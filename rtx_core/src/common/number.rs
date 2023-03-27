@@ -13,7 +13,7 @@ use std::fmt;
 pub struct Number(pub i64);
 impl Object for Number {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.0.to_string()))) }
 }
 impl NumericOps for Number {
   fn new(number: i64) -> Self { Number(number) }

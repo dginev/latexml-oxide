@@ -57,7 +57,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(cs);
   match meaning {
     Some(store) => match store.as_ref() {
-      Stored::Token(ref m) => true,
+      Stored::Token(_) => true,
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
@@ -232,7 +232,7 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
     Some(setter) => setter.clone(),
     None => {
       if readonly {
-        Arc::new(move |value, args, state| {
+        Arc::new(move |_value, _args, state| {
           let message = s!("Can't assign to register {}", setter_name);
           Warn!("unexpected", setter_name, None, state, message);
         })
@@ -282,13 +282,13 @@ pub fn def_primitive(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
@@ -304,7 +304,7 @@ pub fn def_primitive(
     before_digest_env.push(bgroup_closure);
   }
   if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!(stomach, state, {
+    let merge_font_closure = before_digest_simple!(_stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
         merge_font((**chosen_font).clone(), state);
       }
@@ -316,12 +316,12 @@ pub fn def_primitive(
   let mut after_digest_env: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, _whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_env.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, _whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_env.push(egroup_closure);
@@ -379,7 +379,7 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
       dtks.push(T_OTHER!("["));
       if let Some(ref role) = captured_role {
         dtks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
-        if let Some(ref revert_as) = captured_revert_as {
+        if let Some(ref _revert_as) = captured_revert_as {
           dtks.push(T_OTHER!(","));
         }
       }
@@ -421,7 +421,7 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
   // content: build the replacement closure
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
   let content_closure : ReplacementClosure = if nargs == 0 {
-    Arc::new(|document, args, props, state| {
+    Arc::new(|document, _args, props, state| {
       let mut attrs = HashMap::new();
       for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
@@ -484,7 +484,7 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
 }
 
 
-pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
@@ -493,7 +493,7 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
-      replacement: Some(Arc::new(move |stomach, args, state| {
+      replacement: Some(Arc::new(move |stomach, _args, state| {
         let locator = stomach.get_locator().unwrap().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
@@ -523,11 +523,11 @@ pub fn def_math_primitive(cs: Token, paramlist: Option<Parameters>, presentation
 pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // TODO: do we need to do anything about digesting the presentation?
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
-  let csname_alias = if options.alias.is_none() && options.robust {
-    Some(String::from(cs.get_cs_name()))
-  } else {
-    None
-  };
+  // let csname_alias = if options.alias.is_none() && options.robust {
+  //   Some(String::from(cs.get_cs_name()))
+  // } else {
+  //   None
+  // };
   let defcs = if options.robust {
     def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
   } else {
@@ -550,7 +550,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
   let mathstyle_for_font = options.mathstyle.clone();
   let presentation_for_font = presentation.clone();
   options.font = Some(FontDirective::Closure(if is_mathstyle {
-    Arc::new(move |whatsit, state| {
+    Arc::new(move |_whatsit, state| {
       Ok(
         state
           .lookup_font()
@@ -563,7 +563,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
       )
     })
   } else {
-    Arc::new(move |whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation_for_font)))
+    Arc::new(move |_whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation_for_font)))
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
@@ -654,7 +654,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presen
     Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state))
   }));
 
-  let mut prop_options = options.clone();
+  // let mut prop_options = options.clone();
   let mut constructor = Constructor {
     cs: defcs,
     paramlist,
@@ -713,12 +713,12 @@ pub fn def_constructor(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
     let cs_name_cloned = cs_name;
-    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
@@ -739,13 +739,13 @@ pub fn def_constructor(
   //  Can we consolidate into a single, top-level, font handler?
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
-      let merge_font_closure = before_digest_simple!(stomach, state, {
+      let merge_font_closure = before_digest_simple!(_stomach, state, {
         merge_font((*chosen_font).clone(), state);
       });
       before_digest_closures.push(merge_font_closure);
     },
     Some(FontDirective::Closure(font_closure)) => {
-      let execute_font_closure = before_digest_simple!(stomach, state, {
+      let execute_font_closure = before_digest_simple!(_stomach, state, {
         merge_font( font_closure(None, state)?, state);
       });
       before_digest_closures.push(execute_font_closure);
@@ -757,12 +757,12 @@ pub fn def_constructor(
   let mut after_digest_closures: Vec<DigestionClosure> = options.after_digest;
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
-    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
+    let end_mode_closure: DigestionClosure = after_digest_simple!(stomach, _whatsit, state, {
       stomach.end_mode(&mode_clone, state)?;
     });
     after_digest_closures.push(end_mode_closure);
   } else if options.bounded {
-    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, whatsit, state, {
+    let egroup_closure: DigestionClosure = after_digest_simple!(stomach, _whatsit, state, {
       stomach.egroup(state)?;
     });
     after_digest_closures.push(egroup_closure);
@@ -806,12 +806,12 @@ pub fn def_environment(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure = before_digest_simple!(stomach, state, { requireMath!(require_name, state) });
+    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure = before_digest_simple!(stomach, state, { forbidMath!(forbid_name, state) });
+    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
   let bgroup_closure = before_digest_simple!(stomach, state, {
@@ -834,7 +834,7 @@ pub fn def_environment(
   }
 
   let env_name = name.clone();
-  let current_environment_closure = before_digest_simple!(stomach, state, {
+  let current_environment_closure = before_digest_simple!(_stomach, state, {
     state.assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(T_CS!("\\@currenvir"), None, Some(ExpansionBody::Tokens(Tokens!(body))), None, state);
@@ -842,7 +842,7 @@ pub fn def_environment(
   before_digest_env.push(current_environment_closure);
 
   if let Some(chosen_font_directive) = options.font {
-    let merge_font_closure = before_digest_simple!(stomach, state, {
+    let merge_font_closure = before_digest_simple!(_stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = chosen_font_directive {
         merge_font((**chosen_font).clone(), state);
       }
@@ -891,7 +891,7 @@ pub fn def_environment(
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
-  let unexpected_end_closure = after_digest_simple!(stomach, whatsit, state, {
+  let unexpected_end_closure = after_digest_simple!(stomach, _whatsit, state, {
     let env = state.lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
@@ -973,7 +973,7 @@ pub fn def_environment(
   state.install_definition(name_constructor, options.scope.clone());
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
-  after_digest_end.push(after_digest_simple!(stomach, whatsit, state, {
+  after_digest_end.push(after_digest_simple!(stomach, _whatsit, state, {
     stomach.egroup(state)?;
   }));
 
@@ -1151,7 +1151,7 @@ fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: 
   // before_digest
   //
   let cs_string = cs_str.to_owned();
-  let mut before_digest_closures : Vec<BeforeDigestClosure> = vec![before_digest_simple!(stomach, state, {
+  let mut before_digest_closures : Vec<BeforeDigestClosure> = vec![before_digest_simple!(_stomach, state, {
     requireMath!(cs_string, state);
   })];
   if !options.nogroup {
@@ -1160,7 +1160,7 @@ fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: 
     }));
   }
   if let Some(font) = options.font {
-    before_digest_closures.push(before_digest_simple!(stomach, state, {
+    before_digest_closures.push(before_digest_simple!(_stomach, state, {
       if let FontDirective::Asset(ref chosen_font) = font {
         merge_font((**chosen_font).clone(), state);
       }
@@ -1183,16 +1183,16 @@ fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: 
   let presentation_for_font = presentation.to_owned();
   properties.insert(String::from("font"), Stored::FontDirective(FontDirective::Closure(
    if let Some(mathstyle) = options.mathstyle {
-    Arc::new(move |whatsit, state|{Ok(
+    Arc::new(move |_whatsit, state|{Ok(
       state.lookup_font().unwrap().merge(Font{mathstyle: Some(Cow::Owned(mathstyle.clone())), ..Font::default()}).specialize(&presentation_for_font)
     )})
   } else {
-    Arc::new(move |whatsit,state|{Ok(
+    Arc::new(move |_whatsit,state|{Ok(
       state.lookup_font().unwrap().specialize(&presentation_for_font)
     )})
   })));
 
-  cons.properties = Arc::new(move |stomach,args,state|
+  cons.properties = Arc::new(move |_stomach,_args,_state|
     Ok(properties.clone()));
 
 }

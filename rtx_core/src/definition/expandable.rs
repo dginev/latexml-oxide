@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::fmt;
+// use std::fmt;
 use libxml::tree::Node;
 
 use crate::common::error::*;
@@ -60,11 +60,11 @@ impl PartialEq for Expandable {
   fn eq(&self, other: &Expandable) -> bool { self.paramlist == other.paramlist && self.expansion == other.expansion }
 }
 
-impl fmt::Display for Expandable {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
-  }
-}
+// impl fmt::Display for Expandable {
+//   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+//     unimplemented!();
+//   }
+// }
 impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }

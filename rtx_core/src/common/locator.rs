@@ -87,7 +87,7 @@ impl Locator {
       let (base, ext) = pathname::url_split(&self.source);
       s!("{}.{}", base, ext)
     } else {
-      let (path, base, ext) = pathname::split(&self.source);
+      let (_path, base, _ext) = pathname::split(&self.source);
       base
     }
   }

@@ -210,7 +210,7 @@ impl Gullet {
       //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
 
       // Wow!!!!! See TeX the Program \S 309
-      if let Some(ref nextt) = next_token {
+      if let Some(ref _nextt) = next_token {
         if (state.align_group_count > 0) && state.reading_alignment
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
         {
@@ -241,9 +241,7 @@ impl Gullet {
     }
 
     loop {
-      let cc: Catcode;
       let mut invoked = false;
-      let mut return_next = false;
       let runtime = match self.mouth {
         None => return Ok(None),
         Some(ref mut runtime) => runtime,
@@ -535,7 +533,6 @@ impl Gullet {
   /// But, see readUntilBrace for that case.
   pub fn read_until(&mut self, delim: &Tokens, state: &mut State) -> Result<Tokens> {
     let mut tokens: Vec<Token> = Vec::new();
-    let mut n = 0;
     let mut nbraces = 0;
     let want = delim.unlist_ref();
     let ntomatch = want.len();
@@ -1015,11 +1012,11 @@ impl Gullet {
         d = d.negate();
       }
       let (r1, f1) = match self.read_keyword(&["plus"], state)? {
-        Some(v) => self.read_rubber(false, state)?,
+        Some(_) => self.read_rubber(false, state)?,
         None => (None, None),
       };
       let (r2, f2) = match self.read_keyword(&["minus"], state)? {
-        Some(v) => self.read_rubber(false, state)?,
+        Some(_) => self.read_rubber(false, state)?,
         None => (None, None),
       };
 
@@ -1130,7 +1127,7 @@ impl Gullet {
   }
 
   pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<i64>> {
-    if let Some(m) = self.read_keyword(&["mu"], state)? {
+    if let Some(_) = self.read_keyword(&["mu"], state)? {
       self.skip_one_space(state);
       Ok(Some(UNITY)) // effectively, scaled mu
     } else if let Some(m) = self.read_internal_mu_glue(state)? {
@@ -1223,7 +1220,6 @@ impl Gullet {
     let results: R = reader(self, state);
     // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
     loop {
-      let mut is_mouth = false;
       if let Some(ref mut runtime) = self.mouth {
         if runtime.mouth.get_source() == mouth_source {
           self.close_mouth(true, state);

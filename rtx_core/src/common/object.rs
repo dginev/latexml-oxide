@@ -29,7 +29,7 @@ pub trait Object {
 
   // These should really only make sense for Data objects within the
   // processing stream.
-  fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested>
+  fn be_digested(self, _stomach: &mut Stomach, _state: &mut State) -> Result<Digested>
   where
     Self: Sized,
     Self: Debug,
@@ -51,7 +51,7 @@ pub trait Object {
     }
   }
   /// each concrete object needs to provide its own path back to tokens
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self, _state: &State) -> Result<Tokens> {
     unimplemented!();
   }
 }

@@ -31,23 +31,21 @@ impl BoxOps for Comment {
   fn get_properties(&self) -> &HashMap<String, Stored> {
     unimplemented!();
   }
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    unimplemented!();
-  }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed("")) }
+  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {unimplemented!();}
+  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     document.insert_comment(&self.0, state)?;
     Ok(Vec::new())
   }
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) }
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> { None }
-  fn has_property(&self, key: &str) -> bool { false }
-  fn get_property_bool(&self, key: &str) -> bool { false }
-  fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
+  fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
+  fn has_property(&self, _key: &str) -> bool { false }
+  fn get_property_bool(&self, _key: &str) -> bool { false }
+  fn get_width(&mut self, _options: Option<HashMap<String, Stored>>, _state: &mut State) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }
 
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(&self, _options: HashMap<String, Stored>, _state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
     Ok((Dimension::default(), Dimension::default(), Dimension::default()))
   }
 

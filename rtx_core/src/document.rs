@@ -287,7 +287,7 @@ impl Document {
         if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
-            for (key, (value, properties)) in &pending_declaration {
+            for (key, (value, _properties)) in &pending_declaration {
               self.set_attribute(&mut text, key, value, state)?;
             }
             self.finalize_rec(&mut text, state)?; // Now have to clean up the new node!
@@ -1037,14 +1037,15 @@ impl Document {
   /// but may move up past a text node.
   pub fn insert_comment(&mut self, text: &str, state: &mut State) -> Result<Node> {
     // TODO:
-    // let trimmed = text.trim_end();
-    // let clean = DASHES_RE.replace_all(trimmed,"__");
-    // self.close_text_internal(state);    // Close any open text node.
-    // if (self.node.get_type() == Some(NodeType::DocumentNode) {
-    //   comment = self.document.create_comment(s!(" {} ",clean_text));
-    //   self.pending.push(comment.clone());
-    //   Ok(comment)
-    // } else {
+    let trimmed = text.trim_end();
+    let _clean = DASHES_RE.replace_all(trimmed,"__");
+    self.close_text_internal(state)?;    // Close any open text node.
+    if self.node.get_type() == Some(NodeType::DocumentNode) {
+      // TODO: add "create_comment" (or equiv) to libxml wrapper
+      // let comment = self.document.create_comment(s!(" {} ",clean));
+      // self.pending.push(comment.clone());
+      // Ok(comment)
+    } else {
     //   if let Some(last_child) = self.node.last_child() {
     //     if last_child.get_type() == NodeType::CommentNode {
     //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));
@@ -1052,7 +1053,7 @@ impl Document {
     //     }
     //   }
     //   self.node.add_child(self.document.create_comment(s!(" {} ",clean_text));
-    // }
+    }
     Ok(self.node.clone())
   }
 
@@ -1092,7 +1093,7 @@ impl Document {
     let declared_font       = self.get_node_font(&self.node);
     let pending_declaration = font.relative_to(declared_font);
     let elementname         = match pending_declaration.get("element") {
-      Some((k,v)) => k,
+      Some((k,_v)) => k,
       None => FONT_ELEMENT_NAME
     };
     // If not at document begin. And not appending text in same font.
@@ -1263,7 +1264,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, force: Option<HashSet<&'static str>>) -> Result<()> {
+  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, _force: Option<HashSet<&'static str>>) -> Result<()> {
     for (key, val) in from.get_attributes().iter() {
       // Special case attributes
       if key.as_str() == "xml:id" {
@@ -1394,7 +1395,7 @@ impl Document {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
-      for idx in 0..nmatched - 1 {
+      for _idx in 0..nmatched - 1 {
         let mut remove = node.get_prev_sibling().unwrap();
         boxes.push_front(self.get_node_box(&remove).unwrap());
         self.remove_node(&mut remove);
@@ -1790,7 +1791,7 @@ impl Document {
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
   fn record_id(&mut self, id: &str) -> String {
-    if let Some(prev) = self.idstore.get(id) {
+    if let Some(_prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
       // Can we recover?
       unimplemented!();
@@ -1984,7 +1985,7 @@ impl Document {
   // our $dual_transfer_overrides    = { %$content_transfer_overrides,
   //   map { ($_ => 1) } qw(xml:id role) };
 
-  fn compact_xmdual(&mut self, dual: Node, content: Node, presentation: Option<Node>, state: &mut State) -> Result<()> {
+  fn compact_xmdual(&mut self, _dual: Node, _content: Node, _presentation: Option<Node>, _state: &mut State) -> Result<()> {
   //   my $c_name = $self->getNodeQName($content);
   //   my $p_name = $self->getNodeQName($presentation);
     // 1.Quick fix: merge two tokens
@@ -2124,7 +2125,7 @@ impl Document {
   }
 
   pub fn get_node_font(&self, mut node: &Node) -> &Font {
-    if let Some(element) = xml::closest_element(node) {
+    if let Some(_element) = xml::closest_element(node) {
       if node.get_type() == Some(NodeType::ElementNode) {
         if let Some(fontid) = node.get_attribute("_font") {
           if let Some(fnt) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
@@ -2526,7 +2527,7 @@ impl Document {
 
   // Replace $node by `nodes` (presumably descendants of some kind?)
   pub fn replace_node(&mut self, mut node: Node, with: Vec<Node>) -> Result<Node> {
-    if let Some(parent) = node.get_parent() {
+    if let Some(_parent) = node.get_parent() {
       let mut c0_opt: Option<Node> = None;
       for mut with_node in with.into_iter() {
         with_node.unlink();
@@ -2545,7 +2546,7 @@ impl Document {
 
   // initially since $node->setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options & correctness?
-  pub fn rename_node(&mut self, node: &mut Node, newname: &str) -> Result<Node> {
+  pub fn rename_node(&mut self, _node: &mut Node, _newname: &str) -> Result<Node> {
     unimplemented!();
     // my ($self, $node, $newname) = @_;
     // my $model = $$self{model};
@@ -2611,7 +2612,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn make_error(&mut self, error_class: &str, content: &str, state: &mut State) -> Result<()> {
+  pub fn make_error(&mut self, error_class: &str, _content: &str, state: &mut State) -> Result<()> {
     let savenode_opt = if !self.is_openable("ltx:ERROR", state) {
       self.float_to_element("ltx:ERROR", false)
     } else {
@@ -2636,7 +2637,7 @@ impl Document {
   // to reset the insertion point to where it had been.
 
   /// Find a node in the document that can contain an element `qname`
-  pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Option<Node> {
+  pub fn float_to_element(&mut self, _qname: &str, _closeifpossible: bool) -> Option<Node> {
     // TODO:
 
     // let candidates = get_insertion_candidates(self.node);

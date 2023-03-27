@@ -82,7 +82,7 @@ impl PartialEq for Rewrite {
 }
 
 impl Rewrite {
-  pub fn new(kind: &str, mut options: RewriteOptions) -> Self {
+  pub fn new(_kind: &str, mut options: RewriteOptions) -> Self {
     use RewriteOperator::*;
     let mut clauses = Vec::new();
     // collect the non-compiling, early phase clauses from the options
@@ -152,7 +152,7 @@ impl Rewrite {
     self.clauses = new_clauses;
   }
 
-  pub fn compile_clause(&mut self, document: &mut Document, clause: RewriteClause) -> RewriteClause {
+  pub fn compile_clause(&mut self, _document: &mut Document, clause: RewriteClause) -> RewriteClause {
     let op = clause.op;
     let pattern = clause.pattern;
     //   my ($oop, $opattern) = ($op, $pattern);
@@ -244,7 +244,7 @@ impl Rewrite {
     state: &mut State,
   ) -> Result<()> {
     use RewriteOperator::*;
-    if let Some(RewriteClause { compiled, op, pattern }) = clauses.pop_front() {
+    if let Some(RewriteClause { compiled:_, op, pattern }) = clauses.pop_front() {
       match op {
         Select => {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
@@ -281,7 +281,7 @@ impl Rewrite {
             }
           }
           let mut replaced = Vec::new();
-          for idx in 0..nmatched {
+          for _idx in 0..nmatched {
             // Remove the nodes to be replaced
             if let Some(popped) = following.pop_front() {
               replaced.push(popped);

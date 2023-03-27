@@ -86,16 +86,7 @@ impl Object for ArgWrap {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     use ArgWrap::*;
     match self {
-      Token(t) => None,
-      OptionToken(t) => None,
-      Tokens(t) => None,
-      OptionTokens(t) => None,
-      Number(t) => None,
-      OptionNumber(t) => None,
-      Float(t) => None,
-      OptionFloat(t) => None,
-      Dimension(t) => None,
-      OptionDimension(t) => None,
+      Token(_) | OptionToken(_) | Tokens(_) | OptionTokens(_) | Number(_) | OptionNumber(_) | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) => None,
       Glue(t) => t.get_locator(),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.get_locator(),
@@ -175,18 +166,18 @@ impl Object for ArgWrap {
     use ArgWrap::*;
     match self {
       Token(t) => Ok(Tokens!(t.clone())),
-      OptionToken(t) => unimplemented!(),
+      OptionToken(_t) => unimplemented!(),
       Tokens(t) => Ok(t.clone()),
       OptionTokens(t_opt) => match t_opt {
         Some(tks) => Ok(tks.clone()),
         None => Ok(Tokens!()),
       },
       Number(t) => t.revert(state),
-      OptionNumber(t) => unimplemented!(),
+      OptionNumber(_t) => unimplemented!(),
       Float(t) => t.revert(state),
-      OptionFloat(t) => unimplemented!(),
+      OptionFloat(_t) => unimplemented!(),
       Dimension(t) => t.revert(state),
-      OptionDimension(t) => unimplemented!(),
+      OptionDimension(_t) => unimplemented!(),
       Glue(t) => t.revert(state),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.revert(state),
@@ -277,13 +268,7 @@ impl ArgWrap {
     let result = match self {
       Token(t) => Some(Cow::Owned(Tokens!(t.clone()))), // ? avoid the clone ?
       Tokens(tks) => Some(Cow::Borrowed(tks)),
-      Number(tks) => Some(Cow::Owned(self.revert(state)?)),
-      Float(t) => Some(Cow::Owned(self.revert(state)?)),
-      Dimension(t) => Some(Cow::Owned(self.revert(state)?)),
-      Glue(t) => Some(Cow::Owned(self.revert(state)?)),
-      MuGlue(t) => Some(Cow::Owned(self.revert(state)?)),
-      MuDimension(t) => Some(Cow::Owned(self.revert(state)?)),
-      KV(t) => Some(Cow::Owned(self.revert(state)?)),
+      Number(_) |Float(_)|Dimension(_) |Glue(_)|MuGlue(_) | MuDimension(_) | KV(_) => Some(Cow::Owned(self.revert(state)?)),
       OptionToken(opt) => opt.as_ref().map(|t| Cow::Owned(Tokens!(t.clone()))),
       OptionTokens(opt) => opt.as_ref().map(Cow::Borrowed),
       OptionNumber(opt) => match opt {

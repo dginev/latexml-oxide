@@ -306,7 +306,7 @@ impl Conditional {
         Ok(Tokens!())
       } else {
         state.set_ifframe(Some(Arc::clone(&stack_frame)));
-        let t = self.skip_conditional_body(0, gullet, state);
+        let _t = self.skip_conditional_body(0, gullet, state);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"

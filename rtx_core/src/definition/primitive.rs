@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::fmt;
 use libxml::tree::Node;
 
 use crate::common::error::*;
@@ -65,11 +64,11 @@ impl PartialEq for Primitive {
   fn eq(&self, other: &Primitive) -> bool { self.cs == other.cs }
 }
 
-impl fmt::Display for Primitive {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
-  }
-}
+// impl fmt::Display for Primitive {
+//   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+//     unimplemented!();
+//   }
+// }
 impl Object for Primitive {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Primitive") }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }

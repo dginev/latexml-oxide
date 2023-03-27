@@ -84,7 +84,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Arc::new(|stomach, whatsit, state| Ok(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::new())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -157,7 +157,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Arc::new(|stomach, whatsit, state| Ok(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::new())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,
@@ -171,7 +171,7 @@ impl PartialEq for Constructor {
 }
 
 impl fmt::Display for Constructor {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+  fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
     unimplemented!();
   }
 }

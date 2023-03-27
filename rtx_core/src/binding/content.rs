@@ -360,7 +360,8 @@ pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, st
 fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
-    let (dir, name, extension) = pathname::split(pathname);
+    // let (dir, name, extension) = pathname::split(pathname);
+
     // Don't load if we've already loaded it before.
     // Note that we'll still load it if we've already loaded only the ltxml version
     // since someone's presumably asking _explicitly_ for the raw TeX version.
@@ -413,11 +414,11 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   Ok(())
 }
 
-pub fn load_tex_content(path: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn load_tex_content(path: &str, _options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
-  let has_binding = if !pathname::is_literaldata(path) {
-    let (dir, base, ext) = pathname::split(path);
+  let _has_binding = if !pathname::is_literaldata(path) {
+    let (_dir, base, _ext) = pathname::split(path);
     load_external_binding(&base, stomach, state)? || load_binding(&base, stomach, state)?
   } else {
     false
@@ -657,7 +658,7 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
   // }
 }
 
-pub fn load_class(name: &str, options: Vec<String>, after: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn load_class(name: &str, _options: Vec<String>, after: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -752,9 +753,9 @@ pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -
     // (3) BUT we want to avoid kpsewhich if we can, since it's slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
     let paths: Vec<String> = state.search_paths.iter().cloned().collect();
-    let urlbase = state.lookup_value("URLBASE");
+    let _urlbase = state.lookup_value("URLBASE");
     let nopaths = state.lookup_bool("REMOTE_REQUEST");
-    let ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
+    let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
     // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
@@ -864,7 +865,7 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T, stomach: &mut Stomach, state: &
 }
 
 pub fn digest_if(token: Token, stomach: &mut Stomach, state: &mut State) -> Result<Option<Digested>> {
-  if let Some(defn) = state.lookup_definition(&token) {
+  if let Some(_defn) = state.lookup_definition(&token) {
     match stomach.digest(Tokens!(token), state) {
       Ok(t) => Ok(Some(t)),
       Err(e) => Err(e),
@@ -973,7 +974,7 @@ pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State
       stomach,
       state,
     )?;
-    if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) {
+    if let Some(_map) = state.lookup_value(&s!("{encoding}_fontmap")) {
       // Got map?
       state.assign_value(&fail_key, false, None);
     } else {

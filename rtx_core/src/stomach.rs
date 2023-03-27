@@ -206,13 +206,13 @@ impl<'t> Stomach {
           if cc == Catcode::CS {
             result = self.invoke_token_undefined(&token, state)?;
           } else if cc.is_absorbable() {
-            if let Some(digested) = self.invoke_token_simple(&token, meaning, state)? {
+            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
             }
           } else {
             let message = s!("The token {:?} (catcode {:?}) should never reach Stomach!", token, cc);
             Error!("misdefined", token, self, state, &message);
-            if let Some(digested) = self.invoke_token_simple(&token, meaning, state)? {
+            if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
             }
           }
@@ -336,7 +336,7 @@ impl<'t> Stomach {
     }
   }
 
-  fn invoke_token_simple(&mut self, token: &Token, meaning: Token, state: &mut State) -> Result<Option<Digested>> {
+  fn invoke_token_simple(&mut self, meaning: Token, state: &mut State) -> Result<Option<Digested>> {
     let cc = meaning.get_catcode();
     let font = state.lookup_font();
     state.clear_prefixes(); // prefixes shouldn't apply here.

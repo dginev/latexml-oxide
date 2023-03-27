@@ -4,7 +4,7 @@
 
 //! Binding infrastructure for the `LaTeXML` converter, reimplemented in Rust
 #![recursion_limit = "1024"]
-#![allow(dead_code, unused_variables, unused_mut, unused_macros)]
+#![allow(dead_code, unused_variables, unused_mut)]
 #![allow(clippy::unused_unit, clippy::implicit_hasher, clippy::trivial_regex)]
 
 #[macro_use]

@@ -1,11 +1,15 @@
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested
 // macros currently don't support repetition Details at: https://github.com/rust-lang/rust/issues/35853
+
+/// build a Font from key=>val pairs
 #[macro_export]
 macro_rules! Font {
   ($($key:ident => $value:expr),*) => (
     Some(Font { $($key: $value.into_font_field(),)* .. Font::default() })
 )}
 
+/// build a FontDirective from key=>val pairs
+/// (currently only FontDirective::Asset is supported in this macro)
 #[macro_export]
 macro_rules! FontDirective {
   ($($key:ident => $value:expr),*) => (
@@ -14,6 +18,8 @@ macro_rules! FontDirective {
     ))))
 }
 
+/// given a struct `$name`, create a new instance of it using the given key=>val pairs
+/// and complete the remaining entries via the Default instance
 #[macro_export]
 macro_rules! NewDefault {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {
@@ -22,7 +28,7 @@ macro_rules! NewDefault {
   })
 }
 
-// Just like NewDefault, but adds a mandatory .into_option to all values
+/// Just like NewDefault, but adds a mandatory `.into_option()` to all values
 #[macro_export]
 macro_rules! NewDefaultV {
   ($name:ident, $($key:ident => $value:expr),*) => ($name {
@@ -34,19 +40,15 @@ macro_rules! NewDefaultV {
 // Useful shorthand macros, to brainstorm ergonomics ideas,
 // and to aid binding development
 
-#[macro_export]
-macro_rules! transfer_default {
-  ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
-    $hash_receiver
-      .entry(stringify!($val).to_owned())
-      .or_insert($struct_source.$val.to_string());
-  };
-}
+/// Assumption: `$receiver` is HashMap<String,String>.
+/// If, and only if, `$has_receiver` does not have a value at slot `$val`,
+/// and `$struct_source` has a set value at `$val`,
+/// then transfers (with ownership) the `$val` field of a `$struct_source` into the `$receiver`.
 #[macro_export]
 macro_rules! transfer_opt_default {
-  ($val:ident, $struct_source:ident, $hash_receiver:ident) => {
-    if let Some(ref $val) = $struct_source.$val {
-      $hash_receiver.entry(stringify!($val).to_owned()).or_insert($val.to_string());
+  ($val:ident, $struct_source:ident, $receiver:ident) => {
+    if let Some(ref tval) = $struct_source.$val {
+      $receiver.entry(stringify!($val).to_owned()).or_insert(tval.to_string());
     }
   };
 }
@@ -54,24 +56,7 @@ macro_rules! transfer_opt_default {
 // Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper doesn't.
 // In latexml, you could say:
 
-#[macro_export]
-macro_rules! noprimitive {
-  () => {
-    |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| Ok(Vec::new())
-  };
-}
-
-#[macro_export]
-macro_rules! primitivesub {
-  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    move |$stomach: &mut Stomach, mut $args: Vec<ArgWrap>, $inner_state: &mut State| {
-      BindInnerState!($stomach, $inner_state);
-      let macro_out = $body;
-      end_state_frame!();
-      macro_out
-    }
-  };
-}
+/// create a PrimitiveClosure from the pieces, with a forced empty return value
 #[macro_export]
 macro_rules! primitiveproc {
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (

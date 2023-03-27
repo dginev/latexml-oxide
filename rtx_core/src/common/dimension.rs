@@ -22,8 +22,8 @@ pub struct Dimension(pub i64);
 
 impl Object for Dimension {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
-  fn be_digested(self, stomach: &mut crate::stomach::Stomach, state: &mut State) -> Result<Digested>
+  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
+  fn be_digested(self, _stomach: &mut crate::stomach::Stomach, _state: &mut State) -> Result<Digested>
   where
     Self: Sized,
     Self: fmt::Debug,

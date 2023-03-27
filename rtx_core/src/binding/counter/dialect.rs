@@ -105,7 +105,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
+    Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, inner_state| {
       let counter_value = counter_value(&ctr_string, inner_state).value_of();
       Ok(Tokens::new(ExplodeText!(counter_value)))
     }))),
@@ -162,7 +162,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
+        Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, _inner_state| {
           Ok(mouth::tokenize_internal(&s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             idwithin,
@@ -181,7 +181,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(move |gullet, args, inner_state| {
+        Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, _inner_state| {
           Ok(mouth::tokenize_internal(&s!("{}\\csname @{}@ID\\endcsname", prefix, ctr_string)))
         }))),
         Some(ExpandableOptions {
@@ -385,7 +385,7 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &mut State) {
-  if let Some(mapper) = state.lookup_value("LABEL_MAPPING_HOOK") {
+  if let Some(_mapper) = state.lookup_value("LABEL_MAPPING_HOOK") {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
@@ -395,7 +395,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &
     if state.lookup_meaning(&hj_id).is_some() {
       state.let_i(&T_CS!(s!("\\the{ctr}@ID")), hj_id, Some(Scope::Global), gullet);
     }
-    let label = state.lookup_value("PEEKED_LABEL");
+    let _label = state.lookup_value("PEEKED_LABEL");
     // TODO: Continue once we know the type of "mapper"
     unimplemented!();
     //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
@@ -688,7 +688,7 @@ pub fn begin_itemize(
 }
 
 /// Copies the current id, tags, and inlist counter values into whatsit properties
-pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, stomach: &mut Stomach, state: &mut State) {
+pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, _stomach: &mut Stomach, state: &mut State) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state.remove_value(tagskey) {
     state.assign_value(tagskey, false, Some(Scope::Global));

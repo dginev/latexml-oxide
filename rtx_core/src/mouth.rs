@@ -160,7 +160,7 @@ impl Mouth {
   pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Result<Self> {
     if let Some(content) = options.content.take() {
       // we've cached the content of this source
-      let (dir, name, ext) = pathname::split(source);
+      let (_dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
       Mouth::new(&content, Some(options), state)
@@ -311,7 +311,7 @@ impl Mouth {
       if let Some(ref mut reader) = self.reader {
         // file mouth case
         let mut file_bytes = Vec::new();
-        let num_bytes = match reader.read_to_end(&mut file_bytes) {
+        let _num_bytes = match reader.read_to_end(&mut file_bytes) {
           Ok(count) => count,
           Err(e) => {
             let message = s!("BufReader::read_to_end returned an error: {:?}", e);
@@ -324,7 +324,7 @@ impl Mouth {
                             // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
                             // we will first decode the read-in bytes to the right String form, and THEN split lines.
                             // as such, decoding is the first action taken on bytes read in from a file.
-        if let Some(ref encoding) = state.input_encoding {
+        if let Some(ref _encoding) = state.input_encoding {
           // TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars to space(?).
           unimplemented!();
@@ -667,7 +667,7 @@ impl Mouth {
 
   fn handle_space(&mut self, state: &State) -> Option<Token> {
     // Skip any following spaces!
-    while let Some((ch, cc)) = self.get_next_char(state) {
+    while let Some((_ch, cc)) = self.get_next_char(state) {
       if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
         // backup at nonspace/eol
         if self.colno <= self.nchars {

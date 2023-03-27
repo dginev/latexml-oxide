@@ -1,8 +1,8 @@
 //! The Core of rtx - roughly the equivalent of TeX conversion.
 //!
 
-#![warn(missing_docs)]
-#![allow(dead_code, unused_variables, unused_mut, unused_macros, clippy::trivial_regex)]
+#![allow(missing_docs)]
+#![allow(dead_code, unused_mut, clippy::trivial_regex)]
 
 /// Auxiliary macros
 #[macro_use]
@@ -218,7 +218,7 @@ pub trait BoxOps: Object {
   /// gets the associated font, if any
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;
   /// sets an associated font
-  fn set_font(&mut self, font: Arc<Font>) { unimplemented!() }
+  fn set_font(&mut self, _font: Arc<Font>) { unimplemented!() }
   /// sets a "width" property, for sizing
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 
@@ -250,7 +250,7 @@ pub trait BoxOps: Object {
   /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
   /// gets the "height" property value, if any
-  fn get_height(&self, state: &State) -> Option<RegisterValue> {
+  fn get_height(&self, _state: &State) -> Option<RegisterValue> {
     match self.get_property("height") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
@@ -259,7 +259,7 @@ pub trait BoxOps: Object {
   /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
   /// gets the "depth" property value, if any
-  fn get_depth(&self, state: &State) -> Option<RegisterValue> {
+  fn get_depth(&self, _state: &State) -> Option<RegisterValue> {
     match self.get_property("depth") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
@@ -533,7 +533,7 @@ impl Object for Digested {
       Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
-      Postponed(ref t) => None, // Tokens locator?
+      Postponed(ref _t) => None, // Tokens locator?
     }
   }
   fn revert(&self, state: &State) -> Result<Tokens> {
@@ -578,7 +578,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_properties(),
       List(ref l) => l.get_properties(),
       KeyVals(ref kvs) => kvs.get_properties(),
-      Whatsit(ref w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
+      Whatsit(ref _w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -591,7 +591,7 @@ impl BoxOps for Digested {
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
       DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
-      DigestedData::List(ref l) => Debug!("ignore", "set_property", None, None, format!("List::set_property({key},_)")),
+      DigestedData::List(ref _l) => Debug!("ignore", "set_property", None, None, format!("List::set_property({key},_)")),
       _ => unimplemented!(),
     }
   }
@@ -656,7 +656,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_font(state),
       List(ref l) => l.get_font(state),
       Whatsit(ref w) => Ok(w.read().unwrap().get_font(state)?.map(|t| Cow::Owned(t.into_owned()))),
-      Postponed(ref tks) => Ok(None),
+      Postponed(ref _tks) => Ok(None),
       _ => unimplemented!(),
     }
   }

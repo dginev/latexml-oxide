@@ -1206,7 +1206,6 @@ impl State {
       if let Some(entry) = entry_opt {
         if let Some(front) = entry.front() {
           if let Stored::Token(ref t) = front {
-            let cc = t.get_catcode();
             let lookupname = if t.has_smuggled() { "\\relax" } else { t.get_executable_primitive_name().unwrap() };
             if let Some(retry_entry) = self.meaning.get(lookupname) {
               // special case,
@@ -1540,7 +1539,7 @@ impl State {
 
   // #======================================================================
 
-  pub fn note_status(&self, category: &str, what: &str) {
+  pub fn note_status(&self, _category: &str, _what: &str) {
     // Ok, note status is *EXTREMELY* localized
     // it only touches the status field of state,
     // and has NO side-effects to any of the other stateful machinery.
@@ -1767,7 +1766,7 @@ impl State {
       self.install_definition(
         Constructor {
           cs: token.clone(),
-          replacement: Some(Arc::new(move |document, args, props, i_state| {
+          replacement: Some(Arc::new(move |document, _args, _props, i_state| {
             document.make_error("undefined", &owned_cs, i_state)
           })),
           ..Constructor::default()
