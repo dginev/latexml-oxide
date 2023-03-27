@@ -167,7 +167,7 @@ impl Definition for Constructor {
   fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     Debug!("invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
@@ -209,7 +209,7 @@ impl Definition for Constructor {
 
     // Now create the Whatsit, itself.
     let mut whatsit = Whatsit {
-      definition: caller,
+      definition: Arc::new(self.clone()),
       args,
       properties,
       ..Whatsit::default()

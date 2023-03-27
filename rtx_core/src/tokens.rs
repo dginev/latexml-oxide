@@ -25,8 +25,9 @@ use crate::stomach::Stomach;
 use crate::token::*;
 use crate::Digested;
 
+/// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;
-/// Us this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
+/// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 /// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
@@ -39,6 +40,7 @@ impl PartialEq for Tokens {
   fn eq(&self, other: &Tokens) -> bool { self.0.len() == other.0.len() && self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b) }
 }
 
+/// convenience macro for assembling a Tokens object from different pieces (`Token`, `Vec<Token>`, `Tokens`)
 #[macro_export]
 macro_rules! Tokens(
   () => ( $crate::tokens::NO_TOKENS );
@@ -134,6 +136,7 @@ impl AsRef<Tokens> for Tokens {
 }
 
 impl Tokens {
+  /// Create a Tokens object from a `Vec` of individual `Token`
   pub fn new(tokens: Vec<Token>) -> Self { Tokens(tokens) }
 
   /// Return a list of the tokens making up this Tokens
@@ -251,20 +254,23 @@ impl Tokens {
 
   // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
+  /// returns self, for compatibility convenience with `Option`
   pub fn unwrap_or_default(self) -> Tokens { self }
-
+  /// returns self, for compatibility convenience with `Option`
   pub fn unwrap(&self) -> &Tokens { self }
 
+  /// A string form which is primarily used for error-reporting
   pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
-
+  /// digest the current `Tokens`
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(self, state)
   }
 
+  /// Remove dont_expand, but preserve SMUGGLE_THE
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
     Tokens(self.0.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::<Vec<_>>())
   }
-
+  /// Checks if any BEGIN/END code groups are correctly nested and closed
   pub fn is_balanced(&self) -> bool {
     let mut level = 0;
     for t in &self.0 {
@@ -273,6 +279,11 @@ impl Tokens {
         Catcode::END => -1,
         _ => 0,
       };
+      if level < 0 {
+        // a negative level encountered at any point is ill-formed,
+        // return early
+        return false;
+      }
     }
     level == 0
   }

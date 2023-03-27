@@ -242,14 +242,14 @@ impl<'t> Stomach {
         },
         Some(Stored::Constructor(meaning)) => {
           // Otherwise, a normal primitive or constructor
-          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          result = meaning.invoke_primitive(self, state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         Some(Stored::Primitive(meaning)) => {
           // Otherwise, a normal primitive or constructor
-          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          result = meaning.invoke_primitive(self, state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
@@ -257,14 +257,14 @@ impl<'t> Stomach {
         Some(Stored::MathPrimitive(meaning)) => {
           // Copy of regular Primitive
           // Otherwise, a normal primitive or constructor
-          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          result = meaning.invoke_primitive(self, state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         Some(Stored::Register(meaning)) => {
           // Registers are special primitives
-          result = meaning.invoke_primitive(self, meaning.clone(), state)?;
+          result = meaning.invoke_primitive(self, state)?;
           if !meaning.is_prefix() {
             state.clear_prefixes(); // Clear prefixes unless we just set one.
           }
