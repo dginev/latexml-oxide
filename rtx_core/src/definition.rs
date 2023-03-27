@@ -204,7 +204,7 @@ impl PartialEq for FontDirective {
 
 pub trait Definition: Object {
   fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens>;
-  fn invoke_primitive(&self, gullet: &mut Stomach, caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>>;
+  fn invoke_primitive(&self, gullet: &mut Stomach, state: &mut State) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
   /// forced to clone

@@ -36,8 +36,10 @@ pub const T_RELAX: Token = Token {
   smuggled: None,
 };
 
+/// A Token category code, as in TeX
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
+  ///
   ESCAPE,
   BEGIN,
   END,
@@ -122,6 +124,7 @@ impl From<Catcode> for u8 {
 }
 
 impl Catcode {
+  /// a debug-friendly name
   pub fn name(self) -> &'static str {
     use crate::token::Catcode::*;
     match self {
@@ -149,7 +152,7 @@ impl Catcode {
       SmuggleTHE => "SmuggleThe",
     }
   }
-
+  /// a \meaning-friendly name
   pub fn meaning(self) -> &'static str {
     use crate::token::Catcode::*;
     match self {
@@ -172,7 +175,7 @@ impl Catcode {
       _ => "",
     }
   }
-
+  /// a short name helpful for Token debugging
   pub fn short_name(self) -> &'static str {
     use crate::token::Catcode::*;
     match self {
@@ -203,6 +206,7 @@ impl Catcode {
   // Categories of Category codes.
   // For Tokens with these catcodes, only the catcode is relevant for comparison.
   // (if they even make it to a stage where they get compared)
+  /// TeX-primitive codes
   pub fn is_primitive(self) -> bool {
     use crate::token::Catcode::*;
     match self {
@@ -212,7 +216,7 @@ impl Catcode {
       IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
     }
   }
-
+  ///
   pub fn is_executable(self) -> bool {
     use crate::token::Catcode::*;
     match self {
@@ -222,7 +226,7 @@ impl Catcode {
       EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG | SmuggleTHE => false,
     }
   }
-
+  ///
   pub fn is_neutralizable(self) -> bool {
     use crate::token::Catcode::*;
     match self {
@@ -232,28 +236,28 @@ impl Catcode {
       ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
     }
   }
-
+  ///
   pub fn is_active_or_cs(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, ACTIVE | CS)
   }
-
+  ///
   pub fn is_absorbable(self) -> bool {
     use crate::token::Catcode::*;
     // Absorbable
     matches!(self, SPACE | LETTER | OTHER | COMMENT)
   }
-
+  /// Gullet can only hold comment and marker tokens
   pub fn is_gullet_holdable(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, COMMENT | MARKER)
   }
-
+  /// gullet::is_balanced reacts to BEGIN,END,MARKER coded tokens
   pub fn is_balanced_interesting(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, BEGIN | END | MARKER)
   }
-
+  /// can a token of this catcode be used to smuggle for `\the`
   pub fn can_smuggle_the(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, PARAM | ACTIVE | CS | ARG)
@@ -269,8 +273,11 @@ impl Catcode {
 /// ```
 #[derive(Clone)]
 pub struct Token {
+  /// the character content for this token
   pub text: Cow<'static, str>,
+  /// a TeX catcode
   pub code: Catcode,
+  /// possibly smuggled inner token (for \noexpand)
   pub smuggled: Option<Box<Token>>,
 }
 
@@ -304,34 +311,42 @@ impl PartialEq for Token {
 }
 
 #[macro_export]
+/// macro for a BEGIN "{" token
 macro_rules! T_BEGIN(() => {
   Token { text: Cow::Borrowed("{"),code: Catcode::BEGIN, smuggled: None}
 });
 
+/// macro for an END "}" token
 #[macro_export]
 macro_rules! T_END(() => {
   Token { text: Cow::Borrowed("}"),code: Catcode::END, smuggled: None}
 });
+/// macro for a MATH "$" token
 #[macro_export]
 macro_rules! T_MATH(() => {
   Token { text: Cow::Borrowed("$"),code: Catcode::MATH, smuggled: None}
 });
+/// macro for an ALIGN "&" token
 #[macro_export]
 macro_rules! T_ALIGN(() => {
   Token { text: Cow::Borrowed("&"),code: Catcode::ALIGN, smuggled: None}
 });
+/// macro for a PARAM "#" token
 #[macro_export]
 macro_rules! T_PARAM(() => {
   Token { text: Cow::Borrowed("#"),code: Catcode::PARAM, smuggled: None}
 });
+/// macro for a SUPER "^" token
 #[macro_export]
 macro_rules! T_SUPER(() => {
  Token { text: Cow::Borrowed("^"),code: Catcode::SUPER, smuggled: None}
 });
+/// macro for a SUB "_" token
 #[macro_export]
 macro_rules! T_SUB(() => {
   Token { text: Cow::Borrowed("_"),code: Catcode::SUB, smuggled: None}
 });
+/// macro for a SPACE " " token
 #[macro_export]
 macro_rules! T_SPACE(() => {
   Token { text: Cow::Borrowed(" "),code: Catcode::SPACE, smuggled: None}
@@ -339,10 +354,12 @@ macro_rules! T_SPACE(() => {
 ($text:literal) => {
   Token { text: Cow::Borrowed($text),code: Catcode::SPACE, smuggled: None}
 });
+/// macro for a CR "\n" token
 #[macro_export]
 macro_rules! T_CR(() => (
   Token { text: Cow::Borrowed("\n"),code: Catcode::SPACE, smuggled: None}
 ));
+/// macro for a LETTER token
 #[macro_export]
 macro_rules! T_LETTER {
   ($text:literal) => {
@@ -360,6 +377,7 @@ macro_rules! T_LETTER {
     }
   };
 }
+/// macro for an OTHER code token
 #[macro_export]
 macro_rules! T_OTHER {
   ($text:literal) => {
@@ -377,6 +395,7 @@ macro_rules! T_OTHER {
     }
   };
 }
+/// macro for an ACTIVE char token
 #[macro_export]
 macro_rules! T_ACTIVE {
   ($text:literal) => {
@@ -394,6 +413,7 @@ macro_rules! T_ACTIVE {
     }
   };
 }
+/// macro for a COMMENT content token
 #[macro_export]
 macro_rules! T_COMMENT {
   ($text:literal) => {
@@ -411,6 +431,7 @@ macro_rules! T_COMMENT {
     }
   };
 }
+/// macro for a command sequence token
 #[macro_export]
 macro_rules! T_CS {
   ($text:literal) => {
@@ -428,6 +449,7 @@ macro_rules! T_CS {
     }
   };
 }
+/// macro for a tracing MARKER token
 #[macro_export]
 macro_rules! T_MARKER {
   ($text:literal) => {
@@ -446,6 +468,7 @@ macro_rules! T_MARKER {
   };
 }
 
+/// macro for a numbered ARG token
 #[macro_export]
 macro_rules! T_ARG {
   ($text:literal) => {
@@ -463,7 +486,7 @@ macro_rules! T_ARG {
     }
   };
 }
-
+/// macro for a SmuggleThe token (see `gullet::invoke_and_read_x_token`)
 #[macro_export]
 macro_rules! T_SMUGGLE_THE {
   ($t:ident) => {
@@ -489,6 +512,7 @@ macro_rules! T_SMUGGLE_THE {
   };
 }
 
+/// Token constructor macro (defaults to OTHER code)
 #[macro_export]
 macro_rules! Token {
   ($text:literal) => {
@@ -521,7 +545,7 @@ macro_rules! Token {
   };
 }
 
-// Explode a string into a list of tokens, all w/catcode OTHER (except space).
+/// Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
 macro_rules! Explode(($text:expr) => (
   $text.to_string().as_str().chars().map(|c|
@@ -530,8 +554,8 @@ macro_rules! Explode(($text:expr) => (
   ).collect::<Vec<Token>>()
 ));
 
-// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
-// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
+/// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
+/// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
 macro_rules! ExplodeText(($text:expr) => ({
   use $crate::token::{Catcode,Token};
@@ -543,6 +567,7 @@ macro_rules! ExplodeText(($text:expr) => ({
 }));
 
 static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
+/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
 pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
   untex(digested.revert(state)?, suppress_linebreak)
 }
@@ -643,8 +668,8 @@ impl Default for Token {
 ///======================================================================
 /// Accessors.
 impl<'a> Token {
+  /// simple Token constructor, wrapping over text and catcode
   pub fn new(text: Cow<'static, str>, code: Catcode) -> Self { Token { text, code, smuggled: None } }
-  pub fn isa_token(&self) -> bool { true }
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
@@ -703,7 +728,7 @@ impl<'a> Token {
 
   /// Return the catcode of the token.
   pub fn get_catcode(&self) -> Catcode { self.code }
-
+  /// is the current one
   pub fn is_executable(&self) -> bool { self.code.is_executable() }
 
   pub fn has_smuggled(&self) -> bool { self.smuggled.is_some() }
@@ -790,6 +815,7 @@ impl<'a> Token {
       None => self,
     }
   }
+  /// Borrow a smuggled inner token, without consuming the owner Token
   pub fn without_dont_expand_ref(&self) -> &Token {
     match &self.smuggled {
       Some(t) => t,
@@ -802,13 +828,12 @@ impl<'a> Token {
   /// purposes where the
   /// actual character is needed.
 
-  /// Should revert do something with this???
-  ///  ($standardchar[$$self[1]] || $$self[0]); }
-
+  // A Token reverts to itself
   pub fn revert(self) -> Token { self }
 
+  /// borrow the string content of this Token
   pub fn as_str(&self) -> &str { &self.text }
-
+  /// A string form which is primarily used for error-reporting
   pub fn stringify(&self) -> String {
     let mut string = self.text.to_string();
     // Make the token's char content more printable, since this is for a visual messages.

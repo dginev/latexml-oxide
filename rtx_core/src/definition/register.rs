@@ -440,7 +440,7 @@ impl Definition for RegisterCell {
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)
-  fn invoke_primitive(&self, stomach: &mut Stomach, _caller: Arc<dyn Definition>, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
     if self.borrow().register_type == RegisterType::CharDef {
       let internalcs = &self.borrow().internalcs;
