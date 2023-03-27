@@ -161,7 +161,7 @@
     </span>properties =&gt; sub[stomach, args, state] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="number">0</span>] {
         <span class="kw">if let </span>DigestedData::Postponed(<span class="kw-2">ref </span>tag_tokens) = arg.data() {
-          <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
+          <span class="kw">let </span>gullet = stomach.get_gullet_mut();
           <span class="kw">let </span>tag_expanded = <span class="macro">Expand!</span>(tag_tokens.clone(), gullet, state);
           <span class="kw">let </span>tag = stomach.digest(tag_expanded, state)<span class="question-mark">?</span>;
           <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;tag&quot; </span>=&gt; tag))

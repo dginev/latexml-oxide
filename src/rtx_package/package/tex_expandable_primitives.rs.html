@@ -454,7 +454,7 @@
       } <span class="kw">else </span>{
         t
       }});
-    <span class="kw">let </span><span class="kw-2">mut </span>token = <span class="kw">match </span>token_opt {
+    <span class="kw">let </span>token = <span class="kw">match </span>token_opt {
       <span class="prelude-val">None </span>=&gt; {
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet, state,
           <span class="string">&quot;conditional expected a token argument, readXToken came back empty. Falling back to \\@empty&quot;</span>);

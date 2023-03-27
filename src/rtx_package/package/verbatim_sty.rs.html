@@ -163,7 +163,6 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -238,7 +237,6 @@
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verbatim@&quot;</span>, sub[gullet, arg, state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>mouth = gullet.get_mouth_mut();
     <span class="kw">let </span>env = state.lookup_string(<span class="string">&quot;current_environment&quot;</span>);
     <span class="comment">// Note: This should allow a regexp, since there can be spaces between \end and { !!!
     </span><span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
@@ -280,7 +278,7 @@
         state,
         |igullet, istate| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
           <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>mouth) = igullet.get_mouth_mut() {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = igullet.get_mouth_mut() {
             <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = mouth.read_raw_line(<span class="bool-val">false</span>, istate) {
               lines.push(line);
             }

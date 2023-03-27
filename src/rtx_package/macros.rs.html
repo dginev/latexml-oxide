@@ -151,6 +151,7 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string construction replacements into closures
 /// that execute the needed ops in libxml.
@@ -161,7 +162,8 @@
     <span class="attr">#[derive(CompileReplacement)]
     #[replacement=<span class="macro-nonterminal">$replacement</span>]
     </span><span class="kw">struct </span>_Dummy;
-    <span class="kw">let </span>tmp: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="macro">this_replacement!</span>();
+    <span class="attr">#[allow(unused_mut)]
+    </span><span class="kw">let </span>tmp: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="macro">this_replacement!</span>();
     <span class="macro-nonterminal">$var </span>= tmp;
   }};
 }

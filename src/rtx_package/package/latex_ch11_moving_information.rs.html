@@ -720,7 +720,7 @@
       <span class="prelude-val">Some</span>(labeld) =&gt; clean_label(<span class="kw-2">&amp;</span>labeld.to_string(), <span class="prelude-val">None</span>).into_owned(),
       <span class="prelude-val">None </span>=&gt; String::new()
     };
-    <span class="kw">let </span><span class="kw-2">mut </span>scope = label.replace(<span class="string">&quot;LABEL:&quot;</span>,<span class="string">&quot;label:&quot;</span>);
+    <span class="kw">let </span>scope = label.replace(<span class="string">&quot;LABEL:&quot;</span>,<span class="string">&quot;label:&quot;</span>);
     <span class="kw">let </span>label_key = <span class="macro">s!</span>(<span class="string">&quot;LABEL@{}&quot;</span>, label);
     whatsit.set_property(<span class="string">&quot;label&quot;</span>, label);
     <span class="kw">let </span>cc = state.lookup_value(<span class="string">&quot;current_counter&quot;</span>);
@@ -1340,7 +1340,7 @@
   // But also, if there are multiple bibliographies,
   </span><span class="kw">let </span>bibnumber = <span class="number">1 </span>+ state.lookup_int(<span class="string">&quot;n_bibliographies&quot;</span>);
   state.assign_value(<span class="string">&quot;n_bibliographies&quot;</span>, bibnumber, <span class="prelude-val">Some</span>(Scope::Global));
-  <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
+  <span class="kw">let </span>gullet = stomach.get_gullet_mut();
   <span class="kw">let </span><span class="kw-2">mut </span>docid: String = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\thedocument@ID&quot;</span>), gullet, state).to_string();
   <span class="kw">if </span>!docid.is_empty() {
     docid += <span class="string">&quot;.&quot;</span>;

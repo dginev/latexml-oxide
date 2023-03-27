@@ -829,7 +829,7 @@
 // It&#39;s slightly different in that it expands the argument
 // Redefine \@url to sanitize the argument less
 </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@Url Token&quot;</span>, sub[gullet,(cmd),state] {
-  <span class="kw">let </span><span class="kw-2">mut </span>open = gullet.read_token(state).unwrap();
+  <span class="kw">let </span>open = gullet.read_token(state).unwrap();
   state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// Needs special protection?
   </span>state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\~&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// Needs special protection?

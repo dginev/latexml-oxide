@@ -145,7 +145,7 @@
       </span><span class="macro">bind_state_mut!</span>(stomach,state);
       <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@currenvir&quot;</span>, <span class="string">&quot;document&quot;</span>);
     }
-    <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
+    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
     state.assign_value(<span class="string">&quot;current_environment&quot;</span>, <span class="string">&quot;document&quot;</span>, <span class="prelude-val">None</span>);
     <span class="kw">let </span>expanded_id = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\thedocument@ID&quot;</span>),gullet,state);
     whatsit.set_property(<span class="string">&quot;id&quot;</span>, expanded_id);

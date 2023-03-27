@@ -1328,8 +1328,8 @@
   </span><span class="kw">if </span>children.len() == <span class="number">1 </span>&amp;&amp; !document.findnodes(<span class="string">&quot;ltx:Math&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text_node), state).is_empty() {
     <span class="comment">// Replace XMText by XMWrap/*  (this should preserve the parse?)
     </span>document.rename_node(<span class="kw-2">&amp;mut </span>text_node, <span class="string">&quot;ltx:XMWrap&quot;</span>)<span class="question-mark">?</span>; <span class="comment">// text_node =
-    </span><span class="kw">let </span><span class="kw-2">mut </span>first_child = children.pop().unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>first_granchildren = first_child.get_child_nodes();
+    </span><span class="kw">let </span>first_child = children.pop().unwrap();
+    <span class="kw">let </span>first_granchildren = first_child.get_child_nodes();
     document.replace_node(
       first_child,
       first_granchildren

@@ -736,8 +736,8 @@
   </span><span class="kw">let </span>dec     = DECIMAL_SEP.get(lang).unwrap_or(<span class="kw-2">&amp;</span><span class="string">&quot;.&quot;</span>);
   <span class="kw">let </span>thou    = THOUSANDS_SEP.get(lang).unwrap_or(<span class="kw-2">&amp;</span><span class="string">&quot;,&quot;</span>);
   <span class="kw">let </span>decrole = <span class="kw">if </span>dec == <span class="kw-2">&amp;</span><span class="string">&quot;.&quot; </span>{ <span class="string">&quot;PERIOD&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
-  <span class="kw">let </span><span class="kw-2">mut </span>chars : Vec&lt;char&gt; = Vec::new();
-  <span class="kw">let </span>(<span class="kw-2">mut </span>n, <span class="kw-2">mut </span>combined, <span class="kw-2">mut </span>number, w, <span class="kw-2">mut </span>font) = (<span class="number">0</span>, String::new(), String::new(), <span class="number">0</span>, <span class="prelude-val">None</span>);
+  <span class="comment">// let mut chars : Vec&lt;char&gt; = Vec::new();
+  </span><span class="kw">let </span>(<span class="kw-2">mut </span>n, <span class="kw-2">mut </span>combined, <span class="kw-2">mut </span>number, w, <span class="kw-2">mut </span>font) = (<span class="number">0</span>, String::new(), String::new(), <span class="number">0</span>, <span class="prelude-val">None</span>);
   <span class="comment">//     NOTE: We&#39;re scanning chars from END!
   </span><span class="kw">let </span><span class="kw-2">mut </span>node_ref = node;
   <span class="kw">let </span><span class="kw-2">mut </span>current;
@@ -834,8 +834,8 @@
   // Combine letters, when the fonts are right. (sorta related to mathcode)
   // well, maybe a letter followed by letters &amp; digits?
   </span><span class="macro">DefMathLigature!</span>(matcher =&gt; sub [document,node_opt,state] {
-     <span class="kw">let </span><span class="kw-2">mut </span>chars :Vec&lt;char&gt; = Vec::new();
-     <span class="kw">let </span>font  = document.get_node_font(node_opt);
+    <span class="comment">//  let mut chars :Vec&lt;char&gt; = Vec::new();
+     </span><span class="kw">let </span>font  = document.get_node_font(node_opt);
      <span class="kw">let </span><span class="kw-2">mut </span>this_node;
      <span class="kw">let </span><span class="kw-2">mut </span>node_mut = node_opt;
      <span class="kw">if </span>font.is_sticky() {

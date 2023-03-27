@@ -140,7 +140,7 @@
     <span class="kw">let </span>perc = <span class="macro">vec!</span>[<span class="string">&#39;%&#39;</span>];
     state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>perc));
     <span class="kw">let </span><span class="kw-2">mut </span>open = gullet.read_token(state).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>close;
+    <span class="kw">let </span>close;
     <span class="kw">let </span>url = <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
       open = <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>);
       close = <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>);

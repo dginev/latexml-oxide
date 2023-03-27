@@ -554,8 +554,8 @@
 </span><span class="kw">pub fn </span>revert_script(script: <span class="kw-2">&amp;</span>Digested, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
   <span class="kw">let </span>tokens = script.revert(state)<span class="question-mark">?</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>ts = tokens.unlist();
-  <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">0</span>;
-  <span class="kw">if </span>ts.len() &gt; <span class="number">1 </span>&amp;&amp; ts.get(<span class="number">0</span>).unwrap().code == Catcode::BEGIN &amp;&amp; ts.last().unwrap().code == Catcode::END {
+  <span class="comment">// let mut level = 0;
+  </span><span class="kw">if </span>ts.len() &gt; <span class="number">1 </span>&amp;&amp; ts.get(<span class="number">0</span>).unwrap().code == Catcode::BEGIN &amp;&amp; ts.last().unwrap().code == Catcode::END {
     <span class="prelude-val">Ok</span>(ts)
   } <span class="kw">else </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>wrapped = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
