@@ -434,22 +434,6 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
-<a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
 </pre><pre class="rust"><code><span class="doccomment">///! A variety of traits helpful for auto-casting between the different components of the conversion toolchain
 </span><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::{HashMap, VecDeque};
@@ -476,7 +460,10 @@
 <span class="kw">use crate</span>::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{BoxOps, Digested};
 
-<span class="kw">pub trait </span>IntoOption&lt;T&gt;: Sized {
+<span class="doccomment">/// A trait for auto-wrapping a generic type T into Option&lt;Y&gt;,
+/// where Y can be inferred from context.
+/// (useful in macro helpers, such as `NewDefaultV!`)
+</span><span class="kw">pub trait </span>IntoOption&lt;T&gt;: Sized {
   <span class="doccomment">/// Performs the conversion.
   </span><span class="kw">fn </span>into_option(<span class="self">self</span>) -&gt; T;
 }
@@ -584,7 +571,9 @@
   }
 }
 
-<span class="kw">pub trait </span>IntoTokensResult&lt;T&gt;: Sized {
+<span class="doccomment">/// A trait for creating `Result&lt;Tokens&gt;` from all sensible concrete types one could
+/// return from e.g. a DefMacro closure
+</span><span class="kw">pub trait </span>IntoTokensResult&lt;T&gt;: Sized {
   <span class="doccomment">/// Performs the conversion, used for DefMacro return values etc
   </span><span class="kw">fn </span>into_tokens_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;;
 }
@@ -618,36 +607,11 @@
   </span><span class="kw">fn </span>into_tokens_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="self">self</span>.map(|w| w.owned_tokens().unwrap_or_default()) }
 }
 
-<span class="kw">pub trait </span>IntoResultOptTokens&lt;T&gt;: Sized {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;;
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span>Token {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="self">self</span>))) }
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span>Vec&lt;Token&gt; {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Tokens::new(<span class="self">self</span>))) }
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span>Tokens {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>)) }
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="self">self</span>.map(<span class="prelude-val">Some</span>) }
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="self">self </span>}
-}
-
-<span class="kw">impl </span>IntoResultOptTokens&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;&gt; <span class="kw">for </span>() {
-  <span class="kw">fn </span>into_result_opt_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) }
-}
-
-<span class="kw">pub trait </span>IntoResultArgWrap&lt;T&gt;: Sized {
-  <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
+<span class="doccomment">/// Create a `Result&lt;ArgWrap&gt;` from any concrete type that Gullet may have a reader for.
+/// Used in auto-casting the data fetched by Parameter readers
+</span><span class="kw">pub trait </span>IntoResultArgWrap&lt;T&gt;: Sized {
+  <span class="doccomment">/// performs the conversion
+  </span><span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
 }
 
 <span class="kw">impl </span>IntoResultArgWrap&lt;<span class="prelude-ty">Result</span>&lt;ArgWrap&gt;&gt; <span class="kw">for </span>Token {
@@ -742,7 +706,8 @@
   <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; { <span class="prelude-val">Ok</span>(ArgWrap::OptionTokens(<span class="prelude-val">None</span>)) }
 }
 
-<span class="kw">pub trait </span>IntoBoolResult&lt;T&gt;: Sized {
+<span class="doccomment">/// Creates `Result&lt;bool&gt;` from some type `T`
+</span><span class="kw">pub trait </span>IntoBoolResult&lt;T&gt;: Sized {
   <span class="doccomment">/// Performs the conversion, used for DefConditional return values etc
   </span><span class="kw">fn </span>into_bool_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt;;
 }
@@ -753,7 +718,8 @@
   <span class="kw">fn </span>into_bool_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; { <span class="self">self </span>}
 }
 
-<span class="kw">pub trait </span>IntoDigestedResult&lt;T&gt;: Sized {
+<span class="doccomment">/// Creates a `Result&lt;Vec&lt;Digested&gt;&gt;` from some type `T`
+</span><span class="kw">pub trait </span>IntoDigestedResult&lt;T&gt;: Sized {
   <span class="doccomment">/// Performs the conversion, used for DefPrimitive return values etc
   </span><span class="kw">fn </span>into_digested_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt;;
 }
@@ -790,7 +756,9 @@
   <span class="kw">fn </span>into_digested_result(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="self">self</span>.map(|d| <span class="macro">vec!</span>[d]) }
 }
 
-<span class="kw">pub trait </span>IntoRegisterValueOption&lt;T&gt;: Sized {
+<span class="doccomment">/// Creates an `Option&lt;RegisterValue&gt;` from some type `T`.
+/// Useful for Register `getter` closures
+</span><span class="kw">pub trait </span>IntoRegisterValueOption&lt;T&gt;: Sized {
   <span class="kw">fn </span>into_register_value_option(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;;
 }
 <span class="kw">impl </span>IntoRegisterValueOption&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; <span class="kw">for </span>() {

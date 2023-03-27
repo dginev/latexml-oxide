@@ -516,10 +516,28 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -543,15 +561,23 @@
 
 <span class="kw">use </span><span class="kw">super</span>::argument::ArgWrap;
 
-<span class="attr">#[derive(Clone, PartialEq)]
+<span class="doccomment">/// The values that can be read by, and stored in, a Register
+</span><span class="attr">#[derive(Clone, PartialEq)]
 </span><span class="kw">pub enum </span>RegisterValue {
-  Number(Number),
-  Dimension(Dimension),
-  MuDimension(MuDimension),
-  Glue(Glue),
-  MuGlue(MuGlue),
-  Token(Token),
-  Tokens(Tokens),
+  <span class="doccomment">///
+  </span>Number(Number),
+  <span class="doccomment">///
+  </span>Dimension(Dimension),
+  <span class="doccomment">///
+  </span>MuDimension(MuDimension),
+  <span class="doccomment">///
+  </span>Glue(Glue),
+  <span class="doccomment">///
+  </span>MuGlue(MuGlue),
+  <span class="doccomment">///
+  </span>Token(Token),
+  <span class="doccomment">///
+  </span>Tokens(Tokens),
 }
 <span class="kw">impl </span>From&lt;Number&gt; <span class="kw">for </span>RegisterValue {
   <span class="kw">fn </span>from(n: Number) -&gt; RegisterValue { RegisterValue::Number(n) }
@@ -862,35 +888,58 @@
   }
 }
 
-<span class="attr">#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+<span class="doccomment">/// The type of a TeX Register
+</span><span class="attr">#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>RegisterType {
-  Number,
-  Dimension,
-  MuDimension,
-  Glue,
-  MuGlue,
-  Token,
-  Tokens,
-  CharDef,
-  Any, <span class="comment">// Placeholder for any argument accepted
-</span>}
+  <span class="doccomment">/// simple scalar number
+  </span>Number,
+  <span class="doccomment">/// a TeX dimension
+  </span>Dimension,
+  <span class="doccomment">/// a TeX mu dimension
+  </span>MuDimension,
+  <span class="doccomment">/// a TeX glue
+  </span>Glue,
+  <span class="doccomment">/// a TeX mu glue
+  </span>MuGlue,
+  <span class="doccomment">/// a TeX Token
+  </span>Token,
+  <span class="doccomment">/// multiple Tokens
+  </span>Tokens,
+  <span class="doccomment">/// a character definition
+  </span>CharDef,
+  <span class="doccomment">/// Placeholder for any argument accepted
+  </span>Any,
+}
 
 <span class="comment">// why mutable state in the Getter closure? Because the `.get_width` and friends methods have a
 // caching optimization, which requires writing new properties while they are stored in the State table
+// if we decide that isn&#39;t needed, we can go back to immutable.
+</span><span class="doccomment">/// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
 </span><span class="kw">pub type </span>RegisterGetterClosure = Arc&lt;<span class="kw">dyn </span>Fn(Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt;;
-<span class="kw">pub type </span>RegisterSetterClosure = Arc&lt;<span class="kw">dyn </span>Fn(RegisterValue, Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State)&gt;;
+<span class="doccomment">/// sets a register value in the State frame
+</span><span class="kw">pub type </span>RegisterSetterClosure = Arc&lt;<span class="kw">dyn </span>Fn(RegisterValue, Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State)&gt;;
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// A struct representing a TeX register
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Register {
-  <span class="kw">pub </span>cs: Token,
-  <span class="kw">pub </span>name: String,
-  <span class="kw">pub </span>parameters: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-  <span class="kw">pub </span>register_type: RegisterType,
-  <span class="kw">pub </span>readonly: bool,
-  <span class="kw">pub </span>internalcs: <span class="prelude-ty">Option</span>&lt;Token&gt;,
-  <span class="kw">pub </span>value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
-  <span class="kw">pub </span>getter: RegisterGetterClosure,
-  <span class="kw">pub </span>setter: RegisterSetterClosure,
+  <span class="doccomment">/// the public command sequence for this register
+  </span><span class="kw">pub </span>cs: Token,
+  <span class="doccomment">/// the internal name for this register
+  </span><span class="kw">pub </span>name: String,
+  <span class="doccomment">/// associated parameters, if any
+  </span><span class="kw">pub </span>parameters: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  <span class="doccomment">/// the type of values accepted by this register (Number, Dimension, ...)
+  </span><span class="kw">pub </span>register_type: RegisterType,
+  <span class="doccomment">/// read-only flag (default: false)
+  </span><span class="kw">pub </span>readonly: bool,
+  <span class="doccomment">/// internal command sequence for this register
+  </span><span class="kw">pub </span>internalcs: <span class="prelude-ty">Option</span>&lt;Token&gt;,
+  <span class="doccomment">/// the current value
+  </span><span class="kw">pub </span>value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
+  <span class="doccomment">/// reader for a value
+  </span><span class="kw">pub </span>getter: RegisterGetterClosure,
+  <span class="doccomment">/// setter for a value
+  </span><span class="kw">pub </span>setter: RegisterSetterClosure,
   <span class="comment">// pub traits: PrimitiveOptions,
 </span>}
 <span class="kw">impl </span>Default <span class="kw">for </span>Register {
@@ -925,28 +974,13 @@
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Register {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{self:?}&quot;</span>) }
 }
-<span class="doccomment">/// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
-/// a `RefCell&lt;Register&gt;`.
-</span><span class="kw">pub struct </span>RegisterCell(RwLock&lt;Register&gt;);
-<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RegisterCell {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.read().unwrap()) }
-}
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>RegisterCell {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>.read().unwrap()) }
-}
-<span class="kw">impl </span>Object <span class="kw">for </span>RegisterCell {
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { Definition::stringify_type(<span class="self">self</span>, <span class="string">&quot;RegisterCell&quot;</span>) }
+
+<span class="kw">impl </span>Object <span class="kw">for </span>Register {
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
 }
-<span class="kw">impl </span>PartialEq <span class="kw">for </span>RegisterCell {
-  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>RegisterCell) -&gt; bool { <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0</span>.read().unwrap() == <span class="kw-2">*</span>other.<span class="number">0</span>.read().unwrap() }
-}
-<span class="kw">impl </span>RegisterCell {
-  <span class="kw">pub fn </span>new(cell: RwLock&lt;Register&gt;) -&gt; <span class="self">Self </span>{ RegisterCell(cell) }
-  <span class="kw">pub fn </span>borrow(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RwLockReadGuard&lt;Register&gt; { <span class="self">self</span>.<span class="number">0</span>.read().unwrap() }
-  <span class="kw">pub fn </span>borrow_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RwLockWriteGuard&lt;Register&gt; { <span class="self">self</span>.<span class="number">0</span>.write().unwrap() }
-}
-<span class="kw">impl </span>Definition <span class="kw">for </span>RegisterCell {
+
+<span class="kw">impl </span>Definition <span class="kw">for </span>Register {
   <span class="kw">fn </span>is_register(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
   <span class="kw">fn </span>is_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">false </span>}
   <span class="kw">fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.borrow().readonly }
@@ -976,7 +1010,7 @@
     gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;=&quot;</span>], state)<span class="question-mark">?</span>;
     <span class="kw">let </span>value = gullet.read_value(<span class="self">self</span>.register_type().unwrap(), state)<span class="question-mark">?</span>;
 
-    <span class="self">self</span>.borrow_mut().set_value(value, args, state);
+    <span class="self">self</span>.borrow().set_value(value, args, state);
 
     state.after_assignment(gullet);
     <span class="comment">// # Tracing ?
@@ -1009,8 +1043,10 @@
 }
 
 <span class="kw">impl </span>Register {
-  <span class="kw">pub fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.readonly }
-  <span class="kw">pub fn </span>set_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: RegisterValue, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="doccomment">/// checks the readonly flag
+  </span><span class="kw">pub fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.readonly }
+  <span class="doccomment">/// runs the setter to assign the value for this register
+  </span><span class="kw">pub fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, value: RegisterValue, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) {
     <span class="kw">if </span><span class="self">self</span>.register_type == RegisterType::CharDef {
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to chardef {}&quot;</span>, <span class="self">self</span>.cs.get_cs_name());
       <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;chardef&quot;</span>, <span class="prelude-val">None</span>, state, message);
@@ -1018,8 +1054,8 @@
       (<span class="self">self</span>.setter)(value, args, state);
     }
   }
-
-  <span class="kw">pub fn </span>new_chardef(cs: Token, value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;, internalcs: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="self">Self </span>{
+  <span class="doccomment">/// creates a CharDef type register
+  </span><span class="kw">pub fn </span>new_chardef(cs: Token, value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;, internalcs: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="self">Self </span>{
     Register {
       cs,
       parameters: <span class="prelude-val">None</span>,

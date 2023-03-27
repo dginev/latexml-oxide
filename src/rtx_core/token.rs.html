@@ -880,7 +880,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterCell;
+<span class="kw">use </span><span class="kw">crate</span>::definition::register::Register;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
@@ -1713,7 +1713,7 @@
     <span class="macro">s!</span>(<span class="string">&quot;{}[{}]&quot;</span>, <span class="self">self</span>.code.short_name(), string)
   }
 
-  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;RegisterCell&gt;&gt; { state.lookup_register_definition(<span class="self">self</span>) }
+  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; { state.lookup_register_definition(<span class="self">self</span>) }
 
   <span class="kw">pub fn </span>to_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Number { Number::new(<span class="self">self</span>.text.parse::&lt;i64&gt;().unwrap_or(<span class="number">0</span>)) }
 

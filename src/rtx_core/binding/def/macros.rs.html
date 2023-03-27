@@ -578,6 +578,7 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
 </pre><pre class="rust"><code><span class="comment">// Macros requiring repetitions need to be handled outside of the main setup macro, as nested
 // macros currently don&#39;t support repetition Details at: https://github.com/rust-lang/rust/issues/35853
 </span><span class="attr">#[macro_export]
@@ -842,7 +843,8 @@
   };
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// A closure for obtaining a `RegisterValue`, usually owned by a `Register` getter.
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>getter {
   (<span class="macro-nonterminal">$args</span>: ident, <span class="macro-nonterminal">$state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|<span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$state</span>: <span class="kw-2">&amp;mut </span>State| -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
@@ -1124,7 +1126,7 @@
   }};
   (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:ident, <span class="macro-nonterminal">$args</span>:expr, <span class="macro-nonterminal">$state_arg</span>: ident) =&gt; {{
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = <span class="macro-nonterminal">$state_arg</span>.lookup_register_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cs</span>)) {
-      (<span class="kw-2">*</span>defn.borrow_mut()).set_value(<span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$args</span>, <span class="macro-nonterminal">$state_arg</span>);
+      (<span class="kw-2">*</span>defn).set_value(<span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$args</span>, <span class="macro-nonterminal">$state_arg</span>);
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The control sequence {} is not a register&quot;</span>, <span class="macro-nonterminal">$cs</span>);
       <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;register&quot;</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$state_arg</span>, message);

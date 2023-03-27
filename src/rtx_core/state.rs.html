@@ -1850,7 +1850,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{ConditionalType, IfFrame};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::Expandable;
-<span class="kw">use </span><span class="kw">crate</span>::definition::register::{RegisterCell, RegisterValue};
+<span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register,RegisterValue};
 <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagOptions;
@@ -3007,7 +3007,7 @@
 
   <span class="doccomment">/// A specialized version of `lookup_definition` for registers, since we can&#39;t adequately perform
   /// multi-dispatch when we have a &quot;Self: Sized&quot; for the Definition trait object.
-  </span><span class="kw">pub fn </span>lookup_register_definition(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;RegisterCell&gt;&gt; {
+  </span><span class="kw">pub fn </span>lookup_register_definition(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
     <span class="kw">match </span><span class="self">self</span>.lookup_definition_internal(key) {
       <span class="prelude-val">Some</span>(defs) =&gt; <span class="kw">match </span>defs.front() {
         <span class="prelude-val">Some</span>(Stored::Register(entry)) =&gt; <span class="prelude-val">Some</span>(Arc::clone(entry)),

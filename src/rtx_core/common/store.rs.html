@@ -1023,7 +1023,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::Expandable;
 <span class="kw">use </span><span class="kw">crate</span>::definition::math_primitive::MathPrimitive; <span class="comment">//MathPrimitiveOptions
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::primitive::Primitive;
-<span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterCell, RegisterValue};
+<span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterValue};
 <span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagData;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
@@ -1127,6 +1127,8 @@
   </span>Reversion(Reversion),
   <span class="comment">// LaTeXML objects (Arc-wrapped)
   </span><span class="doccomment">/// latexml object (Arc-wrapped)
+  </span>Register(Arc&lt;Register&gt;),
+  <span class="doccomment">/// latexml object (Arc-wrapped)
   </span>Expandable(Arc&lt;Expandable&gt;),
   <span class="doccomment">/// latexml object (Arc-wrapped)
   </span>Conditional(Arc&lt;Conditional&gt;),
@@ -1147,8 +1149,6 @@
   </span>FontDirective(FontDirective),
   <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
   </span>Mouth(Arc&lt;RwLock&lt;Mouth&gt;&gt;),
-  <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
-  </span>Register(Arc&lt;RegisterCell&gt;),
   <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
   </span>IfFrame(Arc&lt;RwLock&lt;IfFrame&gt;&gt;),
 }
@@ -1181,7 +1181,7 @@
       </span>Constructor(<span class="kw-2">ref </span>_constructor) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Constructor[TODO]&quot;</span>),
       Digested(<span class="kw-2">ref </span>digested) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Digested[{digested:?}]&quot;</span>),
       Parameter(<span class="kw-2">ref </span>parameter) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Parameter[{parameter:?}]&quot;</span>),
-      Register(<span class="kw-2">ref </span>register) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Register[{:?}]&quot;</span>, register.borrow().cs),
+      Register(<span class="kw-2">ref </span>register) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Register[{:?}]&quot;</span>, register.cs),
       Rewrite(<span class="kw-2">ref </span>rewrite) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Rewrite[{rewrite:?}]&quot;</span>),
       Mouth(<span class="kw-2">ref </span>mouth) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Mouth[{:?}]&quot;</span>, mouth.read().unwrap().get_source()),
       Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Font[{font:?}]&quot;</span>),
@@ -1697,11 +1697,11 @@
   <span class="kw">fn </span>from(font: Arc&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Stored::Font(font) }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;RegisterCell&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(register: Arc&lt;RegisterCell&gt;) -&gt; <span class="self">Self </span>{ Stored::Register(register) }
+<span class="kw">impl </span>From&lt;Arc&lt;Register&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(register: Arc&lt;Register&gt;) -&gt; <span class="self">Self </span>{ Stored::Register(register) }
 }
 <span class="kw">impl </span>From&lt;Register&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(register: Register) -&gt; <span class="self">Self </span>{ Arc::new(RegisterCell::new(RwLock::new(register))).into() }
+  <span class="kw">fn </span>from(register: Register) -&gt; <span class="self">Self </span>{ Arc::new(register).into() }
 }
 
 <span class="kw">impl </span>From&lt;Rewrite&gt; <span class="kw">for </span>Stored {
@@ -1913,8 +1913,8 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Arc&lt;RegisterCell&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;RegisterCell&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
     <span class="kw">match </span>value {
       Stored::Register(<span class="kw-2">ref </span>reg) =&gt; <span class="prelude-val">Some</span>(Arc::clone(reg)),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,

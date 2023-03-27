@@ -275,6 +275,27 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::fmt;
@@ -300,32 +321,53 @@
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use crate</span>::{BoxOps, Digested, Locator};
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// configuration for creating a new Constructor
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ConstructorOptions {
-  <span class="kw">pub </span>nargs: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>bounded: bool,
-  <span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>sizer: <span class="prelude-ty">Option</span>&lt;SizingClosure&gt;,
-  <span class="kw">pub </span>before_digest: Vec&lt;BeforeDigestClosure&gt;,
-  <span class="kw">pub </span>after_digest: Vec&lt;DigestionClosure&gt;,
-  <span class="kw">pub </span>before_construct: Vec&lt;ConstructionClosure&gt;,
-  <span class="kw">pub </span>after_construct: Vec&lt;ConstructionClosure&gt;,
+  <span class="doccomment">/// number of arguments (if any)
+  </span><span class="kw">pub </span>nargs: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="doccomment">/// bouded mode (default: false)
+  </span><span class="kw">pub </span>bounded: bool,
+  <span class="doccomment">/// begin a named mode
+  </span><span class="kw">pub </span>mode: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="doccomment">/// a `SizingClosure` to estimate the size of the digested box
+  </span><span class="kw">pub </span>sizer: <span class="prelude-ty">Option</span>&lt;SizingClosure&gt;,
+  <span class="doccomment">/// custom code to run immediately before the digestion phase
+  </span><span class="kw">pub </span>before_digest: Vec&lt;BeforeDigestClosure&gt;,
+  <span class="doccomment">/// custom code to run immediately after the digestion phase
+  </span><span class="kw">pub </span>after_digest: Vec&lt;DigestionClosure&gt;,
+  <span class="doccomment">/// custom code to run immediately before the construction phase
+  </span><span class="kw">pub </span>before_construct: Vec&lt;ConstructionClosure&gt;,
+  <span class="doccomment">/// custom code to run immediately after the construction phase
+  </span><span class="kw">pub </span>after_construct: Vec&lt;ConstructionClosure&gt;,
 
   <span class="comment">// environment-specific
+  </span><span class="doccomment">/// requires to be used in math mode
   </span><span class="kw">pub </span>require_math: bool,
-  <span class="kw">pub </span>forbid_math: bool,
-  <span class="kw">pub </span>properties: PropertiesClosure,
-  <span class="kw">pub </span>capture_body: bool,
-  <span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
-
-  <span class="kw">pub </span>after_digest_begin: Vec&lt;DigestionClosure&gt;,
-  <span class="kw">pub </span>before_digest_end: Vec&lt;BeforeDigestClosure&gt;,
-  <span class="kw">pub </span>after_digest_body: Vec&lt;DigestionClosure&gt;,
-  <span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>robust: bool,
-  <span class="kw">pub </span>locked: bool,
-  <span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="doccomment">/// forbids use in math mode
+  </span><span class="kw">pub </span>forbid_math: bool,
+  <span class="doccomment">/// custom directives for computing box properties
+  </span><span class="kw">pub </span>properties: PropertiesClosure,
+  <span class="doccomment">/// should it capture the body as `#body` (default: false)
+  </span><span class="kw">pub </span>capture_body: bool,
+  <span class="doccomment">/// specify a font to use, or instructions how to compute which font to use
+  </span><span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;FontDirective&gt;,
+  <span class="doccomment">/// custom code to run as digestion begins
+  </span><span class="kw">pub </span>after_digest_begin: Vec&lt;DigestionClosure&gt;,
+  <span class="doccomment">/// custom code to run just before digestion ends
+  </span><span class="kw">pub </span>before_digest_end: Vec&lt;BeforeDigestClosure&gt;,
+  <span class="doccomment">/// custom code to run after `#body` has been digested
+  </span><span class="kw">pub </span>after_digest_body: Vec&lt;DigestionClosure&gt;,
+  <span class="doccomment">/// provide tokens to revert to, or custom code for computing them
+  </span><span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Reversion&gt;,
+  <span class="doccomment">/// Local/Global scope of installing this definition (default: Local)
+  </span><span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="doccomment">/// is this a robust command sequence (default: false)
+  </span><span class="kw">pub </span>robust: bool,
+  <span class="doccomment">/// lock the definition for raw TeX overrides (default: false)
+  </span><span class="kw">pub </span>locked: bool,
+  <span class="doccomment">/// alternative (command sequence) name, used for reversion
+  </span><span class="kw">pub </span>alias: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>ConstructorOptions {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{

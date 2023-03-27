@@ -494,7 +494,7 @@
           <span class="kw">let </span>summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)<span class="question-mark">?</span>;
           <span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
           <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
-          defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
+          defn.set_value(defn_value.add(summand), defn_args, state);
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\advance expected a defined variable for {:?}, found no definition&quot;</span>, defn_token_rc);
           <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
@@ -512,7 +512,7 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
         <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
         <span class="kw">let </span>scale_value = scale.to_number().value_of();
-        defn.borrow_mut().set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
+        defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } <span class="kw">else </span>{
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\multiply expected a defined variable for {:?}, found no definition&quot;</span>, varname);
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
@@ -535,7 +535,7 @@
           <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, scale, stomach, state, <span class="string">&quot;Illegal \\divide by 0; assuming 1&quot;</span>);
           denominator = <span class="number">1.0</span>;
         }
-        defn.borrow_mut().set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
+        defn.set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } <span class="kw">else </span>{
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\divide expected a defined variable for {:?}, found no definition&quot;</span>, varname);
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
