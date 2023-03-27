@@ -421,7 +421,7 @@
 }
 
 <span class="kw">impl </span>Rewrite {
-  <span class="kw">pub fn </span>new(kind: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: RewriteOptions) -&gt; <span class="self">Self </span>{
+  <span class="kw">pub fn </span>new(_kind: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: RewriteOptions) -&gt; <span class="self">Self </span>{
     <span class="kw">use </span>RewriteOperator::<span class="kw-2">*</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>clauses = Vec::new();
     <span class="comment">// collect the non-compiling, early phase clauses from the options
@@ -491,7 +491,7 @@
     <span class="self">self</span>.clauses = new_clauses;
   }
 
-  <span class="kw">pub fn </span>compile_clause(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, clause: RewriteClause) -&gt; RewriteClause {
+  <span class="kw">pub fn </span>compile_clause(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, clause: RewriteClause) -&gt; RewriteClause {
     <span class="kw">let </span>op = clause.op;
     <span class="kw">let </span>pattern = clause.pattern;
     <span class="comment">//   my ($oop, $opattern) = ($op, $pattern);
@@ -583,7 +583,7 @@
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">use </span>RewriteOperator::<span class="kw-2">*</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(RewriteClause { compiled, op, pattern }) = clauses.pop_front() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(RewriteClause { compiled:<span class="kw">_</span>, op, pattern }) = clauses.pop_front() {
       <span class="kw">match </span>op {
         Select =&gt; {
           <span class="comment">// my ($xpath, $nnodes, @wilds) = @$pattern;
@@ -620,7 +620,7 @@
             }
           }
           <span class="kw">let </span><span class="kw-2">mut </span>replaced = Vec::new();
-          <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..nmatched {
+          <span class="kw">for </span>_idx <span class="kw">in </span><span class="number">0</span>..nmatched {
             <span class="comment">// Remove the nodes to be replaced
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(popped) = following.pop_front() {
               replaced.push(popped);

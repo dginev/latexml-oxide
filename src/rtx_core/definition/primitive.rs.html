@@ -123,9 +123,7 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::fmt;
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -191,12 +189,12 @@
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Primitive) -&gt; bool { <span class="self">self</span>.cs == other.cs }
 }
 
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Primitive {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">unimplemented!</span>();
-  }
-}
-<span class="kw">impl </span>Object <span class="kw">for </span>Primitive {
+<span class="comment">// impl fmt::Display for Primitive {
+//   fn fmt(&amp;self, _f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+//     unimplemented!();
+//   }
+// }
+</span><span class="kw">impl </span>Object <span class="kw">for </span>Primitive {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">&quot;Primitive&quot;</span>) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
 }

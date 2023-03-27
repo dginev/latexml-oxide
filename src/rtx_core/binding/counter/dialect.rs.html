@@ -812,7 +812,7 @@
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{}&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|gullet, args, inner_state| {
+    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, inner_state| {
       <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string, inner_state).value_of();
       <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
     }))),
@@ -869,7 +869,7 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|gullet, args, inner_state| {
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, _inner_state| {
           <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
             <span class="string">&quot;\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname&quot;</span>,
             idwithin,
@@ -888,7 +888,7 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|gullet, args, inner_state| {
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, _inner_state| {
           <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}\\csname @{}@ID\\endcsname&quot;</span>, prefix, ctr_string)))
         }))),
         <span class="prelude-val">Some</span>(ExpandableOptions {
@@ -1092,7 +1092,7 @@
 /// Assign a sub to LABEL_MAPPING_HOOK: &amp;sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 </span><span class="kw">fn </span>maybe_preempt_refnum(ctr: <span class="kw-2">&amp;</span>str, norefnum: bool, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) {
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(mapper) = state.lookup_value(<span class="string">&quot;LABEL_MAPPING_HOOK&quot;</span>) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(_mapper) = state.lookup_value(<span class="string">&quot;LABEL_MAPPING_HOOK&quot;</span>) {
     <span class="kw">let </span>hj_refnum = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\_PREEMPTED_REFNUM_{ctr}&quot;</span>));
     <span class="kw">let </span>hj_id = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\_PREEMPTED_ID_{ctr}&quot;</span>));
     <span class="comment">// First, restore the \the&lt;ctr&gt; and \the&lt;ctr&gt;@ID macros to defaults
@@ -1102,7 +1102,7 @@
     <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>hj_id).is_some() {
       state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}@ID&quot;</span>)), hj_id, <span class="prelude-val">Some</span>(Scope::Global), gullet);
     }
-    <span class="kw">let </span>label = state.lookup_value(<span class="string">&quot;PEEKED_LABEL&quot;</span>);
+    <span class="kw">let </span>_label = state.lookup_value(<span class="string">&quot;PEEKED_LABEL&quot;</span>);
     <span class="comment">// TODO: Continue once we know the type of &quot;mapper&quot;
     </span><span class="macro">unimplemented!</span>();
     <span class="comment">//   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
@@ -1395,7 +1395,7 @@
 }
 
 <span class="doccomment">/// Copies the current id, tags, and inlist counter values into whatsit properties
-</span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) {
+</span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit, _stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span>tagskey = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{captype}_tags&quot;</span>);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = state.remove_value(tagskey) {
     state.assign_value(tagskey, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));

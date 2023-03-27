@@ -86,7 +86,7 @@
 
   <span class="comment">// These should really only make sense for Data objects within the
   // processing stream.
-  </span><span class="kw">fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
+  </span><span class="kw">fn </span>be_digested(<span class="self">self</span>, _stomach: <span class="kw-2">&amp;mut </span>Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
   <span class="kw">where
     </span><span class="self">Self</span>: Sized,
     <span class="self">Self</span>: Debug,
@@ -108,7 +108,7 @@
     }
   }
   <span class="doccomment">/// each concrete object needs to provide its own path back to tokens
-  </span><span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="macro">unimplemented!</span>();
   }
 }

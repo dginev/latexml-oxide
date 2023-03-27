@@ -2945,6 +2945,7 @@
 <a href="#2945" id="2945">2945</a>
 <a href="#2946" id="2946">2946</a>
 <a href="#2947" id="2947">2947</a>
+<a href="#2948" id="2948">2948</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3234,7 +3235,7 @@
         <span class="kw">if </span><span class="self">self</span>.can_contain(node, FONT_ELEMENT_NAME, state) &amp;&amp; !pending_declaration.is_empty() {
           <span class="comment">// Too late to do wrapNodes?
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>text) = <span class="self">self</span>.wrap_nodes(FONT_ELEMENT_NAME, <span class="macro">vec!</span>[child], state)<span class="question-mark">? </span>{
-            <span class="kw">for </span>(key, (value, properties)) <span class="kw">in </span><span class="kw-2">&amp;</span>pending_declaration {
+            <span class="kw">for </span>(key, (value, _properties)) <span class="kw">in </span><span class="kw-2">&amp;</span>pending_declaration {
               <span class="self">self</span>.set_attribute(<span class="kw-2">&amp;mut </span>text, key, value, state)<span class="question-mark">?</span>;
             }
             <span class="self">self</span>.finalize_rec(<span class="kw-2">&amp;mut </span>text, state)<span class="question-mark">?</span>; <span class="comment">// Now have to clean up the new node!
@@ -3984,23 +3985,24 @@
   /// but may move up past a text node.
   </span><span class="kw">pub fn </span>insert_comment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, text: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
     <span class="comment">// TODO:
-    // let trimmed = text.trim_end();
-    // let clean = DASHES_RE.replace_all(trimmed,&quot;__&quot;);
-    // self.close_text_internal(state);    // Close any open text node.
-    // if (self.node.get_type() == Some(NodeType::DocumentNode) {
-    //   comment = self.document.create_comment(s!(&quot; {} &quot;,clean_text));
-    //   self.pending.push(comment.clone());
-    //   Ok(comment)
-    // } else {
-    //   if let Some(last_child) = self.node.last_child() {
+    </span><span class="kw">let </span>trimmed = text.trim_end();
+    <span class="kw">let </span>_clean = DASHES_RE.replace_all(trimmed,<span class="string">&quot;__&quot;</span>);
+    <span class="self">self</span>.close_text_internal(state)<span class="question-mark">?</span>;    <span class="comment">// Close any open text node.
+    </span><span class="kw">if </span><span class="self">self</span>.node.get_type() == <span class="prelude-val">Some</span>(NodeType::DocumentNode) {
+      <span class="comment">// TODO: add &quot;create_comment&quot; (or equiv) to libxml wrapper
+      // let comment = self.document.create_comment(s!(&quot; {} &quot;,clean));
+      // self.pending.push(comment.clone());
+      // Ok(comment)
+    </span>} <span class="kw">else </span>{
+    <span class="comment">//   if let Some(last_child) = self.node.last_child() {
     //     if last_child.get_type() == NodeType::CommentNode {
     //       last_child.set_content(s!(&quot;{}\n     {} &quot;,comment.get_content(), clean_text));
     //       return Ok(last_child);
     //     }
     //   }
     //   self.node.add_child(self.document.create_comment(s!(&quot; {} &quot;,clean_text));
-    // }
-    </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone())
+    </span>}
+    <span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone())
   }
 
   <span class="comment">// **********************************************************************
@@ -4039,7 +4041,7 @@
     </span><span class="kw">let </span>declared_font       = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
     <span class="kw">let </span>pending_declaration = font.relative_to(declared_font);
     <span class="kw">let </span>elementname         = <span class="kw">match </span>pending_declaration.get(<span class="string">&quot;element&quot;</span>) {
-      <span class="prelude-val">Some</span>((k,v)) =&gt; k,
+      <span class="prelude-val">Some</span>((k,_v)) =&gt; k,
       <span class="prelude-val">None </span>=&gt; FONT_ELEMENT_NAME
     };
     <span class="comment">// If not at document begin. And not appending text in same font.
@@ -4210,7 +4212,7 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>merge_attributes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: Node, to: <span class="kw-2">&amp;mut </span>Node, force: <span class="prelude-ty">Option</span>&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>merge_attributes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, from: Node, to: <span class="kw-2">&amp;mut </span>Node, _force: <span class="prelude-ty">Option</span>&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>(key, val) <span class="kw">in </span>from.get_attributes().iter() {
       <span class="comment">// Special case attributes
       </span><span class="kw">if </span>key.as_str() == <span class="string">&quot;xml:id&quot; </span>{
@@ -4341,7 +4343,7 @@
       <span class="kw">let </span><span class="kw-2">mut </span>boxes = VecDeque::new();
       boxes.push_front(<span class="self">self</span>.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(<span class="kw-2">&amp;</span>newstring)<span class="question-mark">?</span>;
-      <span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..nmatched - <span class="number">1 </span>{
+      <span class="kw">for </span>_idx <span class="kw">in </span><span class="number">0</span>..nmatched - <span class="number">1 </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>remove = node.get_prev_sibling().unwrap();
         boxes.push_front(<span class="self">self</span>.get_node_box(<span class="kw-2">&amp;</span>remove).unwrap());
         <span class="self">self</span>.remove_node(<span class="kw-2">&amp;mut </span>remove);
@@ -4737,7 +4739,7 @@
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
   </span><span class="kw">fn </span>record_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(prev) = <span class="self">self</span>.idstore.get(id) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_prev) = <span class="self">self</span>.idstore.get(id) {
       <span class="comment">// Whoops! Already assigned!!!
       // Can we recover?
       </span><span class="macro">unimplemented!</span>();
@@ -4931,7 +4933,7 @@
   // our $dual_transfer_overrides    = { %$content_transfer_overrides,
   //   map { ($_ =&gt; 1) } qw(xml:id role) };
 
-  </span><span class="kw">fn </span>compact_xmdual(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dual: Node, content: Node, presentation: <span class="prelude-ty">Option</span>&lt;Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>compact_xmdual(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _dual: Node, _content: Node, _presentation: <span class="prelude-ty">Option</span>&lt;Node&gt;, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">//   my $c_name = $self-&gt;getNodeQName($content);
   //   my $p_name = $self-&gt;getNodeQName($presentation);
     // 1.Quick fix: merge two tokens
@@ -5071,7 +5073,7 @@
   }
 
   <span class="kw">pub fn </span>get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="kw-2">&amp;</span>Font {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(element) = xml::closest_element(node) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_element) = xml::closest_element(node) {
       <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(fontid) = node.get_attribute(<span class="string">&quot;_font&quot;</span>) {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(fnt) = <span class="self">self</span>.node_fonts.get(<span class="kw-2">&amp;</span>fontid.parse::&lt;u64&gt;().unwrap()) {
@@ -5473,7 +5475,7 @@
 
   <span class="comment">// Replace $node by `nodes` (presumably descendants of some kind?)
   </span><span class="kw">pub fn </span>replace_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: Node, with: Vec&lt;Node&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = node.get_parent() {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_parent) = node.get_parent() {
       <span class="kw">let </span><span class="kw-2">mut </span>c0_opt: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
       <span class="kw">for </span><span class="kw-2">mut </span>with_node <span class="kw">in </span>with.into_iter() {
         with_node.unlink();
@@ -5492,7 +5494,7 @@
 
   <span class="comment">// initially since $node-&gt;setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options &amp; correctness?
-  </span><span class="kw">pub fn </span>rename_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, newname: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+  </span><span class="kw">pub fn </span>rename_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _node: <span class="kw-2">&amp;mut </span>Node, _newname: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
     <span class="macro">unimplemented!</span>();
     <span class="comment">// my ($self, $node, $newname) = @_;
     // my $model = $$self{model};
@@ -5558,7 +5560,7 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>make_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, error_class: <span class="kw-2">&amp;</span>str, content: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>make_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, error_class: <span class="kw-2">&amp;</span>str, _content: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>savenode_opt = <span class="kw">if </span>!<span class="self">self</span>.is_openable(<span class="string">&quot;ltx:ERROR&quot;</span>, state) {
       <span class="self">self</span>.float_to_element(<span class="string">&quot;ltx:ERROR&quot;</span>, <span class="bool-val">false</span>)
     } <span class="kw">else </span>{
@@ -5583,7 +5585,7 @@
   // to reset the insertion point to where it had been.
 
   </span><span class="doccomment">/// Find a node in the document that can contain an element `qname`
-  </span><span class="kw">pub fn </span>float_to_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, closeifpossible: bool) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
+  </span><span class="kw">pub fn </span>float_to_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _qname: <span class="kw-2">&amp;</span>str, _closeifpossible: bool) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
     <span class="comment">// TODO:
 
     // let candidates = get_insertion_candidates(self.node);

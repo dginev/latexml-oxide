@@ -1255,7 +1255,7 @@
   <span class="kw">let </span>meaning = state.lookup_meaning(cs);
   <span class="kw">match </span>meaning {
     <span class="prelude-val">Some</span>(store) =&gt; <span class="kw">match </span>store.as_ref() {
-      Stored::Token(<span class="kw-2">ref </span>m) =&gt; <span class="bool-val">true</span>,
+      Stored::Token(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
       Stored::Expandable(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
       Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
       Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
@@ -1430,7 +1430,7 @@
     <span class="prelude-val">Some</span>(setter) =&gt; setter.clone(),
     <span class="prelude-val">None </span>=&gt; {
       <span class="kw">if </span>readonly {
-        Arc::new(<span class="kw">move </span>|value, args, state| {
+        Arc::new(<span class="kw">move </span>|_value, _args, state| {
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to register {}&quot;</span>, setter_name);
           <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, setter_name, <span class="prelude-val">None</span>, state, message);
         })
@@ -1480,13 +1480,13 @@
 
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">requireMath!</span>(cs_name_cloned, state) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">requireMath!</span>(cs_name_cloned, state) });
     before_digest_env.push(require_math_closure);
   }
 
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">forbidMath!</span>(cs_name_cloned, state) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">forbidMath!</span>(cs_name_cloned, state) });
     before_digest_env.push(forbid_math_closure);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
@@ -1502,7 +1502,7 @@
     before_digest_env.push(bgroup_closure);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(chosen_font_directive) = options.font {
-    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
+    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, {
       <span class="kw">if let </span>FontDirective::Asset(<span class="kw-2">ref </span>chosen_font) = chosen_font_directive {
         merge_font((<span class="kw-2">**</span>chosen_font).clone(), state);
       }
@@ -1514,12 +1514,12 @@
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_env: Vec&lt;DigestionClosure&gt; = options.after_digest;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
     <span class="kw">let </span>mode_clone = mode.clone();
-    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
       stomach.end_mode(<span class="kw-2">&amp;</span>mode_clone, state)<span class="question-mark">?</span>;
     });
     after_digest_env.push(end_mode_closure);
   } <span class="kw">else if </span>options.bounded {
-    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
       stomach.egroup(state)<span class="question-mark">?</span>;
     });
     after_digest_env.push(egroup_closure);
@@ -1577,7 +1577,7 @@
       dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = captured_role {
         dtks.extend(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">&quot;role&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>), <span class="macro">T_OTHER!</span>(role)]);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>revert_as) = captured_revert_as {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_revert_as) = captured_revert_as {
           dtks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>));
         }
       }
@@ -1619,7 +1619,7 @@
   // content: build the replacement closure
   </span><span class="kw">let </span>nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(<span class="number">0</span>);
   <span class="kw">let </span>content_closure : ReplacementClosure = <span class="kw">if </span>nargs == <span class="number">0 </span>{
-    Arc::new(|document, args, props, state| {
+    Arc::new(|document, _args, props, state| {
       <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
       <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;role&quot;</span>, <span class="string">&quot;scriptpos&quot;</span>, <span class="string">&quot;stretchy&quot;</span>] {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = props.get(key) {
@@ -1682,7 +1682,7 @@
 }
 
 
-<span class="kw">pub fn </span>def_math_primitive(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>def_math_primitive(cs: Token, _paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span>scope = options.scope.clone();
   <span class="kw">let </span>reqfont_opt = options.font.clone();
   <span class="kw">let </span>moved_options = options.clone();
@@ -1691,7 +1691,7 @@
     MathPrimitive {
       cs: cs.clone(),
       paramlist: <span class="prelude-val">None</span>, <span class="comment">// never any parameters, this is intentional
-      </span>replacement: <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|stomach, args, state| {
+      </span>replacement: <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|stomach, _args, state| {
         <span class="kw">let </span>locator = stomach.get_locator().unwrap().into_owned();
         <span class="kw">let </span><span class="kw-2">mut </span>properties = moved_options.clone();
         properties.mode = <span class="prelude-val">Some</span>(String::from(<span class="string">&quot;math&quot;</span>));
@@ -1721,12 +1721,12 @@
 <span class="kw">pub fn </span>def_math_constructor(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, <span class="kw-2">mut </span>presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="comment">// TODO: do we need to do anything about digesting the presentation?
   </span><span class="kw">let </span>nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(<span class="number">0</span>);
-  <span class="kw">let </span>csname_alias = <span class="kw">if </span>options.alias.is_none() &amp;&amp; options.robust {
-    <span class="prelude-val">Some</span>(String::from(cs.get_cs_name()))
-  } <span class="kw">else </span>{
-    <span class="prelude-val">None
-  </span>};
-  <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
+  <span class="comment">// let csname_alias = if options.alias.is_none() &amp;&amp; options.robust {
+  //   Some(String::from(cs.get_cs_name()))
+  // } else {
+  //   None
+  // };
+  </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
     def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
   } <span class="kw">else </span>{
     cs.clone()
@@ -1748,7 +1748,7 @@
   <span class="kw">let </span>mathstyle_for_font = options.mathstyle.clone();
   <span class="kw">let </span>presentation_for_font = presentation.clone();
   options.font = <span class="prelude-val">Some</span>(FontDirective::Closure(<span class="kw">if </span>is_mathstyle {
-    Arc::new(<span class="kw">move </span>|whatsit, state| {
+    Arc::new(<span class="kw">move </span>|_whatsit, state| {
       <span class="prelude-val">Ok</span>(
         state
           .lookup_font()
@@ -1761,7 +1761,7 @@
       )
     })
   } <span class="kw">else </span>{
-    Arc::new(<span class="kw">move </span>|whatsit, state| <span class="prelude-val">Ok</span>(state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>presentation_for_font)))
+    Arc::new(<span class="kw">move </span>|_whatsit, state| <span class="prelude-val">Ok</span>(state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>presentation_for_font)))
   }));
   <span class="kw">let </span>compiled_replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="prelude-val">Some</span>(<span class="kw">if </span>nargs == <span class="number">0 </span>{
     <span class="comment">// If trivial presentation, allow it in Text
@@ -1852,8 +1852,8 @@
     <span class="prelude-val">Ok</span>(Font::math_default().compute_string_size(<span class="kw-2">&amp;</span>presentation_for_sizer, HashMap::new(), state))
   }));
 
-  <span class="kw">let </span><span class="kw-2">mut </span>prop_options = options.clone();
-  <span class="kw">let </span><span class="kw-2">mut </span>constructor = Constructor {
+  <span class="comment">// let mut prop_options = options.clone();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>constructor = Constructor {
     cs: defcs,
     paramlist,
     replacement: compiled_replacement,
@@ -1911,12 +1911,12 @@
 
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>cs_name_cloned = cs_name.clone();
-    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">requireMath!</span>(cs_name_cloned, state) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">requireMath!</span>(cs_name_cloned, state) });
     before_digest_closures.push(require_math_closure);
   }
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>cs_name_cloned = cs_name;
-    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">forbidMath!</span>(cs_name_cloned, state) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">forbidMath!</span>(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
@@ -1937,13 +1937,13 @@
   //  Can we consolidate into a single, top-level, font handler?
   </span><span class="kw">match </span>options.font {
     <span class="prelude-val">Some</span>(FontDirective::Asset(chosen_font)) =&gt; {
-      <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
+      <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, {
         merge_font((<span class="kw-2">*</span>chosen_font).clone(), state);
       });
       before_digest_closures.push(merge_font_closure);
     },
     <span class="prelude-val">Some</span>(FontDirective::Closure(font_closure)) =&gt; {
-      <span class="kw">let </span>execute_font_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
+      <span class="kw">let </span>execute_font_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, {
         merge_font( font_closure(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>, state);
       });
       before_digest_closures.push(execute_font_closure);
@@ -1955,12 +1955,12 @@
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_closures: Vec&lt;DigestionClosure&gt; = options.after_digest;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mode) = options.mode {
     <span class="kw">let </span>mode_clone = mode.clone();
-    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+    <span class="kw">let </span>end_mode_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
       stomach.end_mode(<span class="kw-2">&amp;</span>mode_clone, state)<span class="question-mark">?</span>;
     });
     after_digest_closures.push(end_mode_closure);
   } <span class="kw">else if </span>options.bounded {
-    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+    <span class="kw">let </span>egroup_closure: DigestionClosure = <span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
       stomach.egroup(state)<span class="question-mark">?</span>;
     });
     after_digest_closures.push(egroup_closure);
@@ -2004,12 +2004,12 @@
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_env: Vec&lt;BeforeDigestClosure&gt; = Vec::new();
   <span class="kw">if </span>options.require_math {
     <span class="kw">let </span>require_name = begin_name.clone();
-    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">requireMath!</span>(require_name, state) });
+    <span class="kw">let </span>require_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">requireMath!</span>(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   <span class="kw">if </span>options.forbid_math {
     <span class="kw">let </span>forbid_name = begin_name.clone();
-    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(stomach, state, { <span class="macro">forbidMath!</span>(forbid_name, state) });
+    <span class="kw">let </span>forbid_math_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, { <span class="macro">forbidMath!</span>(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
   <span class="kw">let </span>bgroup_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
@@ -2032,7 +2032,7 @@
   }
 
   <span class="kw">let </span>env_name = name.clone();
-  <span class="kw">let </span>current_environment_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
+  <span class="kw">let </span>current_environment_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, {
     state.assign_value(<span class="string">&quot;current_environment&quot;</span>, env_name.clone(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>body = <span class="macro">T_LETTER!</span>(env_name.clone());
     def_macro(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currenvir&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>(body))), <span class="prelude-val">None</span>, state);
@@ -2040,7 +2040,7 @@
   before_digest_env.push(current_environment_closure);
 
   <span class="kw">if let </span><span class="prelude-val">Some</span>(chosen_font_directive) = options.font {
-    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(stomach, state, {
+    <span class="kw">let </span>merge_font_closure = <span class="macro">before_digest_simple!</span>(_stomach, state, {
       <span class="kw">if let </span>FontDirective::Asset(<span class="kw-2">ref </span>chosen_font) = chosen_font_directive {
         merge_font((<span class="kw-2">**</span>chosen_font).clone(), state);
       }
@@ -2089,7 +2089,7 @@
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_env = options.after_digest.clone();
   <span class="kw">let </span>name_clone = name.to_string();
   <span class="kw">let </span>end_name_clone = end_name.to_string();
-  <span class="kw">let </span>unexpected_end_closure = <span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+  <span class="kw">let </span>unexpected_end_closure = <span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
     <span class="kw">let </span>env = state.lookup_string(<span class="string">&quot;current_environment&quot;</span>);
     <span class="kw">if </span>env.is_empty() || name_clone != env {
       <span class="kw">let </span>message1 = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t close environment {}&quot;</span>, name_clone);
@@ -2171,7 +2171,7 @@
   state.install_definition(name_constructor, options.scope.clone());
   <span class="kw">let </span>end_name = <span class="macro">s!</span>(<span class="string">&quot;\\end{}&quot;</span>, <span class="kw-2">&amp;</span>name);
   <span class="kw">let </span><span class="kw-2">mut </span>after_digest_end = options.after_digest;
-  after_digest_end.push(<span class="macro">after_digest_simple!</span>(stomach, whatsit, state, {
+  after_digest_end.push(<span class="macro">after_digest_simple!</span>(stomach, _whatsit, state, {
     stomach.egroup(state)<span class="question-mark">?</span>;
   }));
 
@@ -2349,7 +2349,7 @@
   // before_digest
   //
   </span><span class="kw">let </span>cs_string = cs_str.to_owned();
-  <span class="kw">let </span><span class="kw-2">mut </span>before_digest_closures : Vec&lt;BeforeDigestClosure&gt; = <span class="macro">vec!</span>[<span class="macro">before_digest_simple!</span>(stomach, state, {
+  <span class="kw">let </span><span class="kw-2">mut </span>before_digest_closures : Vec&lt;BeforeDigestClosure&gt; = <span class="macro">vec!</span>[<span class="macro">before_digest_simple!</span>(_stomach, state, {
     <span class="macro">requireMath!</span>(cs_string, state);
   })];
   <span class="kw">if </span>!options.nogroup {
@@ -2358,7 +2358,7 @@
     }));
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = options.font {
-    before_digest_closures.push(<span class="macro">before_digest_simple!</span>(stomach, state, {
+    before_digest_closures.push(<span class="macro">before_digest_simple!</span>(_stomach, state, {
       <span class="kw">if let </span>FontDirective::Asset(<span class="kw-2">ref </span>chosen_font) = font {
         merge_font((<span class="kw-2">**</span>chosen_font).clone(), state);
       }
@@ -2381,16 +2381,16 @@
   <span class="kw">let </span>presentation_for_font = presentation.to_owned();
   properties.insert(String::from(<span class="string">&quot;font&quot;</span>), Stored::FontDirective(FontDirective::Closure(
    <span class="kw">if let </span><span class="prelude-val">Some</span>(mathstyle) = options.mathstyle {
-    Arc::new(<span class="kw">move </span>|whatsit, state|{<span class="prelude-val">Ok</span>(
+    Arc::new(<span class="kw">move </span>|_whatsit, state|{<span class="prelude-val">Ok</span>(
       state.lookup_font().unwrap().merge(Font{mathstyle: <span class="prelude-val">Some</span>(Cow::Owned(mathstyle.clone())), ..Font::default()}).specialize(<span class="kw-2">&amp;</span>presentation_for_font)
     )})
   } <span class="kw">else </span>{
-    Arc::new(<span class="kw">move </span>|whatsit,state|{<span class="prelude-val">Ok</span>(
+    Arc::new(<span class="kw">move </span>|_whatsit,state|{<span class="prelude-val">Ok</span>(
       state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>presentation_for_font)
     )})
   })));
 
-  cons.properties = Arc::new(<span class="kw">move </span>|stomach,args,state|
+  cons.properties = Arc::new(<span class="kw">move </span>|_stomach,_args,_state|
     <span class="prelude-val">Ok</span>(properties.clone()));
 
 }</code></pre></div>

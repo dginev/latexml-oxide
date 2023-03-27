@@ -574,7 +574,7 @@
 
   <span class="comment">// ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  </span><span class="kw">fn </span>invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">fn </span>invocation(<span class="kw-2">&amp;mut </span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;, _gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>invocation_result: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="self">self</span>.get_cs().into_owned()];
 
     <span class="kw">match </span><span class="self">self</span>.get_parameters() {
@@ -631,7 +631,7 @@
     <span class="prelude-val">Ok</span>(after_body_digested)
   }
 
-  <span class="kw">fn </span>value_of(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; { <span class="macro">unimplemented!</span>() }
+  <span class="kw">fn </span>value_of(<span class="kw-2">&amp;</span><span class="self">self</span>, _args: Vec&lt;ArgWrap&gt;, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; { <span class="macro">unimplemented!</span>() }
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterType&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>get_reversion_spec(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Reversion&gt; { <span class="macro">unimplemented!</span>() }
   <span class="kw">fn </span>get_expansion(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ExpansionBody&gt; { <span class="prelude-val">None </span>}

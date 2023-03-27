@@ -971,7 +971,7 @@
   </span><span class="kw">pub fn </span>create(source: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: MouthOptions, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = options.content.take() {
       <span class="comment">// we&#39;ve cached the content of this source
-      </span><span class="kw">let </span>(dir, name, ext) = pathname::split(source);
+      </span><span class="kw">let </span>(_dir, name, ext) = pathname::split(source);
       options.source = <span class="prelude-val">Some</span>(source.to_string());
       options.shortsource = <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">&quot;{}.{}&quot;</span>, name, ext));
       Mouth::new(<span class="kw-2">&amp;</span>content, <span class="prelude-val">Some</span>(options), state)
@@ -1122,7 +1122,7 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>reader) = <span class="self">self</span>.reader {
         <span class="comment">// file mouth case
         </span><span class="kw">let </span><span class="kw-2">mut </span>file_bytes = Vec::new();
-        <span class="kw">let </span>num_bytes = <span class="kw">match </span>reader.read_to_end(<span class="kw-2">&amp;mut </span>file_bytes) {
+        <span class="kw">let </span>_num_bytes = <span class="kw">match </span>reader.read_to_end(<span class="kw-2">&amp;mut </span>file_bytes) {
           <span class="prelude-val">Ok</span>(count) =&gt; count,
           <span class="prelude-val">Err</span>(e) =&gt; {
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;BufReader::read_to_end returned an error: {:?}&quot;</span>, e);
@@ -1135,7 +1135,7 @@
                             // however, executing a rust regex on a Vec&lt;u8&gt; is just not going to be a sane way forward.
                             // we will first decode the read-in bytes to the right String form, and THEN split lines.
                             // as such, decoding is the first action taken on bytes read in from a file.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>encoding) = state.input_encoding {
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_encoding) = state.input_encoding {
           <span class="comment">// TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX&#39;s behaviour we actually should turn such un-decodeable chars to space(?).
           </span><span class="macro">unimplemented!</span>();
@@ -1478,7 +1478,7 @@
 
   <span class="kw">fn </span>handle_space(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
     <span class="comment">// Skip any following spaces!
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>((ch, cc)) = <span class="self">self</span>.get_next_char(state) {
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>((_ch, cc)) = <span class="self">self</span>.get_next_char(state) {
       <span class="kw">if </span>(cc != Catcode::SPACE) &amp;&amp; (cc != Catcode::EOL) {
         <span class="comment">// backup at nonspace/eol
         </span><span class="kw">if </span><span class="self">self</span>.colno &lt;= <span class="self">self</span>.nchars {

@@ -1120,6 +1120,9 @@
 <a href="#1120" id="1120">1120</a>
 <a href="#1121" id="1121">1121</a>
 <a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY_F64};
@@ -1354,7 +1357,7 @@
   <span class="kw">pub </span>encoding: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="kw">pub </span>language: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="kw">pub </span>mathstyle: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
-  <span class="kw">pub </span>mathstylestep: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
+  <span class="kw">pub </span>mathstylestep: <span class="prelude-ty">Option</span>&lt;i32&gt;,
   <span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="kw">pub </span>emph: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>scripted: <span class="prelude-ty">Option</span>&lt;bool&gt;,
@@ -1522,7 +1525,7 @@
   //   )
   // }
 
-  </span><span class="kw">pub fn </span>math_bearing(<span class="kw-2">&amp;</span><span class="self">self</span>, thisbox: <span class="kw-2">&amp;</span>Digested, prevbox: <span class="kw-2">&amp;</span>Digested) -&gt; f64 {
+  </span><span class="kw">pub fn </span>math_bearing(<span class="kw-2">&amp;</span><span class="self">self</span>, _thisbox: <span class="kw-2">&amp;</span>Digested, _prevbox: <span class="kw-2">&amp;</span>Digested) -&gt; f64 {
     <span class="comment">// my $r0      = $prevbox-&gt;getProperty(&#39;role&#39;) || &#39;ID&#39;;
     // my $r1      = $box-&gt;getProperty(&#39;role&#39;)     || &#39;ID&#39;;
     // my $t0      = $mathatomtype{$r0}            || 0;
@@ -1885,11 +1888,14 @@
       changes.color = other.color.clone();
     }
 
-    <span class="comment">// TODO:
-    // if mathstyle &amp;&amp; othermathstyle {
-    //   changes.mathstylestep = mathstylestep.get(mathstyle).unwrap().get(othermathstyle).unwrap();
-    // }
-    </span>changes
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(ms) = mathstyle {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(os) = othermathstyle {
+        <span class="kw">let </span>ms_str : <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;*</span>ms;
+        <span class="kw">let </span>os_str : <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;*</span>os;
+        changes.mathstylestep = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
+      }
+    }
+    changes
   }
 
   <span class="kw">pub fn </span>get_metric(<span class="kw-2">&amp;</span><span class="self">self</span>, c_opt: <span class="prelude-ty">Option</span>&lt;char&gt;) -&gt; <span class="kw-2">&amp;</span>MetricData {
@@ -1929,18 +1935,18 @@
     (size * m.emwidth / <span class="number">18.0</span>).trunc() <span class="kw">as </span>i64
   }
 
-  <span class="kw">pub fn </span>compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>, text: <span class="kw-2">&amp;</span>str, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;</span>State) -&gt; (Dimension, Dimension, Dimension) {
+  <span class="kw">pub fn </span>compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>, text: <span class="kw-2">&amp;</span>str, _options: HashMap&lt;String, Stored&gt;, _state: <span class="kw-2">&amp;</span>State) -&gt; (Dimension, Dimension, Dimension) {
     <span class="kw">if </span>text.is_empty() || <span class="self">self</span>.get_family().map(|fam| fam == <span class="string">&quot;nullfont&quot;</span>).unwrap_or(<span class="bool-val">false</span>) {
       <span class="kw">return </span>(Dimension::default(), Dimension::default(), Dimension::default());
     }
     <span class="kw">let </span>size = <span class="self">self</span>.get_size().unwrap_or(DEFSIZE);
-    <span class="kw">let </span>ismath = <span class="self">self</span>.get_family().map(|fam| fam == <span class="string">&quot;math&quot;</span>).unwrap_or(<span class="bool-val">false</span>);
+    <span class="kw">let </span>_ismath = <span class="self">self</span>.get_family().map(|fam| fam == <span class="string">&quot;math&quot;</span>).unwrap_or(<span class="bool-val">false</span>);
     <span class="kw">let </span>(<span class="kw-2">mut </span>w, <span class="kw-2">mut </span>h, <span class="kw-2">mut </span>d) = (<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);
     <span class="kw">for </span>char <span class="kw">in </span>text.chars() {
       <span class="kw">let </span>metric = <span class="self">self</span>.get_metric(<span class="prelude-val">Some</span>(char));
       <span class="kw">let </span>entry_opt = metric.sizes.get(char.to_string().as_str());
       <span class="comment">// let entry_opt  = metric.sizes.get(char);
-      </span><span class="kw">let </span>(cw, ch, cd, ci) = <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
+      </span><span class="kw">let </span>(cw, ch, cd, _ci) = <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
         <span class="kw-2">*</span>entry
       } <span class="kw">else </span>{
         (<span class="number">0.75 </span>* UNITY_F64, <span class="number">0.7 </span>* UNITY_F64, <span class="number">0.2 </span>* UNITY_F64, <span class="number">0.0</span>)
@@ -1992,24 +1998,24 @@
       },
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     };
-    <span class="kw">let </span>maxwidth = fillwidth.unwrap_or_default();
+    <span class="kw">let </span>_maxwidth = fillwidth.unwrap_or_default();
     <span class="comment">//   # baselineskip, lineskip ??
-    </span><span class="kw">let </span>baseline = state
+    </span><span class="kw">let </span>_baseline = state
       .lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\baselineskip&quot;</span>))
       .expect(<span class="string">&quot;baseline skip should aways be defined&quot;</span>)
       .value_of(Vec::new(), state)
       .expect(<span class="string">&quot;\\baselineskip should always have a value.&quot;</span>)
       .value_of();
-    <span class="kw">let </span>lineskip = state
+    <span class="kw">let </span>_lineskip = state
       .lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\lineskip&quot;</span>))
       .expect(<span class="string">&quot;lineskip should always be defined&quot;</span>)
       .value_of(Vec::new(), state)
       .expect(<span class="string">&quot;\\lineskip should always have a value.&quot;</span>)
       .value_of();
-    <span class="kw">let </span><span class="kw-2">mut </span>lines: Vec&lt;(Dimension, Dimension, Dimension)&gt; = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>_lines: Vec&lt;(Dimension, Dimension, Dimension)&gt; = Vec::new();
     <span class="kw">let </span>(<span class="kw-2">mut </span>wd, <span class="kw-2">mut </span>ht, <span class="kw-2">mut </span>dp) = (<span class="number">0.0</span>, <span class="number">0</span>, <span class="number">0</span>);
-    <span class="kw">let </span>(minwd, minht, mindp) = (<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>);
-    <span class="kw">let </span>vattach = <span class="kw">match </span>options.get(<span class="string">&quot;vattach&quot;</span>) {
+    <span class="kw">let </span>(_minwd, _minht, _mindp) = (<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>);
+    <span class="kw">let </span>_vattach = <span class="kw">match </span>options.get(<span class="string">&quot;vattach&quot;</span>) {
       <span class="prelude-val">Some</span>(Stored::String(vattach)) =&gt; vattach,
       <span class="kw">_ </span>=&gt; <span class="string">&quot;baseline&quot;</span>,
     };

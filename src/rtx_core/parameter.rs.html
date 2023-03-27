@@ -549,6 +549,14 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>proc_macro2::TokenStream; <span class="comment">// use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 </span><span class="kw">use </span>quote::{quote, ToTokens};
@@ -733,7 +741,7 @@
           }),
         },
       };
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>desc) = descriptor {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_desc) = descriptor {
         <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
         <span class="self">self</span>.optional = <span class="bool-val">true</span>;
       }
@@ -788,13 +796,13 @@
     </span>}
   }
 
-  <span class="kw">fn </span>setup_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="kw">pub fn </span>setup_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) {
     <span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
       state.begin_semiverbatim(<span class="self">self</span>.semiverbatim.as_deref());
     }
   }
 
-  <span class="kw">fn </span>revert_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>revert_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
       state.end_semiverbatim()<span class="question-mark">?</span>;
     }
@@ -939,6 +947,14 @@
     } <span class="kw">else </span>{
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
+  }
+
+  <span class="doccomment">/// This is needed by structured parameter types like KeyVals
+  /// where the argument may already have been tokenized before the KeyVals
+  /// (and the parameter types for the keys) had a chance to properly parse.
+  </span><span class="comment">// Yuck!
+  </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: Tokens, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _state:<span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="macro">unimplemented!</span>()
   }
 }
 

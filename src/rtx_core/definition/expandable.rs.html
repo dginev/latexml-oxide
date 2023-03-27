@@ -248,8 +248,8 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::fmt;
-<span class="kw">use </span>libxml::tree::Node;
+<span class="comment">// use std::fmt;
+</span><span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
@@ -309,12 +309,12 @@
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Expandable) -&gt; bool { <span class="self">self</span>.paramlist == other.paramlist &amp;&amp; <span class="self">self</span>.expansion == other.expansion }
 }
 
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Expandable {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">unimplemented!</span>();
-  }
-}
-<span class="kw">impl </span>Object <span class="kw">for </span>Expandable {
+<span class="comment">// impl fmt::Display for Expandable {
+//   fn fmt(&amp;self, _f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+//     unimplemented!();
+//   }
+// }
+</span><span class="kw">impl </span>Object <span class="kw">for </span>Expandable {
   <span class="kw">fn </span>is_definition(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
   <span class="kw">fn </span>is_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">true </span>}
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.locator)) }

@@ -859,13 +859,13 @@
           <span class="kw">if </span>cc == Catcode::CS {
             result = <span class="self">self</span>.invoke_token_undefined(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
           } <span class="kw">else if </span>cc.is_absorbable() {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = <span class="self">self</span>.invoke_token_simple(<span class="kw-2">&amp;</span>token, meaning, state)<span class="question-mark">? </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = <span class="self">self</span>.invoke_token_simple(meaning, state)<span class="question-mark">? </span>{
               result.push(digested);
             }
           } <span class="kw">else </span>{
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The token {:?} (catcode {:?}) should never reach Stomach!&quot;</span>, token, cc);
             <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, token, <span class="self">self</span>, state, <span class="kw-2">&amp;</span>message);
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = <span class="self">self</span>.invoke_token_simple(<span class="kw-2">&amp;</span>token, meaning, state)<span class="question-mark">? </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = <span class="self">self</span>.invoke_token_simple(meaning, state)<span class="question-mark">? </span>{
               result.push(digested);
             }
           }
@@ -989,7 +989,7 @@
     }
   }
 
-  <span class="kw">fn </span>invoke_token_simple(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: <span class="kw-2">&amp;</span>Token, meaning: Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+  <span class="kw">fn </span>invoke_token_simple(<span class="kw-2">&amp;mut </span><span class="self">self</span>, meaning: Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
     <span class="kw">let </span>cc = meaning.get_catcode();
     <span class="kw">let </span>font = state.lookup_font();
     state.clear_prefixes(); <span class="comment">// prefixes shouldn&#39;t apply here.

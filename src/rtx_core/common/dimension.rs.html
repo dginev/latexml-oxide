@@ -129,8 +129,8 @@
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Dimension {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string()))) }
-  <span class="kw">fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::stomach::Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string()))) }
+  <span class="kw">fn </span>be_digested(<span class="self">self</span>, _stomach: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::stomach::Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
   <span class="kw">where
     </span><span class="self">Self</span>: Sized,
     <span class="self">Self</span>: fmt::Debug,

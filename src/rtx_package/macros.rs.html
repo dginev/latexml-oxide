@@ -151,8 +151,6 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string construction replacements into closures
 /// that execute the needed ops in libxml.
@@ -222,8 +220,6 @@
 </span><span class="macro">macro_rules! </span>compile_expansion {
   (<span class="macro-nonterminal">$var</span>:ident, <span class="macro-nonterminal">$expansion</span>:literal) =&gt; {{
     <span class="kw">use </span>rtx_core::definition::ExpansionBody;
-    <span class="attr">#[allow(unused_imports)]
-    </span><span class="kw">use </span>rtx_core::token::Catcode;
     <span class="attr">#[derive(CompileExpansion)]
     #[expansion=<span class="macro-nonterminal">$expansion</span>]
     </span><span class="kw">struct </span>_DummyE;

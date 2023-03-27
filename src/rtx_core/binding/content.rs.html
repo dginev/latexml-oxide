@@ -982,6 +982,7 @@
 <a href="#982" id="982">982</a>
 <a href="#983" id="983">983</a>
 <a href="#984" id="984">984</a>
+<a href="#985" id="985">985</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1344,8 +1345,9 @@
 <span class="kw">fn </span>load_tex_definitions(request: <span class="kw-2">&amp;</span>str, pathname: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!pathname::is_literaldata(pathname) {
     <span class="comment">// We can&#39;t analyze literal data&#39;s pathnames!
-    </span><span class="kw">let </span>(dir, name, extension) = pathname::split(pathname);
-    <span class="comment">// Don&#39;t load if we&#39;ve already loaded it before.
+    // let (dir, name, extension) = pathname::split(pathname);
+
+    // Don&#39;t load if we&#39;ve already loaded it before.
     // Note that we&#39;ll still load it if we&#39;ve already loaded only the ltxml version
     // since someone&#39;s presumably asking _explicitly_ for the raw TeX version.
     // It&#39;s probably even the ltxml version is asking for it!!
@@ -1397,11 +1399,11 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>load_tex_content(path: <span class="kw-2">&amp;</span>str, options: InputOptions, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>load_tex_content(path: <span class="kw-2">&amp;</span>str, _options: InputOptions, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
-  </span><span class="kw">let </span>has_binding = <span class="kw">if </span>!pathname::is_literaldata(path) {
-    <span class="kw">let </span>(dir, base, ext) = pathname::split(path);
+  </span><span class="kw">let </span>_has_binding = <span class="kw">if </span>!pathname::is_literaldata(path) {
+    <span class="kw">let </span>(_dir, base, _ext) = pathname::split(path);
     load_external_binding(<span class="kw-2">&amp;</span>base, stomach, state)<span class="question-mark">? </span>|| load_binding(<span class="kw-2">&amp;</span>base, stomach, state)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     <span class="bool-val">false
@@ -1641,7 +1643,7 @@
   <span class="comment">// }
 </span>}
 
-<span class="kw">pub fn </span>load_class(name: <span class="kw-2">&amp;</span>str, options: Vec&lt;String&gt;, after: Tokens, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>load_class(name: <span class="kw-2">&amp;</span>str, _options: Vec&lt;String&gt;, after: Tokens, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -1736,9 +1738,9 @@
     // (3) BUT we want to avoid kpsewhich if we can, since it&#39;s slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
     </span><span class="kw">let </span>paths: Vec&lt;String&gt; = state.search_paths.iter().cloned().collect();
-    <span class="kw">let </span>urlbase = state.lookup_value(<span class="string">&quot;URLBASE&quot;</span>);
+    <span class="kw">let </span>_urlbase = state.lookup_value(<span class="string">&quot;URLBASE&quot;</span>);
     <span class="kw">let </span>nopaths = state.lookup_bool(<span class="string">&quot;REMOTE_REQUEST&quot;</span>);
-    <span class="kw">let </span>ltxml_paths: Vec&lt;String&gt; = <span class="kw">if </span>nopaths { <span class="macro">vec!</span>[] } <span class="kw">else </span>{ paths.clone() };
+    <span class="kw">let </span>_ltxml_paths: Vec&lt;String&gt; = <span class="kw">if </span>nopaths { <span class="macro">vec!</span>[] } <span class="kw">else </span>{ paths.clone() };
 
     <span class="comment">// TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we&#39;re looking for ltxml, look within our paths &amp; installation first (faster than kpse)
@@ -1848,7 +1850,7 @@
 }
 
 <span class="kw">pub fn </span>digest_if(token: Token, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(_defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
     <span class="kw">match </span>stomach.digest(<span class="macro">Tokens!</span>(token), state) {
       <span class="prelude-val">Ok</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(t)),
       <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
@@ -1957,7 +1959,7 @@
       stomach,
       state,
     )<span class="question-mark">?</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(_map) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
       <span class="comment">// Got map?
       </span>state.assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
     } <span class="kw">else </span>{

@@ -382,7 +382,7 @@
       <span class="comment">// environment-specific
       </span>require_math: <span class="bool-val">false</span>,
       forbid_math: <span class="bool-val">false</span>,
-      properties: Arc::new(|stomach, whatsit, state| <span class="prelude-val">Ok</span>(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::new())),
       capture_body: <span class="bool-val">false</span>,
       font: <span class="prelude-val">None</span>,
       after_digest_begin: <span class="macro">vec!</span>[],
@@ -455,7 +455,7 @@
       after_digest: <span class="macro">vec!</span>[],
       before_construct: <span class="macro">vec!</span>[],
       after_construct: <span class="macro">vec!</span>[],
-      properties: Arc::new(|stomach, whatsit, state| <span class="prelude-val">Ok</span>(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::new())),
       capture_body: <span class="bool-val">false</span>,
       after_digest_body: <span class="macro">vec!</span>[],
       reversion: <span class="prelude-val">None</span>,
@@ -469,7 +469,7 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Constructor {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, _f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="macro">unimplemented!</span>();
   }
 }

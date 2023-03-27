@@ -564,30 +564,19 @@
 <a href="#564" id="564">564</a>
 <a href="#565" id="565">565</a>
 <a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
 </pre><pre class="rust"><code><span class="comment">// Macros requiring repetitions need to be handled outside of the main setup macro, as nested
 // macros currently don&#39;t support repetition Details at: https://github.com/rust-lang/rust/issues/35853
+
+</span><span class="doccomment">/// build a Font from key=&gt;val pairs
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>Font {
   ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
     <span class="prelude-val">Some</span>(Font { $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_font_field(),)* .. Font::default() })
 )}
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// build a FontDirective from key=&gt;val pairs
+/// (currently only FontDirective::Asset is supported in this macro)
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>FontDirective {
   ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
     <span class="prelude-val">Some</span>(FontDirective::Asset(Arc::new(
@@ -595,7 +584,9 @@
     ))))
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// given a struct `$name`, create a new instance of it using the given key=&gt;val pairs
+/// and complete the remaining entries via the Default instance
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>NewDefault {
   (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
     $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>,)*
@@ -603,7 +594,7 @@
   })
 }
 
-<span class="comment">// Just like NewDefault, but adds a mandatory .into_option to all values
+<span class="doccomment">/// Just like NewDefault, but adds a mandatory `.into_option()` to all values
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>NewDefaultV {
   (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
@@ -615,19 +606,15 @@
 <span class="comment">// Useful shorthand macros, to brainstorm ergonomics ideas,
 // and to aid binding development
 
+</span><span class="doccomment">/// Assumption: `$receiver` is HashMap&lt;String,String&gt;.
+/// If, and only if, `$has_receiver` does not have a value at slot `$val`,
+/// and `$struct_source` has a set value at `$val`,
+/// then transfers (with ownership) the `$val` field of a `$struct_source` into the `$receiver`.
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>transfer_default {
-  (<span class="macro-nonterminal">$val</span>:ident, <span class="macro-nonterminal">$struct_source</span>:ident, <span class="macro-nonterminal">$hash_receiver</span>:ident) =&gt; {
-    <span class="macro-nonterminal">$hash_receiver
-      </span>.entry(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$val</span>).to_owned())
-      .or_insert(<span class="macro-nonterminal">$struct_source</span>.<span class="macro-nonterminal">$val</span>.to_string());
-  };
-}
-<span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>transfer_opt_default {
-  (<span class="macro-nonterminal">$val</span>:ident, <span class="macro-nonterminal">$struct_source</span>:ident, <span class="macro-nonterminal">$hash_receiver</span>:ident) =&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span><span class="macro-nonterminal">$val</span>) = <span class="macro-nonterminal">$struct_source</span>.<span class="macro-nonterminal">$val </span>{
-      <span class="macro-nonterminal">$hash_receiver</span>.entry(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$val</span>).to_owned()).or_insert(<span class="macro-nonterminal">$val</span>.to_string());
+  (<span class="macro-nonterminal">$val</span>:ident, <span class="macro-nonterminal">$struct_source</span>:ident, <span class="macro-nonterminal">$receiver</span>:ident) =&gt; {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>tval) = <span class="macro-nonterminal">$struct_source</span>.<span class="macro-nonterminal">$val </span>{
+      <span class="macro-nonterminal">$receiver</span>.entry(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$val</span>).to_owned()).or_insert(tval.to_string());
     }
   };
 }
@@ -635,25 +622,8 @@
 <span class="comment">// Discussion: Ideally we wouldn&#39;t need any of these closure macros, just the way latexml proper doesn&#39;t.
 // In latexml, you could say:
 
+</span><span class="doccomment">/// create a PrimitiveClosure from the pieces, with a forced empty return value
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>noprimitive {
-  () =&gt; {
-    |stomach: <span class="kw-2">&amp;mut </span>Stomach, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State| <span class="prelude-val">Ok</span>(Vec::new())
-  };
-}
-
-<span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>primitivesub {
-  (<span class="macro-nonterminal">$stomach</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
-    <span class="kw">move </span>|<span class="macro-nonterminal">$stomach</span>: <span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$inner_state</span>: <span class="kw-2">&amp;mut </span>State| {
-      <span class="macro">BindInnerState!</span>(<span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$inner_state</span>);
-      <span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
-      <span class="macro">end_state_frame!</span>();
-      macro_out
-    }
-  };
-}
-<span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>primitiveproc {
   (<span class="macro-nonterminal">$stomach</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; (
     |<span class="macro-nonterminal">$stomach</span>:<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">mut </span><span class="macro-nonterminal">$args </span>: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$inner_state</span>:<span class="kw-2">&amp;mut </span>State| {

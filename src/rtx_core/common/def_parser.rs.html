@@ -257,7 +257,7 @@
       </span><span class="kw">let </span>spec = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       <span class="kw">let </span>inner_spec = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       next_proto = OPTIONAL_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>).to_string();
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         <span class="comment">// TODO: Add the defaults !
         </span><span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
           name: Cow::Borrowed(<span class="string">&quot;Optional&quot;</span>),

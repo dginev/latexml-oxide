@@ -611,8 +611,6 @@
 <a href="#611" id="611">611</a>
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
-<a href="#614" id="614">614</a>
-<a href="#615" id="615">615</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::HashMap;
@@ -686,7 +684,7 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>KeyVals {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, _f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="macro">unimplemented!</span>();
   }
 }
@@ -753,17 +751,17 @@
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="macro">unimplemented!</span>() }
   <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; { <span class="macro">unimplemented!</span>() }
   <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">unimplemented!</span>() }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">unimplemented!</span>() }
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) } <span class="comment">// TODO
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) } <span class="comment">// TODO
   </span><span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) } <span class="comment">// TODO
   </span><span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    options: HashMap&lt;String, Stored&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
+    _options: HashMap&lt;String, Stored&gt;,
+    _state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(
     <span class="kw">crate</span>::common::dimension::Dimension,
     <span class="kw">crate</span>::common::dimension::Dimension,
@@ -792,7 +790,7 @@
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  </span><span class="kw">pub fn </span>new(options: KeyValsOptions, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
+  </span><span class="kw">pub fn </span>new(options: KeyValsOptions, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
     <span class="comment">// parse all the arguments
     </span><span class="kw">let </span>prefix = options.prefix.unwrap_or_else(|| String::from(<span class="string">&quot;KV&quot;</span>));
     <span class="comment">// $keysets = [split(&#39;,&#39;, ToString(defined($keysets) ? $keysets : &#39;_anonymous_&#39;))] unless (ref($keysets) eq &#39;ARRAY&#39;);
@@ -832,7 +830,7 @@
   <span class="comment">//======================================================================
   // Resolution to KeySets
   //======================================================================
-  </span><span class="kw">fn </span>resolve_keyval_for(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;KeyVal&gt; {
+  </span><span class="kw">fn </span>resolve_keyval_for(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;KeyVal&gt; {
     <span class="comment">// my $prefix  = $self-&gt;get_Prefix;
     // my @keysets = $self-&gt;get_keySets;
     // let sets = Vec::new();
@@ -1083,7 +1081,7 @@
     </span><span class="kw">let </span>startloc = gullet.get_locator().unwrap().into_owned();
 
     <span class="comment">// set and read tokens
-    </span><span class="kw">let </span>open = gullet.read_token(state);
+    </span><span class="kw">let </span>_open = gullet.read_token(state);
     <span class="kw">let </span>assign = <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>);
     <span class="kw">let </span>punct = <span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>);
     <span class="kw">let </span>punct_tks = <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>));
@@ -1122,8 +1120,8 @@
           <span class="kw">let </span>keydef_opt = keyval.get_type(state);
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
             <span class="comment">// TODO:
-            // keydef.setup_catcodes();
-          </span>}
+            </span>keydef.setup_catcodes(state);
+          }
 
           <span class="comment">// read until $punct
           </span><span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
@@ -1152,15 +1150,13 @@
           </span><span class="kw">if </span>!toks.is_empty() {
             value = Tokens::new(toks);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
-              <span class="comment">// TODO:
-              // value = keydef.reparse(gullet, value)
-            </span>}
+              value = keydef.reparse(value, gullet, state)<span class="question-mark">?</span>;
+            }
           }
           <span class="comment">// and cleanup
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
-            <span class="comment">// TODO:
-            // keydef.revert_catcodes()
-          </span>}
+            keydef.revert_catcodes(state)<span class="question-mark">?</span>;
+          }
         }
 
         <span class="comment">// and store our value please

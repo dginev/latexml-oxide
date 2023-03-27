@@ -285,10 +285,8 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::HashMap;
-<span class="kw">use </span>std::fmt;
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -519,12 +517,12 @@
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>MathPrimitive) -&gt; bool { <span class="self">self</span>.cs == other.cs }
 }
 
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>MathPrimitive {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">unimplemented!</span>();
-  }
-}
-<span class="kw">impl </span>Object <span class="kw">for </span>MathPrimitive {
+<span class="comment">// impl fmt::Display for MathPrimitive {
+//   fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result {
+//     unimplemented!();
+//   }
+// }
+</span><span class="kw">impl </span>Object <span class="kw">for </span>MathPrimitive {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { &lt;<span class="self">Self </span><span class="kw">as </span>Definition&gt;::stringify_type(<span class="self">self</span>, <span class="string">&quot;MathPrimitive&quot;</span>) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
 }

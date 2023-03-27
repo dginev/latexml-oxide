@@ -1827,7 +1827,6 @@
 <a href="#1827" id="1827">1827</a>
 <a href="#1828" id="1828">1828</a>
 <a href="#1829" id="1829">1829</a>
-<a href="#1830" id="1830">1830</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -3036,7 +3035,6 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(front) = entry.front() {
           <span class="kw">if let </span>Stored::Token(<span class="kw-2">ref </span>t) = front {
-            <span class="kw">let </span>cc = t.get_catcode();
             <span class="kw">let </span>lookupname = <span class="kw">if </span>t.has_smuggled() { <span class="string">&quot;\\relax&quot; </span>} <span class="kw">else </span>{ t.get_executable_primitive_name().unwrap() };
             <span class="kw">if let </span><span class="prelude-val">Some</span>(retry_entry) = <span class="self">self</span>.meaning.get(lookupname) {
               <span class="comment">// special case,
@@ -3370,7 +3368,7 @@
 
   <span class="comment">// #======================================================================
 
-  </span><span class="kw">pub fn </span>note_status(<span class="kw-2">&amp;</span><span class="self">self</span>, category: <span class="kw-2">&amp;</span>str, what: <span class="kw-2">&amp;</span>str) {
+  </span><span class="kw">pub fn </span>note_status(<span class="kw-2">&amp;</span><span class="self">self</span>, _category: <span class="kw-2">&amp;</span>str, _what: <span class="kw-2">&amp;</span>str) {
     <span class="comment">// Ok, note status is *EXTREMELY* localized
     // it only touches the status field of state,
     // and has NO side-effects to any of the other stateful machinery.
@@ -3597,7 +3595,7 @@
       <span class="self">self</span>.install_definition(
         Constructor {
           cs: token.clone(),
-          replacement: <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|document, args, props, i_state| {
+          replacement: <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|document, _args, _props, i_state| {
             document.make_error(<span class="string">&quot;undefined&quot;</span>, <span class="kw-2">&amp;</span>owned_cs, i_state)
           })),
           ..Constructor::default()

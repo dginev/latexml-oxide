@@ -626,7 +626,7 @@
 <span class="kw">impl </span>Object <span class="kw">for </span>RegisterValue {
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;RegisterValue[{}]&quot;</span>, <span class="self">self</span>) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">match </span><span class="self">self </span>{
       <span class="comment">// ExplodeText($self-&gt;toString);
       </span>RegisterValue::Number(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
@@ -664,13 +664,13 @@
   }
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RegisterType {
     <span class="kw">match </span><span class="self">self </span>{
-      RegisterValue::Number(v) =&gt; RegisterType::Number,
-      RegisterValue::Dimension(v) =&gt; RegisterType::Dimension,
-      RegisterValue::MuDimension(v) =&gt; RegisterType::MuDimension,
-      RegisterValue::Glue(v) =&gt; RegisterType::Glue,
-      RegisterValue::MuGlue(v) =&gt; RegisterType::MuGlue,
-      RegisterValue::Token(v) =&gt; RegisterType::Token,
-      RegisterValue::Tokens(v) =&gt; RegisterType::Tokens,
+      RegisterValue::Number(<span class="kw">_</span>) =&gt; RegisterType::Number,
+      RegisterValue::Dimension(<span class="kw">_</span>) =&gt; RegisterType::Dimension,
+      RegisterValue::MuDimension(<span class="kw">_</span>) =&gt; RegisterType::MuDimension,
+      RegisterValue::Glue(<span class="kw">_</span>) =&gt; RegisterType::Glue,
+      RegisterValue::MuGlue(<span class="kw">_</span>) =&gt; RegisterType::MuGlue,
+      RegisterValue::Token(<span class="kw">_</span>) =&gt; RegisterType::Token,
+      RegisterValue::Tokens(<span class="kw">_</span>) =&gt; RegisterType::Tokens,
     }
   }
   <span class="kw">fn </span>add&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self </span>{
@@ -680,8 +680,8 @@
       RegisterValue::MuDimension(v) =&gt; RegisterValue::MuDimension(v.add(other)),
       RegisterValue::Glue(v) =&gt; RegisterValue::Glue(v.add(other)),
       RegisterValue::MuGlue(v) =&gt; RegisterValue::MuGlue(v.add(other)),
-      RegisterValue::Token(v) =&gt; <span class="macro">unimplemented!</span>(),
-      RegisterValue::Tokens(v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Token(_v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Tokens(_v) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">fn </span>subtract&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self </span>{
@@ -691,8 +691,8 @@
       RegisterValue::MuDimension(v) =&gt; RegisterValue::MuDimension(v.subtract(other)),
       RegisterValue::Glue(v) =&gt; RegisterValue::Glue(v.subtract(other)),
       RegisterValue::MuGlue(v) =&gt; RegisterValue::MuGlue(v.subtract(other)),
-      RegisterValue::Token(v) =&gt; <span class="macro">unimplemented!</span>(),
-      RegisterValue::Tokens(v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Token(_v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Tokens(_v) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">fn </span>multiply&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self </span>{
@@ -702,8 +702,8 @@
       RegisterValue::MuDimension(v) =&gt; RegisterValue::MuDimension(v.multiply(other)),
       RegisterValue::Glue(v) =&gt; RegisterValue::Glue(v.multiply(other)),
       RegisterValue::MuGlue(v) =&gt; RegisterValue::MuGlue(v.multiply(other)),
-      RegisterValue::Token(v) =&gt; <span class="macro">unimplemented!</span>(),
-      RegisterValue::Tokens(v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Token(_v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Tokens(_v) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">fn </span>negate(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -713,8 +713,8 @@
       RegisterValue::MuDimension(v) =&gt; RegisterValue::MuDimension(v.negate()),
       RegisterValue::Glue(v) =&gt; RegisterValue::Glue(v.negate()),
       RegisterValue::MuGlue(v) =&gt; RegisterValue::MuGlue(v.negate()),
-      RegisterValue::Token(v) =&gt; <span class="macro">unimplemented!</span>(),
-      RegisterValue::Tokens(v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Token(_v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Tokens(_v) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">fn </span>divide&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self
@@ -725,8 +725,8 @@
       RegisterValue::MuDimension(v) =&gt; RegisterValue::MuDimension(v.divide(other)),
       RegisterValue::Glue(v) =&gt; RegisterValue::Glue(v.divide(other)),
       RegisterValue::MuGlue(v) =&gt; RegisterValue::MuGlue(v.divide(other)),
-      RegisterValue::Token(v) =&gt; <span class="macro">unimplemented!</span>(),
-      RegisterValue::Tokens(v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Token(_v) =&gt; <span class="macro">unimplemented!</span>(),
+      RegisterValue::Tokens(_v) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="doccomment">/// For now only meant as a type cast, unimplemented in other cases
@@ -985,7 +985,7 @@
   <span class="kw">fn </span>is_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="bool-val">false </span>}
   <span class="kw">fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.borrow().readonly }
   <span class="comment">// not implemented for primitives
-  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="macro">unimplemented!</span>() }
+  </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="macro">unimplemented!</span>() }
   <span class="kw">fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt; { <span class="macro">unimplemented!</span>() } <span class="comment">// TODO: How do we do this with a RefCell ?!
   </span><span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Owned(<span class="self">self</span>.borrow().cs.clone()) }
   <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Owned(<span class="self">self</span>.borrow().cs.get_cs_name().to_owned()) }
