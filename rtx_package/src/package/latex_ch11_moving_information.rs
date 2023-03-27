@@ -38,7 +38,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       Some(labeld) => clean_label(&labeld.to_string(), None).into_owned(),
       None => String::new()
     };
-    let mut scope = label.replace("LABEL:","label:");
+    let scope = label.replace("LABEL:","label:");
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
     let cc = state.lookup_value("current_counter");
@@ -658,7 +658,7 @@ fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state:
   // But also, if there are multiple bibliographies,
   let bibnumber = 1 + state.lookup_int("n_bibliographies");
   state.assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
-  let mut gullet = stomach.get_gullet_mut();
+  let gullet = stomach.get_gullet_mut();
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID"), gullet, state).to_string();
   if !docid.is_empty() {
     docid += ".";

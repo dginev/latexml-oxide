@@ -88,7 +88,7 @@ LoadDefinitions!(state, {
   let dec     = DECIMAL_SEP.get(lang).unwrap_or(&".");
   let thou    = THOUSANDS_SEP.get(lang).unwrap_or(&",");
   let decrole = if dec == &"." { "PERIOD" } else { "" };
-  let mut chars : Vec<char> = Vec::new();
+  // let mut chars : Vec<char> = Vec::new();
   let (mut n, mut combined, mut number, w, mut font) = (0, String::new(), String::new(), 0, None);
   //     NOTE: We're scanning chars from END!
   let mut node_ref = node;
@@ -186,7 +186,7 @@ LoadDefinitions!(state, {
   // Combine letters, when the fonts are right. (sorta related to mathcode)
   // well, maybe a letter followed by letters & digits?
   DefMathLigature!(matcher => sub [document,node_opt,state] {
-     let mut chars :Vec<char> = Vec::new();
+    //  let mut chars :Vec<char> = Vec::new();
      let font  = document.get_node_font(node_opt);
      let mut this_node;
      let mut node_mut = node_opt;

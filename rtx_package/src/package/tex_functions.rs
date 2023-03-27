@@ -477,8 +477,8 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   if children.len() == 1 && !document.findnodes("ltx:Math", Some(&text_node), state).is_empty() {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
     document.rename_node(&mut text_node, "ltx:XMWrap")?; // text_node =
-    let mut first_child = children.pop().unwrap();
-    let mut first_granchildren = first_child.get_child_nodes();
+    let first_child = children.pop().unwrap();
+    let first_granchildren = first_child.get_child_nodes();
     document.replace_node(
       first_child,
       first_granchildren

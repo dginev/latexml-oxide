@@ -56,7 +56,7 @@ LoadDefinitions!(state, {
     properties => sub[stomach, args, state] {
       if let Some(ref arg) = args[0] {
         if let DigestedData::Postponed(ref tag_tokens) = arg.data() {
-          let mut gullet = stomach.get_gullet_mut();
+          let gullet = stomach.get_gullet_mut();
           let tag_expanded = Expand!(tag_tokens.clone(), gullet, state);
           let tag = stomach.digest(tag_expanded, state)?;
           Ok(stored_map!("tag" => tag))

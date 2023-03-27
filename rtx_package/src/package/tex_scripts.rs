@@ -227,7 +227,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
 pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   let tokens = script.revert(state)?;
   let mut ts = tokens.unlist();
-  let mut level = 0;
+  // let mut level = 0;
   if ts.len() > 1 && ts.get(0).unwrap().code == Catcode::BEGIN && ts.last().unwrap().code == Catcode::END {
     Ok(ts)
   } else {

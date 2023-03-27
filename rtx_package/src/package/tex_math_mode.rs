@@ -18,7 +18,7 @@ LoadDefinitions!(state, {
     sub[stomach, _args, state] {
       let mut op = "\\@@BEGININLINEMATH";
       {
-        let mut gullet = stomach.get_gullet_mut();
+        let gullet = stomach.get_gullet_mut();
         let mode = LookupString!("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
