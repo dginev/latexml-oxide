@@ -36,7 +36,7 @@ LoadDefinitions!(state, {
       bind_state_mut!(stomach,state);
       DefMacro!("\\@currenvir", "document");
     }
-    let mut gullet = stomach.get_gullet_mut();
+    let gullet = stomach.get_gullet_mut();
     state.assign_value("current_environment", "document", None);
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"),gullet,state);
     whatsit.set_property("id", expanded_id);

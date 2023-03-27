@@ -72,7 +72,6 @@ LoadDefinitions!(state, {
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
   DefMacro!("\\verbatim@", sub[gullet, arg, state] {
-    let mut mouth = gullet.get_mouth_mut();
     let env = state.lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
@@ -114,7 +113,7 @@ LoadDefinitions!(state, {
         state,
         |igullet, istate| -> Result<Tokens> {
           let mut lines = Vec::new();
-          if let Some(mut mouth) = igullet.get_mouth_mut() {
+          if let Some(mouth) = igullet.get_mouth_mut() {
             while let Some(line) = mouth.read_raw_line(false, istate) {
               lines.push(line);
             }

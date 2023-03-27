@@ -38,7 +38,7 @@ LoadDefinitions!(state, {
     let perc = vec!['%'];
     state.begin_semiverbatim(Some(&perc));
     let mut open = gullet.read_token(state).unwrap();
-    let mut close;
+    let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
       close = T_OTHER!("}");

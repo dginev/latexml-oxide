@@ -145,7 +145,7 @@ DefMacro!("\\href HyperVerbatim {}", "\\@@Url\\href{}{}{#1}{#2}");
 // It's slightly different in that it expands the argument
 // Redefine \@url to sanitize the argument less
 DefMacro!("\\@Url Token", sub[gullet,(cmd),state] {
-  let mut open = gullet.read_token(state).unwrap();
+  let open = gullet.read_token(state).unwrap();
   state.begin_semiverbatim(Some(&['%']));
   state.let_i(&T_CS!("~"), T_OTHER!("~"), None, gullet); // Needs special protection?
   state.let_i(&T_CS!("\\~"), T_OTHER!("~"), None, gullet); // Needs special protection?

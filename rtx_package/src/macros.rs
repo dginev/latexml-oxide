@@ -8,6 +8,7 @@ macro_rules! compile_replacement {
     #[derive(CompileReplacement)]
     #[replacement=$replacement]
     struct _Dummy;
+    #[allow(unused_mut)]
     let tmp: Option<ReplacementClosure> = this_replacement!();
     $var = tmp;
   }};

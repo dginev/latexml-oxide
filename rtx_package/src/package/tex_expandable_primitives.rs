@@ -40,7 +40,7 @@ LoadDefinitions!(outer_state, {
       } else {
         t
       }});
-    let mut token = match token_opt {
+    let token = match token_opt {
       None => {
         Error!("expected", "ExpandedIfToken", gullet, state,
           "conditional expected a token argument, readXToken came back empty. Falling back to \\@empty");

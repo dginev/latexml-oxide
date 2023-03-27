@@ -38,7 +38,7 @@ LoadDefinitions!(outer_stomach, state, {
   //   Number are fixed point (and print that way!)
   // concievably variables can be redefined in middle of loop?
   DefMacro!("\\multido@@initvars@@{}", sub[ogullet, (variables), ostate] {
-    let mut reader_mouth = Mouth::new("", None, ostate)?;
+    let reader_mouth = Mouth::new("", None, ostate)?;
     let read_result : Result<Vec<Token>> = ogullet.reading_from_mouth(reader_mouth, ostate, |gullet, state| {
       gullet.unread(variables);
       let mut inits : Vec<Token> = Vec::new();
@@ -66,7 +66,7 @@ LoadDefinitions!(outer_stomach, state, {
             Error!("expected", "+", gullet, state, "Missing + in multido variables");
           }
           let needs_negate = state.lookup_int("\\multido@count") < 0;
-          let mut step = match vtype.as_str() {
+          let step = match vtype.as_str() {
             "d" => {
               let mut stepv = gullet.read_dimension(state)?;
               if needs_negate { stepv = stepv.negate(); }

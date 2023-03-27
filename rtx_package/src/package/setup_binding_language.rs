@@ -426,6 +426,7 @@ macro_rules! TypedConditional {
       sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
 
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
+    #[allow(unused_mut)]
     let closure : ConditionalClosure =  Arc::new(move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
@@ -563,6 +564,7 @@ macro_rules! TypedPrimitive {
   ($cs:literal, $these_parameters:ident ,
       sub [ $stomach_arg:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    #[allow(unused_mut)]
     let replacement_closure =  Arc::new(move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
@@ -866,7 +868,7 @@ macro_rules! defi_math {
     defi_math!($cstext, $paramlist, $presentation, $options, st)
   }};
   ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr, $state_arg:ident) => {{
-    let mut options = $options;
+    let options = $options;
     let cs = T_CS!($cstext.to_string());
     let presentation = $presentation.to_string();
     let paramlist: Option<Parameters> = $paramlist;
@@ -1471,6 +1473,7 @@ macro_rules! DefMacro {
   ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
+    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
     )));
@@ -1478,6 +1481,7 @@ macro_rules! DefMacro {
   }};
   ($proto:expr, $body:block) => {{
     let (cs, params) = parse_prototype!($proto);
+    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |gullet, mut args, inner_state| WithInnerState!($body, inner_state).into_tokens_result()
     )));
@@ -1494,6 +1498,7 @@ macro_rules! DefMacro {
   // Internal-level use
   ($cs:expr, $parameters:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
     )));
@@ -1553,6 +1558,7 @@ macro_rules! TypedMacro {
   ( $cs:literal, $these_parameters:ident,
     sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
+    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
         $(
@@ -1767,7 +1773,7 @@ macro_rules! Digest {
     stmch.digest($tokens, st)
   }};
   ($tokens:expr, $state_arg:ident) => {{
-    let mut state_stomach = $state_arg.stomach.clone();
+    let state_stomach = $state_arg.stomach.clone();
     let mut state_stomach_mut = state_stomach.write().unwrap();
     state_stomach_mut.digest($tokens, $state_arg)
   }};

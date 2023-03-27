@@ -148,7 +148,7 @@ LoadDefinitions!(state, {
         } else if let Some(s) = GetKeyVal!(spec, "spread") {
           let s_num_opt : Option<RegisterValue> = s.into();
           let s_num = s_num_opt.unwrap_or_default();
-          let mut tbox = whatsit.get_arg_mut(2).unwrap();
+          let tbox = whatsit.get_arg_mut(2).unwrap();
           let current_w = tbox.get_width(None, state)?.unwrap();
           let new_w = current_w.add(s_num);
           Some( new_w )
