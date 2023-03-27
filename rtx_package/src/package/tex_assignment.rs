@@ -118,7 +118,7 @@ LoadDefinitions!(outer_state, {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
           let defn_args : Vec<ArgWrap> = inner.clone();
           let defn_value = defn.value_of(inner, state).unwrap_or_default();
-          defn.borrow_mut().set_value(defn_value.add(summand), defn_args, state);
+          defn.set_value(defn_value.add(summand), defn_args, state);
         } else {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
           Error!("expected","definition", stomach, state, message);
@@ -136,7 +136,7 @@ LoadDefinitions!(outer_state, {
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
         let scale_value = scale.to_number().value_of();
-        defn.borrow_mut().set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
+        defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } else {
         let message = s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);
@@ -159,7 +159,7 @@ LoadDefinitions!(outer_state, {
           Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
-        defn.borrow_mut().set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
+        defn.set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } else {
         let message = s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);

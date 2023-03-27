@@ -20,7 +20,7 @@ use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
-use crate::definition::register::{Register, RegisterCell, RegisterValue};
+use crate::definition::register::{Register, RegisterValue};
 use crate::definition::FontDirective;
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
@@ -124,6 +124,8 @@ pub enum Stored {
   Reversion(Reversion),
   // LaTeXML objects (Arc-wrapped)
   /// latexml object (Arc-wrapped)
+  Register(Arc<Register>),
+  /// latexml object (Arc-wrapped)
   Expandable(Arc<Expandable>),
   /// latexml object (Arc-wrapped)
   Conditional(Arc<Conditional>),
@@ -144,8 +146,6 @@ pub enum Stored {
   FontDirective(FontDirective),
   /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   Mouth(Arc<RwLock<Mouth>>),
-  /// WALL OF SHAME (interior mutability) -- can we dispense with these?
-  Register(Arc<RegisterCell>),
   /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   IfFrame(Arc<RwLock<IfFrame>>),
 }
@@ -178,7 +178,7 @@ impl fmt::Debug for Stored {
       Constructor(ref _constructor) => write!(f, "Stored::Constructor[TODO]"),
       Digested(ref digested) => write!(f, "Stored::Digested[{digested:?}]"),
       Parameter(ref parameter) => write!(f, "Stored::Parameter[{parameter:?}]"),
-      Register(ref register) => write!(f, "Stored::Register[{:?}]", register.borrow().cs),
+      Register(ref register) => write!(f, "Stored::Register[{:?}]", register.cs),
       Rewrite(ref rewrite) => write!(f, "Stored::Rewrite[{rewrite:?}]"),
       Mouth(ref mouth) => write!(f, "Stored::Mouth[{:?}]", mouth.read().unwrap().get_source()),
       Font(ref font) => write!(f, "Stored::Font[{font:?}]"),
@@ -694,11 +694,11 @@ impl From<Arc<Font>> for Stored {
   fn from(font: Arc<Font>) -> Self { Stored::Font(font) }
 }
 
-impl From<Arc<RegisterCell>> for Stored {
-  fn from(register: Arc<RegisterCell>) -> Self { Stored::Register(register) }
+impl From<Arc<Register>> for Stored {
+  fn from(register: Arc<Register>) -> Self { Stored::Register(register) }
 }
 impl From<Register> for Stored {
-  fn from(register: Register) -> Self { Arc::new(RegisterCell::new(RwLock::new(register))).into() }
+  fn from(register: Register) -> Self { Arc::new(register).into() }
 }
 
 impl From<Rewrite> for Stored {
@@ -910,8 +910,8 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<Arc<RegisterCell>> {
-  fn from(value: &'a Stored) -> Option<Arc<RegisterCell>> {
+impl<'a> From<&'a Stored> for Option<Arc<Register>> {
+  fn from(value: &'a Stored) -> Option<Arc<Register>> {
     match value {
       Stored::Register(ref reg) => Some(Arc::clone(reg)),
       _ => None,

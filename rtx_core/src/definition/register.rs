@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Arc;
 use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
@@ -25,14 +25,22 @@ use crate::{Digested, Locator};
 
 use super::argument::ArgWrap;
 
+/// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
 pub enum RegisterValue {
+  ///
   Number(Number),
+  ///
   Dimension(Dimension),
+  ///
   MuDimension(MuDimension),
+  ///
   Glue(Glue),
+  ///
   MuGlue(MuGlue),
+  ///
   Token(Token),
+  ///
   Tokens(Tokens),
 }
 impl From<Number> for RegisterValue {
@@ -344,34 +352,57 @@ impl fmt::Display for RegisterValue {
   }
 }
 
+/// The type of a TeX Register
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RegisterType {
+  /// simple scalar number
   Number,
+  /// a TeX dimension
   Dimension,
+  /// a TeX mu dimension
   MuDimension,
+  /// a TeX glue
   Glue,
+  /// a TeX mu glue
   MuGlue,
+  /// a TeX Token
   Token,
+  /// multiple Tokens
   Tokens,
+  /// a character definition
   CharDef,
-  Any, // Placeholder for any argument accepted
+  /// Placeholder for any argument accepted
+  Any,
 }
 
 // why mutable state in the Getter closure? Because the `.get_width` and friends methods have a
 // caching optimization, which requires writing new properties while they are stored in the State table
+// if we decide that isn't needed, we can go back to immutable.
+/// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
 pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
+/// sets a register value in the State frame
 pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
 
+/// A struct representing a TeX register
 #[derive(Clone)]
 pub struct Register {
+  /// the public command sequence for this register
   pub cs: Token,
+  /// the internal name for this register
   pub name: String,
+  /// associated parameters, if any
   pub parameters: Option<Parameters>,
+  /// the type of values accepted by this register (Number, Dimension, ...)
   pub register_type: RegisterType,
+  /// read-only flag (default: false)
   pub readonly: bool,
+  /// internal command sequence for this register
   pub internalcs: Option<Token>,
+  /// the current value
   pub value: Option<RegisterValue>,
+  /// reader for a value
   pub getter: RegisterGetterClosure,
+  /// setter for a value
   pub setter: RegisterSetterClosure,
   // pub traits: PrimitiveOptions,
 }
@@ -407,28 +438,13 @@ impl fmt::Debug for Register {
 impl fmt::Display for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{self:?}") }
 }
-/// The only purpose of RegisterCell is to provide us with a place to implement fmt::Display over
-/// a `RefCell<Register>`.
-pub struct RegisterCell(RwLock<Register>);
-impl fmt::Debug for RegisterCell {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0.read().unwrap()) }
-}
-impl fmt::Display for RegisterCell {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0.read().unwrap()) }
-}
-impl Object for RegisterCell {
-  fn stringify(&self) -> String { Definition::stringify_type(self, "RegisterCell") }
+
+impl Object for Register {
+  fn stringify(&self) -> String { format!("{self:?}") }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
-impl PartialEq for RegisterCell {
-  fn eq(&self, other: &RegisterCell) -> bool { *self.0.read().unwrap() == *other.0.read().unwrap() }
-}
-impl RegisterCell {
-  pub fn new(cell: RwLock<Register>) -> Self { RegisterCell(cell) }
-  pub fn borrow(&self) -> RwLockReadGuard<Register> { self.0.read().unwrap() }
-  pub fn borrow_mut(&self) -> RwLockWriteGuard<Register> { self.0.write().unwrap() }
-}
-impl Definition for RegisterCell {
+
+impl Definition for Register {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.borrow().readonly }
@@ -458,7 +474,7 @@ impl Definition for RegisterCell {
     gullet.read_keyword(&["="], state)?;
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
 
-    self.borrow_mut().set_value(value, args, state);
+    self.borrow().set_value(value, args, state);
 
     state.after_assignment(gullet);
     // # Tracing ?
@@ -491,8 +507,10 @@ impl Definition for RegisterCell {
 }
 
 impl Register {
+  /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
-  pub fn set_value(&mut self, value: RegisterValue, args: Vec<ArgWrap>, state: &mut State) {
+  /// runs the setter to assign the value for this register
+  pub fn set_value(&self, value: RegisterValue, args: Vec<ArgWrap>, state: &mut State) {
     if self.register_type == RegisterType::CharDef {
       let message = s!("Can't assign to chardef {}", self.cs.get_cs_name());
       Error!("unexpected", "chardef", None, state, message);
@@ -500,7 +518,7 @@ impl Register {
       (self.setter)(value, args, state);
     }
   }
-
+  /// creates a CharDef type register
   pub fn new_chardef(cs: Token, value: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
     Register {
       cs,

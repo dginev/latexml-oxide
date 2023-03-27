@@ -24,6 +24,9 @@ use crate::whatsit::Whatsit;
 use crate::*;
 use crate::{BoxOps, Digested};
 
+/// A trait for auto-wrapping a generic type T into Option<Y>,
+/// where Y can be inferred from context.
+/// (useful in macro helpers, such as `NewDefaultV!`)
 pub trait IntoOption<T>: Sized {
   /// Performs the conversion.
   fn into_option(self) -> T;
@@ -132,6 +135,8 @@ impl IntoOption<Option<SizingClosure>> for &str {
   }
 }
 
+/// A trait for creating `Result<Tokens>` from all sensible concrete types one could
+/// return from e.g. a DefMacro closure
 pub trait IntoTokensResult<T>: Sized {
   /// Performs the conversion, used for DefMacro return values etc
   fn into_tokens_result(self) -> Result<Tokens>;
@@ -166,35 +171,10 @@ impl IntoTokensResult<Result<Tokens>> for Result<ArgWrap> {
   fn into_tokens_result(self) -> Result<Tokens> { self.map(|w| w.owned_tokens().unwrap_or_default()) }
 }
 
-pub trait IntoResultOptTokens<T>: Sized {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>>;
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for Token {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(Tokens!(self))) }
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for Vec<Token> {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(Tokens::new(self))) }
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for Tokens {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(Some(self)) }
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Tokens> {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self.map(Some) }
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for Result<Option<Tokens>> {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { self }
-}
-
-impl IntoResultOptTokens<Result<Option<Tokens>>> for () {
-  fn into_result_opt_tokens(self) -> Result<Option<Tokens>> { Ok(None) }
-}
-
+/// Create a `Result<ArgWrap>` from any concrete type that Gullet may have a reader for.
+/// Used in auto-casting the data fetched by Parameter readers
 pub trait IntoResultArgWrap<T>: Sized {
+  /// performs the conversion
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
 
@@ -290,6 +270,7 @@ impl IntoResultArgWrap<Result<ArgWrap>> for () {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
 }
 
+/// Creates `Result<bool>` from some type `T`
 pub trait IntoBoolResult<T>: Sized {
   /// Performs the conversion, used for DefConditional return values etc
   fn into_bool_result(self) -> Result<bool>;
@@ -301,6 +282,7 @@ impl IntoBoolResult<Result<bool>> for Result<bool> {
   fn into_bool_result(self) -> Result<bool> { self }
 }
 
+/// Creates a `Result<Vec<Digested>>` from some type `T`
 pub trait IntoDigestedResult<T>: Sized {
   /// Performs the conversion, used for DefPrimitive return values etc
   fn into_digested_result(self) -> Result<Vec<Digested>>;
@@ -338,6 +320,8 @@ impl IntoDigestedResult<Result<Vec<Digested>>> for Result<Digested> {
   fn into_digested_result(self) -> Result<Vec<Digested>> { self.map(|d| vec![d]) }
 }
 
+/// Creates an `Option<RegisterValue>` from some type `T`.
+/// Useful for Register `getter` closures
 pub trait IntoRegisterValueOption<T>: Sized {
   fn into_register_value_option(self) -> Option<RegisterValue>;
 }

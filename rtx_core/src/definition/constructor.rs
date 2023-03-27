@@ -23,31 +23,52 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested, Locator};
 
+/// configuration for creating a new Constructor
 #[derive(Clone)]
 pub struct ConstructorOptions {
+  /// number of arguments (if any)
   pub nargs: Option<usize>,
+  /// bouded mode (default: false)
   pub bounded: bool,
+  /// begin a named mode
   pub mode: Option<String>,
+  /// a `SizingClosure` to estimate the size of the digested box
   pub sizer: Option<SizingClosure>,
+  /// custom code to run immediately before the digestion phase
   pub before_digest: Vec<BeforeDigestClosure>,
+  /// custom code to run immediately after the digestion phase
   pub after_digest: Vec<DigestionClosure>,
+  /// custom code to run immediately before the construction phase
   pub before_construct: Vec<ConstructionClosure>,
+  /// custom code to run immediately after the construction phase
   pub after_construct: Vec<ConstructionClosure>,
 
   // environment-specific
+  /// requires to be used in math mode
   pub require_math: bool,
+  /// forbids use in math mode
   pub forbid_math: bool,
+  /// custom directives for computing box properties
   pub properties: PropertiesClosure,
+  /// should it capture the body as `#body` (default: false)
   pub capture_body: bool,
+  /// specify a font to use, or instructions how to compute which font to use
   pub font: Option<FontDirective>,
-
+  /// custom code to run as digestion begins
   pub after_digest_begin: Vec<DigestionClosure>,
+  /// custom code to run just before digestion ends
   pub before_digest_end: Vec<BeforeDigestClosure>,
+  /// custom code to run after `#body` has been digested
   pub after_digest_body: Vec<DigestionClosure>,
+  /// provide tokens to revert to, or custom code for computing them
   pub reversion: Option<Reversion>,
+  /// Local/Global scope of installing this definition (default: Local)
   pub scope: Option<Scope>,
+  /// is this a robust command sequence (default: false)
   pub robust: bool,
+  /// lock the definition for raw TeX overrides (default: false)
   pub locked: bool,
+  /// alternative (command sequence) name, used for reversion
   pub alias: Option<String>,
 }
 impl Default for ConstructorOptions {

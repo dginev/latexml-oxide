@@ -262,6 +262,7 @@ macro_rules! reader_predigest {
   };
 }
 
+/// A closure for obtaining a `RegisterValue`, usually owned by a `Register` getter.
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
@@ -544,7 +545,7 @@ macro_rules! AssignRegister {
   }};
   ($cs:literal, $value:ident, $args:expr, $state_arg: ident) => {{
     if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
-      (*defn.borrow_mut()).set_value($value, $args, $state_arg);
+      (*defn).set_value($value, $args, $state_arg);
     } else {
       let message = s!("The control sequence {} is not a register", $cs);
       Warn!("expected", "register", None, $state_arg, message);
