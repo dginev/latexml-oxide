@@ -478,6 +478,17 @@
 <a href="#478" id="478">478</a>
 <a href="#479" id="479">479</a>
 <a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Token List constructors.
 </span><span class="kw">use </span><span class="kw">crate</span>::fmt;
 <span class="kw">use </span>proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
@@ -505,8 +516,9 @@
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::Digested;
 
-<span class="kw">pub const </span>UNTEX_LINELENGTH: usize = <span class="number">78</span>;
-<span class="doccomment">/// Us this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
+<span class="doccomment">/// If untex is requested to add line-breaks, this is the line length it will allow
+</span><span class="kw">pub const </span>UNTEX_LINELENGTH: usize = <span class="number">78</span>;
+<span class="doccomment">/// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
 </span><span class="kw">pub const </span>NO_TOKENS: Tokens = Tokens(Vec::new());
 <span class="doccomment">/// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
@@ -519,7 +531,8 @@
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Tokens) -&gt; bool { <span class="self">self</span>.<span class="number">0</span>.len() == other.<span class="number">0</span>.len() &amp;&amp; <span class="self">self</span>.<span class="number">0</span>.iter().zip(other.<span class="number">0</span>.iter()).all(|(a, b)| a == b) }
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// convenience macro for assembling a Tokens object from different pieces (`Token`, `Vec&lt;Token&gt;`, `Tokens`)
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>Tokens(
   () =&gt; ( <span class="macro-nonterminal">$crate::tokens::NO_TOKENS </span>);
   ($( <span class="macro-nonterminal">$tokens</span>:expr ),+) =&gt; ({
@@ -614,7 +627,8 @@
 }
 
 <span class="kw">impl </span>Tokens {
-  <span class="kw">pub fn </span>new(tokens: Vec&lt;Token&gt;) -&gt; <span class="self">Self </span>{ Tokens(tokens) }
+  <span class="doccomment">/// Create a Tokens object from a `Vec` of individual `Token`
+  </span><span class="kw">pub fn </span>new(tokens: Vec&lt;Token&gt;) -&gt; <span class="self">Self </span>{ Tokens(tokens) }
 
   <span class="doccomment">/// Return a list of the tokens making up this Tokens
   </span><span class="kw">pub fn </span>unlist(<span class="self">self</span>) -&gt; Vec&lt;Token&gt; { <span class="self">self</span>.<span class="number">0 </span>}
@@ -731,21 +745,24 @@
 
   <span class="comment">// stopgap, how do we unpack! gullet-stage arguments without the unwrap?
   // should we unify the interfaces so that Options are always used? Could be cumbursome...
+  </span><span class="doccomment">/// returns self, for compatibility convenience with `Option`
   </span><span class="kw">pub fn </span>unwrap_or_default(<span class="self">self</span>) -&gt; Tokens { <span class="self">self </span>}
+  <span class="doccomment">/// returns self, for compatibility convenience with `Option`
+  </span><span class="kw">pub fn </span>unwrap(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Tokens { <span class="self">self </span>}
 
-  <span class="kw">pub fn </span>unwrap(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Tokens { <span class="self">self </span>}
-
-  <span class="kw">pub fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;Tokens[{}]&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.iter().map(ToString::to_string).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;,&quot;</span>)) }
-
-  <span class="kw">pub fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+  <span class="doccomment">/// A string form which is primarily used for error-reporting
+  </span><span class="kw">pub fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;Tokens[{}]&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.iter().map(ToString::to_string).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;,&quot;</span>)) }
+  <span class="doccomment">/// digest the current `Tokens`
+  </span><span class="kw">pub fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
     stomach.digest(<span class="self">self</span>, state)
   }
 
-  <span class="kw">pub fn </span>neutralize(<span class="self">self</span>, extraspecials: <span class="kw-2">&amp;</span>[char], state: <span class="kw-2">&amp;</span>State) -&gt; Tokens {
+  <span class="doccomment">/// Remove dont_expand, but preserve SMUGGLE_THE
+  </span><span class="kw">pub fn </span>neutralize(<span class="self">self</span>, extraspecials: <span class="kw-2">&amp;</span>[char], state: <span class="kw-2">&amp;</span>State) -&gt; Tokens {
     Tokens(<span class="self">self</span>.<span class="number">0</span>.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;())
   }
-
-  <span class="kw">pub fn </span>is_balanced(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+  <span class="doccomment">/// Checks if any BEGIN/END code groups are correctly nested and closed
+  </span><span class="kw">pub fn </span>is_balanced(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">0</span>;
     <span class="kw">for </span>t <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
       level += <span class="kw">match </span>t.get_catcode() {
@@ -753,6 +770,11 @@
         Catcode::END =&gt; -<span class="number">1</span>,
         <span class="kw">_ </span>=&gt; <span class="number">0</span>,
       };
+      <span class="kw">if </span>level &lt; <span class="number">0 </span>{
+        <span class="comment">// a negative level encountered at any point is ill-formed,
+        // return early
+        </span><span class="kw">return </span><span class="bool-val">false</span>;
+      }
     }
     level == <span class="number">0
   </span>}

@@ -895,14 +895,14 @@
         },
         <span class="prelude-val">Some</span>(Stored::Constructor(meaning)) =&gt; {
           <span class="comment">// Otherwise, a normal primitive or constructor
-          </span>result = meaning.invoke_primitive(<span class="self">self</span>, meaning.clone(), state)<span class="question-mark">?</span>;
+          </span>result = meaning.invoke_primitive(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="kw">if </span>!meaning.is_prefix() {
             state.clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
           </span>}
         },
         <span class="prelude-val">Some</span>(Stored::Primitive(meaning)) =&gt; {
           <span class="comment">// Otherwise, a normal primitive or constructor
-          </span>result = meaning.invoke_primitive(<span class="self">self</span>, meaning.clone(), state)<span class="question-mark">?</span>;
+          </span>result = meaning.invoke_primitive(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="kw">if </span>!meaning.is_prefix() {
             state.clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
           </span>}
@@ -910,14 +910,14 @@
         <span class="prelude-val">Some</span>(Stored::MathPrimitive(meaning)) =&gt; {
           <span class="comment">// Copy of regular Primitive
           // Otherwise, a normal primitive or constructor
-          </span>result = meaning.invoke_primitive(<span class="self">self</span>, meaning.clone(), state)<span class="question-mark">?</span>;
+          </span>result = meaning.invoke_primitive(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="kw">if </span>!meaning.is_prefix() {
             state.clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
           </span>}
         },
         <span class="prelude-val">Some</span>(Stored::Register(meaning)) =&gt; {
           <span class="comment">// Registers are special primitives
-          </span>result = meaning.invoke_primitive(<span class="self">self</span>, meaning.clone(), state)<span class="question-mark">?</span>;
+          </span>result = meaning.invoke_primitive(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="kw">if </span>!meaning.is_prefix() {
             state.clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
           </span>}

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Relaxng",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["Relaxng","an internal representation for a RelaxNG schema"]]};

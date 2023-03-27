@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["Object",""]]};
+window.SIDEBAR_ITEMS = {"trait":[["Object","Base object for all LaTeXML Objects."]]};
