@@ -1123,7 +1123,7 @@ impl Gullet {
   }
 
   pub fn read_mu_unit(&mut self, state: &mut State) -> Result<Option<i64>> {
-    if let Some(_) = self.read_keyword(&["mu"], state)? {
+    if self.read_keyword(&["mu"], state)?.is_some() {
       self.skip_one_space(state);
       Ok(Some(UNITY)) // effectively, scaled mu
     } else if let Some(m) = self.read_internal_mu_glue(state)? {

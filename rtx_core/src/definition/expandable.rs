@@ -7,7 +7,6 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::argument::ArgWrap;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -224,26 +223,6 @@ impl Expandable {
       is_outer: traits.outer || state.get_prefix("outer"),
       is_long: traits.long || state.get_prefix("long"),
       ..Expandable::default()
-    }
-  }
-
-  fn do_invocation(&self, gullet: &mut Gullet, args: Vec<ArgWrap>, state: &mut State) -> Result<Tokens> {
-    match self.expansion {
-      Some(ExpansionBody::Closure(ref closure)) => closure(gullet, args, state),
-      // but for tokens, make sure args are proper Tokens (lists)
-      Some(ExpansionBody::Tokens(ref tks)) => {
-        if !tks.is_empty() {
-          let mut args_tks = Vec::new();
-          for arg in args.iter() {
-            args_tks.push(arg.as_tokens(state)?);
-          }
-          Ok(tks.substitute_parameters(&args_tks))
-        } else {
-          Ok(Tokens!())
-        }
-      },
-      // empty if no expansion
-      None => Ok(Tokens!()),
     }
   }
 }

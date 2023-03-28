@@ -87,11 +87,11 @@ LoadDefinitions!(outer_state, {
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", sub[gullet, (num), state] {()});
-  DefMacro!("\\firstmarks Number", sub[gullet, (num), state] {()});
-  DefMacro!("\\botmarks Number", sub[gullet, (num), state] {()});
-  DefMacro!("\\splitfirstmarks Number", sub[gullet, (num), state] {()});
-  DefMacro!("\\splitbotmarks Number", sub[gullet, (num), state] {()});
+  DefMacro!("\\topmarks Number", sub[gullet, (num), state] {});
+  DefMacro!("\\firstmarks Number", sub[gullet, (num), state] {});
+  DefMacro!("\\botmarks Number", sub[gullet, (num), state] {});
+  DefMacro!("\\splitfirstmarks Number", sub[gullet, (num), state] {});
+  DefMacro!("\\splitbotmarks Number", sub[gullet, (num), state] {});
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives

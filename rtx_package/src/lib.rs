@@ -5,7 +5,7 @@
 //! Binding infrastructure for the `LaTeXML` converter, reimplemented in Rust
 #![recursion_limit = "1024"]
 #![allow(dead_code, unused_variables)]
-#![allow(clippy::unused_unit, clippy::implicit_hasher, clippy::trivial_regex)]
+#![allow(clippy::implicit_hasher, clippy::trivial_regex)]
 
 #[macro_use]
 extern crate rtx_codegen;
