@@ -36,7 +36,7 @@ LoadDefinitions!(state, {
   );
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
-  DefConstructor!("\\lx@author@prefix", sub[document, args, props, state] {
+  DefConstructor!("\\lx@author@prefix", sub[document, _args, _props, state] {
     let mut node   = document.get_element().unwrap();
     let nauthors   = state.lookup_int("NUMBER_OF_AUTHORS");
     let i          = document.findnodes("//ltx:creator[@role='author']", None, state).len() as i64;
@@ -110,11 +110,11 @@ LoadDefinitions!(state, {
   // Probably there are other places (eg in titlepage?) that should force the close??
 
   DefEnvironment!("{abstract}", "",
-    after_digest_begin => sub[stomach, args, state] {
+    after_digest_begin => sub[stomach, _args, state] {
       AssignValue!("inPreamble" => false);
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     },
-    after_digest => sub[stomach, args, state] {
+    after_digest => sub[stomach, _args, state] {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
       let regurgitated = List::new(stomach.regurgitate(), state);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
@@ -130,7 +130,7 @@ LoadDefinitions!(state, {
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
-  DefMacro!("\\abstract", sub[gullet, args, state] {
+  DefMacro!("\\abstract", sub[gullet, _args, state] {
     if gullet.if_next(T_BEGIN!(), state)? {
       T_CS!("\\abstract@onearg")
     } else {
@@ -178,7 +178,7 @@ LoadDefinitions!(state, {
     mode => "text"
   );
 
-  DefConstructor!("\\maybe@end@title", sub[document,args,props,state] {
+  DefConstructor!("\\maybe@end@title", sub[document,_args,_props,state] {
     if document.is_closeable("ltx:titlepage", state).is_some() {
       document.close_element("ltx:titlepage", state)?;
     }

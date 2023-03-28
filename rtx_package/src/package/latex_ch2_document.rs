@@ -20,7 +20,7 @@ LoadDefinitions!(state, {
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
   // But more complicated due to id, at begin/end document and so forth.
   // AND, lower-level so that we can cope with common errors at document end.
-  DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, args, props, state] {
+  DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, _args, props, state] {
     let id = prop_str!(props,"id");
     if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
       if !id.is_empty() {
@@ -58,7 +58,7 @@ LoadDefinitions!(state, {
   // \document is used directly in e.g. expl3.sty
   Let!(&T_CS!("\\document"), T_CS!("\\begin{document}"), Some(Scope::Global));
 
-  DefConstructor!(T_CS!("\\end{document}"), None, sub[document,args,props,state] {
+  DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props,state] {
       document.close_element("ltx:document", state)?;
     },
     before_digest => sub[stomach,state] {
@@ -71,7 +71,7 @@ LoadDefinitions!(state, {
       // Now we check whether we're down to the last stack frame.
       // It is common for unclosed { or even environments
       // and we want to at least compress & avoid unnecessary errors & warnings.
-      let nframes = state.get_frame_depth();
+      let _nframes = state.get_frame_depth();
       //     my $ifstack;
       //     if ($STATE->isValueBound('current_environment', 0)
       //       && ($STATE->valueInFrame('current_environment', 0) eq 'document')

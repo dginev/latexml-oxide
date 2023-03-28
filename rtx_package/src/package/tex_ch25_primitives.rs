@@ -47,7 +47,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lower Dimension MoveableBox",
     "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[_stomach, whatsit, _state] {
       whatsit.set_property("y",
         // can the ergonomics of this Dimension cast be improved?
         Dimension(-whatsit.get_arg(1).unwrap().value_of())

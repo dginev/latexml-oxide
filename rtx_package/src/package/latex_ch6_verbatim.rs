@@ -23,7 +23,7 @@ LoadDefinitions!(outer_state, {
     Let!(&T_ACTIVE!(" "), T_SPACE!());
   });
   DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
-    before_digest => sub[stomach,state] { state.end_semiverbatim()?; });
+    before_digest => sub[_stomach,state] { state.end_semiverbatim()?; });
 
   // Close enough?
   // verbatim is a bit of special case;
@@ -83,7 +83,7 @@ LoadDefinitions!(outer_state, {
       ).collect();
       whatsit.set_body(boxes, state);
     },
-    before_construct => sub[document, whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
+    before_construct => sub[document, _whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
   );
 
   DefPrimitive!("\\@vobeyspaces", sub[stomach, (), state] {
@@ -93,7 +93,7 @@ LoadDefinitions!(outer_state, {
 
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
-  DefMacro!("\\verb", sub[gullet, args, state] {
+  DefMacro!("\\verb", sub[gullet, _args, state] {
     let active_chars = &['%', '\\', '{', '}'];
     state.begin_semiverbatim(Some(active_chars));
     state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
@@ -142,7 +142,7 @@ LoadDefinitions!(outer_state, {
 
   DefConstructor!("\\@internal@verb{} Undigested {}",
     "?#isMath(<ltx:XMTok font='#font'>#text</ltx:XMTok>)(<ltx:verbatim font='#font'>#text</ltx:verbatim>)",
-    properties => sub[stomach, args, state] {
+    properties => sub[_stomach, args, _state] {
       Ok(stored_map!("text" => args[2].as_ref().unwrap().to_string()))
     },
   font => { family => "typewriter", series => "medium", shape => "upright" },
@@ -158,9 +158,9 @@ LoadDefinitions!(outer_state, {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter");
     },
-    after_digest => sub[stomach,whatsit,state] { stomach.egroup(state)?; },
+    after_digest => sub[stomach,_whatsit,state] { stomach.egroup(state)?; },
     // Since ltx:verbatim is both inline & block, we have to fudge inline mode
-    before_construct => sub[document, args, state] {
+    before_construct => sub[document, _args, state] {
       if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
         document.open_element("ltx:p", None, None, state)?;
       }},
@@ -171,7 +171,7 @@ LoadDefinitions!(outer_state, {
      stomach.bgroup(state);
      MergeFont!(family => "typewriter");
    },
-   after_digest => sub[stomach,whatsit,state] { stomach.egroup(state)?; },
+   after_digest => sub[stomach,_whatsit,state] { stomach.egroup(state)?; },
    reversion => "\\verb#1#2#1"
   );
 

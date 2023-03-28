@@ -38,7 +38,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
     before_digest => { Let!(&T_CS!("\\par"), T_CR!()); },
-    before_construct => sub[document, whatsit, inner_state] { document.maybe_close_element("ltx:p", inner_state)?; }
+    before_construct => sub[document, _whatsit, inner_state] { document.maybe_close_element("ltx:p", inner_state)?; }
   );
 
   // We HAVE to get this guy in, to close the <ltx:verbatim>"
@@ -71,7 +71,7 @@ LoadDefinitions!(state, {
   // Well, we have to dance a bit...
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
-  DefMacro!("\\verbatim@", sub[gullet, arg, state] {
+  DefMacro!("\\verbatim@", sub[gullet, _arg, state] {
     let env = state.lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();

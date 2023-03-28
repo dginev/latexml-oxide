@@ -16,7 +16,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
-  DefConstructor!("\\label Semiverbatim", sub[document, olabel, props, state] {
+  DefConstructor!("\\label Semiverbatim", sub[document, _olabel, props, state] {
     if let Some(savenode) = document.float_to_label(state) {
       let mut labels : HashMap<String,bool> = HashMap::new();
       if let Some(label) = props.get("label") {
@@ -66,7 +66,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // # * is added to accommodate hyperref
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
     "<ltx:ref labelref='#label' _force_font='true'/>",
-    properties => sub[stomach, args, state] {
+    properties => sub[_stomach, args, _state] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.unwrap().as_ref().unwrap().to_string();
       Ok(map!("label" => Stored::String(clean_label(&label, None).into_owned())))
@@ -166,7 +166,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   );
 
   // Close the bibliography
-  DefConstructor!("\\endthebibliography", sub[document,whatsit,props,state] {
+  DefConstructor!("\\endthebibliography", sub[document,_whatsit,_props,state] {
     document.maybe_close_element("ltx:biblist", state)?;
     document.maybe_close_element("ltx:bibliography", state)?;
   }, locked=>true);
@@ -174,7 +174,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);
 
-  DefMacro!("\\par@in@bibliography", sub[gullet, args, state] {
+  DefMacro!("\\par@in@bibliography", sub[gullet, _args, state] {
       gullet.skip_spaces(state);
       if let Some(tok) = gullet.read_token(state) {
         // If next token is another \par, or a REAL \bibitem,

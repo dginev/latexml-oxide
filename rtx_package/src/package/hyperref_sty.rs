@@ -338,7 +338,7 @@ DefMacro!("\\@bookmarksopenlevel", "\\maxdimen");
 // TODO: The star forms prevent nested double links.
 DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
   "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref') show='autoref' labelref='#label' _force_font='true'/>",
-  properties => sub[stomach, args, state] {
+  properties => sub[_stomach, args, _state] {
     let refarg = &args[1];
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
   });

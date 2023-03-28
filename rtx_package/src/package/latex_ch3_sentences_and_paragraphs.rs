@@ -54,7 +54,7 @@ LoadDefinitions!(state, {
         DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
       }
     },
-    after_construct => sub[doc,args,inner_state] {
+    after_construct => sub[doc,_args,inner_state] {
       doc.maybe_close_element("ltx:emph", inner_state)?; }
   );
 

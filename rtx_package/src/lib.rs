@@ -1,10 +1,6 @@
-// Copyright 2015-2016 Deyan Ginev. See the LICENSE
-// file at the top-level directory of this distribution.
-//
-
-//! Binding infrastructure for the `LaTeXML` converter, reimplemented in Rust
+//! Binding definitions for the `LaTeXML` converter, reimplemented in Rust
+//!
 #![recursion_limit = "1024"]
-#![allow(dead_code, unused_variables)]
 #![allow(clippy::implicit_hasher, clippy::trivial_regex)]
 
 #[macro_use]

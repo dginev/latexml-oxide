@@ -69,7 +69,7 @@ LoadDefinitions!(state, {
     // }
   );
   DefConstructor!("\\@hidden@egroup", "",
-    after_digest => sub[stomach,args,state] { stomach.egroup(state)?; },
+    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
     reversion => ""
   );
 
@@ -357,7 +357,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
-  DefConstructor!("\\vskip Glue", sub[document, args, props, state] {
+  DefConstructor!("\\vskip Glue", sub[document, args, _props, state] {
     unref!(args => length);
     let length = length.pt_value(None);
 

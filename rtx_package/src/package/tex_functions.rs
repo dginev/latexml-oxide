@@ -263,7 +263,7 @@ pub fn predigest_box_contents(stomach: &mut Stomach, _tokens: ArgWrap, state: &m
   }
 }
 
-pub fn revert_spec(whatsit: &mut Whatsit, keyword: &str, state: &mut State) -> Vec<Token> {
+pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str, _state: &mut State) -> Vec<Token> {
   //   my ($whatsit, $keyword) = @_;
   //   my $value = $whatsit->getProperty($keyword);
   //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
@@ -600,7 +600,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
-pub fn writable_tokens(tokens: &Tokens, state: &mut State) -> Result<String> {
+pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> Result<String> {
   // unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
@@ -845,7 +845,7 @@ pub fn make_generic_message(cmd:&str, args: Vec<Tokens>, kind:&str, stomach: &mu
     "info" => {
       Info!("latex",cmd,stomach,state,message);
     },
-    other => panic!("Only call make_generic_message with error|warn|info message kinds.")
+    _other => panic!("Only call make_generic_message with error|warn|info message kinds.")
   };
   Ok(())
 }

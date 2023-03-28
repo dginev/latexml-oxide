@@ -55,7 +55,7 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
 
 // Remember a "safe" way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
-pub fn is_script(object: &Digested, state: &State) -> Option<(String, Catcode)> {
+pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)> {
   let box_opt = match object.data() {
     DigestedData::List(obj) => obj.boxes.last(),
     _ => Some(object),
@@ -92,7 +92,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
   //   let mut gullet = stomach.get_gullet_mut();
   //   gullet.skip_spaces(state);
   let font = state.lookup_font().unwrap();
-  if let Some(style) = font.get_mathstyle() {
+  if font.get_mathstyle().is_some() {
     let mut putback = VecDeque::new();
     let mut nscripts = 0;
 
@@ -265,7 +265,7 @@ LoadDefinitions!(state, {
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[whatsit,args,state] {
+    reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
@@ -278,7 +278,7 @@ LoadDefinitions!(state, {
   </ltx:XMApp>
   "###
     ,
-    reversion => sub[whatsit,args,state] {
+    reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
@@ -291,7 +291,7 @@ LoadDefinitions!(state, {
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[whatsit,args,state] {
+    reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
@@ -301,13 +301,13 @@ LoadDefinitions!(state, {
     <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[whatsit,args,state] {
+    reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
   );
 
-  DefMacro!("'", sub[gullet,args,state] {
+  DefMacro!("'", sub[gullet,_args,state] {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     while gullet.if_next(T_OTHER!("'"), state)? {

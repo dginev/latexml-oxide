@@ -81,7 +81,7 @@ LoadDefinitions!(state, {
     "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP'",
     "and @role!='OPEN' and @role!='CLOSE'",
     "])]"),
-  replace => sub[document, nodes, state] {
+  replace => sub[document, nodes, _state] {
     let node = nodes.pop().unwrap();
     let mut replacement = node.clone();
     let content     = node.get_content();

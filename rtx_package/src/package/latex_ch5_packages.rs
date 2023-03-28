@@ -98,20 +98,13 @@ LoadDefinitions!(outer_stomach, state, {
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
     () });
 
+  // anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  DefMacro!("\\DeclareRelease{}{}{}", sub[stomach, (version, date, name), state] {
-    // anything useful?
-    Tokens!(); });
+  DefMacro!("\\DeclareRelease{}{}{}", None);
   //\DeclareCurrentRelease{v4.49}{2021-11-01}
-  DefMacro!("\\DeclareCurrentRelease{}{}", sub[stomach, (version, date), state] {
-    // anything useful?
-    Tokens!() });
-  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", sub[gullet,args,state] {
-    // anything useful?
-    Tokens!() });
-  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", sub[gullet,args,state] {
-    // anything useful?
-    Tokens!() });
+  DefMacro!("\\DeclareCurrentRelease{}{}", None);
+  DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", None);
+  DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", None);
 
   DefPrimitive!("\\DeclareOption{}{}", sub[stomach,(option, code),state] {
     let option_str = option.to_string();

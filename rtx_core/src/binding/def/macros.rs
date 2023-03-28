@@ -59,14 +59,14 @@ macro_rules! transfer_opt_default {
 /// create a PrimitiveClosure from the pieces, with a forced empty return value
 #[macro_export]
 macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (
+  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (Arc::new(
     |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>, $inner_state:&mut State| {
       BindInnerState!($stomach, $inner_state);
       $body
       end_state_frame!();
       Ok(Vec::new())
     }
-  )
+  ))
 }
 
 #[macro_export]

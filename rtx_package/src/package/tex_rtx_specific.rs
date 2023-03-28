@@ -183,10 +183,10 @@ DefConstructor!("\\lx@add@Preamble@PI Undigested", "<?latexml preamble='#1'?>");
 
 DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
-  before_digest => sub[stomach,state] {
+  before_digest => sub[_stomach,state] {
     state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::new()));
   },
-  after_digest => sub[stomach,whatsit,state] {
+  after_digest => sub[_stomach,whatsit,state] {
     let kv     = whatsit.get_arg(1);
     if let Some(Stored::HashStored(xmargs)) = state.pop_value("PENDING_DUAL_XMARGS") { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
@@ -264,7 +264,7 @@ DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
 // and establish an id and idref later.
 DefConstructor!("\\lx@xmarg{}{}", "<ltx:XMArg _xmkey='#1'>#2</ltx:XMArg>",
   reversion   => "#2",
-  after_digest => sub[stomach,whatsit,state] {
+  after_digest => sub[_stomach,whatsit,state] {
     let xmid = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
     let arg = whatsit.get_arg(2);
     let reversion_key = s!("xref:{}@reversion", xmid);
@@ -280,7 +280,7 @@ DefConstructor!("\\lx@xmarg{}{}", "<ltx:XMArg _xmkey='#1'>#2</ltx:XMArg>",
 
 DefConstructor!("\\lx@xmref{}", "<ltx:XMRef _xmkey='#1'/>",
   // TODO: Must we store and lookup the Whatsit?
-  reversion => sub[stomach,args,state] {
+  reversion => sub[_stomach,args,state] {
     let xmid = args[0].as_ref().unwrap().to_string();
     Ok( state.lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )},
   // sizer => sub { LookupValue('xref:' . ToString($_[0]->getArg(1)))->getSize; }

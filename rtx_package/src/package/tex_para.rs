@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   skippable_props.insert(s!("alignmentSkippable"), true.into());
 
   DefConstructor!("\\normal@par",
-    sub[document, args, props, state] {
+    sub[document, _args, props, state] {
       if !prop_bool!(props, "inPreamble") {
         document.maybe_close_element("ltx:p", state)?;
         let element = document.get_element();
@@ -88,7 +88,7 @@ LoadDefinitions!(state, {
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructor!("\\inner@par", sub[document, args, props, state] {
+  DefConstructor!("\\inner@par", sub[document, _args, _props, state] {
     Debug!("inner@par invoked!\n");
     if document.maybe_close_element("ltx:p", state)?.is_some() {
     } else if document.can_contain(document.get_node(), "ltx:break", state) {
@@ -101,7 +101,7 @@ LoadDefinitions!(state, {
     prune_empty_para(document, node, state)?;
   });
   Tag!("ltx:p", auto_close => true, auto_open => true,
-    after_close => sub[document, node, state] {
+    after_close => sub[document, node, _state] {
       document.trim_node_whitespace(node)?;
   });
 

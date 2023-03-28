@@ -53,7 +53,7 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefParameterType!(BoxSpecification,  reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!(BoxSpecification,  reader => reader!(gullet, _inner, _extra, state, {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
         Ok(Tokens!(T_OTHER!(key)))
       } else {
@@ -102,7 +102,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
-      unpack_opt_ref!(args => spec_opt, contents_opt);
+      unpack_opt_ref!(args => _spec_opt, contents_opt);
       let contents = contents_opt.unwrap().as_ref().unwrap();
       let current_opt = document.get_element();
 
@@ -140,7 +140,7 @@ LoadDefinitions!(state, {
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
     before_digest => sub[stomach, state] {reenter_text_mode(false, stomach.get_gullet_mut(), state)},
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[_stomach, whatsit, state] {
       let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
         if let Some(w) = GetKeyVal!(spec, "to") {
@@ -162,13 +162,13 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, props, state] {
+  DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props, state] {
       let contents = args[1].as_ref().unwrap();
-      let block = insert_block(document, contents, string_map!("vattach" => "bottom"), state);
+      let _block = insert_block(document, contents, string_map!("vattach" => "bottom"), state);
     },
-    // sizer       => "#2",
+    sizer       => "#2",
     mode        => "text",
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[_stomach, _whatsit, _state] {
       // TODO: Height arith
         // let spec = whatsit.get_arg(1);
         // let tbox  = $whatsit.get_arg(2);
@@ -181,13 +181,13 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, props, state] {
+  DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, _props, state] {
       let contents = args[1].as_ref().unwrap();
       insert_block(document, contents, string_map!("vattach" => "top"), state)?;
     },
     // sizer       => '#2',
     mode        => "text",
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[_stomach, _whatsit, _state] {
       // TODO: Height arith
       //   my $spec = $whatsit.get_arg(1);
       //   my $box  = $whatsit.get_arg(2);
@@ -200,7 +200,7 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefParameterType!(RuleSpecification, reader=>reader!(gullet, inner, extra, state, {
+  DefParameterType!(RuleSpecification, reader=>reader!(_gullet, _inner, _extra, _state, {
     unimplemented!(); ()
     // my $keyvals = LaTeXML::Core::KeyVals->new(undef, undef, skipMissing => 1);
     // while (my $key = $gullet->readKeyword('width', 'height', 'depth')) {

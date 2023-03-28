@@ -112,7 +112,7 @@ LoadDefinitions!(outer_state, {
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
-  DefParameterType!(FontToken, reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!(FontToken, reader => reader!(gullet, _inner, _extra, state, {
     let token = gullet.read_token(state).unwrap();
     if FONT_TOKEN_RE.is_match(&token.to_string()) {
       gullet.read_number(state)?;
@@ -542,11 +542,14 @@ LoadDefinitions!(outer_state, {
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
   sizer => "#1",    // Close enough?
   after_digest => sub[stomach, whatsit, state] {
-    unimplemented!(); ()
-      // my ($stomach, $whatsit) = @_;
-      // my $n = $whatsit->getArg(1)->valueOf;
-      // my ($role, $glyph) = decodeMathChar($n);
-      // $whatsit->setProperty(glyph => $glyph) if $glyph;
-      // $whatsit->setProperty(font => LookupValue('font')->specialize($glyph)) if $glyph;
+    let n = whatsit.get_arg(1).unwrap().value_of();
+    let (role, glyph_opt) = decode_math_char(n as u16, stomach, state);
+    if let Some(glyph) = glyph_opt {
+      whatsit.set_property("glyph", glyph);
+
+      let mut glyph_buf: [u8; 4] = [0; 4];
+      let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
+      whatsit.set_property("font", state.lookup_font().unwrap().specialize(glyph_str));
+    }
   });
 });

@@ -3,7 +3,7 @@ lazy_static! {
 }
 
 use crate::package::*;
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!(state, {
 
   DefRegister!("\\multido@count" => Number::new(0));
   DefRegister!("\\multidocount"  => Number::new(0));
