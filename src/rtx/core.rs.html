@@ -655,7 +655,7 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(pathname) = pathname::find(
         <span class="kw-2">&amp;</span>request_base,
         PathnameFindOptions {
-          types: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
+          extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
           ..PathnameFindOptions::default()
         },
       ) {

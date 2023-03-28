@@ -644,8 +644,8 @@
             <span class="prelude-val">None </span>=&gt; String::new(),
             <span class="comment">// TODO: How to print closures? This follows Perl&#39;s raw pointer format
             </span><span class="prelude-val">Some</span>(ExpansionBody::Closure(exp)) =&gt; <span class="macro">format!</span>(<span class="string">&quot;CODE({:p})&quot;</span>,Arc::as_ptr(exp)),
-            <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; writable_tokens(tks, state)<span class="question-mark">?
-          </span>};
+            <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; writable_tokens(tks, state)
+          };
           meaning = <span class="macro">format!</span>(<span class="string">&quot;{prefixes}macro:{spec}-&gt;{expansion}{p_trailer}&quot;</span>);
         },
         e =&gt; { <span class="comment">// are there other cases that could occur here? should we handle them?

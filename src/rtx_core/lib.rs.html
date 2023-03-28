@@ -741,10 +741,15 @@
 <a href="#741" id="741">741</a>
 <a href="#742" id="742">742</a>
 <a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
 </pre><pre class="rust"><code><span class="doccomment">//! The Core of rtx - roughly the equivalent of TeX conversion.
 //!
 
-</span><span class="attr">#![allow(missing_docs)]
+</span><span class="attr">#![warn(missing_docs)]
 
 </span><span class="doccomment">/// Auxiliary macros
 </span><span class="attr">#[macro_use]
@@ -935,7 +940,7 @@
       <span class="kw">match </span><span class="self">self</span>.get_properties().get(key) {
         <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(value)),
         <span class="prelude-val">None </span>=&gt; {
-          <span class="kw">let </span>tex = <span class="self">self</span>.get_tokens().map(|tks| tks.untex()).unwrap_or_default(); <span class="comment">// !
+          <span class="kw">let </span>tex = <span class="self">self</span>.get_tokens().map(|tks| tks.clone().untex()).unwrap_or_default(); <span class="comment">// !
           </span><span class="kw">if </span>!tex.is_empty() &amp;&amp; tex.chars().all(char::is_whitespace) {
             <span class="comment">// Check the TeX code, not (just) the string!
             </span><span class="prelude-val">Some</span>(Cow::Owned(Stored::Bool(<span class="bool-val">true</span>)))
@@ -1482,6 +1487,11 @@
       DigestedData::RegisterValue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
       <span class="kw">_ </span>=&gt; <span class="self">self</span>.to_string()
     }
+  }
+
+  <span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
+  </span><span class="kw">pub fn </span>untex(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+    <span class="prelude-val">Ok</span>(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.untex())
   }
 }
 </code></pre></div>

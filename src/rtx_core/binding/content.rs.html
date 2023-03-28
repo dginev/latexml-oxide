@@ -1907,7 +1907,7 @@
     params.push(
       Parameter {
         name: Cow::Borrowed(<span class="string">&quot;Optional&quot;</span>),
-        spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;[Default:{}]&quot;</span>, tks.untex())),
+        spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;[Default:{}]&quot;</span>, tks.clone().untex())),
         extra: <span class="macro">vec!</span>[tks],
         ..Parameter::default()
       }

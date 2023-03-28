@@ -2941,8 +2941,6 @@
 <a href="#2941" id="2941">2941</a>
 <a href="#2942" id="2942">2942</a>
 <a href="#2943" id="2943">2943</a>
-<a href="#2944" id="2944">2944</a>
-<a href="#2945" id="2945">2945</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3252,11 +3250,9 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="doccomment">/// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  /// Document construction at the Current Insertion Point.
-  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  <span class="doccomment">/// Document construction at the Current Insertion Point.
   ///
-  /// **********************************************************************
   /// absorb the given $box into the DOM (called from constructors).
   /// This will return a list of whatever nodes were created.
   /// Note that this may include nodes that are children of other nodes in the list
@@ -3266,7 +3262,7 @@
   /// [Note that recording the nodes being constructed isn&#39;t all that costly,
   /// but filtering them for parent/child relations IS, particularly since it usually isn&#39;t needed]
   ///
-  /// A $box that is a TBox, or List, or Whatsit, is responsible for carrying out
+  /// A box that is a TBox, or List, or Whatsit, is responsible for carrying out
   /// its own insertion, but it should ultimately call methods of Document
   /// that will record the nodes that were created.
   /// $box can also be a plain string (Digested::Postponed)
