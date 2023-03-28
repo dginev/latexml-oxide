@@ -13,11 +13,9 @@ use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
 use rtx_package::package;
 
-#[allow(clippy::implicit_hasher)]
 pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {
   rtx_tests_internal(dirpath, requires, dispatcher_opt)
 }
-#[allow(clippy::implicit_hasher)]
 pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   if !validate_requirements(dirpath, requires) {

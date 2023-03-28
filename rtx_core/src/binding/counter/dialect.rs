@@ -503,7 +503,6 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   }
 }
 
-#[allow(clippy::float_cmp)]
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
   let counter = state.lookup_string("itemcounter");

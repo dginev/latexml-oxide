@@ -592,8 +592,7 @@ impl Document {
 
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
-  #[allow(clippy::wrong_self_convention)]
-  pub fn is_openable(&mut self, qname: &str, state: &mut State) -> bool {
+  pub fn is_openable(&self, qname: &str, state: &mut State) -> bool {
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
       let node_qname = self.get_node_qname(&node, state);
@@ -612,8 +611,7 @@ impl Document {
   /// any intervening nodes must be autocloseable.
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
-  #[allow(clippy::wrong_self_convention)]
-  pub fn is_closeable<T: IntoVDQS>(&mut self, tags: T, state: &mut State) -> Option<Node> {
+  pub fn is_closeable<T: IntoVDQS>(&self, tags: T, state: &mut State) -> Option<Node> {
     let mut tags: VecDeque<String> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
@@ -1152,7 +1150,7 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(&mut self, tag: &str, child: &str, state: &mut State) -> Option<String> {
+  pub fn can_contain_indirect(&self, tag: &str, child: &str, state: &mut State) -> Option<String> {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model->getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -1170,11 +1168,11 @@ impl Document {
     }
   }
 
-  pub fn can_contain_node_somehow(&mut self, tag: &Node, child: &str, state: &mut State) -> bool {
+  pub fn can_contain_node_somehow(&self, tag: &Node, child: &str, state: &mut State) -> bool {
     self.can_contain_somehow(&state.model.get_node_qname(tag), child, state)
   }
 
-  pub fn can_contain_somehow(&mut self, tag: &str, child: &str, state: &mut State) -> bool {
+  pub fn can_contain_somehow(&self, tag: &str, child: &str, state: &mut State) -> bool {
     state.model.can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
   }
 
@@ -2680,7 +2678,6 @@ impl Document {
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
-  #[allow(clippy::nonminimal_bool)]
   pub fn float_to_label(&mut self, state: &mut State) -> Option<Node> {
     let key = "labels";
     let ancestors: Vec<Node> = self
