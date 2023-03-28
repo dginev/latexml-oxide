@@ -10,7 +10,7 @@ LoadDefinitions!(outer_state, {
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
-  DefPrimitive!("\\protected", sub[stomach, _args, state] {
+  DefPrimitive!("\\protected", sub[_stomach, _args, state] {
     state.set_prefix("protected");
   },
   is_prefix => true);
@@ -59,12 +59,12 @@ LoadDefinitions!(outer_state, {
   // #======================================================================
   // # 3.3 Environmental enquiries
 
-  DefMacro!("\\eTeXrevision", sub[gullet,args,state] { Explode!(".2") });
+  DefMacro!("\\eTeXrevision", sub[_gullet,_args,_state] { Explode!(".2") });
   DefRegister!("\\eTeXversion" => Number!(2));
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
-    getter => sub[args, state] { state.get_frame_depth() });
+    getter => sub[_args, state] { state.get_frame_depth() });
 
   // \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
@@ -233,29 +233,29 @@ LoadDefinitions!(outer_state, {
     Ok(value)
   }
 
-  DefParameterType!(NumExpr, sub[gullet, inner, _extra, state] {
+  DefParameterType!(NumExpr, sub[gullet, _inner, _extra, state] {
     etex_readexpr(gullet, RegisterType::Number, state)?
   });
-  DefParameterType!(DimExpr, sub[gullet, inner, _extra, state] {
+  DefParameterType!(DimExpr, sub[gullet, _inner, _extra, state] {
     etex_readexpr(gullet, RegisterType::Dimension, state)?
   });
-  DefParameterType!(GlueExpr, sub[gullet, inner, _extra, state] {
+  DefParameterType!(GlueExpr, sub[gullet, _inner, _extra, state] {
     etex_readexpr(gullet, RegisterType::Glue, state)?
   });
-  DefParameterType!(MuExpr, sub[gullet, inner, _extra, state] {
+  DefParameterType!(MuExpr, sub[gullet, _inner, _extra, state] {
     etex_readexpr(gullet, RegisterType::MuGlue, state)?
   });
 
-  DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args, state] {
+  DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args, _state] {
     args.remove(0).expect_number()
   });
-  DefRegister!("\\dimexpr DimExpr", Dimension::new(0), getter => sub[args, state] {
+  DefRegister!("\\dimexpr DimExpr", Dimension::new(0), getter => sub[args, _state] {
     args.remove(0).expect_dimension()
   });
-  DefRegister!("\\glueexpr GlueExpr", Glue::new(0), getter => sub[args, state] {
+  DefRegister!("\\glueexpr GlueExpr", Glue::new(0), getter => sub[args, _state] {
     args.remove(0).expect_glue()
   });
-  DefRegister!("\\muexpr MuExpr", MuGlue::new(0), getter => sub[args, state] {
+  DefRegister!("\\muexpr MuExpr", MuGlue::new(0), getter => sub[args, _state] {
     args.remove(0).expect_mu_glue()
   });
 

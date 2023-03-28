@@ -65,7 +65,7 @@ LoadDefinitions!(state, {
   });
 
   // Define \Url, in case its used; won't be represented as nicely
-  DefMacro!("\\Url", sub[gullet, args, state] {
+  DefMacro!("\\Url", sub[gullet, _args, _state] {
     gullet.unread_one(T_OTHER!("\\Url"));
     Ok(Tokens!(T_CS!("\\@Url")))
   });
@@ -73,7 +73,7 @@ LoadDefinitions!(state, {
   // \@@Url cmd {open}{close}{url}{formattedurl}
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    properties => sub[stomach, args, state] {
+    properties => sub[_stomach, args, state] {
       unref!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(

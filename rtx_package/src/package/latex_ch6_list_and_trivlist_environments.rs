@@ -45,7 +45,7 @@ LoadDefinitions!(state, {
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties => sub[stomach, args, state] { begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
+    properties => sub[stomach, _args, state] { begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
     before_digest_end => { Digest!("\\par")?; }
   );
 

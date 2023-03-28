@@ -103,7 +103,7 @@ LoadDefinitions!(state, {
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
-  Tag!("ltx:document", after_open_late => sub[document, node, state] {
+  Tag!("ltx:document", after_open_late => sub[document, _node, state] {
     // this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
@@ -218,7 +218,7 @@ LoadDefinitions!(state, {
   });
 
   // Remove the last closed node, if it's empty.
-  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, whatsit, state, {
+  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit, _state, {
     if let Some(mut node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {

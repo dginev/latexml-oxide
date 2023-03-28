@@ -234,7 +234,7 @@ LoadDefinitions!(state, {
   //     LookupValue('box' . $value) || Box(); });
 
   // A soft sorta \par that only closes an ltx:p, but not ltx:para
-  DefConstructor!("\\lx@parboxnewline[]", sub[document, args, props, state] {
+  DefConstructor!("\\lx@parboxnewline[]", sub[document, _args, _props, state] {
     document.maybe_close_element("ltx:p", state)?;
   });
 

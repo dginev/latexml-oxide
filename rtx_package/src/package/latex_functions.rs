@@ -15,7 +15,7 @@ pub fn start_appendices(kind: &str, state: &mut State) { begin_appendices(kind, 
 // Class files should define \@appendix to call this as startAppendices('section') or chapter...
 // counter is also the element name!
 
-pub fn begin_appendices(counter: &str, state: &mut State) {
+pub fn begin_appendices(_counter: &str, _state: &mut State) {
   unimplemented!();
   // Let('\lx@save@theappendex',    '\the' . $counter,         'global');
   // Let('\lx@save@theappendex@ID', '\the' . $counter . '@ID', 'global');
@@ -34,7 +34,7 @@ pub fn begin_appendices(counter: &str, state: &mut State) {
   // Let(T_CS!('\@appendix'),    T_CS!('\relax'),      'global');
 }
 
-pub fn end_appendices(state: &mut State) {
+pub fn end_appendices(_state: &mut State) {
   unimplemented!();
   // if (my $counter = LookupMapping('BACKMATTER_ELEMENT', 'ltx:appendix')) {
   //   $counter =~ s/^ltx://;

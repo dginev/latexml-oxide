@@ -4,12 +4,12 @@ LoadDefinitions!(outer_state, {
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  let define_excluded: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, state, {
+  let define_excluded: PrimitiveClosure = primitiveproc!(_stomach, args, state, {
     unpack!(args=>name);
     let begin_mark = s!("\\begin{{{name}}}");
     let end_mark = s!("\\end{{{name}}}");
     DefConstructor!(T_CS!(begin_mark), None, None,
-    after_digest => sub[stomach, whatsit, after_digest_state] {
+    after_digest => sub[stomach, _whatsit, after_digest_state] {
       let mut nlines = 0;
       let gullet = &mut stomach.gullet;
       gullet.read_raw_line(after_digest_state);    // IGNORE 1st line (after the \begin{$name} !!!
@@ -22,11 +22,11 @@ LoadDefinitions!(outer_state, {
       note_progress(&s!("[Skipped {name} ({nlines} lines)]"));
       Ok(Vec::new())
     });
-  }));
+  });
 
   // I don't understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  let define_included: PrimitiveClosure = Arc::new(primitiveproc!(stomach, args, inner_state, {
+  let define_included: PrimitiveClosure = primitiveproc!(_stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
     let name = args.pop().unwrap().owned_tokens().expect("expecting a Tokens argument").to_string();
     let mut before_tokens = match args.pop() {
@@ -48,7 +48,7 @@ LoadDefinitions!(outer_state, {
       before_tokens.clone()
     });
     DefMacro!(T_CS!(s!("\\end{{{name}}}")), None, Tokens::new(after_tokens));
-  }));
+  });
 
   let mut mock_stomach = Stomach::default();
   define_excluded(&mut mock_stomach, vec![ArgWrap::Tokens(Tokenize!("comment", None))], outer_state)?;

@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
-    properties => sub[whatsit,_args,state] { Ok(stored_map!("isBreak" => Stored::Bool(true) )) }
+    properties => sub[_whatsit,_args,_state] { Ok(stored_map!("isBreak" => Stored::Bool(true) )) }
   );
 
   Let!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));

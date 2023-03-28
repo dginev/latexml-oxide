@@ -19,7 +19,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\citeform{}", "#1");
 
   // Copy of natbib's \citet
-  DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim", sub[gullet, (star,pre,post,tkeys), state] {
+  DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim", sub[gullet, (_star,_pre,_post,_tkeys), _state] {
     unimplemented!();
       // my ($style, $open, $close, $ns)
       //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);

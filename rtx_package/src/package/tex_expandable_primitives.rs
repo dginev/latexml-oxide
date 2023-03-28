@@ -31,7 +31,7 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifinner", { false });
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
-  DefParameterType!(ExpandedIfToken, sub[gullet, inner, _extra, state] {
+  DefParameterType!(ExpandedIfToken, sub[gullet, _inner, _extra, state] {
     let token_opt = gullet.read_x_token(Some(false), false, state)?.map(|t| {
       // Also resolve \let variants:
       let meaning_opt = state.lookup_meaning(&t);
@@ -244,7 +244,7 @@ LoadDefinitions!(outer_state, {
 
   //======================================================================
 
-  DefParameterType!(CSName, reader => reader!(gullet, inner, extra, state, {
+  DefParameterType!(CSName, reader => reader!(gullet, _inner, _extra, state, {
     let mut cs = escapechar(state);
     // keep newlines from having \n inside!
     while let Some(token) = gullet.read_x_token(Some(true), true, state)? {
@@ -303,7 +303,7 @@ LoadDefinitions!(outer_state, {
   });
 
   // Insert magic token that Gullet knows not to expand the next one.
-  DefMacro!(T_CS!("\\noexpand"), None, sub[gullet, args, state] {
+  DefMacro!(T_CS!("\\noexpand"), None, sub[gullet, _args, state] {
     if let Some(token) = gullet.read_token(state) {
       vec![token.with_dont_expand(state)?]
     } else {

@@ -115,7 +115,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
   Ok(())
 }
 
-fn retract_equation(state: &mut State) {
+fn retract_equation(_state: &mut State) {
   unimplemented!();
 }
 
@@ -145,13 +145,13 @@ LoadDefinitions!(state, {
       }
     }
   },
-  properties  => sub[stomach,args,state] { ref_step_id("equation", stomach, state) },
+  properties  => sub[stomach,_args,state] { ref_step_id("equation", stomach, state) },
   capture_body => true);
 
   DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
   mode       => "display_math",
-  properties   => sub[stomach, args, state] { ref_step_id("equation", stomach, state) },
+  properties   => sub[stomach, _args, state] { ref_step_id("equation", stomach, state) },
   locked     => true);
   DefEnvironment!("{math}",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",

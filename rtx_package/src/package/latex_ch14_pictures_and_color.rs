@@ -20,7 +20,7 @@ LoadDefinitions!(outer_state, {
     AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None, state).into());
     AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None, state).into());
     stomach.bgroup(state); },
-  after_digest => sub[stomach,whatsit,state] {
+  after_digest => sub[stomach,_whatsit,state] {
     // TODO
     // $_[1]->getSize;    # precompute while binding in effect
     stomach.egroup(state)?; },

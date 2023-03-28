@@ -89,7 +89,7 @@ LoadDefinitions!(state, {
   let thou    = THOUSANDS_SEP.get(lang).unwrap_or(&",");
   let decrole = if dec == &"." { "PERIOD" } else { "" };
   // let mut chars : Vec<char> = Vec::new();
-  let (mut n, mut combined, mut number, w, mut font) = (0, String::new(), String::new(), 0, None);
+  let (mut n, mut combined, mut number, _w, mut font) = (0, String::new(), String::new(), 0, None);
   //     NOTE: We're scanning chars from END!
   let mut node_ref = node;
   let mut current;
@@ -323,7 +323,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\newlanguage Token", r"\alloc@@{language}\global\chardef#1=\allocationnumber");
 
   // # This implementation is quite wrong
-  DefPrimitive!("\\newinsert Token", sub[stomach, args, state] {
+  DefPrimitive!("\\newinsert Token", sub[_stomach, args, state] {
     unpack_to_token!(args => t);
     DefRegister!(t, None, Number::new(0));
   });

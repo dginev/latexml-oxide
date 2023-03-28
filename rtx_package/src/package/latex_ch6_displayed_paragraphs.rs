@@ -6,7 +6,7 @@ use crate::package::*;
 
 LoadDefinitions!(state, {
 
-  DefEnvironment!("{center}", sub[document, args, props, state] {
+  DefEnvironment!("{center}", sub[document, _args, props, state] {
     document.maybe_close_element("ltx:p", state)?;                       // this starts a new vertical block
     aligning_environment("center", "ltx_centering", document, props, state)?;
     Ok(())

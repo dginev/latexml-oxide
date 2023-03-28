@@ -22,7 +22,7 @@ RawTeX!(r###"
 \newcount\etb@tempcnta
 "###);
 
-DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(star,cs,nargs,opt,body),state] {
+DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
   if !is_definable(&cs, state) {
     if !state.lookup_bool(&s!("{cs}:locked")) {
       Info!("ignore", cs, stomach, state,
@@ -33,12 +33,12 @@ DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(s
   }
   Tokens!() });
 
-DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(star,cs,nargs,opt,body),state] {
+DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
   let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
   DefMacro!(cs, args, body, protected => true, long => true);
   Tokens!() });
 
-DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(star,cs,nargs,opt,body), state] {
+DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body), state] {
   if is_definable(&cs, state) {
     let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
@@ -1267,7 +1267,7 @@ RawTeX!(r###"
 
 // Need to be able to examine a Macro's replacement for a match (and then replace)
 // we can only do this for token expansions, and should return failure for all else.
-DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(prefix,cs,search,replace,success,failure), state] {
+DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(_prefix,cs,search,replace,success,failure), state] {
   let definition = state.lookup_definition(&cs);
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();

@@ -1,3 +1,3 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {});
+LoadDefinitions!(_state, {});
