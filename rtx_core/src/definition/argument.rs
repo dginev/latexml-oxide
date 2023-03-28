@@ -1,4 +1,3 @@
-#![allow(clippy::uninlined_format_args)]
 use std::borrow::Cow;
 use std::fmt::{self, Display};
 

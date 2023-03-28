@@ -20,7 +20,6 @@ pub enum TagOptionName {
   AfterCloseLate,
 }
 
-#[allow(dead_code)]
 impl TagOptionName {
   pub fn all() -> Vec<TagOptionName> {
     use self::TagOptionName::*;
@@ -48,7 +47,6 @@ pub struct TagOptions {
   pub after_close_late: Option<Vec<TagConstructionClosure>>,
 }
 
-#[allow(dead_code)]
 impl TagOptions {
   pub fn get(&self, name: &TagOptionName) -> &Option<Vec<TagConstructionClosure>> {
     use self::TagOptionName::*;
