@@ -143,8 +143,6 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
@@ -160,12 +158,10 @@
 <span class="kw">use </span>rtx_math_parser::node_to_grammar_lexemes;
 <span class="kw">use </span>rtx_package::package;
 
-<span class="attr">#[allow(clippy::implicit_hasher)]
-</span><span class="kw">pub fn </span>rtx_tests(dirpath: <span class="kw-2">&amp;</span>str, requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
+<span class="kw">pub fn </span>rtx_tests(dirpath: <span class="kw-2">&amp;</span>str, requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
   rtx_tests_internal(dirpath, requires, dispatcher_opt)
 }
-<span class="attr">#[allow(clippy::implicit_hasher)]
-</span><span class="kw">pub fn </span>rtx_tests_internal(dirpath: <span class="kw-2">&amp;</span>str, requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, extra_bindings_dispatcher: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
+<span class="kw">pub fn </span>rtx_tests_internal(dirpath: <span class="kw-2">&amp;</span>str, requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, extra_bindings_dispatcher: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   <span class="kw">if </span>!validate_requirements(dirpath, requires) {
     <span class="kw">return</span>; <span class="comment">// test group only if required files are found.
