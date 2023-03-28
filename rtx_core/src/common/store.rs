@@ -134,7 +134,7 @@ pub enum Stored {
   Primitive(Arc<Primitive>),
   /// latexml object (Arc-wrapped)
   MathPrimitive(Arc<MathPrimitive>),
-  /////// MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
+  //  MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   /// latexml object (Arc-wrapped)
   Constructor(Arc<Constructor>),
   /// latexml object (Arc-wrapped)

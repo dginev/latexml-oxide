@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -12,7 +11,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
 use crate::state::State;
@@ -566,94 +564,7 @@ macro_rules! ExplodeText(($text:expr) => ({
   ).collect::<Vec<Token>>()
 }));
 
-static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
-/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
-pub fn untex_digested(digested: &Digested, suppress_linebreak: bool, state: &mut State) -> Result<String> {
-  untex(digested.revert(state)?, suppress_linebreak)
-}
-
-/// Recovers a string representation of what may likely have been the source TeX for a given Tokens collection
-/// (note that the LaTeXML linebreak feature is always *disabled* here.)
-pub fn untex(tokens: Tokens, _suppress_linebreak: bool) -> Result<String> {
-  let suppress_linebreak = true;
-  use crate::token::Catcode::*;
-  let mut tokens: VecDeque<Token> = tokens.unlist().into_iter().collect();
-  let mut tex_string = String::new();
-  let mut length = 0;
-  let mut level: i32 = 0;
-  let mut prevs = String::new();
-  let mut prevcc = COMMENT;
-  while let Some(token) = tokens.pop_front() {
-    let cc = token.get_catcode();
-    if cc == COMMENT {
-      continue;
-    }
-    let mut token_string = token.get_string().to_owned();
-    // Note: \n only-used to fail alphanumeric test
-    let first_char = token_string.chars().next().unwrap_or('\n');
-    if cc == LETTER {
-      // keep "words" together, just for aesthetics
-      while !tokens.is_empty() && tokens[0].get_catcode() == LETTER {
-        token_string += tokens.pop_front().unwrap().get_string()
-      }
-    }
-    let l = token_string.len();
-    if cc == BEGIN {
-      level += 1;
-    }
-    // Seems a reasonable & safe time to line break, for readability, etc.
-    if (cc == SPACE) && (token_string == "\n") {
-      // preserve newlines already present
-      if length > 0 {
-        tex_string.push_str(&token_string);
-        length = 0;
-      }
-    }
-    // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
-    else if ((cc == LETTER) || ((cc == OTHER) && first_char.is_alphanumeric()))
-      && (prevcc == CS)
-      && (!prevs.is_empty())
-      && prevs.chars().rev().next().unwrap().is_alphabetic()
-    // is this a good replacement for lookup_catcode == LETTER?
-    {
-      // Insert a (virtual) space before a letter if previous token was a CS w/letters
-      // This is required for letters, but just aesthetic for digits (to me?)
-      // Of course, use a newline if we're already at end
-      let space = if !suppress_linebreak && (length > 0) && (length + l > UNTEX_LINELENGTH) { '\n' } else { ' ' };
-      tex_string.push(space);
-      tex_string.push_str(&token_string);
-      length += 1 + l;
-    } else if !suppress_linebreak && (length > 0) && (length + l > UNTEX_LINELENGTH) && (tokens.len() > 1) {
-      // linebreak before this token?
-      // and not at end! Or even within an arg!
-      tex_string.push_str("%\n");
-      tex_string.push_str(&token_string);
-      length = l; // with %, so that it "disappears"
-    } else {
-      tex_string.push_str(&token_string);
-      length += l;
-    }
-    if cc == END {
-      level -= 1;
-    }
-
-    prevs = token_string;
-    prevcc = cc;
-  }
-  // Patch up nesting for valid TeX !!!
-  match level {
-    0 => {},
-    1i32..=std::i32::MAX => {
-      let close_brace_string = String::from_utf8(vec![b'}'; level.unsigned_abs() as usize]).unwrap();
-      tex_string = tex_string + &close_brace_string;
-    },
-    std::i32::MIN..=-1i32 => {
-      let open_brace_string = String::from_utf8(vec![b'{'; level.unsigned_abs() as usize]).unwrap();
-      tex_string = open_brace_string + &tex_string;
-    },
-  };
-  Ok(tex_string)
-}
+// static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
 
 impl Default for Token {
   fn default() -> Self {

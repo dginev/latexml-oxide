@@ -308,11 +308,9 @@ impl Document {
     Ok(())
   }
 
-  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
   /// Document construction at the Current Insertion Point.
-  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ///
-  /// **********************************************************************
   /// absorb the given $box into the DOM (called from constructors).
   /// This will return a list of whatever nodes were created.
   /// Note that this may include nodes that are children of other nodes in the list
@@ -322,7 +320,7 @@ impl Document {
   /// [Note that recording the nodes being constructed isn't all that costly,
   /// but filtering them for parent/child relations IS, particularly since it usually isn't needed]
   ///
-  /// A $box that is a TBox, or List, or Whatsit, is responsible for carrying out
+  /// A box that is a TBox, or List, or Whatsit, is responsible for carrying out
   /// its own insertion, but it should ultimately call methods of Document
   /// that will record the nodes that were created.
   /// $box can also be a plain string (Digested::Postponed)

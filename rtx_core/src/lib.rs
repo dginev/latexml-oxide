@@ -193,7 +193,7 @@ pub trait BoxOps: Object {
       match self.get_properties().get(key) {
         Some(value) => Some(Cow::Borrowed(value)),
         None => {
-          let tex = self.get_tokens().map(|tks| tks.untex()).unwrap_or_default(); // !
+          let tex = self.get_tokens().map(|tks| tks.clone().untex()).unwrap_or_default(); // !
           if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
             // Check the TeX code, not (just) the string!
             Some(Cow::Owned(Stored::Bool(true)))
@@ -740,5 +740,10 @@ impl Digested {
       DigestedData::RegisterValue(ref v) => v.to_attribute(),
       _ => self.to_string()
     }
+  }
+
+  /// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
+  pub fn untex(&self, state: &mut State) -> Result<String> {
+    Ok(self.revert(state)?.untex())
   }
 }

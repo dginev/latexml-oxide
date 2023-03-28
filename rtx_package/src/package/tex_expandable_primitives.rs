@@ -230,7 +230,7 @@ LoadDefinitions!(outer_state, {
             None => String::new(),
             // TODO: How to print closures? This follows Perl's raw pointer format
             Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})",Arc::as_ptr(exp)),
-            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks, state)?
+            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks, state)
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
         },

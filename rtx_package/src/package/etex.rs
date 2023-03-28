@@ -17,7 +17,7 @@ LoadDefinitions!(outer_state, {
 
   // \detokenize
   DefMacro!("\\detokenize GeneralText", sub[gullet, (text), state] {
-    Explode!(writable_tokens(&text, state)?)
+    Explode!(writable_tokens(&text, state))
   });
 
   // When building an expanded token list, the tokens resulting from the expansion
@@ -52,7 +52,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\scantokens GeneralText", sub[gullet, (tokens), state] {
     gullet.open_mouth(
-      Mouth::new(&writable_tokens(&tokens, state)?, None, state)?, true);
+      Mouth::new(&writable_tokens(&tokens, state), None, state)?, true);
     Tokens!()
   });
 

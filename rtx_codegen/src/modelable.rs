@@ -32,7 +32,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     &name,
     pathname::PathnameFindOptions {
       paths: Some(vec![s!(".")]),
-      types: Some(vec![s!("model")]),
+      extensions: Some(vec![s!("model")]),
       installation_subdir: Some(s!("resources/RelaxNG")),
     },
   );

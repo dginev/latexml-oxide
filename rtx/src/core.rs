@@ -293,7 +293,7 @@ impl DigestionAPI for Core {
       if let Some(pathname) = pathname::find(
         &request_base,
         PathnameFindOptions {
-          types: Some(vec![mode.extension(), String::new()]),
+          extensions: Some(vec![mode.extension(), String::new()]),
           ..PathnameFindOptions::default()
         },
       ) {
