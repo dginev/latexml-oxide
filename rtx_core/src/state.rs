@@ -1284,7 +1284,7 @@ impl State {
       let popped_frame = self.undo.pop_front().unwrap();
       for table_name in TableName::variants() {
         let undo_table = popped_frame.table(table_name);
-        let mut state_table = self.table_mut(table_name);
+        let state_table = self.table_mut(table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
           let named_table = state_table.get_mut(key).unwrap();
@@ -1434,7 +1434,7 @@ impl State {
     // Here we ALWAYS push the stashed values into the table
     // since they may be popped off by deactivateScope
     for (table_name, key, value) in actions {
-      let mut frame = &mut self.undo[0];
+      let frame = &mut self.undo[0];
       let frame_table = frame.table_mut(table_name);
       let entry = frame_table.entry(key.clone()).or_insert(0);
       *entry += 1; // Note that this many values must be undone
@@ -1483,9 +1483,9 @@ impl State {
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
         (*table_entry).pop_front();
 
-        if let Some(mut frame) = self.undo.front_mut() {
-          let mut frame_table = frame.table_mut(table_name);
-          let mut frame_count = frame_table.entry(key.to_string()).or_default();
+        if let Some(frame) = self.undo.front_mut() {
+          let frame_table = frame.table_mut(table_name);
+          let frame_count = frame_table.entry(key.to_string()).or_default();
           *frame_count -= 1;
         }
       } else {

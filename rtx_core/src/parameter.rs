@@ -136,7 +136,7 @@ impl Parameter {
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let mut descriptor: Option<Arc<Parameter>>;
+    let descriptor: Option<Arc<Parameter>>;
     if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
       descriptor = Some(Arc::clone(d_lookup));
     } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
@@ -319,7 +319,7 @@ impl Parameter {
     if self.semiverbatim.is_some() {
       self.setup_catcodes(state);
       if value_arg.is_tokens() {
-        if let Some(mut value) = value_arg.owned_tokens() {
+        if let Some(value) = value_arg.owned_tokens() {
           let neutralized = stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
             let gullet = stomach.get_gullet_mut();
             gullet.unread(value);
@@ -492,7 +492,7 @@ impl Parameters {
     }
     let value_tokens = value.revert(ostate)?;
     // start with empty mouth
-    let mut reader_mouth = Mouth::new("", None, ostate)?;
+    let reader_mouth = Mouth::new("", None, ostate)?;
     gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
 
         gulletx.unread(value_tokens); // but put back tokens to be read

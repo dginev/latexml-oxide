@@ -202,10 +202,10 @@ pub fn new_setup(
 }
 
 pub fn spec_setup(
-  mut spec: &str,
-  mut plus: Option<f64>,
+  spec: &str,
+  plus: Option<f64>,
   mut pfill: Option<FillCode>,
-  mut minus: Option<f64>,
+  minus: Option<f64>,
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
@@ -225,7 +225,7 @@ pub fn spec_setup(
     }
 
     if let Some(cs) = GLUE_RE.captures(spec) {
-      let (mut f, unit, p, punit, m, munit) = (
+      let (f, unit, p, punit, m, munit) = (
         cs.get(1).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
         cs.get(2).map_or("", |m| m.as_str()),
         cs.get(4).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
@@ -338,7 +338,7 @@ impl Glue {
     // (pts, p, pf, m, mf) = @$self;
     // if (ref $other eq 'LaTeXML::Common::Glue') {
     // my ($pts2, $p2, $pf2, $m2, $mf2) = @$other;
-    let mut skip = self.skip + other.skip;
+    let skip = self.skip + other.skip;
     let mut plus = self.plus;
     let mut minus = self.minus;
     let mut pfill = self.pfill;

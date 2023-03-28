@@ -144,7 +144,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   prefix = clean_id(&prefix);
 
   if !prefix.is_empty() {
-    let mut idwithin = match options_opt {
+    let idwithin = match options_opt {
       Some(ref opts) => {
         if opts.idwithin.is_empty() {
           within

@@ -901,7 +901,7 @@ impl Font {
       .filter(|thisbox| !thisbox.has_property("isEmpty"));
 
     let mut prevbox_opt: Option<Digested> = None;
-    for mut thisbox in filtered_boxes {
+    for thisbox in filtered_boxes {
       // Should any `options` be inherited by the contained boxes?
       let (w, h, d) = thisbox.get_size(None, state)?;
 

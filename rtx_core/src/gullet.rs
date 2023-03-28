@@ -166,7 +166,7 @@ impl Gullet {
   pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
     let mut next_token: Option<Token> = None;
     // If we're without a runtime, bail
-    let mut runtime = match self.mouth {
+    let runtime = match self.mouth {
       None => return None,
       Some(ref mut runtime) => runtime,
     };
@@ -241,7 +241,6 @@ impl Gullet {
     }
 
     loop {
-      let mut invoked = false;
       let runtime = match self.mouth {
         None => return Ok(None),
         Some(ref mut runtime) => runtime,
@@ -314,13 +313,10 @@ impl Gullet {
               }
             }
             // TODO: ## Wow!!!!! See TeX the Program \S 309
-            if !invoked {
-              if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
-                return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
-              } else {
-                return Ok(Some(token));
-              }
+            if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
+              return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
             } else {
+              return Ok(Some(token));
             }
           }
         },
@@ -358,7 +354,7 @@ impl Gullet {
 
     // add the newly expanded tokens back into the gullet stream, in the ordinary case.
     {
-      let mut runtime = self.mouth.as_mut().unwrap();
+      let runtime = self.mouth.as_mut().unwrap();
       for token in expansion.unlist().into_iter().rev() {
         runtime.pushback.push_front(token);
       }
@@ -1213,7 +1209,7 @@ impl Gullet {
     }
   }
 
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Gullet, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();
     self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
@@ -1331,8 +1327,8 @@ impl Gullet {
     }
   }
 
-  pub fn do_expand<T: Into<Tokens>>(&mut self, mut tokens: T, outer_state: &mut State) -> Result<Tokens> {
-    let mut tokens: Tokens = tokens.into();
+  pub fn do_expand<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Tokens> {
+    let tokens: Tokens = tokens.into();
     self.reading_from_mouth(
       Mouth::default(),
       outer_state,

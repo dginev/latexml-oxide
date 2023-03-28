@@ -44,7 +44,7 @@ pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
 
 /// cleans a string down to characters acceptable for an id attribute
 pub fn clean_id(key: &str) -> String {
-  let mut cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
+  let cleaned = Cow::Borrowed(key.trim_start().trim_end()); // Trim leading/trailing, in any case
   let cleaned_1 = SPACES_RE.replace_all(&cleaned, ""); // remove all spaces
                                                        // Remove common idiom:
   let cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(&cleaned_1, "$inner");
@@ -90,8 +90,8 @@ pub fn clean_url(url: &str) -> String {
 
 /// builds a complete url from fragments
 pub fn compose_url(base: &str, url: &str, fragid_opt: Option<&str>) -> String {
-  let mut base = TRAILING_SLASH_RE.replace(base, ""); //  remove trailing /
-  let mut fragid = fragid_opt.unwrap_or("");
+  let base = TRAILING_SLASH_RE.replace(base, ""); //  remove trailing /
+  let fragid = fragid_opt.unwrap_or("");
   let base: String = if !base.is_empty() && !LEADING_PROTOCOL_RE.is_match(url) {
     // already has protocol, so is absolute url
     base.to_string() + if url.starts_with('/') { "" } else { "/" } // else start w/base, possibly /

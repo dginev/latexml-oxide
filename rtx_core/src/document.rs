@@ -490,7 +490,7 @@ impl Document {
     let mut attr_data = Vec::new();
     if let Some(attributes) = attributes_opt {
       let mut keys = vec![String::from("class"), String::from("package"), String::from("options")];
-      let mut other_keys = attributes
+      let other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
         .map(ToString::to_string)
@@ -1574,7 +1574,7 @@ impl Document {
   fn get_insertion_candidates(&self, node: &Node) -> Vec<Node> {
     let mut nodes: Vec<Node> = Vec::new();
     // Check the current element FIRST, then build list of candidates.
-    let mut first = if node.get_type() == Some(NodeType::TextNode) {
+    let first = if node.get_type() == Some(NodeType::TextNode) {
       Cow::Owned(node.get_parent().unwrap())
     } else {
       Cow::Borrowed(node)
@@ -2124,7 +2124,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn get_node_font(&self, mut node: &Node) -> &Font {
+  pub fn get_node_font(&self, node: &Node) -> &Font {
     if let Some(_element) = xml::closest_element(node) {
       if node.get_type() == Some(NodeType::ElementNode) {
         if let Some(fontid) = node.get_attribute("_font") {
@@ -2177,7 +2177,7 @@ impl Document {
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font->textDefault(); }
 
   // Remove a node from the document (from it's parent)
-  pub fn remove_node(&mut self, mut node: &mut Node) {
+  pub fn remove_node(&mut self, node: &mut Node) {
     let mut chopped: bool = self.node == *node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
@@ -2236,7 +2236,7 @@ impl Document {
   /// in the process.
   pub fn open_element_at(
     &mut self,
-    mut point: &mut Node,
+    point: &mut Node,
     qname: &str,
     attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
@@ -2261,7 +2261,7 @@ impl Document {
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.record_constructed_node(&newnode);
       self.document.set_root_element(&newnode);
-      for mut node in &mut self.pending {
+      for node in &mut self.pending {
         newnode.add_prev_sibling(node)?; // Add saved comments, PI's
       }
 
@@ -2404,7 +2404,7 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, mut node: &mut Node, state: &mut State) -> Result<()> { self.after_close(node, state) }
+  pub fn close_element_at(&mut self, node: &mut Node, state: &mut State) -> Result<()> { self.after_close(node, state) }
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
@@ -2457,7 +2457,7 @@ impl Document {
     self.append_clone_aux(node, new_children, &mut id_map, state)
   }
 
-  fn append_clone_aux(&mut self, mut node: &mut Node, new_children: Vec<Node>, id_map: &mut HashMap<String, String>, state: &mut State) -> Result<()> {
+  fn append_clone_aux(&mut self, node: &mut Node, new_children: Vec<Node>, id_map: &mut HashMap<String, String>, state: &mut State) -> Result<()> {
     for child in new_children.into_iter() {
       match child.get_type() {
       Some(NodeType::ElementNode) => {
@@ -2771,7 +2771,7 @@ impl Document {
   /// The parent node (the one with ID=<parentid>) also maintains a counter
   /// stored in an attribute `_ID_counter_<prefix>` recording the last used
   /// <number> for <prefix> amongst its descendents.
-  pub fn generate_id(&mut self, mut node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
+  pub fn generate_id(&mut self, node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
     // If node doesn't already have an id, and can
     let node_qname = self.get_node_qname(node, state);
     // but isn't a _Capture_ node (which ultimately should disappear)

@@ -102,7 +102,7 @@ impl<'t> Stomach {
   /// Typically used to digest arguments to primitives or constructors.
   /// Returns a List containing the digested material.
   pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Digested> {
-    let mut tokens: Tokens = tokens.into();
+    let tokens: Tokens = tokens.into();
 
     self.reading_from_mouth(Mouth::default(), outer_state, move |stomach, state| {
       let local_box_list = stomach.regurgitate(); // grab the current boxes to emulate local frame;
@@ -118,7 +118,7 @@ impl<'t> Stomach {
         // {
         //   let list = STOMACH_LIST.lock()
         // info!(target:"stomach:digest:invoke_token","{:?}", token);
-        let mut invoked = stomach.invoke_token(&token, state)?;
+        let invoked = stomach.invoke_token(&token, state)?;
         stomach.box_list.extend(invoked);
         // }
 
@@ -221,7 +221,7 @@ impl<'t> Stomach {
           // A math-active character will (typically) be a macro,
           // but it isn't expanded in the gullet, but later when digesting, in math mode
           // (? I think)
-          let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
+          let invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           if !invoked_meaning.is_empty() {
             self.gullet.unread(invoked_meaning);
           }
@@ -233,7 +233,7 @@ impl<'t> Stomach {
         },
         Some(Stored::Conditional(meaning)) => {
           // Conditionals are "expandable", use the regular invoke.
-          let mut invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
+          let invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
           maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
           self.token_stack.pop();
@@ -381,7 +381,7 @@ impl<'t> Stomach {
   // Do something, while reading stuff from a specific Mouth.
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, mut reader: FnR) -> R
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Stomach, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();
     {

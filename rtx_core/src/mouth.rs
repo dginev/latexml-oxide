@@ -218,7 +218,7 @@ impl Mouth {
       //   Fatal('I/O', $pathname, $self, "Input file $pathname appears to be binary."); }
       // open($IN, '<', $pathname)
       //   || Fatal('I/O', $pathname, $self, "Can't open $pathname for reading", $!);
-      let mut f = match File::open(pathname) {
+      let f = match File::open(pathname) {
         Ok(handle) => handle,
         Err(e) => {
           if e.kind() == io::ErrorKind::NotFound {
@@ -380,8 +380,8 @@ impl Mouth {
         }
         if !two_hex {
           // OR ^^ followed by a SINGLE Control char type code???
-          let mut c = self.chars[self.colno + 1];
-          let mut cn = c as i64;
+          let c = self.chars[self.colno + 1];
+          let cn = c as i64;
 
           ch = (cn + if cn >= 64 { -64 } else { 64 }) as u8 as char;
           self.splice(self.colno - 1..self.colno + 2, &[ch]);
