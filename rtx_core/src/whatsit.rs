@@ -15,7 +15,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
-use crate::state::State;
+use crate::state::{DEFAULT_STATE,State};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
@@ -197,8 +197,7 @@ impl fmt::Debug for Whatsit {
 
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let mut state = State::default();
-    write!(f, "{}", self.revert(&state).unwrap()) // What else??
+    write!(f, "{}", self.revert(&DEFAULT_STATE).unwrap()) // What else??
   }
 }
 
@@ -275,9 +274,9 @@ impl Object for Whatsit {
           }
         },
       };
-      if let Some(mut body) = self.get_body() {
+      if let Some(body) = self.get_body() {
         tokens.extend(body.revert(state)?.unlist());
-        if let Some(mut trailer) = self.get_trailer() {
+        if let Some(trailer) = self.get_trailer() {
           tokens.extend(trailer.revert(state)?.unlist());
         }
       }
@@ -351,7 +350,7 @@ impl BoxOps for Whatsit {
     } else {
       // Nothing specified? use #body if any, else sum all box args
       let mut boxes = Vec::new();
-      if let Some(mut body_stored) = self.get_property("body") {
+      if let Some(body_stored) = self.get_property("body") {
         if let Stored::Digested(ref body) = *body_stored {
           boxes.push((*body).clone());
         }

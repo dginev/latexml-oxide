@@ -66,7 +66,7 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
     .collect()
 }
 
-pub fn closest_element(mut node: &Node) -> Option<Node> {
+pub fn closest_element(node: &Node) -> Option<Node> {
   if node.get_type() == Some(NodeType::ElementNode) {
     return Some(node.clone());
   }

@@ -24,7 +24,7 @@ lazy_static! {
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(Token, Option<Parameters>)> {
   let cs;
-  let mut final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
+  let final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
     // also replace in proto
     CSNAME_MACRO_RE.replace(proto, "").to_string()
@@ -58,7 +58,7 @@ pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(To
 pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option<&mut State>) -> Result<Option<Parameters>> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
-    let mut next_proto: String;
+    let next_proto: String;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK_RE.is_match(&prototype) {
       let captures = NESTED_CHECK_RE.captures(&prototype).unwrap();

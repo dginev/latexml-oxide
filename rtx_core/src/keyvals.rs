@@ -315,7 +315,7 @@ impl KeyVals {
     //   @rmtokens = LaTeXML::Package::Expand($rmmacro)->unlist; }
 
     // define some xkeyval internals
-    let mut tokens = Vec::new();
+    let tokens = Vec::new();
     // let tokens = $setInternals ? (
     //   T_CS('\def'), T_CS('\XKV@fams'), T_BEGIN, Explode(join(',', $self->getKeySets)), T_END,
     //   T_CS('\def'), T_CS('\XKV@na'), T_BEGIN, Explode(join(',', @skip)), T_END
@@ -428,7 +428,7 @@ impl KeyVals {
       pairs.push((key.to_string(), value.clone()));
 
       // if we do not have a value yet, set it
-      let mut entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
+      let entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
 
       // If we get a third value, push into an array
       // This is unlikely to be what the caller expects!! But what else?

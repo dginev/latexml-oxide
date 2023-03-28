@@ -56,7 +56,7 @@ impl Default for InputDefinitionOptions {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mut stomach: &mut Stomach, mut state: &mut State) -> Result<()> {
+pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let name = raw_file.trim();
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions... so let's make stomach a mandatory option.
   let prevname = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname")).is_some() {
@@ -179,10 +179,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, mu
   Ok(())
 }
 
-pub fn load_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(true, file, stomach, state) }
-pub fn load_external_binding(file: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(false, file, stomach, state) }
+pub fn load_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(true, file, stomach, state) }
+pub fn load_external_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(false, file, stomach, state) }
 // in the spirit of Perl's Package::loadLTXML
-fn _load_binding(internal: bool, request: &str, mut stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+fn _load_binding(internal: bool, request: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
   // avoid double-loads, but be binding-specific
   let loaded_key = s!("{request}_binding_loaded");
   if state.lookup_bool(&loaded_key) {
@@ -299,7 +299,7 @@ pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach
   }
 }
 
-pub fn input(mut request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn input(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // unwrap if in quotes \input{"file name"}
   let mut clean_req = Cow::Borrowed(request);
   while request.starts_with('"') && request.ends_with('"') {
@@ -389,7 +389,7 @@ fn load_tex_definitions(request: &str, pathname: &str, stomach: &mut Stomach, st
   state.unlocked = false;
   let content_str = state.lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() { None } else { Some(content_str) };
-  let mut pathname_mouth = Mouth::create(
+  let pathname_mouth = Mouth::create(
     pathname,
     MouthOptions {
       fordefinitions: true,
@@ -698,7 +698,7 @@ pub struct FindFileOptions {
 }
 
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {
-  let mut options = options.unwrap_or_default();
+  let options = options.unwrap_or_default();
   if pathname::is_literaldata(file) {
     // If literal protocol return immediately (unless notex!)
     if options.notex {
@@ -909,7 +909,7 @@ pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>, gul
   }
 }
 
-pub fn do_expand<T: Into<Tokens>>(mut tokens: T, outer_gullet: &mut Gullet, outer_state: &mut State) -> Result<Tokens> {
+pub fn do_expand<T: Into<Tokens>>(tokens: T, outer_gullet: &mut Gullet, outer_state: &mut State) -> Result<Tokens> {
   outer_gullet.do_expand(tokens, outer_state)
 }
 

@@ -2,7 +2,7 @@
 //!
 
 #![allow(missing_docs)]
-#![allow(dead_code, unused_mut, clippy::trivial_regex)]
+#![allow(dead_code, clippy::trivial_regex)]
 
 /// Auxiliary macros
 #[macro_use]

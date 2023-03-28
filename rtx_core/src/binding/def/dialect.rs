@@ -69,7 +69,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
-  let mut name = token.get_string();
+  let name = token.get_string();
   (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
 }
 
@@ -352,7 +352,7 @@ pub fn def_primitive(
   }
 }
 
-pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
   let csname = cs.get_string();
   let cont_cs = T_CS!(s!("{csname}@content"));
   let pres_cs = T_CS!(s!("{csname}@presentation"));
@@ -484,7 +484,7 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
 }
 
 
-pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
@@ -520,7 +520,7 @@ pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentatio
   );
 }
 
-pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, mut presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // TODO: do we need to do anything about digesting the presentation?
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
   // let csname_alias = if options.alias.is_none() && options.robust {
@@ -1027,7 +1027,7 @@ pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &m
   let mut used = HashMap::new();
   for cap in ARG_HOLE.captures_iter(presentation) {  // Get the args that were actually used!
     let argi = cap.get(1).unwrap().as_str();
-    let mut entry = used.entry(argi.parse::<usize>()?).or_insert(0);
+    let entry = used.entry(argi.parse::<usize>()?).or_insert(0);
     *entry += 1;
   }
   let mut cargs = Vec::new();

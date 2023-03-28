@@ -140,9 +140,9 @@ impl Rewrite {
   }
 
   pub fn compile_clauses(&mut self, document: &mut Document) {
-    let mut current_clauses: Vec<RewriteClause> = self.clauses.drain(..).collect();
+    let current_clauses: Vec<RewriteClause> = self.clauses.drain(..).collect();
     let mut new_clauses: Vec<RewriteClause> = Vec::new();
-    for mut clause in current_clauses {
+    for clause in current_clauses {
       if !clause.compiled {
         new_clauses.push(self.compile_clause(document, clause));
       } else {

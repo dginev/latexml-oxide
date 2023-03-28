@@ -292,7 +292,7 @@ impl Tokens {
   // Using inline accessors on those assumptions
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
     let mut result = Vec::new();
-    let mut in_tokens = self.0.iter();
+    let in_tokens = self.0.iter();
     for token in in_tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
