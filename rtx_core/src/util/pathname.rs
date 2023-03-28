@@ -7,10 +7,14 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::path::{Path, PathBuf};
 
+/// configuration for filesystem search
 #[derive(Debug, Clone, Default)]
 pub struct PathnameFindOptions {
+  /// the allowed/requested paths to search in
   pub paths: Option<Vec<String>>,
-  pub types: Option<Vec<String>>,
+  /// the file extensions to search for
+  pub extensions: Option<Vec<String>>,
+  /// the location of the installation subdirectory (deprecated?)
   pub installation_subdir: Option<String>,
 }
 
@@ -49,8 +53,9 @@ lazy_static! {
 
 }
 
+/// checks if the path is a conforming URL string
 pub fn is_url(path: &str) -> bool { URL_RE.is_match(path) }
-
+/// checks if the path starts with the "literal:" protocol
 pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
 /// check whether a pathname is reloadable as a TeX definition
@@ -61,9 +66,9 @@ pub fn is_reloadable(pathname: &str) -> bool {
   // to load an adjacently defined language, so allow that.
   ext == "ldf"
 }
-
+/// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
-
+/// convert a (possibly relative) file path to an absolute one
 pub fn absolute(path: &str) -> String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
 
 /// Split the pathname into components (dir,name,type).
@@ -140,6 +145,7 @@ pub fn protocol(pathname: &str) -> String {
   }
 }
 
+/// combine a directory and a base name into a full path
 pub fn concat(dir: &str, file: &str) -> String {
   if dir.is_empty() {
     file.to_owned()
@@ -204,7 +210,7 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   }
   // extract the desired extensions.
   let mut exts = Vec::new();
-  if let Some(ext_vec) = options.types {
+  if let Some(ext_vec) = options.extensions {
     for ext in ext_vec {
       if ext.is_empty() || pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
@@ -247,6 +253,7 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   paths
 }
 
+/// find the requested `pathname` using the `options` search configuration
 pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   if !pathname.is_empty() {
     let paths = candidate_pathnames(pathname, options);
@@ -259,6 +266,7 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   None
 }
 
+/// transform to a canonical file name, via `Path::file_name`
 pub fn file_name(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -269,6 +277,7 @@ pub fn file_name(pathname: &str) -> String {
   .to_lowercase()
 }
 
+/// transform to a base name (via `Path::file_stem`)
 pub fn file_stem(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -279,6 +288,7 @@ pub fn file_stem(pathname: &str) -> String {
   .to_lowercase()
 }
 
+/// obtain the directory portion of a pathname (via `Path::parent`)
 pub fn directory(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -289,6 +299,7 @@ pub fn directory(pathname: &str) -> String {
   .to_lowercase()
 }
 
+/// obtain the extension portion of a pathname (via `Path::extension`)
 pub fn extension(pathname: &str) -> String {
   let canonical_pathname = canonical(pathname);
   let canonical_path = Path::new(&canonical_pathname);
@@ -299,6 +310,8 @@ pub fn extension(pathname: &str) -> String {
   .to_lowercase()
 }
 
+/// search for a list of candidate names via the external `kpsewhich` utility
+/// returning the first path that is found
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   for candidate in candidates {
     if let Some(path) = KPSE.lock().unwrap().find_file(candidate) {
@@ -308,6 +321,8 @@ pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   None
 }
 
+/// check if pathname contains dangerous pieces
 pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }
 
+/// returns the current working directory
 pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string() }

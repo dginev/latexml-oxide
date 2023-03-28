@@ -290,6 +290,7 @@ impl Tokens {
 
   // NOTE: Assumes each arg either undef or also Tokens
   // Using inline accessors on those assumptions
+  /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
     let mut result = Vec::new();
     let in_tokens = self.0.iter();
@@ -304,39 +305,43 @@ impl Tokens {
     Tokens::new(result)
   }
 
+  /// removes the smuggled token of all contained Token elements
   pub fn without_dont_expand(self) -> Self { Tokens(self.0.into_iter().map(|t| t.without_dont_expand()).collect()) }
 
-  pub fn untex(&self) -> String {
-    let tokens = self.clone().revert();
-    let mut tokens: VecDeque<Token> = tokens.into();
-    let mut result = String::new();
+  /// Consumes a Tokens to a string containing TeX that created it (or could have).
+  /// Note that this is not necessarily the original TeX code; expansions or other substitutions may have taken place.
+  /// Also note that the LaTeXML linebreak feature is always *disabled* here.)
+  pub fn untex(self) -> String {
+    let mut tokens: VecDeque<Token> = self.revert().into_iter().collect();
+    let mut tex_string = String::new();
     let mut length = 0;
     let mut level = 0;
     let mut prevs = String::new();
     let mut prevcc = Catcode::COMMENT;
-    while !tokens.is_empty() {
-      let token = tokens.pop_front().unwrap();
+    while let Some(token) = tokens.pop_front() {
       let cc = token.get_catcode();
       if cc == Catcode::COMMENT {
         continue;
       }
-      let mut s = token.to_string();
+      let mut token_string = token.to_string();
+      // Note: \n only-used to fail alphanumeric test
+      let first_char = token_string.chars().next().unwrap_or('\n');
       if cc == Catcode::LETTER {
         // keep "words" together, just for aesthetics
         while !tokens.is_empty() && tokens[0].get_catcode() == Catcode::LETTER {
-          s.push_str(tokens.pop_front().unwrap().get_string());
+          token_string.push_str(tokens.pop_front().unwrap().get_string());
         }
       }
 
-      let l = s.len();
+      let l = token_string.len();
       if cc == Catcode::BEGIN {
         level += 1;
       }
       //  Seems a reasonable & safe time to line break, for readability, etc.
-      if cc == Catcode::SPACE && s == "\n" {
+      if cc == Catcode::SPACE && token_string == "\n" {
         // preserve newlines already present
         if length > 0 {
-          result = s;
+          tex_string.push_str(&token_string);
           length = 0;
         }
       // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
@@ -345,31 +350,24 @@ impl Tokens {
         // TOOD: this used to call "lookup_catcode" in State; is this char-check as good?
         let prev_is_letter = last_prevs.is_alphabetic();
 
-        if (cc == Catcode::LETTER || (cc == Catcode::OTHER && s.chars().next().unwrap_or('_').is_alphanumeric()))
+        if (cc == Catcode::LETTER || (cc == Catcode::OTHER && first_char.is_alphanumeric()))
           && prevcc == Catcode::CS
           && prev_is_letter
         {
           // Insert a (virtual) space before a letter if previous token was a CS w/letters
           // This is required for letters, but just aesthetic for digits (to me?)
-          // Of course, use a newline if we're already at end
-          let space = if length > 0 && length + l > UNTEX_LINELENGTH { '\n' } else { ' ' };
-          result.push(space);
-          result.push_str(&s);
+          let space = ' ';
+          tex_string.push(space);
+          tex_string.push_str(&token_string);
           length += 1 + l;
-        } else if length > 0 && (length + l > UNTEX_LINELENGTH) && tokens.len() > 1 {
-          // linebreak before this token? and not at end!
-          // Or even within an arg!
-          result.push_str("%\n");
-          result.push_str(&s);
-          length = l; // with %, so that it "disappears"
         } else {
-          result.push_str(&s);
+          tex_string.push_str(&token_string);
           length += l;
         }
         if cc == Catcode::END {
           level -= 1;
         }
-        prevs = s;
+        prevs = token_string;
         prevcc = cc;
       }
     }
@@ -377,20 +375,20 @@ impl Tokens {
     match level {
       1..=std::i32::MAX => {
         for _ in 0..level {
-          result.push('}');
+          tex_string.push('}');
         }
       },
       std::i32::MIN..=-1 => {
         for _ in 0..(-level) {
-          result = String::from("{") + &result;
+          tex_string = String::from("{") + &tex_string;
         }
       },
       0 => {},
     }
-    result
+    tex_string
   }
 
-  // Process the CC_PARAM tokens for use as a macro body (and other token lists)
+  /// Process the `Catcode::PARAM` tokens for use as a macro body (and other token lists)
   // Groups PARAM+OTHER token pair into match tokens.
   // Collapses PARAM+PARAM token pair into a single PARAM
   // B book suggests running this

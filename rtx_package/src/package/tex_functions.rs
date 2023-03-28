@@ -600,7 +600,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
-pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> Result<String> {
+pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> String {
   // unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
@@ -628,7 +628,7 @@ pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> Result<String> {
       },
     }
   }
-  untex(Tokens::new(wv), true)
+  Tokens::new(wv).untex()
 }
 
 // sub orNull {

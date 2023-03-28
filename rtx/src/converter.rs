@@ -4,7 +4,6 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::State;
-use rtx_core::token;
 use rtx_core::{generate_message, s, Core, CoreOptions, Digested, Error, Info};
 use rtx_package::package;
 use std::sync::Arc;
@@ -184,7 +183,7 @@ impl Converter {
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
       OutputFormat::TeX => {
-        let untex_result = { token::untex_digested(&digested, false, self.core.get_state_mut()) };
+        let untex_result = { digested.untex(self.core.get_state_mut()) };
         match untex_result {
           Ok(tex) => tex,
           Err(e) => {

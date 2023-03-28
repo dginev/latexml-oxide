@@ -89,7 +89,7 @@ LoadDefinitions!(state, {
       s!("{arg}=")
     } else { String::new() };
     let stuff = Invocation!(T_CS!("\\meaning"), vec![arg], gullet)?;
-    let rhs = writable_tokens(&Expand!(stuff, gullet), state)?;
+    let rhs = writable_tokens(&Expand!(stuff, gullet), state);
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
     eprintln!("{}",gullet.get_locator().unwrap_or_default());
@@ -167,7 +167,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\message{}", sub [stomach, (message), state] {
     if state.lookup_int("VERBOSITY") > -1 {
       eprintln!("{}", writable_tokens(
-        &do_expand(message, stomach.get_gullet_mut(), state)?, state)?);
+        &do_expand(message, stomach.get_gullet_mut(), state)?, state));
     }
   });
 
@@ -268,12 +268,12 @@ LoadDefinitions!(state, {
       let handle   = s!("{}_contents",filename);
       let mut contents : String = LookupString!(&handle);
       let mut gullet = stomach.get_gullet_mut();
-      contents.push_str(&untex(Expand!(tokens,gullet,state),false)?);
+      contents.push_str(&Expand!(tokens,gullet,state).untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
       let gullet = stomach.get_gullet_mut();
-      println_stderr!("{}", untex(Expand!(tokens, gullet),false)?);
+      println_stderr!("{}", Expand!(tokens, gullet).untex());
     }
   });
 

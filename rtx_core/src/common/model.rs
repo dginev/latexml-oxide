@@ -139,7 +139,7 @@ impl Model {
         &name,
         pathname::PathnameFindOptions {
           paths,
-          types: Some(vec![s!("model")]),
+          extensions: Some(vec![s!("model")]),
           installation_subdir: Some(s!("resources/{}", schema_type)),
         },
       );
