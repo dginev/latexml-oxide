@@ -1890,8 +1890,8 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ms) = mathstyle {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(os) = othermathstyle {
-        <span class="kw">let </span>ms_str : <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;*</span>ms;
-        <span class="kw">let </span>os_str : <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;*</span>os;
+        <span class="kw">let </span>ms_str : <span class="kw-2">&amp;</span>str = ms;
+        <span class="kw">let </span>os_str : <span class="kw-2">&amp;</span>str = os;
         changes.mathstylestep = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
       }
     }
@@ -2026,7 +2026,7 @@
       .filter(|thisbox| !thisbox.has_property(<span class="string">&quot;isEmpty&quot;</span>));
 
     <span class="kw">let </span><span class="kw-2">mut </span>prevbox_opt: <span class="prelude-ty">Option</span>&lt;Digested&gt; = <span class="prelude-val">None</span>;
-    <span class="kw">for </span><span class="kw-2">mut </span>thisbox <span class="kw">in </span>filtered_boxes {
+    <span class="kw">for </span>thisbox <span class="kw">in </span>filtered_boxes {
       <span class="comment">// Should any `options` be inherited by the contained boxes?
       </span><span class="kw">let </span>(w, h, d) = thisbox.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
 

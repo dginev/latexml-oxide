@@ -1267,7 +1267,7 @@
 
 <span class="kw">pub fn </span>is_definable(token: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
   <span class="kw">let </span>meaning = state.lookup_meaning(token);
-  <span class="kw">let </span><span class="kw-2">mut </span>name = token.get_string();
+  <span class="kw">let </span>name = token.get_string();
   (name != <span class="string">&quot;\\relax&quot; </span>&amp;&amp; !name.starts_with(<span class="string">&quot;\\end&quot;</span>)) &amp;&amp; (meaning.is_none() || (meaning == state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX)))
 }
 
@@ -1550,7 +1550,7 @@
   }
 }
 
-<span class="kw">pub fn </span>def_math_dual(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>def_math_dual(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span>csname = cs.get_string();
   <span class="kw">let </span>cont_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;{csname}@content&quot;</span>));
   <span class="kw">let </span>pres_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;{csname}@presentation&quot;</span>));
@@ -1682,7 +1682,7 @@
 }
 
 
-<span class="kw">pub fn </span>def_math_primitive(cs: Token, _paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>def_math_primitive(cs: Token, _paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span>scope = options.scope.clone();
   <span class="kw">let </span>reqfont_opt = options.font.clone();
   <span class="kw">let </span>moved_options = options.clone();
@@ -1718,7 +1718,7 @@
   );
 }
 
-<span class="kw">pub fn </span>def_math_constructor(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, <span class="kw-2">mut </span>presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>def_math_constructor(cs: Token, paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;, presentation: String, <span class="kw-2">mut </span>options: MathPrimitiveOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="comment">// TODO: do we need to do anything about digesting the presentation?
   </span><span class="kw">let </span>nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(<span class="number">0</span>);
   <span class="comment">// let csname_alias = if options.alias.is_none() &amp;&amp; options.robust {
@@ -2225,7 +2225,7 @@
   <span class="kw">let </span><span class="kw-2">mut </span>used = HashMap::new();
   <span class="kw">for </span>cap <span class="kw">in </span>ARG_HOLE.captures_iter(presentation) {  <span class="comment">// Get the args that were actually used!
     </span><span class="kw">let </span>argi = cap.get(<span class="number">1</span>).unwrap().as_str();
-    <span class="kw">let </span><span class="kw-2">mut </span>entry = used.entry(argi.parse::&lt;usize&gt;()<span class="question-mark">?</span>).or_insert(<span class="number">0</span>);
+    <span class="kw">let </span>entry = used.entry(argi.parse::&lt;usize&gt;()<span class="question-mark">?</span>).or_insert(<span class="number">0</span>);
     <span class="kw-2">*</span>entry += <span class="number">1</span>;
   }
   <span class="kw">let </span><span class="kw-2">mut </span>cargs = Vec::new();

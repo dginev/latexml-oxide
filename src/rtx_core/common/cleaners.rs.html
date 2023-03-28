@@ -151,7 +151,7 @@
 
 <span class="doccomment">/// cleans a string down to characters acceptable for an id attribute
 </span><span class="kw">pub fn </span>clean_id(key: <span class="kw-2">&amp;</span>str) -&gt; String {
-  <span class="kw">let </span><span class="kw-2">mut </span>cleaned = Cow::Borrowed(key.trim_start().trim_end()); <span class="comment">// Trim leading/trailing, in any case
+  <span class="kw">let </span>cleaned = Cow::Borrowed(key.trim_start().trim_end()); <span class="comment">// Trim leading/trailing, in any case
   </span><span class="kw">let </span>cleaned_1 = SPACES_RE.replace_all(<span class="kw-2">&amp;</span>cleaned, <span class="string">&quot;&quot;</span>); <span class="comment">// remove all spaces
                                                        // Remove common idiom:
   </span><span class="kw">let </span>cleaned_2 = DIRTY_ID_IDIOM_RE.replace_all(<span class="kw-2">&amp;</span>cleaned_1, <span class="string">&quot;$inner&quot;</span>);
@@ -197,8 +197,8 @@
 
 <span class="doccomment">/// builds a complete url from fragments
 </span><span class="kw">pub fn </span>compose_url(base: <span class="kw-2">&amp;</span>str, url: <span class="kw-2">&amp;</span>str, fragid_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; String {
-  <span class="kw">let </span><span class="kw-2">mut </span>base = TRAILING_SLASH_RE.replace(base, <span class="string">&quot;&quot;</span>); <span class="comment">//  remove trailing /
-  </span><span class="kw">let </span><span class="kw-2">mut </span>fragid = fragid_opt.unwrap_or(<span class="string">&quot;&quot;</span>);
+  <span class="kw">let </span>base = TRAILING_SLASH_RE.replace(base, <span class="string">&quot;&quot;</span>); <span class="comment">//  remove trailing /
+  </span><span class="kw">let </span>fragid = fragid_opt.unwrap_or(<span class="string">&quot;&quot;</span>);
   <span class="kw">let </span>base: String = <span class="kw">if </span>!base.is_empty() &amp;&amp; !LEADING_PROTOCOL_RE.is_match(url) {
     <span class="comment">// already has protocol, so is absolute url
     </span>base.to_string() + <span class="kw">if </span>url.starts_with(<span class="string">&#39;/&#39;</span>) { <span class="string">&quot;&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;/&quot; </span>} <span class="comment">// else start w/base, possibly /

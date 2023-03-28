@@ -164,7 +164,7 @@
     .collect()
 }
 
-<span class="kw">pub fn </span>closest_element(<span class="kw-2">mut </span>node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
+<span class="kw">pub fn </span>closest_element(node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
   <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
     <span class="kw">return </span><span class="prelude-val">Some</span>(node.clone());
   }

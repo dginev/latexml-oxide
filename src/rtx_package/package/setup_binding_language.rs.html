@@ -2428,6 +2428,9 @@
 <a href="#2428" id="2428">2428</a>
 <a href="#2429" id="2429">2429</a>
 <a href="#2430" id="2430">2430</a>
+<a href="#2431" id="2431">2431</a>
+<a href="#2432" id="2432">2432</a>
+<a href="#2433" id="2433">2433</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -2523,13 +2526,16 @@
 </span><span class="macro">macro_rules! </span>WithInnerState {
   (<span class="macro-nonterminal">$body</span>: block, <span class="macro-nonterminal">$inner_state</span>:ident) =&gt; {{
     <span class="macro">BindInnerState!</span>(<span class="macro-nonterminal">$inner_state</span>);
-    <span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
+    <span class="attr">#[allow(clippy::unused_unit)]
+    </span><span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
     <span class="macro">end_state_frame!</span>();
+
     macro_out
   }};
   (<span class="macro-nonterminal">$body</span>: block, <span class="macro-nonterminal">$stomach</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident) =&gt; {{
     <span class="macro">BindInnerState!</span>(<span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$inner_state</span>);
-    <span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
+    <span class="attr">#[allow(clippy::unused_unit)]
+    </span><span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
     <span class="macro">end_state_frame!</span>();
     macro_out
   }};

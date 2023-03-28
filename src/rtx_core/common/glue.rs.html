@@ -610,10 +610,10 @@
 }
 
 <span class="kw">pub fn </span>spec_setup(
-  <span class="kw-2">mut </span>spec: <span class="kw-2">&amp;</span>str,
-  <span class="kw-2">mut </span>plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+  spec: <span class="kw-2">&amp;</span>str,
+  plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   <span class="kw-2">mut </span>pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
-  <span class="kw-2">mut </span>minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+  minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   <span class="kw-2">mut </span>mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   unit: <span class="kw-2">&amp;</span>str,
   state: <span class="kw-2">&amp;</span>State,
@@ -633,7 +633,7 @@
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(cs) = GLUE_RE.captures(spec) {
-      <span class="kw">let </span>(<span class="kw-2">mut </span>f, unit, p, punit, m, munit) = (
+      <span class="kw">let </span>(f, unit, p, punit, m, munit) = (
         cs.get(<span class="number">1</span>).map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default()).unwrap_or_default(),
         cs.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
         cs.get(<span class="number">4</span>).map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default()).unwrap_or_default(),
@@ -746,7 +746,7 @@
     <span class="comment">// (pts, p, pf, m, mf) = @$self;
     // if (ref $other eq &#39;LaTeXML::Common::Glue&#39;) {
     // my ($pts2, $p2, $pf2, $m2, $mf2) = @$other;
-    </span><span class="kw">let </span><span class="kw-2">mut </span>skip = <span class="self">self</span>.skip + other.skip;
+    </span><span class="kw">let </span>skip = <span class="self">self</span>.skip + other.skip;
     <span class="kw">let </span><span class="kw-2">mut </span>plus = <span class="self">self</span>.plus;
     <span class="kw">let </span><span class="kw-2">mut </span>minus = <span class="self">self</span>.minus;
     <span class="kw">let </span><span class="kw-2">mut </span>pfill = <span class="self">self</span>.pfill;

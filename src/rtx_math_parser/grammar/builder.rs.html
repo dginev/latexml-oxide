@@ -147,14 +147,12 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::semantics::<span class="kw-2">*</span>;
 <span class="kw">use </span>marpa::grammar::Grammar <span class="kw">as </span>MarpaGrammar;
 <span class="kw">use </span>marpa::result::Result;
 <span class="kw">use </span>marpa::tree_builder::TreeBuilder;
 
-<span class="attr">#[allow(unused_macros)]
-</span><span class="kw">pub fn </span>init_grammar() -&gt; <span class="prelude-ty">Result</span>&lt;(MarpaGrammar, Actions, TreeBuilder)&gt; {
+<span class="kw">pub fn </span>init_grammar() -&gt; <span class="prelude-ty">Result</span>&lt;(MarpaGrammar, Actions, TreeBuilder)&gt; {
   <span class="comment">// We create a declarative macro language of our own, in the spirit of the Marpa SLIF
   </span><span class="macro">default_registry!</span>();
   <span class="comment">// Tokens, to be used in rules directly

@@ -1343,10 +1343,6 @@
 <a href="#1343" id="1343">1343</a>
 <a href="#1344" id="1344">1344</a>
 <a href="#1345" id="1345">1345</a>
-<a href="#1346" id="1346">1346</a>
-<a href="#1347" id="1347">1347</a>
-<a href="#1348" id="1348">1348</a>
-<a href="#1349" id="1349">1349</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1515,7 +1511,7 @@
   </span><span class="kw">pub fn </span>read_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>next_token: <span class="prelude-ty">Option</span>&lt;Token&gt; = <span class="prelude-val">None</span>;
     <span class="comment">// If we&#39;re without a runtime, bail
-    </span><span class="kw">let </span><span class="kw-2">mut </span>runtime = <span class="kw">match </span><span class="self">self</span>.mouth {
+    </span><span class="kw">let </span>runtime = <span class="kw">match </span><span class="self">self</span>.mouth {
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; runtime,
     };
@@ -1590,7 +1586,6 @@
     }
 
     <span class="kw">loop </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>invoked = <span class="bool-val">false</span>;
       <span class="kw">let </span>runtime = <span class="kw">match </span><span class="self">self</span>.mouth {
         <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; runtime,
@@ -1663,13 +1658,10 @@
               }
             }
             <span class="comment">// TODO: ## Wow!!!!! See TeX the Program \S 309
-            </span><span class="kw">if </span>!invoked {
-              <span class="kw">if </span>token.code == Catcode::CS &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(state.generate_error_stub(<span class="self">self</span>, <span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report early!
-              </span>} <span class="kw">else </span>{
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
-              }
-            } <span class="kw">else </span>{
+            </span><span class="kw">if </span>token.code == Catcode::CS &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
+              <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(state.generate_error_stub(<span class="self">self</span>, <span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report early!
+            </span>} <span class="kw">else </span>{
+              <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
             }
           }
         },
@@ -1707,7 +1699,7 @@
 
     <span class="comment">// add the newly expanded tokens back into the gullet stream, in the ordinary case.
     </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>runtime = <span class="self">self</span>.mouth.as_mut().unwrap();
+      <span class="kw">let </span>runtime = <span class="self">self</span>.mouth.as_mut().unwrap();
       <span class="kw">for </span>token <span class="kw">in </span>expansion.unlist().into_iter().rev() {
         runtime.pushback.push_front(token);
       }
@@ -2476,7 +2468,7 @@
   }
 
   <span class="kw">pub fn </span>read_mu_unit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;i64&gt;&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) = <span class="self">self</span>.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;mu&quot;</span>], state)<span class="question-mark">? </span>{
+    <span class="kw">if </span><span class="self">self</span>.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;mu&quot;</span>], state)<span class="question-mark">?</span>.is_some() {
       <span class="self">self</span>.skip_one_space(state);
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(UNITY)) <span class="comment">// effectively, scaled mu
     </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(m) = <span class="self">self</span>.read_internal_mu_glue(state)<span class="question-mark">? </span>{
@@ -2562,7 +2554,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, <span class="kw-2">mut </span>reader: FnR) -&gt; R
+  <span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">&amp;mut </span>State) -&gt; R {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     <span class="self">self</span>.open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
@@ -2680,8 +2672,8 @@
     }
   }
 
-  <span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>tokens: T, outer_state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>tokens: Tokens = tokens.into();
+  <span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: T, outer_state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="kw">let </span>tokens: Tokens = tokens.into();
     <span class="self">self</span>.reading_from_mouth(
       Mouth::default(),
       outer_state,

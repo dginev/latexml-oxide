@@ -755,7 +755,7 @@
   /// Typically used to digest arguments to primitives or constructors.
   /// Returns a List containing the digested material.
   </span><span class="kw">pub fn </span>digest&lt;T: Into&lt;Tokens&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: T, outer_state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>tokens: Tokens = tokens.into();
+    <span class="kw">let </span>tokens: Tokens = tokens.into();
 
     <span class="self">self</span>.reading_from_mouth(Mouth::default(), outer_state, <span class="kw">move </span>|stomach, state| {
       <span class="kw">let </span>local_box_list = stomach.regurgitate(); <span class="comment">// grab the current boxes to emulate local frame;
@@ -771,7 +771,7 @@
         // {
         //   let list = STOMACH_LIST.lock()
         // info!(target:&quot;stomach:digest:invoke_token&quot;,&quot;{:?}&quot;, token);
-        </span><span class="kw">let </span><span class="kw-2">mut </span>invoked = stomach.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>invoked = stomach.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
         stomach.box_list.extend(invoked);
         <span class="comment">// }
 
@@ -874,7 +874,7 @@
           <span class="comment">// A math-active character will (typically) be a macro,
           // but it isn&#39;t expanded in the gullet, but later when digesting, in math mode
           // (? I think)
-          </span><span class="kw">let </span><span class="kw-2">mut </span>invoked_meaning = meaning.invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.gullet, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
+          </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.gullet, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
           <span class="kw">if </span>!invoked_meaning.is_empty() {
             <span class="self">self</span>.gullet.unread(invoked_meaning);
           }
@@ -886,7 +886,7 @@
         },
         <span class="prelude-val">Some</span>(Stored::Conditional(meaning)) =&gt; {
           <span class="comment">// Conditionals are &quot;expandable&quot;, use the regular invoke.
-          </span><span class="kw">let </span><span class="kw-2">mut </span>invoked_meaning = meaning.invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.gullet, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
+          </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.gullet, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
           <span class="self">self</span>.gullet.unread(invoked_meaning);
           maybe_token = <span class="self">self</span>.gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>.map(Cow::Owned);
           <span class="self">self</span>.token_stack.pop();
@@ -1034,7 +1034,7 @@
   <span class="comment">// Do something, while reading stuff from a specific Mouth.
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
-  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, <span class="kw-2">mut </span>reader: FnR) -&gt; R
+  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">&amp;mut </span>State) -&gt; R {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     {

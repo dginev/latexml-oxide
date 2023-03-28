@@ -1041,7 +1041,7 @@
 }
 
 <span class="doccomment">/// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-</span><span class="kw">pub fn </span>input_definitions(raw_file: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: InputDefinitionOptions, <span class="kw-2">mut </span>stomach: <span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">mut </span>state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>input_definitions(raw_file: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: InputDefinitionOptions, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>name = raw_file.trim();
   <span class="comment">// Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions... so let&#39;s make stomach a mandatory option.
   </span><span class="kw">let </span>prevname = <span class="kw">if </span>options.handleoptions &amp;&amp; state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>)).is_some() {
@@ -1164,10 +1164,10 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>load_binding(file: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; { _load_binding(<span class="bool-val">true</span>, file, stomach, state) }
-<span class="kw">pub fn </span>load_external_binding(file: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; { _load_binding(<span class="bool-val">false</span>, file, stomach, state) }
+<span class="kw">pub fn </span>load_binding(file: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; { _load_binding(<span class="bool-val">true</span>, file, stomach, state) }
+<span class="kw">pub fn </span>load_external_binding(file: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; { _load_binding(<span class="bool-val">false</span>, file, stomach, state) }
 <span class="comment">// in the spirit of Perl&#39;s Package::loadLTXML
-</span><span class="kw">fn </span>_load_binding(internal: bool, request: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+</span><span class="kw">fn </span>_load_binding(internal: bool, request: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   <span class="comment">// avoid double-loads, but be binding-specific
   </span><span class="kw">let </span>loaded_key = <span class="macro">s!</span>(<span class="string">&quot;{request}_binding_loaded&quot;</span>);
   <span class="kw">if </span>state.lookup_bool(<span class="kw-2">&amp;</span>loaded_key) {
@@ -1284,7 +1284,7 @@
   </span>}
 }
 
-<span class="kw">pub fn </span>input(<span class="kw-2">mut </span>request: <span class="kw-2">&amp;</span>str, options: InputOptions, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>input(request: <span class="kw-2">&amp;</span>str, options: InputOptions, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// unwrap if in quotes \input{&quot;file name&quot;}
   </span><span class="kw">let </span><span class="kw-2">mut </span>clean_req = Cow::Borrowed(request);
   <span class="kw">while </span>request.starts_with(<span class="string">&#39;&quot;&#39;</span>) &amp;&amp; request.ends_with(<span class="string">&#39;&quot;&#39;</span>) {
@@ -1374,7 +1374,7 @@
   </span>state.unlocked = <span class="bool-val">false</span>;
   <span class="kw">let </span>content_str = state.lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{pathname}_contents&quot;</span>));
   <span class="kw">let </span>content = <span class="kw">if </span>content_str.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(content_str) };
-  <span class="kw">let </span><span class="kw-2">mut </span>pathname_mouth = Mouth::create(
+  <span class="kw">let </span>pathname_mouth = Mouth::create(
     pathname,
     MouthOptions {
       fordefinitions: <span class="bool-val">true</span>,
@@ -1683,7 +1683,7 @@
 }
 
 <span class="kw">pub fn </span>find_file(file: <span class="kw-2">&amp;</span>str, options: <span class="prelude-ty">Option</span>&lt;FindFileOptions&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-  <span class="kw">let </span><span class="kw-2">mut </span>options = options.unwrap_or_default();
+  <span class="kw">let </span>options = options.unwrap_or_default();
   <span class="kw">if </span>pathname::is_literaldata(file) {
     <span class="comment">// If literal protocol return immediately (unless notex!)
     </span><span class="kw">if </span>options.notex {
@@ -1894,7 +1894,7 @@
   }
 }
 
-<span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(<span class="kw-2">mut </span>tokens: T, outer_gullet: <span class="kw-2">&amp;mut </span>Gullet, outer_state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T, outer_gullet: <span class="kw-2">&amp;mut </span>Gullet, outer_state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   outer_gullet.do_expand(tokens, outer_state)
 }
 

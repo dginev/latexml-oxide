@@ -479,9 +479,9 @@
   }
 
   <span class="kw">pub fn </span>compile_clauses(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) {
-    <span class="kw">let </span><span class="kw-2">mut </span>current_clauses: Vec&lt;RewriteClause&gt; = <span class="self">self</span>.clauses.drain(..).collect();
+    <span class="kw">let </span>current_clauses: Vec&lt;RewriteClause&gt; = <span class="self">self</span>.clauses.drain(..).collect();
     <span class="kw">let </span><span class="kw-2">mut </span>new_clauses: Vec&lt;RewriteClause&gt; = Vec::new();
-    <span class="kw">for </span><span class="kw-2">mut </span>clause <span class="kw">in </span>current_clauses {
+    <span class="kw">for </span>clause <span class="kw">in </span>current_clauses {
       <span class="kw">if </span>!clause.compiled {
         new_clauses.push(<span class="self">self</span>.compile_clause(document, clause));
       } <span class="kw">else </span>{

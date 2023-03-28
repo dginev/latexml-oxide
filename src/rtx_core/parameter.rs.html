@@ -695,7 +695,7 @@
     // If either a declared entry or a function Read&lt;Type&gt; accessible from LaTeXML::Package::Pool
     // is defined.
     </span><span class="kw">let </span>looked_up_mapping = state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name);
-    <span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Arc&lt;Parameter&gt;&gt;;
+    <span class="kw">let </span>descriptor: <span class="prelude-ty">Option</span>&lt;Arc&lt;Parameter&gt;&gt;;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
       descriptor = <span class="prelude-val">Some</span>(Arc::clone(d_lookup));
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
@@ -878,7 +878,7 @@
     </span><span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
       <span class="self">self</span>.setup_catcodes(state);
       <span class="kw">if </span>value_arg.is_tokens() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>value) = value_arg.owned_tokens() {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value_arg.owned_tokens() {
           <span class="kw">let </span>neutralized = stomach.reading_from_mouth(Mouth::default(), state, <span class="kw">move </span>|stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State| {
             <span class="kw">let </span>gullet = stomach.get_gullet_mut();
             gullet.unread(value);
@@ -1051,7 +1051,7 @@
     }
     <span class="kw">let </span>value_tokens = value.revert(ostate)<span class="question-mark">?</span>;
     <span class="comment">// start with empty mouth
-    </span><span class="kw">let </span><span class="kw-2">mut </span>reader_mouth = Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>, ostate)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>reader_mouth = Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>, ostate)<span class="question-mark">?</span>;
     gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: <span class="kw-2">&amp;mut </span>Gullet, state| {
 
         gulletx.unread(value_tokens); <span class="comment">// but put back tokens to be read

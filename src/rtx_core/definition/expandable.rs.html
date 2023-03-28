@@ -226,27 +226,6 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::fmt;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -256,7 +235,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State};
 
-<span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
@@ -473,26 +451,6 @@
       is_outer: traits.outer || state.get_prefix(<span class="string">&quot;outer&quot;</span>),
       is_long: traits.long || state.get_prefix(<span class="string">&quot;long&quot;</span>),
       ..Expandable::default()
-    }
-  }
-
-  <span class="kw">fn </span>do_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">match </span><span class="self">self</span>.expansion {
-      <span class="prelude-val">Some</span>(ExpansionBody::Closure(<span class="kw-2">ref </span>closure)) =&gt; closure(gullet, args, state),
-      <span class="comment">// but for tokens, make sure args are proper Tokens (lists)
-      </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="kw-2">ref </span>tks)) =&gt; {
-        <span class="kw">if </span>!tks.is_empty() {
-          <span class="kw">let </span><span class="kw-2">mut </span>args_tks = Vec::new();
-          <span class="kw">for </span>arg <span class="kw">in </span>args.iter() {
-            args_tks.push(arg.as_tokens(state)<span class="question-mark">?</span>);
-          }
-          <span class="prelude-val">Ok</span>(tks.substitute_parameters(<span class="kw-2">&amp;</span>args_tks))
-        } <span class="kw">else </span>{
-          <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-        }
-      },
-      <span class="comment">// empty if no expansion
-      </span><span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()),
     }
   }
 }

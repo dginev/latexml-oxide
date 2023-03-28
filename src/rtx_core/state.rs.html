@@ -3113,7 +3113,7 @@
       <span class="kw">let </span>popped_frame = <span class="self">self</span>.undo.pop_front().unwrap();
       <span class="kw">for </span>table_name <span class="kw">in </span>TableName::variants() {
         <span class="kw">let </span>undo_table = popped_frame.table(table_name);
-        <span class="kw">let </span><span class="kw-2">mut </span>state_table = <span class="self">self</span>.table_mut(table_name);
+        <span class="kw">let </span>state_table = <span class="self">self</span>.table_mut(table_name);
         <span class="kw">for </span>(key, undo_count) <span class="kw">in </span>undo_table.iter() {
           <span class="comment">// Typically only 1 value to shift off the table, unless scopes have been activated.
           </span><span class="kw">let </span>named_table = state_table.get_mut(key).unwrap();
@@ -3263,7 +3263,7 @@
     <span class="comment">// Here we ALWAYS push the stashed values into the table
     // since they may be popped off by deactivateScope
     </span><span class="kw">for </span>(table_name, key, value) <span class="kw">in </span>actions {
-      <span class="kw">let </span><span class="kw-2">mut </span>frame = <span class="kw-2">&amp;mut </span><span class="self">self</span>.undo[<span class="number">0</span>];
+      <span class="kw">let </span>frame = <span class="kw-2">&amp;mut </span><span class="self">self</span>.undo[<span class="number">0</span>];
       <span class="kw">let </span>frame_table = frame.table_mut(table_name);
       <span class="kw">let </span>entry = frame_table.entry(key.clone()).or_insert(<span class="number">0</span>);
       <span class="kw-2">*</span>entry += <span class="number">1</span>; <span class="comment">// Note that this many values must be undone
@@ -3312,9 +3312,9 @@
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
         </span>(<span class="kw-2">*</span>table_entry).pop_front();
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>frame) = <span class="self">self</span>.undo.front_mut() {
-          <span class="kw">let </span><span class="kw-2">mut </span>frame_table = frame.table_mut(table_name);
-          <span class="kw">let </span><span class="kw-2">mut </span>frame_count = frame_table.entry(key.to_string()).or_default();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(frame) = <span class="self">self</span>.undo.front_mut() {
+          <span class="kw">let </span>frame_table = frame.table_mut(table_name);
+          <span class="kw">let </span>frame_count = frame_table.entry(key.to_string()).or_default();
           <span class="kw-2">*</span>frame_count -= <span class="number">1</span>;
         }
       } <span class="kw">else </span>{

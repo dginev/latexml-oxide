@@ -1029,7 +1029,7 @@
       //   Fatal(&#39;I/O&#39;, $pathname, $self, &quot;Input file $pathname appears to be binary.&quot;); }
       // open($IN, &#39;&lt;&#39;, $pathname)
       //   || Fatal(&#39;I/O&#39;, $pathname, $self, &quot;Can&#39;t open $pathname for reading&quot;, $!);
-      </span><span class="kw">let </span><span class="kw-2">mut </span>f = <span class="kw">match </span>File::open(pathname) {
+      </span><span class="kw">let </span>f = <span class="kw">match </span>File::open(pathname) {
         <span class="prelude-val">Ok</span>(handle) =&gt; handle,
         <span class="prelude-val">Err</span>(e) =&gt; {
           <span class="kw">if </span>e.kind() == io::ErrorKind::NotFound {
@@ -1191,8 +1191,8 @@
         }
         <span class="kw">if </span>!two_hex {
           <span class="comment">// OR ^^ followed by a SINGLE Control char type code???
-          </span><span class="kw">let </span><span class="kw-2">mut </span>c = <span class="self">self</span>.chars[<span class="self">self</span>.colno + <span class="number">1</span>];
-          <span class="kw">let </span><span class="kw-2">mut </span>cn = c <span class="kw">as </span>i64;
+          </span><span class="kw">let </span>c = <span class="self">self</span>.chars[<span class="self">self</span>.colno + <span class="number">1</span>];
+          <span class="kw">let </span>cn = c <span class="kw">as </span>i64;
 
           ch = (cn + <span class="kw">if </span>cn &gt;= <span class="number">64 </span>{ -<span class="number">64 </span>} <span class="kw">else </span>{ <span class="number">64 </span>}) <span class="kw">as </span>u8 <span class="kw">as </span>char;
           <span class="self">self</span>.splice(<span class="self">self</span>.colno - <span class="number">1</span>..<span class="self">self</span>.colno + <span class="number">2</span>, <span class="kw-2">&amp;</span>[ch]);

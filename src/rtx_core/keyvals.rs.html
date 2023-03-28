@@ -611,6 +611,7 @@
 <a href="#611" id="611">611</a>
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::HashMap;
@@ -637,7 +638,8 @@
 
 <span class="kw">type </span>KVTuple = (String, Stored, bool, Vec&lt;KeyVal&gt;, KeyVal);
 
-<span class="attr">#[derive(Debug, Clone)]
+<span class="attr">#[allow(dead_code)] </span><span class="comment">// TODO: remove when KeyVals is fully implemented
+</span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>KeyVals {
   <span class="comment">// which KeyVals are we parsing and how do we behave?
   </span>prefix: String,
@@ -928,7 +930,7 @@
     //   @rmtokens = LaTeXML::Package::Expand($rmmacro)-&gt;unlist; }
 
     // define some xkeyval internals
-    </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
+    </span><span class="kw">let </span>tokens = Vec::new();
     <span class="comment">// let tokens = $setInternals ? (
     //   T_CS(&#39;\def&#39;), T_CS(&#39;\XKV@fams&#39;), T_BEGIN, Explode(join(&#39;,&#39;, $self-&gt;getKeySets)), T_END,
     //   T_CS(&#39;\def&#39;), T_CS(&#39;\XKV@na&#39;), T_BEGIN, Explode(join(&#39;,&#39;, @skip)), T_END
@@ -1041,7 +1043,7 @@
       </span>pairs.push((key.to_string(), value.clone()));
 
       <span class="comment">// if we do not have a value yet, set it
-      </span><span class="kw">let </span><span class="kw-2">mut </span>entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
+      </span><span class="kw">let </span>entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
 
       <span class="comment">// If we get a third value, push into an array
       // This is unlikely to be what the caller expects!! But what else?

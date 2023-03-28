@@ -192,7 +192,7 @@
 <span class="doccomment">/// If calling at compile-time, pass `None` for state, to avoid initialization.
 </span><span class="kw">pub fn </span>parse_prototype(proto: <span class="kw-2">&amp;</span>str, state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Token, <span class="prelude-ty">Option</span>&lt;Parameters&gt;)&gt; {
   <span class="kw">let </span>cs;
-  <span class="kw">let </span><span class="kw-2">mut </span>final_proto = <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = CSNAME_MACRO_RE.captures(proto) {
+  <span class="kw">let </span>final_proto = <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str())));
     <span class="comment">// also replace in proto
     </span>CSNAME_MACRO_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
@@ -226,7 +226,7 @@
 </span><span class="kw">pub fn </span>parse_parameters(<span class="kw-2">mut </span>prototype: String, cs: <span class="kw-2">&amp;</span>Token, <span class="kw-2">mut </span>state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>parameters = Vec::new();
   <span class="kw">while </span>!prototype.is_empty() {
-    <span class="kw">let </span><span class="kw-2">mut </span>next_proto: String;
+    <span class="kw">let </span>next_proto: String;
     <span class="comment">// Handle possibly nested cases, such as {Number}
     </span><span class="kw">if </span>NESTED_CHECK_RE.is_match(<span class="kw-2">&amp;</span>prototype) {
       <span class="kw">let </span>captures = NESTED_CHECK_RE.captures(<span class="kw-2">&amp;</span>prototype).unwrap();

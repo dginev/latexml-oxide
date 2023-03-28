@@ -3438,7 +3438,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>attr_data = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(attributes) = attributes_opt {
       <span class="kw">let </span><span class="kw-2">mut </span>keys = <span class="macro">vec!</span>[String::from(<span class="string">&quot;class&quot;</span>), String::from(<span class="string">&quot;package&quot;</span>), String::from(<span class="string">&quot;options&quot;</span>)];
-      <span class="kw">let </span><span class="kw-2">mut </span>other_keys = attributes
+      <span class="kw">let </span>other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != <span class="string">&quot;class&quot; </span>&amp;&amp; k.as_str() != <span class="string">&quot;package&quot; </span>&amp;&amp; k.as_str() != <span class="string">&quot;options&quot;</span>)
         .map(ToString::to_string)
@@ -3993,8 +3993,8 @@
       // let comment = self.document.create_comment(s!(&quot; {} &quot;,clean));
       // self.pending.push(comment.clone());
       // Ok(comment)
-    </span>} <span class="kw">else </span>{
-    <span class="comment">//   if let Some(last_child) = self.node.last_child() {
+    // } else {
+    //   if let Some(last_child) = self.node.last_child() {
     //     if last_child.get_type() == NodeType::CommentNode {
     //       last_child.set_content(s!(&quot;{}\n     {} &quot;,comment.get_content(), clean_text));
     //       return Ok(last_child);
@@ -4522,7 +4522,7 @@
   <span class="kw">fn </span>get_insertion_candidates(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node) -&gt; Vec&lt;Node&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>nodes: Vec&lt;Node&gt; = Vec::new();
     <span class="comment">// Check the current element FIRST, then build list of candidates.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>first = <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
+    </span><span class="kw">let </span>first = <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
       Cow::Owned(node.get_parent().unwrap())
     } <span class="kw">else </span>{
       Cow::Borrowed(node)
@@ -5072,7 +5072,7 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="kw-2">&amp;</span>Font {
+  <span class="kw">pub fn </span>get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="kw-2">&amp;</span>Font {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(_element) = xml::closest_element(node) {
       <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(fontid) = node.get_attribute(<span class="string">&quot;_font&quot;</span>) {
@@ -5125,7 +5125,7 @@
   //   return $$self{node_fonts}{$fontid} || LaTeXML::Common::Font-&gt;textDefault(); }
 
   // Remove a node from the document (from it&#39;s parent)
-  </span><span class="kw">pub fn </span>remove_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;mut </span>Node) {
+  </span><span class="kw">pub fn </span>remove_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node) {
     <span class="kw">let </span><span class="kw-2">mut </span>chopped: bool = <span class="self">self</span>.node == <span class="kw-2">*</span>node; <span class="comment">// Note if we&#39;re removing insertion point
     </span><span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
       <span class="comment">// If an element, do ID bookkeeping.
@@ -5184,7 +5184,7 @@
   /// in the process.
   </span><span class="kw">pub fn </span>open_element_at(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    <span class="kw-2">mut </span>point: <span class="kw-2">&amp;mut </span>Node,
+    point: <span class="kw-2">&amp;mut </span>Node,
     qname: <span class="kw-2">&amp;</span>str,
     attributes: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;,
     <span class="kw-2">mut </span>font_opt: <span class="prelude-ty">Option</span>&lt;Font&gt;,
@@ -5209,7 +5209,7 @@
       newnode = Node::new(<span class="kw-2">&amp;</span>tag, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.document).unwrap();
       <span class="self">self</span>.record_constructed_node(<span class="kw-2">&amp;</span>newnode);
       <span class="self">self</span>.document.set_root_element(<span class="kw-2">&amp;</span>newnode);
-      <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.pending {
+      <span class="kw">for </span>node <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.pending {
         newnode.add_prev_sibling(node)<span class="question-mark">?</span>; <span class="comment">// Add saved comments, PI&#39;s
       </span>}
 
@@ -5352,7 +5352,7 @@
   <span class="doccomment">/// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you&#39;re finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  </span><span class="kw">pub fn </span>close_element_at(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;mut </span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="self">self</span>.after_close(node, state) }
+  </span><span class="kw">pub fn </span>close_element_at(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="self">self</span>.after_close(node, state) }
 
   <span class="kw">pub fn </span>after_open(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Set current point to this node, just in case the afterOpen&#39;s use it.
@@ -5405,7 +5405,7 @@
     </span><span class="self">self</span>.append_clone_aux(node, new_children, <span class="kw-2">&amp;mut </span>id_map, state)
   }
 
-  <span class="kw">fn </span>append_clone_aux(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;mut </span>Node, new_children: Vec&lt;Node&gt;, id_map: <span class="kw-2">&amp;mut </span>HashMap&lt;String, String&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">fn </span>append_clone_aux(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, new_children: Vec&lt;Node&gt;, id_map: <span class="kw-2">&amp;mut </span>HashMap&lt;String, String&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>child <span class="kw">in </span>new_children.into_iter() {
       <span class="kw">match </span>child.get_type() {
       <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
@@ -5719,7 +5719,7 @@
   /// The parent node (the one with ID=&lt;parentid&gt;) also maintains a counter
   /// stored in an attribute `_ID_counter_&lt;prefix&gt;` recording the last used
   /// &lt;number&gt; for &lt;prefix&gt; amongst its descendents.
-  </span><span class="kw">pub fn </span>generate_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>node: <span class="kw-2">&amp;mut </span>Node, <span class="kw-2">mut </span>prefix: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>generate_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, <span class="kw-2">mut </span>prefix: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// If node doesn&#39;t already have an id, and can
     </span><span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
     <span class="comment">// but isn&#39;t a _Capture_ node (which ultimately should disappear)
