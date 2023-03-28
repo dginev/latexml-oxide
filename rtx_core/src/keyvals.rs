@@ -24,6 +24,7 @@ use crate::{BoxOps, Digested};
 
 type KVTuple = (String, Stored, bool, Vec<KeyVal>, KeyVal);
 
+#[allow(dead_code)] // TODO: remove when KeyVals is fully implemented
 #[derive(Debug, Clone)]
 pub struct KeyVals {
   // which KeyVals are we parsing and how do we behave?

@@ -139,7 +139,7 @@ impl Object for Locator {
 }
 
 impl Locator {
-  fn to_attribute(&self) -> String {
+  pub fn to_attribute(&self) -> String {
     let mut loc = self.get_short_source("anonymous_string") + "#text";
     if self.is_range() {
       loc.push_str("range(from='");

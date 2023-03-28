@@ -765,8 +765,8 @@ impl Font {
 
     if let Some(ms) = mathstyle {
       if let Some(os) = othermathstyle {
-        let ms_str : &str = &*ms;
-        let os_str : &str = &*os;
+        let ms_str : &str = ms;
+        let os_str : &str = os;
         changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
       }
     }

@@ -93,12 +93,15 @@ macro_rules! end_state_frame {
 macro_rules! WithInnerState {
   ($body: block, $inner_state:ident) => {{
     BindInnerState!($inner_state);
+    #[allow(clippy::unused_unit)]
     let macro_out = $body;
     end_state_frame!();
+
     macro_out
   }};
   ($body: block, $stomach:ident, $inner_state:ident) => {{
     BindInnerState!($stomach, $inner_state);
+    #[allow(clippy::unused_unit)]
     let macro_out = $body;
     end_state_frame!();
     macro_out

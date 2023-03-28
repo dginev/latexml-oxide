@@ -1045,7 +1045,7 @@ impl Document {
       // let comment = self.document.create_comment(s!(" {} ",clean));
       // self.pending.push(comment.clone());
       // Ok(comment)
-    } else {
+    // } else {
     //   if let Some(last_child) = self.node.last_child() {
     //     if last_child.get_type() == NodeType::CommentNode {
     //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));

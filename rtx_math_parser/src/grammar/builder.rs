@@ -3,7 +3,6 @@ use marpa::grammar::Grammar as MarpaGrammar;
 use marpa::result::Result;
 use marpa::tree_builder::TreeBuilder;
 
-#[allow(unused_macros)]
 pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // We create a declarative macro language of our own, in the spirit of the Marpa SLIF
   default_registry!();
