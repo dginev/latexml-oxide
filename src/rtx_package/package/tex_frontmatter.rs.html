@@ -468,7 +468,7 @@
   // This is called by afterOpen (by default on &lt;ltx:document&gt;) to
   // output any frontmatter that was accumulated.
 
-  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, node, state] {
+  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, _node, state] {
     <span class="comment">// this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
     </span><span class="kw">let </span>frontmatter_elements_set: HashSet&lt;String&gt; = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
@@ -583,7 +583,7 @@
   });
 
   <span class="comment">// Remove the last closed node, if it&#39;s empty.
-  </span><span class="kw">let </span>remove_empty_element: Vec&lt;ConstructionClosure&gt; = <span class="macro">construct!</span>(document, whatsit, state, {
+  </span><span class="kw">let </span>remove_empty_element: Vec&lt;ConstructionClosure&gt; = <span class="macro">construct!</span>(document, _whatsit, _state, {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_node().get_last_child() {
       <span class="comment">// This should be the wrapper just added.
       </span><span class="kw">if </span>node.get_child_nodes().is_empty() {
@@ -729,4 +729,4 @@
   // This would be useful for the titles in links; thus can be plain (unicode) text.
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -232,7 +232,7 @@
   </span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@author@prefix&quot;</span>, sub[document, args, props, state] {
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@author@prefix&quot;</span>, sub[document, _args, _props, state] {
     <span class="kw">let </span><span class="kw-2">mut </span>node   = document.get_element().unwrap();
     <span class="kw">let </span>nauthors   = state.lookup_int(<span class="string">&quot;NUMBER_OF_AUTHORS&quot;</span>);
     <span class="kw">let </span>i          = document.findnodes(<span class="string">&quot;//ltx:creator[@role=&#39;author&#39;]&quot;</span>, <span class="prelude-val">None</span>, state).len() <span class="kw">as </span>i64;
@@ -306,11 +306,11 @@
   // Probably there are other places (eg in titlepage?) that should force the close??
 
   </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{abstract}&quot;</span>, <span class="string">&quot;&quot;</span>,
-    after_digest_begin =&gt; sub[stomach, args, state] {
+    after_digest_begin =&gt; sub[stomach, _args, state] {
       <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot; </span>=&gt; <span class="bool-val">false</span>);
       <span class="macro">AddToMacro!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>, <span class="string">&quot;\\maybe@end@abstract&quot;</span>);
     },
-    after_digest =&gt; sub[stomach, args, state] {
+    after_digest =&gt; sub[stomach, _args, state] {
       <span class="kw">let </span>abstract_title = stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\format@title@abstract&quot;</span>),<span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstractname&quot;</span>), <span class="macro">T_END!</span>()), state)<span class="question-mark">?</span>;
       <span class="kw">let </span>regurgitated = List::new(stomach.regurgitate(), state);
       <span class="kw">let </span>frontmatter = <span class="kw">match </span>state.lookup_value_mut(<span class="string">&quot;frontmatter&quot;</span>) {
@@ -326,7 +326,7 @@
   </span>);
   <span class="comment">// If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   </span><span class="macro">AssignValue!</span>(<span class="string">&quot;\\abstract:locked&quot; </span>=&gt; <span class="bool-val">false</span>); <span class="comment">// REDEFINE the above locked definition!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\abstract&quot;</span>, sub[gullet, args, state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\abstract&quot;</span>, sub[gullet, _args, state] {
     <span class="kw">if </span>gullet.if_next(<span class="macro">T_BEGIN!</span>(), state)<span class="question-mark">? </span>{
       <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstract@onearg&quot;</span>)
     } <span class="kw">else </span>{
@@ -374,7 +374,7 @@
     mode =&gt; <span class="string">&quot;text&quot;
   </span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\maybe@end@title&quot;</span>, sub[document,args,props,state] {
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\maybe@end@title&quot;</span>, sub[document,_args,_props,state] {
     <span class="kw">if </span>document.is_closeable(<span class="string">&quot;ltx:titlepage&quot;</span>, state).is_some() {
       document.close_element(<span class="string">&quot;ltx:titlepage&quot;</span>, state)<span class="question-mark">?</span>;
     }
@@ -391,4 +391,4 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@evenfoot&quot;</span>, <span class="string">&quot;&quot;</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

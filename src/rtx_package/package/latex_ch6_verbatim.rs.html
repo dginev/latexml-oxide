@@ -209,7 +209,7 @@
     </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot; &quot;</span>), <span class="macro">T_SPACE!</span>());
   });
   <span class="macro">DefConstructor!</span>(<span class="string">r&quot;\lx@end@verbatim&quot;</span>, <span class="string">&quot;&lt;/ltx:verbatim&gt;&quot;</span>,
-    before_digest =&gt; sub[stomach,state] { state.end_semiverbatim()<span class="question-mark">?</span>; });
+    before_digest =&gt; sub[_stomach,state] { state.end_semiverbatim()<span class="question-mark">?</span>; });
 
   <span class="comment">// Close enough?
   // verbatim is a bit of special case;
@@ -269,7 +269,7 @@
       ).collect();
       whatsit.set_body(boxes, state);
     },
-    before_construct =&gt; sub[document, whatsit, state] { document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>; }
+    before_construct =&gt; sub[document, _whatsit, state] { document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>; }
   );
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@vobeyspaces&quot;</span>, sub[stomach, (), state] {
@@ -279,7 +279,7 @@
 
   <span class="comment">// WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verb&quot;</span>, sub[gullet, args, state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verb&quot;</span>, sub[gullet, _args, state] {
     <span class="kw">let </span>active_chars = <span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>, <span class="string">&#39;\\&#39;</span>, <span class="string">&#39;{&#39;</span>, <span class="string">&#39;}&#39;</span>];
     state.begin_semiverbatim(<span class="prelude-val">Some</span>(active_chars));
     state.assign_catcode(<span class="string">&#39; &#39;</span>, Catcode::ACTIVE, <span class="prelude-val">None</span>); <span class="comment">// Do NOT (necessarily) skip spaces after \verb!!!
@@ -328,7 +328,7 @@
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@internal@verb{} Undigested {}&quot;</span>,
     <span class="string">&quot;?#isMath(&lt;ltx:XMTok font=&#39;#font&#39;&gt;#text&lt;/ltx:XMTok&gt;)(&lt;ltx:verbatim font=&#39;#font&#39;&gt;#text&lt;/ltx:verbatim&gt;)&quot;</span>,
-    properties =&gt; sub[stomach, args, state] {
+    properties =&gt; sub[_stomach, args, _state] {
       <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;text&quot; </span>=&gt; args[<span class="number">2</span>].as_ref().unwrap().to_string()))
     },
   font =&gt; { family =&gt; <span class="string">&quot;typewriter&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot; </span>},
@@ -344,9 +344,9 @@
       stomach.bgroup(state);
       <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>);
     },
-    after_digest =&gt; sub[stomach,whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
+    after_digest =&gt; sub[stomach,_whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
     <span class="comment">// Since ltx:verbatim is both inline &amp; block, we have to fudge inline mode
-    </span>before_construct =&gt; sub[document, args, state] {
+    </span>before_construct =&gt; sub[document, _args, state] {
       <span class="kw">if </span>!document.can_contain(<span class="kw-2">&amp;</span>document.get_element().unwrap(), <span class="string">&quot;#PCDATA&quot;</span>, state) {
         document.open_element(<span class="string">&quot;ltx:p&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       }},
@@ -357,7 +357,7 @@
      stomach.bgroup(state);
      <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>);
    },
-   after_digest =&gt; sub[stomach,whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
+   after_digest =&gt; sub[stomach,_whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
    reversion =&gt; <span class="string">&quot;\\verb#1#2#1&quot;
   </span>);
 
@@ -371,4 +371,4 @@
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\normalsfcodes&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

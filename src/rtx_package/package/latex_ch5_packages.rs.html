@@ -209,13 +209,6 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>OPTS_REGEX: Regex = Regex::new(<span class="string">r&quot;,\s*&quot;</span>).unwrap();
@@ -316,20 +309,13 @@
     <span class="macro">DefMacro!</span>(ver_cs, <span class="prelude-val">None</span>, version, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
     () });
 
-  <span class="comment">//\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareRelease{}{}{}&quot;</span>, sub[stomach, (version, date, name), state] {
-    <span class="comment">// anything useful?
-    </span><span class="macro">Tokens!</span>(); });
+  <span class="comment">// anything useful?
+  //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareRelease{}{}{}&quot;</span>, <span class="prelude-val">None</span>);
   <span class="comment">//\DeclareCurrentRelease{v4.49}{2021-11-01}
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareCurrentRelease{}{}&quot;</span>, sub[stomach, (version, date), state] {
-    <span class="comment">// anything useful?
-    </span><span class="macro">Tokens!</span>() });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease&quot;</span>, sub[gullet,args,state] {
-    <span class="comment">// anything useful?
-    </span><span class="macro">Tokens!</span>() });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\NewModuleRelease{}{}{} Until:\\EndModuleRelease&quot;</span>, sub[gullet,args,state] {
-    <span class="comment">// anything useful?
-    </span><span class="macro">Tokens!</span>() });
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareCurrentRelease{}{}&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\NewModuleRelease{}{}{} Until:\\EndModuleRelease&quot;</span>, <span class="prelude-val">None</span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\DeclareOption{}{}&quot;</span>, sub[stomach,(option, code),state] {
     <span class="kw">let </span>option_str = option.to_string();
@@ -435,4 +421,4 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\addto@hook DefToken {}&quot;</span>, <span class="string">&quot;#1\\expandafter{\\the#1#2}&quot;</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

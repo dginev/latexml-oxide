@@ -550,6 +550,9 @@
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
 <a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">lazy_static! </span>{
@@ -664,7 +667,7 @@
   <span class="comment">// # 2nd arg is &lt;font&gt; = &lt;fontdef token&gt; | \font | &lt;family member&gt;
   // #  &lt;family member&gt; = &lt;font range&gt;&lt;4bit number&gt;
   // #  &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
-  </span><span class="macro">DefParameterType!</span>(FontToken, reader =&gt; <span class="macro">reader!</span>(gullet, inner, extra, state, {
+  </span><span class="macro">DefParameterType!</span>(FontToken, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
     <span class="kw">let </span>token = gullet.read_token(state).unwrap();
     <span class="kw">if </span>FONT_TOKEN_RE.is_match(<span class="kw-2">&amp;</span>token.to_string()) {
       gullet.read_number(state)<span class="question-mark">?</span>;
@@ -1094,13 +1097,16 @@
   <span class="string">&quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;OVERACCENT&#39;&gt;#glyph&lt;/ltx:XMTok&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;&quot;</span>,
   sizer =&gt; <span class="string">&quot;#1&quot;</span>,    <span class="comment">// Close enough?
   </span>after_digest =&gt; sub[stomach, whatsit, state] {
-    <span class="macro">unimplemented!</span>(); ()
-      <span class="comment">// my ($stomach, $whatsit) = @_;
-      // my $n = $whatsit-&gt;getArg(1)-&gt;valueOf;
-      // my ($role, $glyph) = decodeMathChar($n);
-      // $whatsit-&gt;setProperty(glyph =&gt; $glyph) if $glyph;
-      // $whatsit-&gt;setProperty(font =&gt; LookupValue(&#39;font&#39;)-&gt;specialize($glyph)) if $glyph;
-  </span>});
+    <span class="kw">let </span>n = whatsit.get_arg(<span class="number">1</span>).unwrap().value_of();
+    <span class="kw">let </span>(role, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16, stomach, state);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(glyph) = glyph_opt {
+      whatsit.set_property(<span class="string">&quot;glyph&quot;</span>, glyph);
+
+      <span class="kw">let </span><span class="kw-2">mut </span>glyph_buf: [u8; <span class="number">4</span>] = [<span class="number">0</span>; <span class="number">4</span>];
+      <span class="kw">let </span>glyph_str: <span class="kw-2">&amp;</span>str = glyph.encode_utf8(<span class="kw-2">&amp;mut </span>glyph_buf);
+      whatsit.set_property(<span class="string">&quot;font&quot;</span>, state.lookup_font().unwrap().specialize(glyph_str));
+    }
+  });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

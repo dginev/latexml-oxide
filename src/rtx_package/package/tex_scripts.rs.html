@@ -382,7 +382,7 @@
 
 <span class="comment">// Remember a &quot;safe&quot; way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
-</span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
+</span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
   <span class="kw">let </span>box_opt = <span class="kw">match </span>object.data() {
     DigestedData::List(obj) =&gt; obj.boxes.last(),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(object),
@@ -419,7 +419,7 @@
   <span class="comment">//   let mut gullet = stomach.get_gullet_mut();
   //   gullet.skip_spaces(state);
   </span><span class="kw">let </span>font = state.lookup_font().unwrap();
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(style) = font.get_mathstyle() {
+  <span class="kw">if </span>font.get_mathstyle().is_some() {
     <span class="kw">let </span><span class="kw-2">mut </span>putback = VecDeque::new();
     <span class="kw">let </span><span class="kw-2">mut </span>nscripts = <span class="number">0</span>;
 
@@ -592,7 +592,7 @@
     &lt;ltx:XMArg rule=&quot;Superscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args,state] {
       <span class="macro">unref!</span>(args=&gt;arg);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUPER!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
     <span class="comment">// sizer     =&gt; sub { script_sizer($_[0]-&gt;getArg(1), $_[0].get_property(&quot;base&quot;),
@@ -605,7 +605,7 @@
   &lt;/ltx:XMApp&gt;
   &quot;###
     </span>,
-    reversion =&gt; sub[whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args,state] {
       <span class="macro">unref!</span>(args=&gt;arg);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUB!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
     <span class="comment">// sizer     =&gt; sub { script_sizer($_[0]-&gt;getArg(1), $_[0].get_property(&quot;base&quot;),
@@ -618,7 +618,7 @@
     &lt;ltx:XMArg rule=&quot;Superscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args,state] {
       <span class="macro">unref!</span>(args=&gt;arg);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUPER!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
     <span class="comment">// sizer     =&gt; sub { script_sizer($_[0]-&gt;getArg(1), undef, undef, &quot;SUPERSCRIPT&quot;, &#39;post&quot;); }
@@ -628,13 +628,13 @@
     &lt;ltx:XMArg rule=&quot;Subscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args,state] {
       <span class="macro">unref!</span>(args=&gt;arg);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUB!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
     <span class="comment">// sizer     =&gt; sub { script_sizer($_[0]-&gt;getArg(1), undef, undef, &#39;SUBSCRIPT&#39;, &#39;post&quot;); }
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;&#39;&quot;</span>, sub[gullet,args,state] {
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;&#39;&quot;</span>, sub[gullet,_args,state] {
     <span class="kw">let </span><span class="kw-2">mut </span>sup = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>)];
     <span class="comment">// Collect up all &#39;, convering to \prime
     </span><span class="kw">while </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>), state)<span class="question-mark">? </span>{
@@ -653,4 +653,4 @@
   mathactive =&gt; <span class="bool-val">true</span>); <span class="comment">// Only in math!
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

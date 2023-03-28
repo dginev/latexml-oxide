@@ -1741,7 +1741,7 @@
 \newcount\etb@tempcnta
 &quot;###</span>);
 
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\newrobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(star,cs,nargs,opt,body),state] {
+<span class="macro">DefMacro!</span>(<span class="string">&quot;\\newrobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(_star,cs,nargs,opt,body),state] {
   <span class="kw">if </span>!is_definable(<span class="kw-2">&amp;</span>cs, state) {
     <span class="kw">if </span>!state.lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{cs}:locked&quot;</span>)) {
       <span class="macro">Info!</span>(<span class="string">&quot;ignore&quot;</span>, cs, stomach, state,
@@ -1752,12 +1752,12 @@
   }
   <span class="macro">Tokens!</span>() });
 
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(star,cs,nargs,opt,body),state] {
+<span class="macro">DefMacro!</span>(<span class="string">&quot;\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(_star,cs,nargs,opt,body),state] {
   <span class="kw">let </span>args = convert_latex_args(nargs.value_of() <span class="kw">as </span>usize, opt, state)<span class="question-mark">?</span>;
   <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>);
   <span class="macro">Tokens!</span>() });
 
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\providerobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(star,cs,nargs,opt,body), state] {
+<span class="macro">DefMacro!</span>(<span class="string">&quot;\\providerobustcmd OptionalMatch:* DefToken [Number][]{}&quot;</span>, sub[stomach,(_star,cs,nargs,opt,body), state] {
   <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>cs, state) {
     <span class="kw">let </span>args = convert_latex_args(nargs.value_of() <span class="kw">as </span>usize, opt, state)<span class="question-mark">?</span>;
     <span class="macro">DefMacro!</span>(cs, args, body, protected =&gt; <span class="bool-val">true</span>, long =&gt; <span class="bool-val">true</span>); }
@@ -2986,7 +2986,7 @@
 
 <span class="comment">// Need to be able to examine a Macro&#39;s replacement for a match (and then replace)
 // we can only do this for token expansions, and should return failure for all else.
-</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\patchcmd [] DefToken {}{}{}{}&quot;</span>, sub[gullet,(prefix,cs,search,replace,success,failure), state] {
+</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\patchcmd [] DefToken {}{}{}{}&quot;</span>, sub[gullet,(_prefix,cs,search,replace,success,failure), state] {
   <span class="kw">let </span>definition = state.lookup_definition(<span class="kw-2">&amp;</span>cs);
   <span class="kw">if </span>definition.is_some() &amp;&amp; definition.as_ref().unwrap().is_expandable() {
     <span class="kw">let </span>expansion = definition.as_ref().unwrap().get_expansion();
@@ -3436,4 +3436,4 @@
     state.push_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;@environment@{arg1}@afterend&quot;</span>), arg2.unlist()); });
 
 });</code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

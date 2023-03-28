@@ -203,7 +203,7 @@
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@verbatim@&quot;</span>, <span class="string">&quot;&lt;ltx:verbatim font=&#39;#font&#39;&gt;&quot;</span>,
     before_digest =&gt; { <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CR!</span>()); },
-    before_construct =&gt; sub[document, whatsit, inner_state] { document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, inner_state)<span class="question-mark">?</span>; }
+    before_construct =&gt; sub[document, _whatsit, inner_state] { document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, inner_state)<span class="question-mark">?</span>; }
   );
 
   <span class="comment">// We HAVE to get this guy in, to close the &lt;ltx:verbatim&gt;&quot;
@@ -236,7 +236,7 @@
   // Well, we have to dance a bit...
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verbatim@&quot;</span>, sub[gullet, arg, state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verbatim@&quot;</span>, sub[gullet, _arg, state] {
     <span class="kw">let </span>env = state.lookup_string(<span class="string">&quot;current_environment&quot;</span>);
     <span class="comment">// Note: This should allow a regexp, since there can be spaces between \end and { !!!
     </span><span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
@@ -329,4 +329,4 @@
   //**********************************************************************
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

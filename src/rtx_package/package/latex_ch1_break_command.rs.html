@@ -62,7 +62,7 @@
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\newline&quot;</span>, <span class="string">&quot;?#isMath(&lt;ltx:XMHint name=&#39;newline&#39;/&gt;)(&lt;ltx:break/&gt;)&quot;</span>,
     reversion  =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\newline&quot;</span>), <span class="macro">T_CR!</span>()),
-    properties =&gt; sub[whatsit,_args,state] { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;isBreak&quot; </span>=&gt; Stored::Bool(<span class="bool-val">true</span>) )) }
+    properties =&gt; sub[_whatsit,_args,_state] { <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;isBreak&quot; </span>=&gt; Stored::Bool(<span class="bool-val">true</span>) )) }
   );
 
   <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@normalcr&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>));
@@ -79,4 +79,4 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@icentercr[]&quot;</span>, <span class="string">&quot;\\vskip #1\\ignorespaces&quot;</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

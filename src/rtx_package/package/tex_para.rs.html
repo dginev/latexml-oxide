@@ -149,7 +149,7 @@
   skippable_props.insert(<span class="macro">s!</span>(<span class="string">&quot;alignmentSkippable&quot;</span>), <span class="bool-val">true</span>.into());
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\normal@par&quot;</span>,
-    sub[document, args, props, state] {
+    sub[document, _args, props, state] {
       <span class="kw">if </span>!<span class="macro">prop_bool!</span>(props, <span class="string">&quot;inPreamble&quot;</span>) {
         document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>;
         <span class="kw">let </span>element = document.get_element();
@@ -198,7 +198,7 @@
 
   <span class="comment">// OTOH, sometimes \par is just a minimalistic &quot;start a new line&quot;
   // This should be closer for those cases.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\inner@par&quot;</span>, sub[document, args, props, state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\inner@par&quot;</span>, sub[document, _args, _props, state] {
     <span class="macro">Debug!</span>(<span class="string">&quot;inner@par invoked!\n&quot;</span>);
     <span class="kw">if </span>document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>.is_some() {
     } <span class="kw">else if </span>document.can_contain(document.get_node(), <span class="string">&quot;ltx:break&quot;</span>, state) {
@@ -211,7 +211,7 @@
     prune_empty_para(document, node, state)<span class="question-mark">?</span>;
   });
   <span class="macro">Tag!</span>(<span class="string">&quot;ltx:p&quot;</span>, auto_close =&gt; <span class="bool-val">true</span>, auto_open =&gt; <span class="bool-val">true</span>,
-    after_close =&gt; sub[document, node, state] {
+    after_close =&gt; sub[document, node, _state] {
       document.trim_node_whitespace(node)<span class="question-mark">?</span>;
   });
 
@@ -219,4 +219,4 @@
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\end&quot;</span>, sub[stomach, (), state] { stomach.get_gullet_mut().flush(state); });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

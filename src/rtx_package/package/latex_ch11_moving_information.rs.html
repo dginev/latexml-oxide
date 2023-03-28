@@ -698,7 +698,7 @@
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\label Semiverbatim&quot;</span>, sub[document, olabel, props, state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\label Semiverbatim&quot;</span>, sub[document, _olabel, props, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(savenode) = document.float_to_label(state) {
       <span class="kw">let </span><span class="kw-2">mut </span>labels : HashMap&lt;String,bool&gt; = HashMap::new();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = props.get(<span class="string">&quot;label&quot;</span>) {
@@ -748,7 +748,7 @@
   // # * is added to accommodate hyperref
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\ref OptionalMatch:* Semiverbatim&quot;</span>,
     <span class="string">&quot;&lt;ltx:ref labelref=&#39;#label&#39; _force_font=&#39;true&#39;/&gt;&quot;</span>,
-    properties =&gt; sub[stomach, args, state] {
+    properties =&gt; sub[_stomach, args, _state] {
       <span class="macro">unpack_opt_ref!</span>(args =&gt; _star, label_opt);
       <span class="kw">let </span>label = label_opt.unwrap().as_ref().unwrap().to_string();
       <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(<span class="string">&quot;label&quot; </span>=&gt; Stored::String(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>).into_owned())))
@@ -848,7 +848,7 @@
   </span>);
 
   <span class="comment">// Close the bibliography
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\endthebibliography&quot;</span>, sub[document,whatsit,props,state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\endthebibliography&quot;</span>, sub[document,_whatsit,_props,state] {
     document.maybe_close_element(<span class="string">&quot;ltx:biblist&quot;</span>, state)<span class="question-mark">?</span>;
     document.maybe_close_element(<span class="string">&quot;ltx:bibliography&quot;</span>, state)<span class="question-mark">?</span>;
   }, locked=&gt;<span class="bool-val">true</span>);
@@ -856,7 +856,7 @@
   </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:biblist&quot;</span>,      auto_close =&gt; <span class="bool-val">true</span>);
   <span class="macro">Tag!</span>(<span class="string">&quot;ltx:bibliography&quot;</span>, auto_close =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\par@in@bibliography&quot;</span>, sub[gullet, args, state] {
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\par@in@bibliography&quot;</span>, sub[gullet, _args, state] {
       gullet.skip_spaces(state);
       <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state) {
         <span class="comment">// If next token is another \par, or a REAL \bibitem,
@@ -1363,4 +1363,4 @@
   <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

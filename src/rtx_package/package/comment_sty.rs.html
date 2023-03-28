@@ -64,12 +64,12 @@
   <span class="comment">//**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = Arc::new(<span class="macro">primitiveproc!</span>(stomach, args, state, {
+  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = <span class="macro">primitiveproc!</span>(_stomach, args, state, {
     <span class="macro">unpack!</span>(args=&gt;name);
     <span class="kw">let </span>begin_mark = <span class="macro">s!</span>(<span class="string">&quot;\\begin{{{name}}}&quot;</span>);
     <span class="kw">let </span>end_mark = <span class="macro">s!</span>(<span class="string">&quot;\\end{{{name}}}&quot;</span>);
     <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(begin_mark), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-    after_digest =&gt; sub[stomach, whatsit, after_digest_state] {
+    after_digest =&gt; sub[stomach, _whatsit, after_digest_state] {
       <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
       <span class="kw">let </span>gullet = <span class="kw-2">&amp;mut </span>stomach.gullet;
       gullet.read_raw_line(after_digest_state);    <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
@@ -82,11 +82,11 @@
       note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;[Skipped {name} ({nlines} lines)]&quot;</span>));
       <span class="prelude-val">Ok</span>(Vec::new())
     });
-  }));
+  });
 
   <span class="comment">// I don&#39;t understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  </span><span class="kw">let </span>define_included: PrimitiveClosure = Arc::new(<span class="macro">primitiveproc!</span>(stomach, args, inner_state, {
+  </span><span class="kw">let </span>define_included: PrimitiveClosure = <span class="macro">primitiveproc!</span>(_stomach, args, inner_state, {
     args.reverse(); <span class="comment">// we&#39;ll be using .pop() from the front
     </span><span class="kw">let </span>name = args.pop().unwrap().owned_tokens().expect(<span class="string">&quot;expecting a Tokens argument&quot;</span>).to_string();
     <span class="kw">let </span><span class="kw-2">mut </span>before_tokens = <span class="kw">match </span>args.pop() {
@@ -108,7 +108,7 @@
       </span>before_tokens.clone()
     });
     <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\end{{{name}}}&quot;</span>)), <span class="prelude-val">None</span>, Tokens::new(after_tokens));
-  }));
+  });
 
   <span class="kw">let </span><span class="kw-2">mut </span>mock_stomach = Stomach::default();
   define_excluded(<span class="kw-2">&amp;mut </span>mock_stomach, <span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">&quot;comment&quot;</span>, <span class="prelude-val">None</span>))], outer_state)<span class="question-mark">?</span>;
@@ -119,4 +119,4 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\processcomment{}{}{}{}&quot;</span>, <span class="prelude-val">None</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

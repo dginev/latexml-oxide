@@ -129,7 +129,7 @@
   <span class="comment">// Like  &quot;&lt;ltx:document xml:id=&#39;#id&#39;&gt;#body&lt;/ltx:document&gt;&quot;,
   // But more complicated due to id, at begin/end document and so forth.
   // AND, lower-level so that we can cope with common errors at document end.
-  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document, args, props, state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document, _args, props, state] {
     <span class="kw">let </span>id = <span class="macro">prop_str!</span>(props,<span class="string">&quot;id&quot;</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>docel) = document.findnode(<span class="string">&quot;/ltx:document&quot;</span>, <span class="prelude-val">None</span>, state) { <span class="comment">// Already (auto) created?
       </span><span class="kw">if </span>!id.is_empty() {
@@ -167,7 +167,7 @@
   <span class="comment">// \document is used directly in e.g. expl3.sty
   </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\document&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
 
-  <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document,args,props,state] {
+  <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document,_args,_props,state] {
       document.close_element(<span class="string">&quot;ltx:document&quot;</span>, state)<span class="question-mark">?</span>;
     },
     before_digest =&gt; sub[stomach,state] {
@@ -180,7 +180,7 @@
       <span class="comment">// Now we check whether we&#39;re down to the last stack frame.
       // It is common for unclosed { or even environments
       // and we want to at least compress &amp; avoid unnecessary errors &amp; warnings.
-      </span><span class="kw">let </span>nframes = state.get_frame_depth();
+      </span><span class="kw">let </span>_nframes = state.get_frame_depth();
       <span class="comment">//     my $ifstack;
       //     if ($STATE-&gt;isValueBound(&#39;current_environment&#39;, 0)
       //       &amp;&amp; ($STATE-&gt;valueInFrame(&#39;current_environment&#39;, 0) eq &#39;document&#39;)
@@ -217,4 +217,4 @@
   </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\enddocument&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

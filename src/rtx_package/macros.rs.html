@@ -152,6 +152,10 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="doccomment">/// Macro for compiling string construction replacements into closures
 /// that execute the needed ops in libxml.
@@ -162,13 +166,14 @@
     <span class="attr">#[derive(CompileReplacement)]
     #[replacement=<span class="macro-nonterminal">$replacement</span>]
     </span><span class="kw">struct </span>_Dummy;
-    <span class="attr">#[allow(unused_mut)]
+    <span class="attr">#[allow(unused_mut, unused_variables)]
     </span><span class="kw">let </span>tmp: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="macro">this_replacement!</span>();
     <span class="macro-nonterminal">$var </span>= tmp;
   }};
 }
 
 <span class="attr">#[macro_export]
+#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
 </span><span class="macro">macro_rules! </span>compile_prototype_for_typed_macro {
@@ -182,6 +187,7 @@
 }
 
 <span class="attr">#[macro_export]
+#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Primitive closures
 </span><span class="macro">macro_rules! </span>compile_prototype_for_typed_primitive {
   (<span class="macro-nonterminal">$prototype</span>:literal, sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
@@ -194,6 +200,7 @@
 }
 
 <span class="attr">#[macro_export]
+#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string binding prototypes into Conditional closures
 </span><span class="macro">macro_rules! </span>compile_prototype_for_typed_conditional {
   (<span class="macro-nonterminal">$prototype</span>:literal, sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
@@ -206,6 +213,7 @@
 }
 
 <span class="attr">#[macro_export]
+#[allow(unused_variables)]
 </span><span class="doccomment">/// Macro for compiling string literal prototypes into a Token and Parameters structs
 </span><span class="macro">macro_rules! </span>compile_prototype {
   (<span class="macro-nonterminal">$prototype</span>:literal) =&gt; {{
@@ -307,4 +315,4 @@
   (<span class="macro-nonterminal">$other</span>:ident) =&gt; {<span class="macro-nonterminal">$other</span>};
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

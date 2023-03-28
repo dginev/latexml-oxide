@@ -639,10 +639,10 @@
 
 </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@dual OptionalKeyVals:XMath {}{}&quot;</span>,
   <span class="string">&quot;&lt;ltx:XMDual role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&gt;#2&lt;ltx:XMWrap&gt;#3&lt;/ltx:XMWrap&gt;&lt;/ltx:XMDual&gt;&quot;</span>,
-  before_digest =&gt; sub[stomach,state] {
+  before_digest =&gt; sub[_stomach,state] {
     state.push_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, Stored::HashStored(HashMap::new()));
   },
-  after_digest =&gt; sub[stomach,whatsit,state] {
+  after_digest =&gt; sub[_stomach,whatsit,state] {
     <span class="kw">let </span>kv     = whatsit.get_arg(<span class="number">1</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(xmargs)) = state.pop_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>) { <span class="comment">// Really SHOULD be a hash
       </span>whatsit.set_properties(xmargs);  <span class="comment">// Hopefully no name class with XM&lt;digits&gt;
@@ -720,7 +720,7 @@
 // and establish an id and idref later.
 </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmarg{}{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMArg _xmkey=&#39;#1&#39;&gt;#2&lt;/ltx:XMArg&gt;&quot;</span>,
   reversion   =&gt; <span class="string">&quot;#2&quot;</span>,
-  after_digest =&gt; sub[stomach,whatsit,state] {
+  after_digest =&gt; sub[_stomach,whatsit,state] {
     <span class="kw">let </span>xmid = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
     <span class="kw">let </span>arg = whatsit.get_arg(<span class="number">2</span>);
     <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">&quot;xref:{}@reversion&quot;</span>, xmid);
@@ -736,7 +736,7 @@
 
 <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmref{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMRef _xmkey=&#39;#1&#39;/&gt;&quot;</span>,
   <span class="comment">// TODO: Must we store and lookup the Whatsit?
-  </span>reversion =&gt; sub[stomach,args,state] {
+  </span>reversion =&gt; sub[_stomach,args,state] {
     <span class="kw">let </span>xmid = args[<span class="number">0</span>].as_ref().unwrap().to_string();
     <span class="prelude-val">Ok</span>( state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;xref:{xmid}@reversion&quot;</span>)).unwrap_or_default() )},
   <span class="comment">// sizer =&gt; sub { LookupValue(&#39;xref:&#39; . ToString($_[0]-&gt;getArg(1)))-&gt;getSize; }
@@ -911,4 +911,4 @@
 
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

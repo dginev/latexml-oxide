@@ -143,8 +143,8 @@
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::state::State;
 
-<span class="kw">fn </span>setup_cyrillic(stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="macro">BindState!</span>(stomach, state);
+<span class="kw">fn </span>setup_cyrillic(_stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="macro">BindState!</span>(_stomach, state);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyra&quot;</span>, <span class="string">&quot;\u{0430}&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrb&quot;</span>, <span class="string">&quot;\u{0431}&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrv&quot;</span>, <span class="string">&quot;\u{0432}&quot;</span>);
@@ -243,7 +243,7 @@
   </span><span class="prelude-val">Ok</span>(())
 }
 
-<span class="macro">LoadDefinitions!</span>(outer_stomach, state, {
+<span class="macro">LoadDefinitions!</span>(stomach, state, {
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=&gt;unicode mapping.
@@ -258,12 +258,12 @@
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  </span><span class="macro">ProcessOptions!</span>(outer_stomach);
+  </span><span class="macro">ProcessOptions!</span>(stomach);
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font_encodings_ref) = state.lookup_vecdeque(<span class="string">&quot;font_encodings&quot;</span>) {
     <span class="kw">let </span>font_encodings: VecDeque&lt;Stored&gt; = font_encodings_ref.clone();
     <span class="kw">if </span>!font_encodings.is_empty() {
-      setup_cyrillic(outer_stomach, state)<span class="question-mark">?</span>;
+      setup_cyrillic(stomach, state)<span class="question-mark">?</span>;
       <span class="kw">for </span>encoding_stored <span class="kw">in </span>font_encodings.into_iter() {
         <span class="kw">if let </span>Stored::String(encoding) = encoding_stored {
           <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\encodingdefault&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(encoding)), scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
@@ -274,7 +274,7 @@
           }
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Only strings should be stored as font encoding names, at: {:?}&quot;</span>, encoding_stored);
-          <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, outer_stomach, state, message);
+          <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, stomach, state, message);
         }
       }
     }
@@ -283,4 +283,4 @@
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

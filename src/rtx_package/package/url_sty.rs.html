@@ -167,7 +167,7 @@
   });
 
   <span class="comment">// Define \Url, in case its used; won&#39;t be represented as nicely
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\Url&quot;</span>, sub[gullet, args, state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\Url&quot;</span>, sub[gullet, _args, _state] {
     gullet.unread_one(<span class="macro">T_OTHER!</span>(<span class="string">&quot;\\Url&quot;</span>));
     <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@Url&quot;</span>)))
   });
@@ -175,7 +175,7 @@
   <span class="comment">// \@@Url cmd {open}{close}{url}{formattedurl}
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@Url Undigested {}{} Semiverbatim {}&quot;</span>,<span class="comment">// Allow this to work in Math!
     </span><span class="string">&quot;?#isMath(&lt;ltx:XMWrap href=&#39;#href&#39;&gt;#5&lt;/ltx:XMWrap&gt;)(&lt;ltx:ref href=&#39;#href&#39; class=&#39;#class&#39;&gt;#5&lt;/ltx:ref&gt;)&quot;</span>,
-    properties =&gt; sub[stomach, args, state] {
+    properties =&gt; sub[_stomach, args, state] {
       <span class="macro">unref!</span>(args =&gt; cmd, open, close, url, formattedurl);
       <span class="kw">let </span>ltx_cmd = <span class="macro">s!</span>(<span class="string">&quot;ltx_{}&quot;</span>, LEADING_BACKSLASH_RE.replace(<span class="kw-2">&amp;</span>cmd.to_string(),<span class="string">&quot;&quot;</span>));
       <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(
@@ -203,4 +203,4 @@
   });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -308,7 +308,7 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>retract_equation(state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">fn </span>retract_equation(_state: <span class="kw-2">&amp;mut </span>State) {
   <span class="macro">unimplemented!</span>();
 }
 
@@ -338,13 +338,13 @@
       }
     }
   },
-  properties  =&gt; sub[stomach,args,state] { ref_step_id(<span class="string">&quot;equation&quot;</span>, stomach, state) },
+  properties  =&gt; sub[stomach,_args,state] { ref_step_id(<span class="string">&quot;equation&quot;</span>, stomach, state) },
   capture_body =&gt; <span class="bool-val">true</span>);
 
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{displaymath}&quot;</span>,
   <span class="string">&quot;&lt;ltx:equation xml:id=&#39;#id&#39;&gt;&lt;ltx:Math mode=&#39;display&#39;&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;&lt;/ltx:equation&gt;&quot;</span>,
   mode       =&gt; <span class="string">&quot;display_math&quot;</span>,
-  properties   =&gt; sub[stomach, args, state] { ref_step_id(<span class="string">&quot;equation&quot;</span>, stomach, state) },
+  properties   =&gt; sub[stomach, _args, state] { ref_step_id(<span class="string">&quot;equation&quot;</span>, stomach, state) },
   locked     =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{math}&quot;</span>,
     <span class="string">&quot;&lt;ltx:Math mode=\&quot;inline\&quot;&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;&quot;</span>,
@@ -385,4 +385,4 @@
   });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

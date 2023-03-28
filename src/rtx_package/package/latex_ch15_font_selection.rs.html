@@ -244,34 +244,34 @@
   <span class="comment">// If these series or shapes appear in math, they revert it to roman, medium, upright (?)
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textmd@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">&quot;medium&quot; </span>}, alias =&gt; <span class="string">&quot;\\textmd&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textbf@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, alias =&gt; <span class="string">&quot;\\textbf&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;b&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;b&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textrm@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>,
     mode =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;serif&quot; </span>}, alias =&gt; <span class="string">&quot;\\textrm&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cm&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cm&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsf@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;sansserif&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsf&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmss&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmss&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\texttt@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;typewriter&quot; </span>}, alias =&gt; <span class="string">&quot;\\texttt&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmtt&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmtt&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textup@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, alias =&gt; <span class="string">&quot;\\textup&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textit@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;italic&quot; </span>}, alias =&gt; <span class="string">&quot;\\textit&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;i&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;i&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsl@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;slanted&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsl&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sl&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sl&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsc@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded      =&gt; <span class="bool-val">true</span>, font =&gt; { shape =&gt; <span class="string">&quot;smallcaps&quot; </span>}, alias =&gt; <span class="string">&quot;\\textsc&quot;</span>,
-    before_digest =&gt; sub[gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sc&quot;</span>); });
+    before_digest =&gt; sub[_gullet,state] { <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>, <span class="string">&quot;sc&quot;</span>); });
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textnormal@math{}&quot;</span>, <span class="string">&quot;&lt;ltx:text _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;</span>, mode =&gt;
   <span class="string">&quot;text&quot;</span>,   bounded =&gt; <span class="bool-val">true</span>, font =&gt; { family =&gt; <span class="string">&quot;serif&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot;
-  </span>}, alias =&gt; <span class="string">&quot;\\textnormal&quot;</span>,   before_digest =&gt; sub[gullet,state] {
+  </span>}, alias =&gt; <span class="string">&quot;\\textnormal&quot;</span>,   before_digest =&gt; sub[_gullet,state] {
     <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@family&quot;</span>, <span class="string">&quot;cmtt&quot;</span>);
     <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@series&quot;</span>, <span class="string">&quot;m&quot;</span>);
     <span class="macro">DefMacro!</span>(<span class="string">&quot;\\f@shape&quot;</span>,  <span class="string">&quot;n&quot;</span>); });
@@ -289,4 +289,4 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\textnormal{}&quot;</span>, <span class="string">&quot;\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

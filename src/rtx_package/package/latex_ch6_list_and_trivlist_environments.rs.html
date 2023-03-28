@@ -150,7 +150,7 @@
 
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{trivlist}&quot;</span>,
     <span class="string">&quot;&lt;ltx:itemize&gt;#body&lt;/ltx:itemize&gt;&quot;</span>,
-    properties =&gt; sub[stomach, args, state] { begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state) },
+    properties =&gt; sub[stomach, _args, state] { begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state) },
     before_digest_end =&gt; { <span class="macro">Digest!</span>(<span class="string">&quot;\\par&quot;</span>)<span class="question-mark">?</span>; }
   );
 
@@ -209,4 +209,4 @@
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\@itemdepth&quot; </span>=&gt; Number::new(<span class="number">0</span>));
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

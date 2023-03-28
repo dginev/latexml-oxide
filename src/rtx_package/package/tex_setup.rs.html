@@ -1056,6 +1056,8 @@
 <a href="#1056" id="1056">1056</a>
 <a href="#1057" id="1057">1057</a>
 <a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -1084,7 +1086,7 @@
 
   <span class="comment">//======================================================================
   </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>,
-  after_open =&gt; sub[document, node, state] {
+  after_open =&gt; sub[document, _node, state] {
     document.process_pending_resources(state)<span class="question-mark">?</span>;
   });
   <span class="macro">RequireResource!</span>(<span class="string">&quot;LaTeXML.css&quot;</span>);
@@ -1141,7 +1143,7 @@
 
   // ======================================================================
   // Define parsers for standard parameter types.
-  </span><span class="macro">DefParameterType!</span>(Plain, sub[gullet, inner, extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Plain, sub[gullet, inner, _extra, state] {
       <span class="kw">let </span><span class="kw-2">mut </span>value = ArgWrap::Tokens(gullet.read_arg(state)<span class="question-mark">?</span>);
       <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
         <span class="comment">// TODO: How many arguments can we expect back? One? Many?
@@ -1150,7 +1152,7 @@
       }
       <span class="prelude-val">Ok</span>(value)
     },
-    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, _extra, state, {
       <span class="comment">// let mut reverted_inner;
       </span><span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
       <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
@@ -1225,7 +1227,7 @@
   //   &lt;general text&gt; = &lt;filler&gt;{&lt;balanced text&gt;&lt;right brace&gt;
   // however, &lt;filler&gt; does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
-  </span><span class="macro">DefParameterType!</span>(GeneralText, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(GeneralText, sub[gullet, _inner, _extra, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(open) = gullet.read_x_token(<span class="prelude-val">None </span>,<span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
       <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
         gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>.unwrap_or_default()
@@ -1243,7 +1245,7 @@
     <span class="comment">// TODO: how many tokens are in extra?
     </span>gullet.read_until(<span class="kw-2">&amp;</span>until_extra[<span class="number">0</span>], state)
   },
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, until, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, until, _state, {
     <span class="kw">let </span><span class="kw-2">mut </span>rev = Vec::new();
     <span class="kw">for </span>t <span class="kw">in </span>arg.into_iter() {
       rev.push(t.revert());
@@ -1255,11 +1257,11 @@
   }));
 
   <span class="comment">// Skip any spaces, but don&#39;t contribute an argument.
-  </span><span class="macro">DefParameterType!</span>(SkipSpaces, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(SkipSpaces, sub[gullet, _inner, _extra, state] {
     gullet.skip_spaces(state);
   }, novalue =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">DefParameterType!</span>(Skip1Space, sub[gullet, inner, _extra, state] {
+  <span class="macro">DefParameterType!</span>(Skip1Space, sub[gullet, _inner, _extra, state] {
     gullet.skip_one_space(state);
   }, novalue =&gt; <span class="bool-val">true</span>);
 
@@ -1275,7 +1277,7 @@
   });
 
   <span class="comment">// Read the next token, after expanding any expandable ones.
-  </span><span class="macro">DefParameterType!</span>(XToken, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(XToken, sub[gullet, _inner, _extra, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t))
     } <span class="kw">else </span>{
@@ -1285,12 +1287,12 @@
   });
 
   <span class="comment">// Read a number
-  </span><span class="macro">DefParameterType!</span>(Number, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Number, sub[gullet, _inner, _extra, state] {
     gullet.read_number(state)<span class="question-mark">?
   </span>});
 
   <span class="comment">// Read a floating point number
-  </span><span class="macro">DefParameterType!</span>(Float, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Float, sub[gullet, _inner, _extra, state] {
       gullet.read_float(state)<span class="question-mark">?
     </span>}
   );
@@ -1302,22 +1304,22 @@
   //   return ($gullet-&gt;readFloat || Float(0)); }
 
   // Read a dimension
-  </span><span class="macro">DefParameterType!</span>(Dimension, sub[gullet, inner, _extra, state] { gullet.read_dimension(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(Dimension, sub[gullet, _inner, _extra, state] { gullet.read_dimension(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a Glue (aka skip)
-  </span><span class="macro">DefParameterType!</span>(Glue, sub[gullet, inner, _extra, state] { gullet.read_glue(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(Glue, sub[gullet, _inner, _extra, state] { gullet.read_glue(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a MuDimension (math)
-  </span><span class="macro">DefParameterType!</span>(MuDimension, sub[gullet, inner, _extra, state] { gullet.read_mu_dimension(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(MuDimension, sub[gullet, _inner, _extra, state] { gullet.read_mu_dimension(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a MuGlue (math)
-  </span><span class="macro">DefParameterType!</span>(MuGlue, sub[gullet, inner, _extra, state] { gullet.read_mu_glue(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(MuGlue, sub[gullet, _inner, _extra, state] { gullet.read_mu_glue(state)<span class="question-mark">? </span>});
 
   <span class="comment">// Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
-  </span><span class="macro">DefParameterType!</span>(UntilBrace, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(UntilBrace, sub[gullet, _inner, _extra, state] {
     gullet.read_until_brace(state)<span class="question-mark">?</span>.unwrap_or_default()
   });
 
   <span class="comment">// Yet another special case: Require a { but do not read it!!!
-  </span><span class="macro">DefParameterType!</span>(RequireBrace, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(RequireBrace, sub[gullet, _inner, _extra, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state) {
       <span class="kw">let </span>cc = tok.get_catcode();
       gullet.unread_one(tok.clone());
@@ -1331,7 +1333,7 @@
   },
   novalue =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">DefParameterType!</span>(XUntil, sub[gullet, inner, untils, state] {
+  <span class="macro">DefParameterType!</span>(XUntil, sub[gullet, _inner, untils, state] {
     <span class="comment">// Make sure it&#39;s a single token!!!
     </span><span class="kw">let </span>until : Token = untils.first().expect(<span class="string">&quot;XUntil needs a token Extra.&quot;</span>).into();
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = Vec::new();
@@ -1355,7 +1357,7 @@
   <span class="comment">// This is sorta like readbalanced, but expands as it goes.
   // This appears to be needed by certain primitives (eg. \noalign ?)
   // and maybe what we should be using for some Digested ??
-  </span><span class="macro">DefParameterType!</span>(Expanded, sub[gullet, inner, untils, state] {
+  </span><span class="macro">DefParameterType!</span>(Expanded, sub[gullet, _inner, _untils, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
       <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
         <span class="prelude-val">Ok</span>(
@@ -1369,7 +1371,7 @@
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     }
   },
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
     <span class="kw">let </span>arg_rev : Vec&lt;Token&gt; = arg.into_iter().map(Token::revert).collect();
     <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
     tks.extend(arg_rev);
@@ -1402,7 +1404,7 @@
       <span class="prelude-val">Ok</span>(expanded)
     },
     pack_parameters =&gt; <span class="bool-val">true</span>,
-    reversion      =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    reversion      =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">Tokens!</span>(arg).revert(), <span class="macro">T_END!</span>())) })
   );
 
@@ -1433,8 +1435,8 @@
 
   <span class="comment">// Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   </span><span class="macro">DefParameterType!</span>(Semiverbatim,
-    sub[gullet, inner, _extra, state] { gullet.read_arg(state) },
-    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    sub[gullet, _inner, _extra, state] { gullet.read_arg(state) },
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, _extra, state, {
       <span class="comment">// let mut reverted_inner;
       </span><span class="kw">let </span><span class="kw-2">mut </span>read_tokens: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
       <span class="kw">if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
@@ -1451,10 +1453,10 @@
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   </span><span class="macro">DefParameterType!</span>(OptionalSemiverbatim,
-    sub[gullet, inner, _extra, state] { gullet.read_optional(state) },
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
     semiverbatim =&gt; <span class="prelude-val">Some</span>(Vec::new()),
     optional =&gt; <span class="bool-val">true</span>,
-    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
      <span class="kw">if </span>!arg.is_empty() {
        <span class="kw">let </span><span class="kw-2">mut </span>read_tokens = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="macro">s!</span>(<span class="string">&quot;[&quot;</span>))];
        <span class="kw">let </span><span class="kw-2">mut </span>reverted_arg = arg.into_iter().map(Token::revert).collect();
@@ -1469,7 +1471,7 @@
 
   <span class="comment">// Be careful here: if % appears before the initial {, it&#39;s still a comment!
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
-  </span><span class="macro">DefParameterType!</span>(Verbatim, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Verbatim, sub[gullet, _inner, _extra, state] {
       gullet.read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()), state)<span class="question-mark">?</span>;
       <span class="kw">let </span>verb_chars = <span class="macro">vec!</span>[<span class="string">&#39;%&#39;</span>, <span class="string">&#39;\\&#39;</span>];
       state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>verb_chars));
@@ -1481,10 +1483,10 @@
       stomach.bgroup(state);
       <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>, state);
     }),
-    after_digest =&gt; <span class="macro">after_digest!</span>(stomach, args, state, {
+    after_digest =&gt; <span class="macro">after_digest!</span>(stomach, _args, state, {
       stomach.egroup(state)<span class="question-mark">?</span>;
     }),
-    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
       <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
       <span class="kw">let </span>reverted_arg : Vec&lt;Token&gt; = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
@@ -1494,7 +1496,7 @@
   );
 
   <span class="comment">// Read Verbatim, but allows expanding command sequences
-  </span><span class="macro">DefParameterType!</span>(HyperVerbatim, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(HyperVerbatim, sub[gullet, _inner, _extra, state] {
       gullet.read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()), state)<span class="question-mark">?</span>;
       state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
       <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\%&quot;</span>),              <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;%&quot;</span>), scope =&gt; <span class="prelude-val">Some</span>(Scope::Local));
@@ -1514,9 +1516,9 @@
     before_digest =&gt; <span class="macro">before_digest!</span>(stomach, state, {
       stomach.bgroup(state);
       <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>, state); }),
-    after_digest =&gt; <span class="macro">after_digest!</span>(stomach, args, state, {
+    after_digest =&gt; <span class="macro">after_digest!</span>(stomach, _args, state, {
       stomach.egroup(state)<span class="question-mark">?</span>; }),
-    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
       <span class="kw">let </span><span class="kw-2">mut </span>reverted = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
       <span class="kw">let </span>reverted_arg : Vec&lt;Token&gt; = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
@@ -1525,9 +1527,9 @@
     })
   );
   <span class="comment">// Read an argument that will not be digested.
-  </span><span class="macro">DefParameterType!</span>(Undigested, sub[gullet, inner, _extra, state] { gullet.read_arg(state)},
+  </span><span class="macro">DefParameterType!</span>(Undigested, sub[gullet, _inner, _extra, state] { gullet.read_arg(state)},
   reader_predigest =&gt; <span class="macro">undigested!</span>(),
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
     <span class="kw">if </span>arg.is_empty() {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     } <span class="kw">else </span>{
@@ -1540,10 +1542,10 @@
   }));
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, inner, _extra, state] { gullet.read_optional(state) },
+  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
   reader_predigest =&gt; <span class="macro">undigested!</span>(),
   optional =&gt; <span class="bool-val">true</span>,
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
     <span class="kw">if </span>arg.is_empty() {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     } <span class="kw">else </span>{
@@ -1556,13 +1558,13 @@
   }));
 
   <span class="comment">// Read a keyword value (KeyVals), that will not be digested.
-  </span><span class="macro">DefParameterType!</span>(UndigestedKey, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(UndigestedKey, sub[gullet, _inner, _extra, state] {
     gullet.read_arg(state)
   },
   reader_predigest =&gt; <span class="macro">undigested!</span>());
 
   <span class="comment">// Read a token as used when defining it, ie. it may be enclosed in braces.
-  </span><span class="macro">DefParameterType!</span>(DefToken, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(DefToken, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span><span class="kw-2">mut </span>token = gullet.read_token(state);
     <span class="kw">let </span>space_token = <span class="macro">T_SPACE!</span>();
 
@@ -1587,7 +1589,7 @@
   }, reader_predigest =&gt; <span class="macro">undigested!</span>());
 
   <span class="comment">// Read a variable, ie. a token (after expansion) that is a writable register.
-  </span><span class="macro">DefParameterType!</span>(Variable, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Variable, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span>token_opt = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
     <span class="kw">let </span>defn_opt = <span class="kw">match </span>token_opt {
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) =&gt; state.lookup_register_definition(token),
@@ -1611,8 +1613,8 @@
       <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
     }
   },
-  reversion =&gt; <span class="macro">reversion!</span>(gullet,args, inner, extra, state, {
-    <span class="kw">let </span>defn = args.remove(<span class="number">0</span>);
+  reversion =&gt; <span class="macro">reversion!</span>(gullet,args, _inner, _extra, _state, {
+    <span class="kw">let </span>_defn = args.remove(<span class="number">0</span>);
     <span class="comment">// my ($defn, @args) = @$var;
     </span><span class="macro">unimplemented!</span>()
     <span class="comment">// TODO: What is defn here? what is the intent?
@@ -1627,7 +1629,7 @@
   </span>}));
 
   <span class="comment">// Same, but not necessarily writable
-  </span><span class="macro">DefParameterType!</span>(Register, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Register, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span>token = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
     <span class="kw">let </span>defn = <span class="kw">match </span>token {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -1649,7 +1651,7 @@
     }
     <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   },
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, inner, extra, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, _arg, _inner, _extra, _state, {
     <span class="comment">// my ($var) = @_;
     // my ($defn, @args) = @$var;
     // my $params = $defn-&gt;getParameters;
@@ -1657,7 +1659,7 @@
     </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   }));
 
-  <span class="macro">DefParameterType!</span>(TeXFileName, sub[gullet, inner, _extra, state] {
+  <span class="macro">DefParameterType!</span>(TeXFileName, sub[gullet, _inner, _extra, state] {
     <span class="kw">use </span>Catcode::<span class="kw-2">*</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>token_opt;
@@ -1694,7 +1696,7 @@
   });
 
   <span class="comment">// A LaTeX style directory List
-  </span><span class="macro">DefParameterType!</span>(DirectoryList, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(DirectoryList, sub[_gullet, _inner, _extra, _state] {
       <span class="comment">// my ($gullet) = @_;
       // $gullet-&gt;skipSpaces;
       // if ($gullet-&gt;ifNext(T_BEGIN)) {
@@ -1754,7 +1756,7 @@
 
   <span class="comment">// Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
-  </span><span class="macro">DefParameterType!</span>(BalancedParen, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(BalancedParen, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span>tok_opt = gullet.read_x_token(<span class="prelude-val">None</span>,<span class="bool-val">false</span>,state)<span class="question-mark">?</span>;
     <span class="kw">let </span>is_paren = <span class="kw">match </span>tok_opt {
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) =&gt; t.get_string() == <span class="string">&quot;(&quot;</span>,
@@ -1769,7 +1771,7 @@
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
   },
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, args, inner, extra, state, {
+  reversion =&gt; <span class="macro">reversion!</span>(gullet, args, _inner, _extra, _state, {
     <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(
       <span class="macro">T_OTHER!</span>(<span class="string">&quot;(&quot;</span>), Tokens::new(args).revert(), <span class="macro">T_OTHER!</span>(<span class="string">&quot;)&quot;</span>)
     ))
@@ -1782,7 +1784,7 @@
   // This parameter gets digested until the (required) opening { is balanced.
   // It is useful when the content would usually need to have been \protect&#39;d
   // in order to correctly deal with catcodes.
-  </span><span class="macro">DefParameterType!</span>(Digested, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(Digested, sub[_gullet, _inner, _extra, _state] {
     <span class="comment">//   my ($gullet) = @_;
     //   $gullet-&gt;skipSpaces;
     //   my $ismath = $STATE-&gt;lookupValue(&#39;IN_MATH&#39;);
@@ -1806,7 +1808,7 @@
   });
 
   <span class="comment">// A variation: Digest until we encounter a given token!
-  </span><span class="macro">DefParameterType!</span>(DigestUntil, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(DigestUntil, sub[_gullet, _inner, _extra, _state] {
     <span class="comment">//   my ($gullet, $until) = @_;
     //   ($until) = $until-&gt;unlist;                              # Make sure it&#39;s a single token!!!
     //   $gullet-&gt;skipSpaces;
@@ -1825,10 +1827,10 @@
   // particularly alignments (which may or may not be actual environments),
   // but which need special treatment of some of their content
   // as the expansion is carried out.
-  </span><span class="macro">DefParameterType!</span>(DigestedBody, reader =&gt; <span class="macro">reader!</span>(gullet, inner, extra, state, {
+  </span><span class="macro">DefParameterType!</span>(DigestedBody, reader =&gt; <span class="macro">reader!</span>(_gullet, _inner, _extra, _state, {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) <span class="comment">// all done in predigestion
     </span>}),
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, arg, state, {
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, _arg, state, {
       <span class="kw">let </span>ismath   = state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>);
       <span class="kw">let </span><span class="kw-2">mut </span>list     = stomach.digest_next_body(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="comment">// In most (all?) cases, we&#39;re really looking for a single Whatsit here...
@@ -1854,7 +1856,7 @@
   ////   my($gullet,$unit)=@_;
 
   // CommaList expects something like {balancedstuff,...}
-  </span><span class="macro">DefParameterType!</span>(CommaList, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(CommaList, sub[_gullet, _inner, _extra, _state] {
       <span class="comment">// my ($gullet, $type) = @_;
       // my $typedef = $type &amp;&amp; LaTeXML::Package::parseParameters(ToString($type), &quot;CommaList&quot;)-&gt;[0];
       // my @items = ();
@@ -1963,22 +1965,22 @@
 
   //   return (KeyVals_aux($gullet, $until, [$star, $plus, @keyspec])); }
 
-  </span><span class="macro">DefParameterType!</span>(RequiredKeyVals, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); ()
-    <span class="comment">// RequiredKeyVals(0, 0, @_); },
-  </span>});
-  <span class="comment">//   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(RequiredKeyValsStar, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); ()
-    <span class="comment">// RequiredKeyVals(1, 0, @_); },
-  </span>});
-  <span class="comment">//   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(RequiredKeyValsPlus, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); ()
-    <span class="comment">// RequiredKeyVals(0, 1, @_); },
-  </span>});
-  <span class="comment">//   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(RequiredKeyValsStarPlus, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); ()
-    <span class="comment">// RequiredKeyVals(1, 1, @_); },
-  </span>});
-  <span class="comment">//   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
+  // DefParameterType!(RequiredKeyVals, sub[gullet, inner, _extra, state] {
+  //   // RequiredKeyVals(0, 0, @_); },
+  // });
+  // //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
+  // DefParameterType!(RequiredKeyValsStar, sub[gullet, inner, _extra, state] {
+  //   // RequiredKeyVals(1, 0, @_); },
+  // });
+  // //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
+  // DefParameterType!(RequiredKeyValsPlus, sub[gullet, inner, _extra, state] {
+  //   // RequiredKeyVals(0, 1, @_); },
+  // });
+  // //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
+  // DefParameterType!(RequiredKeyValsStarPlus, sub[gullet, inner, _extra, state] {
+  //   // RequiredKeyVals(1, 1, @_); },
+  // });
+  // //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
 
   </span><span class="kw">pub fn </span>optional_key_vals(star: bool, plus: bool, keysets: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">if </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
@@ -1999,10 +2001,10 @@
     }
   }
 
-  <span class="macro">DefParameterType!</span>(OptionalKeyVals, sub[gullet, inner, extra, state] {
+  <span class="macro">DefParameterType!</span>(OptionalKeyVals, sub[gullet, inner, _extra, state] {
       optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, gullet, state)
     },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, arg, state, {
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
       <span class="kw">if </span>!arg.is_empty() {
         <span class="prelude-val">Some</span>(arg.expected_keyvals(state))
       } <span class="kw">else </span>{
@@ -2011,26 +2013,26 @@
     }),
    optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
-  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsStar, sub[gullet, inner, extra, state] {
+  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsStar, sub[gullet, inner, _extra, state] {
       optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, gullet, state)
     },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, arg, state, {
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
       arg.expected_keyvals(state)
     }),
    optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
-  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlus, sub[gullet, inner, extra, state] {
+  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlus, sub[gullet, inner, _extra, state] {
       optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, gullet, state)
     },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, arg, state, {
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
       arg.expected_keyvals(state)
     }),
    optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
-  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlusStar, sub[gullet, inner, extra, state] {
+  </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlusStar, sub[gullet, inner, _extra, state] {
       optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, gullet, state)
     },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, arg, state, {
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
       arg.expected_keyvals(state)
     }),
    optional=&gt;<span class="bool-val">true</span>);
@@ -2038,32 +2040,32 @@
 
   // # Not sure that this is the most elegant solution, but...
   // # What I&#39;d really like are some sort of parameter modifiers, mathstyle, font... until...?
-  </span><span class="macro">DefParameterType!</span>(DisplayStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
+  // DefParameterType!(DisplayStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(mathstyle =&gt; &#39;display&#39;); },
   //   afterDigest =&gt; sub {
   //     $_[0]-&gt;egroup; },
   //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(TextStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
+  // DefParameterType!(TextStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(mathstyle =&gt; &#39;text&#39;); },
   //   afterDigest =&gt; sub {
   //     $_[0]-&gt;egroup; },
   //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(ScriptStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
+  // DefParameterType!(ScriptStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(mathstyle =&gt; &#39;script&#39;); },
   //   afterDigest =&gt; sub {
   //     $_[0]-&gt;egroup; },
   //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  </span><span class="macro">DefParameterType!</span>(ScriptscriptStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
+  // DefParameterType!(ScriptscriptStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(mathstyle =&gt; &#39;scriptscript&#39;); },
@@ -2071,19 +2073,21 @@
   //     $_[0]-&gt;egroup; },
   //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
   // # Perverse naming convention: not script style, but in the style of a script relative to current.
-  </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
-  //   beforeDigest =&gt; sub {
+    </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[gullet, _inner, _extra, state] {
+      gullet.read_arg(state) },
+  <span class="comment">//   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(scripted =&gt; 1); },
   //   afterDigest =&gt; sub {
   //     $_[0]-&gt;egroup; },
-  //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // # NOTE: the various parameter features don&#39;t combine easily!!
+      </span>reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
+        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), Tokens::new(arg).revert(), <span class="macro">T_END!</span>())) })
+    );
+  <span class="comment">// # NOTE: the various parameter features don&#39;t combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
-  </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readOptional; },
+  // DefParameterType!(OptionalInScriptStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readOptional; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(scripted =&gt; 1); },
@@ -2091,8 +2095,8 @@
   //     $_[0]-&gt;egroup; },
   //   optional =&gt; 1,
   //   reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
-  </span><span class="macro">DefParameterType!</span>(InFractionStyle, sub[gullet, inner, _extra, state] {<span class="macro">unimplemented!</span>(); () });
-  <span class="comment">//     $_[0]-&gt;readArg; },
+  // DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
+  //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
   //     MergeFont(fraction =&gt; 1); },
@@ -2115,4 +2119,4 @@
   });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

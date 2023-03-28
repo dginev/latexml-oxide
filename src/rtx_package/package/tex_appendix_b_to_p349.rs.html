@@ -737,7 +737,7 @@
   <span class="kw">let </span>thou    = THOUSANDS_SEP.get(lang).unwrap_or(<span class="kw-2">&amp;</span><span class="string">&quot;,&quot;</span>);
   <span class="kw">let </span>decrole = <span class="kw">if </span>dec == <span class="kw-2">&amp;</span><span class="string">&quot;.&quot; </span>{ <span class="string">&quot;PERIOD&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
   <span class="comment">// let mut chars : Vec&lt;char&gt; = Vec::new();
-  </span><span class="kw">let </span>(<span class="kw-2">mut </span>n, <span class="kw-2">mut </span>combined, <span class="kw-2">mut </span>number, w, <span class="kw-2">mut </span>font) = (<span class="number">0</span>, String::new(), String::new(), <span class="number">0</span>, <span class="prelude-val">None</span>);
+  </span><span class="kw">let </span>(<span class="kw-2">mut </span>n, <span class="kw-2">mut </span>combined, <span class="kw-2">mut </span>number, _w, <span class="kw-2">mut </span>font) = (<span class="number">0</span>, String::new(), String::new(), <span class="number">0</span>, <span class="prelude-val">None</span>);
   <span class="comment">//     NOTE: We&#39;re scanning chars from END!
   </span><span class="kw">let </span><span class="kw-2">mut </span>node_ref = node;
   <span class="kw">let </span><span class="kw-2">mut </span>current;
@@ -971,7 +971,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\newlanguage Token&quot;</span>, <span class="string">r&quot;\alloc@@{language}\global\chardef#1=\allocationnumber&quot;</span>);
 
   <span class="comment">// # This implementation is quite wrong
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\newinsert Token&quot;</span>, sub[stomach, args, state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\newinsert Token&quot;</span>, sub[_stomach, args, state] {
     <span class="macro">unpack_to_token!</span>(args =&gt; t);
     <span class="macro">DefRegister!</span>(t, <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>));
   });
@@ -1295,4 +1295,4 @@
   // DefPrimitiveI(&#39;\narrower&#39;, undef, undef);
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

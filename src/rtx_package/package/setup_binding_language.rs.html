@@ -2434,7 +2434,7 @@
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
-    <span class="macro">LoadDefinitions!</span>(outer_stomach, <span class="macro-nonterminal">$outer_state</span>, <span class="macro-nonterminal">$body</span>);
+    <span class="macro">LoadDefinitions!</span>(_outer_stomach, <span class="macro-nonterminal">$outer_state</span>, <span class="macro-nonterminal">$body</span>);
   };
   (<span class="macro-nonterminal">$outer_stomach</span>:ident, <span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="kw">pub fn </span>load_definitions(<span class="macro-nonterminal">$outer_stomach</span>: <span class="kw-2">&amp;mut </span>Stomach, <span class="macro-nonterminal">$outer_state</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -2526,15 +2526,14 @@
 </span><span class="macro">macro_rules! </span>WithInnerState {
   (<span class="macro-nonterminal">$body</span>: block, <span class="macro-nonterminal">$inner_state</span>:ident) =&gt; {{
     <span class="macro">BindInnerState!</span>(<span class="macro-nonterminal">$inner_state</span>);
-    <span class="attr">#[allow(clippy::unused_unit)]
+    <span class="attr">#[allow(unused_variables,clippy::unused_unit)]
     </span><span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
     <span class="macro">end_state_frame!</span>();
-
     macro_out
   }};
   (<span class="macro-nonterminal">$body</span>: block, <span class="macro-nonterminal">$stomach</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident) =&gt; {{
     <span class="macro">BindInnerState!</span>(<span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$inner_state</span>);
-    <span class="attr">#[allow(clippy::unused_unit)]
+    <span class="attr">#[allow(unused_variables,clippy::unused_unit)]
     </span><span class="kw">let </span>macro_out = <span class="macro-nonterminal">$body</span>;
     <span class="macro">end_state_frame!</span>();
     macro_out
@@ -2743,7 +2742,6 @@
 </span><span class="macro">macro_rules! </span>DefRewrite {
   ($(<span class="macro-nonterminal">$input</span>:tt)+) =&gt; {{
     <span class="kw">let </span>rewrite_options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {RewriteOptions,});
-    <span class="macro">bind_state!</span>(st);
     <span class="macro">PushValue!</span>(<span class="string">&quot;DOCUMENT_REWRITE_RULES&quot;</span>,
       Rewrite::new(<span class="string">&quot;text&quot;</span>, rewrite_options));
   }};
@@ -2752,7 +2750,6 @@
 <span class="macro">macro_rules! </span>DefMathRewrite {
   ($(<span class="macro-nonterminal">$input</span>:tt)+) =&gt; {{
     <span class="kw">let </span>rewrite_options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {RewriteOptions,});
-    <span class="macro">bind_state!</span>(st);
     <span class="macro">PushValue!</span>(<span class="string">&quot;DOCUMENT_REWRITE_RULES&quot;</span>,
       Rewrite::new(<span class="string">&quot;math&quot;</span>, rewrite_options));
   }};
@@ -2780,7 +2777,7 @@
     <span class="kw">let </span>attr = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {MathLigatureOptions,});
     <span class="kw">let </span>chars    = <span class="macro-nonterminal">$pattern</span>.chars().rev().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     <span class="kw">let </span>ntomatch = chars.len();
-    <span class="kw">let </span>matcher : <span class="prelude-ty">Option</span>&lt;LigatureMatcher&gt; = <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, node_opt: <span class="kw-2">&amp;mut </span>Node, lstate:<span class="kw-2">&amp;</span>State| {
+    <span class="kw">let </span>matcher : <span class="prelude-ty">Option</span>&lt;LigatureMatcher&gt; = <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|_document: <span class="kw-2">&amp;mut </span>Document, node_opt: <span class="kw-2">&amp;mut </span>Node, lstate:<span class="kw-2">&amp;</span>State| {
       <span class="kw">let </span><span class="kw-2">mut </span>node : Node;
       <span class="kw">let </span><span class="kw-2">mut </span>node_mut = node_opt;
       <span class="kw">for </span>c <span class="kw">in </span>chars.iter() {
@@ -2841,7 +2838,7 @@
   </span>(<span class="macro-nonterminal">$proto</span>:literal, <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConditionalOptions,});
     <span class="kw">let </span>(cs, paramlist) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
-    <span class="kw">let </span>test : ConditionalClosure = Arc::new(<span class="kw">move </span>|gullet, args, inner_state| { <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, inner_state).into_bool_result() });
+    <span class="kw">let </span>test : ConditionalClosure = Arc::new(<span class="kw">move </span>|_gullet, _args, _inner_state| { <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, _inner_state).into_bool_result() });
     <span class="macro">defi_conditional!</span>(cs, paramlist, <span class="prelude-val">Some</span>(test), options);
   }};
   (<span class="macro-nonterminal">$proto</span>:literal $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
@@ -2862,7 +2859,7 @@
       sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ):($(<span class="macro-nonterminal">$ptype</span>:ident),<span class="kw-2">*</span>), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
 
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConditionalOptions,});
-    <span class="attr">#[allow(unused_mut)]
+    <span class="attr">#[allow(unused_mut,unused_variables)]
     </span><span class="kw">let </span>closure : ConditionalClosure =  Arc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$gullet</span>: <span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$inner_state</span>: <span class="kw-2">&amp;mut </span>State| {
       $(
           <span class="kw">let </span><span class="macro-nonterminal">$var</span>: <span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>) = <span class="kw">match </span>args.remove(<span class="number">0</span>).try_into() {
@@ -2937,7 +2934,7 @@
   </span>(<span class="macro-nonterminal">$proto</span>:literal, <span class="macro-nonterminal">$replacement</span>:literal $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
-    <span class="kw">let </span>closure : PrimitiveClosure = Arc::new(|stomach: <span class="kw-2">&amp;mut </span>Stomach, args: Vec&lt;ArgWrap&gt;, inner_state: <span class="kw-2">&amp;mut </span>State| {
+    <span class="kw">let </span>closure : PrimitiveClosure = Arc::new(|_stomach: <span class="kw-2">&amp;mut </span>Stomach, _args: Vec&lt;ArgWrap&gt;, inner_state: <span class="kw-2">&amp;mut </span>State| {
       Tbox::new(<span class="macro-nonterminal">$replacement</span>.to_string(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), HashMap::new(), inner_state).into_digested_result()
     });
     <span class="macro">defi_primitive!</span>(cs, params, <span class="prelude-val">Some</span>(closure), options);
@@ -2977,7 +2974,8 @@
 
   <span class="comment">// Case: closure block with implicit arguments
   </span>(<span class="macro-nonterminal">$proto</span>:expr, <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
+    <span class="attr">#![allow(unused_variables)]
+    </span><span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
     <span class="kw">let </span>replacement_closure =  Arc::new(<span class="kw">move </span>|stomach: <span class="kw-2">&amp;mut </span>Stomach, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State| {
       <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, stomach, state).into_digested_result()
@@ -3000,7 +2998,7 @@
   (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$these_parameters</span>:ident ,
       sub [ <span class="macro-nonterminal">$stomach_arg</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ):($(<span class="macro-nonterminal">$ptype</span>:ident),<span class="kw-2">*</span>), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
-    <span class="attr">#[allow(unused_mut)]
+    <span class="attr">#[allow(unused_mut,unused_variables)]
     </span><span class="kw">let </span>replacement_closure =  Arc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$stomach_arg</span>: <span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$inner_state</span>: <span class="kw-2">&amp;mut </span>State| {
       $(
           <span class="kw">let </span><span class="macro-nonterminal">$var</span>: <span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>) = <span class="kw">match </span>args.remove(<span class="number">0</span>).try_into() {
@@ -3114,14 +3112,16 @@
     <span class="macro">defi_constr!</span>(cs, params, compiled_replacement, options);
   }};
   (<span class="macro-nonterminal">$proto</span>:literal, sub [ <span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$args</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConstructorOptions,});
+    <span class="attr">#![allow(unused_variables)]
+    </span><span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConstructorOptions,});
     <span class="kw">let </span>props : ConstructorOptions;
     <span class="kw">let </span>compiled_replacement : <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="prelude-val">Some</span>(Arc::new(<span class="macro">replacement!</span>(<span class="macro-nonterminal">$document</span>, <span class="macro-nonterminal">$args</span>, props, <span class="macro-nonterminal">$inner_state</span>, <span class="macro-nonterminal">$body</span>)));
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
     <span class="macro">defi_constr!</span>(cs, params, compiled_replacement, options);
   }};
   (<span class="macro-nonterminal">$proto</span>:literal, sub [ <span class="macro-nonterminal">$document</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConstructorOptions,});
+    <span class="attr">#![allow(unused_variables)]
+    </span><span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ConstructorOptions,});
     <span class="kw">let </span>props : ConstructorOptions;
     <span class="kw">let </span>args : <span class="prelude-ty">Option</span>&lt;Parameters&gt; = <span class="prelude-val">None</span>;
     <span class="kw">let </span>compiled_replacement : <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt; = <span class="prelude-val">Some</span>(Arc::new(<span class="macro">replacement!</span>(<span class="macro-nonterminal">$document</span>, args, props, <span class="macro-nonterminal">$inner_state</span>, <span class="macro-nonterminal">$body</span>)));
@@ -3917,7 +3917,7 @@
   }};
   (<span class="macro-nonterminal">$proto</span>:expr, <span class="macro-nonterminal">$body</span>:block) =&gt; {{
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
-    <span class="attr">#[allow(unused_mut)]
+    <span class="attr">#[allow(unused_mut, unused_variables)]
     </span><span class="kw">let </span>expansion_closure: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
       <span class="kw">move </span>|gullet, <span class="kw-2">mut </span>args, inner_state| <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, inner_state).into_tokens_result()
     )));
@@ -3994,7 +3994,7 @@
   ( <span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$these_parameters</span>:ident,
     sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ):($(<span class="macro-nonterminal">$ptype</span>:ident),<span class="kw-2">*</span>), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {ExpandableOptions,});
-    <span class="attr">#[allow(unused_mut)]
+    <span class="attr">#[allow(unused_mut,unused_variables)]
     </span><span class="kw">let </span>expansion_closure: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
       <span class="kw">move </span>|<span class="macro-nonterminal">$gullet</span>: <span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;, <span class="macro-nonterminal">$inner_state</span>:<span class="kw-2">&amp;mut </span>State| {
         $(
@@ -4367,7 +4367,7 @@
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="prelude-val">None</span>) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
-    <span class="macro">DeclareOption!</span>(<span class="macro-nonterminal">$option</span>, sub[stomach, state] {}, st)
+    <span class="macro">DeclareOption!</span>(<span class="macro-nonterminal">$option</span>, sub[_stomach, _state] {}, st)
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="macro-nonterminal">$tex</span>:literal) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
@@ -4760,7 +4760,7 @@
   };
   (@after_digest (
     <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-    <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])* [after_digest @ <span class="macro">after_digest!</span>(stomach, whatsit, state, <span class="macro-nonterminal">$body</span>)]})
+    <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])* [after_digest @ <span class="macro">after_digest!</span>(_stomach, _whatsit, _state, <span class="macro-nonterminal">$body</span>)]})
   };
 
   (@after_digest_begin (
@@ -4806,7 +4806,7 @@
   };
   (@getter (
     <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$next</span>:tt)* ) -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
-    <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])* [getter @ <span class="macro">getter!</span>(args, state, <span class="macro-nonterminal">$body</span>)]})
+    <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>) -&gt; {<span class="macro-nonterminal">$kind</span>, $([<span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val</span>])* [getter @ <span class="macro">getter!</span>(_args, _state, <span class="macro-nonterminal">$body</span>)]})
   };
 
   (@setter (
@@ -4865,4 +4865,4 @@
   };
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.1 (8460ca823 2023-03-20)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
