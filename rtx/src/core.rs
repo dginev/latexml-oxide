@@ -15,8 +15,9 @@ use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
+use rtx_core::digested::Digested;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, Core, Debug, Digested, Explode, T_CS, T_OTHER, T_SPACE};
+use rtx_core::{fatal, map, s, Core, Debug, Explode, T_CS, T_OTHER, T_SPACE};
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
