@@ -10,7 +10,7 @@ use rtx_package::package;
 use std::sync::Arc;
 // use std::sync::RwLockWriteGuard;
 
-use crate::core::DigestionAPI;
+use crate::core_interface::DigestionAPI;
 
 const CONVERTER_IDENTITY: &str = "rtx (v0.1.12)";
 
