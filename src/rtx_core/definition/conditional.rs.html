@@ -384,6 +384,7 @@
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock};
@@ -466,9 +467,10 @@
   </span><span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="doccomment">/// a test closure, if implemented in a binding
   </span><span class="kw">pub </span>test: <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
-  <span class="doccomment">///which
+  <span class="doccomment">/// the kind of piece in the syntax (if,else,fi...)
   </span><span class="kw">pub </span>conditional_type: ConditionalType,
-  <span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="doccomment">/// a skipper for \ifcase
+  </span><span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Conditional {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{

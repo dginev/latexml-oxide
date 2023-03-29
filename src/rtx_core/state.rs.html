@@ -1827,6 +1827,29 @@
 <a href="#1827" id="1827">1827</a>
 <a href="#1828" id="1828">1828</a>
 <a href="#1829" id="1829">1829</a>
+<a href="#1830" id="1830">1830</a>
+<a href="#1831" id="1831">1831</a>
+<a href="#1832" id="1832">1832</a>
+<a href="#1833" id="1833">1833</a>
+<a href="#1834" id="1834">1834</a>
+<a href="#1835" id="1835">1835</a>
+<a href="#1836" id="1836">1836</a>
+<a href="#1837" id="1837">1837</a>
+<a href="#1838" id="1838">1838</a>
+<a href="#1839" id="1839">1839</a>
+<a href="#1840" id="1840">1840</a>
+<a href="#1841" id="1841">1841</a>
+<a href="#1842" id="1842">1842</a>
+<a href="#1843" id="1843">1843</a>
+<a href="#1844" id="1844">1844</a>
+<a href="#1845" id="1845">1845</a>
+<a href="#1846" id="1846">1846</a>
+<a href="#1847" id="1847">1847</a>
+<a href="#1848" id="1848">1848</a>
+<a href="#1849" id="1849">1849</a>
+<a href="#1850" id="1850">1850</a>
+<a href="#1851" id="1851">1851</a>
+<a href="#1852" id="1852">1852</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1863,8 +1886,9 @@
 <span class="kw">static </span>CODE_TEX_EXT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;.code.tex&quot;</span>;
 
 <span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>TEX_OR_BIB_EXT_RE: Regex = Regex::new(<span class="string">r&quot;\.(tex|bib)$&quot;</span>).unwrap();
-  <span class="comment">// Conversion to scaled points
+  <span class="doccomment">/// regex for *.tex and *.bib
+  </span><span class="kw">static </span><span class="kw-2">ref </span>TEX_OR_BIB_EXT_RE: Regex = Regex::new(<span class="string">r&quot;\.(tex|bib)$&quot;</span>).unwrap();
+  <span class="doccomment">/// Used in conversion to scaled points
   </span><span class="kw">pub static </span><span class="kw-2">ref </span>UNITS: HashMap&lt;String, f64&gt; = <span class="macro">map!</span>(
     <span class="string">&quot;pt&quot; </span>=&gt; <span class="number">65536.0</span>,
     <span class="string">&quot;pc&quot; </span>=&gt; <span class="number">12.0 </span>* <span class="number">65536.0</span>,
@@ -1879,25 +1903,40 @@
   </span>);
 }
 
-<span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
+<span class="doccomment">/// installation scope in the State tables
+</span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>Scope {
-  Global,
-  Local,
-  Named(String),
+  <span class="doccomment">/// globally visible, does not expire
+  </span>Global,
+  <span class="doccomment">/// globally visible, but expires at the end of the current group
+  </span>Local,
+  <span class="doccomment">/// a named scope - visible only when explicitly activated
+  </span>Named(String),
 }
 
-<span class="attr">#[derive(Debug, Copy, Clone)]
+<span class="doccomment">/// the kinds of tables bookkept in the State
+</span><span class="attr">#[derive(Debug, Copy, Clone)]
 </span><span class="kw">pub enum </span>TableName {
-  Meaning,
-  Value,
-  Catcode,
-  Mathcode,
-  Sfcode,
-  Lccode,
-  Uccode,
-  Delcode,
-  Stash,
-  StashActive,
+  <span class="doccomment">/// token meaning
+  </span>Meaning,
+  <span class="doccomment">/// all stateful values
+  </span>Value,
+  <span class="doccomment">/// catcode bindings
+  </span>Catcode,
+  <span class="doccomment">/// mathcode bindings
+  </span>Mathcode,
+  <span class="doccomment">/// sf code bindings
+  </span>Sfcode,
+  <span class="doccomment">/// lc code bindings
+  </span>Lccode,
+  <span class="doccomment">/// uc code bindings
+  </span>Uccode,
+  <span class="doccomment">/// del code bindings
+  </span>Delcode,
+  <span class="doccomment">/// stash of inactive named values
+  </span>Stash,
+  <span class="doccomment">/// active stash of named values
+  </span>StashActive,
 }
 <span class="kw">impl </span>Display <span class="kw">for </span>TableName {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
@@ -1920,9 +1959,10 @@
   }
 }
 <span class="kw">impl </span>TableName {
-  <span class="kw">pub fn </span>variants() -&gt; Vec&lt;TableName&gt; {
+  <span class="doccomment">/// provides all TableName variants. useful for iterating over all tables
+  </span><span class="kw">pub fn </span>variants() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[TableName] {
     <span class="kw">use </span><span class="self">self</span>::TableName::<span class="kw-2">*</span>;
-    <span class="macro">vec!</span>[Meaning, Value, Catcode, Mathcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
+    <span class="kw-2">&amp;</span>[Meaning, Value, Catcode, Mathcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -2042,10 +2082,16 @@
 ///  stash &amp; stash_active: support named scopes
 ///      (see also activateScope &amp; deactivateScope)
 </span><span class="kw">pub type </span>Table = HashMap&lt;String, VecDeque&lt;Stored&gt;&gt;;
-<span class="kw">pub struct </span>State {
+<span class="doccomment">/// The State efficiently maintain the bindings in a TeX-like fashion.
+/// bindings associate data with keys (eg definitions with macro names)
+/// and respect TeX grouping; that is, an assignment is only in effect
+/// until the current group (opened by \bgroup) is closed (by \egroup).
+</span><span class="kw">pub struct </span>State {
   <span class="comment">// Tables
+  </span><span class="doccomment">/// bookkeeps arbitrary Stored values
   </span><span class="kw">pub </span>value: Table,
-  <span class="kw">pub </span>meaning: Table,
+  <span class="doccomment">/// The definition assocated with a key, usually a control-sequence.
+  </span><span class="kw">pub </span>meaning: Table,
   <span class="kw">pub </span>stash: Table,
   <span class="kw">pub </span>stash_active: Table,
   <span class="kw">pub </span>catcode: Table,
@@ -2395,7 +2441,7 @@
           <span class="self">self</span>.assign_internal(TableName::Stash, <span class="kw-2">&amp;</span>scope_name, Stored::Stash(Vec::new()), <span class="prelude-val">Some</span>(Scope::Global));
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(<span class="kw-2">ref mut </span>stash)) = <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_name).as_mut().unwrap().get_mut(<span class="number">0</span>) {
-          stash.push((table_name, key.to_string(), value.clone()));
+          stash.push((table_name.clone(), key.to_string(), value.clone()));
         }
         <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_name) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -3112,8 +3158,8 @@
     </span>} <span class="kw">else </span>{
       <span class="kw">let </span>popped_frame = <span class="self">self</span>.undo.pop_front().unwrap();
       <span class="kw">for </span>table_name <span class="kw">in </span>TableName::variants() {
-        <span class="kw">let </span>undo_table = popped_frame.table(table_name);
-        <span class="kw">let </span>state_table = <span class="self">self</span>.table_mut(table_name);
+        <span class="kw">let </span>undo_table = popped_frame.table(<span class="kw-2">*</span>table_name);
+        <span class="kw">let </span>state_table = <span class="self">self</span>.table_mut(<span class="kw-2">*</span>table_name);
         <span class="kw">for </span>(key, undo_count) <span class="kw">in </span>undo_table.iter() {
           <span class="comment">// Typically only 1 value to shift off the table, unless scopes have been activated.
           </span><span class="kw">let </span>named_table = state_table.get_mut(key).unwrap();
