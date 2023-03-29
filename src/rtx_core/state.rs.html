@@ -1806,50 +1806,6 @@
 <a href="#1806" id="1806">1806</a>
 <a href="#1807" id="1807">1807</a>
 <a href="#1808" id="1808">1808</a>
-<a href="#1809" id="1809">1809</a>
-<a href="#1810" id="1810">1810</a>
-<a href="#1811" id="1811">1811</a>
-<a href="#1812" id="1812">1812</a>
-<a href="#1813" id="1813">1813</a>
-<a href="#1814" id="1814">1814</a>
-<a href="#1815" id="1815">1815</a>
-<a href="#1816" id="1816">1816</a>
-<a href="#1817" id="1817">1817</a>
-<a href="#1818" id="1818">1818</a>
-<a href="#1819" id="1819">1819</a>
-<a href="#1820" id="1820">1820</a>
-<a href="#1821" id="1821">1821</a>
-<a href="#1822" id="1822">1822</a>
-<a href="#1823" id="1823">1823</a>
-<a href="#1824" id="1824">1824</a>
-<a href="#1825" id="1825">1825</a>
-<a href="#1826" id="1826">1826</a>
-<a href="#1827" id="1827">1827</a>
-<a href="#1828" id="1828">1828</a>
-<a href="#1829" id="1829">1829</a>
-<a href="#1830" id="1830">1830</a>
-<a href="#1831" id="1831">1831</a>
-<a href="#1832" id="1832">1832</a>
-<a href="#1833" id="1833">1833</a>
-<a href="#1834" id="1834">1834</a>
-<a href="#1835" id="1835">1835</a>
-<a href="#1836" id="1836">1836</a>
-<a href="#1837" id="1837">1837</a>
-<a href="#1838" id="1838">1838</a>
-<a href="#1839" id="1839">1839</a>
-<a href="#1840" id="1840">1840</a>
-<a href="#1841" id="1841">1841</a>
-<a href="#1842" id="1842">1842</a>
-<a href="#1843" id="1843">1843</a>
-<a href="#1844" id="1844">1844</a>
-<a href="#1845" id="1845">1845</a>
-<a href="#1846" id="1846">1846</a>
-<a href="#1847" id="1847">1847</a>
-<a href="#1848" id="1848">1848</a>
-<a href="#1849" id="1849">1849</a>
-<a href="#1850" id="1850">1850</a>
-<a href="#1851" id="1851">1851</a>
-<a href="#1852" id="1852">1852</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1876,7 +1832,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagOptions;
-<span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
@@ -1969,15 +1924,21 @@
 <span class="doccomment">/// High-level catcode profiles
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>Catcodes {
-  Standard,
-  Style,
-  <span class="prelude-val">None</span>,
+  <span class="doccomment">/// the usual mainmatter catcodes (e.g. @ is other)
+  </span>Standard,
+  <span class="doccomment">/// the usual style catcodes (e.g. @ is letter)
+  </span>Style,
+  <span class="doccomment">/// left unspecified
+  </span><span class="prelude-val">None</span>,
 }
 
 <span class="doccomment">/// Ledger for stacked assignments
 </span><span class="kw">pub type </span>AssignmentCount = HashMap&lt;String, usize&gt;;
-<span class="kw">pub type </span>StashTable = Vec&lt;(TableName, String, Stored)&gt;;
+<span class="doccomment">/// The `(table_name, key, value)` contents of a stored table of assignments
+</span><span class="kw">pub type </span>StashTable = Vec&lt;(TableName, String, Stored)&gt;;
 <span class="attr">#[derive(Debug, Clone, Default)]
+</span><span class="doccomment">/// For each of several tables (being &quot;value&quot;, &quot;meaning&quot;, &quot;catcode&quot; or other space of names),
+/// each table maintains the bound values, and &quot;undo&quot; defines the stack frames
 </span><span class="kw">pub struct </span>UndoFrame {
   locked: bool,
   meaning: AssignmentCount,
@@ -1993,7 +1954,8 @@
 }
 
 <span class="kw">impl </span>UndoFrame {
-  <span class="kw">pub fn </span>table(<span class="kw-2">&amp;</span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;</span>AssignmentCount {
+  <span class="doccomment">/// borrow the undo assignment counts for a given table name
+  </span><span class="kw">pub fn </span>table(<span class="kw-2">&amp;</span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;</span>AssignmentCount {
     <span class="kw">use </span><span class="self">self</span>::TableName::<span class="kw-2">*</span>;
     <span class="kw">match </span>name {
       Meaning =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.meaning,
@@ -2008,7 +1970,8 @@
       StashActive =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.stash_active,
     }
   }
-  <span class="kw">pub fn </span>table_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;mut </span>AssignmentCount {
+  <span class="doccomment">/// mutably borrow the undo assignment counts for a given table name
+  </span><span class="kw">pub fn </span>table_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;mut </span>AssignmentCount {
     <span class="kw">use </span><span class="self">self</span>::TableName::<span class="kw-2">*</span>;
     <span class="kw">match </span>name {
       Meaning =&gt; <span class="kw-2">&amp;mut </span><span class="self">self</span>.meaning,
@@ -2025,54 +1988,7 @@
   }
 }
 
-<span class="doccomment">/// The State efficiently maintain the bindings in a TeX-like fashion.
-/// bindings associate data with keys (eg definitions with macro names)
-/// and respect TeX grouping; that is, an assignment is only in effect
-/// until the current group (opened by \bgroup) is closed (by \egroup).
-///----------------------------------------------------------------------
-/// The objective is to make the following, most-common, operations FAST:
-///   begin &amp; end a group (ie. push/pop a stack frame)
-///   lookup &amp; assignment of values
-/// With the more obvious approach, a &quot;stack of frames&quot;, either lookup would involve
-/// checking a sequence of frames until the current value is found;
-/// or, starting a new frame would involve copying bindings for all values
-/// I never quite studied how Knuth does it;
-/// The following structures allow these to be constant operations (usually),
-/// except for endgroup (which is linear in # of changed values in that frame).
-///
-/// There are 2 main structures used here.
-/// For each of several `Table`s (being &quot;value&quot;, &quot;meaning&quot;, &quot;catcode&quot; or other space of names),
-/// each table maintains the bound values, and &quot;undo&quot; defines the stack frames:
-///    self.table[key] = [`current_value`, `previous_value`, ...]
-///    self.undo[frame].table[key] = (None | n)
-/// such that the &quot;current value&quot; associated with `key` is the 0th element of the table array;
-/// the `previous_value`s (if any) are values that had been assigned within previous groups.
-/// The undo list indicates how many values have been assigned for `key` in
-/// the `frame`&#39;th frame (usually the last is the one of interest).
-/// [Would be simpler to store boolean in undo, but see deactivateScope]
-/// [An UndoFrame contains fields for each State table, and a lock attribute]
-///
-/// So, in handwaving form, the algorithms are as follows:
-/// push-frame == bgroup == begingroup:
-///    push an empty hash {} onto the undo stack;
-/// pop-frame == egroup == endgroup:
-///   for the `n` associated with every key in the topmost hash in the undo stack
-///     pop `n` values from the table
-///   then remove the hash from the undo stack.
-/// Lookup value:
-///   we simply fetch the last element from the table
-/// Assign a value:
-///   local scope (the normal way):
-///     we push a new value into the table described above,
-///     and also increment the associated value in the undo stack
-///   global scope:
-///     remove any locally scoped values, and undo entries for the key
-///     then set the only remaining value to the given one.
-///   named-scope `scope`:
-///      push an entry `[table,key,value]` globally to the `stash` table&#39;s value.
-///      And assign locally, if the `scope` is active (has non-zero value in `stash_active` table),
-///
-/// There are tables for
+<span class="doccomment">/// There are tables for
 ///  catcode: keys are char;
 ///     Also, `math:char` =1 when `char` is active in math.
 ///  mathcode, sfcode, lccode, uccode, delcode : are similar to catcode but store
@@ -2082,6 +1998,7 @@
 ///  stash &amp; stash_active: support named scopes
 ///      (see also activateScope &amp; deactivateScope)
 </span><span class="kw">pub type </span>Table = HashMap&lt;String, VecDeque&lt;Stored&gt;&gt;;
+
 <span class="doccomment">/// The State efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
@@ -2089,28 +2006,28 @@
 </span><span class="kw">pub struct </span>State {
   <span class="comment">// Tables
   </span><span class="doccomment">/// bookkeeps arbitrary Stored values
-  </span><span class="kw">pub </span>value: Table,
+  </span>value: Table,
   <span class="doccomment">/// The definition assocated with a key, usually a control-sequence.
-  </span><span class="kw">pub </span>meaning: Table,
-  <span class="kw">pub </span>stash: Table,
-  <span class="kw">pub </span>stash_active: Table,
-  <span class="kw">pub </span>catcode: Table,
-  <span class="kw">pub </span>mathcode: Table,
-  <span class="kw">pub </span>sfcode: Table,
-  <span class="kw">pub </span>lccode: Table,
-  <span class="kw">pub </span>uccode: Table,
-  <span class="kw">pub </span>delcode: Table,
+  </span>meaning: Table,
+  stash: Table,
+  stash_active: Table,
+  catcode: Table,
+  mathcode: Table,
+  sfcode: Table,
+  lccode: Table,
+  uccode: Table,
+  delcode: Table,
   <span class="comment">// Table bookkeeping
-  </span><span class="kw">pub </span>undo: VecDeque&lt;UndoFrame&gt;,
+  </span>undo: VecDeque&lt;UndoFrame&gt;,
   <span class="comment">// Stateful runtime - data structures
+  </span><span class="doccomment">/// the schema-derived model used for the current document
   </span><span class="kw">pub </span>model: Model,
-  <span class="kw">pub </span>document: <span class="prelude-ty">Option</span>&lt;Document&gt;,
-  <span class="kw">pub </span>prefixes: HashMap&lt;String, bool&gt;,       <span class="comment">// ?
-  </span><span class="kw">pub </span>status: RwLock&lt;HashMap&lt;String, bool&gt;&gt;, <span class="comment">// ?
-  </span><span class="kw">pub </span>map: Vec&lt;String&gt;,                      <span class="comment">// ?
+  prefixes: HashMap&lt;String, bool&gt;,       <span class="comment">// ?
   </span><span class="kw">pub </span>tag_properties: HashMap&lt;String, TagOptions&gt;,
-  <span class="kw">pub </span>indirect_model: <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
-  <span class="kw">pub </span>pending_resources: Vec&lt;Resource&gt;,
+  <span class="doccomment">/// an optional indirect model for long-distance relationships
+  </span><span class="kw">pub </span>indirect_model: <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
+  <span class="doccomment">/// Document-related resources declared during core conversion, pending until XML is finalized
+  </span><span class="kw">pub </span>pending_resources: Vec&lt;Resource&gt;,
   <span class="comment">// Stateful runtime - simple fields
   // TODO: Maybe group these in a &quot;SessionFlags&quot; struct?
   //       we can then reset that if we reimplement a daemon app
@@ -2118,15 +2035,14 @@
   <span class="kw">pub </span>align_group_count: i32, <span class="comment">// was $LaTeXML::ALIGN_STATE
   </span><span class="kw">pub </span>status_code: usize,
   <span class="kw">pub </span>unlocked: bool,
-    <span class="kw">pub </span>noexpand_the: bool,
   <span class="kw">pub </span>input_encoding: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>strict: bool,
-  <span class="kw">pub </span>include_comments: bool,
-  <span class="kw">pub </span>documentid: String,
+  <span class="comment">// strict: bool,
+  // include_comments: bool,
+  </span><span class="kw">pub </span>documentid: String,
   <span class="kw">pub </span>search_paths: VecDeque&lt;String&gt;,
   <span class="kw">pub </span>graphics_paths: VecDeque&lt;String&gt;,
-  <span class="kw">pub </span>include_styles: bool,
-  <span class="kw">pub </span>nomathparse: bool,
+  <span class="comment">// include_styles: bool,
+  </span><span class="kw">pub </span>nomathparse: bool,
   <span class="kw">pub </span>reading_alignment: bool,
   <span class="comment">// Local structures
   </span>if_frames: Vec&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;RwLock&lt;IfFrame&gt;&gt;&gt;&gt;,
@@ -2168,10 +2084,7 @@
       </span>undo: undo_vdq,
       <span class="comment">// Stateful runtime - data structures
       </span>model: Model::default(),
-      document: <span class="prelude-val">None</span>,
       prefixes: HashMap::new(),
-      status: RwLock::new(HashMap::new()),
-      map: Vec::new(),
       tag_properties: HashMap::new(),
       indirect_model: <span class="prelude-val">None</span>,
       pending_resources: Vec::new(),
@@ -2182,15 +2095,14 @@
       unlocked: <span class="bool-val">true</span>,
       current_token: Vec::new(),
       if_frames: Vec::new(),
-      noexpand_the: <span class="bool-val">false</span>,
       input_encoding: <span class="prelude-val">None</span>,
-      strict: <span class="bool-val">false</span>,
-      include_comments: <span class="bool-val">true</span>,
-      documentid: String::new(),
+      <span class="comment">// strict: false,
+      // include_comments: true,
+      </span>documentid: String::new(),
       search_paths: VecDeque::new(),
       graphics_paths: VecDeque::new(),
-      include_styles: <span class="bool-val">false</span>,
-      nomathparse: <span class="bool-val">false</span>,
+      <span class="comment">// include_styles: false,
+      </span>nomathparse: <span class="bool-val">false</span>,
       smuggle_the: Vec::new(),
       reading_alignment: <span class="bool-val">false</span>,
       bindings_dispatch: <span class="prelude-val">None</span>,
@@ -2275,10 +2187,10 @@
       <span class="prelude-val">Some</span>(m) =&gt; m,
     };
     <span class="kw">let </span>verbosity = options.verbosity.unwrap_or(<span class="number">0</span>);
-    <span class="kw">let </span>strict = options.strict.unwrap_or(<span class="bool-val">false</span>);
-    <span class="kw">let </span>include_comments = options.include_comments.unwrap_or(<span class="bool-val">true</span>);
-    <span class="kw">let </span>include_styles = options.include_styles.unwrap_or(<span class="bool-val">false</span>);
-    <span class="kw">let </span>nomathparse = options.nomathparse.unwrap_or(<span class="bool-val">false</span>);
+    <span class="comment">// let strict = options.strict.unwrap_or(false);
+    // let include_comments = options.include_comments.unwrap_or(true);
+    // let include_styles = options.include_styles.unwrap_or(false);
+    </span><span class="kw">let </span>nomathparse = options.nomathparse.unwrap_or(<span class="bool-val">false</span>);
 
     <span class="kw">let </span>documentid = <span class="kw">match </span>options.documentid {
       <span class="prelude-val">None </span>=&gt; String::new(),
@@ -2298,13 +2210,13 @@
       catcode: catcodes_typed,
       model,
       verbosity,
-      strict,
-      include_comments,
-      documentid,
+      <span class="comment">// strict,
+      // include_comments,
+      </span>documentid,
       search_paths,
       graphics_paths,
-      include_styles,
-      input_encoding: options.input_encoding,
+      <span class="comment">// include_styles,
+      </span>input_encoding: options.input_encoding,
       nomathparse,
       ..State::default()
     }
