@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["DigestedData","These are all kinds of data which we consider officially supported as outputs from the digestion phase of TeX, i.e. from invoking a token."]],"struct":[["Digested","An `Arc`-guarded abstraction for any object encountered at the “digested” phase of processing"]]};
