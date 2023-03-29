@@ -37,14 +37,23 @@ use crate::*;
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
 
 lazy_static! {
+  /// regex for the prefix of a conditional command sequence
   pub static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
+  /// regex for the prefix of a protocol (such as literal:)
   pub static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
+  /// regex for a trailing slash (trivial, but aids replacement of said slash)
   pub static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
+  /// regex for one-or-more spaces
   pub static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();
+  /// regex for ${}^{label}$
   pub static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
+  /// regex for characters not expected in a usual id attribute
   pub static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
+  /// regex for a strange noisy TeX `\\~{}`
   pub static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
-  pub static ref HAS_ARG_HOLE : Regex = Regex::new(r"#\d|\\.").unwrap();
+  /// regex for a TeX argument specifier or any command sequence
+  pub static ref HAS_ARG_OR_CS : Regex = Regex::new(r"#\d|\\.").unwrap();
+  /// regex for the usual argument placeholders `#1`-`#9`
   pub static ref ARG_HOLE : Regex = Regex::new(r"#(\d)").unwrap();
 }
 
@@ -54,6 +63,7 @@ pub fn is_defined(name: &str, state: &State) -> bool {
   is_defined_token(&cs, state)
 }
 
+/// Token variant of `is_defined`. Defined in the LaTeX-y sense of also not being let to \relax.
 pub fn is_defined_token(cs: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(cs);
   match meaning {
@@ -68,29 +78,29 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
   }
 }
 
+/// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let name = token.get_string();
   (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
 }
 
+/// unconditionally wraps a CS token around a string
+// TODO: this was more useful in Perl, maybe we should remove?
 pub fn coerce_cs(t: &str) -> Token { T_CS!(t) }
-
-pub fn revert(_arg: &[Token]) -> Tokens { unimplemented!() }
 
 //======================================================================
 // Defining Conditional Control Sequences.
 //======================================================================
-// Define a conditional control sequence. Its processing takes place in
-// the Gullet.  The test is applied to the arguments (if any),
-// which determines which branch is executed.
-// If the test is undefined, the conditional is a "user defined" one;
-// Two additional primitives are defined \footrue and \foofalse;
-// the test is then determined by the most recently called of those.
-//
-// If you supply a skipper instead of a test, it is also applied to the arguments
-// and should skip to the right place in the following \or, \else, \fi.
-
+/// Define a conditional control sequence. Its processing takes place in
+/// the Gullet.  The test is applied to the arguments (if any),
+/// which determines which branch is executed.
+/// If the test is undefined, the conditional is a "user defined" one;
+/// Two additional primitives are defined \footrue and \foofalse;
+/// the test is then determined by the most recently called of those.
+///
+/// If you supply a skipper instead of a test, it is also applied to the arguments
+/// and should skip to the right place in the following \or, \else, \fi.
 pub fn def_conditional(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -167,6 +177,9 @@ pub fn def_conditional(
   }
 }
 
+/// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
+/// as specified by `paramlist` and is expanded during macro expansion time in the `Gullet`.
+/// See `ExpansionBody` for the possible kinds of `expansion` material.
 pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -195,14 +208,25 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   }
 }
 
+/// configuration for creating a new Register
 #[derive(Default)]
 pub struct RegisterOptions {
+  /// closure to obtain the current register value
   pub getter: Option<RegisterGetterClosure>,
+  /// closure to set the current register value
   pub setter: Option<RegisterSetterClosure>,
+  /// is this register meant as read-only? (default: false)
   pub readonly: bool,
+  /// an optional name for the register (default: the csname)
   pub name: Option<String>,
 }
 
+/// Defines a register with `value` as the initial value
+/// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
+/// Usually, the `prototype` is just the control sequence,
+/// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
+/// that the register value can be accessed when a numeric, dimension, ... value is being read,
+/// and also defines the control sequence for assignment.
 pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parameters>, value: T, options: Option<RegisterOptions>, state: &mut State) {
   let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
@@ -267,6 +291,12 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
   );
 }
 
+/// Defines a primitive control sequence; a primitive is processed during
+/// digestion (in the  `Stomach`), after macro expansion but before Construction time.
+/// Primitive control sequences generate Boxes or Lists, generally
+/// containing basic Unicode content, rather than structured XML.
+/// Primitive control sequences are also executed for side effect during digestion,
+/// effecting changes to the `State`.
 pub fn def_primitive(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -351,6 +381,7 @@ pub fn def_primitive(
   }
 }
 
+/// Advanced math replacements require a XMDual representation
 pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
   let csname = cs.get_string();
   let cont_cs = T_CS!(s!("{csname}@content"));
@@ -482,7 +513,8 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
 
 }
 
-
+/// EXPERIMENT: Introduce an intermediate case for simple symbols
+/// Define a primitive that will create a Tbox with the appropriate set of XMTok attributes.
 pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
@@ -519,6 +551,7 @@ pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentatio
   );
 }
 
+/// Uses of DefMath without arguments, but with constructor-like options, are realized via a `Constructor` definition
 pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // TODO: do we need to do anything about digesting the presentation?
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
@@ -694,6 +727,12 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut Stat
   return_cs
 }
 
+/// The Constructor is where LaTeXML really starts getting interesting;
+/// invoking the control sequence will generate an arbitrary XML
+/// fragment in the document tree.  More specifically: during digestion, the arguments
+/// will be read and digested, creating a `Whatsit` to represent the object. During
+/// absorption by the `Document`, the `Whatsit` will generate the XML fragment according
+/// to the `compiled_replacement`.
 pub fn def_constructor(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -792,6 +831,16 @@ pub fn def_constructor(
   }
 }
 
+/// Defines an Environment that generates a specific XML fragment.
+/// `compiled_replacement` is of the same form as for DefConstructor, but will generally include reference to
+/// the `#body` property.
+/// Upon encountering a `\begin{env}`:  the mode is switched, if needed, else a new group is opened;
+/// then the environment name is noted; the beforeDigest hook is run.
+/// Then the Whatsit representing the begin command (but ultimately the whole environment) is created
+/// and the `after_digest_begin` hook is run.
+/// Next, the body will be digested and collected until the balancing `\end{env}`.
+/// Then, any `after_digest` hook is run, the environment is ended, finally the mode is ended or the group is closed.
+///  The body and `\end{env}` whatsit are added to the `\begin{env}`'s whatsit as body and trailer, respectively.
 pub fn def_environment(
   name: String,
   paramlist: Option<Parameters>,
@@ -1001,7 +1050,7 @@ pub fn def_environment(
 
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
-pub fn get_xmarg_id(gullet: &mut Gullet, state:&mut State) -> Result<Tokens> {
+fn get_xmarg_id(gullet: &mut Gullet, state:&mut State) -> Result<Tokens> {
   step_counter_gullet("@XMARG", false, gullet, state)?;
   def_macro(T_CS!("\\@@XMARG@ID"), None, Tokens!(Explode!(state.lookup_register("\\c@@XMARG", Vec::new()).unwrap().value_of())),
     Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}), state);
@@ -1010,10 +1059,10 @@ pub fn get_xmarg_id(gullet: &mut Gullet, state:&mut State) -> Result<Tokens> {
 }
 
 type ArgsUnpacked = Vec<Option<Tokens>>;
-// Given a list of Tokens (to be expanded into mathematical objects)
-// return two lists:
-//   (1) The Tokens' wrapped in an XMAarg, with an ID added
-//   (2) a corresponding list of Tokens creating XMRef's to those IDs
+/// Given a list of Tokens (to be expanded into mathematical objects)
+/// return two lists:
+///   (1) The Tokens' wrapped in an XMAarg, with an ID added
+///   (2) a corresponding list of Tokens creating XMRef's to those IDs
 // Ah, but there are complications!!!
 // On the one hand, arguments may be hidden, never appearing on the presentation side
 // (all will be passed to the content side); This argues for putting the XMArg's on the content side.
@@ -1054,7 +1103,20 @@ pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &m
   Ok((cargs, pargs))
 }
 
-
+/// Define a Mathematical symbol or function.
+/// There are two sets of cases:
+///  (1) If the presentation appears to be TeX code, we create an XMDual,
+/// since the presentation may end up with structure, etc.
+///  (2) But if the presentation is a simple string, or unicode,
+/// it is just the content of the symbol; even if the function takes arguments.
+// ALSO
+//  arrange that the operator token gets cs="$cs"
+// ALSO
+//  Possibly some trick with SUMOP/INTOP affecting limits ?
+//  Well, not exactly, but....
+// HMM.... Still fishy.
+// When to make a dual ?
+// If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
 pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
@@ -1116,7 +1178,7 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
   // If the macro involves arguments,
   // we will create an XMDual to separate simple content application
   // from the (likely) convoluted presentation.
-  else if HAS_ARG_HOLE.is_match(&presentation) {
+  else if HAS_ARG_OR_CS.is_match(&presentation) {
     // TODO: Are the code variants still applicable in Rust?
     //((ref presentation eq "CODE")
     // || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
