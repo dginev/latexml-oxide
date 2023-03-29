@@ -80,8 +80,9 @@ pub struct Conditional {
   pub paramlist: Option<Parameters>,
   /// a test closure, if implemented in a binding
   pub test: Option<ConditionalClosure>,
-  ///which
+  /// the kind of piece in the syntax (if,else,fi...)
   pub conditional_type: ConditionalType,
+  /// a skipper for \ifcase
   pub skipper: Option<bool>,
 }
 impl Default for Conditional {

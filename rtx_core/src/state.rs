@@ -35,8 +35,9 @@ use crate::util::pathname;
 static CODE_TEX_EXT: &str = ".code.tex";
 
 lazy_static! {
+  /// regex for *.tex and *.bib
   static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
-  // Conversion to scaled points
+  /// Used in conversion to scaled points
   pub static ref UNITS: HashMap<String, f64> = map!(
     "pt" => 65536.0,
     "pc" => 12.0 * 65536.0,
@@ -51,24 +52,39 @@ lazy_static! {
   );
 }
 
+/// installation scope in the State tables
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Scope {
+  /// globally visible, does not expire
   Global,
+  /// globally visible, but expires at the end of the current group
   Local,
+  /// a named scope - visible only when explicitly activated
   Named(String),
 }
 
+/// the kinds of tables bookkept in the State
 #[derive(Debug, Copy, Clone)]
 pub enum TableName {
+  /// token meaning
   Meaning,
+  /// all stateful values
   Value,
+  /// catcode bindings
   Catcode,
+  /// mathcode bindings
   Mathcode,
+  /// sf code bindings
   Sfcode,
+  /// lc code bindings
   Lccode,
+  /// uc code bindings
   Uccode,
+  /// del code bindings
   Delcode,
+  /// stash of inactive named values
   Stash,
+  /// active stash of named values
   StashActive,
 }
 impl Display for TableName {
@@ -92,9 +108,10 @@ impl Display for TableName {
   }
 }
 impl TableName {
-  pub fn variants() -> Vec<TableName> {
+  /// provides all TableName variants. useful for iterating over all tables
+  pub fn variants() -> &'static [TableName] {
     use self::TableName::*;
-    vec![Meaning, Value, Catcode, Mathcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
+    &[Meaning, Value, Catcode, Mathcode, Sfcode, Lccode, Uccode, Delcode, Stash, StashActive]
   }
 }
 
@@ -214,9 +231,15 @@ impl UndoFrame {
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<String, VecDeque<Stored>>;
+/// The State efficiently maintain the bindings in a TeX-like fashion.
+/// bindings associate data with keys (eg definitions with macro names)
+/// and respect TeX grouping; that is, an assignment is only in effect
+/// until the current group (opened by \bgroup) is closed (by \egroup).
 pub struct State {
   // Tables
+  /// bookkeeps arbitrary Stored values
   pub value: Table,
+  /// The definition assocated with a key, usually a control-sequence.
   pub meaning: Table,
   pub stash: Table,
   pub stash_active: Table,
@@ -567,7 +590,7 @@ impl State {
           self.assign_internal(TableName::Stash, &scope_name, Stored::Stash(Vec::new()), Some(Scope::Global));
         }
         if let Some(Stored::Stash(ref mut stash)) = self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0) {
-          stash.push((table_name, key.to_string(), value.clone()));
+          stash.push((table_name.clone(), key.to_string(), value.clone()));
         }
         let has_active = match self.stash_active.get(&scope_name) {
           None => false,
@@ -1284,8 +1307,8 @@ impl State {
     } else {
       let popped_frame = self.undo.pop_front().unwrap();
       for table_name in TableName::variants() {
-        let undo_table = popped_frame.table(table_name);
-        let state_table = self.table_mut(table_name);
+        let undo_table = popped_frame.table(*table_name);
+        let state_table = self.table_mut(*table_name);
         for (key, undo_count) in undo_table.iter() {
           // Typically only 1 value to shift off the table, unless scopes have been activated.
           let named_table = state_table.get_mut(key).unwrap();

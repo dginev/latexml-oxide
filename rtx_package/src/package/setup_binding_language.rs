@@ -486,15 +486,13 @@ macro_rules! defi_conditional {
 //       "Expected a conditional defined by \\newif, got '" . ToString($if) . "'"); }
 //   return; }
 
-///======================================================================
 /// Define a primitive control sequence.
-///======================================================================
+///
 /// Primitives are executed in the Stomach.
 /// The $replacement should be a sub which returns nothing, or a list of `Box`'s or `Whatsit`'s.
 /// The options are:
 ///    is_prefix  : 1 for things like \global, \long, etc.
 ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
-
 #[macro_export]
 macro_rules! DefPrimitive {
   // Case: simple literal replacement
@@ -1461,6 +1459,12 @@ macro_rules! MergeFont {
 // - auto-build the ExpansionOptions data structure from a Perl-like syntax, and validate it along the way
 //  we're taking things a few pegs further than LaTeXML, as DefMacroI syntax is *included* in DefMacro,
 //  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
+
+/// A `$prototype` will be parsed into a command sequence and a list of parameters.
+/// Any macro arguments will be substituted for parameter indicators (eg #1)
+/// in the I<tokens> or tokenized I<string> and the result is used as the expansion
+/// of the control sequence. If I<code> is used, it is called at expansion time
+/// and should return a list of tokens as its result.
 #[macro_export]
 macro_rules! DefMacro {
   // simplest case - mock macro that discards everything.
@@ -1593,6 +1597,13 @@ macro_rules! defi_macro {
   };
 }
 
+
+/// Defines a register with `value` as the initial value
+/// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
+/// Usually, the `prototype` is just the control sequence,
+/// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
+/// that the register value can be accessed when a numeric, dimension, ... value is being read,
+/// and also defines the control sequence for assignment.
 #[macro_export]
 macro_rules! DefRegister {
   ($proto:expr => $value:expr) => {{
