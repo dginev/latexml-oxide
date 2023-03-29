@@ -231,7 +231,10 @@ impl Gullet {
   // Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
-  // If $commentsok is true, will also pass comments.
+  // If `commentsok` is true, will also pass comments.
+  /// Return the next unexpandable token from the input source, or None if there is no more input.
+  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the input.
+  /// If `commentsok`, a comment read or pending will be returned.
   pub fn read_x_token(&mut self, toplevel_opt: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
     // toplevel should be true by default
     let toplevel = toplevel_opt.unwrap_or(true);
@@ -391,7 +394,7 @@ impl Gullet {
       None
     }
   }
-
+  /// Push the `tokens` back into the input stream to be re-read.
   pub fn unread(&mut self, tokens: Tokens) {
     if let Some(ref mut runtime) = self.mouth {
       for token in tokens.unlist().into_iter().rev() {
@@ -399,6 +402,7 @@ impl Gullet {
       }
     };
   }
+  /// same as `unread`, but drains the `tokens` from its contents
   pub fn unread_mut(&mut self, tokens: &mut Tokens) {
     if let Some(ref mut runtime) = self.mouth {
       for token in tokens.unlist_mut().drain(..).rev() {
@@ -406,6 +410,7 @@ impl Gullet {
       }
     };
   }
+  /// same as `unread`, but only for a single `Token`
   pub fn unread_one(&mut self, token: Token) {
     if let Some(ref mut runtime) = self.mouth {
       runtime.pushback.push_front(token);
@@ -611,7 +616,7 @@ impl Gullet {
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
   pub fn read_until_token(&mut self, t: Token, state: &mut State) -> Result<Tokens> { self.read_until(&Tokens!(t), state) }
-
+  /// reads until it encounters a Catcode::BEGIN token
   pub fn read_until_brace(&mut self, state: &mut State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     while let Some(token) = self.read_token(state) {
@@ -633,7 +638,7 @@ impl Gullet {
       Ok(Some(tks))
     }
   }
-
+  /// reads and discards tokens, until it encounters a conditional, if any
   pub fn read_next_conditional(&mut self, state: &mut State) -> Option<(Token, ConditionalType)> {
     while let Some(mut token) = self.read_token(state) {
       if token.get_catcode() == Catcode::SmuggleTHE {
@@ -671,10 +676,11 @@ impl Gullet {
       },
     }
   }
-  // Note that this returns an empty array if [] is present,
-  // [contents] returns Tokens(contents),
-  // otherwise returns None
-  pub fn read_optional(&mut self, state: &mut State) -> Result<Option<Tokens>> {
+  /// Read and return a LaTeX optional argument; returns C<$default> if there is no '[',
+  /// otherwise the contents of the [].
+  /// Note that this returns an empty array if [] is present,
+  /// i.e. "[contents]" in TeX will lead to Tokens(contents), otherwise returns None
+  pub fn read_optional(&mut self, default: Option<Tokens>, state: &mut State) -> Result<Option<Tokens>> {
     match self.read_non_space(state) {
       None => Ok(None),
       Some(t) => {
@@ -682,7 +688,7 @@ impl Gullet {
           Ok(Some(self.read_until(&Tokens!(T_OTHER!("]")), state)?))
         } else {
           self.unread_one(t);
-          Ok(None)
+          Ok(default)
         }
       },
     }
@@ -1210,6 +1216,10 @@ impl Gullet {
     }
   }
 
+  /// Do something, while reading stuff from a specific Mouth.
+  /// This reads ONLY from that mouth (or any mouth openned by code in that source),
+  /// and the mouth should end up empty afterwards, and only be closed here.
+  ///
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Gullet, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();

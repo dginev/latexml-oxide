@@ -131,7 +131,7 @@ LoadDefinitions!(state, {
   );
 
   DefParameterType!(Optional, sub[gullet, inner, default, state] {
-      let value = gullet.read_optional(state)?;
+      let value = gullet.read_optional(None, state)?;
       let value_2 = if value.is_none() && !default.is_empty() {
         ArgWrap::OptionTokens(Some(default[0].clone()))
       } else if let Some(inner_ps) = inner {
@@ -393,7 +393,7 @@ LoadDefinitions!(state, {
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!(OptionalSemiverbatim,
-    sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
     semiverbatim => Some(Vec::new()),
     optional => true,
     reversion => reversion!(gullet, arg, _inner, _extra, _state, {
@@ -482,7 +482,7 @@ LoadDefinitions!(state, {
   }));
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  DefParameterType!(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
+  DefParameterType!(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
   reader_predigest => undigested!(),
   optional => true,
   reversion => reversion!(gullet, arg, _inner, _extra, _state, {

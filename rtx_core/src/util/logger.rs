@@ -6,6 +6,7 @@ use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 struct RtxLogger;
 static LOGGER: RtxLogger = RtxLogger;
 
+/// prints a single line to STDERR
 #[macro_export]
 macro_rules! println_stderr(
     ($($arg:tt)*) => ({
@@ -17,6 +18,7 @@ macro_rules! println_stderr(
     })
 );
 
+/// prints a to STDERR without a line break
 #[macro_export]
 macro_rules! print_stderr(
     ($($arg:tt)*) => ({
@@ -80,6 +82,7 @@ impl log::Log for RtxLogger {
   fn flush(&self) {}
 }
 
+/// initialize the logger at a given verbosity `level`
 pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   log::set_logger(&LOGGER).unwrap();
   log::set_max_level(level);
