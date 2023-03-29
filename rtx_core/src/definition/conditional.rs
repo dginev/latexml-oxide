@@ -19,22 +19,34 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
+///! Conditionals Control sequence definitions.
+///! These represent the control sequences for conditionals, as well as
+///! `\else`, `\or` and `\fi`.
+
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
 //   record a flag somewhere so that \else or \fi is recognized
 //   (otherwise, they should signal an error)
+
+/// classify the standard pieces of a conditional
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConditionalType {
+  /// \if
   If,
+  /// \unless
   Unless,
+  /// \else
   Else,
+  /// \or
   Or,
+  /// \fi
   Fi,
+  /// fallback?
   Unknown,
 }
 
-impl ConditionalType {
-  pub fn from(cs: &str) -> Self {
+impl From<&str> for ConditionalType {
+  fn from(cs: &str) -> Self {
     use self::ConditionalType::*;
     match cs {
       "\\if" => If,
@@ -47,21 +59,29 @@ impl ConditionalType {
   }
 }
 
-// This is ONLY used for \ifcase.
+/// configurations for a conditional.
 #[derive(Default)]
 pub struct ConditionalOptions {
+  /// scope to install in state
   pub scope: Option<Scope>,
+  /// is this definition locked?
   pub locked: Option<bool>,
+  /// skipper, currently only used for \ifcase.
+  // TODO: implement this?
   pub skipper: Option<bool>,
 }
 
+/// A Conditional definition; Expandable.
 #[derive(Clone)]
 pub struct Conditional {
+  /// the command sequence
   pub cs: Token,
+  /// list of parameters, if any
   pub paramlist: Option<Parameters>,
+  /// a test closure, if implemented in a binding
   pub test: Option<ConditionalClosure>,
+  ///which
   pub conditional_type: ConditionalType,
-  pub locked: Option<bool>,
   pub skipper: Option<bool>,
 }
 impl Default for Conditional {
@@ -71,7 +91,6 @@ impl Default for Conditional {
       paramlist: None,
       test: None,
       conditional_type: ConditionalType::Unknown,
-      locked: None,
       skipper: None,
     }
   }
@@ -134,17 +153,23 @@ impl Definition for Conditional {
 }
 
 
+/// A Frame of data for the currently active conditional, stored in State
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfFrame {
+  /// the token which started the conditional
   pub token: Arc<Token>,
+  /// source location of the conditional start
   pub start: Locator,
+  /// flag: currently parsing the test
   pub parsing: bool,
+  /// flag: already seen an else at this level
   pub elses: bool,
+  /// in nested conditionals, give each an id
   pub ifid: i64,
 }
 
 impl Conditional {
-  pub fn invoke_conditional(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invoke_conditional(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     // TODO!!! Implement in full
     // Keep a stack of the conditionals we are processing.
     let mut ifid = state.lookup_int("if_count");
@@ -277,7 +302,7 @@ impl Conditional {
     Tokens!()
   }
 
-  pub fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let stack_frame_opt = if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
       if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
         Some(Arc::clone(stack_frame))
@@ -323,7 +348,7 @@ impl Conditional {
     }
   }
 
-  pub fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let stack_frame_opt: Option<Arc<RwLock<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
       if let Some(Stored::IfFrame(frame)) = stack.front() {
         Some(Arc::clone(frame))
