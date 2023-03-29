@@ -23,11 +23,16 @@ use crate::{Digested, TexMode};
 
 static MAXSTACK: usize = 200;
 
+/// The Stomach is responsible for digesting tokens into boxes, lists, etc.
 #[derive(Default)]
 pub struct Stomach {
+  /// owns a Gullet, responsible for obtaining tokens
   pub gullet: Gullet,
+  /// currently invoked tokens
   pub token_stack: Vec<Arc<Token>>,
+  /// tracks the tokens of boxing groups(?)
   pub boxing: Vec<Token>,
+  /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list: Vec<Digested>,
 }
 
@@ -38,8 +43,11 @@ impl Object for Stomach {
 }
 
 impl<'t> Stomach {
-  pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
+  /// borrow the gullet
   pub fn get_gullet(&self) -> &Gullet { &self.gullet }
+  /// mutably borrow the gullet
+  pub fn get_gullet_mut(&mut self) -> &mut Gullet { &mut self.gullet }
+  /// get the current boxing level
   pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
   /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
   /// This is used for the scriptpos attribute to recognize overlapping sccripts.
@@ -52,13 +60,15 @@ impl<'t> Stomach {
       boxlevel
     }
   }
-
+  /// steal the previously digested boxes from the current level.
   pub fn regurgitate(&mut self) -> Vec<Digested> { self.box_list.drain(..).collect() }
 
   // **********************************************************************
   // Digestion
   // **********************************************************************
 
+  /// Return the digested `List` after reading and digesting a body from the its Gullet.
+  /// The body extends until the current level of boxing or environment is closed.
   pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
     let start_location = self.get_locator().unwrap().into_owned();
     let init_depth = self.boxing.len();
@@ -147,6 +157,10 @@ impl<'t> Stomach {
       digested_list.into()
     })
   }
+
+  /// a convenience function for including chunks of raw TeX (or LaTeX) code
+  /// It is useful for copying portions of the normal
+  /// implementation that can be handled simply using macros and primitives.
 
   pub fn raw_tex(&mut self, text: &str, state: &mut State) -> Result<()> {
     // It could be as simple as this, except if catcodes get changed, it's too late!!!
@@ -382,6 +396,10 @@ impl<'t> Stomach {
   // Do something, while reading stuff from a specific Mouth.
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
+
+  /// TODO: This is a HACK, that copies the `Gullet::reading_from_mouth` function and redoes it in Stomach.
+  /// the need comes from techniques that use a *Stomach* inside the inner reader function, as is done by `Stomach::raw_tex`.
+  /// ideally `reading_from_mouth` should be used with a Gullet, and this variation should be removed.
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Stomach, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();
@@ -453,6 +471,7 @@ impl<'t> Stomach {
   // Dealing with TeX's bindings & grouping.
   // Note that lookups happen more often than bgroup/egroup (which open/close frames).
 
+  /// Adds a new stack frame for a TeX group.
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
     let current_token = match &state.get_current_token() {
       Some(t) => Arc::clone(t),
@@ -471,7 +490,7 @@ impl<'t> Stomach {
       self.boxing.push((*current_token).clone())
     }
   }
-
+  /// Removes the last/current stack frame, ending a TeX group
   pub fn pop_stack_frame(&mut self, nobox: bool, state: &mut State) -> Result<()> {
     if let Some(Stored::VecDequeStored(beforeafter)) = state.remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
@@ -511,6 +530,7 @@ impl<'t> Stomach {
     Ok(())
   }
 
+  /// explain the current frame
   pub fn current_frame_message(&self, state: &State) -> String {
     let target = if state.is_value_bound("MODE", Some(0)) {
       // SET mode in CURRENT frame ?
@@ -536,7 +556,8 @@ impl<'t> Stomach {
   // Grouping pushes a new stack frame for binding definitions, etc.
   //======================================================================
 
-  /// if $nobox is true, inhibit incrementing the boxingLevel
+  /// Begin a new level of binding by pushing a new stack frame,
+  /// and a new level of boxing the digested output.
   pub fn bgroup(&mut self, state: &mut State) {
     self.push_stack_frame(false, state);
     // NOTE: This is WRONG; should really only track "scanned" (not digested) braces
@@ -546,7 +567,9 @@ impl<'t> Stomach {
     // was $LaTeXML::ALIGN_STATE
     state.align_group_count += 1;
   }
-
+  /// End a level of binding by popping the last stack frame,
+  /// undoing whatever bindings appeared there, and also
+  /// decrementing the level of boxing.
   pub fn egroup(&mut self, state: &mut State) -> Result<()> {
     if state.lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
@@ -564,9 +587,10 @@ impl<'t> Stomach {
     state.align_group_count -= 1;
     Ok(())
   }
-
+  /// Begin a new level of binding by pushing a new stack frame.
   pub fn begingroup(&mut self, state: &mut State) { self.push_stack_frame(true, state); }
-
+  /// End a level of binding by popping the last stack frame,
+  /// undoing whatever bindings appeared there.
   pub fn endgroup(&mut self, state: &mut State) -> Result<()> {
     if !state.lookup_bool("groupNonBoxing") {
       // or group was opened with \bgroup
@@ -628,11 +652,15 @@ impl<'t> Stomach {
     Ok(())
   }
 
+  /// Begin processing in `mode`; one of "text", "display-math" or "inline-math".
+  /// This also begins a new level of grouping and switches to a font
+  /// appropriate for the mode.
   pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     self.push_stack_frame(false, state); // Effectively bgroup
     self.set_mode(mode, state)
   }
-
+  /// End processing in `mode`; an error is signalled if `stomach` is not
+  /// currently in `mode`.  This also ends a level of grouping.
   pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     // Last stack frame was NOT a mode switch!?!?!
     if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {

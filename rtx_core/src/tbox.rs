@@ -19,10 +19,15 @@ use crate::{BoxOps, Digested};
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
 pub struct Tbox {
+  /// plain-text content
   pub text: String,
+  /// associated font for `text`
   pub font: Arc<Font>,
+  /// source location where the box originated
   pub locator: Locator,
+  /// misc properties, such as sizing information
   pub properties: HashMap<String, Stored>,
+  /// a Tokens list containing the TeX that created (or could have) the Tbox.
   pub tokens: Tokens,
 }
 
@@ -56,6 +61,11 @@ impl Object for Tbox {
   }
 }
 impl Tbox {
+  /// creates a new Tbox.
+  /// If `font_opt` or `locator_opt` are None, they are obtained from the
+  /// currently active State.  Note that `text` can
+  /// be empty, which contributes nothing to the generated document,
+  /// but does record the TeX code (in the tokens).
   pub fn new(
     text: String,
     font_opt: Option<Arc<Font>>,
@@ -117,7 +127,7 @@ impl Tbox {
       }
     }
   }
-
+  /// checks if the text content is empty
   pub fn is_empty(&self) -> bool { self.text.is_empty() }
 }
 
