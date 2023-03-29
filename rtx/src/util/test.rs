@@ -5,7 +5,7 @@ use libxml::tree::{Node, SaveOptions};
 use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
-use crate::core::DigestionAPI;
+use crate::core_interface::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
 use rtx_core::state::State;
