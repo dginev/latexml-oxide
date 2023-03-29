@@ -25,7 +25,6 @@ use crate::definition::register::{Register,RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
@@ -118,15 +117,21 @@ impl TableName {
 /// High-level catcode profiles
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Catcodes {
+  /// the usual mainmatter catcodes (e.g. @ is other)
   Standard,
+  /// the usual style catcodes (e.g. @ is letter)
   Style,
+  /// left unspecified
   None,
 }
 
 /// Ledger for stacked assignments
 pub type AssignmentCount = HashMap<String, usize>;
+/// The `(table_name, key, value)` contents of a stored table of assignments
 pub type StashTable = Vec<(TableName, String, Stored)>;
 #[derive(Debug, Clone, Default)]
+/// For each of several tables (being "value", "meaning", "catcode" or other space of names),
+/// each table maintains the bound values, and "undo" defines the stack frames
 pub struct UndoFrame {
   locked: bool,
   meaning: AssignmentCount,
@@ -142,6 +147,7 @@ pub struct UndoFrame {
 }
 
 impl UndoFrame {
+  /// borrow the undo assignment counts for a given table name
   pub fn table(&self, name: TableName) -> &AssignmentCount {
     use self::TableName::*;
     match name {
@@ -157,6 +163,7 @@ impl UndoFrame {
       StashActive => &self.stash_active,
     }
   }
+  /// mutably borrow the undo assignment counts for a given table name
   pub fn table_mut(&mut self, name: TableName) -> &mut AssignmentCount {
     use self::TableName::*;
     match name {
@@ -174,53 +181,6 @@ impl UndoFrame {
   }
 }
 
-/// The State efficiently maintain the bindings in a TeX-like fashion.
-/// bindings associate data with keys (eg definitions with macro names)
-/// and respect TeX grouping; that is, an assignment is only in effect
-/// until the current group (opened by \bgroup) is closed (by \egroup).
-///----------------------------------------------------------------------
-/// The objective is to make the following, most-common, operations FAST:
-///   begin & end a group (ie. push/pop a stack frame)
-///   lookup & assignment of values
-/// With the more obvious approach, a "stack of frames", either lookup would involve
-/// checking a sequence of frames until the current value is found;
-/// or, starting a new frame would involve copying bindings for all values
-/// I never quite studied how Knuth does it;
-/// The following structures allow these to be constant operations (usually),
-/// except for endgroup (which is linear in # of changed values in that frame).
-///
-/// There are 2 main structures used here.
-/// For each of several `Table`s (being "value", "meaning", "catcode" or other space of names),
-/// each table maintains the bound values, and "undo" defines the stack frames:
-///    self.table[key] = [`current_value`, `previous_value`, ...]
-///    self.undo[frame].table[key] = (None | n)
-/// such that the "current value" associated with `key` is the 0th element of the table array;
-/// the `previous_value`s (if any) are values that had been assigned within previous groups.
-/// The undo list indicates how many values have been assigned for `key` in
-/// the `frame`'th frame (usually the last is the one of interest).
-/// [Would be simpler to store boolean in undo, but see deactivateScope]
-/// [An UndoFrame contains fields for each State table, and a lock attribute]
-///
-/// So, in handwaving form, the algorithms are as follows:
-/// push-frame == bgroup == begingroup:
-///    push an empty hash {} onto the undo stack;
-/// pop-frame == egroup == endgroup:
-///   for the `n` associated with every key in the topmost hash in the undo stack
-///     pop `n` values from the table
-///   then remove the hash from the undo stack.
-/// Lookup value:
-///   we simply fetch the last element from the table
-/// Assign a value:
-///   local scope (the normal way):
-///     we push a new value into the table described above,
-///     and also increment the associated value in the undo stack
-///   global scope:
-///     remove any locally scoped values, and undo entries for the key
-///     then set the only remaining value to the given one.
-///   named-scope `scope`:
-///      push an entry `[table,key,value]` globally to the `stash` table's value.
-///      And assign locally, if the `scope` is active (has non-zero value in `stash_active` table),
-///
 /// There are tables for
 ///  catcode: keys are char;
 ///     Also, `math:char` =1 when `char` is active in math.
@@ -231,6 +191,7 @@ impl UndoFrame {
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<String, VecDeque<Stored>>;
+
 /// The State efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
@@ -238,27 +199,27 @@ pub type Table = HashMap<String, VecDeque<Stored>>;
 pub struct State {
   // Tables
   /// bookkeeps arbitrary Stored values
-  pub value: Table,
+  value: Table,
   /// The definition assocated with a key, usually a control-sequence.
-  pub meaning: Table,
-  pub stash: Table,
-  pub stash_active: Table,
-  pub catcode: Table,
-  pub mathcode: Table,
-  pub sfcode: Table,
-  pub lccode: Table,
-  pub uccode: Table,
-  pub delcode: Table,
+  meaning: Table,
+  stash: Table,
+  stash_active: Table,
+  catcode: Table,
+  mathcode: Table,
+  sfcode: Table,
+  lccode: Table,
+  uccode: Table,
+  delcode: Table,
   // Table bookkeeping
-  pub undo: VecDeque<UndoFrame>,
+  undo: VecDeque<UndoFrame>,
   // Stateful runtime - data structures
+  /// the schema-derived model used for the current document
   pub model: Model,
-  pub document: Option<Document>,
-  pub prefixes: HashMap<String, bool>,       // ?
-  pub status: RwLock<HashMap<String, bool>>, // ?
-  pub map: Vec<String>,                      // ?
+  prefixes: HashMap<String, bool>,       // ?
   pub tag_properties: HashMap<String, TagOptions>,
+  /// an optional indirect model for long-distance relationships
   pub indirect_model: Option<IndirectModel>,
+  /// Document-related resources declared during core conversion, pending until XML is finalized
   pub pending_resources: Vec<Resource>,
   // Stateful runtime - simple fields
   // TODO: Maybe group these in a "SessionFlags" struct?
@@ -267,14 +228,13 @@ pub struct State {
   pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
   pub status_code: usize,
   pub unlocked: bool,
-    pub noexpand_the: bool,
   pub input_encoding: Option<String>,
-  pub strict: bool,
-  pub include_comments: bool,
+  // strict: bool,
+  // include_comments: bool,
   pub documentid: String,
   pub search_paths: VecDeque<String>,
   pub graphics_paths: VecDeque<String>,
-  pub include_styles: bool,
+  // include_styles: bool,
   pub nomathparse: bool,
   pub reading_alignment: bool,
   // Local structures
@@ -317,10 +277,7 @@ impl Default for State {
       undo: undo_vdq,
       // Stateful runtime - data structures
       model: Model::default(),
-      document: None,
       prefixes: HashMap::default(),
-      status: RwLock::new(HashMap::default()),
-      map: Vec::new(),
       tag_properties: HashMap::default(),
       indirect_model: None,
       pending_resources: Vec::new(),
@@ -331,14 +288,13 @@ impl Default for State {
       unlocked: true,
       current_token: Vec::new(),
       if_frames: Vec::new(),
-      noexpand_the: false,
       input_encoding: None,
-      strict: false,
-      include_comments: true,
+      // strict: false,
+      // include_comments: true,
       documentid: String::new(),
       search_paths: VecDeque::new(),
       graphics_paths: VecDeque::new(),
-      include_styles: false,
+      // include_styles: false,
       nomathparse: false,
       smuggle_the: Vec::new(),
       reading_alignment: false,
@@ -424,9 +380,9 @@ impl State {
       Some(m) => m,
     };
     let verbosity = options.verbosity.unwrap_or(0);
-    let strict = options.strict.unwrap_or(false);
-    let include_comments = options.include_comments.unwrap_or(true);
-    let include_styles = options.include_styles.unwrap_or(false);
+    // let strict = options.strict.unwrap_or(false);
+    // let include_comments = options.include_comments.unwrap_or(true);
+    // let include_styles = options.include_styles.unwrap_or(false);
     let nomathparse = options.nomathparse.unwrap_or(false);
 
     let documentid = match options.documentid {
@@ -447,12 +403,12 @@ impl State {
       catcode: catcodes_typed,
       model,
       verbosity,
-      strict,
-      include_comments,
+      // strict,
+      // include_comments,
       documentid,
       search_paths,
       graphics_paths,
-      include_styles,
+      // include_styles,
       input_encoding: options.input_encoding,
       nomathparse,
       ..State::default()
