@@ -1194,8 +1194,6 @@
 <a href="#1194" id="1194">1194</a>
 <a href="#1195" id="1195">1195</a>
 <a href="#1196" id="1196">1196</a>
-<a href="#1197" id="1197">1197</a>
-<a href="#1198" id="1198">1198</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>std::borrow::{Borrow, Cow};
 <span class="kw">use </span>std::sync::Arc;
@@ -1309,7 +1307,6 @@
         paramlist: <span class="prelude-val">None</span>,
         test: <span class="prelude-val">None</span>,
         conditional_type: ConditionalType::from(cs_name),
-        locked: options.locked,
         skipper: options.skipper,
       },
       options.scope,
@@ -1348,7 +1345,6 @@
               paramlist,
               test,
               conditional_type: ConditionalType::If,
-              locked: options.locked,
               skipper: options.skipper,
             },
             options.scope,
