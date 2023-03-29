@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["converter",""],["core",""],["util",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["converter",""],["core_interface",""],["util",""]]};
