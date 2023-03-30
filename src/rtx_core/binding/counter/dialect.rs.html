@@ -704,8 +704,11 @@
 <a href="#704" id="704">704</a>
 <a href="#705" id="705">705</a>
 <a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{HashMap, VecDeque};
+<span class="kw">use </span>std::collections::{VecDeque};
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
@@ -1208,12 +1211,13 @@
   }
 }
 
-<span class="doccomment">/// Create id, and tags for an itemize type \item
+<span class="attr">#[allow(clippy::float_cmp)]
+</span><span class="doccomment">/// Create id, and tags for an itemize type \item
 </span><span class="kw">pub fn </span>ref_step_item_counter(tag_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">let </span>counter = state.lookup_string(<span class="string">&quot;itemcounter&quot;</span>);
   <span class="kw">let </span>n = state.lookup_int(<span class="string">&quot;itemization_items&quot;</span>);
   state.assign_value(<span class="string">&quot;itemization_items&quot;</span>, n + <span class="number">1</span>, <span class="prelude-val">None</span>);
-  <span class="kw">let </span><span class="kw-2">mut </span>attr: HashMap&lt;String, Stored&gt; = HashMap::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>attr: HashMap&lt;String, Stored&gt; = HashMap::default();
   <span class="kw">if </span>n &gt; <span class="number">0 </span>{
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sep) = state.lookup_dimension(<span class="string">&quot;\\itemsep&quot;</span>) {
       <span class="kw">let </span>default_opt = state.lookup_dimension(<span class="string">&quot;\\lx@default@itemsep&quot;</span>);

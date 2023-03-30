@@ -297,7 +297,7 @@
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>libxml::tree::Node;
@@ -382,7 +382,7 @@
       <span class="comment">// environment-specific
       </span>require_math: <span class="bool-val">false</span>,
       forbid_math: <span class="bool-val">false</span>,
-      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::default())),
       capture_body: <span class="bool-val">false</span>,
       font: <span class="prelude-val">None</span>,
       after_digest_begin: <span class="macro">vec!</span>[],
@@ -455,7 +455,7 @@
       after_digest: <span class="macro">vec!</span>[],
       before_construct: <span class="macro">vec!</span>[],
       after_construct: <span class="macro">vec!</span>[],
-      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| <span class="prelude-val">Ok</span>(HashMap::default())),
       capture_body: <span class="bool-val">false</span>,
       after_digest_body: <span class="macro">vec!</span>[],
       reversion: <span class="prelude-val">None</span>,

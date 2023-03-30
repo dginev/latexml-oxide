@@ -1012,7 +1012,7 @@
      <span class="prelude-val">None</span>,
      <span class="prelude-val">None</span>,
      invoked,
-     HashMap::new(),
+     HashMap::default(),
      p_state)
   });
 
@@ -1032,7 +1032,7 @@
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
         </span><span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), <span class="macro">vec!</span>[value], gullet, i_state)<span class="question-mark">?</span>,
-        HashMap::new(),
+        HashMap::default(),
         i_state)
     });
 
@@ -1068,7 +1068,7 @@
     </span><span class="kw">let </span>internalcs_opt = glyph.map(|<span class="kw">_</span>| <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@mathchardef@{}&quot;</span>, csname)));
     <span class="kw">let </span>internalcs_2 = internalcs_opt.clone();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(internalcs) = internalcs_opt {
-      <span class="kw">let </span><span class="kw-2">mut </span>glyph_props: HashMap&lt;String, Stored&gt; = HashMap::new();
+      <span class="kw">let </span><span class="kw-2">mut </span>glyph_props: HashMap&lt;String, Stored&gt; = HashMap::default();
       glyph_props.insert(<span class="macro">s!</span>(<span class="string">&quot;role&quot;</span>), role.unwrap_or_default().into());
       <span class="kw">let </span>glyph_c = glyph.unwrap();
       <span class="kw">let </span>glyph_str = glyph_c.to_string();

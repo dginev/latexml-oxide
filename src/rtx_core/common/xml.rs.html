@@ -98,7 +98,7 @@
 <a href="#98" id="98">98</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Document, Node, NodeType};
 <span class="kw">use </span>libxml::xpath::Context;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 
 <span class="kw">pub const </span>XMLNS_NS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;http://www.w3.org/2000/xmlns/&quot;</span>;
 <span class="kw">pub const </span>XML_NS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;http://www.w3.org/XML/1998/namespace&quot;</span>;

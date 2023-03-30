@@ -284,7 +284,7 @@
 
   <span class="comment">// \detokenize
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\detokenize GeneralText&quot;</span>, sub[gullet, (text), state] {
-    <span class="macro">Explode!</span>(writable_tokens(<span class="kw-2">&amp;</span>text, state))
+    <span class="macro">Explode!</span>(writable_tokens(<span class="kw-2">&amp;</span>text, state)<span class="question-mark">?</span>)
   });
 
   <span class="comment">// When building an expanded token list, the tokens resulting from the expansion
@@ -319,7 +319,7 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\scantokens GeneralText&quot;</span>, sub[gullet, (tokens), state] {
     gullet.open_mouth(
-      Mouth::new(<span class="kw-2">&amp;</span>writable_tokens(<span class="kw-2">&amp;</span>tokens, state), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
+      Mouth::new(<span class="kw-2">&amp;</span>writable_tokens(<span class="kw-2">&amp;</span>tokens, state)<span class="question-mark">?</span>, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
     <span class="macro">Tokens!</span>()
   });
 

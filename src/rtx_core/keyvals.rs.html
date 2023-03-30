@@ -614,7 +614,7 @@
 <a href="#614" id="614">614</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>libxml::tree::Node;
 
@@ -672,7 +672,7 @@
       hook_missing: <span class="prelude-val">None</span>,
       tuples: Vec::new(),
       cached_pairs: Vec::new(),
-      cached_hash: HashMap::new(),
+      cached_hash: HashMap::default(),
       punct: Vec::new(),
       assign: Vec::new(),
     }
@@ -1027,7 +1027,7 @@
     <span class="comment">// the new data structures to create
     </span><span class="kw">let </span><span class="kw-2">mut </span>newtuples: Vec&lt;KVTuple&gt; = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>pairs = Vec::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>hash: HashMap&lt;String, Vec&lt;Stored&gt;&gt; = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>hash: HashMap&lt;String, Vec&lt;Stored&gt;&gt; = HashMap::default();
 
     <span class="kw">for </span>tuple <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.tuples {
       <span class="comment">// take all the elements we need from the stack
@@ -1185,7 +1185,7 @@
 
   <span class="comment">// returns a key =&gt; ToString(value)
   </span><span class="kw">pub fn </span>get_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashMap&lt;String, String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::default();
     <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash {
       hashed.insert(k.to_string(), v.iter().map(ToString::to_string).collect::&lt;Vec&lt;String&gt;&gt;().join(<span class="string">&quot;&quot;</span>));
     }

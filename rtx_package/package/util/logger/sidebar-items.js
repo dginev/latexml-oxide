@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["init","initialize the logger at a given verbosity `level`"]],"macro":[["print_stderr","prints a to STDERR without a line break"],["println_stderr","prints a single line to STDERR"]]};
+window.SIDEBAR_ITEMS = {"fn":[["init",""]],"macro":[["print_stderr",""],["println_stderr",""]]};

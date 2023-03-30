@@ -2431,17 +2431,6 @@
 <a href="#2431" id="2431">2431</a>
 <a href="#2432" id="2432">2432</a>
 <a href="#2433" id="2433">2433</a>
-<a href="#2434" id="2434">2434</a>
-<a href="#2435" id="2435">2435</a>
-<a href="#2436" id="2436">2436</a>
-<a href="#2437" id="2437">2437</a>
-<a href="#2438" id="2438">2438</a>
-<a href="#2439" id="2439">2439</a>
-<a href="#2440" id="2440">2440</a>
-<a href="#2441" id="2441">2441</a>
-<a href="#2442" id="2442">2442</a>
-<a href="#2443" id="2443">2443</a>
-<a href="#2444" id="2444">2444</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -2930,13 +2919,15 @@
 //       &quot;Expected a conditional defined by \\newif, got &#39;&quot; . ToString($if) . &quot;&#39;&quot;); }
 //   return; }
 
-</span><span class="doccomment">/// Define a primitive control sequence.
-///
+</span><span class="doccomment">///======================================================================
+/// Define a primitive control sequence.
+///======================================================================
 /// Primitives are executed in the Stomach.
 /// The $replacement should be a sub which returns nothing, or a list of `Box`&#39;s or `Whatsit`&#39;s.
 /// The options are:
 ///    is_prefix  : 1 for things like \global, \long, etc.
 ///    registerType : for parameters (but needs to be worked into `DefParameter`, below).
+
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>DefPrimitive {
   <span class="comment">// Case: simple literal replacement
@@ -2944,7 +2935,7 @@
     <span class="kw">let </span>options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {PrimitiveOptions,});
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
     <span class="kw">let </span>closure : PrimitiveClosure = Arc::new(|_stomach: <span class="kw-2">&amp;mut </span>Stomach, _args: Vec&lt;ArgWrap&gt;, inner_state: <span class="kw-2">&amp;mut </span>State| {
-      Tbox::new(<span class="macro-nonterminal">$replacement</span>.to_string(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), HashMap::new(), inner_state).into_digested_result()
+      Tbox::new(<span class="macro-nonterminal">$replacement</span>.to_string(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), HashMap::default(), inner_state).into_digested_result()
     });
     <span class="macro">defi_primitive!</span>(cs, params, <span class="prelude-val">Some</span>(closure), options);
   }};
@@ -3509,7 +3500,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>DefAccent {
   (<span class="macro-nonterminal">$accent</span>:literal, <span class="macro-nonterminal">$combiningchar</span>:expr, <span class="macro-nonterminal">$standalonechar</span>:expr) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>empty_opts : HashMap&lt;String, Stored&gt; = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>empty_opts : HashMap&lt;String, Stored&gt; = HashMap::default();
     <span class="macro">bind_state_mut!</span>(st);
     <span class="macro">DefAccent!</span>(<span class="macro-nonterminal">$accent</span>, <span class="macro-nonterminal">$combiningchar</span>, <span class="macro-nonterminal">$standalonechar</span>, empty_opts, st)
   }};
@@ -3903,12 +3894,6 @@
 // - auto-build the ExpansionOptions data structure from a Perl-like syntax, and validate it along the way
 //  we&#39;re taking things a few pegs further than LaTeXML, as DefMacroI syntax is *included* in DefMacro,
 //  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
-
-</span><span class="doccomment">/// A `$prototype` will be parsed into a command sequence and a list of parameters.
-/// Any macro arguments will be substituted for parameter indicators (eg #1)
-/// in the I&lt;tokens&gt; or tokenized I&lt;string&gt; and the result is used as the expansion
-/// of the control sequence. If I&lt;code&gt; is used, it is called at expansion time
-/// and should return a list of tokens as its result.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>DefMacro {
   <span class="comment">// simplest case - mock macro that discards everything.
@@ -4041,14 +4026,7 @@
   };
 }
 
-
-<span class="doccomment">/// Defines a register with `value` as the initial value
-/// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven&#39;t handled Box&#39;s yet).
-/// Usually, the `prototype` is just the control sequence,
-/// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
-/// that the register value can be accessed when a numeric, dimension, ... value is being read,
-/// and also defines the control sequence for assignment.
-</span><span class="attr">#[macro_export]
+<span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>DefRegister {
   (<span class="macro-nonterminal">$proto</span>:expr =&gt; <span class="macro-nonterminal">$value</span>:expr) =&gt; {{
     <span class="kw">let </span>(cs, params) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
@@ -4329,7 +4307,7 @@
 </span><span class="macro">macro_rules! </span>DocType {
   (<span class="macro-nonterminal">$rootelement</span>:expr, <span class="macro-nonterminal">$pubid</span>:expr, <span class="macro-nonterminal">$sysid</span>:expr) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
-    <span class="kw">let </span><span class="kw-2">mut </span>namespaces: HashMap&lt;String, String&gt; = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>namespaces: HashMap&lt;String, String&gt; = HashMap::default();
     <span class="macro">DocType!</span>(<span class="macro-nonterminal">$rootelement</span>, <span class="macro-nonterminal">$pubid</span>, <span class="macro-nonterminal">$sysid</span>, namespaces, st)
   };
   (<span class="macro-nonterminal">$rootelement</span>:expr, <span class="macro-nonterminal">$pubid</span>:expr, <span class="macro-nonterminal">$sysid</span>:expr, <span class="macro-nonterminal">$namespaces</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {{

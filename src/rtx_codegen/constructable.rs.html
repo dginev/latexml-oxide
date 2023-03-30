@@ -732,7 +732,7 @@
       // makes `current_tag` in particular look very misplaced
       </span><span class="kw">let </span>av = translate_avpairs(<span class="kw-2">&amp;mut </span>replacement);
       operations.push(<span class="macro">quote!</span>(
-        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
         #(#av)*
         document.insert_pi(#current_tag, <span class="prelude-val">Some</span>(av_props))<span class="question-mark">?</span>;
       ));
@@ -777,7 +777,7 @@
       <span class="comment">// Fonts require a bit too much boilerplate at the moment, due to having
       // different directives (code vs asset) and trying to avoid deep cloning.
       </span>operations.push(<span class="macro">quote!</span>(
-        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>av_props : HashMap&lt;String, String&gt; = HashMap::default();
         #(#av)*
         <span class="kw">let </span>this_font_opt = <span class="kw">match </span>props.get(<span class="string">&quot;font&quot;</span>) {
           <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),

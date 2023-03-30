@@ -235,7 +235,7 @@
     tags.insert(<span class="string">&quot;preset&quot;</span>.to_owned(), <span class="bool-val">true</span>.into());
     state.assign_value(<span class="string">&quot;EQUATIONROW_TAGS&quot;</span>, tags, <span class="prelude-val">Some</span>(Scope::Global));
   } <span class="kw">else </span>{
-    state.assign_value(<span class="string">&quot;EQUATIONROW_TAGS&quot;</span>, Stored::HashStored(HashMap::new()), <span class="prelude-val">Some</span>(Scope::Global));
+    state.assign_value(<span class="string">&quot;EQUATIONROW_TAGS&quot;</span>, Stored::HashStored(HashMap::default()), <span class="prelude-val">Some</span>(Scope::Global));
   }
   <span class="kw">let </span>gullet = stomach.get_gullet_mut();
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@@ENDDISPLAYMATH&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@eDM@in@equation&quot;</span>), <span class="prelude-val">None</span>, gullet);
@@ -294,7 +294,7 @@
   <span class="comment">// Now install the tags in $whatsit or current Row, as appropriate.
   </span><span class="kw">let </span>props = <span class="kw">match </span>state.remove_value(<span class="string">&quot;EQUATIONROW_TAGS&quot;</span>) {
     <span class="prelude-val">Some</span>(Stored::HashStored(hs)) =&gt; hs,
-    <span class="kw">_ </span>=&gt; HashMap::new(),
+    <span class="kw">_ </span>=&gt; HashMap::default(),
   };
   <span class="kw">if </span>is_aligned {
     <span class="macro">unimplemented!</span>();

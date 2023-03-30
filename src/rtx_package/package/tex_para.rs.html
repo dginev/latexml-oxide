@@ -145,7 +145,7 @@
 
   // Remember; \par _closes_, not opens, paragraphs!
   // Here, we want to close both an open p and para (if either are open).
-  </span><span class="kw">let </span><span class="kw-2">mut </span>skippable_props: HashMap&lt;String, Stored&gt; = HashMap::new();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>skippable_props: HashMap&lt;String, Stored&gt; = HashMap::default();
   skippable_props.insert(<span class="macro">s!</span>(<span class="string">&quot;alignmentSkippable&quot;</span>), <span class="bool-val">true</span>.into());
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\normal@par&quot;</span>,

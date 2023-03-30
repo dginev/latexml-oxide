@@ -785,7 +785,7 @@
 <span class="kw">use </span>rtx_core::Info;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::cmp::Ordering;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::error::Error;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
@@ -836,7 +836,7 @@
   <span class="doccomment">/// Consumes the `XProps` and returns the (content, font, attributes) in an arrangement suitable for using
   /// the `Document` methods
   </span><span class="kw">pub fn </span>into_attributes(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; XAttributes {
-    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = <span class="self">self</span>.role.take() {
       attrs.insert(String::from(<span class="string">&quot;role&quot;</span>), role.into_owned());
     }

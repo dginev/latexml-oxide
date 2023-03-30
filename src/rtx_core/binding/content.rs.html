@@ -983,10 +983,12 @@
 <a href="#983" id="983">983</a>
 <a href="#984" id="984">984</a>
 <a href="#985" id="985">985</a>
+<a href="#986" id="986">986</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{HashMap, HashSet, VecDeque};
+<span class="kw">use </span>std::collections::{VecDeque};
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::path::Path;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -1463,7 +1465,7 @@
   //   else if execute_default_option_internal(option)) { }
   // } }
   // else {
-  </span><span class="kw">let </span><span class="kw-2">mut </span>requested_options: HashSet&lt;String&gt; = HashSet::new();
+  </span><span class="kw">let </span><span class="kw-2">mut </span>requested_options: HashSet&lt;String&gt; = HashSet::default();
   <span class="kw">for </span>option <span class="kw">in </span>current_options.iter() {
     <span class="kw">match </span>option {
       Stored::String(content) =&gt; {
@@ -1907,7 +1909,7 @@
     params.push(
       Parameter {
         name: Cow::Borrowed(<span class="string">&quot;Optional&quot;</span>),
-        spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;[Default:{}]&quot;</span>, tks.clone().untex())),
+        spec: Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;[Default:{}]&quot;</span>, tks.untex())),
         extra: <span class="macro">vec!</span>[tks],
         ..Parameter::default()
       }

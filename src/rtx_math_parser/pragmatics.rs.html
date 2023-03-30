@@ -586,7 +586,7 @@
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::error::Error;
 
 <span class="kw">use </span><span class="kw">crate</span>::semantics::{Operator, XM};
@@ -1142,7 +1142,7 @@
   <span class="kw">static </span><span class="kw-2">ref </span>PRAGMATIC_BLOCK_MAP : HashMap&lt;char, String&gt; = {
     <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot; in blocks of 3 letter in mathematics,
     // as a fast-and-loose rule of thumb. a-e is an exception as a rather stable 5 letter block with shared utility.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
     <span class="comment">// |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
     </span><span class="kw">let </span>latin_blocks = [(<span class="string">&#39;a&#39;</span>,<span class="string">&#39;e&#39;</span>),(<span class="string">&#39;f&#39;</span>,<span class="string">&#39;h&#39;</span>),(<span class="string">&#39;i&#39;</span>,<span class="string">&#39;k&#39;</span>),(<span class="string">&#39;l&#39;</span>,<span class="string">&#39;n&#39;</span>),(<span class="string">&#39;o&#39;</span>,<span class="string">&#39;q&#39;</span>),(<span class="string">&#39;r&#39;</span>,<span class="string">&#39;t&#39;</span>),(<span class="string">&#39;u&#39;</span>,<span class="string">&#39;w&#39;</span>),(<span class="string">&#39;x&#39;</span>,<span class="string">&#39;z&#39;</span>)];
     <span class="comment">// |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω

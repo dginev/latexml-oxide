@@ -640,7 +640,7 @@
 </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@dual OptionalKeyVals:XMath {}{}&quot;</span>,
   <span class="string">&quot;&lt;ltx:XMDual role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&gt;#2&lt;ltx:XMWrap&gt;#3&lt;/ltx:XMWrap&gt;&lt;/ltx:XMDual&gt;&quot;</span>,
   before_digest =&gt; sub[_stomach,state] {
-    state.push_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, Stored::HashStored(HashMap::new()));
+    state.push_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, Stored::HashStored(HashMap::default()));
   },
   after_digest =&gt; sub[_stomach,whatsit,state] {
     <span class="kw">let </span>kv     = whatsit.get_arg(<span class="number">1</span>);
@@ -759,7 +759,7 @@
 });
 
 <span class="macro">Tag!</span>(<span class="string">&quot;ltx:XMDual&quot;</span>, after_close_late =&gt; sub[document,node,state] {
-  <span class="kw">let </span><span class="kw-2">mut </span>ids  = HashMap::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>ids  = HashMap::default();
   <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
   <span class="comment">// Collect all children with _xmkey attribute
   </span><span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::*[@_xmkey]&quot;</span>, <span class="prelude-val">Some</span>(node), state) {

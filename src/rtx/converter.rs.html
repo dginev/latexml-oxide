@@ -344,15 +344,15 @@
 <span class="kw">use </span>rtx_core::common::object::Object;
 <span class="kw">use </span>rtx_core::common::{Config, DataSize, OutputFormat};
 <span class="kw">use </span>rtx_core::document::Document;
-<span class="kw">use </span>rtx_core::digested::Digested;
 <span class="kw">use </span>rtx_core::list::List;
 <span class="kw">use </span>rtx_core::state::State;
-<span class="kw">use </span>rtx_core::{generate_message, s, Core, CoreOptions, Error, Info};
+<span class="kw">use </span>rtx_core::token;
+<span class="kw">use </span>rtx_core::{generate_message, s, Core, CoreOptions, Digested, Error, Info};
 <span class="kw">use </span>rtx_package::package;
 <span class="kw">use </span>std::sync::Arc;
 <span class="comment">// use std::sync::RwLockWriteGuard;
 
-</span><span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
+</span><span class="kw">use </span><span class="kw">crate</span>::core::DigestionAPI;
 
 <span class="kw">const </span>CONVERTER_IDENTITY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;rtx (v0.1.12)&quot;</span>;
 
@@ -526,7 +526,7 @@
     </span><span class="kw">let </span>dom_result: <span class="prelude-ty">Result</span>&lt;Document&gt;;
     <span class="kw">let </span>serialized = <span class="kw">match </span><span class="self">self</span>.opts.format {
       OutputFormat::TeX =&gt; {
-        <span class="kw">let </span>untex_result = { digested.untex(<span class="self">self</span>.core.get_state_mut()) };
+        <span class="kw">let </span>untex_result = { token::untex_digested(<span class="kw-2">&amp;</span>digested, <span class="bool-val">false</span>, <span class="self">self</span>.core.get_state_mut()) };
         <span class="kw">match </span>untex_result {
           <span class="prelude-val">Ok</span>(tex) =&gt; tex,
           <span class="prelude-val">Err</span>(e) =&gt; {

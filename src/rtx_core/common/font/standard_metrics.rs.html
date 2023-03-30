@@ -1235,7 +1235,7 @@
 <a href="#1235" id="1235">1235</a>
 <a href="#1236" id="1236">1236</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 
 <span class="kw">pub struct </span>MetricData {
   <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
@@ -1265,9 +1265,9 @@
       quad: <span class="number">0.0</span>,
       extraspace: <span class="number">0.0</span>,
       exheight: <span class="number">0.0</span>,
-      ligatures: HashMap::new(),
-      sizes: HashMap::new(),
-      kerns: HashMap::new(),
+      ligatures: HashMap::default(),
+      sizes: HashMap::default(),
+      kerns: HashMap::default(),
       slant: <span class="number">0.0</span>,
     }
   }

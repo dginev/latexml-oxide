@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["init","initialize the logger at a given verbosity `level`"]]};
+window.SIDEBAR_ITEMS = {"fn":[["init",""]]};

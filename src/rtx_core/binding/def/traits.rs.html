@@ -434,9 +434,11 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre><pre class="rust"><code><span class="doccomment">///! A variety of traits helpful for auto-casting between the different components of the conversion toolchain
 </span><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{HashMap, VecDeque};
+<span class="kw">use </span>std::collections::{VecDeque};
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -544,7 +546,7 @@
     </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(stripped) = <span class="self">self</span>.strip_prefix(<span class="string">&#39;#&#39;</span>) {
       <span class="kw">let </span>arg = stripped.parse::&lt;usize&gt;().unwrap_or(<span class="number">1</span>);
       <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|w, state| <span class="kw">match </span>w.get_arg(arg) {
-        <span class="prelude-val">Some</span>(arg) =&gt; arg.compute_size(HashMap::new(), state),
+        <span class="prelude-val">Some</span>(arg) =&gt; arg.compute_size(HashMap::default(), state),
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>((Dimension::default(), Dimension::default(), Dimension::default())),
       }))
     } <span class="kw">else if </span><span class="self">self</span>.is_empty() || <span class="self">self </span>== <span class="string">&quot;0&quot; </span>{
@@ -563,7 +565,7 @@
             text: sized_data.clone(),
             ..Tbox::default()
           })],
-          HashMap::new(),
+          HashMap::default(),
           state,
         )
       }))

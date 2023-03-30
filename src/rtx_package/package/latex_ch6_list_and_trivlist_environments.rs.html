@@ -166,10 +166,10 @@
           <span class="kw">let </span>tag = stomach.digest(tag_expanded, state)<span class="question-mark">?</span>;
           <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;tag&quot; </span>=&gt; tag))
         } <span class="kw">else </span>{
-          <span class="prelude-val">Ok</span>(HashMap::new())
+          <span class="prelude-val">Ok</span>(HashMap::default())
         }
       } <span class="kw">else </span>{
-          <span class="prelude-val">Ok</span>(HashMap::new())
+          <span class="prelude-val">Ok</span>(HashMap::default())
       }
     }
   );

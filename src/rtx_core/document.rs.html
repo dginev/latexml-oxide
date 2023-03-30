@@ -2941,6 +2941,12 @@
 <a href="#2941" id="2941">2941</a>
 <a href="#2942" id="2942">2942</a>
 <a href="#2943" id="2943">2943</a>
+<a href="#2944" id="2944">2944</a>
+<a href="#2945" id="2945">2945</a>
+<a href="#2946" id="2946">2946</a>
+<a href="#2947" id="2947">2947</a>
+<a href="#2948" id="2948">2948</a>
+<a href="#2949" id="2949">2949</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -2953,7 +2959,8 @@
 
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::HashSet;
-<span class="kw">use </span>std::collections::{HashMap, VecDeque};
+<span class="kw">use </span>std::collections::{VecDeque};
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -3038,10 +3045,10 @@
     Document {
       document: doc_scaffold,
       node: root,
-      node_boxes: HashMap::new(),
-      node_fonts: HashMap::new(),
-      idstore: HashMap::new(),
-      rewrite_labels: HashMap::new(),
+      node_boxes: HashMap::default(),
+      node_fonts: HashMap::default(),
+      idstore: HashMap::default(),
+      rewrite_labels: HashMap::default(),
       pending: Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes: Vec::new(),
@@ -3158,7 +3165,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>keys_to_remove: Vec&lt;String&gt; = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>attrs_to_set: Vec&lt;(String, String)&gt; = Vec::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>pending_declaration = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>pending_declaration = HashMap::default();
 
     <span class="kw">if </span><span class="self">self</span>.has_node_font(node) {
       <span class="kw">let </span>desired_font = <span class="self">self</span>.get_node_font(node);
@@ -3250,9 +3257,11 @@
     <span class="prelude-val">Ok</span>(())
   }
 
-
-  <span class="doccomment">/// Document construction at the Current Insertion Point.
+  <span class="doccomment">/// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  /// Document construction at the Current Insertion Point.
+  /// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ///
+  /// **********************************************************************
   /// absorb the given $box into the DOM (called from constructors).
   /// This will return a list of whatever nodes were created.
   /// Note that this may include nodes that are children of other nodes in the list
@@ -3262,7 +3271,7 @@
   /// [Note that recording the nodes being constructed isn&#39;t all that costly,
   /// but filtering them for parent/child relations IS, particularly since it usually isn&#39;t needed]
   ///
-  /// A box that is a TBox, or List, or Whatsit, is responsible for carrying out
+  /// A $box that is a TBox, or List, or Whatsit, is responsible for carrying out
   /// its own insertion, but it should ultimately call methods of Document
   /// that will record the nodes that were created.
   /// $box can also be a plain string (Digested::Postponed)
@@ -3384,10 +3393,10 @@
       };
       <span class="kw">if let </span><span class="prelude-val">Some</span>(font_math) = font_math_opt {
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
-          <span class="self">self</span>.insert_math_token(object, HashMap::new(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font_math), state)<span class="question-mark">?</span>))
+          <span class="self">self</span>.insert_math_token(object, HashMap::default(), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>font_math), state)<span class="question-mark">?</span>))
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
-        <span class="self">self</span>.insert_math_token(object, HashMap::new(), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>))
+        <span class="self">self</span>.insert_math_token(object, HashMap::default(), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>))
       }
     }
   }
@@ -3532,7 +3541,8 @@
 
   <span class="comment">// Check whether it is possible to open $qname at this point,
   // possibly by autoOpen&#39;ing &amp; autoClosing other tags.
-  </span><span class="kw">pub fn </span>is_openable(<span class="kw-2">&amp;</span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+  </span><span class="attr">#[allow(clippy::wrong_self_convention)]
+  </span><span class="kw">pub fn </span>is_openable(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     <span class="kw">let </span><span class="kw-2">mut </span>node_opt = <span class="prelude-val">Some</span>(<span class="self">self</span>.node.clone());
     <span class="kw">while let </span><span class="prelude-val">Some</span>(node) = node_opt {
       <span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>node, state);
@@ -3551,7 +3561,8 @@
   /// any intervening nodes must be autocloseable.
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
-  </span><span class="kw">pub fn </span>is_closeable&lt;T: IntoVDQS&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, tags: T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
+  </span><span class="attr">#[allow(clippy::wrong_self_convention)]
+  </span><span class="kw">pub fn </span>is_closeable&lt;T: IntoVDQS&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tags: T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tags: VecDeque&lt;String&gt; = tags.into_vdqs();
     <span class="kw">let </span><span class="kw-2">mut </span>node_opt = <span class="kw">if </span><span class="self">self</span>.node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
       <span class="self">self</span>.node.get_parent()
@@ -4090,7 +4101,7 @@
   <span class="doccomment">/// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen&#39;able tags?
   /// And if so, return the tag to open.
-  </span><span class="kw">pub fn </span>can_contain_indirect(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+  </span><span class="kw">pub fn </span>can_contain_indirect(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -4108,11 +4119,11 @@
     }
   }
 
-  <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+  <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     <span class="self">self</span>.can_contain_somehow(<span class="kw-2">&amp;</span>state.model.get_node_qname(tag), child, state)
   }
 
-  <span class="kw">pub fn </span>can_contain_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+  <span class="kw">pub fn </span>can_contain_somehow(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     state.model.can_contain(tag, child) || <span class="self">self</span>.can_contain_indirect(tag, child, state).is_some()
   }
 
@@ -5385,7 +5396,7 @@
     <span class="comment">// Expand any document fragments
     </span><span class="kw">let </span>new_children = new_children.into_iter().flat_map(|child| <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::DocumentFragNode) {  child.get_child_nodes() } <span class="kw">else </span>{ <span class="macro">vec!</span>[child] } ).collect::&lt;Vec&lt;Node&gt;&gt;();
     <span class="comment">// Now find all xml:id&#39;s in the new_children and record replacement id&#39;s for them
-    </span><span class="kw">let </span><span class="kw-2">mut </span>id_map = HashMap::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>id_map = HashMap::default();
     <span class="comment">// Find all id&#39;s defined in the copy and change the id.
     </span><span class="kw">for </span>child <span class="kw">in </span>new_children.iter() {
       <span class="kw">for </span>id <span class="kw">in </span><span class="self">self</span>.findvalues(<span class="string">&quot;.//@xml:id&quot;</span>, <span class="prelude-val">Some</span>(child), state) {
@@ -5527,7 +5538,7 @@
   <span class="kw">pub fn </span>add_resource(<span class="kw-2">&amp;mut </span><span class="self">self</span>, resource: Resource, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// let savenode_opt = self.float_to_element(&quot;ltx:resource&quot;, false);
     </span><span class="kw">let </span>savenode_opt = <span class="prelude-val">None</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>attrib: HashMap&lt;String, String&gt; = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>attrib: HashMap&lt;String, String&gt; = HashMap::default();
     attrib.insert(<span class="macro">s!</span>(<span class="string">&quot;src&quot;</span>), resource.name);
     attrib.insert(<span class="macro">s!</span>(<span class="string">&quot;type&quot;</span>), resource.mimetype);
     attrib.insert(<span class="macro">s!</span>(<span class="string">&quot;media&quot;</span>), resource.media);
@@ -5618,6 +5629,7 @@
   <span class="comment">// find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
+  </span><span class="attr">#[allow(clippy::nonminimal_bool)]
   </span><span class="kw">pub fn </span>float_to_label(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
     <span class="kw">let </span>key = <span class="string">&quot;labels&quot;</span>;
     <span class="kw">let </span>ancestors: Vec&lt;Node&gt; = <span class="self">self
@@ -5780,7 +5792,7 @@
       <span class="kw">match </span>child.get_type() {
         <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
           <span class="kw">let </span>tag = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>child, state);
-          <span class="kw">let </span>attributes = child.get_attributes(); <span class="comment">// map { $_-&gt;nodeType == XML_ATTRIBUTE_NODE ? ($self-&gt;getNodeQName($_) =&gt; $_-&gt;getValue) : () }
+          <span class="kw">let </span>attributes = child.get_attributes().into_iter().collect(); <span class="comment">// map { $_-&gt;nodeType == XML_ATTRIBUTE_NODE ? ($self-&gt;getNodeQName($_) =&gt; $_-&gt;getValue) : () }
                                                    // TODO:
                                                    // DANGER: REMOVE the xml:id attribute from $child!!!!
                                                    // This protects against some versions of XML::LibXML that warn against duplicate id&#39;s

@@ -603,7 +603,7 @@
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{HashMap, HashSet};
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
@@ -741,7 +741,7 @@
         <span class="kw-2">&amp;</span>name,
         pathname::PathnameFindOptions {
           paths,
-          extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">&quot;model&quot;</span>)]),
+          types: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">&quot;model&quot;</span>)]),
           installation_subdir: <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">&quot;resources/{}&quot;</span>, schema_type)),
         },
       );
@@ -761,7 +761,7 @@
   <span class="kw">pub fn </span>describe_model(<span class="kw-2">&amp;</span><span class="self">self</span>) {}
 
   <span class="kw">pub fn </span>get_xpath&lt;<span class="lifetime">&#39;o</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;o </span><span class="self">self</span>, document: <span class="kw-2">&amp;</span><span class="lifetime">&#39;o </span>XmlDoc) -&gt; XPath {
-    <span class="kw">let </span><span class="kw-2">mut </span>context = XPath::new(document, HashMap::new());
+    <span class="kw">let </span><span class="kw-2">mut </span>context = XPath::new(document, HashMap::default());
     <span class="kw">for </span>(prefix, ns) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.code_namespaces {
       <span class="comment">// TODO: Is this too slow? We may need to store an active context in the State as an
       // alternative
@@ -1135,7 +1135,7 @@
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = CLASS_MODEL_LINE.captures(<span class="kw-2">&amp;</span>line) {
         <span class="kw">let </span>classname = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span>elements = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-        <span class="kw">let </span><span class="kw-2">mut </span>class_set = HashSet::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>class_set = HashSet::default();
         <span class="kw">for </span>set_element <span class="kw">in </span>elements.split(<span class="string">&#39;,&#39;</span>).collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;() {
           class_set.insert(set_element.to_owned());
         }

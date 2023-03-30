@@ -775,7 +775,97 @@
 <a href="#775" id="775">775</a>
 <a href="#776" id="776">776</a>
 <a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::sync::Arc;
@@ -788,6 +878,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
+<span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::Register;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
@@ -1341,9 +1432,96 @@
   ).collect::&lt;Vec&lt;Token&gt;&gt;()
 }));
 
-<span class="comment">// static UNTEX_LINELENGTH: usize = 78; // [CONSTANT]
+<span class="kw">static </span>UNTEX_LINELENGTH: usize = <span class="number">78</span>; <span class="comment">// [CONSTANT]
+</span><span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
+</span><span class="kw">pub fn </span>untex_digested(digested: <span class="kw-2">&amp;</span>Digested, suppress_linebreak: bool, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+  untex(digested.revert(state)<span class="question-mark">?</span>, suppress_linebreak)
+}
 
-</span><span class="kw">impl </span>Default <span class="kw">for </span>Token {
+<span class="doccomment">/// Recovers a string representation of what may likely have been the source TeX for a given Tokens collection
+/// (note that the LaTeXML linebreak feature is always *disabled* here.)
+</span><span class="kw">pub fn </span>untex(tokens: Tokens, _suppress_linebreak: bool) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+  <span class="kw">let </span>suppress_linebreak = <span class="bool-val">true</span>;
+  <span class="kw">use </span><span class="kw">crate</span>::token::Catcode::<span class="kw-2">*</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; = tokens.unlist().into_iter().collect();
+  <span class="kw">let </span><span class="kw-2">mut </span>tex_string = String::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>length = <span class="number">0</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>level: i32 = <span class="number">0</span>;
+  <span class="kw">let </span><span class="kw-2">mut </span>prevs = String::new();
+  <span class="kw">let </span><span class="kw-2">mut </span>prevcc = COMMENT;
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = tokens.pop_front() {
+    <span class="kw">let </span>cc = token.get_catcode();
+    <span class="kw">if </span>cc == COMMENT {
+      <span class="kw">continue</span>;
+    }
+    <span class="kw">let </span><span class="kw-2">mut </span>token_string = token.get_string().to_owned();
+    <span class="comment">// Note: \n only-used to fail alphanumeric test
+    </span><span class="kw">let </span>first_char = token_string.chars().next().unwrap_or(<span class="string">&#39;\n&#39;</span>);
+    <span class="kw">if </span>cc == LETTER {
+      <span class="comment">// keep &quot;words&quot; together, just for aesthetics
+      </span><span class="kw">while </span>!tokens.is_empty() &amp;&amp; tokens[<span class="number">0</span>].get_catcode() == LETTER {
+        token_string += tokens.pop_front().unwrap().get_string()
+      }
+    }
+    <span class="kw">let </span>l = token_string.len();
+    <span class="kw">if </span>cc == BEGIN {
+      level += <span class="number">1</span>;
+    }
+    <span class="comment">// Seems a reasonable &amp; safe time to line break, for readability, etc.
+    </span><span class="kw">if </span>(cc == SPACE) &amp;&amp; (token_string == <span class="string">&quot;\n&quot;</span>) {
+      <span class="comment">// preserve newlines already present
+      </span><span class="kw">if </span>length &gt; <span class="number">0 </span>{
+        tex_string.push_str(<span class="kw-2">&amp;</span>token_string);
+        length = <span class="number">0</span>;
+      }
+    }
+    <span class="comment">// If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
+    </span><span class="kw">else if </span>((cc == LETTER) || ((cc == OTHER) &amp;&amp; first_char.is_alphanumeric()))
+      &amp;&amp; (prevcc == CS)
+      &amp;&amp; (!prevs.is_empty())
+      &amp;&amp; prevs.chars().rev().next().unwrap().is_alphabetic()
+    <span class="comment">// is this a good replacement for lookup_catcode == LETTER?
+    </span>{
+      <span class="comment">// Insert a (virtual) space before a letter if previous token was a CS w/letters
+      // This is required for letters, but just aesthetic for digits (to me?)
+      // Of course, use a newline if we&#39;re already at end
+      </span><span class="kw">let </span>space = <span class="kw">if </span>!suppress_linebreak &amp;&amp; (length &gt; <span class="number">0</span>) &amp;&amp; (length + l &gt; UNTEX_LINELENGTH) { <span class="string">&#39;\n&#39; </span>} <span class="kw">else </span>{ <span class="string">&#39; &#39; </span>};
+      tex_string.push(space);
+      tex_string.push_str(<span class="kw-2">&amp;</span>token_string);
+      length += <span class="number">1 </span>+ l;
+    } <span class="kw">else if </span>!suppress_linebreak &amp;&amp; (length &gt; <span class="number">0</span>) &amp;&amp; (length + l &gt; UNTEX_LINELENGTH) &amp;&amp; (tokens.len() &gt; <span class="number">1</span>) {
+      <span class="comment">// linebreak before this token?
+      // and not at end! Or even within an arg!
+      </span>tex_string.push_str(<span class="string">&quot;%\n&quot;</span>);
+      tex_string.push_str(<span class="kw-2">&amp;</span>token_string);
+      length = l; <span class="comment">// with %, so that it &quot;disappears&quot;
+    </span>} <span class="kw">else </span>{
+      tex_string.push_str(<span class="kw-2">&amp;</span>token_string);
+      length += l;
+    }
+    <span class="kw">if </span>cc == END {
+      level -= <span class="number">1</span>;
+    }
+
+    prevs = token_string;
+    prevcc = cc;
+  }
+  <span class="comment">// Patch up nesting for valid TeX !!!
+  </span><span class="kw">match </span>level {
+    <span class="number">0 </span>=&gt; {},
+    <span class="number">1i32</span>..=std::i32::MAX =&gt; {
+      <span class="kw">let </span>close_brace_string = String::from_utf8(<span class="macro">vec!</span>[<span class="string">b&#39;}&#39;</span>; level.unsigned_abs() <span class="kw">as </span>usize]).unwrap();
+      tex_string = tex_string + <span class="kw-2">&amp;</span>close_brace_string;
+    },
+    std::i32::MIN..=-<span class="number">1i32 </span>=&gt; {
+      <span class="kw">let </span>open_brace_string = String::from_utf8(<span class="macro">vec!</span>[<span class="string">b&#39;{&#39;</span>; level.unsigned_abs() <span class="kw">as </span>usize]).unwrap();
+      tex_string = open_brace_string + <span class="kw-2">&amp;</span>tex_string;
+    },
+  };
+  <span class="prelude-val">Ok</span>(tex_string)
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Token {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Token {
       text: Cow::Borrowed(<span class="string">&quot;EXPECTED_TOKEN&quot;</span>),

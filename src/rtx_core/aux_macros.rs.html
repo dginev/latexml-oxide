@@ -103,13 +103,14 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Helper macros for quicker and more idiomatic construction and access to data structures.
 
 /// A flexary macro for constructing `HashMap&lt;&amp;&#39;static str, &amp;&#39;static str&gt;` maps
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>static_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>); )*
     map
   }}
@@ -119,7 +120,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>.to_string(), <span class="macro-nonterminal">$val</span>); )*
     map
   }}
@@ -129,7 +130,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>stored_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map : ::std::collections::HashMap&lt;String,Stored&gt; = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map : HashMap&lt;String,Stored&gt; = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>.to_string(), <span class="macro-nonterminal">$val</span>.into()); )*
     map
   }}
@@ -139,7 +140,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>string_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>.to_string(), <span class="macro-nonterminal">$val</span>.to_string()); )*
     map
   }}
@@ -149,7 +150,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>raw_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>); )*
     map
   }}
@@ -159,7 +160,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>raw_char_map {
   ($( <span class="macro-nonterminal">$key</span>:literal =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{
-    <span class="kw">let </span><span class="kw-2">mut </span>map : HashMap&lt;char,<span class="kw">_</span>&gt; = ::std::collections::HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>map : HashMap&lt;char,<span class="kw">_</span>&gt; = HashMap::default();
     $( map.insert(<span class="macro-nonterminal">$key</span>, <span class="macro-nonterminal">$val</span>); )*
     map
   }}
@@ -199,8 +200,9 @@
 </span><span class="macro">macro_rules! </span>set {
     ( $( <span class="macro-nonterminal">$x</span>:expr ),* ) =&gt; {  <span class="comment">// Match zero or more comma delimited items
         </span>{
-            <span class="kw">use </span>std::collections::HashSet;
-            <span class="kw">let </span><span class="kw-2">mut </span>temp_set = HashSet::new();  <span class="comment">// Create a mutable HashSet
+            <span class="comment">// use std::collections::HashSet;
+            </span><span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
+            <span class="kw">let </span><span class="kw-2">mut </span>temp_set = HashSet::default();  <span class="comment">// Create a mutable HashSet
             </span>$(
                 temp_set.insert(<span class="macro-nonterminal">$x</span>); <span class="comment">// Insert each item matched into the HashSet
             </span>)*

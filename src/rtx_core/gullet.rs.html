@@ -1344,19 +1344,11 @@
 <a href="#1344" id="1344">1344</a>
 <a href="#1345" id="1345">1345</a>
 <a href="#1346" id="1346">1346</a>
-<a href="#1347" id="1347">1347</a>
-<a href="#1348" id="1348">1348</a>
-<a href="#1349" id="1349">1349</a>
-<a href="#1350" id="1350">1350</a>
-<a href="#1351" id="1351">1351</a>
-<a href="#1352" id="1352">1352</a>
-<a href="#1353" id="1353">1353</a>
-<a href="#1354" id="1354">1354</a>
-<a href="#1355" id="1355">1355</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{HashSet, VecDeque};
+<span class="kw">use </span>std::collections::{VecDeque};
+<span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
 <span class="kw">use </span>std::mem;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -1585,10 +1577,7 @@
   // Note that most tokens pass through here, so be Fast &amp; Clean! readToken is folded in.
   // `Toplevel&#39; processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
-  // If `commentsok` is true, will also pass comments.
-  </span><span class="doccomment">/// Return the next unexpandable token from the input source, or None if there is no more input.
-  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the input.
-  /// If `commentsok`, a comment read or pending will be returned.
+  // If $commentsok is true, will also pass comments.
   </span><span class="kw">pub fn </span>read_x_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, toplevel_opt: <span class="prelude-ty">Option</span>&lt;bool&gt;, commentsok: bool, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
     <span class="comment">// toplevel should be true by default
     </span><span class="kw">let </span>toplevel = toplevel_opt.unwrap_or(<span class="bool-val">true</span>);
@@ -1748,24 +1737,22 @@
       <span class="prelude-val">None
     </span>}
   }
-  <span class="doccomment">/// Push the `tokens` back into the input stream to be re-read.
-  </span><span class="kw">pub fn </span>unread(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: Tokens) {
+
+  <span class="kw">pub fn </span>unread(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: Tokens) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.mouth {
       <span class="kw">for </span>token <span class="kw">in </span>tokens.unlist().into_iter().rev() {
         runtime.pushback.push_front(token);
       }
     };
   }
-  <span class="doccomment">/// same as `unread`, but drains the `tokens` from its contents
-  </span><span class="kw">pub fn </span>unread_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>Tokens) {
+  <span class="kw">pub fn </span>unread_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tokens: <span class="kw-2">&amp;mut </span>Tokens) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.mouth {
       <span class="kw">for </span>token <span class="kw">in </span>tokens.unlist_mut().drain(..).rev() {
         runtime.pushback.push_front(token);
       }
     };
   }
-  <span class="doccomment">/// same as `unread`, but only for a single `Token`
-  </span><span class="kw">pub fn </span>unread_one(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Token) {
+  <span class="kw">pub fn </span>unread_one(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Token) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = <span class="self">self</span>.mouth {
       runtime.pushback.push_front(token);
     };
@@ -1970,8 +1957,8 @@
   <span class="doccomment">/// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
   </span><span class="kw">pub fn </span>read_until_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, t: Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="self">self</span>.read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(t), state) }
-  <span class="doccomment">/// reads until it encounters a Catcode::BEGIN token
-  </span><span class="kw">pub fn </span>read_until_brace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
+
+  <span class="kw">pub fn </span>read_until_brace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.read_token(state) {
       <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
@@ -1992,8 +1979,8 @@
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(tks))
     }
   }
-  <span class="doccomment">/// reads and discards tokens, until it encounters a conditional, if any
-  </span><span class="kw">pub fn </span>read_next_conditional(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(Token, ConditionalType)&gt; {
+
+  <span class="kw">pub fn </span>read_next_conditional(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(Token, ConditionalType)&gt; {
     <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>token) = <span class="self">self</span>.read_token(state) {
       <span class="kw">if </span>token.get_catcode() == Catcode::SmuggleTHE {
         token = token.without_dont_expand();
@@ -2030,11 +2017,10 @@
       },
     }
   }
-  <span class="doccomment">/// Read and return a LaTeX optional argument; returns C&lt;$default&gt; if there is no &#39;[&#39;,
-  /// otherwise the contents of the [].
-  /// Note that this returns an empty array if [] is present,
-  /// i.e. &quot;[contents]&quot; in TeX will lead to Tokens(contents), otherwise returns None
-  </span><span class="kw">pub fn </span>read_optional(<span class="kw-2">&amp;mut </span><span class="self">self</span>, default: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
+  <span class="comment">// Note that this returns an empty array if [] is present,
+  // [contents] returns Tokens(contents),
+  // otherwise returns None
+  </span><span class="kw">pub fn </span>read_optional(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
     <span class="kw">match </span><span class="self">self</span>.read_non_space(state) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
       <span class="prelude-val">Some</span>(t) =&gt; {
@@ -2042,7 +2028,7 @@
           <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.read_until(<span class="kw-2">&amp;</span><span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>)), state)<span class="question-mark">?</span>))
         } <span class="kw">else </span>{
           <span class="self">self</span>.unread_one(t);
-          <span class="prelude-val">Ok</span>(default)
+          <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         }
       },
     }
@@ -2570,11 +2556,7 @@
     }
   }
 
-  <span class="doccomment">/// Do something, while reading stuff from a specific Mouth.
-  /// This reads ONLY from that mouth (or any mouth openned by code in that source),
-  /// and the mouth should end up empty afterwards, and only be closed here.
-  ///
-  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; R
+  <span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">&amp;mut </span>State) -&gt; R {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     <span class="self">self</span>.open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.

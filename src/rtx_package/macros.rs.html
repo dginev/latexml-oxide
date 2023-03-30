@@ -243,7 +243,7 @@
   (<span class="macro-nonterminal">$var</span>:expr, <span class="macro-nonterminal">$name</span>:expr) =&gt; {{
     <span class="kw">use </span>rtx_core::common::model::Model;
     <span class="kw">use </span>rtx_core::common::relaxng::Relaxng;
-    <span class="kw">use </span>std::collections::HashSet;
+    <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
     <span class="kw">use </span>std::iter::FromIterator;
     <span class="comment">// use rtx_core::common::model::IndirectModel;
     </span><span class="attr">#[derive(LoadModel)]

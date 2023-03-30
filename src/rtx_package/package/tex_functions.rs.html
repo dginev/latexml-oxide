@@ -1451,7 +1451,7 @@
 <span class="doccomment">/// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, &quot;show_token_list&quot; routine, in 292.
-</span><span class="kw">pub fn </span>writable_tokens(tokens: <span class="kw-2">&amp;</span>Tokens, _state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
+</span><span class="kw">pub fn </span>writable_tokens(tokens: <span class="kw-2">&amp;</span>Tokens, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
   <span class="comment">// unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   </span><span class="kw">let </span><span class="kw-2">mut </span>wv = Vec::new();
@@ -1479,7 +1479,7 @@
       },
     }
   }
-  Tokens::new(wv).untex()
+  untex(Tokens::new(wv), <span class="bool-val">true</span>)
 }
 
 <span class="comment">// sub orNull {
@@ -1653,7 +1653,7 @@
 <span class="kw">pub fn </span>aligning_environment(align: <span class="kw-2">&amp;</span>str, class: <span class="kw-2">&amp;</span>str, document: <span class="kw-2">&amp;mut </span>Document, props: <span class="kw-2">&amp;</span>HashMap&lt;String,Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(body)) = props.get(<span class="string">&quot;body&quot;</span>) {
     <span class="comment">// Add class attribute to new nodes.
-    </span><span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>insert_block(document, body, HashMap::new(), state)<span class="question-mark">?</span>.into_iter() {
+    </span><span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>insert_block(document, body, HashMap::default(), state)<span class="question-mark">?</span>.into_iter() {
       set_align_or_class(document, <span class="kw-2">&amp;mut </span>node, align, class, state)<span class="question-mark">?</span>;
     }
   }

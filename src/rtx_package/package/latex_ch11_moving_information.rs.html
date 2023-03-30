@@ -700,7 +700,7 @@
   // Note that latex essentially allows redundant labels, but we can record only one!!!
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\label Semiverbatim&quot;</span>, sub[document, _olabel, props, state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(savenode) = document.float_to_label(state) {
-      <span class="kw">let </span><span class="kw-2">mut </span>labels : HashMap&lt;String,bool&gt; = HashMap::new();
+      <span class="kw">let </span><span class="kw-2">mut </span>labels : HashMap&lt;String,bool&gt; = HashMap::default();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = props.get(<span class="string">&quot;label&quot;</span>) {
         labels.insert(label.to_string(), <span class="bool-val">true</span>);
       }

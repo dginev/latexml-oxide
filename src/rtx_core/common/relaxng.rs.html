@@ -47,7 +47,7 @@
 <a href="#47" id="47">47</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Extract Model information from a RelaxNG schema
 </span><span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="doccomment">/// an internal representation for a RelaxNG schema
 </span><span class="kw">pub struct </span>Relaxng {
   <span class="doccomment">/// the schema name
@@ -69,9 +69,9 @@
     Relaxng {
       name: <span class="macro">s!</span>(<span class="string">&quot;LaTeXML&quot;</span>),
       modules: Vec::new(),
-      elementdefs: HashMap::new(),
-      defs: HashMap::new(),
-      elements: HashMap::new(),
+      elementdefs: HashMap::default(),
+      defs: HashMap::default(),
+      elements: HashMap::default(),
       internal_grammars: <span class="number">0</span>,
     }
   }
@@ -79,7 +79,7 @@
 <span class="kw">impl </span>Relaxng {
   <span class="doccomment">/// declare the schema on a given `Document`
   </span><span class="kw">pub fn </span>add_schema_declaration(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) {
-    <span class="kw">let </span><span class="kw-2">mut </span>attributes = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>attributes = HashMap::default();
     <span class="kw">if </span><span class="self">self</span>.name != <span class="string">&quot;DTD&quot; </span>{
       <span class="comment">// provisions for phasing out DTD
       </span>attributes.insert(<span class="macro">s!</span>(<span class="string">&quot;RelaxNGSchema&quot;</span>), <span class="self">self</span>.name.clone());

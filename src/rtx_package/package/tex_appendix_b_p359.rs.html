@@ -92,7 +92,7 @@
           .specialize(<span class="string">&quot;\u{2026}&quot;</span>));
         <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(<span class="string">&quot;font&quot; </span>=&gt; Stored::Font(Arc::new(new_font)))) <span class="comment">// Since not DefMath!
       </span>} <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(HashMap::new())
+        <span class="prelude-val">Ok</span>(HashMap::default())
       }
   });
 

@@ -391,7 +391,7 @@
 <a href="#391" id="391">391</a>
 <a href="#392" id="392">392</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::error::Error <span class="kw">as </span>ErrorTrait;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::io;
@@ -399,7 +399,7 @@
 <span class="kw">use </span>std::result;
 
 <span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>_NOTE_TIMERS: HashMap&lt;String, String&gt; = HashMap::new();
+  <span class="kw">static </span><span class="kw-2">ref </span>_NOTE_TIMERS: HashMap&lt;String, String&gt; = HashMap::default();
 }
 
 <span class="attr">#[macro_export]

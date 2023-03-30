@@ -132,7 +132,7 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>libxml::tree::Node;
 
@@ -244,7 +244,7 @@
       font,
       mode: <span class="prelude-val">None</span>,
       locator,
-      properties: HashMap::new(),
+      properties: HashMap::default(),
     }
   }
 

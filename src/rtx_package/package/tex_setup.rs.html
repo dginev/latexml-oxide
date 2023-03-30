@@ -1191,7 +1191,7 @@
   );
 
   <span class="macro">DefParameterType!</span>(Optional, sub[gullet, inner, default, state] {
-      <span class="kw">let </span>value = gullet.read_optional(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>value = gullet.read_optional(state)<span class="question-mark">?</span>;
       <span class="kw">let </span>value_2 = <span class="kw">if </span>value.is_none() &amp;&amp; !default.is_empty() {
         ArgWrap::OptionTokens(<span class="prelude-val">Some</span>(default[<span class="number">0</span>].clone()))
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
@@ -1453,7 +1453,7 @@
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   </span><span class="macro">DefParameterType!</span>(OptionalSemiverbatim,
-    sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
     semiverbatim =&gt; <span class="prelude-val">Some</span>(Vec::new()),
     optional =&gt; <span class="bool-val">true</span>,
     reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
@@ -1542,7 +1542,7 @@
   }));
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
+  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
   reader_predigest =&gt; <span class="macro">undigested!</span>(),
   optional =&gt; <span class="bool-val">true</span>,
   reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {

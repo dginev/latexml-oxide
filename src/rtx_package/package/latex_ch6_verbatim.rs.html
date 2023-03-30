@@ -265,7 +265,7 @@
       stomach.egroup(state)<span class="question-mark">?</span>;
       lines.push(<span class="string">&quot;\\end{verbatim}&quot;</span>.to_string());
       <span class="kw">let </span>boxes = lines.into_iter().map(|line|
-        Tbox::new(line.clone(), font.clone(), loc.clone().map(|l| l.into_owned()), <span class="macro">T_OTHER!</span>(line).into(), HashMap::new(), state).into()
+        Tbox::new(line.clone(), font.clone(), loc.clone().map(|l| l.into_owned()), <span class="macro">T_OTHER!</span>(line).into(), HashMap::default(), state).into()
       ).collect();
       whatsit.set_body(boxes, state);
     },

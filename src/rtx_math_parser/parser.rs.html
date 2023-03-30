@@ -826,7 +826,7 @@
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::io::Cursor;
 
 <span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, note_progress, <span class="prelude-ty">Result</span>};
@@ -896,12 +896,12 @@
       builder,
       expert_pragmatics: ValidationPragmatics::expert_defaults(),
       student_pragmatics: ValidationPragmatics::student_defaults(),
-      passed: HashMap::new(),
-      failed: HashMap::new(),
-      unknowns: HashMap::new(),
-      maybe_functions: HashMap::new(),
-      <span class="comment">// punctuation: HashMap::new(),
-      // lostnodes: HashMap::new(),
+      passed: HashMap::default(),
+      failed: HashMap::default(),
+      unknowns: HashMap::default(),
+      maybe_functions: HashMap::default(),
+      <span class="comment">// punctuation: HashMap::default(),
+      // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       </span>n_parsed: <span class="number">0</span>,
       <span class="comment">// strict: true,
@@ -1004,8 +1004,8 @@
   </span><span class="kw">pub fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="self">self</span>.passed = <span class="macro">map!</span>(<span class="string">&quot;ltx:XMath&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMWrap&quot; </span>=&gt; <span class="number">0</span>);
     <span class="self">self</span>.failed = <span class="macro">map!</span>(<span class="string">&quot;ltx:XMath&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMWrap&quot; </span>=&gt; <span class="number">0 </span>);
-    <span class="self">self</span>.unknowns = HashMap::new();
-    <span class="self">self</span>.maybe_functions = HashMap::new();
+    <span class="self">self</span>.unknowns = HashMap::default();
+    <span class="self">self</span>.maybe_functions = HashMap::default();
     <span class="self">self</span>.n_parsed = <span class="number">0</span>;
   }
   <span class="comment">// our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize =&gt; 1, opacity =&gt; 1);

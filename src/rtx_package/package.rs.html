@@ -213,14 +213,13 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
 </pre><pre class="rust"><code><span class="attr">#![allow(unreachable_code)]
 </span><span class="kw">pub use </span>lazy_static::lazy_static;
 <span class="kw">pub use </span>libxml::tree::{Namespace, Node};
 <span class="kw">pub use </span>log;
 <span class="kw">pub use </span>regex::Regex;
 <span class="kw">pub use </span>std::borrow::Cow;
-<span class="kw">pub use </span>std::collections::HashMap;
+<span class="kw">pub use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">pub use </span>std::collections::VecDeque;
 <span class="kw">pub use </span>std::sync::{Arc, RwLock};
 
@@ -271,8 +270,7 @@
 <span class="kw">pub use </span>rtx_core::util::pathname;
 <span class="kw">pub use </span>rtx_core::util::radix;
 <span class="kw">pub use </span>rtx_core::whatsit::Whatsit;
-<span class="kw">pub use </span>rtx_core::digested::{Digested, DigestedData};
-<span class="kw">pub use </span>rtx_core::{BoxOps, Core, TexMode};
+<span class="kw">pub use </span>rtx_core::{BoxOps, Core, Digested, DigestedData, TexMode};
 
 <span class="comment">// ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

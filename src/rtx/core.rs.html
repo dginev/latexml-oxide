@@ -367,6 +367,7 @@
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 
 <span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rtx_core::common::DigestionMode;
@@ -378,9 +379,8 @@
 <span class="kw">use </span>rtx_core::tokens::Tokens;
 <span class="kw">use </span>rtx_core::util::pathname;
 <span class="kw">use </span>rtx_core::util::pathname::PathnameFindOptions;
-<span class="kw">use </span>rtx_core::digested::Digested;
 <span class="comment">// TODO: Clean up these imports -- what belongs where?
-</span><span class="kw">use </span>rtx_core::{fatal, map, s, Core, Debug, Explode, T_CS, T_OTHER, T_SPACE};
+</span><span class="kw">use </span>rtx_core::{fatal, map, s, Core, Debug, Digested, Explode, T_CS, T_OTHER, T_SPACE};
 
 <span class="kw">use </span>rtx_codegen::LoadModel;
 <span class="kw">use </span>rtx_math_parser::MathParser;
@@ -657,7 +657,7 @@
       <span class="kw">if let </span><span class="prelude-val">Some</span>(pathname) = pathname::find(
         <span class="kw-2">&amp;</span>request_base,
         PathnameFindOptions {
-          extensions: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
+          types: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[mode.extension(), String::new()]),
           ..PathnameFindOptions::default()
         },
       ) {
