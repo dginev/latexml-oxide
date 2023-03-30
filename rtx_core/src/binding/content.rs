@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::path::Path;
 
 use crate::common::error::*;

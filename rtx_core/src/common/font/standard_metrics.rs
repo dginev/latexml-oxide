@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 
 pub struct MetricData {
   pub file: &'static str,
@@ -29,9 +29,9 @@ impl Default for MetricData {
       quad: 0.0,
       extraspace: 0.0,
       exheight: 0.0,
-      ligatures: HashMap::new(),
-      sizes: HashMap::new(),
-      kerns: HashMap::new(),
+      ligatures: HashMap::default(),
+      sizes: HashMap::default(),
+      kerns: HashMap::default(),
       slant: 0.0,
     }
   }

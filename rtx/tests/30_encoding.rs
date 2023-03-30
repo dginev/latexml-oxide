@@ -2,12 +2,12 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 
 #[test]
 #[ignore]
 fn can_encode() {
-  let mut requires = HashMap::new();
+  let mut requires = HashMap::default();
   requires.insert("ansinew", "ansinew.def");
   requires.insert("applemac", "applemac.def");
   requires.insert("cp437", "cp437.def");

@@ -25,4 +25,5 @@ dirs = "5.0"
 encoding = "0.2"
 kpathsea = "0.2.3"
 unidecode = "0.3.0"
+rustc-hash = "1.1.0"
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }

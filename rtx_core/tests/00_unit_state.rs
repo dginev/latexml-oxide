@@ -5,7 +5,8 @@ use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::{s, Explode, T_CS, T_OTHER, T_SPACE};
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 
 #[test]
 fn basic_state_init() {
@@ -40,7 +41,7 @@ fn assign_lookup_value() {
     Some(_) => panic!("Looked up value of STRICT didn't match assigned value"),
   };
 
-  let mut hash_val = HashMap::new();
+  let mut hash_val = HashMap::default();
   hash_val.insert(s!("a"), Stored::Bool(true));
   let hash_store = Stored::HashStored(hash_val);
 

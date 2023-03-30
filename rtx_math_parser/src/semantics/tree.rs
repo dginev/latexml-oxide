@@ -6,7 +6,7 @@ use rtx_core::state::State;
 use rtx_core::Info;
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -57,7 +57,7 @@ impl XProps {
   /// Consumes the `XProps` and returns the (content, font, attributes) in an arrangement suitable for using
   /// the `Document` methods
   pub fn into_attributes(mut self) -> XAttributes {
-    let mut attrs = HashMap::new();
+    let mut attrs = HashMap::default();
     if let Some(role) = self.role.take() {
       attrs.insert(String::from("role"), role.into_owned());
     }

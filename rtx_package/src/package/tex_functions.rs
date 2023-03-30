@@ -802,7 +802,7 @@ pub fn dimension_to_spaces(dimen: &Dimension, state: &State) -> Cow<'static, str
 pub fn aligning_environment(align: &str, class: &str, document: &mut Document, props: &HashMap<String,Stored>, state: &mut State) -> Result<()> {
   if let Some(Stored::Digested(body)) = props.get("body") {
     // Add class attribute to new nodes.
-    for mut node in insert_block(document, body, HashMap::new(), state)?.into_iter() {
+    for mut node in insert_block(document, body, HashMap::default(), state)?.into_iter() {
       set_align_or_class(document, &mut node, align, class, state)?;
     }
   }

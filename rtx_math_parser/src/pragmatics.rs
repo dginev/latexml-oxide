@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::error::Error;
 
 use crate::semantics::{Operator, XM};
@@ -555,7 +555,7 @@ lazy_static! {
   static ref PRAGMATIC_BLOCK_MAP : HashMap<char, String> = {
     // generally, we can observe that the latin alphabet shares "intent" in blocks of 3 letter in mathematics,
     // as a fast-and-loose rule of thumb. a-e is an exception as a rather stable 5 letter block with shared utility.
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
     let latin_blocks = [('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
     // |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω

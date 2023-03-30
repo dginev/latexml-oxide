@@ -8,7 +8,7 @@ pub mod primitive;
 pub mod register;
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
 use libxml::tree::Node;

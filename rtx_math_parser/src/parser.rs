@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use libxml::tree::{Node, NodeType};
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::io::Cursor;
 
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
@@ -72,12 +72,12 @@ impl Default for MathParser {
       builder,
       expert_pragmatics: ValidationPragmatics::expert_defaults(),
       student_pragmatics: ValidationPragmatics::student_defaults(),
-      passed: HashMap::new(),
-      failed: HashMap::new(),
-      unknowns: HashMap::new(),
-      maybe_functions: HashMap::new(),
-      // punctuation: HashMap::new(),
-      // lostnodes: HashMap::new(),
+      passed: HashMap::default(),
+      failed: HashMap::default(),
+      unknowns: HashMap::default(),
+      maybe_functions: HashMap::default(),
+      // punctuation: HashMap::default(),
+      // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       n_parsed: 0,
       // strict: true,
@@ -180,8 +180,8 @@ impl MathParser {
   pub fn clear(&mut self) {
     self.passed = map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
     self.failed = map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
-    self.unknowns = HashMap::new();
-    self.maybe_functions = HashMap::new();
+    self.unknowns = HashMap::default();
+    self.maybe_functions = HashMap::default();
     self.n_parsed = 0;
   }
   // our %EXCLUDED_PRETTYNAME_ATTRIBUTES = (fontsize => 1, opacity => 1);

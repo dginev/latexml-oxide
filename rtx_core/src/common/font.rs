@@ -16,7 +16,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -704,7 +704,7 @@ impl Font {
       diffs.push(shape);
       font_properties.shape = self.shape.clone();
     }
-    let mut result = HashMap::new();
+    let mut result = HashMap::default();
 
     if !diffs.is_empty() {
       let font_value = diffs.join(" ");

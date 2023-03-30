@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use libxml::tree::Node;
 
 use crate::common::error::*;
@@ -126,7 +126,7 @@ impl PartialEq for MathPrimitiveOptions {
 
 impl MathPrimitiveOptions {
   pub fn to_hash_stored(&self) -> HashMap<String, Stored> {
-    let mut h = HashMap::new();
+    let mut h = HashMap::default();
     if let Some(ref meaning) = self.meaning {
       h.insert("meaning".to_string(), meaning.into());
     }

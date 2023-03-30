@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 
@@ -279,25 +280,25 @@ impl Default for State {
 
     State {
       // Tables
-      value: HashMap::new(),
-      meaning: HashMap::new(),
-      stash: HashMap::new(),
-      stash_active: HashMap::new(),
-      catcode: HashMap::new(),
-      mathcode: HashMap::new(),
-      sfcode: HashMap::new(),
-      lccode: HashMap::new(),
-      uccode: HashMap::new(),
-      delcode: HashMap::new(),
+      value: HashMap::default(),
+      meaning: HashMap::default(),
+      stash: HashMap::default(),
+      stash_active: HashMap::default(),
+      catcode: HashMap::default(),
+      mathcode: HashMap::default(),
+      sfcode: HashMap::default(),
+      lccode: HashMap::default(),
+      uccode: HashMap::default(),
+      delcode: HashMap::default(),
       // Table bookkeeping
       undo: undo_vdq,
       // Stateful runtime - data structures
       model: Model::default(),
       document: None,
-      prefixes: HashMap::new(),
-      status: RwLock::new(HashMap::new()),
+      prefixes: HashMap::default(),
+      status: RwLock::new(HashMap::default()),
       map: Vec::new(),
-      tag_properties: HashMap::new(),
+      tag_properties: HashMap::default(),
       indirect_model: None,
       pending_resources: Vec::new(),
       // Stateful runtime - simple fields
@@ -354,7 +355,7 @@ impl State {
       Some(cp) => cp,
     };
 
-    let mut catcodes: HashMap<char, Catcode> = HashMap::new();
+    let mut catcodes: HashMap<char, Catcode> = HashMap::default();
     match catcode_profile {
       Catcodes::Standard | Catcodes::Style => {
         catcodes.insert('\\', ESCAPE);
@@ -382,12 +383,12 @@ impl State {
       catcodes.insert('@', LETTER);
     }
 
-    let mut value_table = HashMap::new();
+    let mut value_table = HashMap::default();
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '~', '&', '$', '#', '\'']));
     value_table.insert(s!("SPECIALS"), specials_vdq);
 
-    let mut catcodes_typed: Table = HashMap::new();
+    let mut catcodes_typed: Table = HashMap::default();
     for (k, v) in catcodes {
       let mut vdq = VecDeque::new();
       vdq.push_front(Stored::Catcode(v));
@@ -910,10 +911,10 @@ impl State {
 
   pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
     if !self.value.contains_key(map) || self.value[map].is_empty() {
-      self.assign_internal(TableName::Value, map, Stored::HashStored(HashMap::new()), Some(Scope::Global));
+      self.assign_internal(TableName::Value, map, Stored::HashStored(HashMap::default()), Some(Scope::Global));
     }
     let map_store = self.value.get_mut(map).unwrap();
-    let mut stub_hash = HashMap::new(); // TODO: What is the right abstraction here? this is hacky
+    let mut stub_hash = HashMap::default(); // TODO: What is the right abstraction here? this is hacky
     let mapping = match *map_store.front_mut().unwrap() {
       Stored::HashStored(ref mut mapping) => mapping,
       _ => &mut stub_hash,
@@ -1401,7 +1402,7 @@ impl State {
     }
   }
 
-  pub fn clear_prefixes(&mut self) { self.prefixes = HashMap::new(); }
+  pub fn clear_prefixes(&mut self) { self.prefixes = HashMap::default(); }
 
   // #======================================================================
 
@@ -1602,7 +1603,7 @@ impl State {
   /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
   /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
-    let mut imodel: IndirectModel = HashMap::new();
+    let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
     let mut openable: HashSet<String> = HashSet::new();
     for tag in self.model.get_tags() {
@@ -1614,7 +1615,7 @@ impl State {
     }
 
     for tag in self.model.get_tags() {
-      let mut desc: HashMap<String, HashMap<String, usize>> = HashMap::new();
+      let mut desc: HashMap<String, HashMap<String, usize>> = HashMap::default();
       {
         self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
       }
@@ -1625,20 +1626,20 @@ impl State {
         let mut best = 0; // Find best path to $kid.
         let mut desc_kid_keys: Vec<String> = desc
           .entry(kid.to_owned())
-          .or_insert_with(HashMap::new)
+          .or_insert_with(HashMap::default)
           .keys()
           .map(ToString::to_string)
           .collect();
         desc_kid_keys.sort();
         for start in desc_kid_keys {
           let start_entry = {
-            let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::new);
+            let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
             *kid_entry.entry(start.to_owned()).or_insert(0)
           };
           if start_entry > best {
             imodel
               .entry(tag.to_owned())
-              .or_insert_with(HashMap::new)
+              .or_insert_with(HashMap::default)
               .insert(kid.to_owned(), start.to_owned());
             {
               best = desc[&kid][&start];
@@ -1652,7 +1653,7 @@ impl State {
       // !!! Alarm!!!
       imodel
         .entry(s!("#Document"))
-        .or_insert_with(HashMap::new)
+        .or_insert_with(HashMap::default)
         .insert(s!("#PCDATA"), s!("ltx:p"));
     }
 
@@ -1678,12 +1679,12 @@ impl State {
     let tag_contents: Vec<String> = self.model.get_tag_contents(tag).iter().map(ToString::to_string).collect();
 
     for kid in tag_contents {
-      if desc.entry(kid.clone()).or_insert_with(HashMap::new).contains_key(&start) {
+      if desc.entry(kid.clone()).or_insert_with(HashMap::default).contains_key(&start) {
         continue;
       } // Already solved
 
       if !start.is_empty() {
-        desc.entry(kid.clone()).or_insert_with(HashMap::new).insert(start.clone(), desirability);
+        desc.entry(kid.clone()).or_insert_with(HashMap::default).insert(start.clone(), desirability);
       }
 
       if kid != "#PCDATA" && openable.contains(&kid) {

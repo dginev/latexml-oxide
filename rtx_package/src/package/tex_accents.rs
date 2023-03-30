@@ -40,7 +40,7 @@ pub fn apply_accent(
     font,
     locator.map(|l| l.into_owned()),
     reversion.unwrap_or(Tokens!()),
-    HashMap::new(),
+    HashMap::default(),
     state,
   ))
 }

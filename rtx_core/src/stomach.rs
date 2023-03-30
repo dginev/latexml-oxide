@@ -1,5 +1,6 @@
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
 use crate::common::error::*;
@@ -350,7 +351,7 @@ impl<'t> Stomach {
             font,
             self.gullet.get_locator().map(|l| l.into_owned()),
             Tokens!(meaning),
-            HashMap::new(),
+            HashMap::default(),
             state,
           ))))
         }
@@ -371,7 +372,7 @@ impl<'t> Stomach {
           None,
           None,             // locator
           Tokens!(meaning), // tokens
-          HashMap::new(),   // properties
+          HashMap::default(),   // properties
           state,
         ))))
       },

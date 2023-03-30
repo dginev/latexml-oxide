@@ -9,7 +9,7 @@ mod helpers;
 /// Test cases for rtx
 ///**********************************************************************
 use std::sync::Arc;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 
 use rtx_core::stomach::Stomach;
 use rtx_core::state::State;
@@ -20,7 +20,7 @@ use rtx::util::test::*;
 
 #[test]
 fn can_expand() {
-  let mut requires = HashMap::new();
+  let mut requires = HashMap::default();
   requires.insert("meaning", "t1enc.def");
   requires.insert("ifthen", "ifthen.sty");
 

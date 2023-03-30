@@ -2,7 +2,7 @@
 // use minilp::{ComparisonOp, Variable};
 // use quote::ToTokens;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::collections::HashSet;
 use std::fmt::{self, Display};
 
@@ -263,7 +263,7 @@ impl CurryConstraint {
   //     },
   //     Ordering::Equal => ComparisonOp::Eq,
   //   };
-  //   let mut var_values: HashMap<&String, f64> = HashMap::new();
+  //   let mut var_values: HashMap<&String, f64> = HashMap::default();
 
   //   lhs.to_minilp(&mut var_values, &mut rhs_minilp, false);
 

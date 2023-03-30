@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
+use rustc_hash::{FxHashMap as HashMap};
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -159,7 +160,7 @@ impl Model {
   pub fn describe_model(&self) {}
 
   pub fn get_xpath<'o>(&'o self, document: &'o XmlDoc) -> XPath {
-    let mut context = XPath::new(document, HashMap::new());
+    let mut context = XPath::new(document, HashMap::default());
     for (prefix, ns) in &self.code_namespaces {
       // TODO: Is this too slow? We may need to store an active context in the State as an
       // alternative

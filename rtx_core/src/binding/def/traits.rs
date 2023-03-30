@@ -1,6 +1,7 @@
 ///! A variety of traits helpful for auto-casting between the different components of the conversion toolchain
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
@@ -108,7 +109,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
     } else if let Some(stripped) = self.strip_prefix('#') {
       let arg = stripped.parse::<usize>().unwrap_or(1);
       Some(Arc::new(move |w, state| match w.get_arg(arg) {
-        Some(arg) => arg.compute_size(HashMap::new(), state),
+        Some(arg) => arg.compute_size(HashMap::default(), state),
         None => Ok((Dimension::default(), Dimension::default(), Dimension::default())),
       }))
     } else if self.is_empty() || self == "0" {
@@ -127,7 +128,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
             text: sized_data.clone(),
             ..Tbox::default()
           })],
-          HashMap::new(),
+          HashMap::default(),
           state,
         )
       }))

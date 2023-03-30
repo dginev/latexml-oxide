@@ -2,6 +2,7 @@
 //!
 
 #![allow(missing_docs)]
+extern crate rustc_hash;
 
 /// Auxiliary macros
 #[macro_use]
@@ -52,7 +53,7 @@ pub mod util;
 pub mod whatsit;
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;

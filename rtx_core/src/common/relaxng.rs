@@ -1,6 +1,6 @@
 ///! Extract Model information from a RelaxNG schema
 use crate::document::Document;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 /// an internal representation for a RelaxNG schema
 pub struct Relaxng {
   /// the schema name
@@ -22,9 +22,9 @@ impl Default for Relaxng {
     Relaxng {
       name: s!("LaTeXML"),
       modules: Vec::new(),
-      elementdefs: HashMap::new(),
-      defs: HashMap::new(),
-      elements: HashMap::new(),
+      elementdefs: HashMap::default(),
+      defs: HashMap::default(),
+      elements: HashMap::default(),
       internal_grammars: 0,
     }
   }
@@ -32,7 +32,7 @@ impl Default for Relaxng {
 impl Relaxng {
   /// declare the schema on a given `Document`
   pub fn add_schema_declaration(&self, document: &mut Document) {
-    let mut attributes = HashMap::new();
+    let mut attributes = HashMap::default();
     if self.name != "DTD" {
       // provisions for phasing out DTD
       attributes.insert(s!("RelaxNGSchema"), self.name.clone());
