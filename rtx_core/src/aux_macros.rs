@@ -94,8 +94,9 @@ macro_rules! fontmap {
 macro_rules! set {
     ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
         {
-            use std::collections::HashSet;
-            let mut temp_set = HashSet::new();  // Create a mutable HashSet
+            // use std::collections::HashSet;
+            use rustc_hash::FxHashSet as HashSet;
+            let mut temp_set = HashSet::default();  // Create a mutable HashSet
             $(
                 temp_set.insert($x); // Insert each item matched into the HashSet
             )*

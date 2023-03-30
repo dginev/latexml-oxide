@@ -2,8 +2,7 @@
 // use minilp::{ComparisonOp, Variable};
 // use quote::ToTokens;
 use std::cmp::Ordering;
-use rustc_hash::{FxHashMap as HashMap};
-use std::collections::HashSet;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fmt::{self, Display};
 
 /// A CurryConstraint is a simple linear constraint between named variables and literals
@@ -277,7 +276,7 @@ impl Default for CurryConstraints {
 }
 
 impl CurryConstraints {
-  pub fn new() -> Self { CurryConstraints(HashSet::new()) }
+  pub fn new() -> Self { CurryConstraints(HashSet::default()) }
   pub fn insert(&mut self, value: CurryConstraint) -> bool { self.0.insert(value.simplify()) }
   pub fn iter(&self) -> std::collections::hash_set::Iter<CurryConstraint> { self.0.iter() }
 

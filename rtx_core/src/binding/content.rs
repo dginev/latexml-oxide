@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashSet, VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::path::Path;
 
 use crate::common::error::*;
@@ -479,7 +479,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   //   else if execute_default_option_internal(option)) { }
   // } }
   // else {
-  let mut requested_options: HashSet<String> = HashSet::new();
+  let mut requested_options: HashSet<String> = HashSet::default();
   for option in current_options.iter() {
     match option {
       Stored::String(content) => {

@@ -15,10 +15,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cmp::max;
-use std::collections::hash_map::DefaultHasher;
+use std::hash::{BuildHasher, Hasher, Hash};
 use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
@@ -376,9 +375,10 @@ impl Font {
   }
 
   pub fn to_hashable(&self) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    Hash::hash(self, &mut hasher);
-    hasher.finish()
+    let s = std::collections::hash_map::RandomState::new();
+    let mut new_s = s.build_hasher();
+    Hash::hash(self, &mut new_s);
+    new_s.finish()
   }
 
   // pub fn stringify(&self) -> String {

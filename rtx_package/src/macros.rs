@@ -85,7 +85,7 @@ macro_rules! load_model {
   ($var:expr, $name:expr) => {{
     use rtx_core::common::model::Model;
     use rtx_core::common::relaxng::Relaxng;
-    use std::collections::HashSet;
+    use rustc_hash::FxHashSet as HashSet;
     use std::iter::FromIterator;
     // use rtx_core::common::model::IndirectModel;
     #[derive(LoadModel)]
