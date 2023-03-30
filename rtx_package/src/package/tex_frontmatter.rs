@@ -11,7 +11,7 @@
 // (ie. frontmatter for each sectional unit)
 
 use crate::package::*;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:title",
   "ltx:toctitle",

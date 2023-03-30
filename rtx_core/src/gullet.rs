@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::FxHashSet as HashSet;
 use std::mem;
 use std::sync::Arc;
 

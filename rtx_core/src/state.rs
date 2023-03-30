@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashSet, VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 
@@ -1605,7 +1605,7 @@ impl State {
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
     let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-    let mut openable: HashSet<String> = HashSet::new();
+    let mut openable: HashSet<String> = HashSet::default();
     for tag in self.model.get_tags() {
       if let Some(x) = self.tag_properties.get(&tag) {
         if let Some(true) = x.auto_open {

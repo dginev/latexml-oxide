@@ -1,8 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::borrow::Cow;
-use std::collections::{HashSet};
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -534,7 +533,7 @@ impl Model {
       } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
         let classname = caps.get(1).map_or("", |m| m.as_str());
         let elements = caps.get(2).map_or("", |m| m.as_str());
-        let mut class_set = HashSet::new();
+        let mut class_set = HashSet::default();
         for set_element in elements.split(',').collect::<Vec<&str>>() {
           class_set.insert(set_element.to_owned());
         }
