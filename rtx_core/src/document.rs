@@ -10,7 +10,8 @@ use regex::Regex;
 
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt::Write as _;
 use std::sync::Arc;
 
@@ -95,10 +96,10 @@ impl Document {
     Document {
       document: doc_scaffold,
       node: root,
-      node_boxes: HashMap::new(),
-      node_fonts: HashMap::new(),
-      idstore: HashMap::new(),
-      rewrite_labels: HashMap::new(),
+      node_boxes: HashMap::default(),
+      node_fonts: HashMap::default(),
+      idstore: HashMap::default(),
+      rewrite_labels: HashMap::default(),
       pending: Vec::new(),
       localized_constructed_nodes: Vec::new(),
       constructed_nodes: Vec::new(),
@@ -215,7 +216,7 @@ impl Document {
 
     let mut keys_to_remove: Vec<String> = Vec::new();
     let mut attrs_to_set: Vec<(String, String)> = Vec::new();
-    let mut pending_declaration = HashMap::new();
+    let mut pending_declaration = HashMap::default();
 
     if self.has_node_font(node) {
       let desired_font = self.get_node_font(node);
@@ -443,10 +444,10 @@ impl Document {
       };
       if let Some(font_math) = font_math_opt {
         Ok(Some(
-          self.insert_math_token(object, HashMap::new(), Some(&font_math), state)?))
+          self.insert_math_token(object, HashMap::default(), Some(&font_math), state)?))
       } else {
         Ok(Some(
-        self.insert_math_token(object, HashMap::new(), None, state)?))
+        self.insert_math_token(object, HashMap::default(), None, state)?))
       }
     }
   }
@@ -2446,7 +2447,7 @@ impl Document {
     // Expand any document fragments
     let new_children = new_children.into_iter().flat_map(|child| if child.get_type() == Some(NodeType::DocumentFragNode) {  child.get_child_nodes() } else { vec![child] } ).collect::<Vec<Node>>();
     // Now find all xml:id's in the new_children and record replacement id's for them
-    let mut id_map = HashMap::new();
+    let mut id_map = HashMap::default();
     // Find all id's defined in the copy and change the id.
     for child in new_children.iter() {
       for id in self.findvalues(".//@xml:id", Some(child), state) {
@@ -2588,7 +2589,7 @@ impl Document {
   pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
     // let savenode_opt = self.float_to_element("ltx:resource", false);
     let savenode_opt = None;
-    let mut attrib: HashMap<String, String> = HashMap::new();
+    let mut attrib: HashMap<String, String> = HashMap::default();
     attrib.insert(s!("src"), resource.name);
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
@@ -2842,7 +2843,7 @@ impl Document {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
           let tag = self.get_node_qname(&child, state);
-          let attributes = child.get_attributes(); // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
+          let attributes = child.get_attributes().into_iter().collect(); // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
                                                    // TODO:
                                                    // DANGER: REMOVE the xml:id attribute from $child!!!!
                                                    // This protects against some versions of XML::LibXML that warn against duplicate id's

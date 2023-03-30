@@ -1,5 +1,6 @@
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
 use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
@@ -508,7 +509,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
   let counter = state.lookup_string("itemcounter");
   let n = state.lookup_int("itemization_items");
   state.assign_value("itemization_items", n + 1, None);
-  let mut attr: HashMap<String, Stored> = HashMap::new();
+  let mut attr: HashMap<String, Stored> = HashMap::default();
   if n > 0 {
     if let Some(sep) = state.lookup_dimension("\\itemsep") {
       let default_opt = state.lookup_dimension("\\lx@default@itemsep");

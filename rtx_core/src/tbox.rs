@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
 use libxml::tree::Node;
@@ -32,7 +32,7 @@ impl Default for Tbox {
       text: String::new(),
       font: Arc::new(Font::text_default()),
       locator: Locator::default(),
-      properties: HashMap::new(),
+      properties: HashMap::default(),
       tokens: Tokens!(),
     }
   }

@@ -211,7 +211,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       None,
       None,
       Tokens!(placeholder),
-      HashMap::new(),
+      HashMap::default(),
       state,
     ))])
   }

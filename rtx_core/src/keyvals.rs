@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use libxml::tree::Node;
 
@@ -58,7 +58,7 @@ impl Default for KeyVals {
       hook_missing: None,
       tuples: Vec::new(),
       cached_pairs: Vec::new(),
-      cached_hash: HashMap::new(),
+      cached_hash: HashMap::default(),
       punct: Vec::new(),
       assign: Vec::new(),
     }
@@ -413,7 +413,7 @@ impl KeyVals {
     // the new data structures to create
     let mut newtuples: Vec<KVTuple> = Vec::new();
     let mut pairs = Vec::new();
-    let mut hash: HashMap<String, Vec<Stored>> = HashMap::new();
+    let mut hash: HashMap<String, Vec<Stored>> = HashMap::default();
 
     for tuple in &self.tuples {
       // take all the elements we need from the stack
@@ -571,7 +571,7 @@ impl KeyVals {
 
   // returns a key => ToString(value)
   pub fn get_hash(&self) -> HashMap<String, String> {
-    let mut hashed = HashMap::new();
+    let mut hashed = HashMap::default();
     for (k, v) in &self.cached_hash {
       hashed.insert(k.to_string(), v.iter().map(ToString::to_string).collect::<Vec<String>>().join(""));
     }

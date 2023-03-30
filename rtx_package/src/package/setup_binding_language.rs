@@ -502,7 +502,7 @@ macro_rules! DefPrimitive {
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
     let closure : PrimitiveClosure = Arc::new(|_stomach: &mut Stomach, _args: Vec<ArgWrap>, inner_state: &mut State| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::new(), inner_state).into_digested_result()
+      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::default(), inner_state).into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);
   }};
@@ -1067,7 +1067,7 @@ macro_rules! DefLigature {
 #[macro_export]
 macro_rules! DefAccent {
   ($accent:literal, $combiningchar:expr, $standalonechar:expr) => {{
-    let mut empty_opts : HashMap<String, Stored> = HashMap::new();
+    let mut empty_opts : HashMap<String, Stored> = HashMap::default();
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
   }};
@@ -1874,7 +1874,7 @@ macro_rules! MuGlue {
 macro_rules! DocType {
   ($rootelement:expr, $pubid:expr, $sysid:expr) => {
     bind_state_mut!(st);
-    let mut namespaces: HashMap<String, String> = HashMap::new();
+    let mut namespaces: HashMap<String, String> = HashMap::default();
     DocType!($rootelement, $pubid, $sysid, namespaces, st)
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{

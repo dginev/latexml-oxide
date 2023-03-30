@@ -17,7 +17,7 @@ LoadDefinitions!(state, {
           .specialize("\u{2026}"));
         Ok(map!("font" => Stored::Font(Arc::new(new_font)))) // Since not DefMath!
       } else {
-        Ok(HashMap::new())
+        Ok(HashMap::default())
       }
   });
 

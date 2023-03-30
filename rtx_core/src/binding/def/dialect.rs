@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
+use rustc_hash::{FxHashMap as HashMap};
 
 use regex::Regex;
 
@@ -422,7 +423,7 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
   let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
   let content_closure : ReplacementClosure = if nargs == 0 {
     Arc::new(|document, _args, props, state| {
-      let mut attrs = HashMap::new();
+      let mut attrs = HashMap::default();
       for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
           attrs.insert(key.to_owned(), v.to_string());
@@ -438,14 +439,14 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
     })
   } else {
     Arc::new(|document, args, props, state| {
-      let mut app_attrs = HashMap::new();
+      let mut app_attrs = HashMap::default();
       for key in ["role", "scriptpos"] {
         if let Some(v) = props.get(key) {
           app_attrs.insert(key.to_owned(), v.to_string());
         }
       }
       document.open_element("ltx:XMApp", Some(app_attrs), None, state)?;
-      let mut op_attrs = HashMap::new();
+      let mut op_attrs = HashMap::default();
       if let Some(v) = props.get("operator_stretchy") {
         op_attrs.insert("stretchy".to_owned(), v.to_string());
       }
@@ -568,7 +569,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
     Arc::new(move |document: &mut Document, _, props: &HashMap<String, Stored>, state: &mut State| {
-      let mut attrs = HashMap::new();
+      let mut attrs = HashMap::default();
       for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
           attrs.insert(key.to_owned(), v.to_string());
@@ -597,7 +598,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
     })
   } else {
     Arc::new(move |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
-      let mut attrs = HashMap::new();
+      let mut attrs = HashMap::default();
       for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
           attrs.insert(key.to_owned(), v.to_string());
@@ -615,7 +616,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
         document.open_element("ltx:XMApp", Some(attrs), None, state)?;
       }
       // operator
-      let mut op_attrs = HashMap::new();
+      let mut op_attrs = HashMap::default();
       if let Some(role) = props.get("operator_role") {
         op_attrs.insert(String::from("role"), role.to_string());
       }
@@ -651,7 +652,7 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
     })
   });
   let sizer: Option<SizingClosure> = Some(Arc::new(move |_, state| {
-    Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::new(), state))
+    Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::default(), state))
   }));
 
   // let mut prop_options = options.clone();
@@ -1024,7 +1025,7 @@ type ArgsUnpacked = Vec<Option<Tokens>>;
 // UNLESS they are hidden, in which case they'll be on the content side.
 // So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
 pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<(ArgsUnpacked,ArgsUnpacked)> {
-  let mut used = HashMap::new();
+  let mut used = HashMap::default();
   for cap in ARG_HOLE.captures_iter(presentation) {  // Get the args that were actually used!
     let argi = cap.get(1).unwrap().as_str();
     let entry = used.entry(argi.parse::<usize>()?).or_insert(0);
@@ -1103,7 +1104,7 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
 
   // If single character, handle with a rewrite rule
   if csname.len() == 1 {
-    let mut math_attr_hash: HashMap<String, String> = HashMap::new();
+    let mut math_attr_hash: HashMap<String, String> = HashMap::default();
     transfer_opt_default!(name, options, math_attr_hash);
     transfer_opt_default!(meaning, options, math_attr_hash);
     transfer_opt_default!(omcd, options, math_attr_hash);

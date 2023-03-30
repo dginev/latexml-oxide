@@ -1,5 +1,5 @@
 use libxml::tree::Node;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
 use crate::common::error::*;

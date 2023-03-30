@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use libxml::tree::Node;
 

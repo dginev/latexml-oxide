@@ -1,6 +1,7 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
@@ -517,7 +518,7 @@ unsafe impl Sync for Stored {}
 impl Stored {
   /// helper method that uses `ToString::to_string` to flatten a map with Stored values
   pub fn cast_to_string_hash(in_map: &HashMap<String, Stored>) -> HashMap<String, String> {
-    let mut out_map: HashMap<String, String> = HashMap::new();
+    let mut out_map: HashMap<String, String> = HashMap::default();
     for (key, val) in in_map.iter() {
       out_map.insert(key.to_owned(), val.to_string());
     }

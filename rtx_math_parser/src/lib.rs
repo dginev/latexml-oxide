@@ -1,3 +1,5 @@
+extern crate rustc_hash;
+
 #[macro_use]
 mod grammar;
 mod data;

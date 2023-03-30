@@ -2,7 +2,7 @@ use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::sync::Arc;
 
 use crate::core::DigestionAPI;

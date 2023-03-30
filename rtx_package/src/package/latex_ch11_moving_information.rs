@@ -18,7 +18,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // Note that latex essentially allows redundant labels, but we can record only one!!!
   DefConstructor!("\\label Semiverbatim", sub[document, _olabel, props, state] {
     if let Some(savenode) = document.float_to_label(state) {
-      let mut labels : HashMap<String,bool> = HashMap::new();
+      let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
         labels.insert(label.to_string(), true);
       }

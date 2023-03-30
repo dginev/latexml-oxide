@@ -2,12 +2,12 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 
 #[test]
 #[ignore]
 fn can_babel() {
-  let mut requires = HashMap::new();
+  let mut requires = HashMap::default();
   requires.insert("*", "babel.sty");
   requires.insert("numprints", "numprint.sty");
   requires.insert("german", "germanb.ldf");

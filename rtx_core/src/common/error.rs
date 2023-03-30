@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::error::Error as ErrorTrait;
 use std::fmt;
 use std::io;
@@ -7,7 +7,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use std::result;
 
 lazy_static! {
-  static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::new();
+  static ref _NOTE_TIMERS: HashMap<String, String> = HashMap::default();
 }
 
 #[macro_export]

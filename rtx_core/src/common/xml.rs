@@ -1,6 +1,6 @@
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";

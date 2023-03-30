@@ -184,7 +184,7 @@ DefConstructor!("\\lx@add@Preamble@PI Undigested", "<?latexml preamble='#1'?>");
 DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
   before_digest => sub[_stomach,state] {
-    state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::new()));
+    state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()));
   },
   after_digest => sub[_stomach,whatsit,state] {
     let kv     = whatsit.get_arg(1);
@@ -303,7 +303,7 @@ Tag!("ltx:*", after_open_late => sub[document,node,state] {
 });
 
 Tag!("ltx:XMDual", after_close_late => sub[document,node,state] {
-  let mut ids  = HashMap::new();
+  let mut ids  = HashMap::default();
   let mut refs = Vec::new();
   // Collect all children with _xmkey attribute
   for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node), state) {

@@ -174,7 +174,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       // makes `current_tag` in particular look very misplaced
       let av = translate_avpairs(&mut replacement);
       operations.push(quote!(
-        let mut av_props : HashMap<String, String> = HashMap::new();
+        let mut av_props : HashMap<String, String> = HashMap::default();
         #(#av)*
         document.insert_pi(#current_tag, Some(av_props))?;
       ));
@@ -219,7 +219,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       // Fonts require a bit too much boilerplate at the moment, due to having
       // different directives (code vs asset) and trying to avoid deep cloning.
       operations.push(quote!(
-        let mut av_props : HashMap<String, String> = HashMap::new();
+        let mut av_props : HashMap<String, String> = HashMap::default();
         #(#av)*
         let this_font_opt = match props.get("font") {
           Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),

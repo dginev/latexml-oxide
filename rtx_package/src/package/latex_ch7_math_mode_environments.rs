@@ -42,7 +42,7 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
     tags.insert("preset".to_owned(), true.into());
     state.assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
   } else {
-    state.assign_value("EQUATIONROW_TAGS", Stored::HashStored(HashMap::new()), Some(Scope::Global));
+    state.assign_value("EQUATIONROW_TAGS", Stored::HashStored(HashMap::default()), Some(Scope::Global));
   }
   let gullet = stomach.get_gullet_mut();
   state.let_i(&T_CS!("\\@@ENDDISPLAYMATH"), T_CS!("\\lx@eDM@in@equation"), None, gullet);
@@ -101,7 +101,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
   // Now install the tags in $whatsit or current Row, as appropriate.
   let props = match state.remove_value("EQUATIONROW_TAGS") {
     Some(Stored::HashStored(hs)) => hs,
-    _ => HashMap::new(),
+    _ => HashMap::default(),
   };
   if is_aligned {
     unimplemented!();

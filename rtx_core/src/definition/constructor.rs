@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
 use libxml::tree::Node;
@@ -84,7 +84,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -157,7 +157,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::new())),
+      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,

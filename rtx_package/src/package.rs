@@ -4,7 +4,7 @@ pub use libxml::tree::{Namespace, Node};
 pub use log;
 pub use regex::Regex;
 pub use std::borrow::Cow;
-pub use std::collections::HashMap;
+pub use rustc_hash::{FxHashMap as HashMap};
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
 

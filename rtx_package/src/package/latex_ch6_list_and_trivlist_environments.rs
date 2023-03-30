@@ -61,10 +61,10 @@ LoadDefinitions!(state, {
           let tag = stomach.digest(tag_expanded, state)?;
           Ok(stored_map!("tag" => tag))
         } else {
-          Ok(HashMap::new())
+          Ok(HashMap::default())
         }
       } else {
-          Ok(HashMap::new())
+          Ok(HashMap::default())
       }
     }
   );

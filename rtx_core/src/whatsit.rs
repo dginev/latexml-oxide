@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 // use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
 use libxml::tree::Node;
@@ -44,7 +45,7 @@ impl Default for Whatsit {
   fn default() -> Self {
     Whatsit {
       args: Vec::new(),
-      properties: HashMap::new(),
+      properties: HashMap::default(),
       definition: Arc::new(Expandable::default()),
       reversion: None,
       dual_reversion: None,

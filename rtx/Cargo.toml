@@ -30,6 +30,7 @@ libxml = "0.3.2"
 lazy_static = "1.0"
 regex = "1.7.1"
 glob = "0.3"
+rustc-hash = "1.1.0"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}
 rtx_package = {path = "../rtx_package"}

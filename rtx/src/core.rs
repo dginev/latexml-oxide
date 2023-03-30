@@ -3,6 +3,7 @@ use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
+use rustc_hash::{FxHashMap as HashMap};
 
 use rtx_core::common::error::{note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;

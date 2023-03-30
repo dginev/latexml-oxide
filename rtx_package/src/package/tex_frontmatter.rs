@@ -25,7 +25,7 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
 ];
 
 LoadDefinitions!(state, {
-  AssignValue!("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
+  AssignValue!("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
 
   // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // // The content is the result of digesting $tokens.
@@ -111,7 +111,7 @@ LoadDefinitions!(state, {
       Some(Stored::HashTagData(frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
-    state.assign_value("frontmatter", Stored::HashTagData(HashMap::new()), Some(Scope::Global));
+    state.assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
 
     // order is important here, first go through frontmatter_elements, then any leftover keys.
     let custom_keys: Vec<String> = frontmatter
@@ -127,7 +127,7 @@ LoadDefinitions!(state, {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-        document.set_box_to_absorb(Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::new(), state).into());
+        document.set_box_to_absorb(Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default(), state).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
                                                            //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));

@@ -457,7 +457,7 @@ LoadDefinitions!(outer_state, {
      None,
      None,
      invoked,
-     HashMap::new(),
+     HashMap::default(),
      p_state)
   });
 
@@ -477,7 +477,7 @@ LoadDefinitions!(outer_state, {
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
         Invocation!(T_CS!("\\char"), vec![value], gullet, i_state)?,
-        HashMap::new(),
+        HashMap::default(),
         i_state)
     });
 
@@ -513,7 +513,7 @@ LoadDefinitions!(outer_state, {
     let internalcs_opt = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
     let internalcs_2 = internalcs_opt.clone();
     if let Some(internalcs) = internalcs_opt {
-      let mut glyph_props: HashMap<String, Stored> = HashMap::new();
+      let mut glyph_props: HashMap<String, Stored> = HashMap::default();
       glyph_props.insert(s!("role"), role.unwrap_or_default().into());
       let glyph_c = glyph.unwrap();
       let glyph_str = glyph_c.to_string();

@@ -4,7 +4,7 @@
 #[macro_export]
 macro_rules! static_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map : HashMap<&'static str, &'static str> = ::std::collections::HashMap::new();
+    let mut map : HashMap<&'static str, &'static str> = HashMap::default();
     $( map.insert($key, $val); )*
     map
   }}
@@ -14,7 +14,7 @@ macro_rules! static_map {
 #[macro_export]
 macro_rules! map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map = ::std::collections::HashMap::new();
+    let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val); )*
     map
   }}
@@ -24,7 +24,7 @@ macro_rules! map {
 #[macro_export]
 macro_rules! stored_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map : ::std::collections::HashMap<String,Stored> = ::std::collections::HashMap::new();
+    let mut map : HashMap<String,Stored> = HashMap::default();
     $( map.insert($key.to_string(), $val.into()); )*
     map
   }}
@@ -34,7 +34,7 @@ macro_rules! stored_map {
 #[macro_export]
 macro_rules! string_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map = ::std::collections::HashMap::new();
+    let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val.to_string()); )*
     map
   }}
@@ -44,7 +44,7 @@ macro_rules! string_map {
 #[macro_export]
 macro_rules! raw_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map = ::std::collections::HashMap::new();
+    let mut map = HashMap::default();
     $( map.insert($key, $val); )*
     map
   }}
@@ -54,7 +54,7 @@ macro_rules! raw_map {
 #[macro_export]
 macro_rules! raw_char_map {
   ($( $key:literal => $val:expr ),*) => {{
-    let mut map : HashMap<char,_> = ::std::collections::HashMap::new();
+    let mut map : HashMap<char,_> = HashMap::default();
     $( map.insert($key, $val); )*
     map
   }}
