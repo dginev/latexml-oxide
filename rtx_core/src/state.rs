@@ -415,6 +415,7 @@ impl State {
     }
   }
 
+  /// borrow/get the named table
   pub fn table(&self, name: TableName) -> &Table {
     use self::TableName::*;
     match name {
@@ -430,6 +431,7 @@ impl State {
       StashActive => &self.stash_active,
     }
   }
+  /// mutably borrow/get the named table
   pub fn table_mut(&mut self, name: TableName) -> &mut Table {
     use self::TableName::*;
     match name {
@@ -446,7 +448,7 @@ impl State {
     }
   }
 
-  pub fn assign_internal(&mut self, table_name: TableName, key: &str, value: Stored, mut scope_opt: Option<Scope>) {
+  fn assign_internal(&mut self, table_name: TableName, key: &str, value: Stored, mut scope_opt: Option<Scope>) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
     if let Some(globaldefs) = self.value.get("\\globaldefs") {
@@ -546,7 +548,7 @@ impl State {
           self.assign_internal(TableName::Stash, &scope_name, Stored::Stash(Vec::new()), Some(Scope::Global));
         }
         if let Some(Stored::Stash(ref mut stash)) = self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0) {
-          stash.push((table_name.clone(), key.to_string(), value.clone()));
+          stash.push((table_name, key.to_string(), value.clone()));
         }
         let has_active = match self.stash_active.get(&scope_name) {
           None => false,
@@ -560,7 +562,7 @@ impl State {
   }
 
   //======================================================================
-
+  /// fetches a Stored value at the given key, from the Value table
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
@@ -570,7 +572,7 @@ impl State {
       },
     }
   }
-
+  /// mutably borrows a Stored value at the given key, from the Value table
   pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
     match self.value.get_mut(key) {
       None => None,
@@ -618,7 +620,7 @@ impl State {
       },
     }
   }
-
+  /// assigns a `Stored` value at the given key and scope
   pub fn assign_value<'av, T: Into<Stored>, S: Into<Option<Scope>>>(&'av mut self, key: &'av str, value: T, scope: S) {
     let value = value.into();
     let scope = scope.into();
@@ -646,6 +648,7 @@ impl State {
     }
   }
 
+  /// pops the last value in a named `Stored::VecDequeStored` queue, if any
   pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
     if !self.value.contains_key(key) {
       self.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
@@ -687,13 +690,14 @@ impl State {
     }
   }
 
+  /// like `lookup_value`, but casts the entry into a String (empty if None)
   pub fn lookup_string(&self, key: &str) -> String {
     match self.lookup_value(key) {
       None => String::new(),
       Some(v) => v.into(),
     }
   }
-
+  /// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
   pub fn lookup_int(&self, key: &str) -> i64 {
     match self.lookup_value(key) {
       Some(Stored::Int(i)) => *i,
@@ -963,10 +967,11 @@ impl State {
       },
     }
   }
+  /// assigns a Catcode for a given character
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
     self.assign_internal(TableName::Catcode, &key.to_string(), Stored::Catcode(value), scope);
   }
-
+  /// like `lookup_catcode` but targets Mathcode and its table
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -976,12 +981,13 @@ impl State {
       None => None,
     }
   }
+  /// like `assign_catcode` but targets Mathcode and its table
   pub fn assign_mathcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
+  /// like `lookup_catcode` but targets Sfcode and its table
   pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
     match self.sfcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -991,12 +997,13 @@ impl State {
       None => None,
     }
   }
+  /// like `assign_catcode` but targets Sfcode and its table
   pub fn assign_sfcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Sfcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
+  /// like `lookup_catcode` but targets Lccode and its table
   pub fn lookup_lccode(&self, key: char) -> Option<u16> {
     match self.lccode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1006,12 +1013,13 @@ impl State {
       None => None,
     }
   }
+  /// like `assign_catcode` but targets Lccode and its table
   pub fn assign_lccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Lccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
+  /// like `lookup_catcode` but targets Uccode and its table
   pub fn lookup_uccode(&self, key: char) -> Option<u16> {
     match self.uccode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1021,12 +1029,13 @@ impl State {
       None => None,
     }
   }
+  /// like `assign_catcode` but targets Uccode and its table
   pub fn assign_uccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Uccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
+  /// like `lookup_catcode` but targets Delcode and its table
   pub fn lookup_delcode(&self, key: char) -> Option<u16> {
     match self.delcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1036,6 +1045,7 @@ impl State {
       None => None,
     }
   }
+  /// like `assign_catcode` but targets Delcode and its table
   pub fn assign_delcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
@@ -1166,7 +1176,10 @@ impl State {
       _ => None,
     }
   }
-
+  /// Recognizes mathactive tokens in math mode and also looks for
+  /// cs that have been let to other `executable' tokens.
+  /// Returns a definition object, or a "self inserting" token.
+  /// Used for digestion.
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = token.get_catcode();
     let name = token.get_string();
@@ -1249,12 +1262,15 @@ impl State {
   // to collect those more uniformly and implement here, or in Package
 
   //======================================================================
-
+  /// Starts a new level of grouping.
+  /// Note that this is lower level than C<\bgroup>;
   pub fn push_frame(&mut self) {
     // Easy: just push a new undo frame.
     self.undo.push_front(UndoFrame::default());
   }
 
+  /// Ends the current level of grouping.
+  /// Note that this is lower level than `\egroup`;
   pub fn pop_frame(&mut self) -> Result<()> {
     if self.undo.front().as_ref().unwrap().locked {
       fatal!(TargetUnexpected, Endgroup, "attempt to pop last locked stack frame");
@@ -1281,7 +1297,7 @@ impl State {
   /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
   /// This may give incorrect results for some special environments (e.g. minipage)
   pub fn get_frame_depth(&self) -> usize { self.undo.iter().filter(|frame| !frame.locked).count() - 1 }
-
+  /// begins a semiverbatim frame, neutralizing the usual + requested characters
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
@@ -1310,7 +1326,7 @@ impl State {
       self.assign_font(Arc::new(local_font), Some(Scope::Local));
     }
   }
-
+  /// end by just calling `pop_frame`
   pub fn end_semiverbatim(&mut self) -> Result<()> { self.pop_frame() }
 
   //   #======================================================================
@@ -1371,20 +1387,20 @@ impl State {
   //   return; }
 
   // ======================================================================
-  // Set one of the definition prefixes global, etc (only global matters!)
+  /// Set one of the definition prefixes global, etc (only global matters!)
   pub fn set_prefix(&mut self, prefix: &str) { self.prefixes.insert(prefix.to_string(), true); }
-
+  /// gets the current value of a named prefix
   pub fn get_prefix(&self, prefix: &str) -> bool {
     match self.prefixes.get(prefix) {
       Some(b) => *b,
       _ => false,
     }
   }
-
+  /// clears the global prefixes
   pub fn clear_prefixes(&mut self) { self.prefixes = HashMap::default(); }
 
   // #======================================================================
-
+  ///
   pub fn activate_scope(&mut self, scope: &str) {
     // do not re-activate if already active.
     if let Some(stash_active_entry) = self.stash_active.get(scope) {
@@ -1482,13 +1498,13 @@ impl State {
       }
     }
   }
-
+  /// return all known named scopes
   pub fn get_known_scopes(&self) -> Vec<&String> {
     let mut scopes = self.stash.keys().collect::<Vec<_>>();
     scopes.sort();
     scopes
   }
-
+  /// return the currently activated named scopes
   pub fn get_active_scopes(&self) -> Vec<&String> {
     let mut scopes = self.stash_active.keys().collect::<Vec<_>>();
     scopes.sort();
@@ -1498,7 +1514,7 @@ impl State {
   //======================================================================
   // Units.
   // Put here since it could concievably evolve to depend on the current font.
-
+  /// convert a unit name into a `f64` scaling factor over `sp`
   pub fn convert_unit(&self, unit_arg: &str) -> f64 {
     let unit = unit_arg.to_lowercase();
     // Eventually try to track font size?
@@ -1518,7 +1534,7 @@ impl State {
   }
 
   // #======================================================================
-
+  /// TODO
   pub fn note_status(&self, _category: &str, _what: &str) {
     // Ok, note status is *EXTREMELY* localized
     // it only touches the status field of state,
@@ -1758,12 +1774,14 @@ impl State {
     Ok(token.clone())
   }
 
+  /// simple id generator for a ligature
   pub fn generate_ligature_id(&mut self) -> usize {
     let id = 1 + self.lookup_int("autogen_ligature_id");
     self.assign_value("autogen_ligature_id", Stored::Int(id), Scope::Global);
     id as usize
   }
 
+  /// run the accumulated directives from `\afterassignment`
   pub fn after_assignment(&mut self, gullet: &mut Gullet) {
     match self.remove_value("afterAssignment") {
       Some(Stored::Tokens(after)) => gullet.unread(after),
@@ -1787,22 +1805,26 @@ impl State {
   }
   /// expires the most recent (originally Perl-local) `IfFrame`
   pub fn expire_ifframe(&mut self) { self.if_frames.pop(); }
-
+  /// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn set_smuggle_the(&mut self, smuggle_the: bool) { self.smuggle_the.push(smuggle_the); }
+  /// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn get_smuggle_the(&self) -> bool {
     match self.smuggle_the.last() {
       Some(v) => *v,
       _ => false,
     }
   }
+  /// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn expire_smuggle_the(&mut self) { self.smuggle_the.pop(); }
-
+  /// sets the (localized) current token. see `Stomach::invoke_token`
   pub fn set_current_token(&mut self, token: Arc<Token>) {
     self.current_token.push(token);
   }
+  /// expires the most recent (localized) current token.
   pub fn expire_current_token(&mut self) {
     self.current_token.pop();
   }
+  /// gets the (localized) current token
   pub fn get_current_token(&self) -> Option<Arc<Token>> {
     self.current_token.last().map(Arc::clone)
   }
