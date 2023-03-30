@@ -1806,6 +1806,28 @@
 <a href="#1806" id="1806">1806</a>
 <a href="#1807" id="1807">1807</a>
 <a href="#1808" id="1808">1808</a>
+<a href="#1809" id="1809">1809</a>
+<a href="#1810" id="1810">1810</a>
+<a href="#1811" id="1811">1811</a>
+<a href="#1812" id="1812">1812</a>
+<a href="#1813" id="1813">1813</a>
+<a href="#1814" id="1814">1814</a>
+<a href="#1815" id="1815">1815</a>
+<a href="#1816" id="1816">1816</a>
+<a href="#1817" id="1817">1817</a>
+<a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
+<a href="#1821" id="1821">1821</a>
+<a href="#1822" id="1822">1822</a>
+<a href="#1823" id="1823">1823</a>
+<a href="#1824" id="1824">1824</a>
+<a href="#1825" id="1825">1825</a>
+<a href="#1826" id="1826">1826</a>
+<a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
+<a href="#1829" id="1829">1829</a>
+<a href="#1830" id="1830">1830</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -2222,7 +2244,8 @@
     }
   }
 
-  <span class="kw">pub fn </span>table(<span class="kw-2">&amp;</span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;</span>Table {
+  <span class="doccomment">/// borrow/get the named table
+  </span><span class="kw">pub fn </span>table(<span class="kw-2">&amp;</span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;</span>Table {
     <span class="kw">use </span><span class="self">self</span>::TableName::<span class="kw-2">*</span>;
     <span class="kw">match </span>name {
       Meaning =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.meaning,
@@ -2237,7 +2260,8 @@
       StashActive =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.stash_active,
     }
   }
-  <span class="kw">pub fn </span>table_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;mut </span>Table {
+  <span class="doccomment">/// mutably borrow/get the named table
+  </span><span class="kw">pub fn </span>table_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: TableName) -&gt; <span class="kw-2">&amp;mut </span>Table {
     <span class="kw">use </span><span class="self">self</span>::TableName::<span class="kw-2">*</span>;
     <span class="kw">match </span>name {
       Meaning =&gt; <span class="kw-2">&amp;mut </span><span class="self">self</span>.meaning,
@@ -2253,7 +2277,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>assign_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, table_name: TableName, key: <span class="kw-2">&amp;</span>str, value: Stored, <span class="kw-2">mut </span>scope_opt: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
+  <span class="kw">fn </span>assign_internal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, table_name: TableName, key: <span class="kw-2">&amp;</span>str, value: Stored, <span class="kw-2">mut </span>scope_opt: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
     <span class="comment">// hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(globaldefs) = <span class="self">self</span>.value.get(<span class="string">&quot;\\globaldefs&quot;</span>) {
@@ -2353,7 +2377,7 @@
           <span class="self">self</span>.assign_internal(TableName::Stash, <span class="kw-2">&amp;</span>scope_name, Stored::Stash(Vec::new()), <span class="prelude-val">Some</span>(Scope::Global));
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(<span class="kw-2">ref mut </span>stash)) = <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_name).as_mut().unwrap().get_mut(<span class="number">0</span>) {
-          stash.push((table_name.clone(), key.to_string(), value.clone()));
+          stash.push((table_name, key.to_string(), value.clone()));
         }
         <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_name) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -2367,7 +2391,7 @@
   }
 
   <span class="comment">//======================================================================
-
+  </span><span class="doccomment">/// fetches a Stored value at the given key, from the Value table
   </span><span class="kw">pub fn </span>lookup_value(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt; {
     <span class="kw">match </span><span class="self">self</span>.value.get(key) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
@@ -2377,8 +2401,8 @@
       },
     }
   }
-
-  <span class="kw">pub fn </span>lookup_value_mut&lt;<span class="lifetime">&#39;lv</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; {
+  <span class="doccomment">/// mutably borrows a Stored value at the given key, from the Value table
+  </span><span class="kw">pub fn </span>lookup_value_mut&lt;<span class="lifetime">&#39;lv</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; {
     <span class="kw">match </span><span class="self">self</span>.value.get_mut(key) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front_mut() {
@@ -2425,8 +2449,8 @@
       },
     }
   }
-
-  <span class="kw">pub fn </span>assign_value&lt;<span class="lifetime">&#39;av</span>, T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;av </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;av </span>str, value: T, scope: S) {
+  <span class="doccomment">/// assigns a `Stored` value at the given key and scope
+  </span><span class="kw">pub fn </span>assign_value&lt;<span class="lifetime">&#39;av</span>, T: Into&lt;Stored&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;av </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;av </span>str, value: T, scope: S) {
     <span class="kw">let </span>value = value.into();
     <span class="kw">let </span>scope = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Value, key, value, scope);
@@ -2453,7 +2477,8 @@
     }
   }
 
-  <span class="kw">pub fn </span>pop_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
+  <span class="doccomment">/// pops the last value in a named `Stored::VecDequeStored` queue, if any
+  </span><span class="kw">pub fn </span>pop_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
     <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(key) {
       <span class="self">self</span>.assign_internal(TableName::Value, key, Stored::VecDequeStored(VecDeque::new()), <span class="prelude-val">Some</span>(Scope::Global));
     }
@@ -2494,14 +2519,15 @@
     }
   }
 
-  <span class="kw">pub fn </span>lookup_string(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; String {
+  <span class="doccomment">/// like `lookup_value`, but casts the entry into a String (empty if None)
+  </span><span class="kw">pub fn </span>lookup_string(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; String {
     <span class="kw">match </span><span class="self">self</span>.lookup_value(key) {
       <span class="prelude-val">None </span>=&gt; String::new(),
       <span class="prelude-val">Some</span>(v) =&gt; v.into(),
     }
   }
-
-  <span class="kw">pub fn </span>lookup_int(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; i64 {
+  <span class="doccomment">/// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
+  </span><span class="kw">pub fn </span>lookup_int(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; i64 {
     <span class="kw">match </span><span class="self">self</span>.lookup_value(key) {
       <span class="prelude-val">Some</span>(Stored::Int(i)) =&gt; <span class="kw-2">*</span>i,
       <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)) =&gt; <span class="number">1</span>, <span class="comment">// this is Perl&#39;s boolean -&gt; integer semantics
@@ -2770,11 +2796,12 @@
       },
     }
   }
-  <span class="kw">pub fn </span>assign_catcode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: char, value: Catcode, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
+  <span class="doccomment">/// assigns a Catcode for a given character
+  </span><span class="kw">pub fn </span>assign_catcode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: char, value: Catcode, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
     <span class="self">self</span>.assign_internal(TableName::Catcode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Catcode(value), scope);
   }
-
-  <span class="kw">pub fn </span>lookup_mathcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+  <span class="doccomment">/// like `lookup_catcode` but targets Mathcode and its table
+  </span><span class="kw">pub fn </span>lookup_mathcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
     <span class="kw">match </span><span class="self">self</span>.mathcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -2783,13 +2810,14 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>assign_mathcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
+  <span class="doccomment">/// like `assign_catcode` but targets Mathcode and its table
+  </span><span class="kw">pub fn </span>assign_mathcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
     <span class="kw">let </span>key: char = key.into();
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Mathcode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
-  <span class="kw">pub fn </span>lookup_sfcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+  <span class="doccomment">/// like `lookup_catcode` but targets Sfcode and its table
+  </span><span class="kw">pub fn </span>lookup_sfcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
     <span class="kw">match </span><span class="self">self</span>.sfcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -2798,13 +2826,14 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>assign_sfcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
+  <span class="doccomment">/// like `assign_catcode` but targets Sfcode and its table
+  </span><span class="kw">pub fn </span>assign_sfcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
     <span class="kw">let </span>key: char = key.into();
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Sfcode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
-  <span class="kw">pub fn </span>lookup_lccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+  <span class="doccomment">/// like `lookup_catcode` but targets Lccode and its table
+  </span><span class="kw">pub fn </span>lookup_lccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
     <span class="kw">match </span><span class="self">self</span>.lccode.get(<span class="kw-2">&amp;</span>key.to_string()) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -2813,13 +2842,14 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
+  <span class="doccomment">/// like `assign_catcode` but targets Lccode and its table
+  </span><span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
     <span class="kw">let </span>key: char = key.into();
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Lccode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
-  <span class="kw">pub fn </span>lookup_uccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+  <span class="doccomment">/// like `lookup_catcode` but targets Uccode and its table
+  </span><span class="kw">pub fn </span>lookup_uccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
     <span class="kw">match </span><span class="self">self</span>.uccode.get(<span class="kw-2">&amp;</span>key.to_string()) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -2828,13 +2858,14 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
+  <span class="doccomment">/// like `assign_catcode` but targets Uccode and its table
+  </span><span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
     <span class="kw">let </span>key: char = key.into();
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Uccode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
-  <span class="kw">pub fn </span>lookup_delcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
+  <span class="doccomment">/// like `lookup_catcode` but targets Delcode and its table
+  </span><span class="kw">pub fn </span>lookup_delcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
     <span class="kw">match </span><span class="self">self</span>.delcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
@@ -2843,7 +2874,8 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">pub fn </span>assign_delcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
+  <span class="doccomment">/// like `assign_catcode` but targets Delcode and its table
+  </span><span class="kw">pub fn </span>assign_delcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: C, value: T, scope: S) {
     <span class="kw">let </span>key: char = key.into();
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(TableName::Delcode, <span class="kw-2">&amp;</span>key.to_string(), Stored::Charcode(value.into()), scope);
@@ -2973,8 +3005,11 @@
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
-
-  <span class="kw">pub fn </span>lookup_digestable_definition&lt;<span class="lifetime">&#39;def</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span><span class="kw-2">mut </span><span class="self">self</span>, token: <span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
+  <span class="doccomment">/// Recognizes mathactive tokens in math mode and also looks for
+  /// cs that have been let to other `executable&#39; tokens.
+  /// Returns a definition object, or a &quot;self inserting&quot; token.
+  /// Used for digestion.
+  </span><span class="kw">pub fn </span>lookup_digestable_definition&lt;<span class="lifetime">&#39;def</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span><span class="kw-2">mut </span><span class="self">self</span>, token: <span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
     <span class="kw">let </span>cc = token.get_catcode();
     <span class="kw">let </span>name = token.get_string();
     <span class="kw">let </span>is_active_or_cs = cc.is_active_or_cs();
@@ -3056,13 +3091,16 @@
   // to collect those more uniformly and implement here, or in Package
 
   //======================================================================
-
+  </span><span class="doccomment">/// Starts a new level of grouping.
+  /// Note that this is lower level than C&lt;\bgroup&gt;;
   </span><span class="kw">pub fn </span>push_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="comment">// Easy: just push a new undo frame.
     </span><span class="self">self</span>.undo.push_front(UndoFrame::default());
   }
 
-  <span class="kw">pub fn </span>pop_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="doccomment">/// Ends the current level of grouping.
+  /// Note that this is lower level than `\egroup`;
+  </span><span class="kw">pub fn </span>pop_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.undo.front().as_ref().unwrap().locked {
       <span class="macro">fatal!</span>(TargetUnexpected, Endgroup, <span class="string">&quot;attempt to pop last locked stack frame&quot;</span>);
     <span class="comment">// Fatal(&#39;unexpected&#39;, &#39;&lt;endgroup&gt;&#39;, $self-&gt;getStomach,
@@ -3088,8 +3126,8 @@
   /// by counting all frames which are not Daemon frames (and thus don&#39;t possess _FRAME_LOCK_).
   /// This may give incorrect results for some special environments (e.g. minipage)
   </span><span class="kw">pub fn </span>get_frame_depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="self">self</span>.undo.iter().filter(|frame| !frame.locked).count() - <span class="number">1 </span>}
-
-  <span class="kw">pub fn </span>begin_semiverbatim(<span class="kw-2">&amp;mut </span><span class="self">self</span>, extraspecials: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[char]&gt;) {
+  <span class="doccomment">/// begins a semiverbatim frame, neutralizing the usual + requested characters
+  </span><span class="kw">pub fn </span>begin_semiverbatim(<span class="kw-2">&amp;mut </span><span class="self">self</span>, extraspecials: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[char]&gt;) {
     <span class="comment">// Is this a good/safe enough shorthand, or should we really be doing beginMode?
     </span><span class="self">self</span>.push_frame();
     <span class="self">self</span>.assign_value(<span class="string">&quot;MODE&quot;</span>, Stored::String(<span class="macro">s!</span>(<span class="string">&quot;text&quot;</span>)), <span class="prelude-val">None</span>);
@@ -3117,8 +3155,8 @@
       <span class="self">self</span>.assign_font(Arc::new(local_font), <span class="prelude-val">Some</span>(Scope::Local));
     }
   }
-
-  <span class="kw">pub fn </span>end_semiverbatim(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="self">self</span>.pop_frame() }
+  <span class="doccomment">/// end by just calling `pop_frame`
+  </span><span class="kw">pub fn </span>end_semiverbatim(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="self">self</span>.pop_frame() }
 
   <span class="comment">//   #======================================================================
 
@@ -3178,20 +3216,20 @@
   //   return; }
 
   // ======================================================================
-  // Set one of the definition prefixes global, etc (only global matters!)
+  </span><span class="doccomment">/// Set one of the definition prefixes global, etc (only global matters!)
   </span><span class="kw">pub fn </span>set_prefix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) { <span class="self">self</span>.prefixes.insert(prefix.to_string(), <span class="bool-val">true</span>); }
-
-  <span class="kw">pub fn </span>get_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) -&gt; bool {
+  <span class="doccomment">/// gets the current value of a named prefix
+  </span><span class="kw">pub fn </span>get_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">match </span><span class="self">self</span>.prefixes.get(prefix) {
       <span class="prelude-val">Some</span>(b) =&gt; <span class="kw-2">*</span>b,
       <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
     }
   }
-
-  <span class="kw">pub fn </span>clear_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.prefixes = HashMap::new(); }
+  <span class="doccomment">/// clears the global prefixes
+  </span><span class="kw">pub fn </span>clear_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.prefixes = HashMap::new(); }
 
   <span class="comment">// #======================================================================
-
+  </span><span class="doccomment">///
   </span><span class="kw">pub fn </span>activate_scope(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scope: <span class="kw-2">&amp;</span>str) {
     <span class="comment">// do not re-activate if already active.
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(stash_active_entry) = <span class="self">self</span>.stash_active.get(scope) {
@@ -3289,14 +3327,14 @@
       }
     }
   }
-
-  <span class="kw">pub fn </span>get_known_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
+  <span class="doccomment">/// return all known named scopes
+  </span><span class="kw">pub fn </span>get_known_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash.keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     scopes.sort();
     scopes
   }
-
-  <span class="kw">pub fn </span>get_active_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
+  <span class="doccomment">/// return the currently activated named scopes
+  </span><span class="kw">pub fn </span>get_active_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash_active.keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     scopes.sort();
     scopes
@@ -3305,7 +3343,7 @@
   <span class="comment">//======================================================================
   // Units.
   // Put here since it could concievably evolve to depend on the current font.
-
+  </span><span class="doccomment">/// convert a unit name into a `f64` scaling factor over `sp`
   </span><span class="kw">pub fn </span>convert_unit(<span class="kw-2">&amp;</span><span class="self">self</span>, unit_arg: <span class="kw-2">&amp;</span>str) -&gt; f64 {
     <span class="kw">let </span>unit = unit_arg.to_lowercase();
     <span class="comment">// Eventually try to track font size?
@@ -3325,7 +3363,7 @@
   }
 
   <span class="comment">// #======================================================================
-
+  </span><span class="doccomment">/// TODO
   </span><span class="kw">pub fn </span>note_status(<span class="kw-2">&amp;</span><span class="self">self</span>, _category: <span class="kw-2">&amp;</span>str, _what: <span class="kw-2">&amp;</span>str) {
     <span class="comment">// Ok, note status is *EXTREMELY* localized
     // it only touches the status field of state,
@@ -3565,13 +3603,15 @@
     <span class="prelude-val">Ok</span>(token.clone())
   }
 
-  <span class="kw">pub fn </span>generate_ligature_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; usize {
+  <span class="doccomment">/// simple id generator for a ligature
+  </span><span class="kw">pub fn </span>generate_ligature_id(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; usize {
     <span class="kw">let </span>id = <span class="number">1 </span>+ <span class="self">self</span>.lookup_int(<span class="string">&quot;autogen_ligature_id&quot;</span>);
     <span class="self">self</span>.assign_value(<span class="string">&quot;autogen_ligature_id&quot;</span>, Stored::Int(id), Scope::Global);
     id <span class="kw">as </span>usize
   }
 
-  <span class="kw">pub fn </span>after_assignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet) {
+  <span class="doccomment">/// run the accumulated directives from `\afterassignment`
+  </span><span class="kw">pub fn </span>after_assignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet) {
     <span class="kw">match </span><span class="self">self</span>.remove_value(<span class="string">&quot;afterAssignment&quot;</span>) {
       <span class="prelude-val">Some</span>(Stored::Tokens(after)) =&gt; gullet.unread(after),
       <span class="prelude-val">Some</span>(Stored::Token(after)) =&gt; gullet.unread_one(after),
@@ -3594,23 +3634,27 @@
   }
   <span class="doccomment">/// expires the most recent (originally Perl-local) `IfFrame`
   </span><span class="kw">pub fn </span>expire_ifframe(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.if_frames.pop(); }
-
-  <span class="kw">pub fn </span>set_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>, smuggle_the: bool) { <span class="self">self</span>.smuggle_the.push(smuggle_the); }
-  <span class="kw">pub fn </span>get_smuggle_the(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+  <span class="doccomment">/// set special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
+  </span><span class="kw">pub fn </span>set_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>, smuggle_the: bool) { <span class="self">self</span>.smuggle_the.push(smuggle_the); }
+  <span class="doccomment">/// get special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
+  </span><span class="kw">pub fn </span>get_smuggle_the(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">match </span><span class="self">self</span>.smuggle_the.last() {
       <span class="prelude-val">Some</span>(v) =&gt; <span class="kw-2">*</span>v,
       <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
     }
   }
-  <span class="kw">pub fn </span>expire_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.smuggle_the.pop(); }
-
-  <span class="kw">pub fn </span>set_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Arc&lt;Token&gt;) {
+  <span class="doccomment">/// expire special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
+  </span><span class="kw">pub fn </span>expire_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.smuggle_the.pop(); }
+  <span class="doccomment">/// sets the (localized) current token. see `Stomach::invoke_token`
+  </span><span class="kw">pub fn </span>set_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Arc&lt;Token&gt;) {
     <span class="self">self</span>.current_token.push(token);
   }
-  <span class="kw">pub fn </span>expire_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+  <span class="doccomment">/// expires the most recent (localized) current token.
+  </span><span class="kw">pub fn </span>expire_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="self">self</span>.current_token.pop();
   }
-  <span class="kw">pub fn </span>get_current_token(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Token&gt;&gt; {
+  <span class="doccomment">/// gets the (localized) current token
+  </span><span class="kw">pub fn </span>get_current_token(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Token&gt;&gt; {
     <span class="self">self</span>.current_token.last().map(Arc::clone)
   }
 }
