@@ -436,7 +436,7 @@
 </pre><pre class="rust"><code><span class="doccomment">///! Interface layer for the full range of digested objects
 
 </span><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock}; <span class="comment">//,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;

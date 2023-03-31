@@ -311,6 +311,21 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
 </pre><pre class="rust"><code><span class="kw">use </span>kpathsea::Kpaths;
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
@@ -320,11 +335,15 @@
 <span class="kw">use </span>std::sync::Mutex;
 <span class="kw">use </span>std::path::{Path, PathBuf};
 
-<span class="attr">#[derive(Debug, Clone, Default)]
+<span class="doccomment">/// configuration for filesystem search
+</span><span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="kw">pub struct </span>PathnameFindOptions {
-  <span class="kw">pub </span>paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
-  <span class="kw">pub </span>types: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
-  <span class="kw">pub </span>installation_subdir: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="doccomment">/// the allowed/requested paths to search in
+  </span><span class="kw">pub </span>paths: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  <span class="doccomment">/// the file extensions to search for
+  </span><span class="kw">pub </span>extensions: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
+  <span class="doccomment">/// the location of the installation subdirectory (deprecated?)
+  </span><span class="kw">pub </span>installation_subdir: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="kw">static </span>LITERAL_PROTOCOL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;literal:&quot;</span>;
@@ -362,9 +381,10 @@
 
 </span>}
 
-<span class="kw">pub fn </span>is_url(path: <span class="kw-2">&amp;</span>str) -&gt; bool { URL_RE.is_match(path) }
-
-<span class="kw">pub fn </span>is_literaldata(data: <span class="kw-2">&amp;</span>str) -&gt; bool { data.starts_with(LITERAL_PROTOCOL) }
+<span class="doccomment">/// checks if the path is a conforming URL string
+</span><span class="kw">pub fn </span>is_url(path: <span class="kw-2">&amp;</span>str) -&gt; bool { URL_RE.is_match(path) }
+<span class="doccomment">/// checks if the path starts with the &quot;literal:&quot; protocol
+</span><span class="kw">pub fn </span>is_literaldata(data: <span class="kw-2">&amp;</span>str) -&gt; bool { data.starts_with(LITERAL_PROTOCOL) }
 
 <span class="doccomment">/// check whether a pathname is reloadable as a TeX definition
 </span><span class="kw">pub fn </span>is_reloadable(pathname: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -374,10 +394,10 @@
   // to load an adjacently defined language, so allow that.
   </span>ext == <span class="string">&quot;ldf&quot;
 </span>}
-
-<span class="kw">pub fn </span>is_absolute(path: <span class="kw-2">&amp;</span>str) -&gt; bool { Path::new(<span class="kw-2">&amp;</span>canonical(path)).is_absolute() }
-
-<span class="kw">pub fn </span>absolute(path: <span class="kw-2">&amp;</span>str) -&gt; String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
+<span class="doccomment">/// absolute paths start with the filesystem root - check if this is one
+</span><span class="kw">pub fn </span>is_absolute(path: <span class="kw-2">&amp;</span>str) -&gt; bool { Path::new(<span class="kw-2">&amp;</span>canonical(path)).is_absolute() }
+<span class="doccomment">/// convert a (possibly relative) file path to an absolute one
+</span><span class="kw">pub fn </span>absolute(path: <span class="kw-2">&amp;</span>str) -&gt; String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
 
 <span class="doccomment">/// Split the pathname into components (dir,name,type).
 /// If pathname is absolute, dir starts with volume or &#39;/&#39;
@@ -453,7 +473,8 @@
   }
 }
 
-<span class="kw">pub fn </span>concat(dir: <span class="kw-2">&amp;</span>str, file: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="doccomment">/// combine a directory and a base name into a full path
+</span><span class="kw">pub fn </span>concat(dir: <span class="kw-2">&amp;</span>str, file: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">if </span>dir.is_empty() {
     file.to_owned()
   } <span class="kw">else if </span>file.is_empty() || file == <span class="string">&quot;.&quot; </span>{
@@ -517,7 +538,7 @@
   }
   <span class="comment">// extract the desired extensions.
   </span><span class="kw">let </span><span class="kw-2">mut </span>exts = Vec::new();
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(ext_vec) = options.types {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(ext_vec) = options.extensions {
     <span class="kw">for </span>ext <span class="kw">in </span>ext_vec {
       <span class="kw">if </span>ext.is_empty() || pathname_ext == ext.to_lowercase() {
         exts.push(String::new());
@@ -560,7 +581,8 @@
   paths
 }
 
-<span class="kw">pub fn </span>find(pathname: <span class="kw-2">&amp;</span>str, options: PathnameFindOptions) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<span class="doccomment">/// find the requested `pathname` using the `options` search configuration
+</span><span class="kw">pub fn </span>find(pathname: <span class="kw-2">&amp;</span>str, options: PathnameFindOptions) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
   <span class="kw">if </span>!pathname.is_empty() {
     <span class="kw">let </span>paths = candidate_pathnames(pathname, options);
     <span class="kw">for </span>path <span class="kw">in </span>paths {
@@ -572,7 +594,8 @@
   <span class="prelude-val">None
 </span>}
 
-<span class="kw">pub fn </span>file_name(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="doccomment">/// transform to a canonical file name, via `Path::file_name`
+</span><span class="kw">pub fn </span>file_name(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>canonical_pathname = canonical(pathname);
   <span class="kw">let </span>canonical_path = Path::new(<span class="kw-2">&amp;</span>canonical_pathname);
   <span class="kw">match </span>canonical_path.file_name() {
@@ -582,7 +605,8 @@
   .to_lowercase()
 }
 
-<span class="kw">pub fn </span>file_stem(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="doccomment">/// transform to a base name (via `Path::file_stem`)
+</span><span class="kw">pub fn </span>file_stem(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>canonical_pathname = canonical(pathname);
   <span class="kw">let </span>canonical_path = Path::new(<span class="kw-2">&amp;</span>canonical_pathname);
   <span class="kw">match </span>canonical_path.file_stem() {
@@ -592,7 +616,8 @@
   .to_lowercase()
 }
 
-<span class="kw">pub fn </span>directory(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="doccomment">/// obtain the directory portion of a pathname (via `Path::parent`)
+</span><span class="kw">pub fn </span>directory(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>canonical_pathname = canonical(pathname);
   <span class="kw">let </span>canonical_path = Path::new(<span class="kw-2">&amp;</span>canonical_pathname);
   <span class="kw">match </span>canonical_path.parent() {
@@ -602,7 +627,8 @@
   .to_lowercase()
 }
 
-<span class="kw">pub fn </span>extension(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
+<span class="doccomment">/// obtain the extension portion of a pathname (via `Path::extension`)
+</span><span class="kw">pub fn </span>extension(pathname: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>canonical_pathname = canonical(pathname);
   <span class="kw">let </span>canonical_path = Path::new(<span class="kw-2">&amp;</span>canonical_pathname);
   <span class="kw">match </span>canonical_path.extension() {
@@ -612,7 +638,9 @@
   .to_lowercase()
 }
 
-<span class="kw">pub fn </span>kpsewhich(candidates: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<span class="doccomment">/// search for a list of candidate names via the external `kpsewhich` utility
+/// returning the first path that is found
+</span><span class="kw">pub fn </span>kpsewhich(candidates: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
   <span class="kw">for </span>candidate <span class="kw">in </span>candidates {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = KPSE.lock().unwrap().find_file(candidate) {
       <span class="kw">return </span><span class="prelude-val">Some</span>(path);
@@ -621,8 +649,10 @@
   <span class="prelude-val">None
 </span>}
 
-<span class="kw">pub fn </span>is_nasty(file: <span class="kw-2">&amp;</span>str) -&gt; bool { PATHNAME_IS_NASTY_RE.is_match(file) }
+<span class="doccomment">/// check if pathname contains dangerous pieces
+</span><span class="kw">pub fn </span>is_nasty(file: <span class="kw-2">&amp;</span>str) -&gt; bool { PATHNAME_IS_NASTY_RE.is_match(file) }
 
-<span class="kw">pub fn </span>cwd() -&gt; String { env::current_dir().unwrap().to_string_lossy().to_string() }
+<span class="doccomment">/// returns the current working directory
+</span><span class="kw">pub fn </span>cwd() -&gt; String { env::current_dir().unwrap().to_string_lossy().to_string() }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

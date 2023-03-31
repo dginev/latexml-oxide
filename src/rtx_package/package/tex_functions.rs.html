@@ -1451,7 +1451,7 @@
 <span class="doccomment">/// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, &quot;show_token_list&quot; routine, in 292.
-</span><span class="kw">pub fn </span>writable_tokens(tokens: <span class="kw-2">&amp;</span>Tokens, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+</span><span class="kw">pub fn </span>writable_tokens(tokens: <span class="kw-2">&amp;</span>Tokens, _state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
   <span class="comment">// unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   </span><span class="kw">let </span><span class="kw-2">mut </span>wv = Vec::new();
@@ -1479,7 +1479,7 @@
       },
     }
   }
-  untex(Tokens::new(wv), <span class="bool-val">true</span>)
+  Tokens::new(wv).untex()
 }
 
 <span class="comment">// sub orNull {

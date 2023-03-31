@@ -1058,6 +1058,7 @@
 <a href="#1058" id="1058">1058</a>
 <a href="#1059" id="1059">1059</a>
 <a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -1075,9 +1076,10 @@
   //======================================================================
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
-  </span><span class="kw">if </span>!state.documentid.is_empty() {
+  </span><span class="kw">let </span>doc_id = state.lookup_string(<span class="string">&quot;DOCUMENT_ID&quot;</span>);
+  <span class="kw">if </span>!doc_id.is_empty() {
     <span class="comment">// Wrap in T_OTHER so funny chars don&#39;t screw up (no space!)
-    </span><span class="kw">let </span>doc_id_token = <span class="macro">T_OTHER!</span>(state.documentid);
+    </span><span class="kw">let </span>doc_id_token = <span class="macro">T_OTHER!</span>(doc_id);
     <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\thedocument@ID&quot;</span>), <span class="prelude-val">None</span>, doc_id_token);
   } <span class="kw">else </span>{
     <span class="macro">Let!</span>(<span class="string">&quot;\\thedocument@ID&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
@@ -1191,7 +1193,7 @@
   );
 
   <span class="macro">DefParameterType!</span>(Optional, sub[gullet, inner, default, state] {
-      <span class="kw">let </span>value = gullet.read_optional(state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>value = gullet.read_optional(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="kw">let </span>value_2 = <span class="kw">if </span>value.is_none() &amp;&amp; !default.is_empty() {
         ArgWrap::OptionTokens(<span class="prelude-val">Some</span>(default[<span class="number">0</span>].clone()))
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
@@ -1453,7 +1455,7 @@
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   </span><span class="macro">DefParameterType!</span>(OptionalSemiverbatim,
-    sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
     semiverbatim =&gt; <span class="prelude-val">Some</span>(Vec::new()),
     optional =&gt; <span class="bool-val">true</span>,
     reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
@@ -1542,7 +1544,7 @@
   }));
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(state) },
+  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
   reader_predigest =&gt; <span class="macro">undigested!</span>(),
   optional =&gt; <span class="bool-val">true</span>,
   reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {

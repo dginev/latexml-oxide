@@ -174,6 +174,16 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
@@ -195,11 +205,16 @@
 <span class="doccomment">/// Box is a Rust keyword, so we use &quot;Tbox&quot; instead, as in &quot;TeX Box&quot;
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Tbox {
-  <span class="kw">pub </span>text: String,
-  <span class="kw">pub </span>font: Arc&lt;Font&gt;,
-  <span class="kw">pub </span>locator: Locator,
-  <span class="kw">pub </span>properties: HashMap&lt;String, Stored&gt;,
-  <span class="kw">pub </span>tokens: Tokens,
+  <span class="doccomment">/// plain-text content
+  </span><span class="kw">pub </span>text: String,
+  <span class="doccomment">/// associated font for `text`
+  </span><span class="kw">pub </span>font: Arc&lt;Font&gt;,
+  <span class="doccomment">/// source location where the box originated
+  </span><span class="kw">pub </span>locator: Locator,
+  <span class="doccomment">/// misc properties, such as sizing information
+  </span><span class="kw">pub </span>properties: HashMap&lt;String, Stored&gt;,
+  <span class="doccomment">/// a Tokens list containing the TeX that created (or could have) the Tbox.
+  </span><span class="kw">pub </span>tokens: Tokens,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Tbox {
@@ -232,7 +247,12 @@
   }
 }
 <span class="kw">impl </span>Tbox {
-  <span class="kw">pub fn </span>new(
+  <span class="doccomment">/// creates a new Tbox.
+  /// If `font_opt` or `locator_opt` are None, they are obtained from the
+  /// currently active State.  Note that `text` can
+  /// be empty, which contributes nothing to the generated document,
+  /// but does record the TeX code (in the tokens).
+  </span><span class="kw">pub fn </span>new(
     text: String,
     font_opt: <span class="prelude-ty">Option</span>&lt;Arc&lt;Font&gt;&gt;,
     locator_opt: <span class="prelude-ty">Option</span>&lt;Locator&gt;,
@@ -293,8 +313,8 @@
       }
     }
   }
-
-  <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.text.is_empty() }
+  <span class="doccomment">/// checks if the text content is empty
+  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.text.is_empty() }
 }
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Tbox {

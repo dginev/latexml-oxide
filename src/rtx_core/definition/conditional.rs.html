@@ -359,6 +359,32 @@
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock};
@@ -380,22 +406,34 @@
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use </span><span class="kw">crate</span>::Digested;
 
-<span class="comment">// Conditional control sequences; Expandable
+<span class="doccomment">///! Conditionals Control sequence definitions.
+///! These represent the control sequences for conditionals, as well as
+///! `\else`, `\or` and `\fi`.
+
+</span><span class="comment">// Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
 //   record a flag somewhere so that \else or \fi is recognized
 //   (otherwise, they should signal an error)
+
+</span><span class="doccomment">/// classify the standard pieces of a conditional
 </span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>ConditionalType {
-  If,
-  Unless,
-  Else,
-  Or,
-  Fi,
-  Unknown,
+  <span class="doccomment">/// \if
+  </span>If,
+  <span class="doccomment">/// \unless
+  </span>Unless,
+  <span class="doccomment">/// \else
+  </span>Else,
+  <span class="doccomment">/// \or
+  </span>Or,
+  <span class="doccomment">/// \fi
+  </span>Fi,
+  <span class="doccomment">/// fallback?
+  </span>Unknown,
 }
 
-<span class="kw">impl </span>ConditionalType {
-  <span class="kw">pub fn </span>from(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>ConditionalType {
+  <span class="kw">fn </span>from(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
     <span class="kw">use </span><span class="self">self</span>::ConditionalType::<span class="kw-2">*</span>;
     <span class="kw">match </span>cs {
       <span class="string">&quot;\\if&quot; </span>=&gt; If,
@@ -408,22 +446,31 @@
   }
 }
 
-<span class="comment">// This is ONLY used for \ifcase.
+<span class="doccomment">/// configurations for a conditional.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>ConditionalOptions {
-  <span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
-  <span class="kw">pub </span>locked: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="doccomment">/// scope to install in state
+  </span><span class="kw">pub </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
+  <span class="doccomment">/// is this definition locked?
+  </span><span class="kw">pub </span>locked: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="doccomment">/// skipper, currently only used for \ifcase.
+  </span><span class="comment">// TODO: implement this?
+  </span><span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
 }
 
-<span class="attr">#[derive(Clone)]
+<span class="doccomment">/// A Conditional definition; Expandable.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Conditional {
-  <span class="kw">pub </span>cs: Token,
-  <span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-  <span class="kw">pub </span>test: <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
-  <span class="kw">pub </span>conditional_type: ConditionalType,
-  <span class="kw">pub </span>locked: <span class="prelude-ty">Option</span>&lt;bool&gt;,
-  <span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="doccomment">/// the command sequence
+  </span><span class="kw">pub </span>cs: Token,
+  <span class="doccomment">/// list of parameters, if any
+  </span><span class="kw">pub </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+  <span class="doccomment">/// a test closure, if implemented in a binding
+  </span><span class="kw">pub </span>test: <span class="prelude-ty">Option</span>&lt;ConditionalClosure&gt;,
+  <span class="doccomment">/// the kind of piece in the syntax (if,else,fi...)
+  </span><span class="kw">pub </span>conditional_type: ConditionalType,
+  <span class="doccomment">/// a skipper for \ifcase
+  </span><span class="kw">pub </span>skipper: <span class="prelude-ty">Option</span>&lt;bool&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Conditional {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -432,7 +479,6 @@
       paramlist: <span class="prelude-val">None</span>,
       test: <span class="prelude-val">None</span>,
       conditional_type: ConditionalType::Unknown,
-      locked: <span class="prelude-val">None</span>,
       skipper: <span class="prelude-val">None</span>,
     }
   }
@@ -495,17 +541,23 @@
 }
 
 
-<span class="attr">#[derive(Debug, Clone, PartialEq)]
+<span class="doccomment">/// A Frame of data for the currently active conditional, stored in State
+</span><span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>IfFrame {
-  <span class="kw">pub </span>token: Arc&lt;Token&gt;,
-  <span class="kw">pub </span>start: Locator,
-  <span class="kw">pub </span>parsing: bool,
-  <span class="kw">pub </span>elses: bool,
-  <span class="kw">pub </span>ifid: i64,
+  <span class="doccomment">/// the token which started the conditional
+  </span><span class="kw">pub </span>token: Arc&lt;Token&gt;,
+  <span class="doccomment">/// source location of the conditional start
+  </span><span class="kw">pub </span>start: Locator,
+  <span class="doccomment">/// flag: currently parsing the test
+  </span><span class="kw">pub </span>parsing: bool,
+  <span class="doccomment">/// flag: already seen an else at this level
+  </span><span class="kw">pub </span>elses: bool,
+  <span class="doccomment">/// in nested conditionals, give each an id
+  </span><span class="kw">pub </span>ifid: i64,
 }
 
 <span class="kw">impl </span>Conditional {
-  <span class="kw">pub fn </span>invoke_conditional(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>invoke_conditional(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// TODO!!! Implement in full
     // Keep a stack of the conditionals we are processing.
     </span><span class="kw">let </span><span class="kw-2">mut </span>ifid = state.lookup_int(<span class="string">&quot;if_count&quot;</span>);
@@ -638,7 +690,7 @@
     <span class="macro">Tokens!</span>()
   }
 
-  <span class="kw">pub fn </span>invoke_else(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>invoke_else(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span>stack_frame_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value_mut(<span class="string">&quot;if_stack&quot;</span>) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.front() {
         <span class="prelude-val">Some</span>(Arc::clone(stack_frame))
@@ -684,7 +736,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Arc&lt;RwLock&lt;IfFrame&gt;&gt;&gt; = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = state.lookup_value(<span class="string">&quot;if_stack&quot;</span>) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
         <span class="prelude-val">Some</span>(Arc::clone(frame))

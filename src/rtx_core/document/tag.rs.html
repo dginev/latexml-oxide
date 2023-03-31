@@ -134,8 +134,6 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::sync::Arc;
@@ -158,8 +156,7 @@
   AfterCloseLate,
 }
 
-<span class="attr">#[allow(dead_code)]
-</span><span class="kw">impl </span>TagOptionName {
+<span class="kw">impl </span>TagOptionName {
   <span class="kw">pub fn </span>all() -&gt; Vec&lt;TagOptionName&gt; {
     <span class="kw">use </span><span class="self">self</span>::TagOptionName::<span class="kw-2">*</span>;
     <span class="macro">vec!</span>[AfterOpen, AfterOpenEarly, AfterOpenLate, AfterClose, AfterCloseEarly, AfterCloseLate]
@@ -186,8 +183,7 @@
   <span class="kw">pub </span>after_close_late: <span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt;,
 }
 
-<span class="attr">#[allow(dead_code)]
-</span><span class="kw">impl </span>TagOptions {
+<span class="kw">impl </span>TagOptions {
   <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>TagOptionName) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Vec&lt;TagConstructionClosure&gt;&gt; {
     <span class="kw">use </span><span class="self">self</span>::TagOptionName::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span>name {
