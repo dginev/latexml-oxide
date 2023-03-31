@@ -1522,6 +1522,9 @@ macro_rules! DefMacro {
     compile_expansion!(compiled_expansion, $expansion);
     defi_macro!(T_CS!($cs), None, compiled_expansion, Some(options));
   }};
+  ($cs:literal, None, $expansion:expr) => {{
+    defi_macro!(T_CS!($cs), None, $expansion, None);
+  }};
   ($cs:expr, None, $expansion:literal) => {{
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);

@@ -892,10 +892,10 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T, stomach: &mut Stomach, state: &
   stomach.begin_mode("text", state)?;
 
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
-  state.assign_value("font", font.merge(fontmap!(encoding => "ASCII")), Some(Scope::Local)); // try to stay as ASCII as possible
+  state.assign_font(Arc::new(font.merge(fontmap!(encoding => "ASCII"))), Some(Scope::Local)); // try to stay as ASCII as possible
 
   let value = stomach.digest(stuff, state);
-  state.assign_value("font", font, None); // TODO: maybe we need .assign_font ?
+  state.assign_font(font, None);
   stomach.end_mode("text", state)?;
   value
 }

@@ -208,10 +208,10 @@ LoadDefinitions!(state, {
     DefMacro!(T_CS!(s!("\\M@{}", e)), None, Tokens!(T_CS!("\\default@M"), y.unlist()));
   });
 
-  DefMacro!("\\LastDeclaredEncoding", None, "");
+  DefMacro!("\\LastDeclaredEncoding", None, None);
   DefPrimitive!("\\DeclareFontSubstitution{}{}{}{}", None);
   DefPrimitive!("\\DeclareFontEncodingDefaults{}{}", None);
-  DefMacro!("\\LastDeclaredEncoding", None, "");
+  DefMacro!("\\LastDeclaredEncoding", None, None);
 
   DefPrimitive!("\\SetSymbolFont{}{}{}{}{}{}", None);
   DefPrimitive!("\\SetMathAlphabet{}{}{}{}{}{}", None);
