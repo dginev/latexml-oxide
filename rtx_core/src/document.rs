@@ -1154,8 +1154,7 @@ impl Document {
     // child is a node.
 
     if state.indirect_model.is_none() {
-      let new_im = state.compute_indirect_model();
-      state.indirect_model = Some(new_im);
+      state.indirect_model = Some(state.compute_indirect_model());
     }
 
     let imodel = state.indirect_model.as_ref().unwrap();

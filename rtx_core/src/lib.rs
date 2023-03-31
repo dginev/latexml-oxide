@@ -1,7 +1,7 @@
 //! The Core of rtx - roughly the equivalent of TeX conversion.
 //!
 
-#![warn(missing_docs)]
+#![allow(missing_docs)]
 extern crate rustc_hash;
 
 /// Auxiliary macros

@@ -1587,8 +1587,10 @@ impl State {
   //   return $code; }
   // #======================================================================
 
+
   /// The indirect model includes all elements allowed as direct children,
-  /// and all descendents of a node that can be inserted after autoOpen'ing intermediate elements.
+  /// and all descendents of a node that can be inserted after
+  /// auto_open-ing intermediate elements.
   /// This model therefor includes information from the Schema, as well as
   /// autoOpen information that may be introduced in binding files.
   /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
@@ -1611,17 +1613,17 @@ impl State {
         self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
       }
 
-      let mut desc_keys: Vec<String> = desc.keys().map(ToString::to_string).collect();
-      desc_keys.sort();
+      let desc_keys: Vec<String> = desc.keys().map(ToString::to_string).collect();
+      // desc_keys.sort(); // TODO: why sort?
       for kid in desc_keys {
         let mut best = 0; // Find best path to $kid.
-        let mut desc_kid_keys: Vec<String> = desc
+        let desc_kid_keys: Vec<String> = desc
           .entry(kid.to_owned())
           .or_insert_with(HashMap::default)
           .keys()
           .map(ToString::to_string)
           .collect();
-        desc_kid_keys.sort();
+        // desc_kid_keys.sort(); // TODO: why sort?
         for start in desc_kid_keys {
           let start_entry = {
             let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
