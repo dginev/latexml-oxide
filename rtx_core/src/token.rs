@@ -369,7 +369,7 @@ macro_rules! T_LETTER {
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: Cow::Owned(String::from($text)),
       code: Catcode::LETTER,
       smuggled: None,
     }
@@ -641,11 +641,7 @@ impl<'a> Token {
   pub fn get_catcode(&self) -> Catcode { self.code }
   /// is the current one
   pub fn is_executable(&self) -> bool { self.code.is_executable() }
-
   pub fn has_smuggled(&self) -> bool { self.smuggled.is_some() }
-
-  /// Defined so a Token or Tokens can be used interchangeably.
-  pub fn unlist(&self) -> Vec<Token> { vec![self.clone()] }
 
   /// neutralize really should only retroactively imitate what Semiverbatim would have done.
   /// So, it needs to neutralize those in SPECIALS

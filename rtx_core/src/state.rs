@@ -567,6 +567,7 @@ impl State {
 
   //======================================================================
   /// fetches a Stored value at the given key, from the Value table
+  #[inline(always)]
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
     match self.value.get(key) {
       None => None,
@@ -687,6 +688,7 @@ impl State {
   }
 
   /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
+  #[inline(always)]
   pub fn lookup_bool(&self, key: &str) -> bool {
     match self.lookup_value(key) {
       None => false,
@@ -695,6 +697,7 @@ impl State {
   }
 
   /// like `lookup_value`, but casts the entry into a String (empty if None)
+  #[inline]
   pub fn lookup_string(&self, key: &str) -> String {
     match self.lookup_value(key) {
       None => String::new(),
@@ -702,6 +705,7 @@ impl State {
     }
   }
   /// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
+  #[inline]
   pub fn lookup_int(&self, key: &str) -> i64 {
     match self.lookup_value(key) {
       Some(Stored::Int(i)) => *i,
@@ -710,21 +714,21 @@ impl State {
       _ => 0,
     }
   }
-
+  #[inline]
   pub fn lookup_vec_string<'lvec>(&'lvec self, key: &'lvec str) -> Option<&Vec<String>> {
     match self.lookup_value(key) {
       Some(Stored::VecString(v)) => Some(v),
       _ => None,
     }
   }
-
+  #[inline]
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
     }
   }
-
+  #[inline]
   pub fn remove_vecdeque<'lvdq>(&'lvdq mut self, key: &'lvdq str) -> Option<VecDeque<Stored>> {
     match self.remove_value(key) {
       Some(Stored::VecDequeStored(v)) => Some(v),
@@ -732,6 +736,7 @@ impl State {
     }
   }
   /// convenience method to lookup the current value at the "font" key
+  #[inline(always)]
   pub fn lookup_font(&self) -> Option<Arc<Font>> {
     match self.lookup_value("font") {
       None | Some(Stored::None) => None,
@@ -739,6 +744,7 @@ impl State {
     }
   }
   /// convenience method to lookup the current value at the "mathfont" key
+  #[inline]
   pub fn lookup_mathfont(&self) -> Option<Arc<Font>> {
     match self.lookup_value("mathfont") {
       None | Some(Stored::None) => None,
@@ -747,9 +753,11 @@ impl State {
   }
 
   /// a convenience method to globally asign a `Font` to the "font" key
+  #[inline(always)]
   pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) { self.assign_value("font", Stored::Font(font), scope); }
 
   /// a variant of `lookup_value` that casts the value into `Number`
+  #[inline(always)]
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
@@ -757,6 +765,7 @@ impl State {
     }
   }
   /// a variant of `lookup_value` that casts the value into `Dimension`
+  #[inline(always)]
   pub fn lookup_dimension(&self, key: &str) -> Option<Dimension> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
@@ -764,6 +773,7 @@ impl State {
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
+  #[inline]
   pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
     match self.lookup_value(key) {
       Some(Stored::Glue(v)) => Some(*v),
@@ -772,6 +782,7 @@ impl State {
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
+  #[inline]
   pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
     match self.lookup_value(key) {
       Some(Stored::MuGlue(v)) => Some(*v),
@@ -780,6 +791,7 @@ impl State {
     }
   }
   /// a variant of `lookup_value` that casts the response into `Tokens`
+  #[inline]
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
@@ -787,13 +799,13 @@ impl State {
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Token`
+  #[inline]
   pub fn lookup_token(&self, key: &str) -> Option<&Token> {
     match self.lookup_value(key) {
       Some(Stored::Token(t)) => Some(t),
       _ => None,
     }
   }
-
   pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
@@ -810,7 +822,7 @@ impl State {
       None
     }
   }
-
+  #[inline]
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Arc<dyn Definition>> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
@@ -892,6 +904,7 @@ impl State {
   }
 
   /// manage a (global) hash of values
+  #[inline]
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
     match self.value.get(map) {
       None => None,
@@ -949,6 +962,7 @@ impl State {
 
   //======================================================================
   /// Lookup & assign a character's Catcode
+  #[inline(always)]
   pub fn lookup_catcode(&self, c: char) -> Option<Catcode> {
     // speedup over variant with allocation
     // i.e. "let s = c.to_string();"
@@ -963,11 +977,14 @@ impl State {
       },
     }
   }
+
   /// assigns a Catcode for a given character
+  #[inline]
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
     self.assign_internal(TableName::Catcode, &key.to_string(), Stored::Catcode(value), scope);
   }
   /// like `lookup_catcode` but targets Mathcode and its table
+  #[inline]
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
     match self.mathcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -978,12 +995,14 @@ impl State {
     }
   }
   /// like `assign_catcode` but targets Mathcode and its table
+  #[inline]
   pub fn assign_mathcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Mathcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
   /// like `lookup_catcode` but targets Sfcode and its table
+  #[inline]
   pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
     match self.sfcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -994,12 +1013,14 @@ impl State {
     }
   }
   /// like `assign_catcode` but targets Sfcode and its table
+  #[inline]
   pub fn assign_sfcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Sfcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
   /// like `lookup_catcode` but targets Lccode and its table
+  #[inline]
   pub fn lookup_lccode(&self, key: char) -> Option<u16> {
     match self.lccode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1010,12 +1031,14 @@ impl State {
     }
   }
   /// like `assign_catcode` but targets Lccode and its table
+  #[inline]
   pub fn assign_lccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Lccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
   /// like `lookup_catcode` but targets Uccode and its table
+  #[inline]
   pub fn lookup_uccode(&self, key: char) -> Option<u16> {
     match self.uccode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1026,12 +1049,14 @@ impl State {
     }
   }
   /// like `assign_catcode` but targets Uccode and its table
+  #[inline]
   pub fn assign_uccode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Uccode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
   /// like `lookup_catcode` but targets Delcode and its table
+  #[inline]
   pub fn lookup_delcode(&self, key: char) -> Option<u16> {
     match self.delcode.get(&key.to_string()) {
       Some(c) => match c.front() {
@@ -1042,12 +1067,12 @@ impl State {
     }
   }
   /// like `assign_catcode` but targets Delcode and its table
+  #[inline]
   pub fn assign_delcode<T: Into<u16>, C: Into<char>, S: Into<Option<Scope>>>(&mut self, key: C, value: T, scope: S) {
     let key: char = key.into();
     let scope: Option<Scope> = scope.into();
     self.assign_internal(TableName::Delcode, &key.to_string(), Stored::Charcode(value.into()), scope);
   }
-
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
@@ -1260,11 +1285,11 @@ impl State {
   //======================================================================
   /// Starts a new level of grouping.
   /// Note that this is lower level than C<\bgroup>;
+  #[inline]
   pub fn push_frame(&mut self) {
     // Easy: just push a new undo frame.
     self.undo.push_front(UndoFrame::default());
   }
-
   /// Ends the current level of grouping.
   /// Note that this is lower level than `\egroup`;
   pub fn pop_frame(&mut self) -> Result<()> {
@@ -1292,6 +1317,7 @@ impl State {
   /// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
   /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
   /// This may give incorrect results for some special environments (e.g. minipage)
+  #[inline]
   pub fn get_frame_depth(&self) -> usize { self.undo.iter().filter(|frame| !frame.locked).count() - 1 }
   /// begins a semiverbatim frame, neutralizing the usual + requested characters
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
@@ -1323,6 +1349,7 @@ impl State {
     }
   }
   /// end by just calling `pop_frame`
+  #[inline]
   pub fn end_semiverbatim(&mut self) -> Result<()> { self.pop_frame() }
 
   //   #======================================================================
@@ -1384,8 +1411,10 @@ impl State {
 
   // ======================================================================
   /// Set one of the definition prefixes global, etc (only global matters!)
+  #[inline(always)]
   pub fn set_prefix(&mut self, prefix: &str) { self.prefixes.insert(prefix.to_string(), true); }
   /// gets the current value of a named prefix
+  #[inline(always)]
   pub fn get_prefix(&self, prefix: &str) -> bool {
     match self.prefixes.get(prefix) {
       Some(b) => *b,
@@ -1393,6 +1422,7 @@ impl State {
     }
   }
   /// clears the global prefixes
+  #[inline(always)]
   pub fn clear_prefixes(&mut self) { self.prefixes = HashMap::default(); }
 
   // #======================================================================

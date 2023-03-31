@@ -241,7 +241,7 @@ pub trait Definition: Object {
       None => {},
       Some(params) => {
         for result_token in params.revert_arguments(args, state)? {
-          invocation_result.append(&mut result_token.unlist());
+          invocation_result.push(result_token);
         }
       },
     }
