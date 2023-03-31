@@ -26,17 +26,27 @@ use crate::binding::def::dialect::def_macro;
 lazy_static! {
   static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();
 }
-
+/// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
+  /// an optional extension (such as "sty")
   pub extension: Option<Cow<'static, str>>,
+  /// package options to pass into the loaded library
   pub options: Vec<String>,
+  /// Tokens to process after the definition is loaded
   pub after: Tokens,
+  /// flag to forbid raw TeX sources
   pub notex: bool,
+  /// flag to forbid errors ?
   pub noerror: bool,
+  /// flag to forbid binding dispatch
   pub noltxml: bool,
+  ///
   pub withoptions: Option<Vec<String>>,
+  /// flag to handle options, or ignore them
   pub handleoptions: bool,
+  /// flag to process in .cls mode (default: false)
   pub as_class: bool,
+  /// flag to indicate reading the file raw in Gullet
   pub raw: bool,
 }
 impl Default for InputDefinitionOptions {
@@ -144,8 +154,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, st
     //
     // Find the file to load
     // TODO options.search_paths_only
-    if let Some(file) = find_file(&filename, Some(FindFileOptions {
-    forbid_ltxml: options.noltxml, notex: options.notex, ext_type: options.extension.as_ref().cloned(), search_paths_only: false }), state) {
+    if let Some(file) = find_file(&filename, Some(FindFileOptions { forbid_ltxml: options.noltxml, notex: options.notex, ext_type: options.extension.as_ref().cloned(), search_paths_only: false }), state) {
       is_found_raw = true;
       load_tex_definitions(&filename, &file, stomach, state)?;
     } else if !options.noerror {
@@ -180,7 +189,9 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions, st
   Ok(())
 }
 
+/// loads a binding from the main binding dispatcher, if available+found
 pub fn load_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(true, file, stomach, state) }
+/// loads a binding from an external binding dispatcher, if available+found
 pub fn load_external_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> { _load_binding(false, file, stomach, state) }
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
@@ -283,11 +294,25 @@ fn before_input_handle_options(
   );
   Ok(())
 }
+
+/// configuration for input of a TeX source (content files mostly)
 #[derive(Debug, Default, Clone)]
 pub struct InputOptions {
   pub noerror: bool,
   pub file_type: Option<String>,
 }
+
+/// used for cases when the file (or data)
+/// is plain TeX material that is expected to contribute content
+/// to the document (as opposed to pure definitions).
+/// A Mouth is opened onto the file, and subsequent reading
+/// and/or digestion will pull Tokens from that Mouth until it is
+/// exhausted, or closed.
+///
+/// In some circumstances it may be useful to provide a string containing
+/// the TeX material explicitly, rather than referencing a file.
+/// In this case, the `literal` pseudo-protocal may be used.
+
 pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let filepath = find_file(request, None, state);
   match filepath {
@@ -300,6 +325,13 @@ pub fn input_content(request: &str, options: InputOptions, stomach: &mut Stomach
   }
 }
 
+/// This is essentially the `\input` equivalent;
+/// we are most likely expecting to get actual content,
+/// (possibly with definitions included, as well)
+/// but might actually be getting pure definitions,
+/// (like a proper style file)
+/// in which case we may really want to load a binding.
+/// Note that generic style files (non-latex) often have a .tex extension.
 pub fn input(request: &str, options: InputOptions, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // unwrap if in quotes \input{"file name"}
   let mut clean_req = Cow::Borrowed(request);
@@ -690,14 +722,17 @@ pub fn load_class(name: &str, _options: Vec<String>, after: Tokens, stomach: &mu
   //     return; } } }
 }
 
+/// configuration for searching for a file in the local filesystem
 #[derive(Default)]
 pub struct FindFileOptions {
+  // TODO: this is no longer used in find_file, rather a level earlier
   pub forbid_ltxml: bool,
   pub notex: bool,
   pub ext_type: Option<Cow<'static, str>>,
   pub search_paths_only: bool,
 }
 
+/// search for a file as prescribed by a `FindFileOptions` configuration
 pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State) -> Option<String> {
   let options = options.unwrap_or_default();
   if pathname::is_literaldata(file) {
@@ -729,7 +764,7 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>, state: &mut State
   }
 }
 
-pub fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Option<String> {
+fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
   let cached = state.lookup_string(&s!("{}_contents", file));
   if !cached.is_empty() {
@@ -826,7 +861,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
   }
 }
 
-// Selects the RelaxNG schema defining the XML output language
+/// Selects the RelaxNG schema defining the XML output language
 pub fn select_relaxng_schema(schema: String, namespaces: Option<HashMap<String, String>>, state: &mut State) {
   // What verb here? Set, Choose,...
   let model = &mut state.model;

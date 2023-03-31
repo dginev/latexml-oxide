@@ -1,7 +1,7 @@
 ///! Interface layer for the full range of digested objects
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
