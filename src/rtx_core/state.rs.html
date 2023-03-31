@@ -1825,6 +1825,8 @@
 <a href="#1825" id="1825">1825</a>
 <a href="#1826" id="1826">1826</a>
 <a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
+<a href="#1829" id="1829">1829</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -3414,8 +3416,10 @@
   //   return $code; }
   // #======================================================================
 
+
   </span><span class="doccomment">/// The indirect model includes all elements allowed as direct children,
-  /// and all descendents of a node that can be inserted after autoOpen&#39;ing intermediate elements.
+  /// and all descendents of a node that can be inserted after
+  /// auto_open-ing intermediate elements.
   /// This model therefor includes information from the Schema, as well as
   /// autoOpen information that may be introduced in binding files.
   /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
@@ -3438,18 +3442,18 @@
         <span class="self">self</span>.compute_indirect_model_aux(<span class="kw-2">&amp;</span>tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
       }
 
-      <span class="kw">let </span><span class="kw-2">mut </span>desc_keys: Vec&lt;String&gt; = desc.keys().map(ToString::to_string).collect();
-      desc_keys.sort();
-      <span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
+      <span class="kw">let </span>desc_keys: Vec&lt;String&gt; = desc.keys().map(ToString::to_string).collect();
+      <span class="comment">// desc_keys.sort(); // TODO: why sort?
+      </span><span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
         <span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>; <span class="comment">// Find best path to $kid.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>desc_kid_keys: Vec&lt;String&gt; = desc
+        </span><span class="kw">let </span>desc_kid_keys: Vec&lt;String&gt; = desc
           .entry(kid.to_owned())
           .or_insert_with(HashMap::default)
           .keys()
           .map(ToString::to_string)
           .collect();
-        desc_kid_keys.sort();
-        <span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
+        <span class="comment">// desc_kid_keys.sort(); // TODO: why sort?
+        </span><span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
           <span class="kw">let </span>start_entry = {
             <span class="kw">let </span>kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
             <span class="kw-2">*</span>kid_entry.entry(start.to_owned()).or_insert(<span class="number">0</span>)

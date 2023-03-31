@@ -2941,7 +2941,6 @@
 <a href="#2941" id="2941">2941</a>
 <a href="#2942" id="2942">2942</a>
 <a href="#2943" id="2943">2943</a>
-<a href="#2944" id="2944">2944</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -4098,8 +4097,7 @@
     // child is a node.
 
     </span><span class="kw">if </span>state.indirect_model.is_none() {
-      <span class="kw">let </span>new_im = state.compute_indirect_model();
-      state.indirect_model = <span class="prelude-val">Some</span>(new_im);
+      state.indirect_model = <span class="prelude-val">Some</span>(state.compute_indirect_model());
     }
 
     <span class="kw">let </span>imodel = state.indirect_model.as_ref().unwrap();
