@@ -2442,6 +2442,9 @@
 <a href="#2442" id="2442">2442</a>
 <a href="#2443" id="2443">2443</a>
 <a href="#2444" id="2444">2444</a>
+<a href="#2445" id="2445">2445</a>
+<a href="#2446" id="2446">2446</a>
+<a href="#2447" id="2447">2447</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3965,6 +3968,9 @@
     <span class="kw">let </span>compiled_expansion;
     <span class="macro">compile_expansion!</span>(compiled_expansion, <span class="macro-nonterminal">$expansion</span>);
     <span class="macro">defi_macro!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cs</span>), <span class="prelude-val">None</span>, compiled_expansion, <span class="prelude-val">Some</span>(options));
+  }};
+  (<span class="macro-nonterminal">$cs</span>:literal, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>:expr) =&gt; {{
+    <span class="macro">defi_macro!</span>(<span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cs</span>), <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>, <span class="prelude-val">None</span>);
   }};
   (<span class="macro-nonterminal">$cs</span>:expr, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>:literal) =&gt; {{
     <span class="kw">let </span>compiled_expansion;

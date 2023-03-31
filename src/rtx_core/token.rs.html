@@ -771,10 +771,6 @@
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
@@ -1146,7 +1142,7 @@
   };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
-      text: Cow::Owned(<span class="macro-nonterminal">$text</span>.to_string()),
+      text: Cow::Owned(String::from(<span class="macro-nonterminal">$text</span>)),
       code: Catcode::LETTER,
       smuggled: <span class="prelude-val">None</span>,
     }
@@ -1418,11 +1414,7 @@
   </span><span class="kw">pub fn </span>get_catcode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Catcode { <span class="self">self</span>.code }
   <span class="doccomment">/// is the current one
   </span><span class="kw">pub fn </span>is_executable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.code.is_executable() }
-
   <span class="kw">pub fn </span>has_smuggled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.smuggled.is_some() }
-
-  <span class="doccomment">/// Defined so a Token or Tokens can be used interchangeably.
-  </span><span class="kw">pub fn </span>unlist(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Token&gt; { <span class="macro">vec!</span>[<span class="self">self</span>.clone()] }
 
   <span class="doccomment">/// neutralize really should only retroactively imitate what Semiverbatim would have done.
   /// So, it needs to neutralize those in SPECIALS

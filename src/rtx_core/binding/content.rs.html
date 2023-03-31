@@ -1913,11 +1913,11 @@
   </span>stomach.begin_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
 
   <span class="kw">let </span>font = state.lookup_font().unwrap(); <span class="comment">// TODO: raise error if font missing
-  </span>state.assign_value(<span class="string">&quot;font&quot;</span>, font.merge(<span class="macro">fontmap!</span>(encoding =&gt; <span class="string">&quot;ASCII&quot;</span>)), <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// try to stay as ASCII as possible
+  </span>state.assign_font(Arc::new(font.merge(<span class="macro">fontmap!</span>(encoding =&gt; <span class="string">&quot;ASCII&quot;</span>))), <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// try to stay as ASCII as possible
 
   </span><span class="kw">let </span>value = stomach.digest(stuff, state);
-  state.assign_value(<span class="string">&quot;font&quot;</span>, font, <span class="prelude-val">None</span>); <span class="comment">// TODO: maybe we need .assign_font ?
-  </span>stomach.end_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
+  state.assign_font(font, <span class="prelude-val">None</span>);
+  stomach.end_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
   value
 }
 
