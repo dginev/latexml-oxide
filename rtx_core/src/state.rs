@@ -231,22 +231,26 @@ pub struct State {
   pub input_encoding: Option<String>,
   // strict: bool,
   // include_comments: bool,
-  pub documentid: String,
+  /// current paths to search for TeX inputs
   pub search_paths: VecDeque<String>,
+  /// current paths to search for graphics
   pub graphics_paths: VecDeque<String>,
   // include_styles: bool,
+  /// flag to disable math parsing
   pub nomathparse: bool,
+  /// TODO: marker for alignment
   pub reading_alignment: bool,
   // Local structures
   if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
   smuggle_the: Vec<bool>,
   current_token: Vec<Arc<Token>>,
-  // Auxiliary convenience -- extra dispatch
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
+  /// A dispatcher routing to the compiled code of the main/official rtx bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
+  /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
-  // Circular dependency and global $STATE in Perl requires a bad
-  // style use of interior mutability...
+  /// Circular dependency and global $STATE in Perl requires a bad
+  /// style use of interior mutability...
   pub stomach: Arc<RwLock<Stomach>>,
 }
 unsafe impl Send for State {}
@@ -291,7 +295,6 @@ impl Default for State {
       input_encoding: None,
       // strict: false,
       // include_comments: true,
-      documentid: String::new(),
       search_paths: VecDeque::new(),
       graphics_paths: VecDeque::new(),
       // include_styles: false,
@@ -306,6 +309,7 @@ impl Default for State {
   }
 }
 lazy_static! {
+  /// An easy to reuse read-only global "Default" State singleton
   pub static ref DEFAULT_STATE : State = State::default();
 }
 /// State fields allowed for customization during construction
@@ -385,10 +389,7 @@ impl State {
     // let include_styles = options.include_styles.unwrap_or(false);
     let nomathparse = options.nomathparse.unwrap_or(false);
 
-    let documentid = match options.documentid {
-      None => String::new(),
-      Some(id) => id,
-    };
+
     let search_paths = match options.search_paths {
       None => VecDeque::new(),
       Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect(),
@@ -398,21 +399,24 @@ impl State {
       Some(paths) => paths.iter().map(|p| pathname::absolute(&pathname::canonical(p))).collect(),
     };
 
-    State {
+    let mut state = State {
       value: value_table,
       catcode: catcodes_typed,
       model,
       verbosity,
       // strict,
       // include_comments,
-      documentid,
       search_paths,
       graphics_paths,
       // include_styles,
       input_encoding: options.input_encoding,
       nomathparse,
       ..State::default()
-    }
+    };
+    // TODO: should these be *fields* in state, or really as in Perl - globally assigned values?
+    state.assign_value("DOCUMENT_ID", options.documentid.unwrap_or_default(), Some(Scope::Global));
+
+    state
   }
 
   /// borrow/get the named table
@@ -727,14 +731,14 @@ impl State {
       _ => None,
     }
   }
-
+  /// convenience method to lookup the current value at the "font" key
   pub fn lookup_font(&self) -> Option<Arc<Font>> {
     match self.lookup_value("font") {
       None | Some(Stored::None) => None,
       Some(f) => f.into(),
     }
   }
-
+  /// convenience method to lookup the current value at the "mathfont" key
   pub fn lookup_mathfont(&self) -> Option<Arc<Font>> {
     match self.lookup_value("mathfont") {
       None | Some(Stored::None) => None,
@@ -742,20 +746,24 @@ impl State {
     }
   }
 
+  /// a convenience method to globally asign a `Font` to the "font" key
   pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) { self.assign_value("font", Stored::Font(font), scope); }
 
+  /// a variant of `lookup_value` that casts the value into `Number`
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
     }
   }
+  /// a variant of `lookup_value` that casts the value into `Dimension`
   pub fn lookup_dimension(&self, key: &str) -> Option<Dimension> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
     }
   }
+  /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
   pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
     match self.lookup_value(key) {
       Some(Stored::Glue(v)) => Some(*v),
@@ -763,6 +771,7 @@ impl State {
       Some(other) => panic!("state lookup expected Glue, found: {other:?}"),
     }
   }
+  /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
   pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
     match self.lookup_value(key) {
       Some(Stored::MuGlue(v)) => Some(*v),
@@ -770,13 +779,14 @@ impl State {
       Some(other) => panic!("state lookup expected MuGlue, found: {other:?}"),
     }
   }
-
+  /// a variant of `lookup_value` that casts the response into `Tokens`
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
     }
   }
+  /// a variant of `lookup_value` that only recognizes a `Stored::Token`
   pub fn lookup_token(&self, key: &str) -> Option<&Token> {
     match self.lookup_value(key) {
       Some(Stored::Token(t)) => Some(t),
@@ -935,20 +945,6 @@ impl State {
       Some(frame) => self.undo.get(frame).as_ref().unwrap().table(TableName::Value).contains_key(key),
       None => !self.value.get(key).unwrap_or(&VecDeque::new()).is_empty(),
     }
-  }
-
-  pub fn value_in_frame(&self, key: &str, frame_opt: Option<usize>) -> Option<&Stored> {
-    let frame = frame_opt.unwrap_or(0);
-    let mut p = 0;
-    for f in 0..=frame {
-      let val_opt = self.undo.get(f).as_ref().unwrap().table(TableName::Value).get(key);
-      let value = match val_opt {
-        Some(v) => *v,
-        _ => 0,
-      };
-      p += value;
-    }
-    self.value[key].get(p)
   }
 
   //======================================================================

@@ -15,9 +15,10 @@ LoadDefinitions!(state, {
   //======================================================================
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
-  if !state.documentid.is_empty() {
+  let doc_id = state.lookup_string("DOCUMENT_ID");
+  if !doc_id.is_empty() {
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
-    let doc_id_token = T_OTHER!(state.documentid);
+    let doc_id_token = T_OTHER!(doc_id);
     DefMacro!(T_CS!("\\thedocument@ID"), None, doc_id_token);
   } else {
     Let!("\\thedocument@ID", "\\@empty");
