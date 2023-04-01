@@ -161,7 +161,7 @@ impl Tokens {
       .into_iter()
       .map(|mut t| {
         if t.get_catcode() == Catcode::SmuggleTHE {
-          *t.smuggled.take().unwrap()
+          *t.take_dont_expand().unwrap()
         } else {
           t
         }
@@ -298,7 +298,7 @@ impl Tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(ref arg) = args[&token.text.parse::<usize>().unwrap() - 1] {
+      } else if let Some(ref arg) = args[&token.get_string().parse::<usize>().unwrap() - 1] {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
@@ -400,11 +400,11 @@ impl Tokens {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         // NOTE for future cleanup: Only CC_CS & CC_ACTIVE should ever get with_dont_expand!
         let next_t = toks.pop_front();
-        let next_cc = next_t.as_ref().map(|t| &t.code);
-        if next_cc == Some(&Catcode::OTHER) {
+        let next_cc = next_t.as_ref().map(|t| t.get_catcode());
+        if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
           rescanned.push(T_ARG!(next_t.unwrap()));
-        } else if next_cc == Some(&Catcode::PARAM) {
+        } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
         } else {
           // any other case, preserve as-is, let the higher level call resolve any errors
@@ -418,8 +418,8 @@ impl Tokens {
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );
         }
-      } else if let Some(mut inner) = t.smuggled.take() {
-        if let Some(smuggled) = inner.smuggled.take() {
+      } else if let Some(mut inner) = t.take_dont_expand() {
+        if let Some(smuggled) = inner.take_dont_expand() {
           rescanned.push(*smuggled);
         } else {
           rescanned.push(*inner);
@@ -476,7 +476,7 @@ impl ToTokens for Catcode {
 
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let text = &self.text;
+    let text = self.get_string();
     let code = self.get_catcode();
     stream.extend(quote! {
       Token {

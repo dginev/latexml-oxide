@@ -196,6 +196,10 @@ pub type Table = HashMap<String, VecDeque<Stored>>;
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
+///
+// TODO: Maybe the right Rust metaphor here is to chunk State into a tuple of independent data:
+// struct State(Gullet, Stomach, Model, StateTables, SessionState);
+// maybe not...
 pub struct State {
   // Tables
   /// bookkeeps arbitrary Stored values
@@ -841,10 +845,10 @@ impl State {
   pub fn is_dont_expandable(&self, token: &Token) -> bool {
     // Basically: a CS or Active token that is either not defined, or is expandable
     // (but not \let to a token)
-    if token.code.is_active_or_cs() {
-      let lookupname = &token.text;
+    if token.get_catcode().is_active_or_cs() {
+      let lookupname = token.get_string();
       if !lookupname.is_empty() {
-        match self.meaning.get(&**lookupname) {
+        match self.meaning.get(lookupname) {
           Some(entry) => {
             if let Some(def) = entry.front() {
               // the expandable variants are allowed
