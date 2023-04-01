@@ -371,6 +371,7 @@
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>std::collections::{VecDeque};
@@ -389,7 +390,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, FontDirective, Reversion};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::state::{DEFAULT_STATE,State};
+<span class="kw">use </span><span class="kw">crate</span>::state::{STD_STATE,State};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData, TexMode};
@@ -571,7 +572,8 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.revert(<span class="kw-2">&amp;</span>DEFAULT_STATE).unwrap()) <span class="comment">// What else??
+    <span class="kw">let </span>state = STD_STATE.read().unwrap(); <span class="comment">// TODO: is this really the way?
+    </span><span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.revert(<span class="kw-2">&amp;</span>state).unwrap()) <span class="comment">// What else??
   </span>}
 }
 

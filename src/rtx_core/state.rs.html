@@ -1857,6 +1857,11 @@
 <a href="#1857" id="1857">1857</a>
 <a href="#1858" id="1858">1858</a>
 <a href="#1859" id="1859">1859</a>
+<a href="#1860" id="1860">1860</a>
+<a href="#1861" id="1861">1861</a>
+<a href="#1862" id="1862">1862</a>
+<a href="#1863" id="1863">1863</a>
+<a href="#1864" id="1864">1864</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -2168,8 +2173,14 @@
   }
 }
 <span class="macro">lazy_static! </span>{
-  <span class="doccomment">/// An easy to reuse read-only global &quot;Default&quot; State singleton
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>DEFAULT_STATE : State = State::default();
+  <span class="kw">pub static </span><span class="kw-2">ref </span>STY_STATE: RwLock&lt;State&gt; = RwLock::new(State::new(StateOptions {
+    catcodes: <span class="prelude-val">Some</span>(Catcodes::Style),
+    ..StateOptions::default()
+  }));
+  <span class="kw">pub static </span><span class="kw-2">ref </span>STD_STATE: RwLock&lt;State&gt; = RwLock::new(State::new(StateOptions {
+    catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
+    ..StateOptions::default()
+  }));
 }
 <span class="doccomment">/// State fields allowed for customization during construction
 </span><span class="attr">#[derive(Default)]
@@ -3481,9 +3492,8 @@
   /// and all descendents of a node that can be inserted after
   /// auto_open-ing intermediate elements.
   /// This model therefor includes information from the Schema, as well as
-  /// autoOpen information that may be introduced in binding files.
-  /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
-  /// $imodel{$tag}{$child} =&gt; $open means if in $tag, to open $child, we must first open $open
+  /// auto_open information that may be introduced in binding files.
+  </span><span class="comment">// [Thus it should NOT be modifying the Model object, which may cover several documents]
   </span><span class="kw">pub fn </span>compute_indirect_model(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; IndirectModel {
     <span class="kw">let </span><span class="kw-2">mut </span>imodel: IndirectModel = HashMap::default();
     <span class="comment">// Determine any indirect paths to each descendent via an `autoOpen-able&#39; tag.
