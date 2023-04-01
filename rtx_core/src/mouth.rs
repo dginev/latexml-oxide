@@ -6,7 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use std::sync::{Mutex, RwLock};
+use std::sync::{Mutex};
 
 use core::ops::RangeBounds;
 // TODO:
@@ -20,20 +20,12 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Catcodes, Scope, State, StateOptions};
+use crate::state::{Scope, State, STD_STATE, STY_STATE};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::util::pathname;
 
 lazy_static! {
-  static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Style),
-    ..StateOptions::default()
-  }));
-  static ref STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Standard),
-    ..StateOptions::default()
-  }));
   static ref CS_ENDLINECHAR: Token = T_CS!("\\endlinechar");
   static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
 }

@@ -9,7 +9,7 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
-use crate::state::{State, DEFAULT_STATE};
+use crate::state::{State, STD_STATE};
 use crate::tokens::Tokens;
 use crate::{Digested, RegisterValue};
 
@@ -53,8 +53,14 @@ impl Dimension {
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
       let num:f64 = num_str.parse::<f64>()?;
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-      let state = state_opt.unwrap_or(&DEFAULT_STATE);
-      Ok(fixpoint(num, Some(state.convert_unit(&unit))) as f64)
+      let converted_unit = match state_opt {
+        Some(state) => state.convert_unit(&unit),
+        None => {
+          let state = STD_STATE.read().unwrap(); // TODO: is this really the way?
+          state.convert_unit(&unit)
+        }
+      };
+      Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other Dimensions),
       // you might think truncation (int) is more TeX-like.
