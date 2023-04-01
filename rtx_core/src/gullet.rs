@@ -174,8 +174,8 @@ impl Gullet {
     loop {
       // Check in pushback first....
       while let Some(mut pushback_token) = runtime.pushback.pop_front() {
-        if pushback_token.code == Catcode::SmuggleTHE {
-          pushback_token = *pushback_token.smuggled.unwrap();
+        if pushback_token.get_catcode() == Catcode::SmuggleTHE {
+          pushback_token = *pushback_token.take_smuggled().unwrap();
         }
         match pushback_token.get_catcode() {
           Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
@@ -252,7 +252,7 @@ impl Gullet {
       // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
       let mut next_token = None;
       while let Some(token) = runtime.pushback.pop_front() {
-        match token.code {
+        match token.get_catcode() {
           Catcode::COMMENT => {
             if commentsok {
               return Ok(Some(token));
@@ -270,7 +270,7 @@ impl Gullet {
       if next_token.is_none() {
         // Else read from current mouth
         while let Some(token) = runtime.mouth.read_token(state) {
-          match token.code {
+          match token.get_catcode() {
             Catcode::COMMENT => {
               if commentsok {
                 return Ok(Some(token));
@@ -296,16 +296,16 @@ impl Gullet {
           continue;
         },
         Some(mut token) => {
-          if token.smuggled.is_some() {
-            if token.code != Catcode::SmuggleTHE || state.get_smuggle_the() {
+          if token.has_smuggled() {
+            if token.get_catcode() != Catcode::SmuggleTHE || state.get_smuggle_the() {
               return Ok(Some(token));
             } else {
-              return Ok(token.smuggled.take().map(|t| *t));
+              return Ok(token.take_smuggled().map(|t| *t));
             }
           } else {
             // refactoring a very tricky perl if, so for now this looks awkward
             // maybe we can refactor?
-            if token.code.is_active_or_cs() {
+            if token.get_catcode().is_active_or_cs() {
               if let Some(defn) = state.lookup_definition(&token) {
                 if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
                   // is this the right logic here? don't expand unless digesting?
@@ -317,7 +317,7 @@ impl Gullet {
               }
             }
             // TODO: ## Wow!!!!! See TeX the Program \S 309
-            if token.code == Catcode::CS && state.lookup_meaning(&token).is_none() {
+            if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
               return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
             } else {
               return Ok(Some(token));
@@ -554,7 +554,7 @@ impl Gullet {
         if token == *want {
           break;
         }
-        if token.code == Catcode::BEGIN {
+        if token.get_catcode() == Catcode::BEGIN {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
@@ -579,7 +579,7 @@ impl Gullet {
               return Ok(Tokens!()); // Not more correct, but maybe less confusing?
             },
           };
-          if token.code == Catcode::BEGIN {
+          if token.get_catcode() == Catcode::BEGIN {
             // read balanced, and refill ring.
             nbraces += 1;
             for r_token in ring {
@@ -1208,8 +1208,8 @@ impl Gullet {
       // setup new scan by removing any smuggle CCs
       if let Some(runtime) = &mut self.mouth {
         for token in runtime.pushback.iter_mut() {
-          if token.code == Catcode::SmuggleTHE {
-            *token = *token.smuggled.take().unwrap();
+          if token.get_catcode() == Catcode::SmuggleTHE {
+            *token = *token.take_dont_expand().unwrap();
           }
         }
       }

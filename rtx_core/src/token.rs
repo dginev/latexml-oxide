@@ -33,6 +33,11 @@ pub const T_RELAX: Token = Token {
   code: Catcode::CS,
   smuggled: None,
 };
+pub const T_EMPTY: Token = Token {
+  text: Cow::Borrowed("\\@empty"),
+  code: Catcode::CS,
+  smuggled: None,
+};
 
 /// A Token category code, as in TeX
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
@@ -304,7 +309,9 @@ impl Display for Token {
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
-    self.code == other.code && (self.code == Catcode::SPACE || (*self.text == *other.text)) && self.smuggled.is_none() == other.smuggled.is_none()
+    self.code == other.code && (self.code == Catcode::SPACE ||
+      (*self.text == *other.text)) &&
+      (self.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -714,6 +721,9 @@ impl<'a> Token {
   /// Return the original token of a not-expanded token,
   /// or undef if it isn't marked as such.
   pub fn get_dont_expand(&self) -> &Option<Box<Token>> { &self.smuggled }
+  pub fn get_smuggled(&self) -> &Option<Box<Token>> { &self.smuggled }
+  pub fn take_dont_expand(&mut self) -> Option<Box<Token>> { self.smuggled.take() }
+  pub fn take_smuggled(&mut self) -> Option<Box<Token>> { self.smuggled.take() }
 
   /// Remove dont_expand flag, remove SMUGGLE_THE wrapper
   pub fn without_dont_expand(mut self) -> Token {
