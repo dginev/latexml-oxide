@@ -309,8 +309,14 @@ impl Default for State {
   }
 }
 lazy_static! {
-  /// An easy to reuse read-only global "Default" State singleton
-  pub static ref DEFAULT_STATE : State = State::default();
+  pub static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Style),
+    ..StateOptions::default()
+  }));
+  pub static ref STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  }));
 }
 /// State fields allowed for customization during construction
 #[derive(Default)]
@@ -1622,9 +1628,8 @@ impl State {
   /// and all descendents of a node that can be inserted after
   /// auto_open-ing intermediate elements.
   /// This model therefor includes information from the Schema, as well as
-  /// autoOpen information that may be introduced in binding files.
-  /// [Thus it should NOT be modifying the Model object, which may cover several documents in `]
-  /// $imodel{$tag}{$child} => $open means if in $tag, to open $child, we must first open $open
+  /// auto_open information that may be introduced in binding files.
+  // [Thus it should NOT be modifying the Model object, which may cover several documents]
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
     let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
