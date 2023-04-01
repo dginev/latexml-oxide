@@ -698,7 +698,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[gullet, (tok, xtok), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="macro">vec!</span>[tok];
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>) {
-      state.set_current_token(Arc::new(xtok.clone()));
+      state.set_current_token(Arc::new(xtok));
       <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
         tokens.append(<span class="kw-2">&amp;mut </span>invoked.unlist()); <span class="comment">// Expand $xtok ONCE ONLY!

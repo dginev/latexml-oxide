@@ -650,7 +650,7 @@
       </span>.into_iter()
       .map(|<span class="kw-2">mut </span>t| {
         <span class="kw">if </span>t.get_catcode() == Catcode::SmuggleTHE {
-          <span class="kw-2">*</span>t.smuggled.take().unwrap()
+          <span class="kw-2">*</span>t.take_dont_expand().unwrap()
         } <span class="kw">else </span>{
           t
         }
@@ -787,7 +787,7 @@
       <span class="kw">if </span>token.get_catcode() != Catcode::ARG {
         <span class="comment">// Non-match; copy it
         </span>result.push(token.clone());
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="kw-2">&amp;</span>token.text.parse::&lt;usize&gt;().unwrap() - <span class="number">1</span>] {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="kw-2">&amp;</span>token.get_string().parse::&lt;usize&gt;().unwrap() - <span class="number">1</span>] {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
@@ -889,11 +889,11 @@
       <span class="kw">if </span>t.get_catcode() == Catcode::PARAM &amp;&amp; !toks.is_empty() {
         <span class="comment">// NOTE for future cleanup: Only CC_CS &amp; CC_ACTIVE should ever get with_dont_expand!
         </span><span class="kw">let </span>next_t = toks.pop_front();
-        <span class="kw">let </span>next_cc = next_t.as_ref().map(|t| <span class="kw-2">&amp;</span>t.code);
-        <span class="kw">if </span>next_cc == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Catcode::OTHER) {
+        <span class="kw">let </span>next_cc = next_t.as_ref().map(|t| t.get_catcode());
+        <span class="kw">if </span>next_cc == <span class="prelude-val">Some</span>(Catcode::OTHER) {
           <span class="comment">// only group clear match token cases
           </span>rescanned.push(<span class="macro">T_ARG!</span>(next_t.unwrap()));
-        } <span class="kw">else if </span>next_cc == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Catcode::PARAM) {
+        } <span class="kw">else if </span>next_cc == <span class="prelude-val">Some</span>(Catcode::PARAM) {
           rescanned.push(t);
         } <span class="kw">else </span>{
           <span class="comment">// any other case, preserve as-is, let the higher level call resolve any errors
@@ -907,8 +907,8 @@
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );
         }
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>inner) = t.smuggled.take() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(smuggled) = inner.smuggled.take() {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>inner) = t.take_dont_expand() {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(smuggled) = inner.take_dont_expand() {
           rescanned.push(<span class="kw-2">*</span>smuggled);
         } <span class="kw">else </span>{
           rescanned.push(<span class="kw-2">*</span>inner);
@@ -965,7 +965,7 @@
 
 <span class="kw">impl </span>ToTokens <span class="kw">for </span>Token {
   <span class="kw">fn </span>to_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>, stream: <span class="kw-2">&amp;mut </span>TokenStream) {
-    <span class="kw">let </span>text = <span class="kw-2">&amp;</span><span class="self">self</span>.text;
+    <span class="kw">let </span>text = <span class="self">self</span>.get_string();
     <span class="kw">let </span>code = <span class="self">self</span>.get_catcode();
     stream.extend(<span class="macro">quote! </span>{
       Token {

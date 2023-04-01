@@ -1530,8 +1530,8 @@
     <span class="kw">loop </span>{
       <span class="comment">// Check in pushback first....
       </span><span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>pushback_token) = runtime.pushback.pop_front() {
-        <span class="kw">if </span>pushback_token.code == Catcode::SmuggleTHE {
-          pushback_token = <span class="kw-2">*</span>pushback_token.smuggled.unwrap();
+        <span class="kw">if </span>pushback_token.get_catcode() == Catcode::SmuggleTHE {
+          pushback_token = <span class="kw-2">*</span>pushback_token.take_smuggled().unwrap();
         }
         <span class="kw">match </span>pushback_token.get_catcode() {
           Catcode::COMMENT =&gt; <span class="self">self</span>.pending_comments.push_back(pushback_token),
@@ -1608,7 +1608,7 @@
       <span class="comment">// NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
       </span><span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
       <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = runtime.pushback.pop_front() {
-        <span class="kw">match </span>token.code {
+        <span class="kw">match </span>token.get_catcode() {
           Catcode::COMMENT =&gt; {
             <span class="kw">if </span>commentsok {
               <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
@@ -1626,7 +1626,7 @@
       <span class="kw">if </span>next_token.is_none() {
         <span class="comment">// Else read from current mouth
         </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = runtime.mouth.read_token(state) {
-          <span class="kw">match </span>token.code {
+          <span class="kw">match </span>token.get_catcode() {
             Catcode::COMMENT =&gt; {
               <span class="kw">if </span>commentsok {
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
@@ -1652,16 +1652,16 @@
           </span><span class="kw">continue</span>;
         },
         <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>token) =&gt; {
-          <span class="kw">if </span>token.smuggled.is_some() {
-            <span class="kw">if </span>token.code != Catcode::SmuggleTHE || state.get_smuggle_the() {
+          <span class="kw">if </span>token.has_smuggled() {
+            <span class="kw">if </span>token.get_catcode() != Catcode::SmuggleTHE || state.get_smuggle_the() {
               <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
             } <span class="kw">else </span>{
-              <span class="kw">return </span><span class="prelude-val">Ok</span>(token.smuggled.take().map(|t| <span class="kw-2">*</span>t));
+              <span class="kw">return </span><span class="prelude-val">Ok</span>(token.take_smuggled().map(|t| <span class="kw-2">*</span>t));
             }
           } <span class="kw">else </span>{
             <span class="comment">// refactoring a very tricky perl if, so for now this looks awkward
             // maybe we can refactor?
-            </span><span class="kw">if </span>token.code.is_active_or_cs() {
+            </span><span class="kw">if </span>token.get_catcode().is_active_or_cs() {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
                 <span class="kw">if </span>(toplevel || !(<span class="kw-2">*</span>defn).is_protected()) &amp;&amp; defn.is_expandable() {
                   <span class="comment">// is this the right logic here? don&#39;t expand unless digesting?
@@ -1673,7 +1673,7 @@
               }
             }
             <span class="comment">// TODO: ## Wow!!!!! See TeX the Program \S 309
-            </span><span class="kw">if </span>token.code == Catcode::CS &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
+            </span><span class="kw">if </span>token.get_catcode() == Catcode::CS &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
               <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(state.generate_error_stub(<span class="self">self</span>, <span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report early!
             </span>} <span class="kw">else </span>{
               <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
@@ -1910,7 +1910,7 @@
         <span class="kw">if </span>token == <span class="kw-2">*</span>want {
           <span class="kw">break</span>;
         }
-        <span class="kw">if </span>token.code == Catcode::BEGIN {
+        <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
           <span class="comment">// And if it&#39;s a BEGIN, copy till balanced END
           </span>nbraces += <span class="number">1</span>;
           tokens.push(token);
@@ -1935,7 +1935,7 @@
               <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()); <span class="comment">// Not more correct, but maybe less confusing?
             </span>},
           };
-          <span class="kw">if </span>token.code == Catcode::BEGIN {
+          <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
             <span class="comment">// read balanced, and refill ring.
             </span>nbraces += <span class="number">1</span>;
             <span class="kw">for </span>r_token <span class="kw">in </span>ring {
@@ -2564,8 +2564,8 @@
       <span class="comment">// setup new scan by removing any smuggle CCs
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(runtime) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.mouth {
         <span class="kw">for </span>token <span class="kw">in </span>runtime.pushback.iter_mut() {
-          <span class="kw">if </span>token.code == Catcode::SmuggleTHE {
-            <span class="kw-2">*</span>token = <span class="kw-2">*</span>token.smuggled.take().unwrap();
+          <span class="kw">if </span>token.get_catcode() == Catcode::SmuggleTHE {
+            <span class="kw-2">*</span>token = <span class="kw-2">*</span>token.take_dont_expand().unwrap();
           }
         }
       }

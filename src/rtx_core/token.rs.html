@@ -771,6 +771,16 @@
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
 <a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
@@ -803,6 +813,11 @@
 };
 <span class="kw">pub const </span>T_RELAX: Token = Token {
   text: Cow::Borrowed(<span class="string">&quot;\\relax&quot;</span>),
+  code: Catcode::CS,
+  smuggled: <span class="prelude-val">None</span>,
+};
+<span class="kw">pub const </span>T_EMPTY: Token = Token {
+  text: Cow::Borrowed(<span class="string">&quot;\\@empty&quot;</span>),
   code: Catcode::CS,
   smuggled: <span class="prelude-val">None</span>,
 };
@@ -1077,7 +1092,9 @@
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Token {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Token) -&gt; bool {
-    <span class="self">self</span>.code == other.code &amp;&amp; (<span class="self">self</span>.code == Catcode::SPACE || (<span class="kw-2">*</span><span class="self">self</span>.text == <span class="kw-2">*</span>other.text)) &amp;&amp; <span class="self">self</span>.smuggled.is_none() == other.smuggled.is_none()
+    <span class="self">self</span>.code == other.code &amp;&amp; (<span class="self">self</span>.code == Catcode::SPACE ||
+      (<span class="kw-2">*</span><span class="self">self</span>.text == <span class="kw-2">*</span>other.text)) &amp;&amp;
+      (<span class="self">self</span>.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -1487,6 +1504,9 @@
   <span class="doccomment">/// Return the original token of a not-expanded token,
   /// or undef if it isn&#39;t marked as such.
   </span><span class="kw">pub fn </span>get_dont_expand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.smuggled }
+  <span class="kw">pub fn </span>get_smuggled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.smuggled }
+  <span class="kw">pub fn </span>take_dont_expand(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="self">self</span>.smuggled.take() }
+  <span class="kw">pub fn </span>take_smuggled(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;Token&gt;&gt; { <span class="self">self</span>.smuggled.take() }
 
   <span class="doccomment">/// Remove dont_expand flag, remove SMUGGLE_THE wrapper
   </span><span class="kw">pub fn </span>without_dont_expand(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Token {
