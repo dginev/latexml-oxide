@@ -17,4 +17,4 @@ jobs:
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check --all
-      - run: cargo test --release --workspace --no-fail-fast
+      - run: cargo test --release --workspace --no-fail-fast -j 1 -- --test-threads=1
