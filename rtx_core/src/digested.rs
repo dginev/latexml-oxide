@@ -42,7 +42,7 @@ pub struct Digested(Arc<DigestedData>);
 pub enum DigestedData {
   /// A TeX Box
   TBox(Tbox),
-  /// A TeX Whatsit
+  /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   Whatsit(RwLock<Whatsit>),
   /// A list of Digested data
   List(List),
