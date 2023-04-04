@@ -12,8 +12,9 @@ jobs:
         with:
           packages: "libxml2-dev libkpathsea-dev libkpathsea6 texlive"
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
       - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --check
-      - run: cargo build --release --workspace
+      - run: cargo fmt --check --all
       - run: cargo test --release --workspace --no-fail-fast
