@@ -477,7 +477,7 @@
 </span><span class="kw">pub enum </span>DigestedData {
   <span class="doccomment">/// A TeX Box
   </span>TBox(Tbox),
-  <span class="doccomment">/// A TeX Whatsit
+  <span class="doccomment">/// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   </span>Whatsit(RwLock&lt;Whatsit&gt;),
   <span class="doccomment">/// A list of Digested data
   </span>List(List),
