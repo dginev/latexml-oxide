@@ -14,7 +14,9 @@ fn benchmark_texfile(c: &mut Criterion, tex_path: &'static str) {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  c.bench_function(tex_path, move |b| b.iter(|| latexml.convert_file(tex_path.to_string()).unwrap()));
+  c.bench_function(tex_path, move |b| {
+    b.iter(|| latexml.convert_file(tex_path.to_string()).unwrap())
+  });
 }
 
 fn bench_primes(c: &mut Criterion) { benchmark_texfile(c, "tests/digestion/primes.tex"); }

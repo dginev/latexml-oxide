@@ -1,6 +1,6 @@
-use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use std::borrow::Cow;
 
 use crate::common::error::*;
 // use crate::common::font::Font;
@@ -8,7 +8,10 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, ConstructionClosure, Reversion};
+use crate::definition::{
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+  PrimitiveClosure, Reversion,
+};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -121,7 +124,9 @@ impl Default for MathPrimitiveOptions {
   }
 }
 impl PartialEq for MathPrimitiveOptions {
-  fn eq(&self, other: &MathPrimitiveOptions) -> bool { self.name == other.name && self.meaning == other.meaning && self.role == other.role }
+  fn eq(&self, other: &MathPrimitiveOptions) -> bool {
+    self.name == other.name && self.meaning == other.meaning && self.role == other.role
+  }
 }
 
 impl MathPrimitiveOptions {
@@ -152,7 +157,10 @@ impl MathPrimitiveOptions {
       h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i64));
     }
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
-      h.insert("operator_scriptpos".to_string(), Stored::Int(*operator_scriptpos as i64));
+      h.insert(
+        "operator_scriptpos".to_string(),
+        Stored::Int(*operator_scriptpos as i64),
+      );
     }
     if let Some(ref stretchy) = self.stretchy {
       h.insert("stretchy".to_string(), (*stretchy).into());
@@ -165,7 +173,10 @@ impl MathPrimitiveOptions {
     }
     // TODO: Do we want to run the font closures here? Maybe?
     if let Some(ref font_directive) = self.font {
-      h.insert("font".to_string(), Stored::FontDirective(font_directive.clone()));
+      h.insert(
+        "font".to_string(),
+        Stored::FontDirective(font_directive.clone()),
+      );
     }
     if let Some(ref lpadding) = self.lpadding {
       h.insert("lpadding".to_string(), (*lpadding).into());
@@ -181,7 +192,8 @@ impl MathPrimitiveOptions {
   /// Checks if complex options are present,
   /// suggestive of using a `Constructor` instead of a `Primitive`
   pub fn has_complex_option(&self) -> bool {
-    //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should we even?)
+    //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should
+    // we even?)
     self.bounded
       || self.mode.is_some()
       || !self.before_digest.is_empty()
@@ -242,7 +254,9 @@ impl Object for MathPrimitive {
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
+  }
   fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     // Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -265,8 +279,17 @@ impl Definition for MathPrimitive {
     Ok(result)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
-    fatal!(Definition, Unexpected, "do_absorbtion on MathPrimitive should never be called!");
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>> {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on MathPrimitive should never be called!"
+    );
   }
 
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }

@@ -3,22 +3,30 @@ use quote::{format_ident, quote};
 use rtx_core::common::def_parser::parse_prototype;
 use syn::{DeriveInput, Lit, Meta};
 
-/// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from rtx_package
-/// until we can figure out how to improve the code organization.
+/// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from
+/// rtx_package until we can figure out how to improve the code organization.
 pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
   let prototype: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes(parse_meta)"
+    ),
   };
   let inner: String = match input.attrs[1].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[macro = \"TypedMacro\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[macro = \"TypedMacro\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[macro = \"TypedMacro\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[macro = \"TypedMacro\"] attribute syntax, mandatory double-quotes(parse_meta)"
+    ),
   };
 
   if prototype.is_empty() {
@@ -57,9 +65,11 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
         let inneri = format_ident!("{}", inner);
         quote!(
           macro_rules! this_prototype {
-          (sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {
+          (sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ]
+            $body:block $($input:tt)*) => {
             let these_parameters = #quoted_params;
-            #inneri!(#csname, these_parameters, sub [ $gullet, ( $($var),* ):(#(#proto_types),*), $inner_state ] $body $($input)*)
+            #inneri!(#csname, these_parameters, sub [ $gullet, ( $($var),* ):(#(#proto_types),*),
+              $inner_state ] $body $($input)*)
           }
         }
         )
@@ -74,9 +84,13 @@ pub fn compile_prototype(input: DeriveInput) -> TokenStream {
   let prototype: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[prototype = \"value\"] attribute syntax, mandatory double-quotes(parse_meta)"
+    ),
   };
   if prototype.is_empty() {
     panic!("Must never call on empty prototype?! input was {prototype}");

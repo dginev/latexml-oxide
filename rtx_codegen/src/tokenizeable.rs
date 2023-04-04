@@ -12,9 +12,13 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
   let expansion: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"
+    ),
   };
   let compiled_expansion = if expansion.is_empty() {
     quote!(None)
@@ -28,10 +32,11 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
       // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
       // performed_expansion);
       //
-      // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions (via RawTeX?), e.g. when
-      // reading external style files? should that even be allowed? We can easily pre-compile all of texlive
-      // (or the ~200 supported sty and cls files in the ecosystem) once
-      // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
+      // TODO: Should "substitute_parameters" be specially performed for runtime-read expansions
+      // (via RawTeX?), e.g. when reading external style files? should that even be allowed?
+      // We can easily pre-compile all of texlive (or the ~200 supported sty and cls files in
+      // the ecosystem) once and have all expansions handled by this code snippet. Hmmm...
+      // arguable benefit at this early stage, maybe something beyond 1.0
       quote!(
         Some(ExpansionBody::Tokens(#expansion))
       )
@@ -52,9 +57,13 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   let literal: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"
+    ),
   };
 
   let tokenized = if literal.is_empty() {
@@ -75,9 +84,13 @@ pub fn compile_tokenize_internal(input: DeriveInput) -> TokenStream {
   let literal: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[literal = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"
+    ),
   };
 
   let tokenized = if literal.is_empty() {

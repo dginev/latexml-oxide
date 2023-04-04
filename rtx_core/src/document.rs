@@ -8,10 +8,10 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use regex::Regex;
 
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
@@ -62,7 +62,7 @@ pub struct Document {
   pub pending: Vec<Node>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts: HashMap<u64, Font>,            // used to be _font attribute
+  pub node_fonts: HashMap<u64, Font>,       // used to be _font attribute
   pub idstore: HashMap<String, Node>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels: HashMap<String, String>,
@@ -129,8 +129,14 @@ impl Document {
   pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
     if let Some(root) = self.document.get_root_element() {
       match node_opt {
-        Some(node) => state.model.get_xpath(&self.document).findnodes(xpath, Some(node)),
-        None => state.model.get_xpath(&self.document).findnodes(xpath, Some(&root)),
+        Some(node) => state
+          .model
+          .get_xpath(&self.document)
+          .findnodes(xpath, Some(node)),
+        None => state
+          .model
+          .get_xpath(&self.document)
+          .findnodes(xpath, Some(&root)),
       }
     } else {
       vec![]
@@ -150,14 +156,20 @@ impl Document {
   /// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
   pub fn findvalues(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<String> {
     match node_opt {
-      Some(node) => state.model.get_xpath(&self.document).findvalues(xpath, Some(node)),
+      Some(node) => state
+        .model
+        .get_xpath(&self.document)
+        .findvalues(xpath, Some(node)),
       None => {
         if let Some(root) = self.document.get_root_element() {
-          state.model.get_xpath(&self.document).findvalues(xpath, Some(&root))
+          state
+            .model
+            .get_xpath(&self.document)
+            .findvalues(xpath, Some(&root))
         } else {
           Vec::new()
         }
-    }
+      },
     }
   }
 
@@ -165,7 +177,9 @@ impl Document {
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  pub fn get_node_qname(&self, node: &Node, state: &State) -> String { state.model.get_node_qname(node) }
+  pub fn get_node_qname(&self, node: &Node, state: &State) -> String {
+    state.model.get_node_qname(node)
+  }
 
   pub fn get_node(&self) -> &Node { &self.node }
   pub fn get_node_mut(&mut self) -> &mut Node { &mut self.node }
@@ -221,7 +235,9 @@ impl Document {
     if self.has_node_font(node) {
       let desired_font = self.get_node_font(node);
       pending_declaration = desired_font.relative_to(&declared_font);
-      if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font")) && !pending_declaration.is_empty() {
+      if (!node.get_child_nodes().is_empty() || node.has_attribute("_force_font"))
+        && !pending_declaration.is_empty()
+      {
         for (key, (value, properties)) in &pending_declaration {
           if state.model.can_have_attribute(&qname, key) {
             attrs_to_set.push((key.to_string(), value.to_string()));
@@ -232,7 +248,8 @@ impl Document {
         }
 
         for (key, mut value) in attrs_to_set {
-          if key == "class" { // Generalize?
+          if key == "class" {
+            // Generalize?
             if let Some(ovalue) = node.get_attribute("class") {
               value.push(' ');
               value.push_str(&ovalue);
@@ -261,13 +278,18 @@ impl Document {
         self.finalize_rec(&mut child, state)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME) && !was_forcefont && child.get_attributes().is_empty() {
+        if (state.model.get_node_qname(&child) == FONT_ELEMENT_NAME)
+          && !was_forcefont
+          && child.get_attributes().is_empty()
+        {
           let grandchildren = child.get_child_nodes();
-          if grandchildren
-            .iter()
-            .all(|gchild| self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state))
-          {
-            Debug!("will replace {} grandchildren nodes in finalize_rec", grandchildren.len());
+          if grandchildren.iter().all(|gchild| {
+            self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state)
+          }) {
+            Debug!(
+              "will replace {} grandchildren nodes in finalize_rec",
+              grandchildren.len()
+            );
             self.replace_node(child, grandchildren)?;
           }
         }
@@ -308,7 +330,6 @@ impl Document {
     Ok(())
   }
 
-
   /// Document construction at the Current Insertion Point.
   ///
   /// absorb the given $box into the DOM (called from constructors).
@@ -326,7 +347,12 @@ impl Document {
   /// $box can also be a plain string (Digested::Postponed)
   /// which will be inserted according to whatever
   /// font, mode, etc, are in %props.
-  pub fn absorb(&mut self, object: &Digested, props_opt: Option<HashMap<String, Stored>>, state: &mut State) -> Result<()> {
+  pub fn absorb(
+    &mut self,
+    object: &Digested,
+    props_opt: Option<HashMap<String, Stored>>,
+    state: &mut State,
+  ) -> Result<()> {
     use DigestedData::*;
     let props = props_opt.unwrap_or_default();
     let mut boxes = vec![Cow::Borrowed(object)];
@@ -374,11 +400,14 @@ impl Document {
               Some(Arc::clone(prop_font))
             } else {
               match self.box_to_absorb {
-                Some(ref thisbox) => thisbox.get_font(state)?.map(|thisfont| Arc::new(thisfont.into_owned())),
+                Some(ref thisbox) => thisbox
+                  .get_font(state)?
+                  .map(|thisfont| Arc::new(thisfont.into_owned())),
                 None => None,
               }
             };
-            // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font arg?
+            // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font
+            // arg?
             let text_font = text_font_opt.unwrap_or_default();
             if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font, state)? {
               self.record_constructed_node(&new_text);
@@ -395,9 +424,9 @@ impl Document {
   }
 
   fn init_constructed_nodes(&mut self) {
-    self.localized_constructed_nodes.push(
-      self.constructed_nodes.drain(..).collect()
-    );
+    self
+      .localized_constructed_nodes
+      .push(self.constructed_nodes.drain(..).collect());
   }
   fn drain_constructed_nodes(&mut self) -> Vec<Node> {
     let drained = self.constructed_nodes.drain(..).collect();
@@ -406,13 +435,16 @@ impl Document {
     }
     drained
   }
-  pub fn get_constructed_nodes(&self) -> &[Node] {
-    &self.constructed_nodes
-  }
+  pub fn get_constructed_nodes(&self) -> &[Node] { &self.constructed_nodes }
 
   /// This is a refactored `else` cases from the main absorb routine, to allow for better type
   /// hygiene
-  pub fn absorb_string(&mut self, object: &str, props: &HashMap<String, Stored>, state: &mut State) -> Result<Option<Node>> {
+  pub fn absorb_string(
+    &mut self,
+    object: &str,
+    props: &HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<Option<Node>> {
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
       Some(v) => v.into(),
@@ -423,7 +455,13 @@ impl Document {
         Some(Stored::Font(fnt)) => (**fnt).clone(),
         Some(Stored::FontDirective(FontDirective::Asset(fnt))) => (**fnt).clone(),
         Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None, state)?,
-        _ => self.box_to_absorb.as_ref().unwrap().get_font(state)?.unwrap().into_owned(),
+        _ => self
+          .box_to_absorb
+          .as_ref()
+          .unwrap()
+          .get_font(state)?
+          .unwrap()
+          .into_owned(),
       };
       self.open_text(object, &font, state)
     } else if self.get_node_qname(&self.node, state) == MATH_TOKEN_NAME {
@@ -437,22 +475,38 @@ impl Document {
       let font_math_opt = match props.get("font") {
         Some(Stored::Font(fnt)) => Some(Cow::Borrowed(&**fnt)),
         Some(Stored::FontDirective(FontDirective::Asset(fnt))) => Some(Cow::Borrowed(&**fnt)),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => {
+          Some(Cow::Owned(code(None, state)?))
+        },
         _ => None,
       };
       if let Some(font_math) = font_math_opt {
-        Ok(Some(
-          self.insert_math_token(object, HashMap::default(), Some(&font_math), state)?))
+        Ok(Some(self.insert_math_token(
+          object,
+          HashMap::default(),
+          Some(&font_math),
+          state,
+        )?))
       } else {
-        Ok(Some(
-        self.insert_math_token(object, HashMap::default(), None, state)?))
+        Ok(Some(self.insert_math_token(
+          object,
+          HashMap::default(),
+          None,
+          state,
+        )?))
       }
     }
   }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   /// Shorthand for open,absorb,close, but returns the new node.
-  pub fn insert_element(&mut self, qname: &str, content: Vec<&Digested>, attrib: Option<HashMap<String, String>>, state: &mut State) -> Result<Node> {
+  pub fn insert_element(
+    &mut self,
+    qname: &str,
+    content: Vec<&Digested>,
+    attrib: Option<HashMap<String, String>>,
+    state: &mut State,
+  ) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
     let node = self.open_element(qname, attrib, None, state)?;
@@ -463,7 +517,10 @@ impl Document {
 
     let self_node = self.node.get_parent().unwrap();
     let mut c = Some(self_node);
-    while c.is_some() && c.as_ref() != Some(&node) && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode) {
+    while c.is_some()
+      && c.as_ref() != Some(&node)
+      && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
+    {
       let parent = c.unwrap().get_parent().unwrap();
       c = match parent.get_type() {
         Some(NodeType::DocumentNode) => None,
@@ -485,10 +542,18 @@ impl Document {
   /// but may move up past a text node.
   // Rust note: attrib would have been best as Vec<(String,String)> but
   // currently quote!() doesn't work out of the box on them
-  pub fn insert_pi(&mut self, op: &str, attributes_opt: Option<HashMap<String, String>>) -> Result<()> {
+  pub fn insert_pi(
+    &mut self,
+    op: &str,
+    attributes_opt: Option<HashMap<String, String>>,
+  ) -> Result<()> {
     let mut attr_data = Vec::new();
     if let Some(attributes) = attributes_opt {
-      let mut keys = vec![String::from("class"), String::from("package"), String::from("options")];
+      let mut keys = vec![
+        String::from("class"),
+        String::from("package"),
+        String::from("options"),
+      ];
       let other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
@@ -502,7 +567,10 @@ impl Document {
       }
     }
     // self.close_text_internal();  // Close any open text node
-    let mut pi_node = self.document.create_processing_instruction(op, &attr_data.join(" ")).unwrap();
+    let mut pi_node = self
+      .document
+      .create_processing_instruction(op, &attr_data.join(" "))
+      .unwrap();
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
@@ -519,7 +587,11 @@ impl Document {
     state: &mut State,
   ) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
-    Debug!("Open element {:?} at {:?}", qname, self.get_node_qname(&self.node, state));
+    Debug!(
+      "Open element {:?} at {:?}",
+      qname,
+      self.get_node_qname(&self.node, state)
+    );
     let mut point = self.find_insertion_point(qname, None, state)?;
 
     let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned(), state)?;
@@ -541,7 +613,11 @@ impl Document {
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
   pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    Debug!("Close element {:?} at {:?}", qname, self.document.node_to_string(&self.node));
+    Debug!(
+      "Close element {:?} at {:?}",
+      qname,
+      self.document.node_to_string(&self.node)
+    );
     self.close_text_internal(state)?;
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
@@ -578,7 +654,11 @@ impl Document {
         let message = s!(
           "Closing tag {:?} whose open descendents do not auto-close. Descendants are {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
+          cant_close
+            .into_iter()
+            .map(|n| n.get_name())
+            .collect::<Vec<String>>()
+            .join(",")
         );
         Error!("malformed", qname, self, state, message);
       }
@@ -631,7 +711,10 @@ impl Document {
           break 'inner;
         }
         if !self.can_auto_close(node, state) {
-          Debug!("It was impossible to autoclose node: {:?}", self.document.node_to_string(node));
+          Debug!(
+            "It was impossible to autoclose node: {:?}",
+            self.document.node_to_string(node)
+          );
           return None;
         }
         node_opt = node.get_parent();
@@ -677,7 +760,13 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      Error!("malformed", state.model.get_node_qname(node), self, state, message);
+      Error!(
+        "malformed",
+        state.model.get_node_qname(node),
+        self,
+        state,
+        message
+      );
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
     } else {
       // Found node.
@@ -687,7 +776,11 @@ impl Document {
         let message = s!(
           "Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
           qname,
-          cant_close.into_iter().map(|n| n.get_name()).collect::<Vec<String>>().join(",")
+          cant_close
+            .into_iter()
+            .map(|n| n.get_name())
+            .collect::<Vec<String>>()
+            .join(",")
         );
         Error!("malformed", qname, self, state, message);
       }
@@ -699,11 +792,20 @@ impl Document {
   }
 
   /// Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> { self.close_node_with_strictness(true, node, state) }
+  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
+    self.close_node_with_strictness(true, node, state)
+  }
   /// Only if needed/possible: closes all nodes until $node is closed
-  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> { self.close_node_with_strictness(false, node, state) }
+  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
+    self.close_node_with_strictness(false, node, state)
+  }
 
-  pub fn close_node_with_strictness(&mut self, strict: bool, node: &Node, state: &mut State) -> Result<()> {
+  pub fn close_node_with_strictness(
+    &mut self,
+    strict: bool,
+    node: &Node,
+    state: &mut State,
+  ) -> Result<()> {
     // my ($t, @cant_close) = ();
     let mut cant_close: Vec<Node> = Vec::new();
     let mut n = self.node.clone();
@@ -735,7 +837,11 @@ impl Document {
         let message = s!(
           "Closing {} whose open descendents do not auto-close. Descendents are {}",
           qname,
-          cant_close.iter().map(Node::get_name).collect::<Vec<String>>().join(", ")
+          cant_close
+            .iter()
+            .map(Node::get_name)
+            .collect::<Vec<String>>()
+            .join(", ")
         );
         if strict {
           Error!("malformed", qname, self, state, message);
@@ -778,7 +884,12 @@ impl Document {
   }
 
   /// get the actions that should be performed on afterOpen or afterClose
-  pub fn get_tag_action_list(&self, tag: &str, when: TagOptionName, state: &mut State) -> Vec<TagConstructionClosure> {
+  pub fn get_tag_action_list(
+    &self,
+    tag: &str,
+    when: TagOptionName,
+    state: &mut State,
+  ) -> Vec<TagConstructionClosure> {
     use self::tag::TagOptionName::*;
     // my ($p, $n) = (undef, $tag);
     // if ($tag =~ /^([^:]+):(.+)$/) {
@@ -798,10 +909,18 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = state.tag_properties.entry(tag.to_string()).or_insert_with(TagOptions::default).clone();
+    let tag_hash = state
+      .tag_properties
+      .entry(tag.to_string())
+      .or_insert_with(TagOptions::default)
+      .clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
-    let all_hash = state.tag_properties.entry(s!("ltx:*")).or_insert_with(TagOptions::default).clone();
+    let all_hash = state
+      .tag_properties
+      .entry(s!("ltx:*"))
+      .or_insert_with(TagOptions::default)
+      .clone();
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -848,7 +967,14 @@ impl Document {
 
   /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
   /// but keep XML declaration, comments and don't convert empty elements.
-  pub fn serialize_aux(&self, node: &Node, depth: usize, noindent: bool, heuristic: bool, state: &mut State) -> String {
+  pub fn serialize_aux(
+    &self,
+    node: &Node,
+    depth: usize,
+    noindent: bool,
+    heuristic: bool,
+    state: &mut State,
+  ) -> String {
     let indent = "  ".repeat(depth);
     let mut serialized = String::new();
 
@@ -860,7 +986,8 @@ impl Document {
           serialized.push_str(&child_serialized);
           let mut current_child = child;
           while let Some(sibling) = current_child.get_next_sibling() {
-            let sibling_serialized = self.serialize_aux(&sibling, depth, noindent, heuristic, state);
+            let sibling_serialized =
+              self.serialize_aux(&sibling, depth, noindent, heuristic, state);
             serialized.push_str(&sibling_serialized);
             current_child = sibling;
           }
@@ -876,7 +1003,11 @@ impl Document {
         let nsnodes = node.get_namespace_declarations();
         for ns in nsnodes {
           let prefix = ns.get_prefix();
-          let prefix_declaration = if prefix.is_empty() { s!("xmlns") } else { s!("xmlns:{}", prefix) };
+          let prefix_declaration = if prefix.is_empty() {
+            s!("xmlns")
+          } else {
+            s!("xmlns:{}", prefix)
+          };
           let href = ns.get_href();
           write!(open_tag, " {prefix_declaration}=\"{href}\"").ok();
         }
@@ -888,7 +1019,9 @@ impl Document {
           if key == "id" {
             continue;
           } // HACK for xml:id
-          let key_serialized = state.model.get_node_document_qname(&node.get_attribute_node(key).unwrap());
+          let key_serialized = state
+            .model
+            .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           write!(open_tag, " {key_serialized}=\"{val_serialized}\"").ok();
         }
@@ -900,7 +1033,10 @@ impl Document {
 
         let noindent_children: bool = if heuristic {
           // This emulates libxml2"s heuristic
-          noindent || children.iter().any(|e| e.get_type() == Some(NodeType::TextNode))
+          noindent
+            || children
+              .iter()
+              .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
@@ -918,7 +1054,13 @@ impl Document {
             serialized.push('\n');
           }
           for child in children {
-            serialized.push_str(&self.serialize_aux(&child, depth + 1, noindent_children, heuristic, state));
+            serialized.push_str(&self.serialize_aux(
+              &child,
+              depth + 1,
+              noindent_children,
+              heuristic,
+              state,
+            ));
           }
           if !noindent_children {
             serialized.push_str(&indent)
@@ -946,7 +1088,12 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        write!(serialized, "<!-- {}-->", serialize_string(&node.get_content())).ok();
+        write!(
+          serialized,
+          "<!-- {}-->",
+          serialize_string(&node.get_content())
+        )
+        .ok();
       },
       _ => {},
     }
@@ -984,14 +1131,20 @@ impl Document {
     font_opt: Option<&Font>,
     state: &mut State,
   ) -> Result<Node> {
-    attributes.entry(s!("role")).or_insert_with(|| s!("UNKNOWN"));
+    attributes
+      .entry(s!("role"))
+      .or_insert_with(|| s!("UNKNOWN"));
     // TODO: This seems ported out of order, where should these attributes be
     // getting removed?
     attributes.remove("mode");
     // attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");
-    let qname = if is_space { MATH_HINT_NAME } else { MATH_TOKEN_NAME };
+    let qname = if is_space {
+      MATH_HINT_NAME
+    } else {
+      MATH_TOKEN_NAME
+    };
     let cur_qname = state.model.get_node_qname(&self.node);
     let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
       "" // Make empty hint, of only spaces
@@ -1018,7 +1171,8 @@ impl Document {
       };
       self.set_node_font(&mut node, &font)?;
       if let Some(ref digested) = self.box_to_absorb {
-        // TODO: The Rc<Digested> node boxes still have some way to go until they are fully ergonomic...
+        // TODO: The Rc<Digested> node boxes still have some way to go until they are fully
+        // ergonomic...
         self.set_node_box(&node, digested.clone());
       }
       if !text.is_empty() {
@@ -1035,21 +1189,21 @@ impl Document {
   pub fn insert_comment(&mut self, text: &str, state: &mut State) -> Result<Node> {
     // TODO:
     let trimmed = text.trim_end();
-    let _clean = DASHES_RE.replace_all(trimmed,"__");
-    self.close_text_internal(state)?;    // Close any open text node.
+    let _clean = DASHES_RE.replace_all(trimmed, "__");
+    self.close_text_internal(state)?; // Close any open text node.
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       // TODO: add "create_comment" (or equiv) to libxml wrapper
       // let comment = self.document.create_comment(s!(" {} ",clean));
       // self.pending.push(comment.clone());
       // Ok(comment)
-    // } else {
-    //   if let Some(last_child) = self.node.last_child() {
-    //     if last_child.get_type() == NodeType::CommentNode {
-    //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));
-    //       return Ok(last_child);
-    //     }
-    //   }
-    //   self.node.add_child(self.document.create_comment(s!(" {} ",clean_text));
+      // } else {
+      //   if let Some(last_child) = self.node.last_child() {
+      //     if last_child.get_type() == NodeType::CommentNode {
+      //       last_child.set_content(s!("{}\n     {} ",comment.get_content(), clean_text));
+      //       return Ok(last_child);
+      //     }
+      //   }
+      //   self.node.add_child(self.document.create_comment(s!(" {} ",clean_text));
     }
     Ok(self.node.clone())
   }
@@ -1075,7 +1229,9 @@ impl Document {
     {
       // Ignore initial whitespace
       if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
-        && (node_type == Some(NodeType::DocumentNode) || (node_type == Some(NodeType::ElementNode) && !self.can_contain(&self.node, "#PCDATA", state)))
+        && (node_type == Some(NodeType::DocumentNode)
+          || (node_type == Some(NodeType::ElementNode)
+            && !self.can_contain(&self.node, "#PCDATA", state)))
       {
         return Ok(None);
       }
@@ -1083,19 +1239,24 @@ impl Document {
     if matches!(&font.family.as_deref(), Some("nullfont")) {
       return Ok(None);
     };
-    Debug!("Insert text {:?} at {:?}", text, self.document.node_to_string(&self.node));
+    Debug!(
+      "Insert text {:?} at {:?}",
+      text,
+      self.document.node_to_string(&self.node)
+    );
 
     // Get the desired font attributes, particularly the desired element
     // (usually ltx:text, but let Font override, eg for \emph)
-    let declared_font       = self.get_node_font(&self.node);
+    let declared_font = self.get_node_font(&self.node);
     let pending_declaration = font.relative_to(declared_font);
-    let elementname         = match pending_declaration.get("element") {
-      Some((k,_v)) => k,
-      None => FONT_ELEMENT_NAME
+    let elementname = match pending_declaration.get("element") {
+      Some((k, _v)) => k,
+      None => FONT_ELEMENT_NAME,
     };
     // If not at document begin. And not appending text in same font.
     if node_type != Some(NodeType::DocumentNode)
-      && !(node_type == Some(NodeType::TextNode) && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+      && !(node_type == Some(NodeType::TextNode)
+        && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
@@ -1128,7 +1289,12 @@ impl Document {
       }
       if bestdiff > 0 {
         // Open if needed.
-        self.open_element(elementname, Some(string_map!("_fontswitch" => "true", "_autoopened" => "true")), Some(font), state)?;
+        self.open_element(
+          elementname,
+          Some(string_map!("_fontswitch" => "true", "_autoopened" => "true")),
+          Some(font),
+          state,
+        )?;
       }
     }
 
@@ -1143,7 +1309,9 @@ impl Document {
     state.model.can_contain(&tag, child)
   }
 
-  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool { state.model.can_contain(tag, child) }
+  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
+    state.model.can_contain(tag, child)
+  }
 
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
@@ -1174,9 +1342,13 @@ impl Document {
   }
 
   pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
-    state.model.can_have_attribute(&state.model.get_node_qname(node), attrib)
+    state
+      .model
+      .can_have_attribute(&state.model.get_node_qname(node), attrib)
   }
-  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool { state.model.can_have_attribute(tag, attrib) }
+  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool {
+    state.model.can_have_attribute(tag, attrib)
+  }
 
   pub fn close_text_internal(&mut self, state: &State) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
@@ -1232,8 +1404,8 @@ impl Document {
     let qname = state.model.get_node_qname(node);
     if qname != "ltx:_Capture_" {
       let mut c = node.get_child_nodes();
-      // with single child, AND, $node can have all the attributes that the child has (but at least "font")
-      // BUT, it isn"t being forced somehow
+      // with single child, AND, $node can have all the attributes that the child has (but at least
+      // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_NAME)
         && state.model.can_have_attribute(&qname, "font")
@@ -1241,7 +1413,10 @@ impl Document {
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
-          .all(|v| state.model.can_have_attribute(&qname, v) && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str())))
+          .all(|v| {
+            state.model.can_have_attribute(&qname, v)
+              && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
+          })
         && !c[0].has_attribute("_force_font")
       {
         let mut c_first = c.pop().unwrap();
@@ -1260,7 +1435,12 @@ impl Document {
     Ok(())
   }
 
-  pub fn merge_attributes(&mut self, from: Node, to: &mut Node, _force: Option<HashSet<&'static str>>) -> Result<()> {
+  pub fn merge_attributes(
+    &mut self,
+    from: Node,
+    to: &mut Node,
+    _force: Option<HashSet<&'static str>>,
+  ) -> Result<()> {
     for (key, val) in from.get_attributes().iter() {
       // Special case attributes
       if key.as_str() == "xml:id" {
@@ -1285,11 +1465,15 @@ impl Document {
 
   pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
     if text.is_empty() {
-      return Ok(self.node.clone())
+      return Ok(self.node.clone());
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
-      Debug!("Appending text {:?} to {:?}", text, self.document.node_to_string(&self.node));
+      Debug!(
+        "Appending text {:?} to {:?}",
+        text,
+        self.document.node_to_string(&self.node)
+      );
 
       let parent = self.node.get_parent().unwrap();
       if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
@@ -1301,7 +1485,11 @@ impl Document {
     } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None, state)?;
-      Debug!("Inserting text node for {:?} into {:?}", text, self.document.node_to_string(&point));
+      Debug!(
+        "Inserting text node for {:?} into {:?}",
+        text,
+        self.document.node_to_string(&point)
+      );
       let mut node = Node::new_text(text, &self.document)?;
       point.add_child(&mut node)?;
       if node.get_type().is_none() {
@@ -1322,8 +1510,8 @@ impl Document {
   // /// Indeed, propogate it to ancestors if they were autoOpened for same cause (box)
   // fn append_text_box(&mut self, node: &Node, thisbox: &Digested, state: &State) {
   //   let origbox = self.get_node_box(node);
-  //   if origbox.is_some() && thisbox != &**origbox.as_ref().unwrap() { // if not already the same box
-  //     let newbox = List::new(vec![origbox, thisbox], state);
+  //   if origbox.is_some() && thisbox != &**origbox.as_ref().unwrap() { // if not already the same
+  // box     let newbox = List::new(vec![origbox, thisbox], state);
   //     self.set_node_box(node, newbox);
   //     let p = node;
   //     // AND, propogate change to autoOpen'd ancestors based on same initial box
@@ -1386,8 +1574,15 @@ impl Document {
   }
 
   /// Apply ligature operation to `node`, presumed the last insertion into it's parent(?)
-  fn apply_math_ligature(&mut self, node: &mut Node, ligature: &Ligature, state: &mut State) -> Result<bool> {
-    if let Some((nmatched, newstring, attr)) = (ligature.matcher.as_ref().unwrap())(self, node, state)? {
+  fn apply_math_ligature(
+    &mut self,
+    node: &mut Node,
+    ligature: &Ligature,
+    state: &mut State,
+  ) -> Result<bool> {
+    if let Some((nmatched, newstring, attr)) =
+      (ligature.matcher.as_ref().unwrap())(self, node, state)?
+    {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
@@ -1398,7 +1593,8 @@ impl Document {
       }
       // This fragment replaces the node's box by the composite boxes it replaces
       // HOWEVER, this gets things out of sync because parent lists of boxes still
-      // have the old ones.  Unless we could recursively replace all of them, we'd better skip it(??)
+      // have the old ones.  Unless we could recursively replace all of them, we'd better skip
+      // it(??)
       if boxes.len() > 1 {
         // TODO: Cloning boxes is BAD. What is a better model?
         let mut list = List::new(boxes.into_iter().collect::<Vec<_>>(), state);
@@ -1437,7 +1633,10 @@ impl Document {
     // This test seems to successfully determine inclusion,
     // without requiring the (dangerous? & dubious?) unbindNode to be used.
     if let Some(root) = self.document.get_root_element() {
-      nodes.into_iter().filter(|node| xml::is_descendant_or_self(node, &root)).collect()
+      nodes
+        .into_iter()
+        .filter(|node| xml::is_descendant_or_self(node, &root))
+        .collect()
     } else {
       Vec::new()
     }
@@ -1451,7 +1650,10 @@ impl Document {
     } else {
       let mut new = vec![nodes.remove(0)];
       for node in nodes {
-        if new.iter().all(|other| !xml::is_descendant_or_self(&node, other)) {
+        if new
+          .iter()
+          .all(|other| !xml::is_descendant_or_self(&node, other))
+        {
           new.push(node)
         }
       }
@@ -1478,7 +1680,10 @@ impl Document {
     };
     let mut node = self.node.clone();
     let node_type = node.get_type();
-    if node_type != Some(NodeType::TextNode) && node_type != Some(NodeType::ElementNode) && node_type != Some(NodeType::DocumentNode) {
+    if node_type != Some(NodeType::TextNode)
+      && node_type != Some(NodeType::ElementNode)
+      && node_type != Some(NodeType::DocumentNode)
+    {
       let message = s!(
         "Insertion point is not an element, document or text: {:?}",
         self.document.node_to_string(&node)
@@ -1504,7 +1709,12 @@ impl Document {
   /// Find the node where an element with qualified name $qname can be inserted.
   /// This will move up the tree (closing auto-closable elements),
   /// or down (inserting auto-openable elements), as needed.
-  pub fn find_insertion_point(&mut self, qname: &str, has_opened_opt: Option<String>, state: &mut State) -> Result<Node> {
+  pub fn find_insertion_point(
+    &mut self,
+    qname: &str,
+    has_opened_opt: Option<String>,
+    state: &mut State,
+  ) -> Result<Node> {
     self.close_text_internal(state)?; // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // If `qname` is allowed at the current point, we're done.
@@ -1518,7 +1728,8 @@ impl Document {
         let node_font = self.get_node_font(&self.node).clone();
         self.open_element(&inter, None, Some(&node_font), state)?;
 
-        return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should work now).
+        return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should
+                                                                     // work now).
       }
     }
 
@@ -1623,33 +1834,35 @@ impl Document {
     if key == "xml:id" {
       // If it's an ID attribute
       let recorded = self.record_id(value); // Do id book keeping
-                                            // TODO: Need to improve Namespace ergonomics, also in rust-libxml
-                                            // let node_ns = self
-                                            //   .document
-                                            //   .get_root_element()
-                                            //   .unwrap()
-                                            //   .get_namespace_declarations()
-                                            //   .into_iter()
-                                            //   .find(|ns| ns.get_href() == XML_NS)
-                                            //   .unwrap_or_else(|| {
-                                            //     node
-                                            //       .get_namespace_declarations()
-                                            //       .into_iter()
-                                            //       .find(|ns| ns.get_href() == XML_NS)
-                                            //       .unwrap_or_else(|| {
-                                            //         Namespace::new(
-                                            //           "xml",
-                                            //           &XML_NS.to_string().clone(),
-                                            //           &mut self.document.get_root_element().unwrap(),
-                                            //         ).unwrap_or_else(|_| {
-                                            //           panic!(
-                                            //             "Could not set NS for {:?}\n\n at \n\n {:?}",
-                                            //             self.document.node_to_string(node),
-                                            //             self.document.to_string(true)
-                                            //           )
-                                            //         })
-                                            //       })
-                                            //   });
+
+      // TODO: Need to improve Namespace ergonomics, also in rust-libxml
+      // let node_ns = self
+      //   .document
+      //   .get_root_element()
+      //   .unwrap()
+      //   .get_namespace_declarations()
+      //   .into_iter()
+      //   .find(|ns| ns.get_href() == XML_NS)
+      //   .unwrap_or_else(|| {
+      //     node
+      //       .get_namespace_declarations()
+      //       .into_iter()
+      //       .find(|ns| ns.get_href() == XML_NS)
+      //       .unwrap_or_else(|| {
+      //         Namespace::new(
+      //           "xml",
+      //           &XML_NS.to_string().clone(),
+      //           &mut self.document.get_root_element().unwrap(),
+      //         ).unwrap_or_else(|_| {
+      //           panic!(
+      //             "Could not set NS for {:?}\n\n at \n\n {:?}",
+      //             self.document.node_to_string(node),
+      //             self.document.to_string(true)
+      //           )
+      //         })
+      //       })
+      //   });
+
       self.node.set_attribute("xml:id", &recorded)?; // and bypass all ns stuff
     } else if !key.contains(':') {
       // No colon; no namespace (the common case!)
@@ -1678,7 +1891,9 @@ impl Document {
     } // redundant case...
     Ok(())
   }
-  pub fn node_get_attribute(&mut self, name: &str) -> Option<String> { self.node.get_attribute(name) }
+  pub fn node_get_attribute(&mut self, name: &str) -> Option<String> {
+    self.node.get_attribute(name)
+  }
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Document surgery (?)
   // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1689,7 +1904,13 @@ impl Document {
   // Set any allowed attribute on a node, decoding the prefix, if any.
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
-  pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str, state: &State) -> Result<()> {
+  pub fn set_attribute(
+    &mut self,
+    node: &mut Node,
+    key: &str,
+    value: &str,
+    state: &State,
+  ) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
@@ -1734,7 +1955,8 @@ impl Document {
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
       node.set_attribute(key, value)?;
       // }
-    } else { // Accept any namespaced attributes
+    } else {
+      // Accept any namespaced attributes
       dbg!(key);
       unimplemented!();
     }
@@ -1754,7 +1976,13 @@ impl Document {
     Ok(())
   }
 
-  fn add_ss_values(&mut self, node: &mut Node, key: &str, values_str: &str, state: &State) -> Result<()> {
+  fn add_ss_values(
+    &mut self,
+    node: &mut Node,
+    key: &str,
+    values_str: &str,
+    state: &State,
+  ) -> Result<()> {
     // $values = $values->toAttribute if ref $values;
     if !values_str.is_empty() {
       // Skip if `empty'; but 0 is OK!
@@ -1777,7 +2005,9 @@ impl Document {
     Ok(())
   }
 
-  pub fn add_class(&mut self, node: &mut Node, class: &str, state: &State) -> Result<()> { self.add_ss_values(node, "class", class, state) }
+  pub fn add_class(&mut self, node: &mut Node, class: &str, state: &State) -> Result<()> {
+    self.add_ss_values(node, "class", class, state)
+  }
 
   //**********************************************************************
   // Association of nodes and ids (xml:id)
@@ -1813,13 +2043,22 @@ impl Document {
       // Can we recover?
       if &self.node != prev {
         Some(prev.clone())
-      } else { None }
-    } else { None };
+      } else {
+        None
+      }
+    } else {
+      None
+    };
     if let Some(prev) = prev_opt {
       let badid = id;
       let id = self.modify_id(id.to_owned());
-      let message = s!("Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
-        id, self.document.node_to_string(node),badid, self.document.node_to_string(&prev));
+      let message = s!(
+        "Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
+        id,
+        self.document.node_to_string(node),
+        badid,
+        self.document.node_to_string(&prev)
+      );
       Info!("malformed", "id", self, state, message);
     }
     self.idstore.insert(id.to_string(), node.clone());
@@ -1851,7 +2090,7 @@ impl Document {
 
   /// Get a new, related, but unique id
   /// Sneaky option: try "ID_SUFFIX" as a suffix for id, first.
-  pub fn modify_id(&mut self, id: String ) -> String {
+  pub fn modify_id(&mut self, id: String) -> String {
     if self.idstore.contains_key(&id) {
       // Whoops! Already assigned!!!
       // Can we recover?
@@ -1860,9 +2099,9 @@ impl Document {
       // || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
       // foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
       //   return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self, state, s!("Last alternative for '{}' is '{}'",id,badid)); } }
-      // TODO
-      s!("{}a",badid)
+      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self, state,
+      // s!("Last alternative for '{}' is '{}'",id,badid)); } } TODO
+      s!("{}a", badid)
     } else {
       id
     }
@@ -1874,8 +2113,8 @@ impl Document {
   //  Odd bit:
   //  In an XMDual, in each branch (content, presentation) there will be atoms
   //  that correspond to the input (one will be real, the other an XMRef to the first).
-  //  But also there will be additional "decoration" (delimiters, punctuation, etc on the presentation
-  //  side; other symbols, bindings, whatever, on the content side).
+  //  But also there will be additional "decoration" (delimiters, punctuation, etc on the
+  // presentation  side; other symbols, bindings, whatever, on the content side).
   //  These decorations should NOT be subject to rewrite rules,
   //  and in cross-linked parallel markup, they should be attributed to the
   //  upper containing object's ID, rather than left dangling.
@@ -1902,7 +2141,13 @@ impl Document {
     Ok(())
   }
 
-  fn mark_xmnode_visibility_aux(&self, mut node: Node, cvis: bool, mut pvis: bool, state: &mut State) -> Result<()> {
+  fn mark_xmnode_visibility_aux(
+    &self,
+    mut node: Node,
+    cvis: bool,
+    mut pvis: bool,
+    state: &mut State,
+  ) -> Result<()> {
     let qname = self.get_node_qname(&node, state);
     if (!cvis || node.has_attribute("_cvis")) && (!pvis || node.has_attribute("_pvis")) {
       return Ok(());
@@ -1932,18 +2177,29 @@ impl Document {
       match node.get_attribute("idref") {
         None => {
           let key = node.get_attribute("_xmkey");
-          Warn!("expected", "id", self, state, "Missing idref on ltx:XMRef",s!("_xmkey is `{}`",key.unwrap_or_default()));
+          Warn!(
+            "expected",
+            "id",
+            self,
+            state,
+            "Missing idref on ltx:XMRef",
+            s!("_xmkey is `{}`", key.unwrap_or_default())
+          );
         },
-        Some(id) => {
-          match self.lookup_id(&id) {
-            None => {
-              Warn!("expected", "node", self, state, s!("No node found with id='{id}' (referred to from ltx:XMRef)"));
-            },
-            Some(reffed) => {
-              self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis, state)?;
-            }
-          }
-        }
+        Some(id) => match self.lookup_id(&id) {
+          None => {
+            Warn!(
+              "expected",
+              "node",
+              self,
+              state,
+              s!("No node found with id='{id}' (referred to from ltx:XMRef)")
+            );
+          },
+          Some(reffed) => {
+            self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis, state)?;
+          },
+        },
       }
     } else {
       for child in xml::element_nodes(&node) {
@@ -1957,20 +2213,41 @@ impl Document {
   /// (according to markXMNodeVisibility)
   /// If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
   /// we could avoid re-marking, but we'd better be sure before removing nodes!
-  fn prune_xmduals(&mut self, state:&mut State) -> Result<()> {
+  fn prune_xmduals(&mut self, state: &mut State) -> Result<()> {
     // RE-mark visibility!
     self.mark_xmnode_visibility(state)?;
     // will reversing keep from problems removing nodes from trees that already have been removed?
-    for mut dual in self.findnodes("descendant-or-self::ltx:XMDual", None, state).into_iter().rev() {
+    for mut dual in self
+      .findnodes("descendant-or-self::ltx:XMDual", None, state)
+      .into_iter()
+      .rev()
+    {
       self.document.node_to_string(&dual);
       let mut dual_children = xml::element_nodes(&dual);
       let presentation = dual_children.pop().unwrap();
       let content = dual_children.pop().unwrap();
-      if self.findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&content), state).is_none() { // content never seen
+      if self
+        .findnode(
+          "descendant-or-self::*[@_pvis or @_cvis]",
+          Some(&content),
+          state,
+        )
+        .is_none()
+      {
+        // content never seen
         self.collapse_xmdual(&mut dual, presentation, state)?;
-      } else if self.findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&presentation), state).is_none() { // pres.
+      } else if self
+        .findnode(
+          "descendant-or-self::*[@_pvis or @_cvis]",
+          Some(&presentation),
+          state,
+        )
+        .is_none()
+      {
+        // pres.
         self.collapse_xmdual(&mut dual, content, state)?;
-      } else { // compact aligned structures, where possible
+      } else {
+        // compact aligned structures, where possible
         self.compact_xmdual(dual, content, Some(presentation), state)?;
       }
     }
@@ -1981,66 +2258,78 @@ impl Document {
   // our $dual_transfer_overrides    = { %$content_transfer_overrides,
   //   map { ($_ => 1) } qw(xml:id role) };
 
-  fn compact_xmdual(&mut self, _dual: Node, _content: Node, _presentation: Option<Node>, _state: &mut State) -> Result<()> {
-  //   my $c_name = $self->getNodeQName($content);
-  //   my $p_name = $self->getNodeQName($presentation);
+  fn compact_xmdual(
+    &mut self,
+    _dual: Node,
+    _content: Node,
+    _presentation: Option<Node>,
+    _state: &mut State,
+  ) -> Result<()> {
+    //   my $c_name = $self->getNodeQName($content);
+    //   my $p_name = $self->getNodeQName($presentation);
     // 1.Quick fix: merge two tokens
-  //   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
-  //     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
-  //     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
-  //     $self->replaceNode($dual, $presentation);
+    //   if (($c_name eq 'ltx:XMTok') && ($p_name eq 'ltx:XMTok')) {
+    //     $self->mergeAttributes($content, $presentation, $content_transfer_overrides);
+    //     $self->mergeAttributes($dual,    $presentation, $dual_transfer_overrides);
+    //     $self->replaceNode($dual, $presentation);
 
-  //   # 2.For now, only main use case is compacting mirror XMApp nodes
-  //   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
-  //   my @content_args = element_nodes($content);
-  //   my @pres_args    = element_nodes($presentation);
-  //   return if scalar(@content_args) != scalar(@pres_args);
+    //   # 2.For now, only main use case is compacting mirror XMApp nodes
+    //   return if ($c_name ne 'ltx:XMApp') || ($p_name ne 'ltx:XMApp');
+    //   my @content_args = element_nodes($content);
+    //   my @pres_args    = element_nodes($presentation);
+    //   return if scalar(@content_args) != scalar(@pres_args);
 
-  //   my @new_args = ();
-  //   # walk the corresponding children, and double-check they are referenced in the same order
-  //   while ((my $c_arg = shift(@content_args)) and (my $p_arg = shift(@pres_args))) {
-  //     my $c_idref = $c_arg->getAttribute('idref');
-  //     if ($c_idref && ($c_idref eq ($p_arg->getAttribute('xml:id') || ''))) {
-  //       push @new_args, $p_arg;
-  //       next; }    # content-refs-pres, OK
-  //     my $p_idref = $p_arg->getAttribute('idref');
-  //     if ($p_idref && ($p_idref eq ($c_arg->getAttribute('xml:id') || ''))) {
-  //       push @new_args, $c_arg;
-  //       next; }    # pres-refs-content, OK
+    //   my @new_args = ();
+    //   # walk the corresponding children, and double-check they are referenced in the same order
+    //   while ((my $c_arg = shift(@content_args)) and (my $p_arg = shift(@pres_args))) {
+    //     my $c_idref = $c_arg->getAttribute('idref');
+    //     if ($c_idref && ($c_idref eq ($p_arg->getAttribute('xml:id') || ''))) {
+    //       push @new_args, $p_arg;
+    //       next; }    # content-refs-pres, OK
+    //     my $p_idref = $p_arg->getAttribute('idref');
+    //     if ($p_idref && ($p_idref eq ($c_arg->getAttribute('xml:id') || ''))) {
+    //       push @new_args, $c_arg;
+    //       next; }    # pres-refs-content, OK
 
-  //     # we can handle content-side XMToks, to any XM* presentation subtree differing for now.
-  //     if ($self->getNodeQName($c_arg) ne 'ltx:XMTok') {
-  //       return; }
-  //     else { # otherwise we can compact this case. but delay actual libxml changes until we are *sure* the entire tree is compactable
-  //       push(@new_args, [$c_arg, $p_arg]); } }
+    //     # we can handle content-side XMToks, to any XM* presentation subtree differing for now.
+    //     if ($self->getNodeQName($c_arg) ne 'ltx:XMTok') {
+    //       return; }
+    //     else { # otherwise we can compact this case. but delay actual libxml changes until we are
+    // *sure* the entire tree is compactable       push(@new_args, [$c_arg, $p_arg]); } }
 
-  // # If we made it here, this is a dual with two mirrored applications and a single XMTok difference, compact it.
-  //   my $compact_apply = $self->openElementAt($dual->parentNode, 'ltx:XMApp');
-  //   for my $n_arg (@new_args) {
-  //     # one of the args has our dual node that needs compacting
-  //     if (ref $n_arg eq 'ARRAY') {
-  //       my ($c_arg, $p_arg) = @$n_arg;
-  //       $self->mergeAttributes($c_arg, $p_arg, $content_transfer_overrides);
-  //       $n_arg = $p_arg; }
-  //     $n_arg->unbindNode;
-  //     $compact_apply->appendChild($n_arg); }
-  //   # if the dual has any attributes migrate them to the new XMApp
-  //   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
-  //   $self->replaceNode($dual, $compact_apply);
-  //   $self->closeElementAt($compact_apply);
-      Ok(())
-    }
+    // # If we made it here, this is a dual with two mirrored applications and a single XMTok
+    // difference, compact it.   my $compact_apply = $self->openElementAt($dual->parentNode,
+    // 'ltx:XMApp');   for my $n_arg (@new_args) {
+    //     # one of the args has our dual node that needs compacting
+    //     if (ref $n_arg eq 'ARRAY') {
+    //       my ($c_arg, $p_arg) = @$n_arg;
+    //       $self->mergeAttributes($c_arg, $p_arg, $content_transfer_overrides);
+    //       $n_arg = $p_arg; }
+    //     $n_arg->unbindNode;
+    //     $compact_apply->appendChild($n_arg); }
+    //   # if the dual has any attributes migrate them to the new XMApp
+    //   $self->mergeAttributes($dual, $compact_apply, $dual_transfer_overrides);
+    //   $self->replaceNode($dual, $compact_apply);
+    //   $self->closeElementAt($compact_apply);
+    Ok(())
+  }
 
   /// Replace an XMDual with one of its branches
-  fn collapse_xmdual(&mut self, dual: &mut Node, mut branch: Node, state:&mut State) -> Result<()> {
+  fn collapse_xmdual(
+    &mut self,
+    dual: &mut Node,
+    mut branch: Node,
+    state: &mut State,
+  ) -> Result<()> {
     // The other branch is not visible, nor referenced,
     // but the dual may have an id and be referenced
     if let Some(dualid) = dual.get_attribute_ns("id", XML_NS) {
       self.unrecord_id(&dualid); // We'll move or remove the ID from the dual
-      if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) { // branch has id too!
-      for mut tref in self.findnodes(&s!("//*[@idref='{}']",dualid), None, state) {
-        tref.set_attribute("idref", &branchid)?;
-      } // Change dualid refs to branchid
+      if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) {
+        // branch has id too!
+        for mut tref in self.findnodes(&s!("//*[@idref='{}']", dualid), None, state) {
+          tref.set_attribute("idref", &branchid)?;
+        } // Change dualid refs to branchid
       } else {
         branch.set_attribute("xml:id", &dualid)?; // Just use same ID on the branch
         self.record_id_with_node(&dualid, &branch, state);
@@ -2238,11 +2527,15 @@ impl Document {
     mut font_opt: Option<Font>,
     state: &mut State,
   ) -> Result<Node> {
-    // DG: This is a cursed way to manage fonts, how can we unwind it all back to a clear organization?
+    // DG: This is a cursed way to manage fonts, how can we unwind it all back to a clear
+    // organization?
     if font_opt.is_none() {
       if let Some(ref attrs) = attributes {
         if let Some(fontid) = attrs.get("_font") {
-          font_opt = self.node_fonts.get(&fontid.parse::<u64>().unwrap()).cloned()
+          font_opt = self
+            .node_fonts
+            .get(&fontid.parse::<u64>().unwrap())
+            .cloned()
         }
       }
     }
@@ -2305,8 +2598,8 @@ impl Document {
 
     // TODO [new]: Ever more certain there is a refactor waiting to happen with box_to_absorb
     //             holding a Rc<Digested> for easy cloning and management.
-    //             Though the question remains how to maintain that, without cloning the box to **make** the Rc<>
-    // Old note:
+    //             Though the question remains how to maintain that, without cloning the box to
+    // **make** the Rc<> Old note:
     // The .clone on boxes is potentially *VERY SLOW* and a code smell.
     // It can be eventually avoided by using a "memory arena" for all intermediate
     // objects - tokens, boxes, etc. and a well-designed referncing scheme into
@@ -2327,7 +2620,13 @@ impl Document {
     Ok(newnode)
   }
 
-  fn open_element_internal(&mut self, point: &mut Node, ns_opt: Option<String>, tag: &str, state: &mut State) -> Result<Node> {
+  fn open_element_internal(
+    &mut self,
+    point: &mut Node,
+    ns_opt: Option<String>,
+    tag: &str,
+    state: &mut State,
+  ) -> Result<Node> {
     // TODO:
     //
     // I am seriously irritated by the XML namespace and the confusion of the "default#"
@@ -2341,7 +2640,10 @@ impl Document {
         match point.lookup_namespace_prefix(&ns_uri) {
           // namespace not already declared?
           None => {
-            if let Some(prefix) = state.model.get_document_namespace_prefix(&ns_uri, false, false) {
+            if let Some(prefix) = state
+              .model
+              .get_document_namespace_prefix(&ns_uri, false, false)
+            {
               if !prefix.is_empty() {
                 let mut root = self.document.get_root_element().unwrap();
                 match Namespace::new(&prefix, &ns_uri, &mut root) {
@@ -2400,7 +2702,9 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, node: &mut Node, state: &mut State) -> Result<()> { self.after_close(node, state) }
+  pub fn close_element_at(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+    self.after_close(node, state)
+  }
 
   pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
@@ -2433,14 +2737,28 @@ impl Document {
   // will need to be cloned so that they can be part of the new document;
   // otherwise, they would be removed from thier previous document.
   // Also, we want to have a clean namespace node structure
-  // (otherwise, libxml2 has a tendency to introduce annoying "default" namespace prefix declarations)
-  // And, finally, we need to modify any id's present in the old nodes,
+  // (otherwise, libxml2 has a tendency to introduce annoying "default" namespace prefix
+  // declarations) And, finally, we need to modify any id's present in the old nodes,
   // since otherwise they may be duplicated.
 
   // # Should have variants here for prepend, insert before, insert after.... ???
-  pub fn append_clone(&mut self, node: &mut Node, new_children: Vec<Node>, state: &mut State) -> Result<()> {
+  pub fn append_clone(
+    &mut self,
+    node: &mut Node,
+    new_children: Vec<Node>,
+    state: &mut State,
+  ) -> Result<()> {
     // Expand any document fragments
-    let new_children = new_children.into_iter().flat_map(|child| if child.get_type() == Some(NodeType::DocumentFragNode) {  child.get_child_nodes() } else { vec![child] } ).collect::<Vec<Node>>();
+    let new_children = new_children
+      .into_iter()
+      .flat_map(|child| {
+        if child.get_type() == Some(NodeType::DocumentFragNode) {
+          child.get_child_nodes()
+        } else {
+          vec![child]
+        }
+      })
+      .collect::<Vec<Node>>();
     // Now find all xml:id's in the new_children and record replacement id's for them
     let mut id_map = HashMap::default();
     // Find all id's defined in the copy and change the id.
@@ -2453,35 +2771,52 @@ impl Document {
     self.append_clone_aux(node, new_children, &mut id_map, state)
   }
 
-  fn append_clone_aux(&mut self, node: &mut Node, new_children: Vec<Node>, id_map: &mut HashMap<String, String>, state: &mut State) -> Result<()> {
+  fn append_clone_aux(
+    &mut self,
+    node: &mut Node,
+    new_children: Vec<Node>,
+    id_map: &mut HashMap<String, String>,
+    state: &mut State,
+  ) -> Result<()> {
     for child in new_children.into_iter() {
       match child.get_type() {
-      Some(NodeType::ElementNode) => {
-        let mut new = self.open_element_internal(node, child.get_namespace().map(|ns| ns.get_href()), &child.get_name(), state)?;
-        for (key,val) in child.get_attributes() {
-          match key.as_str() {
-            "xml:id" | "id" => { // Use the replacement id
-              let mapped_id = id_map.get(&val).unwrap();
-              let newid = self.record_id_with_node(mapped_id, &new, state);
-              new.set_attribute(&key, &newid)?;
-            }
-            "idref" => { // Refer to the replacement id if it was replaced
-              let id = id_map.get(&val).unwrap_or(&val);
-              new.set_attribute(&key, id)?;
-            }
-            other_key => // TODO: Are namespaced attributes successfully handled here? Check.
-              new.set_attribute(other_key, &val)?
-         };
-        }
-        self.after_open(&mut new, state)?;
-        self.append_clone_aux(&mut new, child.get_child_nodes(), id_map, state)?;
-        self.after_close(&mut new, state)?;
-      },
-      Some(NodeType::TextNode) => node.append_text(&child.get_content())?,
-      other => panic!("append_clone_aux called on {other:?} Node type.")
-    };
+        Some(NodeType::ElementNode) => {
+          let mut new = self.open_element_internal(
+            node,
+            child.get_namespace().map(|ns| ns.get_href()),
+            &child.get_name(),
+            state,
+          )?;
+          for (key, val) in child.get_attributes() {
+            match key.as_str() {
+              "xml:id" | "id" => {
+                // Use the replacement id
+                let mapped_id = id_map.get(&val).unwrap();
+                let newid = self.record_id_with_node(mapped_id, &new, state);
+                new.set_attribute(&key, &newid)?;
+              },
+              "idref" => {
+                // Refer to the replacement id if it was replaced
+                let id = id_map.get(&val).unwrap_or(&val);
+                new.set_attribute(&key, id)?;
+              },
+              other_key =>
+              // TODO: Are namespaced attributes successfully handled here? Check.
+              {
+                new.set_attribute(other_key, &val)?
+              },
+            };
+          }
+          self.after_open(&mut new, state)?;
+          self.append_clone_aux(&mut new, child.get_child_nodes(), id_map, state)?;
+          self.after_close(&mut new, state)?;
+        },
+        Some(NodeType::TextNode) => node.append_text(&child.get_content())?,
+        other => panic!("append_clone_aux called on {other:?} Node type."),
+      };
+    }
+    Ok(())
   }
-  Ok(()) }
 
   //**********************************************************************
   // Wrapping & Unwrapping nodes by another element.
@@ -2491,7 +2826,12 @@ impl Document {
   // [this makes most sense if `nodes` are a sequence of siblings]
   // Returns undef if $qname isn't allowed in the parent, or if `nodes` aren't allowed in `qname`,
   // otherwise, returns the newly created `qname`.
-  pub fn wrap_nodes(&mut self, qname: &str, mut nodes: Vec<Node>, state: &mut State) -> Result<Option<Node>> {
+  pub fn wrap_nodes(
+    &mut self,
+    qname: &str,
+    mut nodes: Vec<Node>,
+    state: &mut State,
+  ) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
     }
@@ -2614,7 +2954,12 @@ impl Document {
     } else {
       None
     };
-    self.open_element("ltx:ERROR", Some(string_map!("class"=>error_class)), None, state)?;
+    self.open_element(
+      "ltx:ERROR",
+      Some(string_map!("class"=>error_class)),
+      None,
+      state,
+    )?;
     self.close_element("ltx:ERROR", state)?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
@@ -2640,8 +2985,8 @@ impl Document {
     // let mut closeable  = true;
     // // If the current node can contain already, we're fine right here - just return
     // if !candidates.is_empty() && self.can_contain(candidates[0], qname) {
-    //   // Edge case: Don't resume at a text node, if it is current. Don't append more to it after other insertions.
-    //   if self.node.get_type() == NodeType::TextNode {
+    //   // Edge case: Don't resume at a text node, if it is current. Don't append more to it after
+    // other insertions.   if self.node.get_type() == NodeType::TextNode {
     //     self.set_node(candidates[0]);
     //   }
     //   return Some(candidates[0]);
@@ -2658,8 +3003,8 @@ impl Document {
     //   } else {
     //     let savenode = self.node;
     //     self.set_node(n);
-    //     // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for $qname")
-    //     //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
+    //     // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for
+    // $qname")     //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
     //     Some(savenode)
     //   }
     // } else {
@@ -2686,7 +3031,9 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if self.can_node_have_attribute(candidate, key, state) && candidate.has_attribute_ns("id", xml::XML_NS) {
+      if self.can_node_have_attribute(candidate, key, state)
+        && candidate.has_attribute_ns("id", xml::XML_NS)
+      {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -2699,7 +3046,9 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state) && sibling.has_attribute_ns("id", xml::XML_NS) {
+        if self.can_node_have_attribute(&sibling, key, state)
+          && sibling.has_attribute_ns("id", xml::XML_NS)
+        {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?
@@ -2726,14 +3075,18 @@ impl Document {
     self.localized_boxes.push(self.box_to_absorb.take());
     self.box_to_absorb = arg;
   }
-  pub fn expire_box_to_absorb(&mut self) { self.box_to_absorb = self.localized_boxes.pop().unwrap(); }
+  pub fn expire_box_to_absorb(&mut self) {
+    self.box_to_absorb = self.localized_boxes.pop().unwrap();
+  }
 
   pub fn load_labels_for_rewrite(&mut self, state: &mut State) {
     for node in self.findnodes("//*[@labels]", None, state) {
       if let Some(labels) = node.get_attribute("labels") {
         if let Some(id) = node.get_attribute("id") {
           for label in labels.split_whitespace() {
-            self.rewrite_labels.insert(label.to_string(), id.to_string());
+            self
+              .rewrite_labels
+              .insert(label.to_string(), id.to_string());
           }
         } else {
           Error!(
@@ -2748,15 +3101,9 @@ impl Document {
     }
   }
 
-  fn set_local_font(&mut self, arg: Arc<Font>) {
-    self.localized_fonts.push(arg);
-  }
-  fn get_local_font(&self) -> Option<Arc<Font>> {
-    self.localized_fonts.last().cloned()
-  }
-  fn expire_local_font(&mut self) {
-    self.localized_fonts.pop();
-  }
+  fn set_local_font(&mut self, arg: Arc<Font>) { self.localized_fonts.push(arg); }
+  fn get_local_font(&self) -> Option<Arc<Font>> { self.localized_fonts.last().cloned() }
+  fn expire_local_font(&mut self) { self.localized_fonts.pop(); }
 
   //**********************************************************************
   /// This function computes an xml:id for a node, if it hasn't already got one.
@@ -2766,11 +3113,19 @@ impl Document {
   /// The parent node (the one with ID=<parentid>) also maintains a counter
   /// stored in an attribute `_ID_counter_<prefix>` recording the last used
   /// <number> for <prefix> amongst its descendents.
-  pub fn generate_id(&mut self, node: &mut Node, mut prefix: &str, state: &mut State) -> Result<()> {
+  pub fn generate_id(
+    &mut self,
+    node: &mut Node,
+    mut prefix: &str,
+    state: &mut State,
+  ) -> Result<()> {
     // If node doesn't already have an id, and can
     let node_qname = self.get_node_qname(node, state);
     // but isn't a _Capture_ node (which ultimately should disappear)
-    if !node.has_attribute_ns("id", XML_NS) && self.can_have_attribute(&node_qname, "xml:id", state) && (node_qname != "ltx:_Capture_") {
+    if !node.has_attribute_ns("id", XML_NS)
+      && self.can_have_attribute(&node_qname, "xml:id", state)
+      && (node_qname != "ltx:_Capture_")
+    {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node), state)
         .unwrap_or_else(|| self.get_document().get_root_element().unwrap());
@@ -2809,7 +3164,12 @@ impl Document {
   // THESE SHOULD BE PART OF A COMMON BASE CLASS; DUPLICATED IN Post::Document
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  pub fn replace_tree(&mut self, new: Node, old: &mut Node, state: &mut State) -> Result<Option<Node>> {
+  pub fn replace_tree(
+    &mut self,
+    new: Node,
+    old: &mut Node,
+    state: &mut State,
+  ) -> Result<Option<Node>> {
     if let Some(mut parent) = old.get_parent() {
       let mut following = VecDeque::new(); // Collect the matching and following nodes
       while let Some(mut sib) = parent.get_last_child() {
@@ -2837,16 +3197,18 @@ impl Document {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
           let tag = self.get_node_qname(&child, state);
-          let attributes = child.get_attributes().into_iter().collect(); // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) : () }
-                                                   // TODO:
-                                                   // DANGER: REMOVE the xml:id attribute from $child!!!!
-                                                   // This protects against some versions of XML::LibXML that warn against duplicate id's
-                                                   // Hopefully, you shouldn't be using the node any more
-                                                   //         if (my $id = $attributes{'xml:id'}) {
-                                                   //           $child->removeAttribute('xml:id');
-                                                   //           $self->unRecordID($id); }
+          let attributes = child.get_attributes().into_iter().collect();
 
-          let mut new = self.open_element_at( node, &tag, Some(attributes), None, state)?;
+          // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) :
+          // () } TODO:
+          // DANGER: REMOVE the xml:id attribute from $child!!!!
+          // This protects against some versions of XML::LibXML that warn against duplicate id's
+          // Hopefully, you shouldn't be using the node any more
+          //         if (my $id = $attributes{'xml:id'}) {
+          //           $child->removeAttribute('xml:id');
+          //           $self->unRecordID($id); }
+
+          let mut new = self.open_element_at(node, &tag, Some(attributes), None, state)?;
           self.append_tree(&mut new, child.get_child_nodes(), state)?;
           self.close_element_at(&mut new, state)?;
         },

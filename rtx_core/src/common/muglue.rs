@@ -18,7 +18,9 @@ pub struct MuGlue {
 
 impl fmt::Display for MuGlue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let string = glue_string(self.skip, self.plus, self.pfill, self.minus, self.mfill, "mu");
+    let string = glue_string(
+      self.skip, self.plus, self.pfill, self.minus, self.mfill, "mu",
+    );
     write!(f, "{string}")
   }
 }
@@ -35,7 +37,7 @@ impl NumericOps for MuGlue {
       mfill: None,
     }
   }
-  fn new_f64(number:f64) -> Self {
+  fn new_f64(number: f64) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
     MuGlue {
       skip,
@@ -51,7 +53,13 @@ impl Object for MuGlue {
 }
 
 impl MuGlue {
-  pub fn new_full(skip: i64, plus: Option<i64>, pfill: Option<FillCode>, minus: Option<i64>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full(
+    skip: i64,
+    plus: Option<i64>,
+    pfill: Option<FillCode>,
+    minus: Option<i64>,
+    mfill: Option<FillCode>,
+  ) -> Self {
     MuGlue {
       skip,
       plus,
@@ -60,7 +68,13 @@ impl MuGlue {
       mfill,
     }
   }
-  pub fn new_full_f64(skip:f64, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full_f64(
+    skip: f64,
+    plus: Option<f64>,
+    pfill: Option<FillCode>,
+    minus: Option<f64>,
+    mfill: Option<FillCode>,
+  ) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     MuGlue {
       skip,
@@ -71,8 +85,16 @@ impl MuGlue {
     }
   }
 
-  pub fn new_spec(spec: &str, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>, state: &State) -> Self {
-    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "mu", state);
+  pub fn new_spec(
+    spec: &str,
+    plus: Option<f64>,
+    pfill: Option<FillCode>,
+    minus: Option<f64>,
+    mfill: Option<FillCode>,
+    state: &State,
+  ) -> Self {
+    let (skip, plus, pfill, minus, mfill) =
+      spec_setup(spec, plus, pfill, minus, mfill, "mu", state);
     MuGlue {
       skip,
       plus,
@@ -88,14 +110,22 @@ impl MuGlue {
     if let Some(plus) = self.plus {
       if plus != 0 {
         string.push_str(" plus ");
-        let fill_u = if let Some(pfill) = self.pfill { pfill.to_str() } else { u };
+        let fill_u = if let Some(pfill) = self.pfill {
+          pfill.to_str()
+        } else {
+          u
+        };
         string.push_str(&attribute_format(plus, Some(fill_u)));
       }
     }
     if let Some(minus) = self.minus {
       if minus != 0 {
         string.push_str(" minus ");
-        let mfill_u = if let Some(mfill) = self.mfill { mfill.to_str() } else { u };
+        let mfill_u = if let Some(mfill) = self.mfill {
+          mfill.to_str()
+        } else {
+          u
+        };
         string.push_str(&attribute_format(minus, Some(mfill_u)));
       }
     }

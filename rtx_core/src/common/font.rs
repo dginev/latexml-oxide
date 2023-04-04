@@ -13,11 +13,11 @@ use lazy_static::lazy_static;
 ///
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::max;
-use std::hash::{BuildHasher, Hasher, Hash};
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
+use std::hash::{BuildHasher, Hash, Hasher};
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
@@ -32,7 +32,8 @@ static DEFBACKGROUND: &str = "white";
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
-static DEFSIZE:f64 = 10.0; // TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+// TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+static DEFSIZE: f64 = 10.0;
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
 pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"];
@@ -40,7 +41,7 @@ pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"]
 // static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
 // static FORCE_SHAPE : i8  = 0x4;
-
+#[rustfmt::skip]
 lazy_static! {
   pub static ref FONT_TEXT_DEFAULT : Font = Font::text_default();
   static ref LATIN_LETTER_RE: Regex = Regex::new(r"^[\p{Latin}&&\pL]$").unwrap();
@@ -179,9 +180,10 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
     let ser = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
     let shp = cap.get(3).map_or(String::new(), |m| m.as_str().to_string());
     let size_str = cap.get(4).map_or(String::new(), |m| m.as_str().to_string());
-    // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property whitelist as in Perl?
-    // but the merge is convenient, especially if we can state "only the values different from the default Font"
-    // which may already work courtesy of "None"? Need to think it through...
+    // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property
+    // whitelist as in Perl? but the merge is convenient, especially if we can state "only the
+    // values different from the default Font" which may already work courtesy of "None"? Need
+    // to think it through...
     if let Some(ffam) = lookup_font_family(&fam) {
       props = props.merge(ffam.clone());
     }
@@ -195,7 +197,11 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
       at
     } else {
       let size_f64 = size_str.parse::<f64>().unwrap_or(1.0);
-      if size_f64 == 0.0 { 1.0 } else { size_f64 } // Yes, also if 0, "" (from regexp)
+      if size_f64 == 0.0 {
+        1.0
+      } else {
+        size_f64
+      } // Yes, also if 0, "" (from regexp)
     };
     if let Some(scaled) = scaled_opt {
       size *= scaled;
@@ -274,7 +280,9 @@ impl Eq for Font {}
 // display is used often for attributes in binding replacements,
 // as in font="#font"
 impl fmt::Display for Font {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed(""))) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.family.as_ref().unwrap_or(&Cow::Borrowed("")))
+  }
 }
 
 impl fmt::Debug for Font {
@@ -287,7 +295,11 @@ impl fmt::Debug for Font {
     write!(f, ",")?;
     write!(f, "{}", self.shape.as_ref().unwrap_or(&star))?;
     write!(f, ",")?;
-    let size_str = self.size.as_ref().map(|x| x.to_string()).unwrap_or_else(|| String::from('*'));
+    let size_str = self
+      .size
+      .as_ref()
+      .map(|x| x.to_string())
+      .unwrap_or_else(|| String::from('*'));
     write!(f, "{}", size_str)?;
     write!(f, ",")?;
     write!(f, "{}", self.color.as_ref().unwrap_or(&star))?;
@@ -296,7 +308,11 @@ impl fmt::Debug for Font {
     write!(f, ",")?;
     write!(f, "{}", self.opacity.as_ref().unwrap_or(&star))?;
     write!(f, ",")?;
-    let scale_str = self.scale.as_ref().map(|x| x.to_string()).unwrap_or_else(|| String::from('*'));
+    let scale_str = self
+      .scale
+      .as_ref()
+      .map(|x| x.to_string())
+      .unwrap_or_else(|| String::from('*'));
     write!(f, "{}", scale_str)?;
     write!(f, ",")?;
     write!(f, "{}", self.mathstyle.as_ref().unwrap_or(&star))?;
@@ -386,9 +402,9 @@ impl Font {
   //     Some("math") => Some("serif"),
   //     other => other
   //   };
-  //   let (ser, shp, siz, col, bkg, opa, mstyle, flags) = (self.series, self.shape, self.size, self.color, self.bg, self.opacity, self.mathstyle, self.flags)
-  // s!("Font[{},{},{},{},{},{},{},{},{}]",
-  //     if is_diff(fam, DEFFAMILY) { fam } else { "*" },
+  //   let (ser, shp, siz, col, bkg, opa, mstyle, flags) = (self.series, self.shape, self.size,
+  // self.color, self.bg, self.opacity, self.mathstyle, self.flags) s!("Font[{},{},{},{},{},{},{},
+  // {},{}]",     if is_diff(fam, DEFFAMILY) { fam } else { "*" },
   //     if is_diff(ser, DEFSERIES)     { ser } else { "*" },
   //     if is_diff(shp, DEFSHAPE)      { shp } else { "*" },
   //     if is_diff(siz, DEFSIZE)      { siz } else { "*" },
@@ -516,8 +532,13 @@ impl Font {
       } else if Some(true) == other.scripted {
         // Or adjust both the mathstyle & size for scripts
         let str_stylekey: &str = self.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
-        newfont.mathstyle = SCRIPT_STYLE_MAP.get(str_stylekey).map(|c| Cow::Borrowed(*c));
-        let str_mathstylekey: &str = newfont.mathstyle.as_ref().unwrap_or(&Cow::Borrowed("display"));
+        newfont.mathstyle = SCRIPT_STYLE_MAP
+          .get(str_stylekey)
+          .map(|c| Cow::Borrowed(*c));
+        let str_mathstylekey: &str = newfont
+          .mathstyle
+          .as_ref()
+          .unwrap_or(&Cow::Borrowed("display"));
         newfont.size = Some(style_scale * *STYLE_SIZE.get(str_mathstylekey).unwrap() as f64);
       }
     }
@@ -765,8 +786,8 @@ impl Font {
 
     if let Some(ms) = mathstyle {
       if let Some(os) = othermathstyle {
-        let ms_str : &str = ms;
-        let os_str : &str = os;
+        let ms_str: &str = ms;
+        let os_str: &str = os;
         changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
       }
     }
@@ -810,9 +831,23 @@ impl Font {
     (size * m.emwidth / 18.0).trunc() as i64
   }
 
-  pub fn compute_string_size(&self, text: &str, _options: HashMap<String, Stored>, _state: &State) -> (Dimension, Dimension, Dimension) {
-    if text.is_empty() || self.get_family().map(|fam| fam == "nullfont").unwrap_or(false) {
-      return (Dimension::default(), Dimension::default(), Dimension::default());
+  pub fn compute_string_size(
+    &self,
+    text: &str,
+    _options: HashMap<String, Stored>,
+    _state: &State,
+  ) -> (Dimension, Dimension, Dimension) {
+    if text.is_empty()
+      || self
+        .get_family()
+        .map(|fam| fam == "nullfont")
+        .unwrap_or(false)
+    {
+      return (
+        Dimension::default(),
+        Dimension::default(),
+        Dimension::default(),
+      );
     }
     let size = self.get_size().unwrap_or(DEFSIZE);
     let _ismath = self.get_family().map(|fam| fam == "math").unwrap_or(false);
@@ -921,7 +956,9 @@ impl Font {
 
       // Kern HACK for lists of individual Box's
       if let Some(prevbox) = prevbox_opt {
-        if matches!(prevbox.data(), DigestedData::TBox(_)) && matches!(thisbox.data(), DigestedData::TBox(_)) {
+        if matches!(prevbox.data(), DigestedData::TBox(_))
+          && matches!(thisbox.data(), DigestedData::TBox(_))
+        {
           let prevchar = prevbox.get_string(state)?.chars().last();
           let curchar = thisbox.get_string(state)?.chars().next();
           let metric = self.get_metric(curchar);
@@ -943,8 +980,8 @@ impl Font {
       }
       //     my $newline = (($options{layout} || '') eq 'vertical')        # EVERY box is a row?
       //       || ((ref $box) && $box->getProperty('isBreak'))             # || $box is a linebreak
-      //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the requested width
-      //     if ($newline) {
+      //       || ((defined $maxwidth) && ($wd >= $maxwidth));             # or we've reached the
+      // requested width     if ($newline) {
       //       if (@boxes) {
       //         if ($baseline > $ht + $dp) {
       //           $dp = $baseline - $ht; }
@@ -968,8 +1005,8 @@ impl Font {
     //       my ($w, $h, $d) = $font->getNominalSize;
     //       $h  = $h->valueOf;
     //       $dp = $ht + $dp - $h; $ht = $h; }
-    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current text
-    //       $ht = $ht + $dp; $dp = 0; }
+    //     elsif ($vattach eq 'bottom') {    # Bottom of box is aligned with bottom (?) of current
+    // text       $ht = $ht + $dp; $dp = 0; }
     //     elsif ($vattach eq 'middle') {
     //       my ($w, $h, $d) = $font->getNominalSize;
     //       $h = $h->valueOf;
@@ -979,13 +1016,21 @@ impl Font {
     //       my $h = $lines[0][1];
     //       $dp = $ht + $dp - $h; $ht = $h; } }
 
-    Ok((Dimension::new_f64(wd), Dimension::new(ht), Dimension::new(dp)))
+    Ok((
+      Dimension::new_f64(wd),
+      Dimension::new(ht),
+      Dimension::new(dp),
+    ))
   }
 }
 
-fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
+fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool {
+  x.is_some() && (y.is_none() || (x != y))
+}
 
-fn is_diff_f64(x: &Option<f64>, y: &Option<f64>) -> bool { x.is_some() && (y.is_none() || (x != y)) }
+fn is_diff_f64(x: &Option<f64>, y: &Option<f64>) -> bool {
+  x.is_some() && (y.is_none() || (x != y))
+}
 
 /// Decode a codepoint using the fontmap for a given font and/or fontencoding.
 /// If `encoding` not provided, then lookup according to the current font's
@@ -998,7 +1043,13 @@ fn is_diff_f64(x: &Option<f64>, y: &Option<f64>) -> bool { x.is_some() && (y.is_
 /// so that if anything above 128 comes in, it must already be Unicode!.
 /// The lower half plane still needs to go through decoding, though, to deal
 /// with TeX's rearrangement of ASCII...
-pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, stomach: &mut Stomach, state: &mut State) -> Option<char> {
+pub fn decode(
+  code: u8,
+  encoding_opt: Option<String>,
+  implicit: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
     Some(enc) => enc,
@@ -1054,7 +1105,13 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool, stomach: &
   }
 }
 
-pub fn decode_string(string: &str, encoding_opt: Option<&str>, implicit: bool, stomach: &mut Stomach, state: &mut State) -> String {
+pub fn decode_string(
+  string: &str,
+  encoding_opt: Option<&str>,
+  implicit: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> String {
   if string.is_empty() {
     return String::new();
   }
@@ -1122,4 +1179,6 @@ pub fn rationalize_font_size(size: &str) -> f64 {
 }
 
 /// convert size to percent
-pub fn relative_font_size(newsize:f64, oldsize:f64) -> String { s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor()) }
+pub fn relative_font_size(newsize: f64, oldsize: f64) -> String {
+  s!("{}%", (0.5 + 100.0 * newsize / oldsize).floor())
+}

@@ -1,5 +1,6 @@
 // Macros requiring repetitions need to be handled outside of the main setup macro, as nested
-// macros currently don't support repetition Details at: https://github.com/rust-lang/rust/issues/35853
+// macros currently don't support repetition Details at:
+// https://github.com/rust-lang/rust/issues/35853
 
 /// build a Font from key=>val pairs
 #[macro_export]
@@ -48,13 +49,15 @@ macro_rules! NewDefaultV {
 macro_rules! transfer_opt_default {
   ($val:ident, $struct_source:ident, $receiver:ident) => {
     if let Some(ref tval) = $struct_source.$val {
-      $receiver.entry(stringify!($val).to_owned()).or_insert(tval.to_string());
+      $receiver
+        .entry(stringify!($val).to_owned())
+        .or_insert(tval.to_string());
     }
   };
 }
 
-// Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper doesn't.
-// In latexml, you could say:
+// Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper
+// doesn't. In latexml, you could say:
 
 /// create a PrimitiveClosure from the pieces, with a forced empty return value
 #[macro_export]
@@ -118,12 +121,14 @@ macro_rules! tagsub {
 #[macro_export]
 macro_rules! sizersub {
   ($whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(|$whatsit: &Whatsit, $state: &mut State| -> Result<(Dimension, Dimension, Dimension)> {
-      BindInnerState!($state);
-      let macro_out = $body;
-      end_state_frame!();
-      macro_out
-    })
+    Arc::new(
+      |$whatsit: &Whatsit, $state: &mut State| -> Result<(Dimension, Dimension, Dimension)> {
+        BindInnerState!($state);
+        let macro_out = $body;
+        end_state_frame!();
+        macro_out
+      },
+    )
   };
 }
 
@@ -151,7 +156,8 @@ macro_rules! noreplacement {
 #[macro_export]
 macro_rules! replacement {
   ($doc:ident, $args:ident, $props:ident, $state:ident, $body:block) => (
-    move |$doc:&mut Document,$args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
+    move |$doc:&mut Document,$args: &Vec<Option<Digested>>,
+      $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
     BindInnerState!($state);
     $body
     end_state_frame!();
@@ -179,21 +185,30 @@ macro_rules! properties {
   };
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
     Arc::new(
-      move |$stomach: &mut Stomach, mut $args: &Vec<Option<Digested>>, $inner_state: &mut State| -> Result<HashMap<String, Stored>> {
+      move |$stomach: &mut Stomach,
+            mut $args: &Vec<Option<Digested>>,
+            $inner_state: &mut State|
+            -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, $stomach, $inner_state)
       },
     )
   };
   ($(sub)? $body:block) => {
     Arc::new(
-      move |stomach: &mut Stomach, args: &Vec<Option<Digested>>, state: &mut State| -> Result<HashMap<String, Stored>> {
+      move |stomach: &mut Stomach,
+            args: &Vec<Option<Digested>>,
+            state: &mut State|
+            -> Result<HashMap<String, Stored>> {
         WithInnerState!($body, stomach, state).into_properties_result()
       },
     )
   };
   ($value:expr) => {
     Arc::new(
-      move |_stomach: &mut Stomach, _args: &Vec<Option<Digested>>, _state: &mut State| -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
+      move |_stomach: &mut Stomach,
+            _args: &Vec<Option<Digested>>,
+            _state: &mut State|
+            -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
     )
   };
 }
@@ -212,7 +227,10 @@ macro_rules! after_digest {
 macro_rules! after_digest_single {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
     Arc::new(
-      move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> {
+      move |$stomach: &mut Stomach,
+            $whatsit: &mut Whatsit,
+            $state: &mut State|
+            -> Result<Vec<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_result()
       },
     )
@@ -221,7 +239,12 @@ macro_rules! after_digest_single {
 #[macro_export]
 macro_rules! after_digest_simple {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(move |$stomach: &mut Stomach, $whatsit: &mut Whatsit, $state: &mut State| -> Result<Vec<Digested>> { $body.into_digested_result() })
+    Arc::new(
+      move |$stomach: &mut Stomach,
+            $whatsit: &mut Whatsit,
+            $state: &mut State|
+            -> Result<Vec<Digested>> { $body.into_digested_result() },
+    )
   };
 }
 
@@ -229,9 +252,11 @@ macro_rules! after_digest_simple {
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Arc::new(
-      |$gullet: &mut Gullet, $inner: Option<&Parameters>, $extra: &[Tokens], $state: &mut State| -> Result<ArgWrap> {
-        WithInnerState!($body, $state).into_result_argwrap()
-      },
+      |$gullet: &mut Gullet,
+       $inner: Option<&Parameters>,
+       $extra: &[Tokens],
+       $state: &mut State|
+       -> Result<ArgWrap> { WithInnerState!($body, $state).into_result_argwrap() },
     )
   };
 }
@@ -251,18 +276,22 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |mut $args: Vec<ArgWrap>, $state: &mut State| -> Option<RegisterValue> {
-      WithInnerState!($body, $state).into_register_value_option()
-    }))
+    Some(Arc::new(
+      move |mut $args: Vec<ArgWrap>, $state: &mut State| -> Option<RegisterValue> {
+        WithInnerState!($body, $state).into_register_value_option()
+      },
+    ))
   };
 }
 
 #[macro_export]
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
-      WithInnerState!($body, $state)
-    }))
+    Some(Arc::new(
+      move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
+        WithInnerState!($body, $state)
+      },
+    ))
   };
 }
 
@@ -285,7 +314,11 @@ macro_rules! undigested {
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
     Some(Arc::new(
-      |mut $arg: Vec<Token>, $inner: Option<&Parameters>, $extra: &[Tokens], $state: &State| -> Result<Tokens> {
+      |mut $arg: Vec<Token>,
+       $inner: Option<&Parameters>,
+       $extra: &[Tokens],
+       $state: &State|
+       -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
         end_state_frame!();
@@ -311,8 +344,8 @@ macro_rules! reversion_digested {
 
 // TODO: These .clone calls are silly... can we either
 // 1) Document::insert_element work with a &Vec<Digested>? or
-// 2) we can use mutable Whatsit properties in replacements, where we remove Vec<Digested> instances for cases that will be absorbed?
-// or something else that is lighter on memory allocations?
+// 2) we can use mutable Whatsit properties in replacements, where we remove Vec<Digested> instances
+// for cases that will be absorbed? or something else that is lighter on memory allocations?
 
 #[macro_export]
 macro_rules! prop_digested {
@@ -320,10 +353,16 @@ macro_rules! prop_digested {
     match $props.get($key) {
       Some(Stored::VecDigested(ref vd)) => vd.iter().collect::<Vec<&Digested>>(),
       Some(Stored::Digested(d)) => vec![&*d],
-      Some(Stored::String(s)) => panic!("prop_digested! called on a string property {:?} with value {:?}.", $key, s),
+      Some(Stored::String(s)) => panic!(
+        "prop_digested! called on a string property {:?} with value {:?}.",
+        $key, s
+      ),
       None => Vec::new(),
       other => {
-        eprintln!("Please extend the api_macros::prop_digested macro to support: {:?}", other);
+        eprintln!(
+          "Please extend the api_macros::prop_digested macro to support: {:?}",
+          other
+        );
         unimplemented!();
       },
     }
@@ -433,11 +472,13 @@ macro_rules! unpack {
   }
 }
 
-/// Convenience macro to flexibly unpack a collection of `Vec<ArgWrap>` arguments into individual `Tokens` variables.
+/// Convenience macro to flexibly unpack a collection of `Vec<ArgWrap>` arguments into individual
+/// `Tokens` variables.
 #[macro_export]
 macro_rules! unref {
   ($args:ident => $var:ident) => (count_unpack_ref!(0usize, $args => $var));
-  ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_ref!(0usize,$args => $var,$($tail),*))
+  ($args:ident => $var:ident,$($tail:ident),*) => (
+    count_unpack_ref!(0usize,$args => $var,$($tail),*))
 }
 #[macro_export]
 macro_rules! count_unpack_ref {
@@ -465,7 +506,8 @@ macro_rules! unpack_opt {
 #[macro_export]
 macro_rules! unpack_opt_ref {
   ($args:ident => $var:ident) => (count_unpack_opt!(0usize, $args => $var));
-  ($args:ident => $var:ident,$($tail:ident),*) => (count_unpack_opt!(0usize, $args => $var,$($tail),*));
+  ($args:ident => $var:ident,$($tail:ident),*) => (
+    count_unpack_opt!(0usize, $args => $var,$($tail),*));
 }
 
 #[macro_export]
@@ -560,7 +602,9 @@ macro_rules! SetCounter {
   ($ctr:expr, $value:expr, $stomach:ident, $state_arg:ident) => {
     $state_arg.assign_value(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
     $state_arg.after_assignment($stomach.get_gullet_mut());
-    def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
-      Some(ExpandableOptions{ scope: Some(Scope::Global), ..ExpandableOptions::default()}), $state_arg);
+    def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
+      Tokens::new(Explode!($value.value_of())),
+      Some(ExpandableOptions{ scope: Some(Scope::Global),
+         ..ExpandableOptions::default()}), $state_arg);
   }
 }

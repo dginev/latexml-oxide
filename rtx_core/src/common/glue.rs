@@ -140,7 +140,7 @@ impl NumericOps for Glue {
       mfill: None,
     }
   }
-  fn new_f64(number:f64) -> Self {
+  fn new_f64(number: f64) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(number, None, None, None, None);
     Glue {
       skip,
@@ -166,14 +166,22 @@ pub fn glue_string(
   if let Some(plus) = plus_opt {
     if plus != 0 {
       string.push_str(" plus ");
-      let p_fill = if let Some(fill) = pfill_opt { fill.to_str() } else { unit };
+      let p_fill = if let Some(fill) = pfill_opt {
+        fill.to_str()
+      } else {
+        unit
+      };
       string.push_str(&fixedformat(plus, Some(p_fill)))
     }
   }
   if let Some(minus) = minus_opt {
     if minus != 0 {
       string.push_str(" minus ");
-      let p_fill = if let Some(fill) = mfill_opt { fill.to_str() } else { unit };
+      let p_fill = if let Some(fill) = mfill_opt {
+        fill.to_str()
+      } else {
+        unit
+      };
       string.push_str(&fixedformat(minus, Some(p_fill)))
     }
   }
@@ -182,7 +190,9 @@ pub fn glue_string(
 
 impl fmt::Display for Glue {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let string = glue_string(self.skip, self.plus, self.pfill, self.minus, self.mfill, "pt");
+    let string = glue_string(
+      self.skip, self.plus, self.pfill, self.minus, self.mfill, "pt",
+    );
     write!(f, "{string}")
   }
 }
@@ -191,14 +201,26 @@ impl Object for Glue {
 }
 
 pub fn new_setup(
-  skip:f64,
+  skip: f64,
   plus: Option<f64>,
   pfill: Option<FillCode>,
   minus: Option<f64>,
   mfill: Option<FillCode>,
-) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
+) -> (
+  i64,
+  Option<i64>,
+  Option<FillCode>,
+  Option<i64>,
+  Option<FillCode>,
+) {
   // See comment in Dimension for why kround rather than int
-  (kround(skip), plus.map(kround), pfill, minus.map(kround), mfill)
+  (
+    kround(skip),
+    plus.map(kround),
+    pfill,
+    minus.map(kround),
+    mfill,
+  )
 }
 
 pub fn spec_setup(
@@ -209,10 +231,16 @@ pub fn spec_setup(
   mut mfill: Option<FillCode>,
   unit: &str,
   state: &State,
-) -> (i64, Option<i64>, Option<FillCode>, Option<i64>, Option<FillCode>) {
+) -> (
+  i64,
+  Option<i64>,
+  Option<FillCode>,
+  Option<i64>,
+  Option<FillCode>,
+) {
   if !UNIT_RE.is_match(spec) {
     // If no units, expect fixedpoint values
-    let skip:f64 = spec.parse::<f64>().unwrap_or_default();
+    let skip: f64 = spec.parse::<f64>().unwrap_or_default();
     new_setup(skip, plus, pfill, minus, mfill)
   } else {
     let is_mu = unit == "mu";
@@ -226,11 +254,17 @@ pub fn spec_setup(
 
     if let Some(cs) = GLUE_RE.captures(spec) {
       let (f, unit, p, punit, m, munit) = (
-        cs.get(1).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(1)
+          .map(|v| v.as_str().parse::<f64>().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(2).map_or("", |m| m.as_str()),
-        cs.get(4).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(4)
+          .map(|v| v.as_str().parse::<f64>().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(5).map_or("", |m| m.as_str()),
-        cs.get(7).map(|v| v.as_str().parse::<f64>().unwrap_or_default()).unwrap_or_default(),
+        cs.get(7)
+          .map(|v| v.as_str().parse::<f64>().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(8).map_or("", |m| m.as_str()),
       );
       let skip = if unit.is_empty() {
@@ -296,7 +330,10 @@ pub fn spec_setup(
       }
       (skip, plus, pfill, minus, mfill)
     } else {
-      let msg = s!("Missing {} specification assuming 0pt", if is_mu { "MuGlue" } else { "Glue" });
+      let msg = s!(
+        "Missing {} specification assuming 0pt",
+        if is_mu { "MuGlue" } else { "Glue" }
+      );
       Warn!("unexpected", spec, None, state, msg);
       (0, None, None, None, None)
     }
@@ -304,7 +341,13 @@ pub fn spec_setup(
 }
 
 impl Glue {
-  pub fn new_full(skip: i64, plus: Option<i64>, pfill: Option<FillCode>, minus: Option<i64>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full(
+    skip: i64,
+    plus: Option<i64>,
+    pfill: Option<FillCode>,
+    minus: Option<i64>,
+    mfill: Option<FillCode>,
+  ) -> Self {
     Glue {
       skip,
       plus,
@@ -313,7 +356,13 @@ impl Glue {
       mfill,
     }
   }
-  pub fn new_full_f64(skip:f64, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>) -> Self {
+  pub fn new_full_f64(
+    skip: f64,
+    plus: Option<f64>,
+    pfill: Option<FillCode>,
+    minus: Option<f64>,
+    mfill: Option<FillCode>,
+  ) -> Self {
     let (skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     Glue {
       skip,
@@ -323,8 +372,16 @@ impl Glue {
       mfill,
     }
   }
-  pub fn new_spec(spec: &str, plus: Option<f64>, pfill: Option<FillCode>, minus: Option<f64>, mfill: Option<FillCode>, state: &State) -> Self {
-    let (skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, "pt", state);
+  pub fn new_spec(
+    spec: &str,
+    plus: Option<f64>,
+    pfill: Option<FillCode>,
+    minus: Option<f64>,
+    mfill: Option<FillCode>,
+    state: &State,
+  ) -> Self {
+    let (skip, plus, pfill, minus, mfill) =
+      spec_setup(spec, plus, pfill, minus, mfill, "pt", state);
     Glue {
       skip,
       plus,
@@ -392,14 +449,22 @@ impl Glue {
     if let Some(plus) = self.plus {
       if plus != 0 {
         string.push_str(" plus ");
-        let fill_u = if let Some(pfill) = self.pfill { pfill.to_str() } else { u };
+        let fill_u = if let Some(pfill) = self.pfill {
+          pfill.to_str()
+        } else {
+          u
+        };
         string.push_str(&attribute_format(plus, Some(fill_u)));
       }
     }
     if let Some(minus) = self.minus {
       if minus != 0 {
         string.push_str(" minus ");
-        let mfill_u = if let Some(mfill) = self.mfill { mfill.to_str() } else { u };
+        let mfill_u = if let Some(mfill) = self.mfill {
+          mfill.to_str()
+        } else {
+          u
+        };
         string.push_str(&attribute_format(minus, Some(mfill_u)));
       }
     }

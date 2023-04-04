@@ -1,8 +1,8 @@
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
-use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -56,9 +56,7 @@ impl fmt::Display for Tbox {
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
   fn revert(&self, _state: &State) -> Result<Tokens> { Ok(self.tokens.clone()) }
-  fn stringify(&self) -> String {
-      format!("{self:?}")
-  }
+  fn stringify(&self) -> String { format!("{self:?}") }
 }
 impl Tbox {
   /// creates a new Tbox.
@@ -88,7 +86,9 @@ impl Tbox {
     };
 
     if properties.contains_key("isSpace")
-      && (properties.contains_key("width") || properties.contains_key("height") || properties.contains_key("depth"))
+      && (properties.contains_key("width")
+        || properties.contains_key("height")
+        || properties.contains_key("depth"))
     {
       properties
         .entry(String::from("width"))
@@ -103,9 +103,13 @@ impl Tbox {
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
       if !text.is_empty() {
-        if let Some(Stored::HashString(attr)) = state.lookup_value(&s!("math_token_attributes_{}", text)) {
+        if let Some(Stored::HashString(attr)) =
+          state.lookup_value(&s!("math_token_attributes_{}", text))
+        {
           for (key, value) in attr.iter() {
-            properties.entry(key.to_string()).or_insert_with(|| Stored::String(value.to_owned()));
+            properties
+              .entry(key.to_string())
+              .or_insert_with(|| Stored::String(value.to_owned()));
           }
         }
       }
@@ -134,10 +138,16 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
+  fn get_property_bool(&self, key: &str) -> bool {
+    matches!(self.properties.get(key), Some(Stored::Bool(true)))
+  }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
-  fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> { Ok(Cow::Borrowed(self.text.as_str())) }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.properties.insert(key.to_string(), value.into());
+  }
+  fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
+    Ok(Cow::Borrowed(self.text.as_str()))
+  }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     let text = &self.text;
@@ -149,13 +159,16 @@ impl BoxOps for Tbox {
 
     if !text.is_empty() {
       if mode == "math" {
-        Ok(vec![
-          document.insert_math_token(text, Stored::cast_to_string_hash(&self.properties), Some(font), state)?
-        ])
+        Ok(vec![document.insert_math_token(
+          text,
+          Stored::cast_to_string_hash(&self.properties),
+          Some(font),
+          state,
+        )?])
       } else {
         match document.open_text(text, font, state)? {
           None => Ok(Vec::new()),
-          Some(node) => Ok(vec![node])
+          Some(node) => Ok(vec![node]),
         }
       }
     } else {
@@ -163,9 +176,15 @@ impl BoxOps for Tbox {
     }
   }
 
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
+  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> {
+    Ok(Some(Cow::Borrowed(&self.font)))
+  }
 
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(body_stored) = self.get_property("body") {
       if let Stored::Digested(ref body) = *body_stored {
         body.compute_size(options, state)
@@ -173,7 +192,11 @@ impl BoxOps for Tbox {
         panic!("the stored 'body' property should always be a Stored::Digested enum case.");
       }
     } else {
-      Ok(self.font.compute_string_size(&self.get_string(state)?, options, state))
+      Ok(
+        self
+          .font
+          .compute_string_size(&self.get_string(state)?, options, state),
+      )
     }
   }
 }

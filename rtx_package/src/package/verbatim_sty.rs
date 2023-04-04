@@ -24,10 +24,16 @@ LoadDefinitions!(state, {
   //======================================================================
   // Mostly simplified versions of what"s in verbatim....
   DefMacro!(r"\verbatim@startline", r"\verbatim@line{}");
-  DefMacro!(r"\verbatim@addtoline{}", r"\verbatim@line\expandafter{\the\verbatim@line#1}");
+  DefMacro!(
+    r"\verbatim@addtoline{}",
+    r"\verbatim@line\expandafter{\the\verbatim@line#1}"
+  );
   DefMacro!(r"\verbatim@processline", r"\the\verbatim@line\par");
 
-  DefMacro!(r"\verbatim@font", r"\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs");
+  DefMacro!(
+    r"\verbatim@font",
+    r"\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs"
+  );
   DefMacro!(
     r"\@verbatim",
     r"\the\every@verbatim
@@ -38,19 +44,32 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
     before_digest => { Let!(&T_CS!("\\par"), T_CR!()); },
-    before_construct => sub[document, _whatsit, inner_state] { document.maybe_close_element("ltx:p", inner_state)?; }
+    before_construct => sub[document, _whatsit, inner_state] {
+      document.maybe_close_element("ltx:p", inner_state)?; }
   );
 
   // We HAVE to get this guy in, to close the <ltx:verbatim>"
   DefConstructor!("\\lx@end@verbatim@{}", "</ltx:verbatim>");
 
   // Note: We need the internal T_CS!("\\foo*") to attach the star to the CS, however,
-  //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the RHS
+  //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the
+  // RHS
   //
-  DefMacro!("\\verbatim", "\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start");
-  DefMacro!(T_CS!("\\verbatim*"), None, TokenizeInternal!("\\begingroup\\@verbatim\\verbatim@start"));
+  DefMacro!(
+    "\\verbatim",
+    "\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start"
+  );
+  DefMacro!(
+    T_CS!("\\verbatim*"),
+    None,
+    TokenizeInternal!("\\begingroup\\@verbatim\\verbatim@start")
+  );
   DefMacro!("\\endverbatim", "\\lx@end@verbatim@\\endgroup");
-  DefMacro!(T_CS!("\\endverbatim*"), None, TokenizeInternal!("\\lx@end@verbatim@\\endgroup"));
+  DefMacro!(
+    T_CS!("\\endverbatim*"),
+    None,
+    TokenizeInternal!("\\lx@end@verbatim@\\endgroup")
+  );
 
   DefMacro!(
     "\\comment",
@@ -75,7 +94,8 @@ LoadDefinitions!(state, {
     let env = state.lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
-    // TODO: UGH!!! Isn't there a better way to approximate the Perl simplicity of writing an inline regex?
+    // TODO: UGH!!! Isn't there a better way to approximate
+    // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
     while let Some(line) = gullet.read_raw_line(state) {
@@ -98,7 +118,8 @@ LoadDefinitions!(state, {
     let mut tokens = Vec::new();
     for line in &lines {
       tokens.push(T_CS!("\\verbatim@startline"));
-      tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(ExplodeText!(line))], gullet)?.unlist());
+      tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
+        vec![Tokens::new(ExplodeText!(line))], gullet)?.unlist());
       tokens.push(T_CS!("\\verbatim@processline"));
     }
     tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)], gullet)?.unlist());
@@ -121,11 +142,13 @@ LoadDefinitions!(state, {
           let mut tokens = Vec::new();
           for line in lines.into_iter() {
             tokens.push(T_CS!("\\verbatim@startline"));
-            tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(ExplodeText!(line))], igullet, istate)?.unlist());
+            tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
+              vec![Tokens::new(ExplodeText!(line))], igullet, istate)?.unlist());
             tokens.push(T_CS!("\\verbatim@processline"));
           }
           Ok(Tokens!(
-            T_CS!("\\begingroup"), T_CS!("\\@verbatim"), T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
+            T_CS!("\\begingroup"), T_CS!("\\@verbatim"),
+            T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
             T_CS!("\\lx@verbatim@"), tokens, T_CS!("\\lx@end@verbatim@"), T_CS!("\\endgroup"))
           )
         },
@@ -148,7 +171,8 @@ LoadDefinitions!(state, {
   //     AssignCatcode('{',  CC_OTHER);
   //     AssignCatcode('}',  CC_OTHER);
   //     $init = $mouth->readToken;
-  //     $init = $mouth->readToken if ToString($init) == "*";    // Should I bother handling \verb* ?
+  //     $init = $mouth->readToken if ToString($init) == "*";    // Should I bother handling \verb*
+  // ?
 
   //     if (!$init) {    // typically read too far, got \verb and the content is somewhere else..?
   //       Error("expected", "delimiter", $stomach,

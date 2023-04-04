@@ -1,6 +1,5 @@
 use crate::package::*;
 LoadDefinitions!(outer_state, {
-
   // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
   // This should be fairly compact vertically.
   DefConstructor!("\\@shortstack@cr",
@@ -29,5 +28,4 @@ LoadDefinitions!(outer_state, {
   // properties => { align => sub { ($_[1] ? $alignments{ ToString($_[1]) } : undef); },
   //   vattach => 'bottom' },                # for size computation
   mode => "text");
-
 });

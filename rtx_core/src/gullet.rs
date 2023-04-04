@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::borrow::Cow;
-use std::collections::{VecDeque};
 use rustc_hash::FxHashSet as HashSet;
+use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::mem;
 use std::sync::Arc;
 
@@ -29,7 +29,8 @@ lazy_static! {
   static ref DIGIT_RE: Regex = Regex::new(r"[0-9]").unwrap();
   static ref OCT_RE: Regex = Regex::new(r"[0-7]").unwrap();
   static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
-  static ref SMUGGLE_THE_COMMANDS: HashSet<&'static str> = set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize");
+  static ref SMUGGLE_THE_COMMANDS: HashSet<&'static str> =
+    set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize");
 }
 
 #[derive(PartialEq, Debug)]
@@ -206,8 +207,8 @@ impl Gullet {
       // if ($LaTeXML::TOKEN_LIMIT and $$self{progress} > $LaTeXML::TOKEN_LIMIT) {
       // Fatal('timeout', 'token_limit', $self,
       //   "Token limit of $LaTeXML::TOKEN_LIMIT exceeded, infinite loop?"); }
-      // if ($LaTeXML::PUSHBACK_LIMIT and scalar(@{ $$self{pushback} }) >    $LaTeXML::PUSHBACK_LIMIT) {
-      //   Fatal('timeout', 'pushback_limit', $self,
+      // if ($LaTeXML::PUSHBACK_LIMIT and scalar(@{ $$self{pushback} }) >
+      // $LaTeXML::PUSHBACK_LIMIT) {   Fatal('timeout', 'pushback_limit', $self,
       //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
 
       // Wow!!!!! See TeX the Program \S 309
@@ -233,9 +234,14 @@ impl Gullet {
   //  will step to the next input stream (Mouth) if one is available,
   // If `commentsok` is true, will also pass comments.
   /// Return the next unexpandable token from the input source, or None if there is no more input.
-  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the input.
-  /// If `commentsok`, a comment read or pending will be returned.
-  pub fn read_x_token(&mut self, toplevel_opt: Option<bool>, commentsok: bool, state: &mut State) -> Result<Option<Token>> {
+  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the
+  /// input. If `commentsok`, a comment read or pending will be returned.
+  pub fn read_x_token(
+    &mut self,
+    toplevel_opt: Option<bool>,
+    commentsok: bool,
+    state: &mut State,
+  ) -> Result<Option<Token>> {
     // toplevel should be true by default
     let toplevel = toplevel_opt.unwrap_or(true);
     if commentsok {
@@ -310,7 +316,8 @@ impl Gullet {
                 if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
                   // is this the right logic here? don't expand unless digesting?
                   state.set_current_token(Arc::new(token));
-                  let result = self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
+                  let result =
+                    self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
                   state.expire_current_token();
                   return result;
                 }
@@ -318,7 +325,8 @@ impl Gullet {
             }
             // TODO: ## Wow!!!!! See TeX the Program \S 309
             if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
-              return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
+              return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by
+                                                                         // now; report early!
             } else {
               return Ok(Some(token));
             }
@@ -385,7 +393,10 @@ impl Gullet {
       // If we still have peeked tokens, we ONLY want to combine it with the remainder
       // of the current line from the Mouth (NOT reading a new line)
       if !tokens.is_empty() {
-        Some(Tokens::new(tokens).to_string() + &runtime.mouth.read_raw_line(true, state).unwrap_or_default())
+        Some(
+          Tokens::new(tokens).to_string()
+            + &runtime.mouth.read_raw_line(true, state).unwrap_or_default(),
+        )
       } else {
         // Otherwise, read the next line from the Mouth.
         runtime.mouth.read_raw_line(false, state)
@@ -606,7 +617,10 @@ impl Gullet {
     }
     // Notice that IFF the arg looks like {balanced}, the outer braces are stripped
     // so that delimited arguments behave more similarly to simple, undelimited arguments.
-    if nbraces == 1 && tokens.first().unwrap().get_catcode() == Catcode::BEGIN && tokens.last().unwrap().get_catcode() == Catcode::END {
+    if nbraces == 1
+      && tokens.first().unwrap().get_catcode() == Catcode::BEGIN
+      && tokens.last().unwrap().get_catcode() == Catcode::END
+    {
       tokens.remove(0);
       tokens.pop();
     }
@@ -615,7 +629,9 @@ impl Gullet {
 
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-  pub fn read_until_token(&mut self, t: Token, state: &mut State) -> Result<Tokens> { self.read_until(&Tokens!(t), state) }
+  pub fn read_until_token(&mut self, t: Token, state: &mut State) -> Result<Tokens> {
+    self.read_until(&Tokens!(t), state)
+  }
   /// reads until it encounters a Catcode::BEGIN token
   pub fn read_until_brace(&mut self, state: &mut State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
@@ -680,7 +696,11 @@ impl Gullet {
   /// otherwise the contents of the [].
   /// Note that this returns an empty array if [] is present,
   /// i.e. "[contents]" in TeX will lead to Tokens(contents), otherwise returns None
-  pub fn read_optional(&mut self, default: Option<Tokens>, state: &mut State) -> Result<Option<Tokens>> {
+  pub fn read_optional(
+    &mut self,
+    default: Option<Tokens>,
+    state: &mut State,
+  ) -> Result<Option<Tokens>> {
     match self.read_non_space(state) {
       None => Ok(None),
       Some(t) => {
@@ -712,7 +732,11 @@ impl Gullet {
   // See TeXBook, Ch.24, pp.269-271.
   //**********************************************************************
 
-  pub fn read_value(&mut self, value_type: RegisterType, state: &mut State) -> Result<RegisterValue> {
+  pub fn read_value(
+    &mut self,
+    value_type: RegisterType,
+    state: &mut State,
+  ) -> Result<RegisterValue> {
     match value_type {
       RegisterType::Number => Ok(self.read_number(state)?.into()),
       RegisterType::Dimension => Ok(self.read_dimension(state)?.into()),
@@ -727,7 +751,11 @@ impl Gullet {
     }
   }
 
-  pub fn read_register_value(&mut self, value_type: RegisterType, state: &mut State) -> Result<Option<RegisterValue>> {
+  pub fn read_register_value(
+    &mut self,
+    value_type: RegisterType,
+    state: &mut State,
+  ) -> Result<Option<RegisterValue>> {
     match self.read_x_token(None, false, state)? {
       None => Ok(None),
       Some(token) => {
@@ -905,7 +933,9 @@ impl Gullet {
       if let Some(t) = token {
         self.unread_one(t); // Unread
       }
-      self.read_normal_integer(state)?.map(|v| v.value_of() as f64)
+      self
+        .read_normal_integer(state)?
+        .map(|v| v.value_of() as f64)
     };
 
     if let Some(n) = n_opt {
@@ -945,12 +975,22 @@ impl Gullet {
     if let Some(d) = self.read_internal_dimension(state)? {
       Ok(if is_negative { d.negate() } else { d })
     } else if let Some(d) = self.read_internal_glue(state)? {
-      Ok(Dimension::new(if is_negative { d.negate().value_of() } else { d.value_of() }))
+      Ok(Dimension::new(if is_negative {
+        d.negate().value_of()
+      } else {
+        d.value_of()
+      }))
     } else if let Some(d) = self.read_factor(state)? {
       let unit = match self.read_unit(state)? {
         Some(u) => u,
         None => {
-          Warn!("expected", "<unit>", self, state, "Illegal unit of measure (pt inserted).");
+          Warn!(
+            "expected",
+            "<unit>",
+            self,
+            state,
+            "Illegal unit of measure (pt inserted)."
+          );
           65536.0
         },
       };
@@ -985,7 +1025,10 @@ impl Gullet {
       Some(u.value_of() as f64)
     } else {
       self.read_keyword(&["true"], state)?; // But ignore, we're not bothering with mag...
-      if let Some(u) = self.read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"], state)? {
+      if let Some(u) = self.read_keyword(
+        &["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"],
+        state,
+      )? {
         self.skip_one_space(state);
         Some(state.convert_unit(&u))
       } else {
@@ -1034,7 +1077,11 @@ impl Gullet {
     }
   }
 
-  pub fn read_rubber(&mut self, mu: bool, state: &mut State) -> Result<(Option<i64>, Option<FillCode>)> {
+  pub fn read_rubber(
+    &mut self,
+    mu: bool,
+    state: &mut State,
+  ) -> Result<(Option<i64>, Option<FillCode>)> {
     let is_negative = self.read_optional_signs(state)?;
     let s = if is_negative { -1 } else { 1 };
     match self.read_factor(state)? {
@@ -1052,7 +1099,13 @@ impl Gullet {
           let u = if mu {
             match self.read_mu_unit(state)? {
               None => {
-                Warn!("expected", "<unit>", self, state, "Illegal unit of measure (mu inserted).");
+                Warn!(
+                  "expected",
+                  "<unit>",
+                  self,
+                  state,
+                  "Illegal unit of measure (mu inserted)."
+                );
                 None
               },
               Some(v) => Some(v as f64),
@@ -1060,7 +1113,13 @@ impl Gullet {
           } else {
             match self.read_unit(state)? {
               None => {
-                Warn!("expected", "<unit>", self, state, "Illegal unit of measure (pt inserted).");
+                Warn!(
+                  "expected",
+                  "<unit>",
+                  self,
+                  state,
+                  "Illegal unit of measure (pt inserted)."
+                );
                 None
               },
               Some(v) => Some(v),
@@ -1114,7 +1173,13 @@ impl Gullet {
     if let Some(mut m) = self.read_factor(state)? {
       let munit = self.read_mu_unit(state)?;
       if munit.is_none() {
-        Warn!("expected", "<unit>", self, state, "Illegal unit of measure (mu inserted).");
+        Warn!(
+          "expected",
+          "<unit>",
+          self,
+          state,
+          "Illegal unit of measure (mu inserted)."
+        );
       }
       if is_negative {
         m *= -1.0;
@@ -1124,7 +1189,13 @@ impl Gullet {
       let m = if is_negative { mglue.negate() } else { mglue };
       Ok(MuDimension::new(m.value_of()))
     } else {
-      Warn!("expected", "<mudimen>", self, state, "Expecting mudimen; assuming 0");
+      Warn!(
+        "expected",
+        "<mudimen>",
+        self,
+        state,
+        "Expecting mudimen; assuming 0"
+      );
       Ok(MuDimension::new(0))
     }
   }
@@ -1160,8 +1231,9 @@ impl Gullet {
         } else if let Some(defn) = state.lookup_register_definition(&token) {
           match defn.register_type() {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
-              // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for value_of feels incorrect
-              //       but in which direction should it be resolved?
+              // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
+              // value_of feels incorrect       but in which direction should it be
+              // resolved?
               let args = defn.read_arguments(self, state)?;
               match defn.value_of(args, state) {
                 None => Ok(Tokens!()),
@@ -1171,7 +1243,8 @@ impl Gullet {
             _ => Ok(Tokens!(token)),
           }
         } else if let Some(defn) = state.lookup_definition(&token) {
-          // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any way to circumvent? Is it slow in the first place?
+          // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
+          // way to circumvent? Is it slow in the first place?
           if defn.is_expandable() {
             let x = defn.invoke(self, false, state)?;
             if !x.is_empty() {
@@ -1219,7 +1292,6 @@ impl Gullet {
   /// Do something, while reading stuff from a specific Mouth.
   /// This reads ONLY from that mouth (or any mouth openned by code in that source),
   /// and the mouth should end up empty afterwards, and only be closed here.
-  ///
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Gullet, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();
@@ -1232,21 +1304,40 @@ impl Gullet {
           self.close_mouth(true, state);
           break;
         } else if self.mouthstack.is_empty() {
-          let message = s!("Reading from {}, but it has already been closed.", runtime.mouth.stringify());
-          Error!("unexpected", "<closed>", self, state, "Mouth is unexpectedly already closed", message);
+          let message = s!(
+            "Reading from {}, but it has already been closed.",
+            runtime.mouth.stringify()
+          );
+          Error!(
+            "unexpected",
+            "<closed>",
+            self,
+            state,
+            "Mouth is unexpectedly already closed",
+            message
+          );
           break;
         } else {
           let mut ready_to_read = false;
           {
             if let Some(ref mut runtime) = self.mouth {
-              if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
+              if !runtime.autoclose
+                || !runtime.pushback.is_empty()
+                || runtime.mouth.has_more_input()
+              {
                 ready_to_read = true;
               }
             }
           }
           if ready_to_read {
             let _next = self.read_token(state); // stringify( ?
-            Error!("unexpected", "next", self, state, "TODO: unexpected input remaining");
+            Error!(
+              "unexpected",
+              "next",
+              self,
+              state,
+              "TODO: unexpected input remaining"
+            );
             // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
             //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
             {
@@ -1262,7 +1353,13 @@ impl Gullet {
           }
         }
       } else {
-        Error!("unexpected", "runtime", self, state, "TODO: gullet had no active runtime");
+        Error!(
+          "unexpected",
+          "runtime",
+          self,
+          state,
+          "TODO: gullet had no active runtime"
+        );
         break;
       }
     }
@@ -1338,7 +1435,11 @@ impl Gullet {
     }
   }
 
-  pub fn do_expand<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Tokens> {
+  pub fn do_expand<T: Into<Tokens>>(
+    &mut self,
+    tokens: T,
+    outer_state: &mut State,
+  ) -> Result<Tokens> {
     let tokens: Tokens = tokens.into();
     self.reading_from_mouth(
       Mouth::default(),

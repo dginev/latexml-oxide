@@ -15,7 +15,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\UrlSpecials", "");
 
   // Font style definitions.
-  DefMacro!("\\urlstyle{}", "\\expandafter\\protect\\csname url@#1style\\endcsname");
+  DefMacro!(
+    "\\urlstyle{}",
+    "\\expandafter\\protect\\csname url@#1style\\endcsname"
+  );
   DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
   DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
   DefMacro!("\\url@sfstyle", "\\def\\UrlFont{\\sffamily}");
@@ -28,7 +31,10 @@ LoadDefinitions!(state, {
 
   // \DeclareUrlCommand\cmd{settings}
   // Have this expand into \@Url w/ the declared cmd as arg, so it gets reflected in XML.
-  DefMacro!("\\DeclareUrlCommand{}{}", "\\def#1{\\begingroup #2\\@Url#1}");
+  DefMacro!(
+    "\\DeclareUrlCommand{}{}",
+    "\\def#1{\\begingroup #2\\@Url#1}"
+  );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,
@@ -49,7 +55,8 @@ LoadDefinitions!(state, {
       gullet.read_until_token(close.clone(), state)?
     };
     state.end_semiverbatim()?;
-    let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE).map(|t| T_OTHER!(t.get_string())).collect();
+    let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
+      .map(|t| T_OTHER!(t.get_string())).collect();
 
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());

@@ -64,19 +64,23 @@ LoadDefinitions!(outer_state, {
   // <code assignment> = <codename><8bit><equals><number>
 
   // Need to handle "at" too!!!
-  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName", sub[stomach, (cs, name_arg), state] {
+  DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
+  sub[stomach, (cs, name_arg), state] {
     let gullet = stomach.get_gullet_mut();
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
-      gullet.read_keyword(&["at"], state)?.map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
-      gullet.read_keyword(&["scaled"], state)?.map(|_| gullet.read_number(state).unwrap().value_of() as f64 / 1000.0)) {
+      gullet.read_keyword(&["at"], state)?
+        .map(|_| gullet.read_dimension(state).unwrap().pt_value(None)),
+      gullet.read_keyword(&["scaled"], state)?
+        .map(|_| gullet.read_number(state).unwrap().value_of() as f64 / 1000.0)) {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
 
       // TODO: add this back when we have the fonts, too loud now
 
-      // let message = s!("Unrecognized font name {:?} Font switch macro {:?} will have no effect", name, cs.stringify());
+      // let message = s!("Unrecognized font name {:?} Font switch macro {:?}
+      // will have no effect", name, cs.stringify());
       // Info!("unexpected", name, gullet, state, message);
       None
     };
@@ -120,7 +124,8 @@ LoadDefinitions!(outer_state, {
           let defn_value = defn.value_of(inner, state).unwrap_or_default();
           defn.set_value(defn_value.add(summand), defn_args, state);
         } else {
-          let message = s!("\\advance expected a defined variable for {:?}, found no definition", defn_token_rc);
+          let message = s!("\\advance expected a defined variable for {:?}, found no definition",
+            defn_token_rc);
           Error!("expected","definition", stomach, state, message);
         }
         state.expire_current_token();
@@ -138,7 +143,8 @@ LoadDefinitions!(outer_state, {
         let scale_value = scale.to_number().value_of();
         defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } else {
-        let message = s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
+        let message =
+          s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);
       }
     } else {
@@ -161,7 +167,8 @@ LoadDefinitions!(outer_state, {
         }
         defn.set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } else {
-        let message = s!("\\divide expected a defined variable for {:?}, found no definition", varname);
+        let message =
+          s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", stomach, state, message);
       }
     } else {
@@ -173,14 +180,15 @@ LoadDefinitions!(outer_state, {
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
   DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, (token1, token2), state] {
-   Let!(&token1, token2);
-   Ok(Vec::new())
+    Let!(&token1, token2);
+    Ok(Vec::new())
   });
 
   DefPrimitive!("\\futurelet Token Token Token", sub[stomach, (cs, token1, token2), state] {
-      stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone())); // NOT expandable, but puts tokens back
-      Let!(&cs, token2);
-      Ok(Vec::new())
+    // NOT expandable, but puts tokens back
+    stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone()));
+    Let!(&cs, token2);
+    Ok(Vec::new())
   });
 
   // <shorthand definition> = \chardef<control sequence><equals><8bit>

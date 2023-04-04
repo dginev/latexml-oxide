@@ -1,8 +1,8 @@
 // use crate::argument::Argument;
 // use minilp::{ComparisonOp, Variable};
 // use quote::ToTokens;
-use std::cmp::Ordering;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::cmp::Ordering;
 use std::fmt::{self, Display};
 
 /// A CurryConstraint is a simple linear constraint between named variables and literals
@@ -58,10 +58,10 @@ impl Display for CurryConstraint {
 //       CurryTerm::Arg(v) => quote!(
 //           args[#v].as_ref().unwrap()
 //             .get_meta().curry_level
-//             .as_ref().expect(&format!("Failed to resolve the curry_level of an argument at {:?}", args)).clone()),
-//       CurryTerm::Sub(lhs, rhs) => quote!(CurryTerm::Sub(Box::new(#lhs), Box::new(#rhs))),
-//       CurryTerm::Add(lhs, rhs) => quote!(CurryTerm::Add(Box::new(#lhs), Box::new(#rhs))),
-//     });
+//             .as_ref().expect(&format!("Failed to resolve the curry_level of an argument at {:?}",
+// args)).clone()),       CurryTerm::Sub(lhs, rhs) => quote!(CurryTerm::Sub(Box::new(#lhs),
+// Box::new(#rhs))),       CurryTerm::Add(lhs, rhs) => quote!(CurryTerm::Add(Box::new(#lhs),
+// Box::new(#rhs))),     });
 //   }
 // }
 
@@ -73,8 +73,9 @@ impl CurryTerm {
   //   match self {
   //     CurryTerm::Literal(v) => CurryTerm::Literal(*v),
   //     CurryTerm::Var(v) => CurryTerm::Var(v.clone()),
-  //     CurryTerm::Sub(lhs, rhs) => CurryTerm::Sub(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
-  //     CurryTerm::Add(lhs, rhs) => CurryTerm::Add(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
+  //     CurryTerm::Sub(lhs, rhs) => CurryTerm::Sub(Box::new(lhs.fill_arguments(args)),
+  // Box::new(rhs.fill_arguments(args))),     CurryTerm::Add(lhs, rhs) =>
+  // CurryTerm::Add(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
   //     CurryTerm::Arg(id) => {
   //       let arg = args
   //         .iter()
@@ -129,7 +130,12 @@ impl CurryTerm {
     }
   }
 
-  pub fn to_minilp<'a>(&'a self, var_values: &mut HashMap<&'a String, f64>, rhs_minilp: &mut f64, negate: bool) {
+  pub fn to_minilp<'a>(
+    &'a self,
+    var_values: &mut HashMap<&'a String, f64>,
+    rhs_minilp: &mut f64,
+    negate: bool,
+  ) {
     use CurryTerm::*;
     match self {
       Literal(v) => {
@@ -228,7 +234,11 @@ impl CurryConstraint {
         panic!("Tried to solve a problem that has not filled in its arguments!")
       },
       Sub(sub_left, sub_right) => {
-        new_lhs = Sub(Add(lhs.clone().into(), sub_right.clone()).into(), sub_left.clone()).simplify();
+        new_lhs = Sub(
+          Add(lhs.clone().into(), sub_right.clone()).into(),
+          sub_left.clone(),
+        )
+        .simplify();
         new_rhs = Literal(0);
       },
       Add(_, _) => {
@@ -243,15 +253,15 @@ impl CurryConstraint {
     CurryConstraint((new_lhs, new_cmp, new_rhs))
   }
 
-  // pub fn to_minilp(&self, varmap: &HashMap<&String, Variable>) -> (Vec<(Variable, f64)>, ComparisonOp, f64) {
-  //   let (lhs, cmp, rhs) = &self.0;
+  // pub fn to_minilp(&self, varmap: &HashMap<&String, Variable>) -> (Vec<(Variable, f64)>,
+  // ComparisonOp, f64) {   let (lhs, cmp, rhs) = &self.0;
   //   let mut rhs_minilp = if let CurryTerm::Literal(v) = rhs {
   //     (*v).into()
   //   } else {
-  //     panic!("RHS of a CurryConstraint should be a literal by the time it is solved (i.e. mapped to minilp)")
-  //   };
-  //   // A bit of silly adjustments here, as minilp only has the "-or-equal" variants, while the rust "Ordering" only has the strict relations.
-  //   let cmp_lp = match cmp {
+  //     panic!("RHS of a CurryConstraint should be a literal by the time it is solved (i.e. mapped
+  // to minilp)")   };
+  //   // A bit of silly adjustments here, as minilp only has the "-or-equal" variants, while the
+  // rust "Ordering" only has the strict relations.   let cmp_lp = match cmp {
   //     Ordering::Less => {
   //       rhs_minilp -= 1.0;
   //       ComparisonOp::Le
@@ -266,8 +276,8 @@ impl CurryConstraint {
 
   //   lhs.to_minilp(&mut var_values, &mut rhs_minilp, false);
 
-  //   let lhs_minilp: Vec<(Variable, f64)> = var_values.into_iter().map(|(var, val)| (*varmap.get(&var).unwrap(), val)).collect();
-  //   (lhs_minilp, cmp_lp, rhs_minilp)
+  //   let lhs_minilp: Vec<(Variable, f64)> = var_values.into_iter().map(|(var, val)|
+  // (*varmap.get(&var).unwrap(), val)).collect();   (lhs_minilp, cmp_lp, rhs_minilp)
   // }
 }
 

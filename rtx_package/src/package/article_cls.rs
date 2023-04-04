@@ -1,6 +1,6 @@
 use crate::package::*;
 use rtx_core::state::State;
-
+#[rustfmt::skip]
 LoadDefinitions!(stomach, state, {
   LoadPool!("LaTeX");
   //**********************************************************************
@@ -79,7 +79,10 @@ LoadDefinitions!(stomach, state, {
   DefMacro!("\\thepart", "\\Roman{part}");
   DefMacro!("\\thesection", "\\arabic{section}");
   DefMacro!("\\thesubsection", "\\thesection.\\arabic{subsection}");
-  DefMacro!("\\thesubsubsection", "\\thesubsection.\\arabic{subsubsection}");
+  DefMacro!(
+    "\\thesubsubsection",
+    "\\thesubsection.\\arabic{subsubsection}"
+  );
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
   SetCounter!("tocdepth", Number::new(3));

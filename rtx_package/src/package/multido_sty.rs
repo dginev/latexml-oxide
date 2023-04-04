@@ -1,36 +1,36 @@
 lazy_static! {
-  static ref DNIR_REX : Regex = Regex::new("^\\\\((?i)[dnir])").unwrap();
+  static ref DNIR_REX: Regex = Regex::new("^\\\\((?i)[dnir])").unwrap();
 }
 
 use crate::package::*;
+#[rustfmt::skip]
 LoadDefinitions!(state, {
-
   DefRegister!("\\multido@count" => Number::new(0));
   DefRegister!("\\multidocount"  => Number::new(0));
   DefRegister!("\\multido@stuff" => Tokens!());
 
-  DefMacro!("\\multido",  r"\multido@{}{\begingroup}{\endgroup}");
-  DefMacro!("\\mmultido", r"\multido@{\multido@stepvar}{\begingroup}{\endgroup}");
-  DefMacro!("\\Multido",  r"\multido@{}{}{}");
+  DefMacro!("\\multido", r"\multido@{}{\begingroup}{\endgroup}");
+  DefMacro!(
+    "\\mmultido",
+    r"\multido@{\multido@stepvar}{\begingroup}{\endgroup}"
+  );
+  DefMacro!("\\Multido", r"\multido@{}{}{}");
   DefMacro!("\\MMultido", r"\multido@{\multido@stepvar}{}{}");
 
-  DefMacro!("\\multido@{}{}{}{}{}{}","#2\
-      \\multido@count=#5\\relax\
-      \\ifnum\\multido@count=\\z@\\else\\multido@@{#1}{#4}{#6}\\fi\
-      #3\
-      \\ignorespaces");
+  DefMacro!(
+    "\\multido@{}{}{}{}{}{}",
+    "#2\\multido@count=#5\\relax\\ifnum\\multido@count=\\z@\\else\\multido@@{#1}{#4}{#6}\\fi#3\\ignorespaces"
+  );
 
   // Simplified...
-  DefMacro!("\\multido@@{}{}{}",
-    "\\multido@@initvars@@{#2}\
-      \\ifnum\\multido@count<\\z@\\multido@count=-\\multido@count\\fi\
-      \\multidocount=1\\relax#1\\multido@stuff{#3}\\multido@loop");
-  DefMacro!("\\multido@loop",
-    "\\the\\multido@stuff\
-      \\ifnum\\multidocount<\\multido@count\
-      \\advance\\multidocount\\@ne\
-      \\multido@stepvar\
-      \\expandafter\\multido@loop\\fi");
+  DefMacro!(
+    "\\multido@@{}{}{}",
+    "\\multido@@initvars@@{#2}\\ifnum\\multido@count<\\z@\\multido@count=-\\multido@count\\fi\\multidocount=1\\relax#1\\multido@stuff{#3}\\multido@loop"
+  );
+  DefMacro!(
+    "\\multido@loop",
+    "\\the\\multido@stuff\\ifnum\\multidocount<\\multido@count\\advance\\multidocount\\@ne\\multido@stepvar\\expandafter\\multido@loop\\fi"
+  );
   DefMacro!("\\multidostop", "\\multidocount=\\multido@count");
 
   // Annoyances with variables:
@@ -39,7 +39,8 @@ LoadDefinitions!(state, {
   // concievably variables can be redefined in middle of loop?
   DefMacro!("\\multido@@initvars@@{}", sub[ogullet, (variables), ostate] {
     let reader_mouth = Mouth::new("", None, ostate)?;
-    let read_result : Result<Vec<Token>> = ogullet.reading_from_mouth(reader_mouth, ostate, |gullet, state| {
+    let read_result : Result<Vec<Token>> =
+    ogullet.reading_from_mouth(reader_mouth, ostate, |gullet, state| {
       gullet.unread(variables);
       let mut inits : Vec<Token> = Vec::new();
       let mut steps = Vec::new();
@@ -130,5 +131,4 @@ LoadDefinitions!(state, {
   DefMacro!("\\fpSub {Float} {Float} DefToken", sub[gullet, (a,b,token), state] {
     let value = a.subtract(b);
     DefMacro!(token, None, Tokens!(Explode!(value.to_tight_string()))); });
-
 });

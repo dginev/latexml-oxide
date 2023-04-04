@@ -37,7 +37,11 @@ impl Default for KeyVal {
 impl KeyVal {
   pub fn new(prefix: Option<String>, keyset: String, key: String) -> Self {
     let prefix = prefix.unwrap_or_else(|| "KV".to_string());
-    KeyVal { prefix, key, keyset }
+    KeyVal {
+      prefix,
+      key,
+      keyset,
+    }
   }
 
   pub fn get_header(&self) -> String { s!("{}@{}@{}", self.prefix, self.keyset, self.key) }
@@ -46,8 +50,12 @@ impl KeyVal {
   // Property access
   //======================================================================
 
-  pub fn get_prop<'a>(&self, key: &str, state: &'a State) -> Option<&'a Stored> { state.lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header())) }
-  pub fn get_default(&self, state: &State) -> Option<Stored> { self.get_prop("default", state).map(|v| (*v).clone()) }
+  pub fn get_prop<'a>(&self, key: &str, state: &'a State) -> Option<&'a Stored> {
+    state.lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
+  }
+  pub fn get_default(&self, state: &State) -> Option<Stored> {
+    self.get_prop("default", state).map(|v| (*v).clone())
+  }
   pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Arc<Parameter>> {
     match self.get_prop("type", state) {
       Some(Stored::Parameter(p)) => Some(Arc::clone(p)),

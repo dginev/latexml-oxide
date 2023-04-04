@@ -7,7 +7,8 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
 
-pub type RewriteReplaceClosure = Arc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
+pub type RewriteReplaceClosure =
+  Arc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
 
 // ======================================================================
 // Defining Rewrite rules that act on the DOM
@@ -152,21 +153,26 @@ impl Rewrite {
     self.clauses = new_clauses;
   }
 
-  pub fn compile_clause(&mut self, _document: &mut Document, clause: RewriteClause) -> RewriteClause {
+  pub fn compile_clause(
+    &mut self,
+    _document: &mut Document,
+    clause: RewriteClause,
+  ) -> RewriteClause {
     let op = clause.op;
     let pattern = clause.pattern;
     //   my ($oop, $opattern) = ($op, $pattern);
     //   if ($op eq 'label') {
     //     if (ref $pattern eq 'ARRAY') {
-    //       #      $op='multi_select'; $pattern = [map(["descendant-or-self::*[\@label='$_']",1], @$pattern)]; }
+    //       #      $op='multi_select'; $pattern = [map(["descendant-or-self::*[\@label='$_']",1],
+    // @$pattern)]; }
 
     //       $op = 'multi_select'; $pattern = [map { ["descendant-or-self::*[\@xml:id='$_']", 1] }
     //           map { $self->getLabelID($_) } @$pattern]; }
     //     else {
     //       #      $op='select'; $pattern=["descendant-or-self::*[\@label='$pattern']",1]; }}
     //       $op      = 'select';
-    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self->getLabelID($pattern) . "']", 1]; } }
-    //   elsif ($op eq 'scope') {
+    //       $pattern = ["descendant-or-self::*[\@xml:id='" . $self->getLabelID($pattern) . "']",
+    // 1]; } }   elsif ($op eq 'scope') {
     //     $op = 'select';
     //     if ($pattern =~ /^label:(.*)$/) {
     //       #      $pattern=["descendant-or-self::*[\@label='$1']",1]; }
@@ -204,7 +210,11 @@ impl Rewrite {
     //     $pattern = $self->compile_regexp($pattern); }
     //   Debug("Compiled clause $oop=>" . ToString($opattern) . "  ==> $op=>" . ToString($pattern))
     //     if $LaTeXML::DEBUG{rewrite};
-    RewriteClause { compiled: true, op, pattern }
+    RewriteClause {
+      compiled: true,
+      op,
+      pattern,
+    }
   }
 
   pub fn invoke(&mut self, document: &mut Document, root: &Node, state: &mut State) -> Result<()> {
@@ -217,11 +227,11 @@ impl Rewrite {
   // Rewrite spec as input
   //   scope  => $scope  : a scope like "section:1.2.3" or "label:eq.one"; translated to xpath
   //   select => $xpath  : selects subtrees based on xpath expression.
-  //   match  => $code   : called on $document and current $node: tests current node, returns $nnodes, if match
-  //   match  => $string : Treats as TeX, converts Box, then DOM tree, to xpath
-  //                      (The matching top-level nodes will be replaced, if replace is the next op.)
-  //   replace=> $code   : removes the current $nnodes, calls $code with $document and removed nodes
-  //   replace=> $string : removes $nnodes
+  //   match  => $code   : called on $document and current $node: tests current node, returns
+  // $nnodes, if match   match  => $string : Treats as TeX, converts Box, then DOM tree, to xpath
+  //                      (The matching top-level nodes will be replaced, if replace is the next
+  // op.)   replace=> $code   : removes the current $nnodes, calls $code with $document and
+  // removed nodes   replace=> $string : removes $nnodes
   //                       Treats $string as TeX, converts to Box and inserts to replace
   //                       the removed nodes.
   //   attributes=>$hash : adds data from hash as attributes to the current node.
@@ -244,20 +254,33 @@ impl Rewrite {
     state: &mut State,
   ) -> Result<()> {
     use RewriteOperator::*;
-    if let Some(RewriteClause { compiled:_, op, pattern }) = clauses.pop_front() {
+    if let Some(RewriteClause {
+      compiled: _,
+      op,
+      pattern,
+    }) = clauses.pop_front()
+    {
       match op {
         Select => {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
           if let RewritePattern::String(xpath) = pattern {
             let matches = document.findnodes(xpath, Some(tree), state);
-            // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if $LaTeXML::DEBUG{rewrite};
+            // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if
+            // $LaTeXML::DEBUG{rewrite};
             for node in matches {
-              // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still attached to original document!
+              // next unless node.get_owner_document()->isSameNode($tree->ownerDocument); # If still
+              // attached to original document!
               if node.has_attribute("_matched") {
                 continue;
               }
               // let w = mark_wildcards(node, wilds);
-              self.apply_clause(document, &node, self.options.select_count.unwrap_or(1), clauses.clone(), state)?;
+              self.apply_clause(
+                document,
+                &node,
+                self.options.select_count.unwrap_or(1),
+                clauses.clone(),
+                state,
+              )?;
               // unmark_wildcards(node, w);
             }
           } else {

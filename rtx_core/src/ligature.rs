@@ -9,7 +9,9 @@ use crate::state::State;
 
 pub type LigatureClosure = Arc<dyn Fn(&str) -> String>;
 pub type FontTestClosure = Arc<dyn Fn(&Font) -> bool>;
-pub type LigatureMatcher = Arc<dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
+pub type LigatureMatcher = Arc<
+  dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>,
+>;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct MathLigatureOptions {
@@ -19,7 +21,13 @@ pub struct MathLigatureOptions {
 }
 
 impl MathLigatureOptions {
-  pub fn sorted_each(&self) -> Vec<(&str, &Option<String>)> { vec![("meaning", &self.meaning), ("name", &self.name), ("role", &self.role)] }
+  pub fn sorted_each(&self) -> Vec<(&str, &Option<String>)> {
+    vec![
+      ("meaning", &self.meaning),
+      ("name", &self.name),
+      ("role", &self.role),
+    ]
+  }
 }
 
 #[derive(Clone, Default)]

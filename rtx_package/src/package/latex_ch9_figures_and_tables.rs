@@ -1,4 +1,5 @@
 use crate::package::*;
+#[rustfmt::skip]
 LoadDefinitions!(state, {
   //======================================================================
   // C.9.1 Figures and Tables
@@ -26,8 +27,14 @@ LoadDefinitions!(state, {
   DefMacro!("\\format@title@font@table", "\\format@title@font@float");
 
   // Could perhaps parameterize further with a separator?
-  DefMacro!("\\format@title@figure{}", "\\lx@tag[][: ]{\\lx@fnum@@{figure}}#1");
-  DefMacro!("\\format@title@table{}", "\\lx@tag[][: ]{\\lx@fnum@@{table}}#1");
+  DefMacro!(
+    "\\format@title@figure{}",
+    "\\lx@tag[][: ]{\\lx@fnum@@{figure}}#1"
+  );
+  DefMacro!(
+    "\\format@title@table{}",
+    "\\lx@tag[][: ]{\\lx@fnum@@{table}}#1"
+  );
 
   DefMacro!("\\ext@figure", "lof");
   DefMacro!("\\ext@table", "lot");
@@ -38,7 +45,8 @@ LoadDefinitions!(state, {
     r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@caption\expandafter{\@captype}}"
   );
   // First, check for trailing \label, move it into the caption as a standard position
-  // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395 for a passing build.
+  // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395
+  // for a passing build.
   DefMacro!(
     "\\@caption{}[]{}",
     r"\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
@@ -49,7 +57,10 @@ LoadDefinitions!(state, {
     r"\@caption@postlabel{}{}{} SkipMatch:\label Semiverbatim",
     r"\@caption@{#1}{#2}{#3\label{#4}}"
   );
-  DefMacro!(r"\@caption@{}{}{}", r"\@hack@caption@{#1}{#2}{}#3\label\endcaption");
+  DefMacro!(
+    r"\@caption@{}{}{}",
+    r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
+  );
   DefMacro!(
     r"\@hack@caption@{}{}{} Until:\label Until:\endcaption",
     r"\ifx.#5.\@caption@@@{#1}{#2}{#3#4}\else\@@@hack@caption@{#1}{#2}{#3#4}#5\endcaption\fi"

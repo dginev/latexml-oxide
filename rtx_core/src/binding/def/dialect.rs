@@ -1,14 +1,14 @@
 use lazy_static::lazy_static;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
-use rustc_hash::{FxHashMap as HashMap};
 
 use regex::Regex;
 
 // use crate::common::error::*;
 use crate::binding::content::merge_font;
-use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::binding::counter::dialect::step_counter_gullet;
+use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -17,10 +17,12 @@ use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
 use crate::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
 use crate::definition::primitive::{Primitive, PrimitiveOptions};
-use crate::definition::register::{Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue};
+use crate::definition::register::{
+  Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
+};
 use crate::definition::{
-  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure, ExpansionBody, FontDirective, PrimitiveClosure,
-  ReplacementClosure, Reversion, SizingClosure,
+  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
+  ExpansionBody, FontDirective, PrimitiveClosure, ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -34,7 +36,15 @@ use crate::whatsit::Whatsit;
 use crate::Digested;
 use crate::*;
 
-const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &["name", "meaning", "omcd", "decl_id", "mathstyle", "lpadding", "rpadding"];
+const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
+  "name",
+  "meaning",
+  "omcd",
+  "decl_id",
+  "mathstyle",
+  "lpadding",
+  "rpadding",
+];
 
 lazy_static! {
   /// regex for the prefix of a conditional command sequence
@@ -82,7 +92,8 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let name = token.get_string();
-  (name != "\\relax" && !name.starts_with("\\end")) && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
+  (name != "\\relax" && !name.starts_with("\\end"))
+    && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -166,7 +177,10 @@ pub fn def_conditional(
           );
         }
       } else {
-        let message = s!("The conditional {} is being defined but doesn't start with \\if", cs);
+        let message = s!(
+          "The conditional {} is being defined but doesn't start with \\if",
+          cs
+        );
         Error!("misdefined", cs, None, state, message);
       }
     },
@@ -194,15 +208,26 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.get_string().len() == 1 {
-    state.assign_mathcode(cs.get_string().chars().next().unwrap(), 0x8000u16, scope.clone());
+    state.assign_mathcode(
+      cs.get_string().chars().next().unwrap(),
+      0x8000u16,
+      scope.clone(),
+    );
   }
-  let locked_key_opt = if options.locked { Some(format!("{cs}:locked")) } else { None };
+  let locked_key_opt = if options.locked {
+    Some(format!("{cs}:locked"))
+  } else {
+    None
+  };
   let defcs = if options.robust {
     def_robust_cs(cs, options.locked, options.scope.clone(), state)
   } else {
     cs
   };
-  state.install_definition(Expandable::new(defcs, paramlist, expansion, Some(options), state), scope);
+  state.install_definition(
+    Expandable::new(defcs, paramlist, expansion, Some(options), state),
+    scope,
+  );
   if let Some(locked_key) = locked_key_opt {
     state.assign_value(&locked_key, true, Some(Scope::Global));
   }
@@ -227,7 +252,13 @@ pub struct RegisterOptions {
 /// but registers are also handled by prototypes like `\count{Number}`. `DefRegister` arranges
 /// that the register value can be accessed when a numeric, dimension, ... value is being read,
 /// and also defines the control sequence for assignment.
-pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parameters>, value: T, options: Option<RegisterOptions>, state: &mut State) {
+pub fn def_register<T: Into<RegisterValue>>(
+  cs: Token,
+  parameters: Option<Parameters>,
+  value: T,
+  options: Option<RegisterOptions>,
+  state: &mut State,
+) {
   let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let name = options.name.unwrap_or_else(|| cs.to_string());
@@ -240,13 +271,19 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
     Some(getter) => getter.clone(),
     None => {
       let name_clone = name.clone();
-      Arc::new(move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
-        let args_string: String = args.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
-        match state.lookup_value(&format!("{name_clone}{args_string}")) {
-          None => Some(getter_value.clone()),
-          Some(v) => v.into(),
-        }
-      })
+      Arc::new(
+        move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
+          let args_string: String = args
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<String>>()
+            .join("");
+          match state.lookup_value(&format!("{name_clone}{args_string}")) {
+            None => Some(getter_value.clone()),
+            Some(v) => v.into(),
+          }
+        },
+      )
     },
   };
   let readonly = options.readonly;
@@ -263,7 +300,12 @@ pub fn def_register<T: Into<RegisterValue>>(cs: Token, parameters: Option<Parame
         Arc::new(move |value, args, state| {
           let args_string: String = args
             .into_iter()
-            .map(|a| a.as_tokens(state).expect("TODO: handle malformed values here.").unwrap().to_string())
+            .map(|a| {
+              a.as_tokens(state)
+                .expect("TODO: handle malformed values here.")
+                .unwrap()
+                .to_string()
+            })
             .collect::<Vec<String>>()
             .join("");
 
@@ -311,13 +353,15 @@ pub fn def_primitive(
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure =
+      before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_env.push(require_math_closure);
   }
 
   if options.forbid_math {
     let cs_name_cloned = cs_name.clone();
-    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure =
+      before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_env.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
@@ -382,7 +426,13 @@ pub fn def_primitive(
 }
 
 /// Advanced math replacements require a XMDual representation
-pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_dual(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  presentation: String,
+  options: MathPrimitiveOptions,
+  state: &mut State,
+) {
   let csname = cs.get_string();
   let cont_cs = T_CS!(s!("{csname}@content"));
   let pres_cs = T_CS!(s!("{csname}@presentation"));
@@ -399,58 +449,93 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
   let captured_cont_cs = cont_cs.clone();
   let captured_pres_cs = pres_cs.clone();
   let captured_pres = presentation.clone();
-  state.install_definition(Expandable::new(defcs, paramlist.clone(), ExpansionBody::Closure(Arc::new(move |gullet, args, state| {
-    let args_opt_tks = args.into_iter().map(|arg| arg.into()).collect::<Vec<Option<Tokens>>>();
-    let (cargs, pargs) = dualize_arglist(&captured_pres, args_opt_tks, gullet, state)?;
+  state.install_definition(
+    Expandable::new(
+      defcs,
+      paramlist.clone(),
+      ExpansionBody::Closure(Arc::new(move |gullet, args, state| {
+        let args_opt_tks = args
+          .into_iter()
+          .map(|arg| arg.into())
+          .collect::<Vec<Option<Tokens>>>();
+        let (cargs, pargs) = dualize_arglist(&captured_pres, args_opt_tks, gullet, state)?;
 
-    let mut dtks = vec![T_CS!("\\lx@dual")];
-    // optional keyval arg
-    if captured_role.is_some() || captured_revert_as.is_some() {
-      dtks.push(T_OTHER!("["));
-      if let Some(ref role) = captured_role {
-        dtks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
-        if let Some(ref _revert_as) = captured_revert_as {
-          dtks.push(T_OTHER!(","));
+        let mut dtks = vec![T_CS!("\\lx@dual")];
+        // optional keyval arg
+        if captured_role.is_some() || captured_revert_as.is_some() {
+          dtks.push(T_OTHER!("["));
+          if let Some(ref role) = captured_role {
+            dtks.extend(vec![T_OTHER!("role"), T_OTHER!("="), T_OTHER!(role)]);
+            if let Some(ref _revert_as) = captured_revert_as {
+              dtks.push(T_OTHER!(","));
+            }
+          }
+          if let Some(ref revert_as) = captured_revert_as {
+            dtks.extend(vec![
+              T_OTHER!("revert_as"),
+              T_OTHER!("="),
+              T_OTHER!(revert_as),
+            ]);
+          }
+          dtks.push(T_OTHER!("]"));
         }
-      }
-      if let Some(ref revert_as) = captured_revert_as {
-        dtks.extend(vec![T_OTHER!("revert_as"), T_OTHER!("="), T_OTHER!(revert_as)]);
-      }
-      dtks.push(T_OTHER!("]"));
-    }
-    // end optional keyval arg
-    dtks.push(T_BEGIN!());
-    dtks.push(captured_cont_cs.clone());
-      dtks.push(T_BEGIN!());
-      for carg_opt in cargs.into_iter() {
-        if let Some(carg) = carg_opt {
-          dtks.extend(carg.unlist());
-        } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
-      }
-      dtks.push(T_END!());
-    dtks.push(T_END!());
-    dtks.push(T_BEGIN!());
-    dtks.push(captured_pres_cs.clone());
-      dtks.push(T_BEGIN!());
-      for parg_opt in pargs.into_iter() {
-        if let Some(parg) = parg_opt {
-          dtks.extend(parg.unlist());
-        } else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
-      }
-      dtks.push(T_END!());
-    dtks.push(T_END!());
+        // end optional keyval arg
+        dtks.push(T_BEGIN!());
+        dtks.push(captured_cont_cs.clone());
+        dtks.push(T_BEGIN!());
+        for carg_opt in cargs.into_iter() {
+          if let Some(carg) = carg_opt {
+            dtks.extend(carg.unlist());
+          } else {
+          } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+        }
+        dtks.push(T_END!());
+        dtks.push(T_END!());
+        dtks.push(T_BEGIN!());
+        dtks.push(captured_pres_cs.clone());
+        dtks.push(T_BEGIN!());
+        for parg_opt in pargs.into_iter() {
+          if let Some(parg) = parg_opt {
+            dtks.extend(parg.unlist());
+          } else {
+          } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+        }
+        dtks.push(T_END!());
+        dtks.push(T_END!());
 
-    Ok(Tokens::new(dtks))
-  })), Some(ExpandableOptions {  protected: options.protected, ..ExpandableOptions::default() }), state), options.scope.clone());
+        Ok(Tokens::new(dtks))
+      })),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+      state,
+    ),
+    options.scope.clone(),
+  );
 
   // Make the presentation macro.
-  state.install_definition(Expandable::new(pres_cs, paramlist.clone(), ExpansionBody::Tokens(presentation_toks),
-    Some(ExpandableOptions {  protected: options.protected, ..ExpandableOptions::default() }), state), options.scope.clone());
+  state.install_definition(
+    Expandable::new(
+      pres_cs,
+      paramlist.clone(),
+      ExpansionBody::Tokens(presentation_toks),
+      Some(ExpandableOptions {
+        protected: options.protected,
+        ..ExpandableOptions::default()
+      }),
+      state,
+    ),
+    options.scope.clone(),
+  );
 
   // content: Make the content constructor
   // content: build the replacement closure
-  let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
-  let content_closure : ReplacementClosure = if nargs == 0 {
+  let nargs = paramlist
+    .as_ref()
+    .map(|pl| pl.get_parameters().len())
+    .unwrap_or(0);
+  let content_closure: ReplacementClosure = if nargs == 0 {
     Arc::new(|document, _args, props, state| {
       let mut attrs = HashMap::default();
       for key in ["role", "scriptpos", "stretchy"] {
@@ -506,16 +591,22 @@ pub fn def_math_dual(cs: Token, paramlist: Option<Parameters>, presentation: Str
     cs: cont_cs,
     paramlist,
     replacement: Some(content_closure),
-    ..Constructor::default() };
+    ..Constructor::default()
+  };
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
   state.install_definition(content_constructor, scope);
-
 }
 
 /// EXPERIMENT: Introduce an intermediate case for simple symbols
 /// Define a primitive that will create a Tbox with the appropriate set of XMTok attributes.
-pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentation: String, options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math_primitive(
+  cs: Token,
+  _paramlist: Option<Parameters>,
+  presentation: String,
+  options: MathPrimitiveOptions,
+  state: &mut State,
+) {
   let scope = options.scope.clone();
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
@@ -531,7 +622,9 @@ pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentatio
         let state_font = state.lookup_font().unwrap();
         let font = Arc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None, state)?;
-          state_font.merge((*this_reqfont).clone()).specialize(&presentation)
+          state_font
+            .merge((*this_reqfont).clone())
+            .specialize(&presentation)
         } else {
           state_font.specialize(&presentation)
         });
@@ -551,10 +644,20 @@ pub fn def_math_primitive(cs: Token, _paramlist: Option<Parameters>, presentatio
   );
 }
 
-/// Uses of DefMath without arguments, but with constructor-like options, are realized via a `Constructor` definition
-pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+/// Uses of DefMath without arguments, but with constructor-like options, are realized via a
+/// `Constructor` definition
+pub fn def_math_constructor(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  presentation: String,
+  mut options: MathPrimitiveOptions,
+  state: &mut State,
+) {
   // TODO: do we need to do anything about digesting the presentation?
-  let nargs = paramlist.as_ref().map(|pl| pl.get_parameters().len()).unwrap_or(0);
+  let nargs = paramlist
+    .as_ref()
+    .map(|pl| pl.get_parameters().len())
+    .unwrap_or(0);
   // let csname_alias = if options.alias.is_none() && options.robust {
   //   Some(String::from(cs.get_cs_name()))
   // } else {
@@ -566,7 +669,10 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
     cs.clone()
   };
   if options.reversion.is_none() && nargs == 0 && options.alias.is_none() {
-    if options.revert_as.is_none() || options.revert_as == Some(Cow::Borrowed("content")) || options.revert_as == Some(Cow::Borrowed("context")) {
+    if options.revert_as.is_none()
+      || options.revert_as == Some(Cow::Borrowed("content"))
+      || options.revert_as == Some(Cow::Borrowed("context"))
+    {
       // TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
       options.reversion = Some(Reversion::Tokens(Tokens!(cs.clone())));
     } else {
@@ -588,99 +694,119 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
           .lookup_font()
           .unwrap()
           .merge(Font {
-            mathstyle: mathstyle_for_font.as_ref().map(|ms| Cow::Owned(ms.to_owned())),
+            mathstyle: mathstyle_for_font
+              .as_ref()
+              .map(|ms| Cow::Owned(ms.to_owned())),
             ..Font::default()
           })
           .specialize(&presentation_for_font),
       )
     })
   } else {
-    Arc::new(move |_whatsit, state| Ok(state.lookup_font().unwrap().specialize(&presentation_for_font)))
+    Arc::new(move |_whatsit, state| {
+      Ok(
+        state
+          .lookup_font()
+          .unwrap()
+          .specialize(&presentation_for_font),
+      )
+    })
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
-    Arc::new(move |document: &mut Document, _, props: &HashMap<String, Stored>, state: &mut State| {
-      let mut attrs = HashMap::default();
-      for key in ["role", "scriptpos", "stretchy"] {
-        if let Some(v) = props.get(key) {
-          attrs.insert(key.to_owned(), v.to_string());
+    Arc::new(
+      move |document: &mut Document, _, props: &HashMap<String, Stored>, state: &mut State| {
+        let mut attrs = HashMap::default();
+        for key in ["role", "scriptpos", "stretchy"] {
+          if let Some(v) = props.get(key) {
+            attrs.insert(key.to_owned(), v.to_string());
+          }
         }
-      }
-      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-        if let Some(v) = props.get(*key) {
-          attrs.insert(key.to_string(), v.to_string());
+        for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+          if let Some(v) = props.get(*key) {
+            attrs.insert(key.to_string(), v.to_string());
+          }
         }
-      }
-      let font_opt = match props.get("font") {
-        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
-        Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
-        _ => None,
-      };
-      if let Some(font) = font_opt {
-        document.open_element("ltx:XMTok", Some(attrs), Some(&font), state)?;
-      } else {
-        document.open_element("ltx:XMTok", Some(attrs), None, state)?;
-      }
-      document.absorb_string(&presentation_for_replacement, props, state)?;
-      document.close_element("ltx:XMTok", state)?;
+        let font_opt = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
+            Some(Cow::Owned(code(None, state)?))
+          },
+          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+          _ => None,
+        };
+        if let Some(font) = font_opt {
+          document.open_element("ltx:XMTok", Some(attrs), Some(&font), state)?;
+        } else {
+          document.open_element("ltx:XMTok", Some(attrs), None, state)?;
+        }
+        document.absorb_string(&presentation_for_replacement, props, state)?;
+        document.close_element("ltx:XMTok", state)?;
 
-      Ok(())
-    })
+        Ok(())
+      },
+    )
   } else {
-    Arc::new(move |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
-      let mut attrs = HashMap::default();
-      for key in ["role", "scriptpos", "stretchy"] {
-        if let Some(v) = props.get(key) {
-          attrs.insert(key.to_owned(), v.to_string());
+    Arc::new(
+      move |document: &mut Document,
+            args: &Vec<Option<Digested>>,
+            props: &HashMap<String, Stored>,
+            state: &mut State| {
+        let mut attrs = HashMap::default();
+        for key in ["role", "scriptpos", "stretchy"] {
+          if let Some(v) = props.get(key) {
+            attrs.insert(key.to_owned(), v.to_string());
+          }
         }
-      }
-      let font_opt = match props.get("font") {
-        Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
-        Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
-        _ => None,
-      };
-      if let Some(ref font) = font_opt {
-        document.open_element("ltx:XMApp", Some(attrs), Some(font), state)?;
-      } else {
-        document.open_element("ltx:XMApp", Some(attrs), None, state)?;
-      }
-      // operator
-      let mut op_attrs = HashMap::default();
-      if let Some(role) = props.get("operator_role") {
-        op_attrs.insert(String::from("role"), role.to_string());
-      }
-      if let Some(stretchy) = props.get("operator_stretchy") {
-        op_attrs.insert(String::from("stretchy"), stretchy.to_string());
-      }
-      if let Some(scriptpos) = props.get("operator_scriptpos") {
-        op_attrs.insert(String::from("scriptpos"), scriptpos.to_string());
-      }
-      for key in MATH_CONSTRUCTOR_ATTRIBUTES {
-        if let Some(v) = props.get(*key) {
-          op_attrs.insert(key.to_string(), v.to_string());
+        let font_opt = match props.get("font") {
+          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) => {
+            Some(Cow::Owned(code(None, state)?))
+          },
+          Some(Stored::FontDirective(FontDirective::Asset(font))) => Some(Cow::Borrowed(&**font)),
+          _ => None,
+        };
+        if let Some(ref font) = font_opt {
+          document.open_element("ltx:XMApp", Some(attrs), Some(font), state)?;
+        } else {
+          document.open_element("ltx:XMApp", Some(attrs), None, state)?;
         }
-      }
-      if let Some(font) = font_opt {
-        document.open_element("ltx:XMTok", Some(op_attrs), Some(&font), state)?;
-      } else {
-        document.open_element("ltx:XMTok", Some(op_attrs), None, state)?;
-      }
-      document.absorb_string(&presentation_for_replacement, props, state)?;
-      document.close_element("ltx:XMTok", state)?;
-      // arguments
-      for arg in args {
-        document.open_element("ltx:XMArg", None, None, state)?;
-        if let Some(arg_v) = arg {
-          document.absorb(arg_v, None, state)?;
+        // operator
+        let mut op_attrs = HashMap::default();
+        if let Some(role) = props.get("operator_role") {
+          op_attrs.insert(String::from("role"), role.to_string());
         }
-        document.close_element("ltx:XMArg", state)?;
-      }
+        if let Some(stretchy) = props.get("operator_stretchy") {
+          op_attrs.insert(String::from("stretchy"), stretchy.to_string());
+        }
+        if let Some(scriptpos) = props.get("operator_scriptpos") {
+          op_attrs.insert(String::from("scriptpos"), scriptpos.to_string());
+        }
+        for key in MATH_CONSTRUCTOR_ATTRIBUTES {
+          if let Some(v) = props.get(*key) {
+            op_attrs.insert(key.to_string(), v.to_string());
+          }
+        }
+        if let Some(font) = font_opt {
+          document.open_element("ltx:XMTok", Some(op_attrs), Some(&font), state)?;
+        } else {
+          document.open_element("ltx:XMTok", Some(op_attrs), None, state)?;
+        }
+        document.absorb_string(&presentation_for_replacement, props, state)?;
+        document.close_element("ltx:XMTok", state)?;
+        // arguments
+        for arg in args {
+          document.open_element("ltx:XMArg", None, None, state)?;
+          if let Some(arg_v) = arg {
+            document.absorb(arg_v, None, state)?;
+          }
+          document.close_element("ltx:XMArg", state)?;
+        }
 
-      document.close_element("ltx:XMApp", state)?;
-      Ok(())
-    })
+        document.close_element("ltx:XMApp", state)?;
+        Ok(())
+      },
+    )
   });
   let sizer: Option<SizingClosure> = Some(Arc::new(move |_, state| {
     Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::default(), state))
@@ -703,7 +829,10 @@ pub fn def_math_constructor(cs: Token, paramlist: Option<Parameters>, presentati
   state.install_definition(constructor, scope);
 }
 
-fn infer_sizer(sizer: &Option<SizingClosure>, reversion: &Option<Reversion>) -> Option<SizingClosure> {
+fn infer_sizer(
+  sizer: &Option<SizingClosure>,
+  reversion: &Option<Reversion>,
+) -> Option<SizingClosure> {
   match sizer {
     Some(ref closure) => Some(Arc::clone(closure)),
     None => match reversion {
@@ -723,7 +852,10 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut Stat
     ..ExpandableOptions::default()
   };
   // scope should be \x@protect?
-  state.install_definition(Expandable::new(cs, None, expansion, Some(options), state), scope);
+  state.install_definition(
+    Expandable::new(cs, None, expansion, Some(options), state),
+    scope,
+  );
   return_cs
 }
 
@@ -745,18 +877,24 @@ pub fn def_constructor(
   let scope = options.scope;
   let is_locked = options.locked;
   let cs_name = cs.get_cs_name().to_owned();
-  let locked_key = if is_locked { s!("{}:locked", cs_name) } else { String::new() };
+  let locked_key = if is_locked {
+    s!("{}:locked", cs_name)
+  } else {
+    String::new()
+  };
 
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
-    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
+    let require_math_closure =
+      before_digest_simple!(_stomach, state, { requireMath!(cs_name_cloned, state) });
     before_digest_closures.push(require_math_closure);
   }
   if options.forbid_math {
     let cs_name_cloned = cs_name;
-    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
+    let forbid_math_closure =
+      before_digest_simple!(_stomach, state, { forbidMath!(cs_name_cloned, state) });
     before_digest_closures.push(forbid_math_closure);
   }
   if let Some(ref mode) = options.mode {
@@ -784,11 +922,11 @@ pub fn def_constructor(
     },
     Some(FontDirective::Closure(font_closure)) => {
       let execute_font_closure = before_digest_simple!(_stomach, state, {
-        merge_font( font_closure(None, state)?, state);
+        merge_font(font_closure(None, state)?, state);
       });
       before_digest_closures.push(execute_font_closure);
     },
-    None => {}
+    None => {},
   };
   before_digest_closures.extend(options.before_digest);
 
@@ -832,15 +970,16 @@ pub fn def_constructor(
 }
 
 /// Defines an Environment that generates a specific XML fragment.
-/// `compiled_replacement` is of the same form as for DefConstructor, but will generally include reference to
-/// the `#body` property.
+/// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
+/// reference to the `#body` property.
 /// Upon encountering a `\begin{env}`:  the mode is switched, if needed, else a new group is opened;
 /// then the environment name is noted; the beforeDigest hook is run.
-/// Then the Whatsit representing the begin command (but ultimately the whole environment) is created
-/// and the `after_digest_begin` hook is run.
+/// Then the Whatsit representing the begin command (but ultimately the whole environment) is
+/// created and the `after_digest_begin` hook is run.
 /// Next, the body will be digested and collected until the balancing `\end{env}`.
-/// Then, any `after_digest` hook is run, the environment is ended, finally the mode is ended or the group is closed.
-///  The body and `\end{env}` whatsit are added to the `\begin{env}`'s whatsit as body and trailer, respectively.
+/// Then, any `after_digest` hook is run, the environment is ended, finally the mode is ended or the
+/// group is closed.  The body and `\end{env}` whatsit are added to the `\begin{env}`'s whatsit as
+/// body and trailer, respectively.
 pub fn def_environment(
   name: String,
   paramlist: Option<Parameters>,
@@ -854,12 +993,14 @@ pub fn def_environment(
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
   if options.require_math {
     let require_name = begin_name.clone();
-    let require_math_closure = before_digest_simple!(_stomach, state, { requireMath!(require_name, state) });
+    let require_math_closure =
+      before_digest_simple!(_stomach, state, { requireMath!(require_name, state) });
     before_digest_env.push(require_math_closure);
   }
   if options.forbid_math {
     let forbid_name = begin_name.clone();
-    let forbid_math_closure = before_digest_simple!(_stomach, state, { forbidMath!(forbid_name, state) });
+    let forbid_math_closure =
+      before_digest_simple!(_stomach, state, { forbidMath!(forbid_name, state) });
     before_digest_env.push(forbid_math_closure);
   }
   let bgroup_closure = before_digest_simple!(stomach, state, {
@@ -870,7 +1011,10 @@ pub fn def_environment(
   let atbegin_hook_closure = before_digest_simple!(stomach, state, {
     if let Some(b) = state.lookup_tokens(&atbegin_key) {
       vec![stomach.digest(b.unlist(), state)?]
-    } else { Vec::new() } });
+    } else {
+      Vec::new()
+    }
+  });
 
   before_digest_env.push(atbegin_hook_closure);
   if let Some(ref mode) = options.mode {
@@ -885,7 +1029,13 @@ pub fn def_environment(
   let current_environment_closure = before_digest_simple!(_stomach, state, {
     state.assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
-    def_macro(T_CS!("\\@currenvir"), None, Some(ExpansionBody::Tokens(Tokens!(body))), None, state);
+    def_macro(
+      T_CS!("\\@currenvir"),
+      None,
+      Some(ExpansionBody::Tokens(Tokens!(body))),
+      None,
+      state,
+    );
   });
   before_digest_env.push(current_environment_closure);
 
@@ -899,19 +1049,23 @@ pub fn def_environment(
   }
   before_digest_env.extend(options.before_digest);
 
-  let push_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-    state.push_frame();
-    Ok(())
-  });
+  let push_frame_closure = Arc::new(
+    |_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+      state.push_frame();
+      Ok(())
+    },
+  );
   let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
   before_construct_with_frame.extend(options.before_construct);
 
   let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
 
-  let pop_frame_closure = Arc::new(|_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
-    state.pop_frame()?;
-    Ok(())
-  });
+  let pop_frame_closure = Arc::new(
+    |_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
+      state.pop_frame()?;
+      Ok(())
+    },
+  );
   after_construct_with_frame.push(pop_frame_closure);
 
   let begin_name_constructor = Arc::new(Constructor {
@@ -952,7 +1106,14 @@ pub fn def_environment(
           .collect::<Vec<String>>()
           .join(", ")
       );
-      Error!("unexpected", end_name_clone, stomach, state, message1, message2);
+      Error!(
+        "unexpected",
+        end_name_clone,
+        stomach,
+        state,
+        message1,
+        message2
+      );
     }
     Ok(Vec::new())
   });
@@ -961,17 +1122,21 @@ pub fn def_environment(
   match options.mode {
     Some(mode) => {
       let emode = mode;
-      let emode_closure = Arc::new(move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-        stomach.end_mode(&emode, state)?;
-        Ok(Vec::new())
-      });
+      let emode_closure = Arc::new(
+        move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          stomach.end_mode(&emode, state)?;
+          Ok(Vec::new())
+        },
+      );
       after_digest_env.push(emode_closure);
     },
     None => {
-      let egroup_closure = Arc::new(|stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
-        stomach.egroup(state)?;
-        Ok(Vec::new())
-      });
+      let egroup_closure = Arc::new(
+        |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
+          stomach.egroup(state)?;
+          Ok(Vec::new())
+        },
+      );
       after_digest_env.push(egroup_closure);
     },
   };
@@ -981,9 +1146,11 @@ pub fn def_environment(
   let atend_hook_closure = before_digest_simple!(stomach, state, {
     if let Some(e) = state.lookup_tokens(&atend_key) {
       vec![stomach.digest(e.unlist(), state)?]
-    } else { Vec::new() } });
+    } else {
+      Vec::new()
+    }
+  });
   before_digest_for_endenv.push(atend_hook_closure);
-
 
   let end_envname_constructor = Arc::new(Constructor {
     cs: T_CS!(end_name),
@@ -1050,10 +1217,21 @@ pub fn def_environment(
 
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
-fn get_xmarg_id(gullet: &mut Gullet, state:&mut State) -> Result<Tokens> {
+fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
   step_counter_gullet("@XMARG", false, gullet, state)?;
-  def_macro(T_CS!("\\@@XMARG@ID"), None, Tokens!(Explode!(state.lookup_register("\\c@@XMARG", Vec::new()).unwrap().value_of())),
-    Some(ExpandableOptions{scope: Some(Scope::Global), ..ExpandableOptions::default()}), state);
+  def_macro(
+    T_CS!("\\@@XMARG@ID"),
+    None,
+    Tokens!(Explode!(state
+      .lookup_register("\\c@@XMARG", Vec::new())
+      .unwrap()
+      .value_of())),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+    state,
+  );
 
   gullet.do_expand(T_CS!("\\the@XMARG@ID"), state)
 }
@@ -1065,22 +1243,28 @@ type ArgsUnpacked = Vec<Option<Tokens>>;
 ///   (2) a corresponding list of Tokens creating XMRef's to those IDs
 // Ah, but there are complications!!!
 // On the one hand, arguments may be hidden, never appearing on the presentation side
-// (all will be passed to the content side); This argues for putting the XMArg's on the content side.
-// OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
-// the proper context they will be presented, and pick up all the styling (font size, displaystyle..)
-// I don't know how to work around the latter, so we'll put args on the presentation side,
-// UNLESS they are hidden, in which case they'll be on the content side.
+// (all will be passed to the content side); This argues for putting the XMArg's on the content
+// side. OTOH, they ought to be on the presentation side, so that they can be expanded & digested in
+// the proper context they will be presented, and pick up all the styling (font size,
+// displaystyle..) I don't know how to work around the latter, so we'll put args on the presentation
+// side, UNLESS they are hidden, in which case they'll be on the content side.
 // So, how do we know if they're hidden? We'll scan the presentation for #\d, that's how!
-pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &mut Gullet, state: &mut State) -> Result<(ArgsUnpacked,ArgsUnpacked)> {
+pub fn dualize_arglist(
+  presentation: &str,
+  args: Vec<Option<Tokens>>,
+  gullet: &mut Gullet,
+  state: &mut State,
+) -> Result<(ArgsUnpacked, ArgsUnpacked)> {
   let mut used = HashMap::default();
-  for cap in ARG_HOLE.captures_iter(presentation) {  // Get the args that were actually used!
+  for cap in ARG_HOLE.captures_iter(presentation) {
+    // Get the args that were actually used!
     let argi = cap.get(1).unwrap().as_str();
     let entry = used.entry(argi.parse::<usize>()?).or_insert(0);
     *entry += 1;
   }
   let mut cargs = Vec::new();
   let mut pargs = Vec::new();
-  for (index,arg_opt) in args.into_iter().enumerate() {
+  for (index, arg_opt) in args.into_iter().enumerate() {
     match arg_opt {
       None => {
         pargs.push(None);
@@ -1090,14 +1274,45 @@ pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &m
         pargs.push(Some(arg.clone()));
         cargs.push(Some(arg));
       },
-      Some(arg_toks) => if used.get(&(1+index)).unwrap_or(&0) > &0 { // used in presentation?
-        let id = get_xmarg_id(gullet, state)?;
-        pargs.push(Some(Tokens!(T_CS!("\\lx@xmarg"), T_BEGIN!(), id.clone().unlist(), T_END!(),T_BEGIN!(), arg_toks.unlist(), T_END!()))); // put XMArg in presentation
-        cargs.push(Some(Tokens!(T_CS!("\\lx@xmref"), T_BEGIN!(), id.unlist(), T_END!()))); }
-      else {                                                  // Hidden arg, put XMArg in content.
-        let id = get_xmarg_id(gullet, state)?;
-        cargs.push(Some(Tokens!(T_CS!("\\lx@xmarg"), T_BEGIN!(), id.clone().unlist(),T_END!(),T_BEGIN!(), arg_toks.unlist(),T_END!())));
-        pargs.push(Some(Tokens!(T_CS!("\\lx@xmref"), T_BEGIN!(), id.unlist(), T_END!()))); }
+      Some(arg_toks) => {
+        if used.get(&(1 + index)).unwrap_or(&0) > &0 {
+          // used in presentation?
+          let id = get_xmarg_id(gullet, state)?;
+          pargs.push(Some(Tokens!(
+            T_CS!("\\lx@xmarg"),
+            T_BEGIN!(),
+            id.clone().unlist(),
+            T_END!(),
+            T_BEGIN!(),
+            arg_toks.unlist(),
+            T_END!()
+          ))); // put XMArg in presentation
+          cargs.push(Some(Tokens!(
+            T_CS!("\\lx@xmref"),
+            T_BEGIN!(),
+            id.unlist(),
+            T_END!()
+          )));
+        } else {
+          // Hidden arg, put XMArg in content.
+          let id = get_xmarg_id(gullet, state)?;
+          cargs.push(Some(Tokens!(
+            T_CS!("\\lx@xmarg"),
+            T_BEGIN!(),
+            id.clone().unlist(),
+            T_END!(),
+            T_BEGIN!(),
+            arg_toks.unlist(),
+            T_END!()
+          )));
+          pargs.push(Some(Tokens!(
+            T_CS!("\\lx@xmref"),
+            T_BEGIN!(),
+            id.unlist(),
+            T_END!()
+          )));
+        }
+      },
     }
   }
   Ok((cargs, pargs))
@@ -1117,7 +1332,13 @@ pub fn dualize_arglist(presentation: &str, args: Vec<Option<Tokens>>, gullet: &m
 // HMM.... Still fishy.
 // When to make a dual ?
 // If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
-pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, mut options: MathPrimitiveOptions, state: &mut State) {
+pub fn def_math(
+  cs: Token,
+  paramlist: Option<Parameters>,
+  presentation: String,
+  mut options: MathPrimitiveOptions,
+  state: &mut State,
+) {
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
 
@@ -1140,7 +1361,10 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
         inferred_name
       },
     };
-    let meaning_check = options.meaning.as_ref().map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
+    let meaning_check = options
+      .meaning
+      .as_ref()
+      .map_or_else(|| Cow::Owned(String::new()), Cow::Borrowed);
     if (*name == presentation) || (name.is_empty()) || *name == *meaning_check {
       None
     } else {
@@ -1173,7 +1397,11 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
     transfer_opt_default!(replace, options, math_attr_hash);
     transfer_opt_default!(mathstyle, options, math_attr_hash);
     transfer_opt_default!(stretchy, options, math_attr_hash);
-    state.assign_value(&s!("math_token_attributes_{}", csname), math_attr_hash, Some(Scope::Global));
+    state.assign_value(
+      &s!("math_token_attributes_{}", csname),
+      math_attr_hash,
+      Some(Scope::Global),
+    );
   }
   // If the macro involves arguments,
   // we will create an XMDual to separate simple content application
@@ -1198,7 +1426,12 @@ pub fn def_math(cs: Token, paramlist: Option<Parameters>, presentation: String, 
 }
 
 /// Transfers the common MathPrimitive options to a (ideally freshly instantiated) Constructor.
-fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: MathPrimitiveOptions, cons: &mut Constructor) {
+fn transfer_common_constructor_options(
+  cs: &Token,
+  presentation: &str,
+  options: MathPrimitiveOptions,
+  cons: &mut Constructor,
+) {
   let cs_str = cs.get_string();
   let mut properties = options.to_hash_stored();
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.to_owned()));
@@ -1212,9 +1445,10 @@ fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: 
   // before_digest
   //
   let cs_string = cs_str.to_owned();
-  let mut before_digest_closures : Vec<BeforeDigestClosure> = vec![before_digest_simple!(_stomach, state, {
-    requireMath!(cs_string, state);
-  })];
+  let mut before_digest_closures: Vec<BeforeDigestClosure> =
+    vec![before_digest_simple!(_stomach, state, {
+      requireMath!(cs_string, state);
+    })];
   if !options.nogroup {
     before_digest_closures.push(before_digest_simple!(stomach, state, {
       stomach.bgroup(state);
@@ -1242,18 +1476,34 @@ fn transfer_common_constructor_options(cs: &Token, presentation: &str, options: 
   cons.before_construct = options.before_construct;
   cons.after_construct = options.after_construct;
   let presentation_for_font = presentation.to_owned();
-  properties.insert(String::from("font"), Stored::FontDirective(FontDirective::Closure(
-   if let Some(mathstyle) = options.mathstyle {
-    Arc::new(move |_whatsit, state|{Ok(
-      state.lookup_font().unwrap().merge(Font{mathstyle: Some(Cow::Owned(mathstyle.clone())), ..Font::default()}).specialize(&presentation_for_font)
-    )})
-  } else {
-    Arc::new(move |_whatsit,state|{Ok(
-      state.lookup_font().unwrap().specialize(&presentation_for_font)
-    )})
-  })));
+  properties.insert(
+    String::from("font"),
+    Stored::FontDirective(FontDirective::Closure(
+      if let Some(mathstyle) = options.mathstyle {
+        Arc::new(move |_whatsit, state| {
+          Ok(
+            state
+              .lookup_font()
+              .unwrap()
+              .merge(Font {
+                mathstyle: Some(Cow::Owned(mathstyle.clone())),
+                ..Font::default()
+              })
+              .specialize(&presentation_for_font),
+          )
+        })
+      } else {
+        Arc::new(move |_whatsit, state| {
+          Ok(
+            state
+              .lookup_font()
+              .unwrap()
+              .specialize(&presentation_for_font),
+          )
+        })
+      },
+    )),
+  );
 
-  cons.properties = Arc::new(move |_stomach,_args,_state|
-    Ok(properties.clone()));
-
+  cons.properties = Arc::new(move |_stomach, _args, _state| Ok(properties.clone()));
 }

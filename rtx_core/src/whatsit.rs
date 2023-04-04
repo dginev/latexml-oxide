@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 // use std::cell::RefCell;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
-use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -16,7 +16,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
-use crate::state::{STD_STATE,State};
+use crate::state::{State, STD_STATE};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
@@ -115,26 +115,38 @@ impl Whatsit {
     }
   }
   /// Sets the body of the `whatsit` to the boxes in `body`.
-  /// The last box in `body` is assumed to represent the `trailer`, that is the result of the invocation
-  /// that closed the environment or math.  It is stored separately in the properties under "trailer".
+  /// The last box in `body` is assumed to represent the `trailer`, that is the result of the
+  /// invocation that closed the environment or math.  It is stored separately in the properties
+  /// under "trailer".
   pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
     let trailer_opt = body.pop();
-    let mode = if self.is_math() { TexMode::Math } else { TexMode::Text };
+    let mode = if self.is_math() {
+      TexMode::Math
+    } else {
+      TexMode::Text
+    };
 
     let mut list = List::new(body, state);
     if self.is_math() {
       list.mode = Some(mode);
     }
-    self.properties.insert(s!("body"), Digested::from(list).into());
+    self
+      .properties
+      .insert(s!("body"), Digested::from(list).into());
     if let Some(digested) = trailer_opt {
       if let DigestedData::Whatsit(ref trailer) = digested.data() {
         // And copy any otherwise undefined properties from the trailer
         let trailer_val = trailer.read().unwrap();
         let props = trailer_val.get_properties();
         for (prop, value) in props {
-          self.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
+          self
+            .properties
+            .entry(prop.to_string())
+            .or_insert_with(|| value.clone());
         }
-        self.properties.insert(s!("trailer"), digested.clone().into());
+        self
+          .properties
+          .insert(s!("trailer"), digested.clone().into());
       }
     }
   }
@@ -143,8 +155,9 @@ impl Whatsit {
   /// #<digit> is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
   fn substitute_parameters(&self, spec: Tokens, state: &State) -> Result<Vec<Token>> {
-    // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into the Whatsit substituteParameters. For Expandable we
-    // now have guarantees that "#,i" has been mapped into a single T_ARG(#i), but not here. so for now run on each call?
+    // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into
+    // the Whatsit substituteParameters. For Expandable we now have guarantees that "#,i" has
+    // been mapped into a single T_ARG(#i), but not here. so for now run on each call?
     let mut in_toks = VecDeque::from(spec.unlist());
     let args = self.get_args();
     let props = &self.properties;
@@ -161,7 +174,9 @@ impl Whatsit {
         } else {
           match props.get(s) {
             Some(Stored::Digested(v)) => Some((*v).clone()),
-            Some(other) => panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}"),
+            Some(other) => {
+              panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}")
+            },
             None => None,
           }
         };
@@ -192,7 +207,7 @@ impl fmt::Debug for Whatsit {
         pieces.push(trailer.to_string());
       }
     }
-    write!(f,"{}]",pieces.join(","))
+    write!(f, "{}]", pieces.join(","))
   }
 }
 
@@ -206,9 +221,7 @@ impl fmt::Display for Whatsit {
 impl Object for Whatsit {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
-  fn stringify(&self) -> String {
-      format!("{self:?}")
-  }
+  fn stringify(&self) -> String { format!("{self:?}") }
 
   fn revert(&self, state: &State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
@@ -255,13 +268,15 @@ impl Object for Whatsit {
             tokens.push(defn.get_cs().into_owned());
           }
           if let Some(parameters) = defn.get_parameters() {
-            // TODO: This is a sticking point. Both in terms of type mismatch between revert_arguments and get_args,
-            // but much worse with the expectation of passing in a gullet and state for the parameter reversion
+            // TODO: This is a sticking point. Both in terms of type mismatch between
+            // revert_arguments and get_args, but much worse with the expectation of
+            // passing in a gullet and state for the parameter reversion
             // for now approximate this with some slight of hand ...
             // tokens.extend(parameters.revert_arguments(self.get_args())?);
             //
-            // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky workaround
-            // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
+            // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky
+            // workaround so maybe worth taking some time and aligning the idea here
+            // with `.revert_arguments` to avoid the insanity?
             //
             // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
             let args = self
@@ -303,7 +318,9 @@ impl Object for Whatsit {
 
 impl BoxOps for Whatsit {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.revert(state)?.to_string())) }
+  fn get_string(&self, state: &State) -> Result<Cow<str>> {
+    Ok(Cow::Owned(self.revert(state)?.to_string()))
+  }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     // Significant time is consumed here, and associated with a specific CS,
@@ -316,15 +333,20 @@ impl BoxOps for Whatsit {
 
     self.definition.do_absorbtion(document, self, state)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-
   }
 
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
+    self.properties.get(key).map(Cow::Borrowed)
+  }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
 
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.properties.insert(key.to_string(), value.into());
+  }
 
-  fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
+  fn get_property_bool(&self, key: &str) -> bool {
+    matches!(self.properties.get(key), Some(Stored::Bool(true)))
+  }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {
       Some(Stored::Digested(body)) => Some(body.clone()),
@@ -343,9 +365,17 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn set_font(&mut self, font: Arc<Font>) { self.properties.insert("font".to_string(), Stored::Font(font)); }
+  fn set_font(&mut self, font: Arc<Font>) {
+    self
+      .properties
+      .insert("font".to_string(), Stored::Font(font));
+  }
 
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
       sizer(self, state)

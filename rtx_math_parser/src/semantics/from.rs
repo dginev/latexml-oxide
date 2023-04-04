@@ -31,30 +31,72 @@ impl From<&str> for XM {
   fn from(a: &str) -> XM { XM::Lexeme(a.to_string(), Meta::default()) }
 }
 impl From<(&str, &str)> for XM {
-  fn from(a: (&str, &str)) -> XM { XM::Apply(a.0.into(), Args(vec![Some(a.1.into())]), XProps::default(), Meta::default()) }
+  fn from(a: (&str, &str)) -> XM {
+    XM::Apply(
+      a.0.into(),
+      Args(vec![Some(a.1.into())]),
+      XProps::default(),
+      Meta::default(),
+    )
+  }
 }
 impl From<(&str, (&str, &str))> for XM {
-  fn from(args: (&str, (&str, &str))) -> XM { XM::Apply(args.0.into(), args.1.into(), XProps::default(), Meta::default()) }
+  fn from(args: (&str, (&str, &str))) -> XM {
+    XM::Apply(
+      args.0.into(),
+      args.1.into(),
+      XProps::default(),
+      Meta::default(),
+    )
+  }
 }
 
 impl From<(&str, (&str, (&str, &str)))> for XM {
-  fn from(args: (&str, (&str, (&str, &str)))) -> XM { XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
+  fn from(args: (&str, (&str, (&str, &str)))) -> XM {
+    XM::Apply(
+      args.0.into(),
+      Args(vec![Some(args.1.into())]),
+      XProps::default(),
+      Meta::default(),
+    )
+  }
 }
 // One element arrays as argument containers (since we can't do one element tuple types?)
 impl From<(&str, (&str, (&str, [&str; 1])))> for XM {
   fn from(args: (&str, (&str, (&str, [&str; 1])))) -> XM {
-    XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default())
+    XM::Apply(
+      args.0.into(),
+      Args(vec![Some(args.1.into())]),
+      XProps::default(),
+      Meta::default(),
+    )
   }
 }
 impl From<(&str, (&str, [&str; 1]))> for XM {
-  fn from(args: (&str, (&str, [&str; 1]))) -> XM { XM::Apply(args.0.into(), Args(vec![Some(args.1.into())]), XProps::default(), Meta::default()) }
+  fn from(args: (&str, (&str, [&str; 1]))) -> XM {
+    XM::Apply(
+      args.0.into(),
+      Args(vec![Some(args.1.into())]),
+      XProps::default(),
+      Meta::default(),
+    )
+  }
 }
 impl From<(&str, [&str; 1])> for XM {
-  fn from(args: (&str, [&str; 1])) -> XM { XM::Apply(args.0.into(), Args(vec![Some(args.1[0].into())]), XProps::default(), Meta::default()) }
+  fn from(args: (&str, [&str; 1])) -> XM {
+    XM::Apply(
+      args.0.into(),
+      Args(vec![Some(args.1[0].into())]),
+      XProps::default(),
+      Meta::default(),
+    )
+  }
 }
 
 impl From<[&str; 1]> for Args {
-  fn from(args: [&str; 1]) -> Args { Args(args.iter().map(|&x| x.into()).map(Option::Some).collect()) }
+  fn from(args: [&str; 1]) -> Args {
+    Args(args.iter().map(|&x| x.into()).map(Option::Some).collect())
+  }
 }
 impl<OP: ToString + Sized, LEFT: Into<XM>, RIGHT: Into<XM>> From<(OP, LEFT, RIGHT)> for XM {
   fn from(args: (OP, LEFT, RIGHT)) -> XM {
@@ -82,7 +124,15 @@ impl<OP: ToString + Sized> From<(OP, Vec<XM>)> for XM {
 }
 
 impl From<(&str, &str)> for Args {
-  fn from(args: (&str, &str)) -> Args { Args([args.0, args.1].iter().map(|&x| x.into()).map(Option::Some).collect()) }
+  fn from(args: (&str, &str)) -> Args {
+    Args(
+      [args.0, args.1]
+        .iter()
+        .map(|&x| x.into())
+        .map(Option::Some)
+        .collect(),
+    )
+  }
 }
 impl From<[&str; 2]> for Args {
   fn from(args: [&str; 2]) -> Args {

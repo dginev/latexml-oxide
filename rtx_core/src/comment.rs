@@ -1,7 +1,7 @@
-use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
-use std::fmt;
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use std::borrow::Cow;
+use std::fmt;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -31,7 +31,9 @@ impl BoxOps for Comment {
   fn get_properties(&self) -> &HashMap<String, Stored> {
     unimplemented!();
   }
-  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {unimplemented!();}
+  fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
+    unimplemented!();
+  }
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     document.insert_comment(&self.0, state)?;
@@ -41,16 +43,29 @@ impl BoxOps for Comment {
   fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
   fn has_property(&self, _key: &str) -> bool { false }
   fn get_property_bool(&self, _key: &str) -> bool { false }
-  fn get_width(&mut self, _options: Option<HashMap<String, Stored>>, _state: &mut State) -> Result<Option<RegisterValue>> {
+  fn get_width(
+    &mut self,
+    _options: Option<HashMap<String, Stored>>,
+    _state: &mut State,
+  ) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }
 
-  fn compute_size(&self, _options: HashMap<String, Stored>, _state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
-    Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+  fn compute_size(
+    &self,
+    _options: HashMap<String, Stored>,
+    _state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
+    Ok((
+      Dimension::default(),
+      Dimension::default(),
+      Dimension::default(),
+    ))
   }
 
   // sub getHeight      { return Dimension(0); }
   // sub getTotalHeight { return Dimension(0); }
   // sub getDepth       { return Dimension(0); }
-  // sub getSize { return (Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0)); }
+  // sub getSize { return (Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0),
+  // Dimension(0)); }
 }

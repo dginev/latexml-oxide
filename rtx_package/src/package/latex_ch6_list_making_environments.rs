@@ -152,10 +152,22 @@ LoadDefinitions!(state, {
   DefMacro!("\\itemcontext", "\\space in \\@listcontext");
   DefMacro!("\\itemcontext", "");
   // Probably would help to give a bit more context for the ii & higher?
-  DefMacro!("\\typerefnum@@itemi", "\\lx@poormans@ordinal{@itemi} \\itemtyperefname \\itemcontext");
-  DefMacro!("\\typerefnum@@itemii", "\\lx@poormans@ordinal{@itemii} \\itemtyperefname \\itemcontext");
-  DefMacro!("\\typerefnum@@itemiii", "\\lx@poormans@ordinal{@itemiii} \\itemtyperefname \\itemcontext");
-  DefMacro!("\\typerefnum@@itemiv", "\\lx@poormans@ordinal{@itemiv} \\itemtyperefname \\itemcontext");
+  DefMacro!(
+    "\\typerefnum@@itemi",
+    "\\lx@poormans@ordinal{@itemi} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemii",
+    "\\lx@poormans@ordinal{@itemii} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemiii",
+    "\\lx@poormans@ordinal{@itemiii} \\itemtyperefname \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@@itemiv",
+    "\\lx@poormans@ordinal{@itemiv} \\itemtyperefname \\itemcontext"
+  );
   //----------------------------------------------------------------------
   // Basic enumeration bits
 
@@ -182,10 +194,22 @@ LoadDefinitions!(state, {
 
   // These define the typerefnum form, for out-of-context \ref's
   DefMacro!("\\enumtyperefname", "item");
-  DefMacro!("\\typerefnum@enumi", "\\enumtyperefname~\\p@enumi\\theenumi \\itemcontext");
-  DefMacro!("\\typerefnum@enumii", "\\enumtyperefname~\\p@enumii\\theenumii \\itemcontext");
-  DefMacro!("\\typerefnum@enumiii", "\\enumtyperefname~\\p@enumiii\\theenumiii \\itemcontext");
-  DefMacro!("\\typerefnum@enumiv", "\\enumtyperefname~\\p@enumiv\\theenumiv \\itemcontext");
+  DefMacro!(
+    "\\typerefnum@enumi",
+    "\\enumtyperefname~\\p@enumi\\theenumi \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumii",
+    "\\enumtyperefname~\\p@enumii\\theenumii \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumiii",
+    "\\enumtyperefname~\\p@enumiii\\theenumiii \\itemcontext"
+  );
+  DefMacro!(
+    "\\typerefnum@enumiv",
+    "\\enumtyperefname~\\p@enumiv\\theenumiv \\itemcontext"
+  );
 
   //----------------------------------------------------------------------
   // Basic description list bits
@@ -214,13 +238,17 @@ LoadDefinitions!(state, {
   DefMacro!("\\desctyperefname", "item");
 
   // Blech
-  for lvl in &["@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi"] {
+  for lvl in &[
+    "@itemi", "@itemii", "@itemiii", "@itemiv", "@itemv", "@itemvi",
+  ] {
     DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\itemtyperefname"));
   }
   for lvl in &["enumi", "enumii", "enumiii", "enumiv"] {
     DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\enumtyperefname"));
   }
-  for lvl in &["@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi"] {
+  for lvl in &[
+    "@desci", "@descii", "@desciii", "@desciv", "@descv", "@descvi",
+  ] {
     DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\desctyperefname"));
   }
 });

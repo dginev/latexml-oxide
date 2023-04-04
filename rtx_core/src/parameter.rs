@@ -21,7 +21,8 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
-pub type ReaderFn = dyn Fn(&mut Gullet, Option<&Parameters>, &[Tokens], &mut State) -> Result<ArgWrap>;
+pub type ReaderFn =
+  dyn Fn(&mut Gullet, Option<&Parameters>, &[Tokens], &mut State) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
 pub type ReaderClosure = Arc<ReaderFn>;
@@ -34,7 +35,8 @@ pub type ReaderClosure = Arc<ReaderFn>;
 // let mut stomach = state.stomach.borrow_mut();
 // let mut gullet = stomach.get_gullet_mut();
 //
-pub type ReversionClosure = Arc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
+pub type ReversionClosure =
+  Arc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
 
 lazy_static! {
   static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
@@ -92,12 +94,11 @@ impl fmt::Debug for Parameter {
       "Parameter(\n\t name:{:?}, novalue:{:?}, semiverbatim:{:?},",
       self.name, self.novalue, self.semiverbatim,
     )?;
+    writeln!(f, "\t optional:{:?}, spec:{:?}", self.optional, self.spec)?;
+    writeln!(f, "\t inner: {:?}", self.inner)?;
     writeln!(
       f,
-      "\t optional:{:?}, spec:{:?}\n\t inner: {:?}\n\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )",
-      self.optional,
-      self.spec,
-      self.inner,
+      "\t extra: {:?}\n\t reversion: {:?}, before_digest: {:?}, after_digest: {:?} )",
       self.extra,
       self.reversion.is_some(),
       self.before_digest.len(),
@@ -156,7 +157,11 @@ impl Parameter {
               novalue: true,
               ..Parameter::default()
             })),
-            None => fatal!(Parameter, Init, s!("Can't initialize parameter {:?}, unknown?", self.name)),
+            None => fatal!(
+              Parameter,
+              Init,
+              s!("Can't initialize parameter {:?}, unknown?", self.name)
+            ),
           },
         },
       };
@@ -187,12 +192,13 @@ impl Parameter {
         self.optional = true;
       }
     } else {
-      descriptor = Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
-        Arc::new(Parameter {
-          reader,
-          ..Parameter::default()
-        })
-      });
+      descriptor =
+        Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
+          Arc::new(Parameter {
+            reader,
+            ..Parameter::default()
+          })
+        });
     }
     match descriptor {
       Some(descriptor) => {
@@ -217,19 +223,27 @@ impl Parameter {
       None => fatal!(
         Parameter,
         Unknown,
-        s!("Unrecognized parameter type with name {:?}, spec {:?}", self.name, self.spec)
+        s!(
+          "Unrecognized parameter type with name {:?}, spec {:?}",
+          self.name,
+          self.spec
+        )
       ),
     }
     // Last but not least, initialize any "inner" parameters
-    self.inner = self.inner.map(|inner_ps| inner_ps.init(state)
-        .expect("inner param init shouldn't fail?"));
+    self.inner = self.inner.map(|inner_ps| {
+      inner_ps
+        .init(state)
+        .expect("inner param init shouldn't fail?")
+    });
     Ok(self)
   }
 
   /// Obtain the reader of a given parameter name, if available
   pub fn check_reader_function(name: &str, state: &State) -> Option<ReaderClosure> {
-    // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't possible
-    // But what is the exact purpose of seeking through the pool namespace? Wouldn't any parameter be already assigned in the state?
+    // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't
+    // possible But what is the exact purpose of seeking through the pool namespace? Wouldn't
+    // any parameter be already assigned in the state?
     if let Some(Stored::Parameter(param)) = state.lookup_mapping("PARAMETER_TYPES", name) {
       Some(param.reader.clone())
     } else {
@@ -250,7 +264,12 @@ impl Parameter {
     Ok(())
   }
 
-  pub fn read(&self, gullet: &mut Gullet, fordefn: Option<&dyn Definition>, state: &mut State) -> Result<ArgWrap> {
+  pub fn read(
+    &self,
+    gullet: &mut Gullet,
+    fordefn: Option<&dyn Definition>,
+    state: &mut State,
+  ) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -292,9 +311,13 @@ impl Parameter {
     };
     self.revert_catcodes(state)?;
 
-    let checked_value = if !self.optional && !self.novalue && (value_arg.is_none() && self.reader_predigest.is_none()) {
-      // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in the long-run
-      //        Until *may* have a value, but it also may *not*, both OK. So... except it from the error message here
+    let checked_value = if !self.optional
+      && !self.novalue
+      && (value_arg.is_none() && self.reader_predigest.is_none())
+    {
+      // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in
+      // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
+      // except it from the error message here
       if !self.name.starts_with("Until") {
         let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
         Error!(
@@ -314,28 +337,38 @@ impl Parameter {
     Ok(checked_value)
   }
 
-  pub fn digest(&self, stomach: &mut Stomach, mut value_arg: ArgWrap, _fordefn: Option<&Constructor>, state: &mut State) -> Result<Option<Digested>> {
+  pub fn digest(
+    &self,
+    stomach: &mut Stomach,
+    mut value_arg: ArgWrap,
+    _fordefn: Option<&Constructor>,
+    state: &mut State,
+  ) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes(state);
       if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
-          let neutralized = stomach.reading_from_mouth(Mouth::default(), state, move |stomach: &mut Stomach, state: &mut State| {
-            let gullet = stomach.get_gullet_mut();
-            gullet.unread(value);
-            let mut tokens = Vec::new();
-            loop {
-              match gullet.read_x_token(Some(true), true, state) {
-                Ok(token_opt) => match token_opt {
-                  Some(token) => tokens.push(token),
-                  None => break,
-                },
-                Err(x) => return Err(x),
+          let neutralized = stomach.reading_from_mouth(
+            Mouth::default(),
+            state,
+            move |stomach: &mut Stomach, state: &mut State| {
+              let gullet = stomach.get_gullet_mut();
+              gullet.unread(value);
+              let mut tokens = Vec::new();
+              loop {
+                match gullet.read_x_token(Some(true), true, state) {
+                  Ok(token_opt) => match token_opt {
+                    Some(token) => tokens.push(token),
+                    None => break,
+                  },
+                  Err(x) => return Err(x),
+                }
               }
-            }
-            let evec = Vec::new();
-            Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
-          })?;
+              let evec = Vec::new();
+              Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
+            },
+          )?;
           value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
         } else {
           value_arg = ArgWrap::default();
@@ -355,10 +388,10 @@ impl Parameter {
       // (such as the missing value of an Optional [] argument)
       // gets digested?
       //
-      // currently a `Digested::default` gets returned, which has an empty TBox and also gets returned
-      // for e.g. empty mandatory Plain arguments {}.
-      // But we need *different* values, as the explicit "\foo[]" is an override to empty, while "\foo"
-      // will use the default value for the Optional.
+      // currently a `Digested::default` gets returned, which has an empty TBox and also gets
+      // returned for e.g. empty mandatory Plain arguments {}.
+      // But we need *different* values, as the explicit "\foo[]" is an override to empty, while
+      // "\foo" will use the default value for the Optional.
       if self.optional && value_arg.is_none() {
         None
       } else {
@@ -379,7 +412,12 @@ impl Parameter {
   pub fn revert(&self, value_opt: Option<Tokens>, state: &State) -> Result<Option<Tokens>> {
     if let Some(ref reverter) = self.reversion {
       if let Some(value) = value_opt {
-        Ok(Some((reverter)(value.unlist(), self.inner.as_ref(), &self.extra, state)?))
+        Ok(Some((reverter)(
+          value.unlist(),
+          self.inner.as_ref(),
+          &self.extra,
+          state,
+        )?))
       } else {
         Ok(None)
       }
@@ -394,7 +432,7 @@ impl Parameter {
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
   // Yuck!
-  pub fn reparse(&self, _value: Tokens, _gullet: &mut Gullet, _state:&State) -> Result<Tokens> {
+  pub fn reparse(&self, _value: Tokens, _gullet: &mut Gullet, _state: &State) -> Result<Tokens> {
     unimplemented!()
   }
 }
@@ -453,18 +491,23 @@ impl Parameters {
     Ok(self)
   }
 
-  pub fn read_arguments(&self, gullet: &mut Gullet, fordefn: Option<&dyn Definition>, state: &mut State) -> Result<Vec<ArgWrap>> {
+  pub fn read_arguments(
+    &self,
+    gullet: &mut Gullet,
+    fordefn: Option<&dyn Definition>,
+    state: &mut State,
+  ) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
     gullet.setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
       if parameter.reader_predigest.is_some() {
-        // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest closure...
-        // so this shouldn't be an error, not even an info -- but leaving it here if something changes in the future.
-        // error!(
+        // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
+        // closure... so this shouldn't be an error, not even an info -- but leaving it here
+        // if something changes in the future. error!(
         //   target: &s!("parameter:{}", parameter.name),
-        //   "parameter with predigest closure was invoked in an expandable context. Parameter digestion won't execute."
-        // );
+        //   "parameter with predigest closure was invoked in an expandable context. Parameter
+        // digestion won't execute." );
       }
       if !parameter.novalue {
         args.push(values);
@@ -473,7 +516,12 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn read_arguments_and_digest(&self, stomach: &mut Stomach, fordefn: &Constructor, state: &mut State) -> Result<Vec<Option<Digested>>> {
+  pub fn read_arguments_and_digest(
+    &self,
+    stomach: &mut Stomach,
+    fordefn: &Constructor,
+    state: &mut State,
+  ) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
     stomach.get_gullet_mut().setup_scan();
     for parameter in &self.0 {
@@ -486,19 +534,23 @@ impl Parameters {
     Ok(args)
   }
 
-  pub fn reparse_argument(&self, gullet: &mut Gullet, value: ArgWrap, ostate: &mut State) -> Result<Vec<ArgWrap>> {
+  pub fn reparse_argument(
+    &self,
+    gullet: &mut Gullet,
+    value: ArgWrap,
+    ostate: &mut State,
+  ) -> Result<Vec<ArgWrap>> {
     if value.is_none() {
-      return Ok(Vec::new())
+      return Ok(Vec::new());
     }
     let value_tokens = value.revert(ostate)?;
     // start with empty mouth
     let reader_mouth = Mouth::new("", None, ostate)?;
     gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
-
-        gulletx.unread(value_tokens); // but put back tokens to be read
-        let values = self.read_arguments(gulletx, None, state)?;
-        gulletx.skip_spaces(state);
-        Ok(values)
+      gulletx.unread(value_tokens); // but put back tokens to be read
+      let values = self.read_arguments(gulletx, None, state)?;
+      gulletx.skip_spaces(state);
+      Ok(values)
     })
   }
 }
@@ -517,9 +569,7 @@ impl fmt::Display for Parameters {
 }
 
 impl From<Parameters> for Vec<Parameter> {
-  fn from(ps: Parameters) -> Vec<Parameter> {
-    ps.0
-  }
+  fn from(ps: Parameters) -> Vec<Parameter> { ps.0 }
 }
 
 impl ToTokens for Parameters {
@@ -544,7 +594,7 @@ impl ToTokens for Parameter {
     let extra = &self.extra;
     let inner = match &self.inner {
       None => quote!(None),
-      Some(inner_ps) => quote!(Some(#inner_ps))
+      Some(inner_ps) => quote!(Some(#inner_ps)),
     };
     stream.extend(quote! {
       Parameter {

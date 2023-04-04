@@ -3,8 +3,8 @@ pub use lazy_static::lazy_static;
 pub use libxml::tree::{Namespace, Node};
 pub use log;
 pub use regex::Regex;
+pub use rustc_hash::FxHashMap as HashMap;
 pub use std::borrow::Cow;
-pub use rustc_hash::{FxHashMap as HashMap};
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
 
@@ -14,8 +14,7 @@ pub use rtx_core::*;
 
 pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::cleaners::*;
-pub use rtx_core::common::xml::XML_NS;
-pub use rtx_core::common::float::{Float, floatformat};
+pub use rtx_core::common::float::{floatformat, Float};
 pub use rtx_core::common::font;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::Glue;
@@ -24,6 +23,7 @@ pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::common::object::Object;
+pub use rtx_core::common::xml::XML_NS;
 pub use rtx_core::definition::argument::ArgWrap;
 pub use rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 pub use rtx_core::definition::constructor::ConstructorOptions;
@@ -33,9 +33,11 @@ pub use rtx_core::definition::primitive::{Primitive, PrimitiveOptions};
 pub use rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, FontClosure,
-  FontDirective, PrimitiveClosure, PrimitiveFn, ReplacementClosure, Reversion,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
+  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveClosure, PrimitiveFn,
+  ReplacementClosure, Reversion,
 };
+pub use rtx_core::digested::{Digested, DigestedData};
 pub use rtx_core::document::resource::*;
 pub use rtx_core::document::tag::{TagOptionName, TagOptions};
 pub use rtx_core::document::Document;
@@ -55,7 +57,6 @@ pub use rtx_core::tokens::Tokens;
 pub use rtx_core::util::pathname;
 pub use rtx_core::util::radix;
 pub use rtx_core::whatsit::Whatsit;
-pub use rtx_core::digested::{Digested, DigestedData};
 pub use rtx_core::{BoxOps, Core, TexMode};
 
 // ------------------------------------------------------------------------------------------------
@@ -162,27 +163,27 @@ pub mod etex;
 pub mod pdftex;
 
 // Supported package bindings
-pub mod latexml_sty;
 pub mod alltt_sty;
 pub mod amsmath_sty;
 pub mod amsthm_sty;
 pub mod article_cls;
+pub mod cite_sty;
 pub mod comment_sty;
+pub mod etoolbox_sty;
 pub mod fontenc_sty;
+pub mod hyperref_sty;
 pub mod ieeetran_cls;
 pub mod inputenc_sty;
+pub mod latexml_sty;
+pub mod multido_sty;
 pub mod t1_fontmap;
 pub mod t1enc_def;
 pub mod t1enc_sty;
+pub mod textcase_sty;
 pub mod textcomp_sty;
 pub mod url_sty;
-pub mod hyperref_sty;
-pub mod etoolbox_sty;
-pub mod verbatim_sty;
-pub mod multido_sty;
 pub mod utf8_def;
-pub mod textcase_sty;
-pub mod cite_sty;
+pub mod verbatim_sty;
 
 pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
   Some(match filename {
@@ -208,7 +209,7 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "t1enc.sty" => t1enc_def::load_definitions(stomach, state),
     "t1enc.def" => t1enc_sty::load_definitions(stomach, state),
     "t1.fontmap" => t1_fontmap::load_definitions(stomach, state),
-    "utf8.def"  => utf8_def::load_definitions(stomach, state),
+    "utf8.def" => utf8_def::load_definitions(stomach, state),
     "textcase.sty" => textcase_sty::load_definitions(stomach, state),
     "cite.sty" => cite_sty::load_definitions(stomach, state),
     _other => return None,

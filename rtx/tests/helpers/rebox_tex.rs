@@ -4,10 +4,11 @@ use rtx_package::package::*;
 // LaTeXML Declaration for David Carlisle's xii.tex
 //**********************************************************************
 LoadDefinitions!(state, {
-
   // Simple reuse of Whatsit
-  DefConstructor!("\\BoxDup{}",
-    "<ltx:XMWrap><ltx:XMWrap>#1</ltx:XMWrap><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMWrap>");
+  DefConstructor!(
+    "\\BoxDup{}",
+    "<ltx:XMWrap><ltx:XMWrap>#1</ltx:XMWrap><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMWrap>"
+  );
 
   // Deferred reuse of Whatsit
   DefConstructor!("\\SaveBox{}", "#1",
@@ -19,5 +20,4 @@ LoadDefinitions!(state, {
   // Some math macros that create ltx:XMDual's for testing
   DefMath!("\\parens{}",   "(#1)", meaning => "parentheses");
   DefMath!("\\brackets{}", "[#1]", meaning => "brackets");
-
 });

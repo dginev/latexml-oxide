@@ -146,7 +146,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConditional!("\\if@lx@inbibliography");
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
-    "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
+    "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont'
+    _force_font='true'>#title</ltx:title><ltx:biblist>",
      before_digest => sub[stomach, state] {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach.digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")), state)?])
@@ -194,7 +195,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
   // A bibitem with now key or label...
-  DefMacro!("\\restoring@bibitem", "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem");
+  DefMacro!(
+    "\\restoring@bibitem",
+    "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem"
+  );
 
   NewCounter!("@bibitem", "bibliography", idprefix => "bib");
   DefMacro!("\\the@bibitem", "\\arabic{@bibitem}");
@@ -204,7 +208,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefMacro!(
     "\\bibitem",
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem", locked=>true);
-  DefConstructor!("\\lx@bibitem[] Semiverbatim", "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
+  DefConstructor!("\\lx@bibitem[] Semiverbatim",
+    "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
     after_digest => sub[stomach, whatsit, state] {
       let tag_opt = whatsit.get_arg(1);
       let key = if let Some(key) = whatsit.get_arg(2) {
@@ -218,7 +223,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
         tag_tokens.push(T_END!());
-        tag_tokens.extend(Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet)?.unlist());
+        tag_tokens.extend(
+          Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet)?.unlist());
         tag_tokens.push(T_END!());
         properties.insert("tags".to_string(),
           stomach.digest(tag_tokens, state)?.into());
@@ -251,7 +257,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
     }
     // else ? it probably isn't going to work??
     Info!("Now, try to open {{thebibliography}}");
-    tokens.extend(Invocation!("\\begin", vec![Tokenize!("thebibliography"), Tokens!()], gullet)?.unlist());
+    tokens.extend(Invocation!("\\begin",
+      vec![Tokenize!("thebibliography"), Tokens!()], gullet)?.unlist());
     let tokens = Tokens::new(tokens);
     Info!("PATCHING with {:?}", tokens.to_string());
     Ok(tokens)
@@ -310,7 +317,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
-    "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator' yyseparator='#yyseparator'>#3#4</ltx:bibref>",
+    "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator'
+      yyseparator='#yyseparator'>#3#4</ltx:bibref>",
     properties => sub[stomach, args, state] {
       unref!(args => show, keys, phrase1, phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
@@ -343,7 +351,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
       post_wrapped.extend(post_tokens);
       post_tokens = post_wrapped;
     }
-    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![Tokens!(), keys, Tokens!(), Tokens!()], gullet)?;
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens!(), keys, Tokens!(), Tokens!()], gullet)?;
     let mut arg_tokens = open.unlist();
     arg_tokens.extend(bibref.unlist());
     arg_tokens.extend(post_tokens);
@@ -546,8 +555,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   //   my ($string) = @_;
   //   $string =~ s/(\\\@|\\,|\\:|\\;|\\!|\\ |\\\/|)//g;
   //   $string =~
-  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\tt|\\small|\\tiny)//g;
-  //   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
+  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\
+  // tt|\\small|\\tiny)//g;   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
   //   $string =~ s/(\\|\{|\})//g;
   //   $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
   //   $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=>1 mapping???
@@ -635,23 +644,51 @@ LoadDefinitions!(outer_stomach, outer_state, {
 fn setup_pseudo_bibitem(state: &mut State, gullet: &mut Gullet) {
   state.let_i(&T_CS!("\\save@bibitem"), T_CS!("\\bibitem"), None, gullet);
   state.let_i(&T_CS!("\\save@par"), T_CS!("\\par"), None, gullet);
-  state.let_i(&T_CS!("\\bibitem"), T_CS!("\\restoring@bibitem"), None, gullet);
-  state.let_i(&T_CS!("\\par"), T_CS!("\\par@in@bibliography"), None, gullet);
+  state.let_i(
+    &T_CS!("\\bibitem"),
+    T_CS!("\\restoring@bibitem"),
+    None,
+    gullet,
+  );
+  state.let_i(
+    &T_CS!("\\par"),
+    T_CS!("\\par@in@bibliography"),
+    None,
+    gullet,
+  );
   // Moreover some people use \item instead of \bibitem
-  state.let_i(&T_CS!("\\item"), T_CS!("\\item@in@bibliography"), None, gullet);
+  state.let_i(
+    &T_CS!("\\item"),
+    T_CS!("\\item@in@bibliography"),
+    None,
+    gullet,
+  );
   // And protect from redefinitions.
-  state.let_i(&T_CS!("\\newblock"), T_CS!("\\lx@bibnewblock"), None, gullet);
+  state.let_i(
+    &T_CS!("\\newblock"),
+    T_CS!("\\lx@bibnewblock"),
+    None,
+    gullet,
+  );
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-fn begin_bibliography(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
+fn begin_bibliography(
+  stomach: &mut Stomach,
+  whatsit: &mut Whatsit,
+  state: &mut State,
+) -> Result<()> {
   begin_bibliography_clean(stomach, whatsit, state)?;
   // Fix for missing \bibitems!
   setup_pseudo_bibitem(state, stomach.get_gullet_mut());
   Ok(())
 }
 
-fn begin_bibliography_clean(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<()> {
+fn begin_bibliography_clean(
+  stomach: &mut Stomach,
+  whatsit: &mut Whatsit,
+  state: &mut State,
+) -> Result<()> {
   BindState!(stomach, state);
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.

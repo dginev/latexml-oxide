@@ -48,17 +48,44 @@ LoadDefinitions!(outer_state, {
   });
 
   // These DO immediately effect the font!
-  DefMacro!("\\mdseries", "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont");
-  DefMacro!("\\bfseries", "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont");
+  DefMacro!(
+    "\\mdseries",
+    "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\bfseries",
+    "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont"
+  );
 
-  DefMacro!("\\rmfamily", "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont");
-  DefMacro!("\\sffamily", "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont");
-  DefMacro!("\\ttfamily", "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont");
+  DefMacro!(
+    "\\rmfamily",
+    "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\sffamily",
+    "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\ttfamily",
+    "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont"
+  );
 
-  DefMacro!("\\upshape", "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont");
-  DefMacro!("\\itshape", "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont");
-  DefMacro!("\\slshape", "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont");
-  DefMacro!("\\scshape", "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont");
+  DefMacro!(
+    "\\upshape",
+    "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\itshape",
+    "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\slshape",
+    "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont"
+  );
+  DefMacro!(
+    "\\scshape",
+    "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont"
+  );
 
   DefMacro!(
     "\\normalfont",

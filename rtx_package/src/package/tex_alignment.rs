@@ -32,7 +32,8 @@ LoadDefinitions!(state, {
   //     Let('\centerline', '\relax'); },
   //   afterConstruct => sub {    # Override nowrap on right,left,center cells
   //     my $cell = $_[0]->getElement;
-  //     $_[0]->addClass($cell, 'ltx_wrap') unless ($cell->getAttribute('align') || '') eq 'justify'; });
+  //     $_[0]->addClass($cell, 'ltx_wrap') unless ($cell->getAttribute('align') || '') eq
+  // 'justify'; });
 
   // DefColumnType('p{Dimension}', sub {
   //     $LaTeXML::BUILD_TEMPLATE->addColumn(before => Tokens(T_CS('\tabularcell@hbox'), T_BEGIN),
@@ -127,7 +128,8 @@ LoadDefinitions!(state, {
   //       T_CS('\@alignment@newline@marker'),
   //       T_CS('\@open@row'), T_CS('\@open@column'), T_CS('\@open@inner@column')); });
 
-  // DefConstructor('\@alignment@newline@marker', undef, '', reversion => Tokens(T_CS("\\\\"), T_CR));
+  // DefConstructor('\@alignment@newline@marker', undef, '', reversion => Tokens(T_CS("\\\\"),
+  // T_CR));
 
   // DefConstructor('\@alignment@hline', undef, '',
   //   afterDigest => sub {
@@ -163,14 +165,14 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@dollar@in@mathmode', undef, sub {
   //     my ($stomach) = @_;
   //     my $level = $stomach->getBoxingLevel;
-  //     if ((LookupValue('MATH_ALIGN_$_BEGUN') || 0) == $level) { # If we're begun making _something_ with $.
-  //       my @l = ();
+  //     if ((LookupValue('MATH_ALIGN_$_BEGUN') || 0) == $level) { # If we're begun making
+  // _something_ with $.       my @l = ();
   //       if (LookupValue('IN_MATH')) {                           # But we're somehow in math?
   //         @l = $stomach->invokeToken(T_CS('\@@ENDINLINEMATH')); }
   //       else {
   //         @l = $stomach->invokeToken(T_CS('\@@ENDINLINETEXT')); }
-  //       AssignValue('MATH_ALIGN_$_BEGUN' => 0);                 # Reset this AFTER finishing the something
-  //       @l; }
+  //       AssignValue('MATH_ALIGN_$_BEGUN' => 0);                 # Reset this AFTER finishing the
+  // something       @l; }
   //     else {
   //       AssignValue('MATH_ALIGN_$_BEGUN' => $level + 1);        # Note that we've begun something
   //       if (LookupValue('IN_MATH')) {                           # If we're "still" in math
@@ -186,7 +188,8 @@ LoadDefinitions!(state, {
   // DefConstructor('\@@ENDINLINETEXT', undef, "", alias => '$',
   //   beforeDigest => sub { $_[0]->endMode('text'); });
 
-  // DefPrimitiveI('\@LTX@nonumber', undef, sub { AssignValue(EQUATIONROW_NUMBER => 0, 'global'); });
+  // DefPrimitiveI('\@LTX@nonumber', undef, sub { AssignValue(EQUATIONROW_NUMBER => 0, 'global');
+  // });
 
   // # \noalign{} provides vertical material that doesn't get aligned.
   // # This could be a bunch of text that would be treated like AMS' \intertext,
@@ -199,8 +202,8 @@ LoadDefinitions!(state, {
   // # See the peculiar construct in LaTeX for \hline and \@xhline
   // DefMacro('\noalign Expanded',
   //   '\if@in@alignment'
-  //     . '\@multicolumn{\@alignment@ncolumns}{l}{\@@LTX@noalign{#1}}\@LTX@nonumber\@alignment@newline'
-  //     . '\else#1\fi');
+  //     . '\@multicolumn{\@alignment@ncolumns}{l}{\@@LTX@noalign{#1}}\@LTX@nonumber\@alignment@
+  // newline'     . '\else#1\fi');
   // # This just processes the argument in text mode, but notices whether it is "empty" or not.
   // # If so, tell the current row that it can safely be collapsed later on.
   // DefConstructor('\@@LTX@noalign{}', sub {
@@ -315,7 +318,8 @@ LoadDefinitions!(state, {
   // sub translateAttachment {
   //   my ($pos) = @_;
   //   $pos = ($pos ? ToString($pos) : '');
-  //   return ($pos eq 't' ? 'top' : ($pos eq 'b' ? 'bottom' : 'middle')); }    # undef meaning 'baseline'
+  //   return ($pos eq 't' ? 'top' : ($pos eq 'b' ? 'bottom' : 'middle')); }    # undef meaning
+  // 'baseline'
 
   // #----------------------------------------------------------------------
   // # To recognize where rows & columns start and stop, we need to
@@ -370,8 +374,9 @@ LoadDefinitions!(state, {
   // # colspan > 1. Also, inner columns recognize \omit which removes the
   // # before & after tokens which would otherwise wrap the inner column.
 
-  // DefPrimitiveI('\@tabular@begin@heading', undef, sub { AssignValue(IN_TABULAR_HEAD => 1, 'global'); });
-  // DefPrimitiveI('\@tabular@end@heading', undef, sub { AssignValue(IN_TABULAR_HEAD => 0, 'global'); });
+  // DefPrimitiveI('\@tabular@begin@heading', undef, sub { AssignValue(IN_TABULAR_HEAD => 1,
+  // 'global'); }); DefPrimitiveI('\@tabular@end@heading', undef, sub {
+  // AssignValue(IN_TABULAR_HEAD => 0, 'global'); });
 
   // DefMacroI('\@close@column',  undef, '\@column@after\@@close@column');
   // DefMacroI('\@open@column',   undef, '\@@open@column\@column@before');
@@ -459,7 +464,8 @@ LoadDefinitions!(state, {
   // PushValue(ALIGNMENT_LINE_COMMANDS => T_CS('\label'));
 
   // DefMacroI('\@open@inner@column',  undef, '\@@open@inner@column\@inner@column@before');
-  // DefMacroI('\@close@inner@column', undef, '\@@eat@space\@inner@column@after\@@close@inner@column');
+  // DefMacroI('\@close@inner@column', undef,
+  // '\@@eat@space\@inner@column@after\@@close@inner@column');
 
   // DefMacroI('\@inner@column@before', undef, '');
   // DefMacroI('\@inner@column@after', undef, sub {
@@ -485,14 +491,14 @@ LoadDefinitions!(state, {
   //       if ($tok->equals(T_SPACE)) { }    # Skip leading space
   //       elsif (grep { $tok->equals($_) } @line_tokens) {    # Save line commands
   //         push(@lines, $stomach->invokeToken($tok)); }
-  //       elsif (Equals($tok, T_BEGIN)) {                     # Crazy... seems { doesn't "block" \omit!
-  //         push(@savedtokens, $tok); }
+  //       elsif (Equals($tok, T_BEGIN)) {                     # Crazy... seems { doesn't "block"
+  // \omit!         push(@savedtokens, $tok); }
   //       else {
-  //         if (Equals($tok, T_CS('\omit'))) {    # \omit removes the before/after tokens for this column.
-  //           $$colspec{before} = $$colspec{after} = Tokens(); }
+  //         if (Equals($tok, T_CS('\omit'))) {    # \omit removes the before/after tokens for this
+  // column.           $$colspec{before} = $$colspec{after} = Tokens(); }
   //         ## If we find \@@eat@space, we're at end of the columns content, so consider it empty
-  //         elsif (Equals($tok, T_CS('\@@eat@space'))) {    # First non-empty token implies column is empty.
-  //           $$colspec{empty} = 1; }
+  //         elsif (Equals($tok, T_CS('\@@eat@space'))) {    # First non-empty token implies column
+  // is empty.           $$colspec{empty} = 1; }
   //         $gullet->unread($tok); last; } }
   //     $gullet->unread(@savedtokens);
   //     $gullet->unread(beforeCellUnlist($$colspec{before}));
@@ -573,8 +579,8 @@ LoadDefinitions!(state, {
   //         push(@template, $t); } }
   //     # Convert the template
   //     my $ismath  = $STATE->lookupValue('IN_MATH');
-  //     my $before  = 1;                                # true if we're before a # in current column
-  //     my @pre     = ();
+  //     my $before  = 1;                                # true if we're before a # in current
+  // column     my @pre     = ();
   //     my @post    = ();
   //     my @cols    = ();
   //     my @nonreps = ();
@@ -583,10 +589,10 @@ LoadDefinitions!(state, {
   //       if ($t->equals(T_PARAM)) {
   //         $before = 0; }
   //       elsif ($t->equals(T_ALIGN)) {
-  //         if ($before) { @nonreps = @cols; @cols = (); } # A & while we're before a column means Repeated columns
-  //         else {                                         # Finished column spec; add it
-  //               # Try some magic for math, so we can create a valid math matrix (maybe!)
-  //               # DAMN \halign can't be in math, anyway.
+  //         if ($before) { @nonreps = @cols; @cols = (); } # A & while we're before a column means
+  // Repeated columns         else {                                         # Finished column
+  // spec; add it               # Try some magic for math, so we can create a valid math matrix
+  // (maybe!)               # DAMN \halign can't be in math, anyway.
   //               # So, to get a matrix, we'll have to rewrite the alignment!
   //           if ($ismath) {
   //             push(@pre, T_MATH); unshift(@post, T_MATH); }

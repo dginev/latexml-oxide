@@ -1,6 +1,6 @@
 # Detailed instructions at: https://github.com/rust-lang-nursery/rustfmt/blob/master/Configurations.md
-max_width = 151
-comment_width = 150
+max_width = 100
+comment_width = 100
 match_block_trailing_comma = true
 wrap_comments = true
 fn_single_line = true

@@ -6,7 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use std::sync::{Mutex};
+use std::sync::Mutex;
 
 use core::ops::RangeBounds;
 // TODO:
@@ -42,7 +42,8 @@ pub enum FoodType {
 }
 
 impl FoodType {
-  /// TODO: Should be a From trait implementation, but am not allowed due to both &str and Option being external. Argh.
+  /// TODO: Should be a From trait implementation, but am not allowed due to both &str and Option
+  /// being external. Argh.
   pub fn opt_from_str(text: &str) -> Option<FoodType> {
     use self::FoodType::*;
     match text.to_lowercase().as_str() {
@@ -129,13 +130,23 @@ impl Object for Mouth {
   fn stringify(&self) -> String { s!("Mouth[<string>{}x{}]", self.lineno, self.colno) }
   fn get_locator(&self) -> Option<Cow<Locator>> {
     let (to_line, to_column) = (self.lineno, self.colno);
-    let max_col = if self.nchars > 0 { self.nchars - 1 } else { self.nchars }; // There is always a trailing EOL char, if any
+    let max_col = if self.nchars > 0 {
+      self.nchars - 1
+    } else {
+      self.nchars
+    }; // There is always a trailing EOL char, if any
     let (from_line, from_column) = if to_column > 0 && to_column >= max_col {
       (to_line, 0)
     } else {
       (to_line, to_column)
     };
-    Some(Cow::Owned(Locator::new(self.source.clone(), from_line, from_column, to_line, to_column)))
+    Some(Cow::Owned(Locator::new(
+      self.source.clone(),
+      from_line,
+      from_column,
+      to_line,
+      to_column,
+    )))
   }
 }
 
@@ -147,8 +158,9 @@ impl Mouth {
   //  atletter,
   //  content
   //
-  // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more compact in this particular application
-  //     we're really looking at a unified Mouth application logic, with a capacity of reading different kinds of sources
+  // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more
+  // compact in this particular application     we're really looking at a unified Mouth
+  // application logic, with a capacity of reading different kinds of sources
   pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Result<Self> {
     if let Some(content) = options.content.take() {
       // we've cached the content of this source
@@ -275,7 +287,8 @@ impl Mouth {
         note_end(msg);
       }
     }
-    self.reader.take(); // if we have a reader, this will force a Drop at the end of finish(), which will close the file handle
+    self.reader.take(); // if we have a reader, this will force a Drop at the end of finish(), which
+                        // will close the file handle
   }
   // Auxiliaries
 
@@ -283,7 +296,10 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    let mut lines: VecDeque<String> = LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect(); // And split.
+    let mut lines: VecDeque<String> = LINEBREAK_REGEX
+      .split(lines)
+      .map(ToString::to_string)
+      .collect(); // And split.
     if lines.iter().last() == Some(&String::new()) {
       lines.pop_back();
     }
@@ -311,14 +327,17 @@ impl Mouth {
             0
           },
         };
-        self.reader.take(); // remove the now exhausted reader
-                            // Note: the original latexml code first split the perl string into lines, and only THEN decoded it
-                            // however, executing a rust regex on a Vec<u8> is just not going to be a sane way forward.
-                            // we will first decode the read-in bytes to the right String form, and THEN split lines.
-                            // as such, decoding is the first action taken on bytes read in from a file.
+        // remove the now exhausted reader
+        self.reader.take();
+        // Note: the original latexml code first split the perl string into lines, and only THEN
+        // decoded it however, executing a rust regex on a Vec<u8> is
+        // just not going to be a sane way forward. we will first decode
+        // the read-in bytes to the right String form, and THEN split lines.
+        // as such, decoding is the first action taken on bytes read in from a file.
         if let Some(ref _encoding) = state.input_encoding {
           // TODO: What are characters that fail to decode replaced by in Rust?
-          // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable chars to space(?).
+          // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
+          // chars to space(?).
           unimplemented!();
           //let message = s!("input isn't valid under encoding {}", encoding);
           //Info!("misdefined", encoding, self, state, message);
@@ -361,8 +380,12 @@ impl Mouth {
         // ^^ followed by TWO LOWERCASE Hex digits???
         if let Some(c1) = c1_opt {
           if let Some(c2) = c2_opt {
-            if (self.colno + 2 < self.nchars) && LOWERHEX_REGEX.is_match(&c1.to_string()) && LOWERHEX_REGEX.is_match(&c2.to_string()) {
-              let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap(); // TODO: Maybe Result type warranted here?
+            if (self.colno + 2 < self.nchars)
+              && LOWERHEX_REGEX.is_match(&c1.to_string())
+              && LOWERHEX_REGEX.is_match(&c2.to_string())
+            {
+              // TODO: Maybe Result type warranted here?
+              let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();
               ch = hex as char;
               self.splice(self.colno - 1..self.colno + 3, &[ch]);
               self.nchars -= 3;
@@ -387,7 +410,9 @@ impl Mouth {
     }
   }
   pub fn has_more_input(&mut self) -> bool {
-    self.colno < self.nchars || !self.buffer.is_empty() || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
+    self.colno < self.nchars
+      || !self.buffer.is_empty()
+      || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
   }
 
   /// Read the next token, or undef if exhausted.
@@ -481,7 +506,11 @@ impl Mouth {
         }
         // Sneak a comment out, every so often.
         if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
-          return Some(T_COMMENT!(s!("**** {} Line {} ****", &self.shortsource, &self.lineno.to_string())));
+          return Some(T_COMMENT!(s!(
+            "**** {} Line {} ****",
+            &self.shortsource,
+            &self.lineno.to_string()
+          )));
         }
       }
       if self.skipping_spaces {
@@ -527,7 +556,11 @@ impl Mouth {
     while let Some(token) = self.read_token(state) {
       tokens.push(token);
     }
-    while let Some(Token { code: Catcode::SPACE, .. }) = tokens.last() {
+    while let Some(Token {
+      code: Catcode::SPACE,
+      ..
+    }) = tokens.last()
+    {
       // Remove trailing space
       tokens.pop();
     }
@@ -698,7 +731,7 @@ impl Mouth {
     if let Some((ch, mut cc)) = self.get_next_char(state) {
       // Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
-      let mut cs = s!("\\{}", ch); // I need this standardized to be able to lookup tokens (A better way???)
+      let mut cs = s!("\\{}", ch);
       if cc == Catcode::LETTER {
         // For letter, read more letters for csname.
         while let Some((nch, ncc)) = self.get_next_char(state) {
@@ -774,11 +807,11 @@ impl Mouth {
 // We also allow for explicitly passing the state in, so that one could memoize state creation
 // using lazy_static doesnt work here as State is too complex an object
 
-// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that is actually slow in practice,
-// but it ought to be at least suboptimal.
-// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at compile_time,
-// we can bunch them together as a global object in codegen maybe? Then at least we can optimize the compile pass
-// + avoid runtime tokenization in the literal binding definitions.
+// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that
+// is actually slow in practice, but it ought to be at least suboptimal.
+// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at
+// compile_time, we can bunch them together as a global object in codegen maybe? Then at least we
+// can optimize the compile pass + avoid runtime tokenization in the literal binding definitions.
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   // special case! empty input is empty Tokens
@@ -788,7 +821,9 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   match state_opt {
     None => {
       let mut state = STD_STATE.write().unwrap();
-      Mouth::new(text, None, &mut state).unwrap().read_tokens(&mut state)
+      Mouth::new(text, None, &mut state)
+        .unwrap()
+        .read_tokens(&mut state)
     },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
@@ -799,5 +834,7 @@ pub fn tokenize_internal(text: &str) -> Tokens {
     return Tokens::default();
   }
   let mut state = STY_STATE.write().unwrap();
-  Mouth::new(text, None, &mut state).unwrap().read_tokens(&mut state)
+  Mouth::new(text, None, &mut state)
+    .unwrap()
+    .read_tokens(&mut state)
 }

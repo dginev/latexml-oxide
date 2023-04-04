@@ -1,7 +1,7 @@
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
@@ -14,7 +14,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
-use crate::definition::Reversion;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -23,6 +22,7 @@ use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::FontDirective;
+use crate::definition::Reversion;
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::ligature::Ligature;
@@ -59,8 +59,8 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 // 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
 
-/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an extremely permissive
-/// struct that affords all essential kinds of values that appear essential.
+/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
+/// extremely permissive struct that affords all essential kinds of values that appear essential.
 #[derive(Clone)]
 pub enum Stored {
   /// if we want to keep a key but make it 'undef', set it to None
@@ -224,8 +224,8 @@ impl fmt::Display for Stored {
   }
 }
 /// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
-/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior mutability
-/// Worse: some conditions depend on the Stateful meaning of Token's,
+/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior
+/// mutability Worse: some conditions depend on the Stateful meaning of Token's,
 ///        so the perfect equality check would need State as an argument :(
 impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
@@ -308,7 +308,7 @@ impl PartialEq for Stored {
         } else {
           false
         }
-      }
+      },
       Catcode(ref cc) => {
         if let Catcode(cc2) = other {
           *cc == *cc2
@@ -481,9 +481,13 @@ impl PartialEq for Stored {
       HashStored(ref hs) => {
         if let HashStored(hs2) = other {
           hs.len() == hs2.len()
-            && hs
-              .iter()
-              .all(|(key, value)| if let Some(item2) = hs2.get(key) { value == item2 } else { false })
+            && hs.iter().all(|(key, value)| {
+              if let Some(item2) = hs2.get(key) {
+                value == item2
+              } else {
+                false
+              }
+            })
         } else {
           false
         }
@@ -538,7 +542,8 @@ impl Stored {
       e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
     }
   }
-  /// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise `ToString::to_string`
+  /// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise
+  /// `ToString::to_string`
   pub fn to_attribute(&self) -> String {
     match self {
       Stored::Dimension(ref v) => v.to_attribute(),
@@ -546,7 +551,7 @@ impl Stored {
       //Stored::MuDimension(ref v) => v.to_attribute(),
       Stored::Glue(ref v) => v.to_attribute(),
       Stored::MuGlue(ref v) => v.to_attribute(),
-      other => other.to_string()
+      other => other.to_string(),
     }
   }
 }
@@ -593,7 +598,7 @@ impl From<i64> for Stored {
 }
 
 impl From<f64> for Stored {
-  fn from(value:f64) -> Self { Stored::Number(Number::new(value.floor() as i64)) }
+  fn from(value: f64) -> Self { Stored::Number(Number::new(value.floor() as i64)) }
 }
 
 impl From<Catcode> for Stored {
@@ -674,7 +679,7 @@ impl From<Option<&crate::Digested>> for Stored {
   fn from(value_opt: Option<&crate::Digested>) -> Self {
     match value_opt {
       Some(v) => v.into(),
-      None => Stored::None
+      None => Stored::None,
     }
   }
 }
@@ -737,7 +742,14 @@ impl From<Vec<String>> for Stored {
 }
 
 impl<'a> From<Vec<&'a str>> for Stored {
-  fn from(value: Vec<&'a str>) -> Self { Stored::VecString(value.iter().map(ToString::to_string).collect::<Vec<String>>()) }
+  fn from(value: Vec<&'a str>) -> Self {
+    Stored::VecString(
+      value
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<String>>(),
+    )
+  }
 }
 
 impl From<Vec<Token>> for Stored {
@@ -893,9 +905,9 @@ impl<'a> From<&'a Stored> for Option<Tokens> {
       Stored::VecDequeStored(vdq) => {
         // Each item in the queue can be unlisted into a Vec<Token>
         // and then the result can be re-cast as a single Tokens
-        let mut collected : Vec<Token> = Vec::new();
+        let mut collected: Vec<Token> = Vec::new();
         for item in vdq {
-          let item_tokens_opt : Option<Tokens> = item.into();
+          let item_tokens_opt: Option<Tokens> = item.into();
           if let Some(item_tokens) = item_tokens_opt {
             collected.extend(item_tokens.unlist());
           }

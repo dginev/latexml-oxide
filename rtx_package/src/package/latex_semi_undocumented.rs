@@ -79,7 +79,10 @@ LoadDefinitions!(outer_stomach, state, {
   );
 
   Let!("\\l@ngrel@x", "\\relax"); // Never actually used anywhere, but...
-  DefMacro!("\\@star@or@long{}", r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}");
+  DefMacro!(
+    "\\@star@or@long{}",
+    r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}"
+  );
 
   // maybe this is easiest just to punt.
   RawTeX!(
@@ -152,14 +155,28 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\appendixname", "Appendix");
   // These aren"t defined in LaTeX,
   // these definitions will give us more meaningful typerefnum"s
-  DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
-  DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+  DefMacro!(
+    "\\sectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsubsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\paragraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subparagraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
 
   DefPrimitive!("\\@@end", sub[stomach,_args,state] { stomach.get_gullet_mut().flush(state) });
-
 
   // DG: TODO Maybe split these out?
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,37 +187,37 @@ LoadDefinitions!(outer_stomach, state, {
   //
   // For now, a few macros required by other packages will be included:
   // DefMacro!(T_CS!("\\hook_gput_code:nnn"), '{}{}{}', '');
-  DefMacro!("\\NewHook{}",                    None);
-  DefMacro!("\\NewReversedHook{}",            None);
-  DefMacro!("\\NewMirroredHookPair{}{}",      None);
-  DefMacro!("\\ActivateGenericHook{}",        None);
-  DefMacro!("\\DisableGenericHook{}",         None);
-  DefMacro!("\\AddToHook{}[]{}",              None);
-  DefMacro!("\\AddToHookNext{}{}",            None);
-  DefMacro!("\\ClearHookNext{}",              None);
-  DefMacro!("\\RemoveFromHook{}[]",           None);
-  DefMacro!("\\SetDefaultHookLabel{}",        None);
-  DefMacro!("\\PushDefaultHookLabel{}",       None);
-  DefMacro!("\\PopDefaultHookLabel",          None);
-  DefMacro!("\\UseHook{}",                    None);
-  DefMacro!("\\UseOneTimeHook{}",             None);
-  DefMacro!("\\ShowHook{}",                   None);
-  DefMacro!("\\LogHook{}",                    None);
-  DefMacro!("\\DebugHooksOn",                 None);
-  DefMacro!("\\DebugHooksOff",                None);
-  DefMacro!("\\DeclareHookRule{}{}{}{}",      None);
+  DefMacro!("\\NewHook{}", None);
+  DefMacro!("\\NewReversedHook{}", None);
+  DefMacro!("\\NewMirroredHookPair{}{}", None);
+  DefMacro!("\\ActivateGenericHook{}", None);
+  DefMacro!("\\DisableGenericHook{}", None);
+  DefMacro!("\\AddToHook{}[]{}", None);
+  DefMacro!("\\AddToHookNext{}{}", None);
+  DefMacro!("\\ClearHookNext{}", None);
+  DefMacro!("\\RemoveFromHook{}[]", None);
+  DefMacro!("\\SetDefaultHookLabel{}", None);
+  DefMacro!("\\PushDefaultHookLabel{}", None);
+  DefMacro!("\\PopDefaultHookLabel", None);
+  DefMacro!("\\UseHook{}", None);
+  DefMacro!("\\UseOneTimeHook{}", None);
+  DefMacro!("\\ShowHook{}", None);
+  DefMacro!("\\LogHook{}", None);
+  DefMacro!("\\DebugHooksOn", None);
+  DefMacro!("\\DebugHooksOff", None);
+  DefMacro!("\\DeclareHookRule{}{}{}{}", None);
   DefMacro!("\\DeclareDefaultHookRule{}{}{}", None);
-  DefMacro!("\\ClearHookRule{}{}{}",          None);
-  DefMacro!("\\IfHookEmptyTF{}{}{}",          "#3");
-  DefMacro!("\\IfHookExistsTF{}{}{}",         "#3");
-  DefMacro!("\\MakeTextLowercase",            "\\lowercase");
-  DefMacro!("\\MakeTextUppercase",            "\\uppercase");
+  DefMacro!("\\ClearHookRule{}{}{}", None);
+  DefMacro!("\\IfHookEmptyTF{}{}{}", "#3");
+  DefMacro!("\\IfHookExistsTF{}{}{}", "#3");
+  DefMacro!("\\MakeTextLowercase", "\\lowercase");
+  DefMacro!("\\MakeTextUppercase", "\\uppercase");
 
   DefConditional!("\\if@includeinrelease");
-  Let!("\\@kernel@after@enddocument",               "\\@empty");
+  Let!("\\@kernel@after@enddocument", "\\@empty");
   Let!("\\@kernel@after@enddocument@afterlastpage", "\\@empty");
-  Let!("\\@kernel@before@begindocument",            "\\@empty");
-  Let!("\\@kernel@after@begindocument",             "\\@empty");
-  Let!("\\conditionally@traceon",                   "\\@empty");
-  Let!("\\conditionally@traceoff",                  "\\@empty");
+  Let!("\\@kernel@before@begindocument", "\\@empty");
+  Let!("\\@kernel@after@begindocument", "\\@empty");
+  Let!("\\conditionally@traceon", "\\@empty");
+  Let!("\\conditionally@traceoff", "\\@empty");
 });

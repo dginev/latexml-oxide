@@ -39,7 +39,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\warn@unusedclassoptions", sub[stomach,_args,state] {
     if let Some(Stored::VecString(unused)) = state.lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
-        Info!("unexpected", "options", stomach, state, "Unused global options: {}",unused.join(","));
+        Info!("unexpected", "options", stomach, state,
+              "Unused global options: {}",unused.join(","));
         state.assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
       }
     }
@@ -58,8 +59,8 @@ LoadDefinitions!(state, {
   //     $options = [($options ? split(/,\s*/, ToString($options)) : ())];
   //     # Watch out; In principle, compatibility mode wants a .sty, not a .cls!!!
   //     # But, we'd prefer .cls, since we'll have better bindings.
-  //     # And in fact, nobody's likely to write a binding for a .sty that wants to be a class anyway.
-  //     # So, we'll just try for a .cls, punting to OmniBus if needed.
+  //     # And in fact, nobody's likely to write a binding for a .sty that wants to be a class
+  // anyway.     # So, we'll just try for a .cls, punting to OmniBus if needed.
   //     # If we start wanting to read style files by default, we'll still need to handle this
   //     # specially, since class (or sty files pretending to be) cover so much more.
   //     LoadClass($class, options => $options, after => Tokens(T_CS('\compat@loadpackages')));
@@ -74,13 +75,13 @@ LoadDefinitions!(state, {
   //         RequirePackage($option); }
   //       else {
   //         $hadmissing = 1;
-  //         Info('unexpected', $option, $_[0], "Unexpected option '$option' passed to $name.$type"); } }
-  //     # Often, in compatibility mode, the options are used to load what are effectively
-  //     # document classes for specific journals, etc that introduce a bunch of new frontmatter!
-  //     # To try to recover from this, we'll go ahead & load the OmniBus class.
+  //         Info('unexpected', $option, $_[0], "Unexpected option '$option' passed to
+  // $name.$type"); } }     # Often, in compatibility mode, the options are used to load what are
+  // effectively     # document classes for specific journals, etc that introduce a bunch of new
+  // frontmatter!     # To try to recover from this, we'll go ahead & load the OmniBus class.
   //     if ($hadmissing && !LookupValue('OmniBus.cls_loaded')) {
-  //       Info('note', 'OmniBus', $_[0], "Loading OmniBus class to attempt to cover missing options");
-  //       LoadClass('OmniBus'); }
+  //       Info('note', 'OmniBus', $_[0], "Loading OmniBus class to attempt to cover missing
+  // options");       LoadClass('OmniBus'); }
   //     AssignValue('@unusedoptionlist', []); });
 
   // sub onlyPreamble {

@@ -1,4 +1,7 @@
-use crate::binding::def::dialect::{DIRTY_ID_IDIOM_RE, LEADING_PROTOCOL_RE, NON_ID_CHARSET_RE, SPACES_RE, TILDE_NOISE_RE, TRAILING_SLASH_RE};
+use crate::binding::def::dialect::{
+  DIRTY_ID_IDIOM_RE, LEADING_PROTOCOL_RE, NON_ID_CHARSET_RE, SPACES_RE, TILDE_NOISE_RE,
+  TRAILING_SLASH_RE,
+};
 use std::borrow::Cow;
 use unidecode::unidecode;
 

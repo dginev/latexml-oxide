@@ -2,7 +2,7 @@ use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 use std::sync::Arc;
 
 use crate::core_interface::DigestionAPI;
@@ -13,10 +13,18 @@ use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
 use rtx_package::package;
 
-pub fn rtx_tests(dirpath: &str, requires: Option<HashMap<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {
+pub fn rtx_tests(
+  dirpath: &str,
+  requires: Option<HashMap<&str, &str>>,
+  dispatcher_opt: Option<BindingDispatcher>,
+) {
   rtx_tests_internal(dirpath, requires, dispatcher_opt)
 }
-pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, extra_bindings_dispatcher: Option<BindingDispatcher>) {
+pub fn rtx_tests_internal(
+  dirpath: &str,
+  requires: Option<HashMap<&str, &str>>,
+  extra_bindings_dispatcher: Option<BindingDispatcher>,
+) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
@@ -28,7 +36,12 @@ pub fn rtx_tests_internal(dirpath: &str, requires: Option<HashMap<&str, &str>>, 
     let tex_file_string = tex_file.to_str().unwrap();
     let xml_file_str = xml_file.to_str().unwrap();
     if xml_file.exists() {
-      rtx_ok_internal(tex_file_string, xml_file_str, name, extra_bindings_dispatcher.clone());
+      rtx_ok_internal(
+        tex_file_string,
+        xml_file_str,
+        name,
+        extra_bindings_dispatcher.clone(),
+      );
     } else {
       // Skip, these could be tex fragment files.
     }
@@ -40,9 +53,15 @@ fn validate_requirements(_dirpath: &str, _requires: Option<HashMap<&str, &str>>)
   true
 }
 
-// fn rtx_ok(tex_path: &str, xml_path: &str, name: &str) { rtx_ok_internal(tex_path, xml_path, name, None) }
+// fn rtx_ok(tex_path: &str, xml_path: &str, name: &str) { rtx_ok_internal(tex_path, xml_path, name,
+// None) }
 
-fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_dispatcher: Option<BindingDispatcher>) {
+fn rtx_ok_internal(
+  tex_path: &str,
+  xml_path: &str,
+  name: &str,
+  extra_bindings_dispatcher: Option<BindingDispatcher>,
+) {
   let tex_strings = process_texfile(tex_path, name, extra_bindings_dispatcher);
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(xml_path, name);
@@ -64,7 +83,11 @@ fn rtx_ok_internal(tex_path: &str, xml_path: &str, name: &str, extra_bindings_di
 
 /// Returns the list-of-strings form of whatever was requested, if successful,
 /// otherwise empty; and they will have reported the failure
-fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option<BindingDispatcher>) -> Vec<String> {
+fn process_texfile(
+  tex_path: &str,
+  name: &str,
+  extra_bindings_dispatcher: Option<BindingDispatcher>,
+) -> Vec<String> {
   // TODO: continue here...
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
@@ -75,10 +98,10 @@ fn process_texfile(tex_path: &str, name: &str, extra_bindings_dispatcher: Option
   });
   // Add the package bindings
   latexml.get_state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
-  // If we want to test the rtx_contrib bindings, we need to pass in the additional binding dispatcher,
-  // which makes the contrib bindings visible
-  // this would have been equivalent to a latexml --path argument, except we require access to compiled functions,
-  // hence the rust-native pass
+  // If we want to test the rtx_contrib bindings, we need to pass in the additional binding
+  // dispatcher, which makes the contrib bindings visible
+  // this would have been equivalent to a latexml --path argument, except we require access to
+  // compiled functions, hence the rust-native pass
   if extra_bindings_dispatcher.is_some() {
     latexml.get_state_mut().extra_bindings_dispatch = extra_bindings_dispatcher;
   }
@@ -122,7 +145,11 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     search_paths: None,
-    preload: Some(["article.cls", "amsmath.sty"].map(|x| x.to_string()).to_vec()),
+    preload: Some(
+      ["article.cls", "amsmath.sty"]
+        .map(|x| x.to_string())
+        .to_vec(),
+    ),
     nomathparse: Some(true),
     include_comments: Some(false),
     ..CoreOptions::default()

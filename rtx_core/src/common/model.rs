@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::borrow::Cow;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -70,7 +70,9 @@ impl Model {
     self.schema_data = Some(vec![s!("DTD"), roottag, publicid, systemid]);
   }
 
-  pub fn set_relaxng_schema(&mut self, schema: String) { self.schema_data = Some(vec![s!("RelaxNG"), schema]); }
+  pub fn set_relaxng_schema(&mut self, schema: String) {
+    self.schema_data = Some(vec![s!("RelaxNG"), schema]);
+  }
   pub fn add_schema_declaration(&self, document: &mut Document) {
     if let Some(ref schema) = self.schema {
       schema.add_schema_declaration(document);
@@ -187,8 +189,12 @@ impl Model {
 
     match namespace_opt_checked {
       Some(namespace) => {
-        self.code_namespace_prefixes.insert(namespace.clone(), codeprefix.to_string());
-        self.code_namespaces.insert(codeprefix.to_string(), namespace);
+        self
+          .code_namespace_prefixes
+          .insert(namespace.clone(), codeprefix.to_string());
+        self
+          .code_namespaces
+          .insert(codeprefix.to_string(), namespace);
       },
       None => {
         match self.code_namespaces.get(codeprefix) {
@@ -200,7 +206,11 @@ impl Model {
     };
   }
 
-  pub fn register_document_namespace(&mut self, mut docprefix: &str, namespace_opt: Option<String>) {
+  pub fn register_document_namespace(
+    &mut self,
+    mut docprefix: &str,
+    namespace_opt: Option<String>,
+  ) {
     if docprefix.is_empty() {
       docprefix = "#default";
     }
@@ -214,8 +224,12 @@ impl Model {
         } else {
           namespace.to_string()
         };
-        self.document_namespace_prefixes.insert(regnamespace, docprefix.to_string());
-        self.document_namespaces.insert(docprefix.to_string(), namespace);
+        self
+          .document_namespace_prefixes
+          .insert(regnamespace, docprefix.to_string());
+        self
+          .document_namespaces
+          .insert(docprefix.to_string(), namespace);
       },
       None => {
         if let Some(prev) = self.document_namespaces.get(docprefix) {
@@ -226,7 +240,12 @@ impl Model {
     };
   }
 
-  pub fn get_document_namespace_prefix(&mut self, namespace: &str, forattribute: bool, probe: bool) -> Option<String> {
+  pub fn get_document_namespace_prefix(
+    &mut self,
+    namespace: &str,
+    forattribute: bool,
+    probe: bool,
+  ) -> Option<String> {
     // Get the prefix associated with the namespace url, noting that for elements, it might by
     // "#default", but for attributes would never be.
     // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
@@ -239,7 +258,10 @@ impl Model {
       None
     };
     if docprefix.is_none() {
-      docprefix = self.document_namespace_prefixes.get(namespace).map(|prefix| prefix.to_string());
+      docprefix = self
+        .document_namespace_prefixes
+        .get(namespace)
+        .map(|prefix| prefix.to_string());
     }
 
     if docprefix.is_none() && !probe {
@@ -280,9 +302,15 @@ impl Model {
 
     if docprefix != "#default" && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
-      let ns_error = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
+      let ns_error = s!(
+        "http://example.com/namespace{}",
+        &self.namespace_errors.to_string()
+      );
       self.register_document_namespace(docprefix, Some(ns_error));
-      let msg1 = s!("No namespace has been registered for prefix '{}' (in document)", docprefix);
+      let msg1 = s!(
+        "No namespace has been registered for prefix '{}' (in document)",
+        docprefix
+      );
       let msg2 = s!("Using '{}' instead", ns_str);
       Error!("malformed", docprefix, self, None, msg1, msg2);
     }
@@ -298,7 +326,12 @@ impl Model {
   /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
   /// if missing. Get the (code) prefix associated with $namespace,
   /// creating a dummy prefix and signalling an error if none has been registered.
-  pub fn get_namespace_prefix(&mut self, namespace: &str, _forattribute: bool, probe: bool) -> Option<String> {
+  pub fn get_namespace_prefix(
+    &mut self,
+    namespace: &str,
+    _forattribute: bool,
+    probe: bool,
+  ) -> Option<String> {
     let mut codeprefix: Option<String> = None;
 
     if !namespace.is_empty() {
@@ -328,10 +361,16 @@ impl Model {
   }
 
   pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<String> {
-    let mut ns: Option<String> = self.code_namespaces.get(codeprefix).map(|ns| ns.to_string());
+    let mut ns: Option<String> = self
+      .code_namespaces
+      .get(codeprefix)
+      .map(|ns| ns.to_string());
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
-      let example_namespace = s!("http://example.com/namespace{}", &self.namespace_errors.to_string());
+      let example_namespace = s!(
+        "http://example.com/namespace{}",
+        &self.namespace_errors.to_string()
+      );
       ns = Some(example_namespace.clone());
       self.register_namespace(codeprefix, Some(example_namespace));
       Error!(
@@ -386,7 +425,9 @@ impl Model {
         }
       },
       // Need others?
-      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}"),
+      t => {
+        panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+      },
     }
   }
 
@@ -417,7 +458,9 @@ impl Model {
         if let Some(ns) = node.get_namespace() {
           let href = ns.get_href();
           if !href.is_empty() {
-            prefix = self.get_document_namespace_prefix(&href, false, true).unwrap_or_default();
+            prefix = self
+              .get_document_namespace_prefix(&href, false, true)
+              .unwrap_or_default();
           }
         }
         if prefix.is_empty() {
@@ -427,7 +470,9 @@ impl Model {
         }
       },
       // Need others?
-      t => panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}"),
+      t => {
+        panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+      },
     }
   }
 
@@ -479,7 +524,11 @@ impl Model {
     }
 
     // Else query tag properties.
-    let model = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).model;
+    let model = &mut self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default)
+      .model;
     model.contains("ANY") || model.contains(child)
   }
 
@@ -500,7 +549,11 @@ impl Model {
     }
 
     // Else query tag properties.
-    let attributes = &mut self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default).attributes;
+    let attributes = &mut self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default)
+      .attributes;
     attributes.contains(attrib)
   }
 
@@ -555,7 +608,12 @@ impl Model {
   //**********************************************************************
 
   pub fn get_tags(&self) -> Vec<String> {
-    let mut keys: Vec<String> = self.tagprop.keys().map(String::as_str).map(str::to_owned).collect();
+    let mut keys: Vec<String> = self
+      .tagprop
+      .keys()
+      .map(String::as_str)
+      .map(str::to_owned)
+      .collect();
     keys.sort();
     keys
   }
@@ -572,7 +630,10 @@ impl Model {
   }
 
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
+    let frame = self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default);
 
     for element in elements {
       frame.model.insert(element.to_owned());
@@ -591,12 +652,17 @@ impl Model {
   }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
-    let frame = self.tagprop.entry(tag.to_owned()).or_insert_with(TagFrame::default);
+    let frame = self
+      .tagprop
+      .entry(tag.to_owned())
+      .or_insert_with(TagFrame::default);
 
     for attribute in attributes {
       frame.attributes.insert(attribute.to_owned());
     }
   }
 
-  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<String>) { self.schema_class.insert(classname.to_owned(), content); }
+  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<String>) {
+    self.schema_class.insert(classname.to_owned(), content);
+  }
 }

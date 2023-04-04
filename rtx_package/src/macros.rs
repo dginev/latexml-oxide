@@ -19,7 +19,8 @@ macro_rules! compile_replacement {
 /// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_prototype_for_typed_macro {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+    $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedMacro"]
@@ -32,7 +33,8 @@ macro_rules! compile_prototype_for_typed_macro {
 #[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Primitive closures
 macro_rules! compile_prototype_for_typed_primitive {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+    $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedPrimitive"]
@@ -45,7 +47,8 @@ macro_rules! compile_prototype_for_typed_primitive {
 #[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Conditional closures
 macro_rules! compile_prototype_for_typed_conditional {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+    $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedConditional"]
@@ -132,8 +135,8 @@ macro_rules! compile_tokenize_internal {
   }};
 }
 
-// TODO: ideally we can auto-infer this based on DefParameterType declarations but the **timing** is tricky?
-// what to do? For now, hardcode.
+// TODO: ideally we can auto-infer this based on DefParameterType declarations but the **timing** is
+// tricky? what to do? For now, hardcode.
 #[macro_export]
 macro_rules! parameter_rust_type {
   (GeneralText) => {Tokens};

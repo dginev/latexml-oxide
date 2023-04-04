@@ -37,7 +37,9 @@ LoadDefinitions!(state, {
   ]
   .iter()
   {
-    DefMacro!(T_CS!(ltxtrigger), None, { Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger)) });
+    DefMacro!(T_CS!(ltxtrigger), None, {
+      Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger))
+    });
   }
 
   DefPrimitive!("\\@load@latex@pool", sub[stomach, (), state] {
@@ -47,19 +49,31 @@ LoadDefinitions!(state, {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
       },
-      stomach, // crucial, or we can't invoke any RawTeX-like macros in the pool due to multiple mutable borrows of stomach!
+      // Note: passing in "stomach" is crucial,
+      // or we can't invoke any RawTeX-like macros in the pool
+      // due to multiple mutable borrows of stomach!
+      stomach,
       state,
     )?;
   });
 
-  // Technically should be in LaTeX.pool, but we try to maintain the bookkeeping from the very start,
-  // in order to avoid partially defined behavior when --preload directives are mixed with \usepackage{} loads
-  DefMacro!("\\@pushfilename", r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}");
-  DefMacro!("\\@popfilename", r"\expandafter\@p@pfilename\@currnamestack\@nil");
-  DefMacro!("\\@p@pfilename {}{}{} Until:\\@nil",
+  // Technically should be in LaTeX.pool, but we try to maintain the bookkeeping from the very
+  // start, in order to avoid partially defined behavior when --preload directives are mixed with
+  // \usepackage{} loads
+  DefMacro!(
+    "\\@pushfilename",
+    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
+  );
+  DefMacro!(
+    "\\@popfilename",
+    r"\expandafter\@p@pfilename\@currnamestack\@nil"
+  );
+  DefMacro!(
+    "\\@p@pfilename {}{}{} Until:\\@nil",
     r"\gdef\@currname{#1}%
       \gdef\@currext{#2}%
       \catcode`\@#3\relax
-      \gdef\@currnamestack{#4}");
+      \gdef\@currnamestack{#4}"
+  );
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
 });

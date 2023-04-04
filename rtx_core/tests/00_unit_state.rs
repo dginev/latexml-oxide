@@ -4,9 +4,9 @@ use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::{s, Explode, T_CS, T_OTHER, T_SPACE};
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 
 #[test]
 fn basic_state_init() {
@@ -75,7 +75,10 @@ fn scoped_assign_lookup_value() {
   state.assign_value("foo", s!("bar"), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => assert_eq!(received_value, "bar", "global assignment should have value bar"),
+    Some(&Stored::String(ref received_value)) => assert_eq!(
+      received_value, "bar",
+      "global assignment should have value bar"
+    ),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
@@ -84,14 +87,20 @@ fn scoped_assign_lookup_value() {
   state.assign_value("foo", s!("baz"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => assert_eq!(received_value, "baz", "local assignment should have value baz"),
+    Some(&Stored::String(ref received_value)) => assert_eq!(
+      received_value, "baz",
+      "local assignment should have value baz"
+    ),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
   state.assign_value("foo", s!("overwrite"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => assert_eq!(received_value, "overwrite", "second local assignment should have value overwrite"),
+    Some(&Stored::String(ref received_value)) => assert_eq!(
+      received_value, "overwrite",
+      "second local assignment should have value overwrite"
+    ),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
@@ -99,7 +108,10 @@ fn scoped_assign_lookup_value() {
 
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => assert_eq!(received_value, "bar", "global assignment should have value bar"),
+    Some(&Stored::String(ref received_value)) => assert_eq!(
+      received_value, "bar",
+      "global assignment should have value bar"
+    ),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 }
@@ -111,10 +123,17 @@ fn assign_lookup_arrays() {
     .iter()
     .map(|x| Stored::String(x.to_string()))
     .collect::<VecDeque<Stored>>();
-  state.assign_value("SEARCHPATHS", Stored::VecDequeStored(mock_vec.clone()), None);
+  state.assign_value(
+    "SEARCHPATHS",
+    Stored::VecDequeStored(mock_vec.clone()),
+    None,
+  );
   match state.lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
-    Some(&Stored::VecDequeStored(ref received_value)) => assert_eq!(received_value, &mock_vec, "looked up array has correct value"),
+    Some(&Stored::VecDequeStored(ref received_value)) => assert_eq!(
+      received_value, &mock_vec,
+      "looked up array has correct value"
+    ),
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
@@ -137,11 +156,31 @@ fn assign_lookup_arrays() {
     panic!("state.lookup_vecdeque returned None");
   }
 
-  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("d"))), "shift searchpaths");
-  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("c"))), "pop searchpaths");
-  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("a"))), "shift searchpaths");
-  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("b"))), "pop searchpaths");
-  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(
+    state.shift_value("SEARCHPATHS"),
+    Some(Stored::String(s!("d"))),
+    "shift searchpaths"
+  );
+  assert_eq!(
+    state.pop_value("SEARCHPATHS"),
+    Some(Stored::String(s!("c"))),
+    "pop searchpaths"
+  );
+  assert_eq!(
+    state.shift_value("SEARCHPATHS"),
+    Some(Stored::String(s!("a"))),
+    "shift searchpaths"
+  );
+  assert_eq!(
+    state.pop_value("SEARCHPATHS"),
+    Some(Stored::String(s!("b"))),
+    "pop searchpaths"
+  );
+  assert_eq!(
+    state.shift_value("SEARCHPATHS"),
+    None,
+    "shift searchpaths None"
+  );
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
@@ -162,11 +201,31 @@ fn assign_lookup_arrays() {
     Some(&Stored::VecDequeStored(vdq)),
     "push works as intended"
   );
-  assert_eq!(state.pop_value("SEARCHPATHS"), Some(new_d), "pop searchpaths");
-  assert_eq!(state.shift_value("SEARCHPATHS"), Some(Stored::String(s!("a"))), "shift searchpaths");
-  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("c"))), "pop searchpaths");
-  assert_eq!(state.pop_value("SEARCHPATHS"), Some(Stored::String(s!("b"))), "pop searchpaths");
-  assert_eq!(state.shift_value("SEARCHPATHS"), None, "shift searchpaths None");
+  assert_eq!(
+    state.pop_value("SEARCHPATHS"),
+    Some(new_d),
+    "pop searchpaths"
+  );
+  assert_eq!(
+    state.shift_value("SEARCHPATHS"),
+    Some(Stored::String(s!("a"))),
+    "shift searchpaths"
+  );
+  assert_eq!(
+    state.pop_value("SEARCHPATHS"),
+    Some(Stored::String(s!("c"))),
+    "pop searchpaths"
+  );
+  assert_eq!(
+    state.pop_value("SEARCHPATHS"),
+    Some(Stored::String(s!("b"))),
+    "pop searchpaths"
+  );
+  assert_eq!(
+    state.shift_value("SEARCHPATHS"),
+    None,
+    "shift searchpaths None"
+  );
   assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
@@ -198,17 +257,33 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   state.assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
-  if let Some(Stored::Expandable(ref stored_meaning)) = state.lookup_meaning(&T_CS!("\\foobar")).as_deref() {
-    assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has definition for CS \jobname
+  if let Some(Stored::Expandable(ref stored_meaning)) =
+    state.lookup_meaning(&T_CS!("\\foobar")).as_deref()
+  {
+    assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
+                                                       // definition for CS \jobname
   } else {
     panic!("Failed to lookup installed meaning!");
   }
 
-  let looked_up_meaning = { state.lookup_meaning(&T_CS!("\\foobar")).unwrap().into_owned() };
+  let looked_up_meaning = {
+    state
+      .lookup_meaning(&T_CS!("\\foobar"))
+      .unwrap()
+      .into_owned()
+  };
   {
-    state.assign_meaning(&T_CS!("\\foolet"), looked_up_meaning.clone(), Some(Scope::Local));
+    state.assign_meaning(
+      &T_CS!("\\foolet"),
+      looked_up_meaning.clone(),
+      Some(Scope::Local),
+    );
   }
-  assert_eq!(state.lookup_meaning(&T_CS!("\\foolet")).as_deref(), Some(&looked_up_meaning), "Meanings match");
+  assert_eq!(
+    state.lookup_meaning(&T_CS!("\\foolet")).as_deref(),
+    Some(&looked_up_meaning),
+    "Meanings match"
+  );
 }
 
 #[test]

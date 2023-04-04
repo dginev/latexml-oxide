@@ -14,13 +14,19 @@ lazy_static! {
 // #   postset => boolean
 // #   deferretract=>boolean
 fn prepare_equation_counter(options: HashMap<String, Stored>, state: &mut State) {
-  state.assign_value("EQUATION_NUMBERING", Stored::HashStored(options), Some(Scope::Global));
+  state.assign_value(
+    "EQUATION_NUMBERING",
+    Stored::HashStored(options),
+    Some(Scope::Global),
+  );
 }
 
 fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
-  let ctr = if let Some(Stored::HashStored(ref mut numbering)) = state.lookup_value_mut("EQUATION_NUMBERING") {
+  let ctr = if let Some(Stored::HashStored(ref mut numbering)) =
+    state.lookup_value_mut("EQUATION_NUMBERING")
+  {
     numbering.insert("in_equation".to_owned(), true.into());
     // MaybePeekLabel();
     is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
@@ -42,11 +48,25 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
     tags.insert("preset".to_owned(), true.into());
     state.assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
   } else {
-    state.assign_value("EQUATIONROW_TAGS", Stored::HashStored(HashMap::default()), Some(Scope::Global));
+    state.assign_value(
+      "EQUATIONROW_TAGS",
+      Stored::HashStored(HashMap::default()),
+      Some(Scope::Global),
+    );
   }
   let gullet = stomach.get_gullet_mut();
-  state.let_i(&T_CS!("\\@@ENDDISPLAYMATH"), T_CS!("\\lx@eDM@in@equation"), None, gullet);
-  state.let_i(&T_CS!("\\@@BEGINDISPLAYMATH"), T_CS!("\\lx@bDM@in@equation"), None, gullet);
+  state.let_i(
+    &T_CS!("\\@@ENDDISPLAYMATH"),
+    T_CS!("\\lx@eDM@in@equation"),
+    None,
+    gullet,
+  );
+  state.let_i(
+    &T_CS!("\\@@BEGINDISPLAYMATH"),
+    T_CS!("\\lx@bDM@in@equation"),
+    None,
+    gullet,
+  );
   Ok(())
 }
 
@@ -71,17 +91,22 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
             && matches!(tags.get("preset"), Some(&Stored::Bool(true)))))
       {
         retract_equation(state);
-      } else if matches!(numbering.get("postset"), Some(&Stored::Bool(true))) && matches!(tags.get("reset"), Some(&Stored::Bool(true))) {
+      } else if matches!(numbering.get("postset"), Some(&Stored::Bool(true)))
+        && matches!(tags.get("reset"), Some(&Stored::Bool(true)))
+      {
         //   AssignValue(EQUATIONROW_TAGS => {
         //       ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global'); }
         unimplemented!();
-      } else if !matches!(tags.get("reset"), Some(&Stored::Bool(true))) && matches!(numbering.get("numbered"), Some(&Stored::Bool(true))) {
+      } else if !matches!(tags.get("reset"), Some(&Stored::Bool(true)))
+        && matches!(numbering.get("numbered"), Some(&Stored::Bool(true)))
+      {
         tags_numbered_update = true;
       }
     }
   }
 
-  if let Some(Stored::HashStored(ref mut numbering)) = state.lookup_value_mut("EQUATION_NUMBERING") {
+  if let Some(Stored::HashStored(ref mut numbering)) = state.lookup_value_mut("EQUATION_NUMBERING")
+  {
     numbering.insert("in_equation".to_string(), Stored::Bool(false));
   }
   if tags_numbered_update {
@@ -178,8 +203,11 @@ LoadDefinitions!(state, {
   DefMacro!("\\)", "\\@@ENDINLINEMATH");
 
   // Keep from expanding too early, if in alignments, or such.
-  DefMacro!(T_CS!("\\ensuremath"), None,
-    Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath")));
+  DefMacro!(
+    T_CS!("\\ensuremath"),
+    None,
+    Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
+  );
   DefMacro!("\\@ensuremath{}", sub[gullet, (stuff), state] {
     if state.lookup_bool("IN_MATH") {
       stuff.unlist()

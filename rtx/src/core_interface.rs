@@ -1,13 +1,14 @@
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
-use rustc_hash::{FxHashMap as HashMap};
 
 use rtx_core::common::error::{note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
 use rtx_core::definition::expandable::Expandable;
+use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::state::{Scope, Stored}; // State
@@ -15,13 +16,14 @@ use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
-use rtx_core::digested::Digested;
 // TODO: Clean up these imports -- what belongs where?
 use rtx_core::{fatal, map, s, Core, Debug, Explode, T_CS, T_OTHER, T_SPACE};
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
-use rtx_package::{input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions};
+use rtx_package::{
+  input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
+};
 
 lazy_static! {
   static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();
@@ -65,13 +67,19 @@ impl DigestionAPI for Core {
     state.assign_value("InitialPreloads", true, Some(Scope::Global));
     let mut stomach = self.stomach.write().unwrap();
     for preload in preloads {
-      input_definitions(&preload, InputDefinitionOptions::default(), &mut stomach, state)?;
+      input_definitions(
+        &preload,
+        InputDefinitionOptions::default(),
+        &mut stomach,
+        state,
+      )?;
     }
     state.assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
-  // TODO: We should choose between this function or digest_file, rather than implement twice, right?
+  // TODO: We should choose between this function or digest_file, rather than implement twice,
+  // right?
   fn digest(
     &mut self,
     request: String,
@@ -136,7 +144,12 @@ impl DigestionAPI for Core {
     );
 
     // $self->loadPostamble($options{postamble}) if $options{postamble};
-    input_content(&request, InputOptions::default(), &mut self.stomach.write().unwrap(), &mut self.state)?;
+    input_content(
+      &request,
+      InputOptions::default(),
+      &mut self.stomach.write().unwrap(),
+      &mut self.state,
+    )?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -162,8 +175,12 @@ impl DigestionAPI for Core {
     let mut document = Document::new();
     {
       let state = self.get_state_mut();
-      let paths_stored = state.search_paths.clone(); // TODO: Can we disentangle the ownership to avoid the clone?
-      let schema_paths = paths_stored.iter().map(String::as_str).collect::<Vec<&str>>();
+      // TODO: Can we disentangle the ownership to avoid the clone?
+      let paths_stored = state.search_paths.clone();
+      let schema_paths = paths_stored
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<&str>>();
       let default_model_load = match state.model.schema_data {
         None => true,
         Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
@@ -179,7 +196,12 @@ impl DigestionAPI for Core {
       if !state.search_paths.is_empty() {
         {
           if state.lookup_bool("INCLUDE_COMMENTS") {
-            let paths_string = state.search_paths.iter().map(String::as_str).collect::<Vec<&str>>().join(",");
+            let paths_string = state
+              .search_paths
+              .iter()
+              .map(String::as_str)
+              .collect::<Vec<&str>>()
+              .join(",");
             let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
@@ -219,8 +241,9 @@ impl DigestionAPI for Core {
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
-          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
-          // (TODO: obviously, this could be avoided if they never needed mutable state. When do they?)
+          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+          // state. (TODO: obviously, this could be avoided if they never needed mutable
+          // state. When do they?)
           let mut rewrites = Vec::new();
           for rule in rules {
             if let Stored::Rewrite(mut rewrite_rule) = rule {
@@ -345,7 +368,12 @@ impl DigestionAPI for Core {
     {
       // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
       let mut stomach = self.stomach.write().unwrap();
-      input_content(&request, InputOptions::default(), &mut stomach, &mut self.state)?;
+      input_content(
+        &request,
+        InputOptions::default(),
+        &mut stomach,
+        &mut self.state,
+      )?;
     }
 
     if let Some(preamble) = options.preamble {

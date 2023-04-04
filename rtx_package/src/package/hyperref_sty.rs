@@ -1,302 +1,396 @@
 use crate::package::*;
 LoadDefinitions!(state, {
+  // Some of the requirements not yet applicable/supported in latexml
+  //TODO: RequirePackage!("ltxcmds");
+  //RequirePackage("iftex");
+  //RequirePackage("pdftexcmds");
+  //RequirePackage("infwarerr");
 
-// Some of the requirements not yet applicable/supported in latexml
-//TODO: RequirePackage!("ltxcmds");
-//RequirePackage("iftex");
-//RequirePackage("pdftexcmds");
-//RequirePackage("infwarerr");
+  // This is actually important in practice (arXiv), and its location is sensitive
+  // in a complex document the order between loading keyval.sty and xkeyval.sty
+  // determines the argument patterns to some macros, e.g. \setkeys
+  // so emulating the exact raw .sty order of loading is the only way to ensure
+  // robust conversions in latexml for all files that succeed in pdflatex
+  //TODO: RequirePackage!("keyval");
 
-// This is actually important in practice (arXiv), and its location is sensitive
-// in a complex document the order between loading keyval.sty and xkeyval.sty
-// determines the argument patterns to some macros, e.g. \setkeys
-// so emulating the exact raw .sty order of loading is the only way to ensure
-// robust conversions in latexml for all files that succeed in pdflatex
-//TODO: RequirePackage!("keyval");
+  //TODO: RequirePackage!("kvsetkeys");
+  //TODO: RequirePackage!("kvdefinekeys");
+  //RequirePackage("pdfescape");
+  //RequirePackage("hycolor");
+  //RequirePackage("letltxmacro");
+  //RequirePackage("auxhook");
+  //TODO: RequirePackage!("kvoptions");
+  //RequirePackage("intcalc");
+  //RequirePackage("etexcmds");
+  //TODO: RequirePackage!("nameref");
+  RequirePackage!("url");
+  //TODO: RequirePackage!("bitset");
+  //RequirePackage("atbegshi");
 
-//TODO: RequirePackage!("kvsetkeys");
-//TODO: RequirePackage!("kvdefinekeys");
-//RequirePackage("pdfescape");
-//RequirePackage("hycolor");
-//RequirePackage("letltxmacro");
-//RequirePackage("auxhook");
-//TODO: RequirePackage!("kvoptions");
-//RequirePackage("intcalc");
-//RequirePackage("etexcmds");
-//TODO: RequirePackage!("nameref");
-RequirePackage!("url");
-//TODO: RequirePackage!("bitset");
-//RequirePackage("atbegshi");
+  // Can we load hyperref, to get all it's random sundry definitions?
+  // No, too many weird extra packages loaded.
+  //// InputDefinitions('hyperref', type => 'sty', noltxml => 1);
 
-// Can we load hyperref, to get all it's random sundry definitions?
-// No, too many weird extra packages loaded.
-//// InputDefinitions('hyperref', type => 'sty', noltxml => 1);
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Follow hyperref's manual.pdf
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// Follow hyperref's manual.pdf
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // 3. Package Options
+  // Most (all?) options currently ignored; seen handling at end. But:
+  //  * the various color ones should be used for styling
+  //  * The metadata could be used to augment the RDFa
+  for option in [
+    // 3.1 General Options
+    "draft",
+    "final",
+    "debug",
+    "verbose",
+    "implicit",
+    "hypertexnames",
+    "naturalnames",
+    "a4paper",
+    "a5paper",
+    "b5paper",
+    "letterpaper",
+    "legalpaper",
+    "executivepaper",
+    "setpagesizes",
+    // 3.2 Configuration Options
+    "raiselinks",
+    "breaklinks",
+    "pageanchor",
+    "plainpages",
+    "nesting",
+    // 3.3 Backend Drivers
+    "dvipdfm",
+    "dvipdfmx",
+    "dvips",
+    "dvipsone",
+    "dviwindo",
+    "hypertex",
+    "latex2html",
+    "nativepdf",
+    "pdfmark",
+    "pdftex",
+    "ps2pdf",
+    "tex4ht",
+    "textures",
+    "vtex",
+    "vtexpdfmark",
+    "xetex",
+    // 3.4 Extension Options
+    "extension",
+    "hyperfigures",
+    "backref",
+    "pagebackref",
+    "hyperindex",
+    "pageanchors",
+    "plainpages",
+    "hyperfootnotes",
+    "encap",
+    "linktocpage",
+    "breaklinks",
+    "colorlinks",
+    "linkcolor",
+    "anchorcolor",
+    "citecolor",
+    "filecolor",
+    "menucolor",
+    "pagecolor",
+    "urlcolor",
+    "frenchlinks",
+    // 3.5 PDF-specific display options
+    "bookmarks",
+    "bookmarksopen",
+    "bookmarksopenlevel",
+    "bookmarksnumbered",
+    "bookmarstype",
+    "CJKbookmarks",
+    "pdfhighlight",
+    "citebordercolor",
+    "filebordercolor",
+    "linkbordercolor",
+    "menubordercolor",
+    "pagebordercolor",
+    "urlbordercolor",
+    "runbordercolor",
+    "pdfborder",
+    // 3.6 PDF display and information options
+    "baseurl",
+    "pdfpagemode",
+    "pdfview",
+    "pdfstartpage",
+    "pdfstartview",
+    "pdfpagescrop",
+    "pdfcenterwindow",
+    "pdfdirection",
+    "pdfdisplaydoctitle",
+    "pdfduplex",
+    "pdffitwindow",
+    "pdfmenubar",
+    "pdfnewwindow",
+    "pdfnonfullscreenpagemode",
+    "pdfnumcopies",
+    "pdfpagelayout",
+    "pdfpagelabels",
+    "pdfpagetransition",
+    "pdfpicktrackbypdfsize",
+    "pdfprintarea",
+    "pdfprintclip",
+    "pdfprintpagerange",
+    "pdfprintscaling",
+    "pdftoolbar",
+    "pdfviewarea",
+    "pdfviewclip",
+    "pdfprintpagerange",
+    "pdfprintscaling",
+    "pdftoolbar",
+    "pdfviewarea",
+    "pdfviewclip",
+    "pdfwindowui",
+    "unicode",
+    // PDF display and information options that provide interesting Metadata
+    "pdftitle",
+    "pdfauthor",
+    "pdfsubject",
+    "pdfcreator",
+    "pdfproducer",
+    "pdfkeywords",
+    "pdflang",
+  ] {
+    DeclareOption!(option, None);
+  }
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// 3. Package Options
-// Most (all?) options currently ignored; seen handling at end. But:
-//  * the various color ones should be used for styling
-//  * The metadata could be used to augment the RDFa
-for option in [    // 3.1 General Options
-  "draft", "final", "debug", "verbose", "implicit", "hypertexnames", "naturalnames",
-  "a4paper", "a5paper", "b5paper", "letterpaper", "legalpaper", "executivepaper", "setpagesizes",
-  // 3.2 Configuration Options
-  "raiselinks", "breaklinks", "pageanchor", "plainpages", "nesting",
-  // 3.3 Backend Drivers
-  "dvipdfm", "dvipdfmx", "dvips", "dvipsone", "dviwindo", "hypertex", "latex2html",
-  "nativepdf", "pdfmark", "pdftex", "ps2pdf", "tex4ht", "textures", "vtex", "vtexpdfmark", "xetex",
-  // 3.4 Extension Options
-  "extension", "hyperfigures", "backref", "pagebackref", "hyperindex",
-  "pageanchors", "plainpages", "hyperfootnotes", "encap", "linktocpage",
-  "breaklinks", "colorlinks", "linkcolor", "anchorcolor", "citecolor", "filecolor",
-  "menucolor", "pagecolor", "urlcolor", "frenchlinks",
-  // 3.5 PDF-specific display options
-  "bookmarks", "bookmarksopen", "bookmarksopenlevel", "bookmarksnumbered", "bookmarstype",
-  "CJKbookmarks", "pdfhighlight", "citebordercolor", "filebordercolor", "linkbordercolor",
-  "menubordercolor", "pagebordercolor", "urlbordercolor", "runbordercolor", "pdfborder",
-  // 3.6 PDF display and information options
-  "baseurl", "pdfpagemode", "pdfview", "pdfstartpage", "pdfstartview", "pdfpagescrop",
-  "pdfcenterwindow", "pdfdirection", "pdfdisplaydoctitle", "pdfduplex", "pdffitwindow",
-  "pdfmenubar", "pdfnewwindow", "pdfnonfullscreenpagemode", "pdfnumcopies",
-  "pdfpagelayout", "pdfpagelabels", "pdfpagetransition", "pdfpicktrackbypdfsize",
-  "pdfprintarea", "pdfprintclip", "pdfprintpagerange", "pdfprintscaling", "pdftoolbar",
-  "pdfviewarea", "pdfviewclip", "pdfprintpagerange", "pdfprintscaling",
-  "pdftoolbar", "pdfviewarea", "pdfviewclip", "pdfwindowui", "unicode",
-  // PDF display and information options that provide interesting Metadata
-  "pdftitle", "pdfauthor", "pdfsubject", "pdfcreator", "pdfproducer", "pdfkeywords", "pdflang"]
-{
-  DeclareOption!(option, None);
-}
+  // \hypersetup{keyvals} configures various parameters,
+  // for each pdf keyword, provide [property,(content|resource),datatype]
+  // our %pdfkey_property = (
+  //   baseurl     => '',                                 # xmp:BaseURL ??
+  //   pdfauthor   => ['dcterms:creator',  'content'],
+  //   pdfkeywords => ['dcterms:subject',  'content'],    # & pdf:Keywords
+  //   pdflang     => ['dcterms:language', 'content'],
+  //   pdfproducer => '',                                 # pdf:Producer & xmp:CreatorTool
+  //   pdfsubject  => ['dcterms:subject', 'content'],
+  //   pdftitle    => ['dcterms:title',   'content'],
+  //   # Include hyperxmp's keywords, as well.
+  //   pdfauthortitle   => '',                                # photoshop:AuthorsPosition
+  //   pdfcaptionwriter => '',                                # photoshop:CaptionWriter !?!?!?
+  //   pdfcopyright     => ['dcterms:rights', 'content'],     # & xmpRights:Marked
+  //   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:WebStatement
+  //   pdfmetalang      => '',                                # dcterms:language ??
+  // );
+  // date=>dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
+  // document identifier => xmlMM:DocumentID
+  // file format => dcterms:format
+  // LaTeX file name => dcterms:source
 
-// \hypersetup{keyvals} configures various parameters,
-// for each pdf keyword, provide [property,(content|resource),datatype]
-// our %pdfkey_property = (
-//   baseurl     => '',                                 # xmp:BaseURL ??
-//   pdfauthor   => ['dcterms:creator',  'content'],
-//   pdfkeywords => ['dcterms:subject',  'content'],    # & pdf:Keywords
-//   pdflang     => ['dcterms:language', 'content'],
-//   pdfproducer => '',                                 # pdf:Producer & xmp:CreatorTool
-//   pdfsubject  => ['dcterms:subject', 'content'],
-//   pdftitle    => ['dcterms:title',   'content'],
-//   # Include hyperxmp's keywords, as well.
-//   pdfauthortitle   => '',                                # photoshop:AuthorsPosition
-//   pdfcaptionwriter => '',                                # photoshop:CaptionWriter !?!?!?
-//   pdfcopyright     => ['dcterms:rights', 'content'],     # & xmpRights:Marked
-//   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:WebStatement
-//   pdfmetalang      => '',                                # dcterms:language ??
-// );
-// date=>dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
-// document identifier => xmlMM:DocumentID
-// file format => dcterms:format
-// LaTeX file name => dcterms:source
+  //DefKeyVal('Hyp', 'baseurl', 'Semiverbatim');
 
-//DefKeyVal('Hyp', 'baseurl', 'Semiverbatim');
+  // sub hyperref_setoption {
+  //   my ($key, $value) = @_;
+  //   AssignMapping('Hyperref_options', $key, $value);
+  //   if ($key eq 'baseurl') {
+  //     AssignValue(BASE_URL => ToString($value)); }
+  //   return; }
 
-// sub hyperref_setoption {
-//   my ($key, $value) = @_;
-//   AssignMapping('Hyperref_options', $key, $value);
-//   if ($key eq 'baseurl') {
-//     AssignValue(BASE_URL => ToString($value)); }
-//   return; }
+  // # Digest & store the options;
+  // # Some are useful properties for generating RDFa
+  // # This can appear anywhere in the doc, including preamble.
+  // # Note also that the last value for any given key replaces previous ones! (eg.ONE author entry)
+  // DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
+  //     my ($stomach, $kv) = @_;
+  //     my @pairs = $kv->getPairs;
+  //     while (@pairs) {
+  //       my ($key, $value) = (shift(@pairs), shift(@pairs));
+  //       hyperref_setoption($key, Digest($value)); }
+  //     return; });
 
-// # Digest & store the options;
-// # Some are useful properties for generating RDFa
-// # This can appear anywhere in the doc, including preamble.
-// # Note also that the last value for any given key replaces previous ones! (eg.ONE author entry)
-// DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
-//     my ($stomach, $kv) = @_;
-//     my @pairs = $kv->getPairs;
-//     while (@pairs) {
-//       my ($key, $value) = (shift(@pairs), shift(@pairs));
-//       hyperref_setoption($key, Digest($value)); }
-//     return; });
+  // PushValue('@at@end@document', T_CS('\@add@PDF@RDFa@triples'));
 
-// PushValue('@at@end@document', T_CS('\@add@PDF@RDFa@triples'));
+  // DefConstructor('\@add@PDF@RDFa@triples', sub {
+  //     my ($document, $xproperty, $content) = @_;
+  //     if (my $root = $document->getDocument->documentElement) {
+  //       foreach my $key (LookupMappingKeys('Hyperref_options')) {
+  //         if (my $entry = ($pdfkey_property{$key})) {
+  //           my ($property, $object, $datatype) = @$entry;
+  //           my $value = LookupMapping('Hyperref_options', $key);
+  //           my $node  = $document->openElementAt($root, 'ltx:rdf',
+  //             property => $property, $object => $value,
+  //             ($datatype ? (datatype => $datatype) : ()));
+  //           # Must do directly; $document->setAttribute omits empty attributes
+  //           $node->setAttribute(about => '');
+  //           $document->closeElementAt($node); } } } });
 
-// DefConstructor('\@add@PDF@RDFa@triples', sub {
-//     my ($document, $xproperty, $content) = @_;
-//     if (my $root = $document->getDocument->documentElement) {
-//       foreach my $key (LookupMappingKeys('Hyperref_options')) {
-//         if (my $entry = ($pdfkey_property{$key})) {
-//           my ($property, $object, $datatype) = @$entry;
-//           my $value = LookupMapping('Hyperref_options', $key);
-//           my $node  = $document->openElementAt($root, 'ltx:rdf',
-//             property => $property, $object => $value,
-//             ($datatype ? (datatype => $datatype) : ()));
-//           # Must do directly; $document->setAttribute omits empty attributes
-//           $node->setAttribute(about => '');
-//           $document->closeElementAt($node); } } } });
+  // Need some work here!?!?
+  DefMacro!("\\pdfcatalog{}", None);
+  DefRegister!("\\pdfcompresslevel", Number::new(0));
 
-// Need some work here!?!?
-DefMacro!("\\pdfcatalog{}", None);
-DefRegister!("\\pdfcompresslevel", Number::new(0));
+  // #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // # Additional User Macros
 
-// #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// # Additional User Macros
+  // \href{url}{text}
+  DefMacro!("\\href HyperVerbatim {}", "\\@@Url\\href{}{}{#1}{#2}");
 
-// \href{url}{text}
-DefMacro!("\\href HyperVerbatim {}", "\\@@Url\\href{}{}{#1}{#2}");
+  // \url{url} from url.sty... well sorta
+  // It's slightly different in that it expands the argument
+  // Redefine \@url to sanitize the argument less
+  DefMacro!("\\@Url Token", sub[gullet,(cmd),state] {
+    let open = gullet.read_token(state).unwrap();
+    state.begin_semiverbatim(Some(&['%']));
+    state.let_i(&T_CS!("~"), T_OTHER!("~"), None, gullet); // Needs special protection?
+    state.let_i(&T_CS!("\\~"), T_OTHER!("~"), None, gullet); // Needs special protection?
+    let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        gullet.read_balanced(true, state)?.unwrap_or_default()) // Expand as we go!
+    } else {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        Tokens!(T_OTHER!(open.get_string())) )
+    };
+    state.end_semiverbatim()?;
+    let toks : Vec<Token> = url.unlist().into_iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      // Identical with url's \@Url except, let CS's through!
+      .map(|t| if t.get_catcode() == Catcode::CS { t } else { T_OTHER!(t.get_string())})
+      .collect();
+    let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
+    url_wrapped.extend(toks.clone());
+    url_wrapped.push(T_CS!("\\UrlRight"));
+    let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
+        Tokens!(T_OTHER!(cmd.to_string())),
+        Tokens!(open),
+        Tokens!(close),
+        Tokens::new(toks),
+        Tokens::new(url_wrapped)], gullet)?.unlist();
+    invocation_tokens.push(T_CS!("\\endgroup"));
+    Tokens::new(invocation_tokens)
+  });
 
-// \url{url} from url.sty... well sorta
-// It's slightly different in that it expands the argument
-// Redefine \@url to sanitize the argument less
-DefMacro!("\\@Url Token", sub[gullet,(cmd),state] {
-  let open = gullet.read_token(state).unwrap();
-  state.begin_semiverbatim(Some(&['%']));
-  state.let_i(&T_CS!("~"), T_OTHER!("~"), None, gullet); // Needs special protection?
-  state.let_i(&T_CS!("\\~"), T_OTHER!("~"), None, gullet); // Needs special protection?
-  let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
-    ( T_OTHER!("{"), T_OTHER!("}"),
-      gullet.read_balanced(true, state)?.unwrap_or_default()) // Expand as we go!
-  } else {
-    ( T_OTHER!("{"), T_OTHER!("}"),
-      Tokens!(T_OTHER!(open.get_string())) )
-  };
-  state.end_semiverbatim()?;
-  let toks : Vec<Token> = url.unlist().into_iter()
-    .filter(|t| t.get_catcode() != Catcode::SPACE)
-    // Identical with url's \@Url except, let CS's through!
-    .map(|t| if t.get_catcode() == Catcode::CS { t } else { T_OTHER!(t.get_string())})
-    .collect();
-  let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
-  url_wrapped.extend(toks.clone());
-  url_wrapped.push(T_CS!("\\UrlRight"));
-  let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
-      Tokens!(T_OTHER!(cmd.to_string())),
-      Tokens!(open),
-      Tokens!(close),
-      Tokens::new(toks),
-      Tokens::new(url_wrapped)], gullet)?.unlist();
-  invocation_tokens.push(T_CS!("\\endgroup"));
-  Tokens::new(invocation_tokens)
-});
+  // \nolinkurl{url}
+  DefConstructor!("\\nolinkurl Semiverbatim", "#1");
 
-// \nolinkurl{url}
-DefConstructor!("\\nolinkurl Semiverbatim", "#1");
-
-// \hyperbaseurl{url}
-DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[stomach,(url),state] {
+  // \hyperbaseurl{url}
+  DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[stomach,(url),state] {
   AssignValue!("BASE_URL" => url.to_string()); });
 
-// \hyperimage{imageurl}{text}
-DefConstructor!("\\hyperimage Semiverbatim {}", "<ltx:graphic graphic='#1' description='#2'/>");
+  // \hyperimage{imageurl}{text}
+  DefConstructor!(
+    "\\hyperimage Semiverbatim {}",
+    "<ltx:graphic graphic='#1' description='#2'/>"
+  );
 
-DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
-// # 2 argument form
-// DefConstructor('\hyperref@@ii OptionalSemiverbatim {}',
-//   "<ltx:ref labelref='#label'>#2</ltx:ref>",
-//   properties => sub { (label => CleanLabel($_[1])); });
-// # 4 argument form
-// DefConstructor('\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim',
-//   "<ltx:ref href='#href'>#4</ltx:ref>",
-//   properties => sub {
-//     (href => ComposeURL(LookupValue('BASE_URL'), $_[1],
-//         CleanID(ToString($_[2]) . '.' . ToString($_[3])))); });
+  DefMacro!("\\hyperref", "\\@ifnextchar[\\hyperref@@ii\\hyperref@@iv");
+  // # 2 argument form
+  // DefConstructor('\hyperref@@ii OptionalSemiverbatim {}',
+  //   "<ltx:ref labelref='#label'>#2</ltx:ref>",
+  //   properties => sub { (label => CleanLabel($_[1])); });
+  // # 4 argument form
+  // DefConstructor('\hyperref@@iv Semiverbatim Semiverbatim Semiverbatim Semiverbatim',
+  //   "<ltx:ref href='#href'>#4</ltx:ref>",
+  //   properties => sub {
+  //     (href => ComposeURL(LookupValue('BASE_URL'), $_[1],
+  //         CleanID(ToString($_[2]) . '.' . ToString($_[3])))); });
 
-// DefConstructor('\htmlref Semiverbatim  Semiverbatim',
-//   "<ltx:ref labelref='#label'>#1</ltx:ref>",
-//   properties => sub { (label => CleanLabel($_[2])); });
+  // DefConstructor('\htmlref Semiverbatim  Semiverbatim',
+  //   "<ltx:ref labelref='#label'>#1</ltx:ref>",
+  //   properties => sub { (label => CleanLabel($_[2])); });
 
-// # \hyperlink{name}{text}
-// DefConstructor('\hyperlink Semiverbatim {}',
-//   "<ltx:ref idref='#1'>#2</ltx:ref>",
-//   properties => sub { (id => CleanID($_[1])); });
-// DefMacro('\hyper@@link{}{}{}', '\hyperlink{#2}{#3}');
+  // # \hyperlink{name}{text}
+  // DefConstructor('\hyperlink Semiverbatim {}',
+  //   "<ltx:ref idref='#1'>#2</ltx:ref>",
+  //   properties => sub { (id => CleanID($_[1])); });
+  // DefMacro('\hyper@@link{}{}{}', '\hyperlink{#2}{#3}');
 
-// sub localized_anchor {
-//   my ($document, $whatsit) = @_;
-//   my $model      = $STATE->getModel;
-//   my $node       = $document->getNode;
-//   my @candidates = ($node);
-//   my $candidate;
-//   while ($candidate = pop(@candidates)) {
-//     my $type = $candidate->nodeType;
-//     if ($type == XML_ELEMENT_NODE) {
-//       last if ($model->canContain('ltx:anchor', $model->getNodeQName($candidate)));
-//       unshift(@candidates, $candidate->childNodes); }
-//     elsif ($type = XML_TEXT_NODE) {
-//       last; } }
-//   my $id = $whatsit->getProperty('id');
-//   if ($candidate) {
-//     my $anchor = $document->wrapNodes('ltx:anchor', $candidate);
-//     $anchor->setAttribute('xml:id', $id);
-//     $document->closeNode($anchor) if $document->isOpen($anchor); }
-//   else {
-//     Error("No available insertion point for ltx:anchor, failing \\hypertarget to $id"); }
-//   return; }
+  // sub localized_anchor {
+  //   my ($document, $whatsit) = @_;
+  //   my $model      = $STATE->getModel;
+  //   my $node       = $document->getNode;
+  //   my @candidates = ($node);
+  //   my $candidate;
+  //   while ($candidate = pop(@candidates)) {
+  //     my $type = $candidate->nodeType;
+  //     if ($type == XML_ELEMENT_NODE) {
+  //       last if ($model->canContain('ltx:anchor', $model->getNodeQName($candidate)));
+  //       unshift(@candidates, $candidate->childNodes); }
+  //     elsif ($type = XML_TEXT_NODE) {
+  //       last; } }
+  //   my $id = $whatsit->getProperty('id');
+  //   if ($candidate) {
+  //     my $anchor = $document->wrapNodes('ltx:anchor', $candidate);
+  //     $anchor->setAttribute('xml:id', $id);
+  //     $document->closeNode($anchor) if $document->isOpen($anchor); }
+  //   else {
+  //     Error("No available insertion point for ltx:anchor, failing \\hypertarget to $id"); }
+  //   return; }
 
-// # \hyperdef{category}{name}{text}
-// DefConstructor('\hyperdef Semiverbatim Semiverbatim Semiverbatim',
-//   "#3",
-//   afterConstruct => \&localized_anchor,
-//   properties     => sub { (id => CleanID(ToString($_[1]) . '.' . ToString($_[2]))); });
-// # \hypertarget{name}{text}
-// DefConstructor('\hypertarget Semiverbatim {}', '#2',
-//   afterConstruct => \&localized_anchor,
-//   properties     => sub { (id => CleanID(ToString($_[1]))); });
+  // # \hyperdef{category}{name}{text}
+  // DefConstructor('\hyperdef Semiverbatim Semiverbatim Semiverbatim',
+  //   "#3",
+  //   afterConstruct => \&localized_anchor,
+  //   properties     => sub { (id => CleanID(ToString($_[1]) . '.' . ToString($_[2]))); });
+  // # \hypertarget{name}{text}
+  // DefConstructor('\hypertarget Semiverbatim {}', '#2',
+  //   afterConstruct => \&localized_anchor,
+  //   properties     => sub { (id => CleanID(ToString($_[1]))); });
 
-// # Should create an anchor with automatically chosen name;
-// # But it's to be used where LaTeXML already would have created an anchor & link...
-// # Should leverage
-DefMacro!("\\phantomsection", None);
+  // # Should create an anchor with automatically chosen name;
+  // # But it's to be used where LaTeXML already would have created an anchor & link...
+  // # Should leverage
+  DefMacro!("\\phantomsection", None);
 
-Let!("\\footref", "\\ref");    // ?
+  Let!("\\footref", "\\ref"); // ?
 
-DefConditional!("\\ifHy@stoppedearly");
-DefConditional!("\\ifHy@typexml");
-DefConditional!("\\ifHy@activeanchor");
-DefConditional!("\\ifHy@backref");
-DefConditional!("\\ifHy@bookmarks");
-DefConditional!("\\ifHy@bookmarksnumbered");
-DefConditional!("\\ifHy@bookmarksopen");
-DefConditional!("\\ifHy@breaklinks");
-DefConditional!("\\ifHy@pdfcenterwindow");
-DefConditional!("\\ifHy@CJKbookmarks");
-DefConditional!("\\ifHy@colorlinks");
-DefConditional!("\\ifHy@destlabel");
-DefConditional!("\\ifHy@draft");
-Let!("\\Hy@finaltrue",  "\\Hy@draftfalse");
-Let!("\\Hy@finalfalse", "\\Hy@drafttrue");
-DefConditional!("\\ifHy@pdfescapeform");
-DefConditional!("\\ifHy@hyperfigures");
-DefConditional!("\\ifHy@pdffitwindow");
-DefConditional!("\\ifHy@frenchlinks");
-DefConditional!("\\ifHy@hyperfootnotes");
-DefConditional!("\\ifHy@hyperindex");
-DefConditional!("\\ifHy@hypertexnames");
-DefConditional!("\\ifHy@implicit");
-DefConditional!("\\ifHy@linktocpage");
-DefConditional!("\\ifHy@localanchorname");
-DefConditional!("\\ifHy@pdfmenubar");
-DefConditional!("\\ifHy@naturalnames");
-DefConditional!("\\ifHy@nesting");
-DefConditional!("\\ifHy@pdfnewwindowset");
-DefConditional!("\\ifHy@pdfnewwindow");
-DefConditional!("\\ifHy@ocgcolorlinks");
-DefConditional!("\\ifHy@pageanchor");
-DefConditional!("\\ifHy@pdfpagelabels");
-DefConditional!("\\ifHy@pdfstring");
-DefConditional!("\\ifHy@plainpages");
-DefConditional!("\\ifHy@psize");
-DefConditional!("\\ifHy@raiselinks");
-DefConditional!("\\ifHy@seminarslides");
-DefConditional!("\\ifHy@setpagesize");
-DefConditional!("\\ifHy@texht");
-DefConditional!("\\ifHy@psdextra");
-DefConditional!("\\ifHy@pdftoolbar");
-DefConditional!("\\ifHy@unicode");
-DefConditional!("\\ifHy@pdfusetitle");
-DefConditional!("\\ifHy@verbose");
-Let!("\\Hy@debugtrue",  "\\Hy@verbosetrue");
-Let!("\\Hy@debugfalse", "\\Hy@verbosefalse");
-DefConditional!("\\ifHy@pdfwindowui");
-DefConditional!("\\ifHy@pdfdisplaydoctitle");
-DefConditional!("\\ifHy@pdfa");
-RawTeX!(r###"
+  DefConditional!("\\ifHy@stoppedearly");
+  DefConditional!("\\ifHy@typexml");
+  DefConditional!("\\ifHy@activeanchor");
+  DefConditional!("\\ifHy@backref");
+  DefConditional!("\\ifHy@bookmarks");
+  DefConditional!("\\ifHy@bookmarksnumbered");
+  DefConditional!("\\ifHy@bookmarksopen");
+  DefConditional!("\\ifHy@breaklinks");
+  DefConditional!("\\ifHy@pdfcenterwindow");
+  DefConditional!("\\ifHy@CJKbookmarks");
+  DefConditional!("\\ifHy@colorlinks");
+  DefConditional!("\\ifHy@destlabel");
+  DefConditional!("\\ifHy@draft");
+  Let!("\\Hy@finaltrue", "\\Hy@draftfalse");
+  Let!("\\Hy@finalfalse", "\\Hy@drafttrue");
+  DefConditional!("\\ifHy@pdfescapeform");
+  DefConditional!("\\ifHy@hyperfigures");
+  DefConditional!("\\ifHy@pdffitwindow");
+  DefConditional!("\\ifHy@frenchlinks");
+  DefConditional!("\\ifHy@hyperfootnotes");
+  DefConditional!("\\ifHy@hyperindex");
+  DefConditional!("\\ifHy@hypertexnames");
+  DefConditional!("\\ifHy@implicit");
+  DefConditional!("\\ifHy@linktocpage");
+  DefConditional!("\\ifHy@localanchorname");
+  DefConditional!("\\ifHy@pdfmenubar");
+  DefConditional!("\\ifHy@naturalnames");
+  DefConditional!("\\ifHy@nesting");
+  DefConditional!("\\ifHy@pdfnewwindowset");
+  DefConditional!("\\ifHy@pdfnewwindow");
+  DefConditional!("\\ifHy@ocgcolorlinks");
+  DefConditional!("\\ifHy@pageanchor");
+  DefConditional!("\\ifHy@pdfpagelabels");
+  DefConditional!("\\ifHy@pdfstring");
+  DefConditional!("\\ifHy@plainpages");
+  DefConditional!("\\ifHy@psize");
+  DefConditional!("\\ifHy@raiselinks");
+  DefConditional!("\\ifHy@seminarslides");
+  DefConditional!("\\ifHy@setpagesize");
+  DefConditional!("\\ifHy@texht");
+  DefConditional!("\\ifHy@psdextra");
+  DefConditional!("\\ifHy@pdftoolbar");
+  DefConditional!("\\ifHy@unicode");
+  DefConditional!("\\ifHy@pdfusetitle");
+  DefConditional!("\\ifHy@verbose");
+  Let!("\\Hy@debugtrue", "\\Hy@verbosetrue");
+  Let!("\\Hy@debugfalse", "\\Hy@verbosefalse");
+  DefConditional!("\\ifHy@pdfwindowui");
+  DefConditional!("\\ifHy@pdfdisplaydoctitle");
+  DefConditional!("\\ifHy@pdfa");
+  RawTeX!(
+    r###"
 \Hy@backreffalse
 \Hy@bookmarksnumberedfalse
 \Hy@bookmarksopenfalse
@@ -330,152 +424,219 @@ RawTeX!(r###"
 \Hy@pdftoolbartrue
 \Hy@typexmlfalse
 \Hy@unicodetrue
-"###);
-DefMacro!("\\@bookmarksopenlevel", "\\maxdimen");
-// This only approximates the "contextual label" that should precede the number,
-// and ignores the user-definable macros.
-// But, we normally defer such bookkeeping until postprocessing....sigh
-// TODO: The star forms prevent nested double links.
-DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
-  "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref') show='autoref' labelref='#label' _force_font='true'/>",
+"###
+  );
+  DefMacro!("\\@bookmarksopenlevel", "\\maxdimen");
+  // This only approximates the "contextual label" that should precede the number,
+  // and ignores the user-definable macros.
+  // But, we normally defer such bookkeeping until postprocessing....sigh
+  // TODO: The star forms prevent nested double links.
+  DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
+  "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
+    show='autoref' labelref='#label' _force_font='true'/>",
   properties => sub[_stomach, args, _state] {
     let refarg = &args[1];
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
   });
 
-DefMacro!("\\lx@autorefnum@@{}", sub[gullet,(ttype),state] {
-  let type_s  = ttype.unwrap().to_string();
-  let mut tokens = if state.lookup_definition(&T_CS!(s!("\\{type_s}autorefname"))).is_some() {
-    vec![T_CS!(format!("\\{type_s}autorefname")), T_CS!("\\nobreakspace")]
-  } else {
-    Vec::new()
-  };
+  DefMacro!("\\lx@autorefnum@@{}", sub[gullet,(ttype),state] {
+    let type_s  = ttype.unwrap().to_string();
+    let mut tokens = if state.lookup_definition(&T_CS!(s!("\\{type_s}autorefname"))).is_some() {
+      vec![T_CS!(format!("\\{type_s}autorefname")), T_CS!("\\nobreakspace")]
+    } else {
+      Vec::new()
+    };
 
-  let counter = LookupMapping!("counter_for_type",&type_s);
-  let stored_type_s = Stored::String(type_s);
-  let counter = counter.unwrap_or(&stored_type_s);
-  let counter_str = counter.to_string();
-  let pcounter = T_CS!(s!("\\p@{counter_str}",));
-  let thecounter = T_CS!(s!("\\the{counter_str}"));
-  if state.lookup_definition(&pcounter).is_some() {
-    tokens.push(pcounter);
-  }
-  tokens.push(thecounter);
-  Tokens::new(tokens)
-});
+    let counter = LookupMapping!("counter_for_type",&type_s);
+    let stored_type_s = Stored::String(type_s);
+    let counter = counter.unwrap_or(&stored_type_s);
+    let counter_str = counter.to_string();
+    let pcounter = T_CS!(s!("\\p@{counter_str}",));
+    let thecounter = T_CS!(s!("\\the{counter_str}"));
+    if state.lookup_definition(&pcounter).is_some() {
+      tokens.push(pcounter);
+    }
+    tokens.push(thecounter);
+    Tokens::new(tokens)
+  });
 
-Let!("\\HyOrg@addtoreset", "\\@addtoreset");
-Let!("\\H@refstepcounter", "\\refstepcounter");
+  Let!("\\HyOrg@addtoreset", "\\@addtoreset");
+  Let!("\\H@refstepcounter", "\\refstepcounter");
 
-AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
+  AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
 
-// Blech...
-DefMacro!(T_CS!("\\@itemiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@itemiiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@itemiiiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@itemivautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@itemvautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@itemviautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\enumiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\enumiiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\enumiiiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\enumivautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@desciautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@desciiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@desciiiautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@descivautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@descvautorefname"), None, T_CS!("\\itemautorefname"));
-DefMacro!(T_CS!("\\@descviautorefname"), None, T_CS!("\\itemautorefname"));
+  // Blech...
+  DefMacro!(
+    T_CS!("\\@itemiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@itemiiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@itemiiiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@itemivautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@itemvautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@itemviautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\enumiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\enumiiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\enumiiiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\enumivautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@desciautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@desciiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@desciiiautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@descivautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@descvautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
+  DefMacro!(
+    T_CS!("\\@descviautorefname"),
+    None,
+    T_CS!("\\itemautorefname")
+  );
 
-// Covered in LaTeX.pool, but non-ref character is ignored.
-// \ref*{label}
-// \pageref*{label}
+  // Covered in LaTeX.pool, but non-ref character is ignored.
+  // \ref*{label}
+  // \pageref*{label}
 
-// I wonder if this is good enough for our context?
-// \pdfstringdef{macroname}{texstring}
-DefMacro!("\\pdfstringdef{Token}{}", "\\def#1{#2}");
-// Hopefully noop is sufficient for PDF-specific uses?
-DefMacro!("\\pdfstringdefDisableCommands", "");
-DefMacro!("\\pdfbookmark[]{}{}",           "");
-DefMacro!("\\currentpdfbookmark{}{}",      "");
-DefMacro!("\\subpdfbookmark{}{}",          "");
-DefMacro!("\\belowpdfbookmark{}{}",        "");
+  // I wonder if this is good enough for our context?
+  // \pdfstringdef{macroname}{texstring}
+  DefMacro!("\\pdfstringdef{Token}{}", "\\def#1{#2}");
+  // Hopefully noop is sufficient for PDF-specific uses?
+  DefMacro!("\\pdfstringdefDisableCommands", "");
+  DefMacro!("\\pdfbookmark[]{}{}", "");
+  DefMacro!("\\currentpdfbookmark{}{}", "");
+  DefMacro!("\\subpdfbookmark{}{}", "");
+  DefMacro!("\\belowpdfbookmark{}{}", "");
 
-//======================================================================
-// 4.1 Replacement macros
+  //======================================================================
+  // 4.1 Replacement macros
 
-// \texorpdfstring{TeXString}{PDFstring}
-DefMacro!("\\texorpdfstring{}{}", "#1");
+  // \texorpdfstring{TeXString}{PDFstring}
+  DefMacro!("\\texorpdfstring{}{}", "#1");
 
-// if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
-//   Let('\pdfstringdefPreHook', '\@empty'); }
-// if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
-//   Let('\pdfstringdefPostHook', '\@gobble'); }
+  // if (!IsDefined(T_CS("\\pdfstringdefPreHook"))) {
+  //   Let('\pdfstringdefPreHook', '\@empty'); }
+  // if (!IsDefined(T_CS("\\pdfstringdefPostHook"))) {
+  //   Let('\pdfstringdefPostHook', '\@gobble'); }
 
-//======================================================================
-// 4.2 Utility macros
-// \hypercalcbp{dimen}
-// DefMacro('\hypercalcbp{Dimension}', sub {
-//     my ($gullet, $dimen) = @_;
-//     Explode($dimen->valueOf / $STATE->convertUnit('bp')); });
+  //======================================================================
+  // 4.2 Utility macros
+  // \hypercalcbp{dimen}
+  // DefMacro('\hypercalcbp{Dimension}', sub {
+  //     my ($gullet, $dimen) = @_;
+  //     Explode($dimen->valueOf / $STATE->convertUnit('bp')); });
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// 5 Acrobat-specific behaviour
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // 5 Acrobat-specific behaviour
 
-// \Acrobatmenu{menuoption}{text}
-// These create buttons that activate Acrobat Reader or Exchange actions.
-// It's doubtful that they have meaningful analogs in our context?
-DefMacro!("\\Acrobatmenu{}{}", "[#1 Button: #2]");
+  // \Acrobatmenu{menuoption}{text}
+  // These create buttons that activate Acrobat Reader or Exchange actions.
+  // It's doubtful that they have meaningful analogs in our context?
+  DefMacro!("\\Acrobatmenu{}{}", "[#1 Button: #2]");
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// 6 PDF and HTML forms
-// hmm... we might actually want to do this?
-// But, we need schema support!
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // 6 PDF and HTML forms
+  // hmm... we might actually want to do this?
+  // But, we need schema support!
 
-//----------------------------------------------------------------------
-// Fields:
-// \TextField[parameters]{label}
-// \CheckBox[parameters]{label}
-// \ChoiceMenu[parameters]{label}{choices}
-// \PushButton[parameters]{label}
-// \Submit[parameters]{label}
-// \Reset[parameters]{label}
-//----------------------------------------------------------------------
-// Layout:
-//  typically:  "#1 #2"
-// \LayoutTextField{label}{field}
-// \LayoutChoiceField{label}{field}
-// \LayoutCheckField{label}{field}
-//----------------------------------------------------------------------
-// What to show
-// \MakeRadioField{width}{height}
-// \MakeCheckField{width}{height}
-// \MakeChoiceField{width}{height}
-// \MakeButtonField{text}
+  //----------------------------------------------------------------------
+  // Fields:
+  // \TextField[parameters]{label}
+  // \CheckBox[parameters]{label}
+  // \ChoiceMenu[parameters]{label}{choices}
+  // \PushButton[parameters]{label}
+  // \Submit[parameters]{label}
+  // \Reset[parameters]{label}
+  //----------------------------------------------------------------------
+  // Layout:
+  //  typically:  "#1 #2"
+  // \LayoutTextField{label}{field}
+  // \LayoutChoiceField{label}{field}
+  // \LayoutCheckField{label}{field}
+  //----------------------------------------------------------------------
+  // What to show
+  // \MakeRadioField{width}{height}
+  // \MakeCheckField{width}{height}
+  // \MakeChoiceField{width}{height}
+  // \MakeButtonField{text}
 
-//======================================================================
-// 6.1 Forms environment parameters
-//   action   URL
-//   encoding name
-//   method   name (post|get)
-//======================================================================
-// 6.2 Forms optional parameters
-//  [a bunch] colors, events, etc; See the doc when we actually support.
+  //======================================================================
+  // 6.1 Forms environment parameters
+  //   action   URL
+  //   encoding name
+  //   method   name (post|get)
+  //======================================================================
+  // 6.2 Forms optional parameters
+  //  [a bunch] colors, events, etc; See the doc when we actually support.
 
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// hyperref uses KeyVals for options!
-// until we come up with a nice, clean formal scheme, just hack through...
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // hyperref uses KeyVals for options!
+  // until we come up with a nice, clean formal scheme, just hack through...
 
-// #### ProcessOptions();
-// # Note that hyperref uses keyval + kvoptions
-// if (my $options = LookupValue('opt@hyperref.sty')) {
-//   foreach my $option (@$options) {
-//     if ($option eq 'colorlinks') {
-//       RequirePackage('color'); }
-//     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
-//       hyperref_setoption($key, $value); } } }
+  // #### ProcessOptions();
+  // # Note that hyperref uses keyval + kvoptions
+  // if (my $options = LookupValue('opt@hyperref.sty')) {
+  //   foreach my $option (@$options) {
+  //     if ($option eq 'colorlinks') {
+  //       RequirePackage('color'); }
+  //     elsif (my ($key, $value) = $option =~ /^(.*?)\s*=\s*(.*?)$/) {
+  //       hyperref_setoption($key, $value); } } }
 
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 \def\HyLang@afrikaans{%
   \def\equationautorefname{Vergelyking}%
   \def\footnoteautorefname{Voetnota}%
@@ -678,7 +839,7 @@ RawTeX!(r###"
 }
 % For now...
 \HyLang@english
-"###);
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+"###
+  );
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });

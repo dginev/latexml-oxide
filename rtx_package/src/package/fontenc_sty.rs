@@ -131,7 +131,10 @@ LoadDefinitions!(stomach, state, {
             MergeFont!(encoding => encoding.to_string());
           }
         } else {
-          let message = s!("Only strings should be stored as font encoding names, at: {:?}", encoding_stored);
+          let message = s!(
+            "Only strings should be stored as font encoding names, at: {:?}",
+            encoding_stored
+          );
           Error!("fontenc", "font_encodings", stomach, state, message);
         }
       }

@@ -92,15 +92,18 @@ macro_rules! rule {
   ($name:ident = $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)?) => {
     let $name = match grammar!().rule(None, &[$($parts),+]) {
       Ok(r) => r,
-      Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
+      Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})",
+        stringify!($name), stringify!($($parts),+), e)
     };
     builder!().rule($name.rule());
     register!($name, $($parts)+ $(=> $action)?$(=> $fn)?);
   };
-  ($name:ident = $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)? | $($($moreparts:ident)+ $(=> $moreaction:block)?$(=> $morefn:ident)?)|+) => {
+  ($name:ident = $($parts:ident)+ $(=> $action:block)?$(=> $fn:ident)? |
+    $($($moreparts:ident)+ $(=> $moreaction:block)?$(=> $morefn:ident)?)|+) => {
     let $name = match grammar!().rule(None, &[$($parts),+]) {
       Ok(r) => r,
-      Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
+      Err(e) => panic!("Failed to instantiate rule \"{} ={}\" ({:?})",
+        stringify!($name), stringify!($($parts),+), e)
     };
     builder!().rule($name.rule());
     register!($name, $($parts)+ $(=> $action)?$(=> $fn)?);
@@ -110,7 +113,8 @@ macro_rules! rule {
   ($name:ident += $($parts:ident)+$(=> $action:block)?$(=> $fn:ident)?) => {
     let subrule = match grammar!().rule(Some($name), &[$($parts),+]) {
       Ok(r) => r,
-      Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
+      Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})",
+        stringify!($name), stringify!($($parts),+), e)
     };
     builder!().rule(subrule.rule());
     register!(subrule, $($parts)+ $(=> $action)?$(=> $fn)?);
@@ -119,7 +123,8 @@ macro_rules! rule {
     $($($moreparts:ident)+ $(=> $moreaction:block)?$(=> $morefn:ident)?)|+) => {
     let subrule = match grammar!().rule(Some($name), &[$($parts),+]) {
       Ok(r) => r,
-      Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})", stringify!($name), stringify!($($parts),+), e)
+      Err(e) => panic!("Failed to instantiate subrule \"{} = {}\" ({:?})",
+        stringify!($name), stringify!($($parts),+), e)
     };
     builder!().rule(subrule.rule());
     register!(subrule, $($parts)+ $(=> $action)?$(=> $fn)?);
@@ -145,7 +150,8 @@ macro_rules! token {
   };
   ($name:ident ~ $literal:literal) => {
     let literal_piece = grammar!().literal_string(None, $literal)?;
-    let $name = grammar!().rule(None, &[literal_piece, lexeme_sep!(), lex_plus!(), lexeme_sep!(), d_plus!(),ws_char!()])?;
+    let $name = grammar!().rule(None,
+      &[literal_piece, lexeme_sep!(), lex_plus!(), lexeme_sep!(), d_plus!(),ws_char!()])?;
     builder!().token($name.rule());
   };
   ($name:ident = [ $($part:ident)+ ]) => {

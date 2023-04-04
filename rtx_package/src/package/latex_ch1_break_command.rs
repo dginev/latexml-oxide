@@ -35,6 +35,9 @@ LoadDefinitions!(state, {
     "\\@centercr",
     r"\ifhmode\unskip\else\@nolnerr\fi\par\@ifstar{\nobreak\@xcentercr}\@xcentercr"
   );
-  DefMacro!("\\@xcentercr", r"\addvspace{-\parskip}\@ifnextchar[\@icentercr\ignorespaces");
+  DefMacro!(
+    "\\@xcentercr",
+    r"\addvspace{-\parskip}\@ifnextchar[\@icentercr\ignorespaces"
+  );
   DefMacro!("\\@icentercr[]", "\\vskip #1\\ignorespaces");
 });

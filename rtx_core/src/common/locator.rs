@@ -48,7 +48,13 @@ impl fmt::Display for Locator {
 }
 
 impl Locator {
-  pub fn new(source: String, from_line: usize, from_column: usize, to_line: usize, to_column: usize) -> Self {
+  pub fn new(
+    source: String,
+    from_line: usize,
+    from_column: usize,
+    to_line: usize,
+    to_column: usize,
+  ) -> Self {
     Locator {
       source,
       from_line,
@@ -71,7 +77,13 @@ impl Locator {
     } else {
       (to.from_line, to.from_column)
     };
-    Some(Locator::new(from.source, from.from_line, from.from_column, to_line, to_column))
+    Some(Locator::new(
+      from.source,
+      from.from_line,
+      from.from_column,
+      to_line,
+      to_column,
+    ))
   }
 
   pub fn is_range(&self) -> bool { self.to_line > 0 || self.to_column > 0 }

@@ -93,14 +93,14 @@ macro_rules! end_state_frame {
 macro_rules! WithInnerState {
   ($body: block, $inner_state:ident) => {{
     BindInnerState!($inner_state);
-    #[allow(unused_variables,clippy::unused_unit)]
+    #[allow(unused_variables, clippy::unused_unit)]
     let macro_out = $body;
     end_state_frame!();
     macro_out
   }};
   ($body: block, $stomach:ident, $inner_state:ident) => {{
     BindInnerState!($stomach, $inner_state);
-    #[allow(unused_variables,clippy::unused_unit)]
+    #[allow(unused_variables, clippy::unused_unit)]
     let macro_out = $body;
     end_state_frame!();
     macro_out
@@ -161,11 +161,19 @@ macro_rules! DefParameterTypeWO {
   ($name:ident, $param:expr) => {
     bind_state_mut!(st);
     // pub type $name = Tokens;
-    st.assign_mapping("PARAMETER_TYPES", stringify!($name), Some(Stored::Parameter(Arc::new($param))))
+    st.assign_mapping(
+      "PARAMETER_TYPES",
+      stringify!($name),
+      Some(Stored::Parameter(Arc::new($param))),
+    )
   };
   ($name:ident, $param:expr, $state_arg:ident) => {
     // pub type $name = Tokens;
-    $state_arg.assign_mapping("PARAMETER_TYPES", stringify!($name), Some(Stored::Parameter(Arc::new($param))))
+    $state_arg.assign_mapping(
+      "PARAMETER_TYPES",
+      stringify!($name),
+      Some(Stored::Parameter(Arc::new($param))),
+    )
   };
 }
 
@@ -287,8 +295,8 @@ macro_rules! LookupColor {
 //   my ($name, $color, $scope) = @_;
 //   return unless ref $color;
 //   my ($model, @spec) = @$color;
-//   $scope = 'global' if $STATE->lookupDefinition(T_CS('\ifglobalcolors')) && IfCondition(T_CS('\ifglobalcolors'));
-//   AssignValue('color_' . $name => $color, $scope);
+//   $scope = 'global' if $STATE->lookupDefinition(T_CS('\ifglobalcolors')) &&
+// IfCondition(T_CS('\ifglobalcolors'));   AssignValue('color_' . $name => $color, $scope);
 //   # We could store these pieces separately,or in a list for above,
 //   # so that extract could use them more reasonably?
 //   # This is perhaps too xcolor specific?
@@ -344,11 +352,13 @@ macro_rules! DefMathLigature {
     let attr = defi_opts!(@munch ($($input)*) -> {MathLigatureOptions,});
     let chars    = $pattern.chars().rev().collect::<Vec<_>>();
     let ntomatch = chars.len();
-    let matcher : Option<LigatureMatcher> = Some(Arc::new(move |_document: &mut Document, node_opt: &mut Node, lstate:&State| {
+    let matcher : Option<LigatureMatcher> = Some(Arc::new(
+      move |_document: &mut Document, node_opt: &mut Node, lstate:&State| {
       let mut node : Node;
       let mut node_mut = node_opt;
       for c in chars.iter() {
-        if lstate.model.get_node_qname(node_mut) != "ltx:XMTok" || node_mut.get_content() != c.to_string() {
+        if lstate.model.get_node_qname(node_mut) != "ltx:XMTok" ||
+           node_mut.get_content() != c.to_string() {
           return Ok(None);
         }
         if let Some(sibling) = node_mut.get_prev_sibling() {
@@ -377,35 +387,41 @@ macro_rules! DefMathLigature {
   (matcher => sub[$document:ident, $node:ident, $statev:ident] $code:block) => {{
     bind_state_mut!(st);
     let id = st.generate_ligature_id();
-    let matcher : Option<LigatureMatcher> = Some(Arc::new(|$document: &mut Document, $node: &mut Node, $statev: &State| $code));
-    st.unshift_value("MATH_LIGATURES", vec![Ligature {
-      id,
-      matcher,
-      code: None,
-      font_test: None,
-      regex: None,
-    }]);
+    let matcher : Option<LigatureMatcher> = Some(Arc::new(
+      |$document: &mut Document, $node: &mut Node, $statev: &State| $code));
+      st.unshift_value("MATH_LIGATURES", vec![Ligature {
+        id,
+        matcher,
+        code: None,
+        font_test: None,
+        regex: None,
+      }]);
   }};
 }
 
 #[macro_export]
 macro_rules! DefConditional(
   // test with explicit arguments can get typed at compile-time
-  ($proto:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    compile_prototype_for_typed_conditional!($proto, sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*)
+  ($proto:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_conditional!($proto, sub [ $gullet, ( $($var),* ), $inner_state ]
+      $body $($input)*)
   }};
   // test is always a rust closure
-  ($proto:literal, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($proto:literal, sub [ $gullet:ident, $args:ident, $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
-    let test : ConditionalClosure = Arc::new(move |$gullet, mut $args, $inner_state| { WithInnerState!($body, $inner_state).into_bool_result() });
+    let test : ConditionalClosure = Arc::new(move |$gullet, mut $args, $inner_state| {
+      WithInnerState!($body, $inner_state).into_bool_result() });
     defi_conditional!(cs, paramlist, Some(test), options);
   }};
   // other shorthand cases
   ($proto:literal, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
-    let test : ConditionalClosure = Arc::new(move |_gullet, _args, _inner_state| { WithInnerState!($body, _inner_state).into_bool_result() });
+    let test : ConditionalClosure = Arc::new(move |_gullet, _args, _inner_state| {
+      WithInnerState!($body, _inner_state).into_bool_result() });
     defi_conditional!(cs, paramlist, Some(test), options);
   }};
   ($proto:literal $($input:tt)*) => {{
@@ -423,11 +439,13 @@ macro_rules! DefConditional(
 #[macro_export]
 macro_rules! TypedConditional {
   ($cs:literal, $these_parameters:ident,
-      sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
+      sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ]
+      $body:block $($input:tt)*) => {{
 
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     #[allow(unused_mut,unused_variables)]
-    let closure : ConditionalClosure =  Arc::new(move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+    let closure : ConditionalClosure =  Arc::new(
+    move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,
@@ -499,30 +517,38 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Arc::new(|_stomach: &mut Stomach, _args: Vec<ArgWrap>, inner_state: &mut State| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::default(), inner_state).into_digested_result()
+    let closure : PrimitiveClosure = Arc::new(
+      |_stomach: &mut Stomach, _args: Vec<ArgWrap>, inner_state: &mut State| {
+      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::default(), inner_state)
+        .into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);
   }};
   // closure with literal prototype
-  ($proto:literal, sub[$stomach_arg:ident,  ( $($var:ident),* ), $state_arg:ident] $body:block $($input:tt)*) => {{
-    compile_prototype_for_typed_primitive!($proto, sub [ $stomach_arg, ( $($var),* ), $state_arg ] $body $($input)*)
+  ($proto:literal, sub[$stomach_arg:ident,  ( $($var:ident),* ), $state_arg:ident]
+    $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_primitive!($proto, sub [ $stomach_arg, ( $($var),* ), $state_arg ]
+      $body $($input)*)
   }};
   // Case: closure pattern replacement
-  ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
+  ($proto:expr, sub[$stomach_arg:ident, $args:ident, $state_arg:ident]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
-      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
-    });
+    let closure : PrimitiveClosure = Arc::new(
+      move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
+        WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
+      });
     defi_primitive!(cs, params, Some(closure), options);
   }};
   // Case: cs-noparams with closure pattern replacement
-  ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($input:tt)*) => {{
+  ($cs:expr, None, sub[$stomach_arg:ident, $args:ident, $state_arg:ident]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Arc::new(move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
-      WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
-    });
+    let replacement_closure = Arc::new(
+      move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
+        WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
+      });
     defi_primitive!($cs, None, Some(replacement_closure), options);
   }};
   // Case: no replacement
@@ -542,9 +568,10 @@ macro_rules! DefPrimitive {
     #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure =  Arc::new(move |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| {
-      WithInnerState!($body, stomach, state).into_digested_result()
-    });
+    let replacement_closure =  Arc::new(
+      move |stomach: &mut Stomach, args: Vec<ArgWrap>, state: &mut State| {
+        WithInnerState!($body, stomach, state).into_digested_result()
+      });
     defi_primitive!(cs, params, Some(replacement_closure), options);
   }};
   // Case: direct closure provided (for reasons of reusing the same closure in several definitions)
@@ -561,10 +588,12 @@ macro_rules! DefPrimitive {
 #[macro_export]
 macro_rules! TypedPrimitive {
   ($cs:literal, $these_parameters:ident ,
-      sub [ $stomach_arg:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
+      sub [ $stomach_arg:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ]
+      $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     #[allow(unused_mut,unused_variables)]
-    let replacement_closure =  Arc::new(move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+    let replacement_closure =  Arc::new(
+    move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
       $(
           let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
             Ok(v) => v,
@@ -637,8 +666,8 @@ macro_rules! LookupRegisterOrDefault {
 //     if ($defn->isRegister) {    # Easy (and proper) case.
 //       return $defn->valueOf; }
 //     else {
-//       $STATE->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start with empty mouth
-//           my ($gullet) = @_;
+//       $STATE->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start
+// with empty mouth           my ($gullet) = @_;
 //           $gullet->unread($cs);    # but put back tokens to be read
 //           return $gullet->readDimension; }); } }
 //   else {
@@ -658,29 +687,33 @@ macro_rules! LookupRegisterOrDefault {
 // Options are:
 //   bounded         : any side effects of before/after daemans are bounded; they are
 //                     automatically enclosed by bgroup/egroup pair.
-//   mode            : causes a switch into the given mode during the Whatsit building in the stomach.
-//   reversion       : a string representing the preferred TeX form of the invocation.
-//   beforeDigest    : code to be executed (in the stomach) before parsing & constructing the Whatsit.
-//                     Can be used for changing modes, beginning groups, etc.
-//   afterDigest     : code to be executed (in the stomach) after parsing & constructing the Whatsit.
-//                     useful for setting Whatsit properties,
+//   mode            : causes a switch into the given mode during the Whatsit building in the
+// stomach.   reversion       : a string representing the preferred TeX form of the invocation.
+//   beforeDigest    : code to be executed (in the stomach) before parsing & constructing the
+// Whatsit.                     Can be used for changing modes, beginning groups, etc.
+//   afterDigest     : code to be executed (in the stomach) after parsing & constructing the
+// Whatsit.                     useful for setting Whatsit properties,
 //   properties      : a hashref listing default values of properties to assign to the Whatsit.
 //                     These properties can be used in the constructor.
-
+#[rustfmt::skip]
 #[macro_export]
 macro_rules! DefConstructor {
   // Closure replacement flavors
-  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
+    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(
+      replacement!($document, $args, $props, $inner_state, $body)));
     let (cs, params) = parse_prototype!($proto);
     defi_constr!(cs, params, compiled_replacement, options);
   }};
-  ($proto:literal, sub [ $document:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($proto:literal, sub [ $document:ident, $args:ident, $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let props : ConstructorOptions;
-    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(replacement!($document, $args, props, $inner_state, $body)));
+    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(
+      replacement!($document, $args, props, $inner_state, $body)));
     let (cs, params) = parse_prototype!($proto);
     defi_constr!(cs, params, compiled_replacement, options);
   }};
@@ -689,7 +722,8 @@ macro_rules! DefConstructor {
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let props : ConstructorOptions;
     let args : Option<Parameters> = None;
-    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(replacement!($document, args, props, $inner_state, $body)));
+    let compiled_replacement : Option<ReplacementClosure> = Some(Arc::new(
+      replacement!($document, args, props, $inner_state, $body)));
     let (cs, params) = parse_prototype!($proto);
     defi_constr!(cs, params, compiled_replacement, options);
   }};
@@ -702,13 +736,17 @@ macro_rules! DefConstructor {
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block, $($input:tt)+) => {{
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident]
+    $body:block, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
+    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(
+      replacement!($document, $args, $props, $inner_state, $body)));
     defi_constr!($cs, $parameters, compiled_replacement, options);
   }};
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident ] $body:block) => {{
-    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(replacement!($document, $args, $props, $inner_state, $body)));
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident, $inner_state:ident]
+    $body:block) => {{
+    let compiled_replacement : Option<ReplacementClosure>= Some(Arc::new(
+      replacement!($document, $args, $props, $inner_state, $body)));
     defi_constr!($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
   //  Pre-parsed prototype; Literal replacement flavors
@@ -1015,7 +1053,12 @@ macro_rules! Invocation {
     Invocation!($token, $args, $gullet, st)
   }};
   ($token:expr, $args:expr, $gullet:expr, $state_arg:ident) => {
-    build_invocation($token, $args.into_iter().map(Into::into).collect(), $gullet, $state_arg)
+    build_invocation(
+      $token,
+      $args.into_iter().map(Into::into).collect(),
+      $gullet,
+      $state_arg,
+    )
   };
 }
 #[macro_export]
@@ -1034,7 +1077,7 @@ macro_rules! DefLigature {
       vec![Ligature {
         id: new_ligature_id,
         regex: Some($regex.to_string()),
-        code: Some(Arc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string())),
+        code: Some(Arc::new(move |text|regex_compiled.replace_all(text, $replacement).to_string())),
         font_test: test_closure,
         matcher: None,
       }],
@@ -1052,7 +1095,7 @@ macro_rules! DefLigature {
       vec![Ligature {
         id: new_ligature_id,
         regex: Some($regex.to_string()),
-        code: Some(Arc::new(move |text| regex_compiled.replace_all(text, $replacement).to_string())),
+        code: Some(Arc::new(move |text|regex_compiled.replace_all(text, $replacement).to_string())),
         font_test: None,
         matcher: None,
       }],
@@ -1077,21 +1120,22 @@ macro_rules! DefAccent {
     bind_state_mut!(st);
     DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
   }};
-  ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr, $state_arg: ident) => {{
+  ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr, $state: ident) => {{
     if $options.contains_key("below") {
       $options.entry(String::from("above")).or_insert(Stored::Bool(true));
     }
     // Used for converting a char used as an above-accent to a combining char (See \accent)
     if $options.contains_key("above") {
-      $state_arg.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
+      $state.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
     } else {
-      $state_arg.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
+      $state.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
     let accent_proto = concat!($accent,"{}");
     DefPrimitive!(&accent_proto, sub[stomach, letter, inner_state] {
       let letter = letter.remove(0).owned_tokens().unwrap();
       let letter_str = letter.to_string();
-      let invoked = Invocation!(T_CS!($accent), vec![letter], stomach.get_gullet_mut(), inner_state)?;
+      let invoked = Invocation!(T_CS!($accent), vec![letter],
+        stomach.get_gullet_mut(), inner_state)?;
       $crate::package::tex_accents::apply_accent(
         stomach, &letter_str, $combiningchar, $standalonechar, Some(invoked), inner_state)
     }, mode => "text");
@@ -1379,7 +1423,12 @@ macro_rules! IsDefinable {
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {{
     bind_state_mut!(stmch, st);
-    st.let_i(&T_CS!($token1), T_CS!($token2), None, stmch.get_gullet_mut());
+    st.let_i(
+      &T_CS!($token1),
+      T_CS!($token2),
+      None,
+      stmch.get_gullet_mut(),
+    );
   }};
   // half-packaged args
   ($token1:literal, $token2:expr) => {{
@@ -1452,19 +1501,22 @@ macro_rules! MergeFont {
 // User-facing Argument Parsers
 //============================================
 //
-// There is a lot of "Do What I Mean" logic going on here, to allow binding writers to thoughtlessly use a single DefMacro!()
-// and have:
+// There is a lot of "Do What I Mean" logic going on here, to allow binding writers to thoughtlessly
+// use a single DefMacro!() and have:
 // - the macro machinery auto-wrap the correct union type containers,
 // - auto-compile the various string replacements and prototypes into their rust data structures
-// - auto-build the ExpansionOptions data structure from a Perl-like syntax, and validate it along the way
-//  we're taking things a few pegs further than LaTeXML, as DefMacroI syntax is *included* in DefMacro,
-//  and we have a several places where we get compile-time speedups by pre-tokenizing into Rust Tokens objects / Replacement closures
+// - auto-build the ExpansionOptions data structure from a Perl-like syntax, and validate it along
+//   the way
+//  we're taking things a few pegs further than LaTeXML, as DefMacroI syntax is *included* in
+// DefMacro,  and we have a several places where we get compile-time speedups by pre-tokenizing into
+// Rust Tokens objects / Replacement closures
 
 /// A `$prototype` will be parsed into a command sequence and a list of parameters.
 /// Any macro arguments will be substituted for parameter indicators (eg #1)
 /// in the I<tokens> or tokenized I<string> and the result is used as the expansion
 /// of the control sequence. If I<code> is used, it is called at expansion time
 /// and should return a list of tokens as its result.
+#[rustfmt::skip]
 #[macro_export]
 macro_rules! DefMacro {
   // simplest case - mock macro that discards everything.
@@ -1473,17 +1525,20 @@ macro_rules! DefMacro {
     defi_macro!(cs, params, None, None);
   }};
   // closure with literal prototype
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block $($input:tt)*) => {{
-    compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*)
+  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
+    compile_prototype_for_typed_macro!($prototype, sub [ $gullet, ( $($var),* ), $inner_state ]
+      $body $($input)*)
   }};
   // closure, general form
-  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($proto:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     #[allow(unused_mut)]
-    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
-    )));
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(
+      Arc::new(move |$gullet, mut $args, $inner_state|
+        WithInnerState!($body, $inner_state).into_tokens_result())));
     defi_macro!(cs, params, expansion_closure, Some(options));
   }};
   ($proto:expr, $body:block) => {{
@@ -1503,11 +1558,13 @@ macro_rules! DefMacro {
     defi_macro!(cs, params, compiled_expansion, Some(options));
   }};
   // Internal-level use
-  ($cs:expr, $parameters:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ] $body:block $($input:tt)*) => {{
+  ($cs:expr, $parameters:expr, sub [ $gullet:ident, $args:ident, $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
-      move |$gullet, mut $args, $inner_state| WithInnerState!($body, $inner_state).into_tokens_result()
+      move |$gullet, mut $args, $inner_state|
+      WithInnerState!($body, $inner_state).into_tokens_result()
     )));
     defi_macro!($cs, $parameters, expansion_closure, Some(options));
   }};
@@ -1533,7 +1590,8 @@ macro_rules! DefMacro {
   ($cs:expr, None, $expansion:expr) => {{
     defi_macro!($cs, None, $expansion, None);
   }};
-  ($cs:expr, None, $expansion:expr, $state_arg:ident) => {{ // explicit state, for nested macro factories
+  // explicit state, for nested macro factories
+  ($cs:expr, None, $expansion:expr, $state_arg:ident) => {{
     def_macro($cs, None, $expansion, None, $state_arg);
   }};
   ($cs:expr, None, $expansion:literal, $($input:tt)+) => {{
@@ -1566,7 +1624,8 @@ macro_rules! DefMacro {
 #[macro_export]
 macro_rules! TypedMacro {
   ( $cs:literal, $these_parameters:ident,
-    sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ] $body:block $($input:tt)*) => {{
+    sub [ $gullet:ident, ( $($var:ident),* ):($($ptype:ident),*), $inner_state:ident ]
+    $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     #[allow(unused_mut,unused_variables)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
@@ -1599,7 +1658,6 @@ macro_rules! defi_macro {
     def_macro($cs, $paramlist, $compiled_replacement, $options, $state_arg);
   };
 }
-
 
 /// Defines a register with `value` as the initial value
 /// (a Number, Dimension, Glue, MuGlue or Tokens --- I haven't handled Box's yet).
@@ -1664,12 +1722,14 @@ macro_rules! defi_register {
 macro_rules! NewCounter {
   ($ctr:expr) => (NewCounterWO!($ctr, "", None));
   ($ctr:expr, $within:expr) => (NewCounterWO!($ctr, $within, None));
-  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) => (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*))));
+  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) => (
+    NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*))));
   // with state
   ($ctr:expr, $state_arg:ident) => (NewCounterWO!($ctr, "", None, $state_arg));
   ($ctr:expr, $within:expr, $state_arg:ident) => (NewCounterWO!($ctr, $within, None, $state_arg));
   ($ctr:expr, $within:expr, $($key:ident => $val:expr),*, $state_arg:ident) =>
-    (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)), $state_arg))
+    (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)),
+      $state_arg))
 }
 
 //=====================================================================
@@ -1678,11 +1738,13 @@ macro_rules! NewCounter {
 #[macro_export]
 macro_rules! DefEnvironment {
   // entry points (this is where a macro call starts):
-  ($proto:literal, sub[$document:ident, $args:ident, $props:ident, $state_arg:ident] $body:block, $($input:tt)+ ) => {{
+  ($proto:literal, sub[$document:ident, $args:ident, $props:ident, $state_arg:ident]
+    $body:block, $($input:tt)+ ) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     DefEnvironmentIWO!($proto,
-      Some(Arc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>, $props: &HashMap<String, Stored>, $state_arg: &mut State| {
-        WithInnerState!($body, $state_arg)
+      Some(Arc::new(|$document: &mut Document, $args: &Vec<Option<Digested>>,
+        $props: &HashMap<String, Stored>, $state_arg: &mut State| {
+          WithInnerState!($body, $state_arg)
       })),
       options);
   }};
@@ -1723,20 +1785,29 @@ macro_rules! DefMath(
 
 #[macro_export]
 macro_rules! DefParameterType {
-  ($name:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name).to_string())));
-  ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name, NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
+  ($name:ident) => (DefParameterTypeWO!($name,
+    NewDefault!(Parameter, name => stringify!($name).to_string())));
+  ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name,
+    NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
   ($name:ident, $($key:ident => $value:expr),*)=>(
-    DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)), $($key=>$value),*)));
+    DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
+    $($key=>$value),*)));
   ($name:ident, $($key:ident => $value:expr),*, $state_arg:ident)=>
-    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)), $($key=>$value),*), $state_arg));
+    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
+    $($key=>$value),*), $state_arg));
   // with reader as explicit sub
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
-    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body))));
-  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
-    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
+    DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
+      reader!($gullet, $inner, $extra, $inner_state, $body))));
+  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident]
+    $body:block, $($key:ident => $value:expr),*) => (
+      DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
+        reader!($gullet, $inner, $extra, $inner_state, $body),
       name => Cow::Borrowed(stringify!($name)),  $($key=>$value),*)));
-  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block, $($key:ident => $value:expr),*) => (
-    DefParameterTypeWO!($name, NewDefault!(Parameter, reader => reader!($gullet, $inner, $extra, $inner_state, $body),
+  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident]
+    $body:block, $($key:ident => $value:expr),*) => (
+    DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
+      reader!($gullet, $inner, $extra, $inner_state, $body),
       name => Cow::Borrowed($name),  $($key=>$value),*), $state_arg));
 }
 
@@ -1893,7 +1964,11 @@ macro_rules! DocType {
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{
     let mut model = &mut $state_arg.model;
-    model.set_doc_type($rootelement.to_string(), $pubid.to_string(), $sysid.to_string());
+    model.set_doc_type(
+      $rootelement.to_string(),
+      $pubid.to_string(),
+      $sysid.to_string(),
+    );
     for (prefix, value) in $namespaces.iter() {
       model.register_document_namespace(prefix, Some(value.to_string()));
     }
@@ -2014,15 +2089,23 @@ macro_rules! AddToMacro {
       Warn!("unexpected", $cs, $organ, $state, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
-        // the .clone() call is again avoidable with a careful refactor via e.g. using `.remove_definition` from state
-        // (as we're redefining the macro again), and then use a `.remove_expansion` call on defn?
+        // the .clone() call is again avoidable with a careful refactor via e.g. using
+        // `.remove_definition` from state (as we're redefining the macro again), and then
+        // use a `.remove_expansion` call on defn?
         Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
         Some(ExpansionBody::Closure(_)) => {
           let message = s!(
-            "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! This is usually in error!",
+            "{} has a closure body, AddToMacro will *override* with an ExpandableBody::Tokens ! \
+             This is usually in error!",
             $cs
           );
-          Warn!("unexpected", "ExpandableBody::Closure", $organ, $state, message);
+          Warn!(
+            "unexpected",
+            "ExpandableBody::Closure",
+            $organ,
+            $state,
+            message
+          );
           Vec::new()
         },
         None => Vec::new(),
@@ -2047,7 +2130,13 @@ macro_rules! AddToMacro {
 macro_rules! BeginItemize {
   ($itype:literal, $counter:literal) => {{
     bind_state_mut!(stmch, st);
-    begin_itemize($itype, Some($counter), BeginItemizeOptions::default(), stmch, st)
+    begin_itemize(
+      $itype,
+      Some($counter),
+      BeginItemizeOptions::default(),
+      stmch,
+      st,
+    )
   }};
 }
 
@@ -2069,250 +2158,336 @@ macro_rules! defi_opts {
   };
   // reversion: Option<Reversion>
     // reversion: sub
-  (@munch ( $(,)? reversion $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? reversion $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@reversion (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
+  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ reversion @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
   };
 
   // sizer: Option<SizingClosure>
-  (@munch ( $(,)? sizer $(:)?$(=>)? sub[$whatsit_arg:ident, $state_arg:ident] $body:block $($next:tt)*) ->
+  (@munch ( $(,)? sizer $(:)?$(=>)? sub[$whatsit_arg:ident, $state_arg:ident]
+    $body:block $($next:tt)*) ->
   {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ sizer @ Some(sizersub!($whatsit_arg, $state_arg, $body)) ]})
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [
+      sizer @ Some(sizersub!($whatsit_arg, $state_arg, $body)) ]})
   };
-  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ sizer @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
   };
   // select: literal string
-  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ select @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
   };
   // select_count: literal number
-  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ select_count @ $tokens.into_option() ] })
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ select_count @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select_count @ $tokens.into_option() ] })
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
+      [ select_count @ $tokens.into_option() ] })
   };
   // replace: sub
-  (@munch ( $(,)? replace $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? replace $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@replace (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? replace $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? replace $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@replace ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // xpath: literal string
-  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ xpath @ $tokens.into_option() ] })
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ xpath @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ xpath @ $tokens.into_option() ] })
   };
 
   // mode : Option<TexMode>
-  (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ mode @ $literal.into_option() ] })
+  (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ mode @ $literal.into_option() ] })
   };
   // alias : Option<String>
-  (@munch ( $(,)? alias $(:)?$(=>)? $literal:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ alias @ $literal.into_option() ] })
+  (@munch ( $(,)? alias $(:)?$(=>)? $literal:literal $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ alias @ $literal.into_option() ] })
   };
   // scope: Option<Scope>
-  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
   };
-  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ scope @ $scope.into_option() ] })
   };
   // font: Font
-  (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident, $font_state:ident ] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ Some(FontDirective::Closure(Arc::new(move |$font_whatsit, $font_state| $body))) ] })
+  (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident, $font_state:ident ]
+    $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ font @ Some(FontDirective::Closure(Arc::new(move |$font_whatsit, $font_state| $body))) ] })
   };
-  (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ FontDirective!($($fkey => $fvalue),*) ] })
+  (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ font @ FontDirective!($($fkey => $fvalue),*) ] })
   };
-  (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ font @ $props.map(|v| FontDirective::Asset(Arc::new(v))) ] })
+  (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ font @ $props.map(|v| FontDirective::Asset(Arc::new(v))) ] })
   };
   // properties: PropertiesClosure
-  (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($body) ] })
+  (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ properties @ properties!($body) ] })
   };
   (@munch ( $(,)? properties $(:)?$(=>)?
-      sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] })
+      sub[$stomach_arg:ident, $args:ident, $state_arg:ident] $body:block $($next:tt)*)
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ properties @ properties!($stomach_arg, $args, $state_arg, $body) ] })
   };
-  (@munch ( $(,)? properties $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ properties @ properties!($var) ] })
+  (@munch ( $(,)? properties $(:)?$(=>)? $var:ident $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ properties @ properties!($var) ] })
   };
 
   // before_digest_end: Vec<BeforeDigestClosure>
-  (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest_end (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest_end ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // before_digest: Vec<BeforeDigestClosure>
-  (@munch ( $(,)? before_digest $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_digest $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest: Vec<DigestionClosure>
-  (@munch ( $(,)? after_digest $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_digest $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest_begin: Vec<DigestionClosure>
-  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest_begin (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest_begin $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest_begin ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest_body: Vec<DigestionClosure>
-  (@munch ( $(,)? after_digest_body $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest_body $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest_body (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_digest_body $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_digest_body $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_digest_body ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // before_construct: Vec<ConstructionClosure>
-  (@munch ( $(,)? before_construct $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_construct $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? before_construct $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? before_construct $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@before_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // after_construct: Vec<ConstructionClosure>
-  (@munch ( $(,)? after_construct $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_construct $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_construct $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_construct $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_construct $(:)?$(=>)? $var:ident $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_construct $(:)?$(=>)? $var:ident $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ $var]})
   };
 
   // getter: RegisterGetterClosure
-  (@munch ( $(,)? getter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? getter $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@getter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? getter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? getter $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@getter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // setter: RegisterSetterClosure
-  (@munch ( $(,)? setter $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? setter $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@setter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? setter $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? setter $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@setter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open: Option<Vec<TagConstructionClosure>>
-  (@munch ( $(,)? after_open $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_open $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_open (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_open $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_open $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_open ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open_late: Option<Vec<TagConstructionClosure>>
-  (@munch ( $(,)? after_open_late $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_open_late $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_open_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_open_late $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_open_late $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_open_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_close: Option<Vec<TagConstructionClosure>>
-  (@munch ( $(,)? after_close $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_close $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_close (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_close $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_close $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_close ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_close_late: Option<Vec<TagConstructionClosure>>
-  (@munch ( $(,)? after_close_late $(:)?$(=>)? sub $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_close_late $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_close_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
-  (@munch ( $(,)? after_close_late $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? after_close_late $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@after_close_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // auto_open: Option<bool>
-  (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
   };
   // auto_close: Option<bool>
-  (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]})
   };
 
   // ligature options
   // role: literal string
-  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ role @ Some($literal.to_string()) ] })
+  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ role @ Some($literal.to_string()) ] })
   };
-  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? role $(:)?$(=>)? $literal:literal)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ role @ Some($literal.to_string()) ] })
   };
   // meaning: literal string
-  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ meaning @ Some($literal.to_string()) ] })
+  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ meaning @ Some($literal.to_string()) ] })
   };
-  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ meaning @ Some($literal.to_string()) ] })
+  (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
+      [ meaning @ Some($literal.to_string()) ] })
   };
   // name: literal string
-  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
+  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ name @ Some($literal.to_string()) ] })
   };
-  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? name $(:)?$(=>)? $literal:literal)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
   };
   // for register
   // name: ident
-  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
+  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ name @ Some($idval.to_string()) ] })
   };
-  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
   };
   // for defmath
   // stretchy: bool
-  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
-  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
 
   // misc ident with literal value
-  (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $lit]})
   };
   // misc ident with block value
-  (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $body]})
   };
 
@@ -2321,127 +2496,168 @@ macro_rules! defi_opts {
 
   (@before_digest_end ($body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_digest_end @ before_digest!($body)]})
   };
   (@before_digest_end (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest_end @ before_digest!($stomach_arg, $state_arg, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_digest_end @ before_digest!($stomach_arg, $state_arg, $body)]})
   };
 
   (@before_digest (sub [$stomach_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($stomach_arg, $state_arg, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_digest @ before_digest!($stomach_arg, $state_arg, $body)]})
   };
   (@before_digest ($body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_digest @ before_digest!($body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_digest @ before_digest!($body)]})
   };
   (@after_digest (
-    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
   };
   (@after_digest (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest @ after_digest!(_stomach, _whatsit, _state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest @ after_digest!(_stomach, _whatsit, _state, $body)]})
   };
 
   (@after_digest_begin (
-    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest_begin @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
   };
   (@after_digest_begin (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest_begin @ after_digest!(stomach, whatsit, state, $body)]})
   };
 
   (@after_digest_body (
-    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_body @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest_body @ after_digest!($stomach_arg, $whatsit, $state_arg, $body)]})
   };
   (@after_digest_body (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_digest_body @ after_digest!(stomach, whatsit, state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_digest_body @ after_digest!(stomach, whatsit, state, $body)]})
   };
 
 
   (@before_construct (
-    sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
+    sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
   };
   (@before_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [before_construct @ construct!(document, whatsit, state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_construct @ construct!(document, whatsit, state, $body)]})
   };
 
   (@after_construct (
-    sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
+    sub[$doc:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_construct @ construct!($doc, $whatsit, $state_arg, $body)]})
   };
   (@after_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ construct!(document, whatsit, state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_construct @ construct!(document, whatsit, state, $body)]})
   };
 
   (@getter (
-    sub[$args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!($args, $state_arg, $body)]})
+    sub[$args:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [getter @ getter!($args, $state_arg, $body)]})
   };
   (@getter (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [getter @ getter!(_args, _state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [getter @ getter!(_args, _state, $body)]})
   };
 
   (@setter (
-    sub[$value:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!($value, $args, $state_arg, $body)]})
+    sub[$value:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [setter @ setter!($value, $args, $state_arg, $body)]})
   };
   (@setter (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [setter @ setter!(value, args, state, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [setter @ setter!(value, args, state, $body)]})
   };
   (@after_open (
-    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
+    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_open (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open @ Some(tagsub!(document, node, state, $body)) ]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open @ Some(tagsub!(document, node, state, $body)) ]})
   };
   (@after_open_late (
-    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
+    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_open_late (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_open_late @ Some(tagsub!(document, node, state, $body)) ]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_open_late @ Some(tagsub!(document, node, state, $body)) ]})
   };
   (@after_close (
-    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
+    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* )
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_close (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close @ Some(tagsub!(document, node, state, $body)) ]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close @ Some(tagsub!(document, node, state, $body)) ]})
   };
     (@after_close_late (
-    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
+    sub[$document:ident, $node:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close_late @ Some(tagsub!($document, $node, $state_arg, $body)) ]})
   };
   (@after_close_late (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_close_late @ Some(tagsub!(document, node, state, $body)) ]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_close_late @ Some(tagsub!(document, node, state, $body)) ]})
   };
 
 
   (@replace ($body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [replace @ rewrite_replace_sub!($body)]})
   };
-  (@replace (sub [$document_arg:ident, $node_arg:ident, $state_arg: ident] $body:block $($next:tt)* )
+  (@replace (sub [$document_arg:ident, $node_arg:ident, $state_arg: ident]
+    $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @ rewrite_replace_sub!($document_arg, $node_arg, $state_arg, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @
+      rewrite_replace_sub!($document_arg, $node_arg, $state_arg, $body)]})
   };
   (@reversion (sub [$stomach:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [reversion @ reversion_digested!($stomach, $args, $state_arg, $body)]})
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [reversion @ reversion_digested!($stomach, $args, $state_arg, $body)]})
   };
 }

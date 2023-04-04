@@ -5,11 +5,11 @@ use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::float::Float;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
@@ -19,8 +19,9 @@ use crate::tokens::Tokens;
 use crate::{fatal, Digested, Fatal};
 
 static CONTROLNAME: &[&str] = &[
-  "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO", "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK",
-  "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS", "GS", "RS", "US",
+  "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",
+  "SI", "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB", "CAN", "EM", "SUB", "ESC", "FS",
+  "GS", "RS", "US",
 ];
 
 pub const MOCK_TOKEN: Token = Token {
@@ -216,7 +217,9 @@ impl Catcode {
       // Primitives
       ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE => true,
       // Non-primitive
-      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
+      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => {
+        false
+      },
     }
   }
   ///
@@ -226,7 +229,8 @@ impl Catcode {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
-      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG | SmuggleTHE => false,
+      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG
+      | SmuggleTHE => false,
     }
   }
   ///
@@ -236,7 +240,8 @@ impl Catcode {
       // Neutralizable
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
       // Non-neutralizable
-      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => false,
+      ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS
+      | MARKER | ARG | SmuggleTHE => false,
     }
   }
   ///
@@ -309,9 +314,9 @@ impl Display for Token {
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
-    self.code == other.code && (self.code == Catcode::SPACE ||
-      (*self.text == *other.text)) &&
-      (self.smuggled.is_none() == other.smuggled.is_none())
+    self.code == other.code
+      && (self.code == Catcode::SPACE || (*self.text == *other.text))
+      && (self.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -587,7 +592,13 @@ impl Default for Token {
 /// Accessors.
 impl<'a> Token {
   /// simple Token constructor, wrapping over text and catcode
-  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self { Token { text, code, smuggled: None } }
+  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self {
+    Token {
+      text,
+      code,
+      smuggled: None,
+    }
+  }
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
@@ -698,7 +709,8 @@ impl<'a> Token {
       Catcode::SmuggleTHE => {
         // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
         let msg = s!(
-          "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}",
+          "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. \
+           Illegal: {}",
           &self.stringify()
         );
         Fatal!(Parameter, Unexpected, None, state, msg);
@@ -764,13 +776,19 @@ impl<'a> Token {
     s!("{}[{}]", self.code.short_name(), string)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Arc<Register>> { state.lookup_register_definition(self) }
+  pub fn to_register(&self, state: &State) -> Option<Arc<Register>> {
+    state.lookup_register_definition(self)
+  }
 
   pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i64>().unwrap_or(0)) }
 
-  pub fn to_dimension(&self) -> Dimension { Dimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_dimension(&self) -> Dimension {
+    Dimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0))
+  }
 
-  pub fn to_mu_dimension(&self) -> MuDimension { MuDimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_mu_dimension(&self) -> MuDimension {
+    MuDimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0))
+  }
 
   pub fn to_glue(&self) -> Glue { Glue::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
@@ -778,6 +796,7 @@ impl<'a> Token {
 
   pub fn to_float(&self) -> Float { Float::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
 
-
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> { stomach.digest(Tokens::new(vec![self]), state) }
+  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+    stomach.digest(Tokens::new(vec![self]), state)
+  }
 }

@@ -1,7 +1,8 @@
-///! A variety of traits helpful for auto-casting between the different components of the conversion toolchain
+use rustc_hash::FxHashMap as HashMap;
+///! A variety of traits helpful for auto-casting between the different components of the
+/// conversion toolchain
 use std::borrow::Cow;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
@@ -67,7 +68,9 @@ impl IntoOption<Option<Reversion>> for &str {
     if self.is_empty() {
       Some(Reversion::Tokens(Tokens!()))
     } else {
-      Some(Reversion::Tokens(mouth::tokenize_internal(self).pack_parameters()))
+      Some(Reversion::Tokens(
+        mouth::tokenize_internal(self).pack_parameters(),
+      ))
     }
   }
 }
@@ -110,10 +113,20 @@ impl IntoOption<Option<SizingClosure>> for &str {
       let arg = stripped.parse::<usize>().unwrap_or(1);
       Some(Arc::new(move |w, state| match w.get_arg(arg) {
         Some(arg) => arg.compute_size(HashMap::default(), state),
-        None => Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+        None => Ok((
+          Dimension::default(),
+          Dimension::default(),
+          Dimension::default(),
+        )),
       }))
     } else if self.is_empty() || self == "0" {
-      Some(Arc::new(|_, _| Ok((Dimension::default(), Dimension::default(), Dimension::default()))))
+      Some(Arc::new(|_, _| {
+        Ok((
+          Dimension::default(),
+          Dimension::default(),
+          Dimension::default(),
+        ))
+      }))
     } else {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
@@ -169,7 +182,9 @@ impl IntoTokensResult<Result<Tokens>> for ArgWrap {
 }
 impl IntoTokensResult<Result<Tokens>> for Result<ArgWrap> {
   // TODO: maybe this should be .revert() ?
-  fn into_tokens_result(self) -> Result<Tokens> { self.map(|w| w.owned_tokens().unwrap_or_default()) }
+  fn into_tokens_result(self) -> Result<Tokens> {
+    self.map(|w| w.owned_tokens().unwrap_or_default())
+  }
 }
 
 /// Create a `Result<ArgWrap>` from any concrete type that Gullet may have a reader for.
@@ -333,16 +348,22 @@ impl IntoRegisterValueOption<Option<RegisterValue>> for Option<RegisterValue> {
   fn into_register_value_option(self) -> Option<RegisterValue> { self }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for usize {
-  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(Number(self as i64))) }
+  fn into_register_value_option(self) -> Option<RegisterValue> {
+    Some(RegisterValue::Number(Number(self as i64)))
+  }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for Number {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Number(self)) }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for Dimension {
-  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Dimension(self)) }
+  fn into_register_value_option(self) -> Option<RegisterValue> {
+    Some(RegisterValue::Dimension(self))
+  }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for MuDimension {
-  fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::MuDimension(self)) }
+  fn into_register_value_option(self) -> Option<RegisterValue> {
+    Some(RegisterValue::MuDimension(self))
+  }
 }
 impl IntoRegisterValueOption<Option<RegisterValue>> for Glue {
   fn into_register_value_option(self) -> Option<RegisterValue> { Some(RegisterValue::Glue(self)) }
@@ -364,20 +385,30 @@ pub trait IntoDigestedOptionResult<T>: Sized {
 }
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Glue {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Glue(self).into_digested_option_result() }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    RegisterValue::Glue(self).into_digested_option_result()
+  }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for MuGlue {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::MuGlue(self).into_digested_option_result() }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    RegisterValue::MuGlue(self).into_digested_option_result()
+  }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Dimension {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Dimension(self).into_digested_option_result() }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    RegisterValue::Dimension(self).into_digested_option_result()
+  }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for MuDimension {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::MuDimension(self).into_digested_option_result() }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    RegisterValue::MuDimension(self).into_digested_option_result()
+  }
 }
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Number {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { RegisterValue::Number(self).into_digested_option_result() }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    RegisterValue::Number(self).into_digested_option_result()
+  }
 }
 
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for RegisterValue {
@@ -390,7 +421,9 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Result<Option<Digest
   fn into_digested_option_result(self) -> Result<Option<Digested>> { self }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for KeyVals {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::from(self))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    Ok(Some(Digested::from(self)))
+  }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   fn into_digested_option_result(self) -> Result<Option<Digested>> {
@@ -401,7 +434,9 @@ impl IntoDigestedOptionResult<Result<Option<Digested>>> for Option<KeyVals> {
   }
 }
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for List {
-  fn into_digested_option_result(self) -> Result<Option<Digested>> { Ok(Some(Digested::from(self))) }
+  fn into_digested_option_result(self) -> Result<Option<Digested>> {
+    Ok(Some(Digested::from(self)))
+  }
 }
 
 pub trait IntoPropertiesResult {

@@ -1,5 +1,5 @@
-use rtx_core::state::{State, StateOptions};
 use rtx::util::test::lex_single_tex_formula;
+use rtx_core::state::{State, StateOptions};
 use rtx_math_parser::MathParser;
 
 #[test]
@@ -7,7 +7,13 @@ fn basic_1() {
   let tex = "1+1=2";
   let (lexemes, mut nodes, xmath_opt, mut doc) = lex_single_tex_formula(tex);
   assert!(!lexemes.is_empty());
-  let expected_lexemes = &["NUMBER:1:1", "ADDOP:plus:2", "NUMBER:1:3", "RELOP:equals:4", "NUMBER:2:5"];
+  let expected_lexemes = &[
+    "NUMBER:1:1",
+    "ADDOP:plus:2",
+    "NUMBER:1:3",
+    "RELOP:equals:4",
+    "NUMBER:2:5",
+  ];
   assert_eq!(lexemes, expected_lexemes);
   let expected_xmath_before = &[
     "<XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok>",
@@ -18,7 +24,10 @@ fn basic_1() {
   ];
   let node_str_before: Vec<String> = {
     let xmldoc = doc.get_document();
-    nodes.iter().map(|node| xmldoc.node_to_string(node)).collect()
+    nodes
+      .iter()
+      .map(|node| xmldoc.node_to_string(node))
+      .collect()
   };
 
   assert_eq!(node_str_before, expected_xmath_before);
@@ -33,7 +42,8 @@ fn basic_1() {
   let parsed_tree_opt = parse_tree_opt.unwrap();
   assert!(parsed_tree_opt.is_some());
   let parsed_tree = parsed_tree_opt.unwrap();
-  let parsed_xml_result = parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc, &mut state);
+  let parsed_xml_result =
+    parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc, &mut state);
   assert!(parsed_xml_result.is_ok());
   let parsed_xml = parsed_xml_result.unwrap();
   for mut fnode in doc.findnodes("//*[@_font]", Some(&parsed_xml), &mut state) {
@@ -51,5 +61,8 @@ fn basic_1() {
     "</XMApp>"
   );
 
-  assert_eq!(doc.get_document().node_to_string(&parsed_xml), expected_xmath_after);
+  assert_eq!(
+    doc.get_document().node_to_string(&parsed_xml),
+    expected_xmath_after
+  );
 }

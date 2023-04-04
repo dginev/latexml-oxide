@@ -2,7 +2,8 @@ use crate::package::*;
 lazy_static! {
   static ref LEAD_W_COLON_RE: Regex = Regex::new(r"^(\w+):").unwrap();
   static ref UNTIL_SPEC: Regex = Regex::new("^\\w?Until(\\w*):").unwrap();
-  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex = Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
+  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex =
+    Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
 }
 //=======================
 // -- Main Definitions --
@@ -43,7 +44,7 @@ LoadDefinitions!(outer_state, {
     let token = match token_opt {
       None => {
         Error!("expected", "ExpandedIfToken", gullet, state,
-          "conditional expected a token argument, readXToken came back empty. Falling back to \\@empty");
+          "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty") },
       Some(t) => t
     };
@@ -107,7 +108,11 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!(T_CS!("\\jobname"), None, Tokens!()); // Set to the filename by initialization
 
-  DefMacro!(T_CS!("\\fontname"), None, Tokens::new(Explode!("fontname not implemented")));
+  DefMacro!(
+    T_CS!("\\fontname"),
+    None,
+    Tokens::new(Explode!("fontname not implemented"))
+  );
 
   DefMacro!("\\meaning Token", sub[gullet, (token), state] {
     let mut meaning = String::from("undefined");
@@ -116,11 +121,15 @@ LoadDefinitions!(outer_state, {
     } else {
       state.lookup_meaning(&token).map(|d| d.into_owned())
     } {
-      // First, if this definition is a primitive|conditional|constructor, check to see if it has an alias, which would allow us to work with a token
+      // First, if this definition is a primitive|conditional|constructor,
+      // check to see if it has an alias, which would allow us to work with a token
       let definition : Stored = match definition {
-        Stored::Primitive(primitive) => Stored::Token(primitive.get_cs_or_alias().into_owned()),
-        Stored::Constructor(constructor) => Stored::Token(constructor.get_cs_or_alias().into_owned()),
-        Stored::Conditional(cond) => Stored::Token(cond.get_cs_or_alias().into_owned()),
+        Stored::Primitive(primitive) =>
+          Stored::Token(primitive.get_cs_or_alias().into_owned()),
+        Stored::Constructor(constructor) =>
+          Stored::Token(constructor.get_cs_or_alias().into_owned()),
+        Stored::Conditional(cond) =>
+          Stored::Token(cond.get_cs_or_alias().into_owned()),
         other => other
       };
       // TODO: Also check for fontinfo_ when implemented
@@ -200,7 +209,9 @@ LoadDefinitions!(outer_state, {
                 p_spec = Cow::Owned(s!("#{arg_index}{p_spec}"));
               },
               other => { // regular parameter, increment
-                if param.novalue { // skip the latexml-only requirement params, but only here, since Match also have "novalue" set.
+              // skip the latexml-only requirement params, but only here,
+              // since Match also have "novalue" set.
+                if param.novalue {
                   continue;
                 }
                 arg_index+=1;
@@ -255,7 +266,9 @@ LoadDefinitions!(outer_state, {
       let cc = token.get_catcode();
       if cc == Catcode::CS {
         if let Some(defn) = state.lookup_definition(&token) {
-          let message = s!("The control sequence {:?} should not appear between \\csname and \\endcsname", token);
+          let message =
+            s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
+              token);
           Error!("unexpected", token, gullet, state, message);
         } else {
           let message = s!("The token {:?} is not defined", token);
@@ -360,8 +373,10 @@ LoadDefinitions!(outer_state, {
       // let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
-      //       Error('unexpected', "\\the$cs", $gullet, "You can't use $cs after \\the"); return (); }
-      let defn = rtoken.to_register(state).expect("if a Register parameter provides a token, it must have a Register definition.");
+      //       Error('unexpected', "\\the$cs", $gullet,
+      //     "You can't use $cs after \\the"); return (); }
+      let defn = rtoken.to_register(state)
+        .expect("if a Register parameter provides a token, it must have a Register definition.");
       let value = defn.value_of(inner, state)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
@@ -407,7 +422,11 @@ fn compare(u: Number, rel: Token, v: Number) -> Result<bool> {
   } else if rel == T_OTHER!(">") || rel == T_CS!("\\@@>") {
     Ok(u > v)
   } else {
-    let message = s!("Expected a relational token for comparision. Got {:?} (cc {:?})", rel, rel.get_catcode());
+    let message = s!(
+      "Expected a relational token for comparision. Got {:?} (cc {:?})",
+      rel,
+      rel.get_catcode()
+    );
     Error!("expected", "<relationaltoken>", None, None, message);
     Ok(false)
   }

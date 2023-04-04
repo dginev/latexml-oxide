@@ -1,4 +1,5 @@
 use crate::package::*;
+#[rustfmt::skip]
 LoadDefinitions!(state, {
   //======================================================================
   // C.5.4 The Title Page and Abstract
@@ -10,7 +11,8 @@ LoadDefinitions!(state, {
   DefMacro!("\\@date", "\\@empty");
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
+    r"\def\@date{#1}\
+\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
 
   // TODO: ^
@@ -31,8 +33,7 @@ LoadDefinitions!(state, {
   });
   DefMacro!(
     "\\lx@author{}",
-    "\\lx@count@author\
-     \\@add@frontmatter{ltx:creator}[role=author]{\\lx@author@prefix\\@personname{#1}}"
+    r"\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}"
   );
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
@@ -62,29 +63,27 @@ LoadDefinitions!(state, {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
   });
 
-  DefMacro!("\\@add@conversion@date", "\\@add@frontmatter{ltx:date}[role=creation]{\\today}");
+  DefMacro!(
+    "\\@add@conversion@date",
+    "\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
+  );
 
   // Doesn"t produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
   DefMacro!(
     "\\maketitle",
-    "\\@startsection@hook\
-     \\global\\let\\thanks\\relax\
-     \\global\\let\\maketitle\\relax\
-     \\global\\let\\@maketitle\\relax\
-     \\global\\let\\@thanks\\@empty\
-     \\global\\let\\@author\\@empty\
-     \\global\\let\\@date\\@empty\
-     \\global\\let\\@title\\@empty\
-     \\global\\let\\title\\relax\
-     \\global\\let\\author\\relax\
-     \\global\\let\\date\\relax\
-     \\global\\let\\and\\relax"
+    r"\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
+\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
+\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
+\global\let\author\relax\global\let\date\relax\global\let\and\relax"
   );
 
   DefMacro!("\\@thanks", "\\@empty");
   DefMacro!("\\thanks{}", "\\def\\@thanks{#1}\\lx@make@thanks{#1}");
-  DefConstructor!("\\lx@make@thanks{}", "<ltx:note role='thanks'>#1</ltx:note>");
+  DefConstructor!(
+    "\\lx@make@thanks{}",
+    "<ltx:note role='thanks'>#1</ltx:note>"
+  );
 
   // Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
   // For one thing, we'd like to just write
@@ -115,14 +114,17 @@ LoadDefinitions!(state, {
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     },
     after_digest => sub[stomach, _args, state] {
-      let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
+      let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),
+        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
       let regurgitated = List::new(stomach.regurgitate(), state);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => Fatal!(TexPool, Expected, stomach, state, "Global TeX Frontmatter hash was not available, should never happen"),
+        _ => Fatal!(TexPool, Expected, stomach, state,
+             "Global TeX Frontmatter hash was not available, should never happen"),
       };
       let abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
-      abstr.push(("ltx:abstract".to_string(), Some(string_map!("name" => abstract_title)), regurgitated.into()));
+      abstr.push(("ltx:abstract".to_string(),
+        Some(string_map!("name" => abstract_title)), regurgitated.into()));
       DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
     },
     locked => true,
@@ -163,8 +165,8 @@ LoadDefinitions!(state, {
   // There's a title and other stuff in here, but how could we guess?
   // Well, there's likely to be a sequence of <p><text font="xx" fontsize="yy">...</text></p>
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
-  // Particularly, if they start with a pseudo superscript or other "marker", they're probably affil!
-  // For now, we just give an info message
+  // Particularly, if they start with a pseudo superscript or other "marker", they're probably
+  // affil! For now, we just give an info message
   DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
     // TODO
     // before_digest => sub { Let('\centering', '\relax');

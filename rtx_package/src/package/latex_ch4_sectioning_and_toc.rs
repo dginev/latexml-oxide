@@ -22,13 +22,26 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // These are defined in terms of \@startsection so that
   // casual user redefinitions work, too.
   DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}"); // not locked since sometimes redefined as partition?
+
+  // not locked since sometimes redefined as partition?
+  DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}");
   DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!("\\subsubsection", "\\@startsection{subsubsection}{3}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!(
+    "\\subsubsection",
+    "\\@startsection{subsubsection}{3}{}{}{}{}"
+  ); // TODO: locked => true);
   DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
   DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
-  for tag in &["part", "chapter", "section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
+  for tag in &[
+    "part",
+    "chapter",
+    "section",
+    "subsection",
+    "subsubsection",
+    "paragraph",
+    "subparagraph",
+  ] {
     Tag!(&s!("ltx:{}",tag), auto_close => true);
   }
 
@@ -56,14 +69,16 @@ LoadDefinitions!(outer_stomach, outer_state, {
       };
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
-        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+        tokens = vec![
+          T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if level_int > CounterValue!("secnumdepth", state).value_of() ||
         state.lookup_bool("no_number_sections") {
         // No number, but in TOC
-        tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
+        tokens = vec![
+          T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
@@ -97,16 +112,20 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // "args" and "props" children ... will come back here after performance becomes
       // an issue again
       //
-      // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
-      // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
+      // Part 2: I have now, with great attention and profiling, solidified the position that
+      //       Whatsits are immutable during the absorbtion phase -- and hence
+      // the args and props passed in here will remain immutable in rtx.
       // Hence, for this absorb call to run correctly, it must either:
       // 1) Accept a cloned value as currently, paying with performance
-      // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
-      //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
+      // 2) Accept immutable references to digested objects,
+      // which may lead to far-reaching borrowing constraints
+      //   e.g. unlist()-ing a digested List will have to produce box references,
+      //  rather than provide the owned boxes directly.
       //   would have to experiment with this - as it is of course much lighter on performance
       //
 
-      // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough,
+      // Update 2022: The notes are generally still accurate,
+      // but cloning a Digested object is now cheap enough,
       // as each enum variant is guarded by an Arc reference counter. Arc<Tbox>, Arc<List>, etc.
       if let Some(Stored::Digested(tags)) = props.get("tags") {
         document.absorb(tags, None, state)?;
@@ -139,14 +158,16 @@ LoadDefinitions!(outer_stomach, outer_state, {
       let invoked_title;
       {
         let gullet = stomach.get_gullet_mut();
-        invoked_title = Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens], gullet)?;
+        invoked_title =
+          Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens], gullet)?;
       }
       let xtitle    = stomach.digest(invoked_title, state)?;
 
       let invoked_toctitle;
       {
         let gullet = stomach.get_gullet_mut();
-        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"), vec![stype.revert(state)?, toctitle.revert(state)?], gullet, state)?;
+        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
+          vec![stype.revert(state)?, toctitle.revert(state)?], gullet, state)?;
       }
       let xtoctitle = stomach.digest(invoked_toctitle, state)?;
 
@@ -160,7 +181,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   );
 
   // No tags, at all? Consider...
-  DefConstructor!("\\@@unnumbered@section{} Undigested OptionalUndigested Undigested", sub[document, args, props, state] {
+  DefConstructor!("\\@@unnumbered@section{} Undigested OptionalUndigested Undigested",
+  sub[document, args, props, state] {
       let stype = args[0].as_ref().unwrap();
       let inlist = args[1].as_ref().unwrap();
       // let toctitle_arg = args[2].as_ref();
@@ -192,7 +214,9 @@ LoadDefinitions!(outer_stomach, outer_state, {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        stomach.digest(Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")), state)?
+        stomach.digest(
+          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")),
+          state)?
       } else {
         title.clone()
       };
@@ -202,7 +226,9 @@ LoadDefinitions!(outer_stomach, outer_state, {
         if let Postponed(toctokens) = toctitle.data() {
           if !toctokens.is_empty() {
             let toctitle_digested = stomach.digest(
-              Tokens!(T_CS!("\\@hidden@bgroup"), toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")), state)?;
+              Tokens!(T_CS!("\\@hidden@bgroup"),
+                toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")),
+              state)?;
             props.insert("toctitle".to_string(), toctitle_digested.into());
           }
         }

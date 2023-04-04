@@ -22,8 +22,9 @@ LoadDefinitions!(state, {
       None
     };
     state.clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = stomach.get_gullet_mut().read_x_token(None, false, state)? {
-      stomach.invoke_token(&xtoken, state)?
+    let mut rest = if let Some(xtoken) = stomach.get_gullet_mut()
+      .read_x_token(None, false, state)? {
+        stomach.invoke_token(&xtoken, state)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
       Stored::Digested(rest.remove(0))
@@ -60,16 +61,20 @@ LoadDefinitions!(state, {
         Ok(Tokens!())
       }
     }),
-    // The predigest closure is new for rtx, as it was a single closure in the latexml implementation
-    // The key problem is that in rtx the parameter type interfaces are well-typed, so it is not possible
-    // to remain elegant while at the same time have access to the stomach AND digest.
+    // The predigest closure is new for rtx, as it was a single closure in Perl
+    // The key problem is that in rtx the parameter type interfaces are well-typed,
+    // so it is not possible to remain elegant while at the same time
+    // have access to the stomach AND digest.
     // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,
-    // while early/immediate digestion via the stomach can be achieved by using the separate `reader_predigest` interface
-    // Importantly, reader_predigest forces the parameter to be usable only for stomach-capable bindings,
+    // while early/immediate digestion via the stomach can be achieved
+    // by using the separate `reader_predigest` interface
+    // Importantly, reader_predigest forces the parameter to be usable
+    // only for stomach-capable bindings,
     // namely DefConstructor, DefPrimitive or DefEnvironment
     reader_predigest => reader_predigest!(stomach, key, state, {
       if !key.is_empty() {
-        let mut keyvals = KeyVals::new(KeyValsOptions{skip_missing: true, ..KeyValsOptions::default()}, state);
+        let mut keyvals = KeyVals::new(
+          KeyValsOptions{skip_missing: true, ..KeyValsOptions::default()}, state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
         keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false, state);
         keyvals.into()
@@ -82,13 +87,15 @@ LoadDefinitions!(state, {
   DefParameterType!(HBoxContents, reader => reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyhbox"), state)
     }),
-    reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
+    reader_predigest=>reader_predigest!(stomach, arg, state, {
+      predigest_box_contents(stomach, arg, state) })
   );
 
   DefParameterType!(VBoxContents, reader=>reader!(gullet, _inner, _extra, state, {
       read_box_contents(gullet, state.lookup_tokens("\\everyvbox"), state)
     }),
-    reader_predigest=>reader_predigest!(stomach, arg, state, { predigest_box_contents(stomach, arg, state) })
+    reader_predigest=>reader_predigest!(stomach, arg, state, {
+      predigest_box_contents(stomach, arg, state) })
   );
 
   // This re-binds a number of important control sequences to their default text binding.
@@ -121,8 +128,10 @@ LoadDefinitions!(state, {
       } else {
         String::new()
       };
-      let node = document.open_element(newtag, Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
-      // Note on the clone: Remember that contents is a Digested, i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
+      let node = document.open_element(newtag,
+        Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
+      // Note on the clone: Remember that contents is a Digested,
+      // i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
       // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
       document.absorb(contents, None, state)?;
       if !is_svg {
@@ -139,7 +148,8 @@ LoadDefinitions!(state, {
     sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
-    before_digest => sub[stomach, state] {reenter_text_mode(false, stomach.get_gullet_mut(), state)},
+    before_digest => sub[stomach, state] {
+      reenter_text_mode(false, stomach.get_gullet_mut(), state)},
     after_digest => sub[_stomach, whatsit, state] {
       let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
@@ -233,8 +243,8 @@ LoadDefinitions!(state, {
   //   if (my $alignment = LookupValue('Alignment')) {
   //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
   //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
-  //       # This isXxxxRule property is to determine if it is used for separating rules within alignments
-  //       $whatsit->setProperty(isVerticalRule => 1) } }
+  //       # This isXxxxRule property is to determine if it is used for separating rules within
+  // alignments       $whatsit->setProperty(isVerticalRule => 1) } }
   //   elsif ((defined $w) && ($w == 0)) {
   //     $whatsit->setProperty(invisible => 1); }
   //   else {
@@ -267,8 +277,8 @@ LoadDefinitions!(state, {
   //     # What is the intended logic here?
   //     if (((!defined $h) && (!defined $w)) || ((defined $w) && ($w > 20))
   //       || ((defined $h) && (defined $w) && ($w > 3 * $h))) {
-  //       # This isXxxxRule property is to determine if it is used for separating rules within alignments
-  //       $alignment->addLine('t');
+  //       # This isXxxxRule property is to determine if it is used for separating rules within
+  // alignments       $alignment->addLine('t');
   //       $whatsit->setProperty(isHorizontalRule => 1) } }
   //   else {
   //     $dims->setValue(width  => '100%') unless defined $w;

@@ -1,7 +1,7 @@
-use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
-use std::fmt;
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use std::borrow::Cow;
+use std::fmt;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -28,7 +28,7 @@ pub struct List {
 impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for tbox in &self.boxes {
-      writeln!(f, "{}",tbox.stringify())?;
+      writeln!(f, "{}", tbox.stringify())?;
     }
     Ok(())
   }
@@ -45,14 +45,17 @@ impl fmt::Display for List {
 
 impl PartialEq for List {
   fn eq(&self, other: &Self) -> bool {
-    self.boxes.len() == other.boxes.len() && self.boxes.iter().zip(other.boxes.iter()).all(|(box1, box2)| box1 == box2)
+    self.boxes.len() == other.boxes.len()
+      && self
+        .boxes
+        .iter()
+        .zip(other.boxes.iter())
+        .all(|(box1, box2)| box1 == box2)
   }
 }
 
 impl Object for List {
-  fn stringify(&self) -> String {
-    format!("{self:?}")
-  }
+  fn stringify(&self) -> String { format!("{self:?}") }
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
   fn revert(&self, state: &State) -> Result<Tokens> {
@@ -66,15 +69,27 @@ impl Object for List {
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
-  fn get_property_bool(&self, key: &str) -> bool { matches!(self.properties.get(key), Some(Stored::Bool(true))) }
+  fn get_property_bool(&self, key: &str) -> bool {
+    matches!(self.properties.get(key), Some(Stored::Bool(true)))
+  }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) { self.properties.insert(key.to_string(), value.into()); }
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.properties.insert(key.to_string(), value.into());
+  }
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { unimplemented!() }
+  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+    unimplemented!()
+  }
 
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(self.font.as_ref().map(Cow::Borrowed)) }
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> {
+    Ok(self.font.as_ref().map(Cow::Borrowed))
+  }
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
       Some(f) => f.compute_boxes_size(&self.boxes, options, state)?,
       _ => Font::text_default().compute_boxes_size(&self.boxes, options, state)?,
@@ -86,7 +101,8 @@ impl List {
   pub fn new(boxes: Vec<Digested>, state: &mut State) -> Self {
     // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
     //   $locator = $bx->getLocator unless defined $locator; }
-    // TODO: Should the locators be an Option<> type? Or can we test for the default here, since it's rare? Hmmmm
+    // TODO: Should the locators be an Option<> type? Or can we test for the default here, since
+    // it's rare? Hmmmm
     let mut locator: Locator = Locator::default();
     for bx in boxes.iter().rev() {
       if let Some(bx_locator) = bx.get_locator() {
@@ -101,7 +117,10 @@ impl List {
     // font!) ???
     let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
-      if let Some(bx_font) = bx.get_font(state).expect("getting a font should go well during List construction") {
+      if let Some(bx_font) = bx
+        .get_font(state)
+        .expect("getting a font should go well during List construction")
+      {
         font = Some(bx_font.into_owned());
         break;
       }

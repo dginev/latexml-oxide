@@ -9,7 +9,9 @@ pub fn get_grammatical_role(node: &Node) -> String {
         "UNKNOWN".to_string()
       } else if tag == "XMDual" {
         match node.get_first_element_child() {
-          Some(child) => child.get_attribute("role").unwrap_or_else(|| "UNKNOWN".to_string()),
+          Some(child) => child
+            .get_attribute("role")
+            .unwrap_or_else(|| "UNKNOWN".to_string()),
           None => "UNKNOWN".to_string(),
         }
       } else {

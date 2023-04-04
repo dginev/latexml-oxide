@@ -1,5 +1,5 @@
-use std::cmp::Ordering;
 use crate::package::*;
+use std::cmp::Ordering;
 
 LoadDefinitions!(state, {
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
@@ -150,8 +150,8 @@ LoadDefinitions!(state, {
   // [ useobjnum number ] [ rule spec ] general text
   // object contents → file spec | general text
   // xform attr spec → [ attr spec ] [ resources spec ]
-  // image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec ]
-  // outline spec → [ attr spec ] action spec [ count number ] general text
+  // image attr spec → [ rule spec ] [ attr spec ] [ page spec ] [ colorspace spec ] [ pdf box spec
+  // ] outline spec → [ attr spec ] action spec [ count number ] general text
   // action spec → user user-action spec | goto goto-action spec |
   // thread thread-action spec
   // user-action spec → general text
@@ -197,5 +197,4 @@ LoadDefinitions!(state, {
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
     }
   });
-
 });

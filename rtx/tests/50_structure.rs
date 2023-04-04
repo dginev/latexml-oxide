@@ -2,7 +2,7 @@ use rtx::util::test::*;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 
 #[test]
 fn can_structure() {

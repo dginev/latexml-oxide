@@ -155,17 +155,17 @@ LoadDefinitions!(state, {
   // If we have a non-negative integer (no signs, decimals,...)
   // followed by a fraction dividing two non-negative integers,
   // Figure it's a mixed fraction --- ADDING the fraction to the number, not multiplying!
-  // DefRewrite(select => ['descendant-or-self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
-  //       . '[ following-sibling::*[1][self::ltx:XMApp]'
+  // DefRewrite(select => ['descendant-or-self::ltx:XMTok[@role="NUMBER" and
+  // translate(@meaning,"0123456789","")=""]'       . '[ following-sibling::*[1][self::ltx:XMApp]'
   //       . ' [child::*[1][self::ltx:XMTok[@meaning="divide"]]]'
   //       . ' [child::*[2]['
   //       . 'self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
-  //       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
-  //       . ']]'
+  //       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and
+  // translate(@meaning,"0123456789","")=""]'       . ']]'
   //       . ' [child::*[3]['
   //       . 'self::ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
-  //       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and translate(@meaning,"0123456789","")=""]'
-  //       . ']]'
+  //       . 'or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role="NUMBER" and
+  // translate(@meaning,"0123456789","")=""]'       . ']]'
   //       . ']',
   //     2],
   //   replace => sub { my ($document, $number, $frac) = @_;
@@ -317,10 +317,22 @@ LoadDefinitions!(state, {
     AssignValue!(&c                  => n + 1,     Some(Scope::Global));
     AssignValue!("\\allocationnumber" => Number!(n), Some(Scope::Global));
   });
-  DefMacro!("\\newread Token", r"\alloc@@{read}\global\chardef#1=\allocationnumber");
-  DefMacro!("\\newwrite Token", r"\alloc@@{write}\global\chardef#1=\allocationnumber");
-  DefMacro!("\\newfam Token", r"\alloc@@{fam}\global\chardef#1=\allocationnumber");
-  DefMacro!("\\newlanguage Token", r"\alloc@@{language}\global\chardef#1=\allocationnumber");
+  DefMacro!(
+    "\\newread Token",
+    r"\alloc@@{read}\global\chardef#1=\allocationnumber"
+  );
+  DefMacro!(
+    "\\newwrite Token",
+    r"\alloc@@{write}\global\chardef#1=\allocationnumber"
+  );
+  DefMacro!(
+    "\\newfam Token",
+    r"\alloc@@{fam}\global\chardef#1=\allocationnumber"
+  );
+  DefMacro!(
+    "\\newlanguage Token",
+    r"\alloc@@{language}\global\chardef#1=\allocationnumber"
+  );
 
   // # This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[_stomach, args, state] {
@@ -458,7 +470,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\frenchspacing", None);
   DefPrimitive!("\\nonfrenchspacing", None);
   // DefMacro!("\\normalbaselines", undef,
-  //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit');
+  //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\
+  // normallineskiplimit');
   DefMacro!(T_CS!("\\space"), None, T_SPACE!());
   DefMacro!(T_CS!("\\lq"), None, T_OTHER!("`"));
   DefMacro!(T_CS!("\\rq"), None, T_OTHER!("'"));
@@ -503,14 +516,20 @@ LoadDefinitions!(state, {
   "###
   );
 
-  DefMacro!("\\enskip", "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi");
+  DefMacro!(
+    "\\enskip",
+    "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi"
+  );
   // DefConstructor('\@math@enskip', undef,
   //   "<ltx:XMHint name='enskip' width='#width'/>",
   //   alias => '\enskip',
   //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
   // DefPrimitiveI('\@text@enskip', undef, "\x{2002}", alias => '\enskip');
 
-  DefMacro!("\\enspace", "\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi");
+  DefMacro!(
+    "\\enspace",
+    "\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi"
+  );
   // DefConstructor('\@math@enspace', undef,
   //   "<ltx:XMHint name='enskip' width='#width'/>",
   //   alias => '\enspace',
@@ -532,14 +551,20 @@ LoadDefinitions!(state, {
   //   properties => { isSpace => 1, width => sub { Dimension('2em'); } });
   // DefPrimitiveI('\@text@qquad', undef, "\x{2003}\x{2003}", alias => '\qquad');
 
-  DefMacro!("\\thinspace", "\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi");
+  DefMacro!(
+    "\\thinspace",
+    "\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi"
+  );
   // DefConstructor('\@math@thinspace', undef,
   //   "<ltx:XMHint name='thinspace' width='#width'/>",
   //   alias => '\thinspace',
   //   properties => { isSpace => 1, width => sub { Dimension('0.16667em'); } });
   // DefPrimitiveI('\@text@thinspace', undef, "\x{2009}", alias => '\thinspace');
 
-  DefMacro!("\\negthinspace", "\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi");
+  DefMacro!(
+    "\\negthinspace",
+    "\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi"
+  );
   // DefConstructor('\@math@negthinspace', undef,
   //   "<ltx:XMHint name='negthinspace' width='#width'/>",
   //   alias => '\negthinspace',
@@ -563,10 +588,14 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\break", None);
   DefPrimitive!("\\nobreak", None);
   DefPrimitive!("\\allowbreak", None);
-  DefMacro!("\\nobreakspace", "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi");
+  DefMacro!(
+    "\\nobreakspace",
+    "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi"
+  );
 
   DefPrimitive!("\\text@nobreakspace", sub[stomach, (), state] {
-    Tbox::new(String::from("\u{00A0}"), None, None, Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
+    Tbox::new(String::from("\u{00A0}"), None, None,
+      Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
   });
 
   // DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",

@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use libxml::tree::{Node, NodeType};
 use regex::Regex;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::io::Cursor;
 
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
@@ -104,7 +104,7 @@ impl MathParser {
     self.clear();
     self.cleanup_scripts(document);
     let xmath_selector = "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]";
-    let xmath_nodes = document.findnodes(xmath_selector, None, state); // descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]
+    let xmath_nodes = document.findnodes(xmath_selector, None, state);
 
     if !xmath_nodes.is_empty() {
       note_begin("Math Parsing");
@@ -251,7 +251,11 @@ impl MathParser {
         if child_nodes.len() == 1 {
           p = child_nodes[0].clone();
         } else {
-          fatal!(XMath, Malformed, "XMath node has DOCUMENT_FRAGMENT for parent!");
+          fatal!(
+            XMath,
+            Malformed,
+            "XMath node has DOCUMENT_FRAGMENT for parent!"
+          );
           // xnode,
         }
       }
@@ -282,7 +286,13 @@ impl MathParser {
 
   // Recursively parse a node with some internal structure
   // by first parsing any structured children, then it's content.
-  fn parse_rec(&mut self, node: &mut Node, rule_opt: &str, document: &mut Document, state: &mut State) -> Result<Option<Node>> {
+  fn parse_rec(
+    &mut self,
+    node: &mut Node,
+    rule_opt: &str,
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<Option<Node>> {
     self.parse_children(node, document, state)?;
     // This will only handle 1 layer nesting (successfully?)
     // Note that this would have been found by the top level xpath,
@@ -345,11 +355,12 @@ impl MathParser {
         if let Some(ref nid) = newid {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
-        for (key,value) in attr {
+        for (key, value) in attr {
           if !(key.starts_with('_') || document.can_have_attribute(&rtag, &key, state)) {
             continue;
           }
-          if key == "xml:id" { // Since we're moving the id...bookkeeping
+          if key == "xml:id" {
+            // Since we're moving the id...bookkeeping
             document.unrecord_id(&value);
             node.remove_attribute("xml:id")?;
           }
@@ -366,7 +377,7 @@ impl MathParser {
         if let Some(rid) = resultid {
           if let Some(nid) = newid {
             if rid != nid {
-              for mut tref in document.findnodes(&s!("//*[@idref='{}']",rid), None, state) {
+              for mut tref in document.findnodes(&s!("//*[@idref='{}']", rid), None, state) {
                 tref.set_attribute("idref", &nid)?;
               }
             }
@@ -384,7 +395,12 @@ impl MathParser {
   }
 
   // Depth first parsing of XMArg nodes.
-  fn parse_children(&mut self, node: &mut Node, document: &mut Document, state: &mut State) -> Result<()> {
+  fn parse_children(
+    &mut self,
+    node: &mut Node,
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
       match tag.as_str() {
@@ -394,7 +410,9 @@ impl MathParser {
         "ltx:XMWrap" => {
           self.parse_rec(&mut child, "Anything", document, state)?;
         },
-        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => self.parse_children(&mut child, document, state)?,
+        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
+          self.parse_children(&mut child, document, state)?
+        },
         "ltx:XMDual" => self.parse_children(&mut child, document, state)?,
         _ => {},
       };
@@ -420,7 +438,13 @@ impl MathParser {
   // Low-level Parser: parse a single expression
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Convert to textual form for processing by MathGrammar
-  fn parse_single(&mut self, mathnode: &mut Node, document: &mut Document, state: &mut State, _rule: &str) -> Result<Option<Node>> {
+  fn parse_single(
+    &mut self,
+    mathnode: &mut Node,
+    document: &mut Document,
+    state: &mut State,
+    _rule: &str,
+  ) -> Result<Option<Node>> {
     let mut idx = 0;
     let mut content_nodes = filter_hints(mathnode.get_child_nodes());
     if content_nodes.is_empty() {
@@ -465,8 +489,16 @@ impl MathParser {
     //     return $result; } }
   }
 
-  pub fn parse_marpa(&mut self, input: &str, nodes: &[Node], document: &mut Document, state: &mut State) -> Result<XM> {
-    let parse_result = self.engine.run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+  pub fn parse_marpa(
+    &mut self,
+    input: &str,
+    nodes: &[Node],
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<XM> {
+    let parse_result = self
+      .engine
+      .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
     let mut parses = Vec::new();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
@@ -475,7 +507,11 @@ impl MathParser {
         self.builder.clone(),
         val,
         self.expert_pragmatics.as_slice(),
-        ActionContext { nodes, document, state },
+        ActionContext {
+          nodes,
+          document,
+          state,
+        },
       ) {
         Ok(tree_opt) => {
           if let Some(tree) = tree_opt {
@@ -523,7 +559,13 @@ impl MathParser {
     }
   }
 
-  pub fn parse_lexemes(&mut self, lexemes: Vec<String>, nodes: &[Node], document: &mut Document, state: &mut State) -> Result<Option<XM>> {
+  pub fn parse_lexemes(
+    &mut self,
+    lexemes: Vec<String>,
+    nodes: &[Node],
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<Option<XM>> {
     let mut input_string: String = lexemes.join(" ");
     // Add a trailing space, in an attempt to work with
     // a rules!() macro that has a Hard expectation of a space char following EVERY token.
@@ -543,7 +585,8 @@ impl MathParser {
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pub fn text_form(node: &Node, document: &mut Document, state: &mut State) -> String {
-  textrec(node, None, None, document, state) }
+  textrec(node, None, None, document, state)
+}
 
 // ================================================================================
 // Some more XML utilities, but math specific (?)
@@ -565,7 +608,13 @@ fn get_token_meaning(node_opt: &Node, document: &Document, state: &State) -> Opt
   }
 }
 
-fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<&str>, document: &Document, state: &mut State) -> String {
+fn textrec(
+  node_opt: &Node,
+  outer_bp_opt: Option<usize>,
+  outer_name_opt: Option<&str>,
+  document: &Document,
+  state: &mut State,
+) -> String {
   let node = realize_xmnode(node_opt, document, state);
   let tag = document.get_node_qname(&node, state);
   let outer_bp = outer_bp_opt.unwrap_or(0);
@@ -612,11 +661,22 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
     },
     "ltx:XMDual" => {
       let children = element_nodes(&node);
-      let content = children.first().expect("XMDual should always have 2 child elements.");
-      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out the semantic form
-      // Fall back to presentation, if content has poor semantics (eg. from replacement patterns)
-      // TODO
-      // return ($text =~ /^\(*Unknown/ ? textrec($presentation, $outer_bp, $outer_name) : $text); }
+      let content = children
+        .first()
+        .expect("XMDual should always have 2 child elements.");
+      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out the
+                                                                          // semantic form
+                                                                          // Fall back to
+                                                                          // presentation, if
+                                                                          // content has poor
+                                                                          // semantics (eg. from
+                                                                          // replacement patterns)
+                                                                          // TODO
+                                                                          // return ($text =~
+                                                                          // /^\(*Unknown/ ?
+                                                                          // textrec($presentation,
+                                                                          // $outer_bp, $outer_name)
+                                                                          // : $text); }
     },
     "ltx:XMTok" => {
       let name = match get_token_meaning(&node, document, state) {
@@ -630,9 +690,11 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
     },
     "ltx:XMWrap" | "ltx:XMCell" => {
       // ??
-      element_nodes(&node).into_iter()
-      .map(|child| textrec(&child, None, None, document, state))
-      .collect::<Vec<_>>().join("@")
+      element_nodes(&node)
+        .into_iter()
+        .map(|child| textrec(&child, None, None, document, state))
+        .collect::<Vec<_>>()
+        .join("@")
     },
     "ltx:XMArg" => {
       let args = element_nodes(&node);
@@ -646,14 +708,24 @@ fn textrec(node_opt: &Node, outer_bp_opt: Option<usize>, outer_name_opt: Option<
         .collect::<Vec<_>>()
         .join("")
     },
-    "ltx:XMArray" => { textrec_array(&node, state)  },
+    "ltx:XMArray" => textrec_array(&node, state),
     _ => s!("[{}]", p_get_value(&node)),
   }
 }
 
-fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, state: &mut State) -> (usize, String) {
-  let role = op.get_attribute("role").unwrap_or_else(|| "Unknown".to_string());
-  if (role == "SUBSCRIPTOP" || role == "SUPERSCRIPTOP") && PRE_DIGITS_RE.is_match(&op.get_attribute("scriptpos").unwrap_or_default()) {
+fn textrec_apply(
+  name: &str,
+  op: &Node,
+  args: Vec<Node>,
+  document: &Document,
+  state: &mut State,
+) -> (usize, String) {
+  let role = op
+    .get_attribute("role")
+    .unwrap_or_else(|| "Unknown".to_string());
+  if (role == "SUBSCRIPTOP" || role == "SUPERSCRIPTOP")
+    && PRE_DIGITS_RE.is_match(&op.get_attribute("scriptpos").unwrap_or_default())
+  {
     // Note that this will likely get parenthesized due to high bp
     let mut inner = textrec(op, None, None, document, state);
     if let Some(arg2) = args.get(1) {
@@ -698,7 +770,8 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, st
   } else if role == "POSTFIX" {
     (
       10000,
-      textrec(&args[0], Some(10000), Some(name), document, state) + &textrec(op, None, None, document, state),
+      textrec(&args[0], Some(10000), Some(name), document, state)
+        + &textrec(op, None, None, document, state),
     )
   } else if name == "multirelation" {
     let joined = args
@@ -723,12 +796,12 @@ fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document, st
 }
 
 fn textrec_array(_node: &Node, _state: &mut State) -> String {
-// my $name = $node->getAttribute('meaning') || $node->getAttribute('name')
-// || 'Array';   my @rows = ();
-//   foreach my $row (element_nodes($node)) {
-// push(@rows, '[' . join(', ', map { ($_->firstChild ?
-// textrec($_->firstChild) : '') } element_nodes($row)) . ']'); } return $name
-// . '[' . join(', ', @rows) . ']';
+  // my $name = $node->getAttribute('meaning') || $node->getAttribute('name')
+  // || 'Array';   my @rows = ();
+  //   foreach my $row (element_nodes($node)) {
+  // push(@rows, '[' . join(', ', map { ($_->firstChild ?
+  // textrec($_->firstChild) : '') } element_nodes($row)) . ']'); } return $name
+  // . '[' . join(', ', @rows) . ']';
   unimplemented!()
 }
 
@@ -800,7 +873,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State)
       if let Some(realnode) = document.lookup_id(&idref) {
         return Cow::Borrowed(realnode);
       } else {
-        let message = s!("Cannot find a node with xml:id='{}'",idref);
+        let message = s!("Cannot find a node with xml:id='{}'", idref);
         // TODO:
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .

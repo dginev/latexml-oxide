@@ -23,9 +23,13 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:classification",
   "ltx:acknowledgements",
 ];
-
+#[rustfmt::skip]
 LoadDefinitions!(state, {
-  AssignValue!("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
+  AssignValue!(
+    "frontmatter",
+    Stored::HashTagData(HashMap::default()),
+    Some(Scope::Global)
+  );
 
   // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // // The content is the result of digesting $tokens.
@@ -149,7 +153,10 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefConstructor!("\\beginsection Until:\\par", "<ltx:section><ltx:title>#1</ltx:title>");
+  DefConstructor!(
+    "\\beginsection Until:\\par",
+    "<ltx:section><ltx:title>#1</ltx:title>"
+  );
 
   // // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   // //  If so, how do know when the theorem ends?
@@ -185,11 +192,12 @@ LoadDefinitions!(state, {
 
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[gullet, (ttype), state] {
-    let formatters = if let Some(Stored::HashStored(formatters)) = state.lookup_value("type_tag_formatter") {
-      Some(formatters.clone())
-    } else {
-      None
-    };
+    let formatters = if let Some(Stored::HashStored(formatters)) =
+      state.lookup_value("type_tag_formatter") {
+        Some(formatters.clone())
+      } else {
+        None
+      };
 
     let mut tags = Vec::new();
     if let Some(formatters) = formatters {
@@ -256,11 +264,20 @@ LoadDefinitions!(state, {
       ctr_type
     }
   });
-  DefMacro!("\\lx@the@@{}", "\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}");
+  DefMacro!(
+    "\\lx@the@@{}",
+    "\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}"
+  );
   DefMacro!("\\lx@@the@@{}", "\\csname the#1\\endcsname");
 
-  DefMacro!("\\lx@therefnum@@{}", "\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}");
-  DefMacro!("\\lx@@therefnum@@{}", "{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}");
+  DefMacro!(
+    "\\lx@therefnum@@{}",
+    "\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}"
+  );
+  DefMacro!(
+    "\\lx@@therefnum@@{}",
+    "{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}"
+  );
 
   AssignMapping!("type_tag_formatter", "refnum" => "\\lx@therefnum@@");
 
@@ -269,7 +286,10 @@ LoadDefinitions!(state, {
   // Customize by defining \fnum@<type> or \<type>name and \fnum@font@<type>
   // Default uses \fnum@font@<type> \<type>name prefix + space (if any) and \the<counter>.
   // When using the "name", uses \<type>name in preference to fallback \lx@name@<type>
-  DefMacro!(r"\lx@refnum@compose{}{}", r"\expandafter\lx@refnum@compose@\expandafter{#2}{#1}");
+  DefMacro!(
+    r"\lx@refnum@compose{}{}",
+    r"\expandafter\lx@refnum@compose@\expandafter{#2}{#1}"
+  );
   DefMacro!(r"\lx@refnum@compose@{}{}", r"\if.#1.#2\else#2\space#1\fi");
 
   DefMacro!(
@@ -282,8 +302,7 @@ LoadDefinitions!(state, {
   // BUT amsthm defines \thmname{}!
   DefMacro!(
     "\\lx@@fnum@@ {}",
-    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}
-    {\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
+    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "" => "\\lx@fnum@@"); // Default!
@@ -294,8 +313,7 @@ LoadDefinitions!(state, {
   // Default uses just \\the<counter>, else composes using \\lx@@fnum@@{type}
   DefMacro!(
     r"\lx@fnum@toc@@{}",
-    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}
-      {\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}"
+    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}"
   );
 
   //----------------------------------------------------------------------
@@ -305,16 +323,12 @@ LoadDefinitions!(state, {
   // \\the<counter>
   DefMacro!(
     "\\lx@typerefnum@@{}",
-    "{\\normalfont\\@ifundefined{typerefnum@font@#1}{}\
-     {\\csname typerefnum@font@#1\\endcsname}\\@ifundefined{typerefnum@#1}\
-     {\\lx@@typerefnum@@{#1}}{\\csname typerefnum@#1\\endcsname}}"
+    r"{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}"
   );
 
   DefMacro!(
     "\\lx@@typerefnum@@{}",
-    "\\@ifundefined{#1typerefname}{\\@ifundefined{#1name}{}{\
-     \\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}}\
-     {\\lx@refnum@compose{\\csname #1typerefname\\endcsname}{\\lx@the@@{#1}}}"
+    r"\@ifundefined{#1typerefname}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");
@@ -329,7 +343,10 @@ LoadDefinitions!(state, {
   // Format a title (or caption) appropriately for type.
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
-  DefMacro!("\\lx@format@title@@{}{}", r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}");
+  DefMacro!(
+    "\\lx@format@title@@{}{}",
+    r"\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}"
+  );
   DefMacro!(
     "\\lx@@format@title@@{}{}",
     r"{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}"
