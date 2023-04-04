@@ -2,7 +2,8 @@ use crate::package::*;
 // Match negations of many operators
 // our %NOTS
 lazy_static! {
-  static ref MATH_CHAR_NEGATIONS : HashMap<String, &'static str> = map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
+  static ref MATH_CHAR_NEGATIONS : HashMap<String, &'static str> =
+    map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
 "\u{2208}" => "\u{2209}",                              //\in=>\notin
 "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
 "\u{227A}" => "\u{2280}", "\u{227B}" => "\u{2281}",    // prec, succ
@@ -204,8 +205,8 @@ LoadDefinitions!(state, {
   // DefConstructor('\nolimits', undef, sub {
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;
-  //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the attrib.
-  // DefConstructor('\displaylimits', undef, sub {
+  //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the
+  // attrib. DefConstructor('\displaylimits', undef, sub {
   //     my ($document, %props) = @_;
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;
@@ -248,10 +249,11 @@ LoadDefinitions!(state, {
   DefMath!("\\bigtriangledown", None, "\u{25BD}", role => "ADDOP");
   DefMath!("\\triangleleft",    None, "\u{25C1}", role => "ADDOP");
   DefMath!("\\triangleright",   None, "\u{25B7}", role => "ADDOP");
-  DefMath!("\\lhd",             None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
-  DefMath!("\\rhd",             None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
+  DefMath!("\\lhd",           None, "\u{22B2}", role => "ADDOP", meaning => "subgroup-of");
+  DefMath!("\\rhd",           None, "\u{22B3}", role => "ADDOP", meaning => "contains-as-subgroup");
   DefMath!("\\unlhd", None, "\u{22B4}", role => "ADDOP", meaning => "subgroup-of-or-equals");
-  DefMath!("\\unrhd", None, "\u{22B5}", role => "ADDOP", meaning => "contains-as-subgroup-or-equals");
+  DefMath!("\\unrhd", None, "\u{22B5}", role => "ADDOP",
+    meaning => "contains-as-subgroup-or-equals");
 
   DefMath!("\\oplus",  None, "\u{2295}", role => "ADDOP", meaning => "direct-sum");
   DefMath!("\\ominus", None, "\u{2296}", role => "ADDOP", meaning => "symmetric-difference");
@@ -273,7 +275,8 @@ LoadDefinitions!(state, {
   DefMath!("\\subset",     None, "\u{2282}", role => "RELOP", meaning => "subset-of");
   DefMath!("\\subseteq",   None, "\u{2286}", role => "RELOP", meaning => "subset-of-or-equals");
   DefMath!("\\sqsubset",   None, "\u{228F}", role => "RELOP", meaning => "square-image-of");
-  DefMath!("\\sqsubseteq", None, "\u{2291}", role => "RELOP", meaning => "square-image-of-or-equals");
+  DefMath!("\\sqsubseteq", None, "\u{2291}", role => "RELOP",
+    meaning => "square-image-of-or-equals");
   DefMath!("\\in",         None, "\u{2208}", role => "RELOP", meaning => "element-of");
   DefMath!("\\vdash", None, "\u{22A2}", role => "METARELOP", meaning => "proves");
 
@@ -284,7 +287,8 @@ LoadDefinitions!(state, {
   DefMath!("\\supset",   None, "\u{2283}", role => "RELOP", meaning => "superset-of");
   DefMath!("\\supseteq", None, "\u{2287}", role => "RELOP", meaning => "superset-of-or-equals");
   DefMath!("\\sqsupset", None, "\u{2290}", role => "RELOP", meaning => "square-original-of");
-  DefMath!("\\sqsupseteq", None, "\u{2292}", role => "RELOP", meaning => "square-original-of-or-equals");
+  DefMath!("\\sqsupseteq", None, "\u{2292}", role => "RELOP",
+    meaning => "square-original-of-or-equals");
   DefMath!("\\ni",    None, "\u{220B}", role => "RELOP",     meaning => "contains");
   DefMath!("\\dashv", None, "\u{22A3}", role => "METARELOP", meaning => "does-not-prove");
 
@@ -323,7 +327,8 @@ LoadDefinitions!(state, {
   DefMath!("\\not", None, "\u{FF0F}", role => "OPFUNCTION", meaning => "not");
 
   // For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
-  DefRewrite!(select => "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
+  DefRewrite!(select =>
+    "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
   select_count => 2,
   replace =>  sub[document, nodes, state] {
     // TODO: This argument low-level boilerplate is annoying
@@ -336,8 +341,9 @@ LoadDefinitions!(state, {
       _ => String::new()
     };
     if text.len() != 1 { // Not simple char token.
+      // Wrap with a cancel op
       document.open_element("ltx:XMApp",
-        Some(map!("_box" => not_node.to_hashable().to_string())), None, state)?; // Wrap with a cancel op
+        Some(map!("_box" => not_node.to_hashable().to_string())), None, state)?;
       let mut strike = document.insert_math_token("",
         string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
         "meaning" => "not", "_box" => not_node.to_hashable()), None, state)?;
@@ -372,7 +378,8 @@ LoadDefinitions!(state, {
       document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
-        for mut n in document.findnodes(&format!("descendant-or-self::ltx:XMRef[@idref='{id}']"), None, state) {
+        let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");
+        for mut n in document.findnodes(&idref_xpath, None, state) {
           document.remove_node(&mut n);
         }
       }   // ? Hopefully this is safe.

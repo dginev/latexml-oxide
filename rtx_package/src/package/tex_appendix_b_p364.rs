@@ -39,13 +39,14 @@ LoadDefinitions!(state, {
 
   // DefMathI('\lx@math@hash',    undef, '#', alias => '\#');
   // DefMathI('\lx@math@amp',     undef, '&', role  => 'ADDOP', meaning => 'and', alias => '\&');
-  // DefMathI('\lx@math@percent', undef, '%', role  => 'POSTFIX', meaning => 'percent', alias => '\%');
-  // DefMathI('\lx@math@dollar', undef, "\$", role => 'OPERATOR', meaning => 'currency-dollar',
-  //   alias => "\\\$");
+  // DefMathI('\lx@math@percent', undef, '%', role  => 'POSTFIX', meaning => 'percent', alias =>
+  // '\%'); DefMathI('\lx@math@dollar', undef, "\$", role => 'OPERATOR', meaning =>
+  // 'currency-dollar',   alias => "\\\$");
   // DefMathI('\lx@math@underscore', undef, '_', alias => '\_');
 
   // # Discretionary times; just treat as invisible ?
-  // DefMathI('\*', undef, "\x{2062}", role => 'MULOP', name => '', meaning => 'times'); # INVISIBLE TIMES (or MULTIPLICATION SIGN = 00D7)
+  // DefMathI('\*', undef, "\x{2062}", role => 'MULOP', name => '', meaning => 'times'); # INVISIBLE
+  // TIMES (or MULTIPLICATION SIGN = 00D7)
 
   // # These 3 should have some `name' assigned ... but what???
 
@@ -96,7 +97,8 @@ LoadDefinitions!(state, {
 
   // DefMacro('\hiderel{}', "#1");    # Just ignore, for now...
 
-  // DefMathI('\to', undef, "\x{2192}", role => 'ARROW'); # RIGHTWARDS ARROW??? a bit more explicitly relation-like?
+  // DefMathI('\to', undef, "\x{2192}", role => 'ARROW'); # RIGHTWARDS ARROW??? a bit more
+  // explicitly relation-like?
 
   // # TeX's ligatures handled by rewrite regexps.
   // # Note: applied in reverse order of definition (latest defined applied first!)
@@ -105,8 +107,8 @@ LoadDefinitions!(state, {
   // DefPrimitive('\@@emdash', sub { Box("\x{2014}", undef, undef, T_CS('\@@emdash')); });
 
   // DefLigature(qr{--}, "\x{2013}",
-  //   fontTest => sub { $_[0]->getFamily ne 'typewriter'; }); # EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
-  // DefLigature(qr{---}, "\x{2014}",
+  //   fontTest => sub { $_[0]->getFamily ne 'typewriter'; }); # EN DASH (NOTE: With digits before &
+  // aft => \N{FIGURE DASH}) DefLigature(qr{---}, "\x{2014}",
   //   fontTest => sub { $_[0]->getFamily ne 'typewriter'; });    # EM DASH
 
   // # Ligatures for doubled single left & right quotes to convert to double quotes

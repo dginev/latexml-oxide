@@ -28,7 +28,12 @@ LoadDefinitions!(outer_state, {
   // twice instead, via a macro
   let define_included: PrimitiveClosure = primitiveproc!(_stomach, args, inner_state, {
     args.reverse(); // we'll be using .pop() from the front
-    let name = args.pop().unwrap().owned_tokens().expect("expecting a Tokens argument").to_string();
+    let name = args
+      .pop()
+      .unwrap()
+      .owned_tokens()
+      .expect("expecting a Tokens argument")
+      .to_string();
     let mut before_tokens = match args.pop() {
       Some(arg) => arg.unlist(),
       None => Vec::new(),
@@ -47,11 +52,19 @@ LoadDefinitions!(outer_state, {
       gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
       before_tokens.clone()
     });
-    DefMacro!(T_CS!(s!("\\end{{{name}}}")), None, Tokens::new(after_tokens));
+    DefMacro!(
+      T_CS!(s!("\\end{{{name}}}")),
+      None,
+      Tokens::new(after_tokens)
+    );
   });
 
   let mut mock_stomach = Stomach::default();
-  define_excluded(&mut mock_stomach, vec![ArgWrap::Tokens(Tokenize!("comment", None))], outer_state)?;
+  define_excluded(
+    &mut mock_stomach,
+    vec![ArgWrap::Tokens(Tokenize!("comment", None))],
+    outer_state,
+  )?;
 
   DefPrimitive!("\\includecomment{}", Some(Arc::clone(&define_included)));
   DefPrimitive!("\\excludecomment{}", Some(define_excluded));

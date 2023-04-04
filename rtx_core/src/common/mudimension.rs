@@ -24,7 +24,9 @@ impl NumericOps for MuDimension {
 }
 
 impl fmt::Display for MuDimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0, self.unit())) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", fixedformat(self.0, self.unit()))
+  }
 }
 impl Object for MuDimension {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
@@ -34,7 +36,11 @@ impl MuDimension {
   pub fn new_spec(spec: &str) -> Self {
     if let Some(cap) = MUDIM_SPEC_RE.captures(spec) {
       MuDimension(fixpoint(
-        cap.get(1).map_or("", |m| m.as_str()).parse::<f64>().unwrap(),
+        cap
+          .get(1)
+          .map_or("", |m| m.as_str())
+          .parse::<f64>()
+          .unwrap(),
         Some(UNITY_F64),
       ))
     } else {

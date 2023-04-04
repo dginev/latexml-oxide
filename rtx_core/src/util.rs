@@ -2,7 +2,8 @@
 pub mod logger;
 /// helper methods for file system paths
 pub mod pathname;
-/// "radix" may be a misnomer here. Primarily used to generate labels, or uniquifying suffixes to make ID's
+/// "radix" may be a misnomer here. Primarily used to generate labels, or uniquifying suffixes to
+/// make ID's
 pub mod radix;
 /// helpers for extracting structured data from replacement (and other) strings
 pub mod text;

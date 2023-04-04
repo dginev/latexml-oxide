@@ -31,7 +31,8 @@ LoadDefinitions!(outer_state, {
 
   // \readline; like \read, but only spaces & other
   DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, (port, token), state] {
-    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&format!("input_file:{port}")) {
+    let file_key = format!("input_file:{port}");
+    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&file_key) {
       Some(Arc::clone(mouth)) } else { None };
     if let Some(mouth) = mouth_opt {
       let mut raw_line = mouth.write().unwrap().read_raw_line(false, state).unwrap_or_default();
@@ -177,7 +178,11 @@ LoadDefinitions!(outer_state, {
   // # since we don't know where it ends, we can't easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
-  fn etex_readexpr(gullet: &mut Gullet, rtype: RegisterType, state: &mut State) -> Result<RegisterValue> {
+  fn etex_readexpr(
+    gullet: &mut Gullet,
+    rtype: RegisterType,
+    state: &mut State,
+  ) -> Result<RegisterValue> {
     let value = etex_readexpr_i(gullet, rtype, 0, state)?;
     if let Some(token) = gullet.read_token(state) {
       // Skip \relax
@@ -188,7 +193,12 @@ LoadDefinitions!(outer_state, {
     Ok(value)
   }
 
-  fn etex_readexpr_i(gullet: &mut Gullet, rtype: RegisterType, prec: usize, state: &mut State) -> Result<RegisterValue> {
+  fn etex_readexpr_i(
+    gullet: &mut Gullet,
+    rtype: RegisterType,
+    prec: usize,
+    state: &mut State,
+  ) -> Result<RegisterValue> {
     // Read a first value
     let token = match gullet.read_x_non_space(state)? {
       Some(t) => t,
@@ -196,7 +206,8 @@ LoadDefinitions!(outer_state, {
     };
     let mut value = if token == T_OTHER!("(") {
       let i_value = etex_readexpr_i(gullet, rtype, 0, state)?;
-      let close = gullet.read_x_token(None, false, state)?; // close parenthesis should have terminated recursive call
+      let close = gullet.read_x_token(None, false, state)?;
+      // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
         unimplemented!();
         //       Error('expected', ')', $gullet,

@@ -22,7 +22,8 @@ LoadDefinitions!(state, {
   // AND, lower-level so that we can cope with common errors at document end.
   DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, _args, props, state] {
     let id = prop_str!(props,"id");
-    if let Some(mut docel) = document.findnode("/ltx:document", None, state) { // Already (auto) created?
+    // Already (auto) created?
+    if let Some(mut docel) = document.findnode("/ltx:document", None, state) {
       if !id.is_empty() {
         document.set_attribute(&mut docel, "xml:id", id, state)?;
       }
@@ -56,7 +57,11 @@ LoadDefinitions!(state, {
   });
 
   // \document is used directly in e.g. expl3.sty
-  Let!(&T_CS!("\\document"), T_CS!("\\begin{document}"), Some(Scope::Global));
+  Let!(
+    &T_CS!("\\document"),
+    T_CS!("\\begin{document}"),
+    Some(Scope::Global)
+  );
 
   DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props,state] {
       document.close_element("ltx:document", state)?;
@@ -105,5 +110,9 @@ LoadDefinitions!(state, {
   });
 
   // \enddocument is used directly in e.g. standalone.cls
-  Let!(&T_CS!("\\enddocument"), T_CS!("\\end{document}"), Some(Scope::Global));
+  Let!(
+    &T_CS!("\\enddocument"),
+    T_CS!("\\end{document}"),
+    Some(Scope::Global)
+  );
 });

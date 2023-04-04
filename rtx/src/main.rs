@@ -14,7 +14,7 @@ fn main() {
       "logger",
       None,
       None,
-      "Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly."
+      "Failed to load logger. Please check rtx_core::util::logger installed correctly."
     );
   }
   let mut argv = env::args();
@@ -23,7 +23,13 @@ fn main() {
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      Error!("rtx", "", None, None, "Please provide a source document! Exiting...");
+      Error!(
+        "rtx",
+        "",
+        None,
+        None,
+        "Please provide a source document! Exiting..."
+      );
       process::exit(1);
     },
   };

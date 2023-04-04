@@ -21,4 +21,5 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
   }
 }
 
-// III. That's all! Run "cargo test" in the rtx/ root and your binding will be compiled and made visible to the main rtx executable
+// III. That's all! Run "cargo test" in the rtx/ root and your binding will be compiled and made
+// visible to the main rtx executable

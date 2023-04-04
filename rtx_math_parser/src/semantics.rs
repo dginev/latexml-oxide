@@ -1,5 +1,5 @@
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::error::Error;
 use std::sync::Arc;
 
@@ -37,7 +37,14 @@ pub struct ActionContext<'a> {
   /// The `Core` state, for a variety of lookups - especially ones needing a `Model`
   pub state: &'a mut State,
 }
-pub type ActionClosure = Arc<dyn Fn(i32, Vec<Option<XM>>, &[ValidationPragmatics], ActionContext) -> Result<Option<XM>, Box<dyn Error>>>;
+pub type ActionClosure = Arc<
+  dyn Fn(
+    i32,
+    Vec<Option<XM>>,
+    &[ValidationPragmatics],
+    ActionContext,
+  ) -> Result<Option<XM>, Box<dyn Error>>,
+>;
 
 #[derive(Default)]
 pub struct Actions {
@@ -60,19 +67,32 @@ impl Actions {
         0 => Ok(None),
         1 => Ok(args.remove(0)),
         more => {
-          eprintln!("Only returning first of {more:?} elements at rule id {id:?} content: {args:?}");
+          eprintln!(
+            "Only returning first of {more:?} elements at rule id {id:?} content: {args:?}"
+          );
           Ok(args.remove(0))
         },
       }
     }
   }
 
-  pub fn get_tree(&self, b: TreeBuilder, v: Value, pragmas: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+  pub fn get_tree(
+    &self,
+    b: TreeBuilder,
+    v: Value,
+    pragmas: &[ValidationPragmatics],
+    ctxt: ActionContext,
+  ) -> Result<Option<XM>, Box<dyn Error>> {
     let handle = proc_value(b, v);
     self.translate_node(&handle, pragmas, ctxt)
   }
 
-  pub fn translate_node<T: Token>(&self, n: &Handle<T>, pragmas: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+  pub fn translate_node<T: Token>(
+    &self,
+    n: &Handle<T>,
+    pragmas: &[ValidationPragmatics],
+    ctxt: ActionContext,
+  ) -> Result<Option<XM>, Box<dyn Error>> {
     match *n.borrow() {
       Node::Tree(ref rule, ref children) => {
         let mut translated_children = Vec::new();
@@ -122,9 +142,19 @@ impl Actions {
 }
 
 /// standard infix application of an operator
-pub fn infix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2);
-  let apply_tree = XM::Apply(infixop.into(), Args(vec![arg1, arg2]), XProps::default(), Meta::default());
+  let apply_tree = XM::Apply(
+    infixop.into(),
+    Args(vec![arg1, arg2]),
+    XProps::default(),
+    Meta::default(),
+  );
   Ok(Some(apply_tree))
 }
 
@@ -137,7 +167,9 @@ pub fn infix_apply_and_elide(
 ) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg1, infixop, arg2, elision);
   // check if "left" is already an application of infix op, in which case we can do n-ary apply.
-  if let Some(XM::Apply(new_op, mut new_args, props, meta)) = infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, ctxt)? {
+  if let Some(XM::Apply(new_op, mut new_args, props, meta)) =
+    infix_apply_nary(rule_id, vec![arg1, infixop, arg2], p, ctxt)?
+  {
     new_args.0.push(elision);
     Ok(Some(XM::Apply(new_op, new_args, props, meta)))
   } else {
@@ -147,7 +179,12 @@ pub fn infix_apply_and_elide(
 
 // infix_apply in the base case,
 // but when chained, using the flat "multirelation" behavior of latexml
-pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_relation(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   // if left has a "multirelation" already, add right in.
   // if left applies a relation, flatten it out to infix form.
@@ -211,7 +248,12 @@ pub fn infix_relation(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationP
   }
 }
 
-pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn infix_apply_nary(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => left, infixop, right);
   let mut left = left;
   // left-to-right associative:
@@ -234,20 +276,50 @@ pub fn infix_apply_nary(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[Validatio
     }
   }
   // base case: new apply tree
-  let apply_tree = XM::Apply(infixop.into(), Args(vec![left, right]), XProps::default(), Meta::default());
+  let apply_tree = XM::Apply(
+    infixop.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  );
   Ok(Some(apply_tree))
 }
 
-pub fn prefix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn prefix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => prefixop, arg1);
-  Ok(Some(XM::Apply(prefixop.into(), Args(vec![arg1]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(
+    prefixop.into(),
+    Args(vec![arg1]),
+    XProps::default(),
+    Meta::default(),
+  )))
 }
-pub fn postfix_apply(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn postfix_apply(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => arg, op);
-  Ok(Some(XM::Apply(op.into(), Args(vec![arg]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(
+    op.into(),
+    Args(vec![arg]),
+    XProps::default(),
+    Meta::default(),
+  )))
 }
 
-pub fn fenced(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => open_opt, arg_opt, close_opt);
   let arg = arg_opt.unwrap();
   let open = open_opt.unwrap();
@@ -255,29 +327,40 @@ pub fn fenced(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatic
   // let xmrefs = create_xmrefs(&[&arg], ctxt)?.remove(0);
   // Ok(Some(
   //   XM::Dual(Box::new(xmrefs), Box::new(
-  //     XM::Wrap(vec![open_opt.unwrap(),arg,close_opt.unwrap()], XProps::default(), Meta::default())
-  //   ), XProps::default(), Meta::default())
+  //     XM::Wrap(vec![open_opt.unwrap(),arg,close_opt.unwrap()], XProps::default(),
+  // Meta::default())   ), XProps::default(), Meta::default())
   // ))
   let o = open.get_value(ctxt.nodes)?;
   let c = close.get_value(ctxt.nodes)?;
-  let op = xnew(format!("delimited-{}{}",o,c));
-  interpret_delimited(op.into(), vec![open,arg,close], ctxt).map(Option::Some)
+  let op = xnew(format!("delimited-{}{}", o, c));
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Option::Some)
 }
 
 /// This is similar, but "interprets" a delimited list as being the
 /// application of some operator to the items in the list.
 fn interpret_delimited(op: XM, stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM, Box<dyn Error>> {
-  let (_seps, args) = extract_separators(&stuff[1..stuff.len()-1]);
+  let (_seps, args) = extract_separators(&stuff[1..stuff.len() - 1]);
   let ref_args = create_xmrefs(&args, ctxt)?;
-  Ok(XM::Dual(Box::new(
-    XM::Apply(op.into(), ref_args.into(), XProps::default(), Meta::default())),
+  Ok(XM::Dual(
+    Box::new(XM::Apply(
+      op.into(),
+      ref_args.into(),
+      XProps::default(),
+      Meta::default(),
+    )),
     Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
-  XProps::default(), Meta::default()))
+    XProps::default(),
+    Meta::default(),
+  ))
 }
 
-
 /// remove start_/end_ wrappers
-pub fn faux_wrap(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], _: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn faux_wrap(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  _: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => start_script, _content, _end_script);
   Ok(start_script)
 }
@@ -305,26 +388,44 @@ pub fn postfix_script(
   new_script(base, op.unwrap(), ctxt)
 }
 
-pub fn prefix_script(_rule_id: i32, mut args: Vec<Option<XM>>, _: &[ValidationPragmatics], ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn prefix_script(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   unp!(args => op, base);
   new_script(base, op.unwrap(), ctxt)
 }
 
 /// This is loosely in the lines of MathParser::NewScript, but taking into account
 /// the realities of our new data structures.
-pub fn new_script(base: Option<XM>, script: XM, ctxt: ActionContext) -> Result<Option<XM>, Box<dyn Error>> {
+pub fn new_script(
+  base: Option<XM>,
+  script: XM,
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
   if let XM::Lexeme(ref lex, _) = script {
     // TODO: continue porting...
-    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built with a base, we expect it to have a
-    // Node.")).flatten(); let rscript = script.realize_xmnode(&ctxt)?;
+    // let rbase = base.as_ref().map(|b| b.realize_xmnode(&ctxt).expect("if a script is to be built
+    // with a base, we expect it to have a Node.")).flatten(); let rscript =
+    // script.realize_xmnode(&ctxt)?;
     let script_wrap = lookup_lex_node(lex.as_str(), ctxt.nodes)?;
     let node_role = script_wrap.get_attribute("role").unwrap();
     let is_float = node_role.starts_with("FLOAT");
     let is_super = node_role.ends_with("SUPERSCRIPT");
-    let role = Cow::Borrowed(if is_super { "SUPERSCRIPTOP" } else { "SUBSCRIPTOP" });
+    let role = Cow::Borrowed(if is_super {
+      "SUPERSCRIPTOP"
+    } else {
+      "SUBSCRIPTOP"
+    });
     let scriptpos = Cow::Borrowed(if is_float { "pre1" } else { "post1" });
     // TODO: scriptpos => "$x$l"
-    let op = new_props(None, None, Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)));
+    let op = new_props(
+      None,
+      None,
+      Some(raw_map!("role"=>role, "scriptpos"=>scriptpos)),
+    );
     let script_arg = obtain_arg(script, 0, ctxt)?;
     Ok(Some(XM::Apply(
       op.into(),
@@ -334,7 +435,8 @@ pub fn new_script(base: Option<XM>, script: XM, ctxt: ActionContext) -> Result<O
     )))
   } else {
     panic!(
-      "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), got {:?}",
+      "new_script is meant to be called on script terminals (e.g. POSTSUBSCRIPT/POSTSUPERSCRIPT), \
+got {:?}",
       script
     );
   }
@@ -385,7 +487,12 @@ pub fn apply_invisible_times(
   }
   // otherwise create a new one:
   let times = invisible_times();
-  Ok(Some(XM::Apply(times.into(), Args(vec![left, right]), XProps::default(), Meta::default())))
+  Ok(Some(XM::Apply(
+    times.into(),
+    Args(vec![left, right]),
+    XProps::default(),
+    Meta::default(),
+  )))
 }
 
 pub fn compound_operator_2(

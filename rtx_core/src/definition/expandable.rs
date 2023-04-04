@@ -56,7 +56,9 @@ impl Default for Expandable {
   }
 }
 impl PartialEq for Expandable {
-  fn eq(&self, other: &Expandable) -> bool { self.paramlist == other.paramlist && self.expansion == other.expansion }
+  fn eq(&self, other: &Expandable) -> bool {
+    self.paramlist == other.paramlist && self.expansion == other.expansion
+  }
 }
 
 // impl fmt::Display for Expandable {
@@ -186,11 +188,22 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Result<Vec<Digested>> { Ok(Vec::new()) }
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Result<Vec<Digested>> {
+    Ok(Vec::new())
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Expandable should never be called!");
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>> {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Expandable should never be called!"
+    );
   }
 }
 

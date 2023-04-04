@@ -25,7 +25,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\@spaces", r"\space\space\space\space");
   Let!("\\@sptoken", T_SPACE!());
 
-  DefMacro!("\\@uclclist", r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH");
+  DefMacro!(
+    "\\@uclclist",
+    r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
+  );
   RawTeX!(
     r###"
   \DeclareRobustCommand{\MakeUppercase}[1]{{%
@@ -152,7 +155,8 @@ LoadDefinitions!(state, {
   });
 
   Let!("\\MessageBreak", "\\relax");
-  RawTeX!(r###"
+  RawTeX!(
+    r###"
      \gdef\PackageError#1#2#3{%
        \GenericError{%
            (#1)\@spaces\@spaces\@spaces\@spaces
@@ -230,15 +234,20 @@ LoadDefinitions!(state, {
      }
      \def\@latex@info@no@line#1{%
        \@latex@info{#1\@gobble}}
-     "###);
+     "###
+  );
   DefPrimitive!("\\@setsize{}{}{}{}", None);
-  Let!("\\@warning",  "\\@latex@warning");
+  Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
   DefMacro!("\\G@refundefinedtrue", None);
-  DefMacro!("\\@nomath{}",
-     r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
-   DefMacro!("\\@font@warning{}",
-     r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}");
+  DefMacro!(
+    "\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
+  );
+  DefMacro!(
+    "\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
+  );
   //======================================================================
   RawTeX!(
     r###"

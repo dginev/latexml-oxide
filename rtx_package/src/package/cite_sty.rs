@@ -1,7 +1,6 @@
 use crate::package::*;
 
 LoadDefinitions!(outer_stomach, state, {
-
   // Ignore the resorting of citations
   // "Compression" of citation lists doesn't make much sense in XML.
 
@@ -11,15 +10,16 @@ LoadDefinitions!(outer_stomach, state, {
   // the XML at the end.
   // An alternative would be to store various styling info,
   // but I'll leave that off, for now.
-  DefMacro!("\\citeleft",   "[");
-  DefMacro!("\\citeright",  "]");
-  DefMacro!("\\citedash",   "--");
-  DefMacro!("\\citemid",    ", ");
-  DefMacro!("\\citepunct",  ", ");
+  DefMacro!("\\citeleft", "[");
+  DefMacro!("\\citeright", "]");
+  DefMacro!("\\citedash", "--");
+  DefMacro!("\\citemid", ", ");
+  DefMacro!("\\citepunct", ", ");
   DefMacro!("\\citeform{}", "#1");
 
   // Copy of natbib's \citet
-  DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim", sub[gullet, (_star,_pre,_post,_tkeys), _state] {
+  DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim",
+    sub[gullet, (_star,_pre,_post,_tkeys), _state] {
     unimplemented!();
       // my ($style, $open, $close, $ns)
       //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
@@ -60,7 +60,6 @@ LoadDefinitions!(outer_stomach, state, {
       ()
   });
 
-  Let!("\\citenum",    "\\citen");
+  Let!("\\citenum", "\\citen");
   Let!("\\citeonline", "\\citen");
-
 });

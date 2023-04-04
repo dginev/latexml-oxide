@@ -12,11 +12,11 @@ use std::sync::Arc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::float::Float;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::float::Float;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
@@ -27,7 +27,8 @@ use crate::Digested;
 
 /// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;
-/// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return value
+/// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return
+/// value
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 /// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
@@ -37,10 +38,13 @@ pub const NO_TOKENS: Tokens = Tokens(Vec::new());
 pub struct Tokens(Vec<Token>);
 
 impl PartialEq for Tokens {
-  fn eq(&self, other: &Tokens) -> bool { self.0.len() == other.0.len() && self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b) }
+  fn eq(&self, other: &Tokens) -> bool {
+    self.0.len() == other.0.len() && self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
+  }
 }
 
-/// convenience macro for assembling a Tokens object from different pieces (`Token`, `Vec<Token>`, `Tokens`)
+/// convenience macro for assembling a Tokens object from different pieces (`Token`, `Vec<Token>`,
+/// `Tokens`)
 #[macro_export]
 macro_rules! Tokens(
   () => ( $crate::tokens::NO_TOKENS );
@@ -98,8 +102,8 @@ impl<'a> From<&'a Tokens> for Token {
     } else {
       panic!("Dangerous cast! Tokens->Token for {ts:?}");
       //let code = ts.0.first().unwrap().get_catcode();
-      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts, single);
-      //Token::new(Cow::Owned(ts.to_string()), code)
+      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
+      // single); Token::new(Cow::Owned(ts.to_string()), code)
     }
   }
 }
@@ -184,7 +188,8 @@ impl Tokens {
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_dimension(&self) -> Dimension {
     // TODO: How do we enhance here to be able to use the current font information from State?
-    // Using the State-ful variations makes it impossible to work with the From/Into standard Rust traits. Should we do StatefulFrom/StatefulInto ?
+    // Using the State-ful variations makes it impossible to work with the From/Into standard Rust
+    // traits. Should we do StatefulFrom/StatefulInto ?
     Dimension::new_f64(Dimension::spec_to_f64(&self.to_string(), None).unwrap_or_default())
   }
 
@@ -227,9 +232,21 @@ impl Tokens {
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
       if let Some(value) = toks_iter.next() {
-        kvs.add_value(&key.to_string(), Stored::Token(value.clone()), false, false, state);
+        kvs.add_value(
+          &key.to_string(),
+          Stored::Token(value.clone()),
+          false,
+          false,
+          state,
+        );
       } else {
-        kvs.add_value(&key.to_string(), Stored::Tokens(Tokens!()), false, false, state);
+        kvs.add_value(
+          &key.to_string(),
+          Stored::Tokens(Tokens!()),
+          false,
+          false,
+          state,
+        );
       }
     }
     kvs
@@ -260,7 +277,17 @@ impl Tokens {
   pub fn unwrap(&self) -> &Tokens { self }
 
   /// A string form which is primarily used for error-reporting
-  pub fn stringify(&self) -> String { s!("Tokens[{}]", &self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")) }
+  pub fn stringify(&self) -> String {
+    s!(
+      "Tokens[{}]",
+      &self
+        .0
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
+    )
+  }
   /// digest the current `Tokens`
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(self, state)
@@ -268,7 +295,13 @@ impl Tokens {
 
   /// Remove dont_expand, but preserve SMUGGLE_THE
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
-    Tokens(self.0.into_iter().map(|t| t.neutralize(extraspecials, state)).collect::<Vec<_>>())
+    Tokens(
+      self
+        .0
+        .into_iter()
+        .map(|t| t.neutralize(extraspecials, state))
+        .collect::<Vec<_>>(),
+    )
   }
   /// Checks if any BEGIN/END code groups are correctly nested and closed
   pub fn is_balanced(&self) -> bool {
@@ -306,11 +339,19 @@ impl Tokens {
   }
 
   /// removes the smuggled token of all contained Token elements
-  pub fn without_dont_expand(self) -> Self { Tokens(self.0.into_iter().map(|t| t.without_dont_expand()).collect()) }
+  pub fn without_dont_expand(self) -> Self {
+    Tokens(
+      self
+        .0
+        .into_iter()
+        .map(|t| t.without_dont_expand())
+        .collect(),
+    )
+  }
 
   /// Consumes a Tokens to a string containing TeX that created it (or could have).
-  /// Note that this is not necessarily the original TeX code; expansions or other substitutions may have taken place.
-  /// Also note that the LaTeXML linebreak feature is always *disabled* here.)
+  /// Note that this is not necessarily the original TeX code; expansions or other substitutions may
+  /// have taken place. Also note that the LaTeXML linebreak feature is always *disabled* here.)
   pub fn untex(self) -> String {
     let mut tokens: VecDeque<Token> = self.revert().into_iter().collect();
     let mut tex_string = String::new();

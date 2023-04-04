@@ -4,9 +4,9 @@ use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::Info;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use rustc_hash::{FxHashMap as HashMap};
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -14,7 +14,7 @@ use std::fmt::Display;
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use super::metadata::Meta;
 use super::ActionContext;
-use crate::parser::{realize_xmnode,p_get_value};
+use crate::parser::{p_get_value, realize_xmnode};
 use crate::pragmatics::ValidationPragmatics;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,10 +52,14 @@ impl Display for XProps {
   }
 }
 
-type XAttributes = (Option<Cow<'static,str>>, Option<Font>, Option<HashMap<String,String>>);
+type XAttributes = (
+  Option<Cow<'static, str>>,
+  Option<Font>,
+  Option<HashMap<String, String>>,
+);
 impl XProps {
-  /// Consumes the `XProps` and returns the (content, font, attributes) in an arrangement suitable for using
-  /// the `Document` methods
+  /// Consumes the `XProps` and returns the (content, font, attributes) in an arrangement suitable
+  /// for using the `Document` methods
   pub fn into_attributes(mut self) -> XAttributes {
     let mut attrs = HashMap::default();
     if let Some(role) = self.role.take() {
@@ -79,7 +83,7 @@ impl XProps {
     if let Some(fontref) = self.fontref.take() {
       attrs.insert(String::from("_font"), fontref.into_owned());
     }
-    let attrs_opt = if attrs.is_empty() { None } else {Some(attrs)};
+    let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
     (self.content.take(), self.font.take(), attrs_opt)
   }
 }
@@ -164,7 +168,10 @@ impl Args {
       if peekable.peek().is_some() {
         maybe_arg
           .as_ref()
-          .unwrap_or(&XM::Lexeme(String::from("missing_argument"), Meta::default()))
+          .unwrap_or(&XM::Lexeme(
+            String::from("missing_argument"),
+            Meta::default(),
+          ))
           .fmt_indented(level, f)?;
       } else {
         let mut last_level: Vec<bool> = level.to_vec();
@@ -174,7 +181,10 @@ impl Args {
         }
         maybe_arg
           .as_ref()
-          .unwrap_or(&XM::Lexeme(String::from("missing_argument"), Meta::default()))
+          .unwrap_or(&XM::Lexeme(
+            String::from("missing_argument"),
+            Meta::default(),
+          ))
           .fmt_indented(&last_level, f)?;
       };
     }
@@ -183,10 +193,18 @@ impl Args {
   /// Obtain defined subtrees as a slice, e.g. for consistency validation
   pub fn trees(&self) -> Vec<&XM> { self.0.iter().filter_map(|x| x.as_ref()).collect() }
   /// Obtain defined subtrees as a mutable slice, e.g. for consistency validation
-  pub fn trees_mut(&mut self) -> Vec<&mut XM> { self.0.iter_mut().filter_map(|x| x.as_mut()).collect() }
+  pub fn trees_mut(&mut self) -> Vec<&mut XM> {
+    self.0.iter_mut().filter_map(|x| x.as_mut()).collect()
+  }
 
   /// borrow the constraints and pass them to the outer caller
-  pub fn get_constraints(&self) -> Vec<&CurryConstraint> { self.trees().into_iter().flat_map(|t| t.get_meta().curry_constraints.iter()).collect() }
+  pub fn get_constraints(&self) -> Vec<&CurryConstraint> {
+    self
+      .trees()
+      .into_iter()
+      .flat_map(|t| t.get_meta().curry_constraints.iter())
+      .collect()
+  }
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
     self
@@ -234,30 +252,55 @@ impl XM {
       XM::Lexeme(_atom, meta) => vec![meta],
       XM::Apply(op, args, _, _) => vec![op.get_meta()]
         .into_iter()
-        .chain(args.0.iter().filter(|arg| arg.is_some()).map(|arg| arg.as_ref().unwrap().get_meta()))
+        .chain(
+          args
+            .0
+            .iter()
+            .filter(|arg| arg.is_some())
+            .map(|arg| arg.as_ref().unwrap().get_meta()),
+        )
         .collect(),
       XM::Dual(content, presentation, _, _) => vec![content.get_meta(), presentation.get_meta()],
       _ => Vec::new(),
     }
   }
-  pub fn get_value(&self, nodes:&[Node]) -> Result<Cow<str>, Box<dyn Error>> {
-    Ok(
-    match self {
+  pub fn get_value(&self, nodes: &[Node]) -> Result<Cow<str>, Box<dyn Error>> {
+    Ok(match self {
       XM::Lexeme(lex, _) => Cow::Owned(p_get_value(lookup_lex_node(lex, nodes)?)),
-      XM::Token(props,_) => match props.content {
+      XM::Token(props, _) => match props.content {
         None => props.name.clone().unwrap_or(Cow::Borrowed("")),
-        Some(ref v) => if v.is_empty() {
-          props.name.clone().unwrap_or(Cow::Borrowed(""))
-        } else { v.clone() }
+        Some(ref v) => {
+          if v.is_empty() {
+            props.name.clone().unwrap_or(Cow::Borrowed(""))
+          } else {
+            v.clone()
+          }
+        },
       },
-      XM::Apply(op, args, _,_) => Cow::Owned(format!("{}{}",op.0.get_value(nodes)?,
-      args.trees().iter().map(|t| t.get_value(nodes).expect("inner")).collect::<Vec<_>>().join(""))),
+      XM::Apply(op, args, _, _) => Cow::Owned(format!(
+        "{}{}",
+        op.0.get_value(nodes)?,
+        args
+          .trees()
+          .iter()
+          .map(|t| t.get_value(nodes).expect("inner"))
+          .collect::<Vec<_>>()
+          .join("")
+      )),
       XM::Choices(_) => unimplemented!(),
-      XM::Dual(content, pres, _,_) => Cow::Owned(
-        format!("{}{}",content.get_value(nodes).expect("inner"),
-                       pres.get_value(nodes).expect("inner"))),
-      XM::Wrap(args, _, _) => Cow::Owned( args.iter().map(|a| a.get_value(nodes).expect("oof")).collect::<Vec<_>>().join("") ),
-      XM::Ref(_) => Cow::Borrowed("")
+      XM::Dual(content, pres, _, _) => Cow::Owned(format!(
+        "{}{}",
+        content.get_value(nodes).expect("inner"),
+        pres.get_value(nodes).expect("inner")
+      )),
+      XM::Wrap(args, _, _) => Cow::Owned(
+        args
+          .iter()
+          .map(|a| a.get_value(nodes).expect("oof"))
+          .collect::<Vec<_>>()
+          .join(""),
+      ),
+      XM::Ref(_) => Cow::Borrowed(""),
     })
   }
 
@@ -267,7 +310,11 @@ impl XM {
   /// Whenever a contradiction/inconsistency is detected, we return an error
   /// This method should always be called on tree construction, as it also manages the various curry
   /// constraints, keeping the resolution local / fast.
-  pub fn specialize(self, mut into: Meta, pragmas: &[ValidationPragmatics]) -> Result<Self, Box<dyn Error>> {
+  pub fn specialize(
+    self,
+    mut into: Meta,
+    pragmas: &[ValidationPragmatics],
+  ) -> Result<Self, Box<dyn Error>> {
     match self {
       XM::Lexeme(name, meta) => {
         let new_meta = meta.with_curry_atom(into, &name)?;
@@ -309,7 +356,8 @@ impl XM {
         // Next, we validate the constraints.
         let initial_constraint_count = meta.curry_constraints.len();
         let mut new_meta = meta;
-        // SPECIAL CASE (of course): if we are using an "unconstrained" directive, no need to do any of this
+        // SPECIAL CASE (of course): if we are using an "unconstrained" directive, no need to do any
+        // of this
         if into.specialize.as_deref() == Some("unconstrained") {
           op.unconstrain_recursive();
           args.unconstrain_recursive();
@@ -330,9 +378,11 @@ impl XM {
           if let Some(ref expr) = new_meta.curry_level {
             match expr {
               CurryTerm::Add(_, _) | CurryTerm::Sub(_, _) => {
-                new_meta
-                  .curry_constraints
-                  .insert(CurryConstraint((expr.clone(), Ordering::Greater, CurryTerm::Literal(0))));
+                new_meta.curry_constraints.insert(CurryConstraint((
+                  expr.clone(),
+                  Ordering::Greater,
+                  CurryTerm::Literal(0),
+                )));
               },
               _ => {},
             }
@@ -360,12 +410,14 @@ impl XM {
   /// Prunes choices based on a validation pass leveraging a choice of pragmatics
   /// if the pruning arrives at no viable trees at all, the original tree is returned,
   /// hence the "soft" function name.
-  /// These are executed at the end of the program, so need to be invoked recursively on each subtree
+  /// These are executed at the end of the program, so need to be invoked recursively on each
+  /// subtree
   pub fn soft_prune_choices(self, pragmatics: ValidationPragmatics) -> Self {
     match self {
       XM::Choices(trees) => {
-        let (consistent_trees, inconsistent_trees): (Vec<XM>, Vec<XM>) =
-          trees.into_iter().partition(|tree| pragmatics.validate_recursive(tree).is_ok());
+        let (consistent_trees, inconsistent_trees): (Vec<XM>, Vec<XM>) = trees
+          .into_iter()
+          .partition(|tree| pragmatics.validate_recursive(tree).is_ok());
         match consistent_trees.len() {
           0 => XM::Choices(inconsistent_trees),
           1 => consistent_trees.into_iter().next().unwrap(),
@@ -535,7 +587,13 @@ impl XM {
   }
 
   /// Rebuild a marpa-derived parse tree into an XMath XML tree
-  pub fn into_xmath(self, owner:&mut Node, nodes: &mut [Node], document: &mut Document, state: &mut State) -> Result<Node, Box<dyn Error + Send + Sync>> {
+  pub fn into_xmath(
+    self,
+    owner: &mut Node,
+    nodes: &mut [Node],
+    document: &mut Document,
+    state: &mut State,
+  ) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       XM::Lexeme(content, _meta) => {
         let id = content.split(':').last().unwrap().parse::<usize>().unwrap() - 1;
@@ -548,8 +606,8 @@ impl XM {
         // I know we need to transition the {font} property to the "_font" attribute
         // when the abstract XMath data becomes a libxml object
         //
-        // but there is some contextual inference at times, e.g. in "insertMathToken", and not at others.
-        // this does the simpler aspect only:
+        // but there is some contextual inference at times, e.g. in "insertMathToken", and not at
+        // others. this does the simpler aspect only:
         let (content_opt, font, attrs) = props.into_attributes();
         let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font, state)?;
         if let Some(content) = content_opt {
@@ -601,7 +659,10 @@ impl XM {
         Ok(ref_node)
       },
       XM::Choices(mut choices) => {
-        Info!("to_xmath handler discarded {} parse choices.", choices.len() - 1);
+        Info!(
+          "to_xmath handler discarded {} parse choices.",
+          choices.len() - 1
+        );
         choices.remove(0).into_xmath(owner, nodes, document, state)
       },
     }
@@ -640,7 +701,9 @@ impl XM {
     match self {
       XM::Lexeme(lex, _) => {
         let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
-        Ok(Some(realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned()))
+        Ok(Some(
+          realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned(),
+        ))
       },
       XM::Ref(ref idref) => {
         if let Some(node) = ctxt.document.lookup_id(idref) {
@@ -664,11 +727,13 @@ impl Display for XM {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 
-
 /// Unwrap any leftover XMArg guards from the markup.
 /// This is done earlier in LaTeXML-classic, during the semantics phase.
 /// With marpa, we can postpone reparenting to the very end, when the tree is requested.
-fn add_child_guard_xmarg(receiver: &mut Node, incoming: &mut Node) -> Result<(), Box<dyn Error + Send + Sync>> {
+fn add_child_guard_xmarg(
+  receiver: &mut Node,
+  incoming: &mut Node,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
   if incoming.get_name() == "XMArg" {
     let mut to_reparent = element_nodes(incoming);
     for incoming_child in to_reparent.iter_mut() {
@@ -706,7 +771,10 @@ pub fn get_token_meaning(in_node: &Node) -> Option<String> {
 }
 /// Looks up the node associated with a given lexeme,
 /// via the node index held in the third colon-separated lexeme piece.
-pub(crate) fn lookup_lex_node<'a>(lex: &'a str, nodes: &'a [Node]) -> Result<&'a Node, Box<dyn Error>> {
+pub(crate) fn lookup_lex_node<'a>(
+  lex: &'a str,
+  nodes: &'a [Node],
+) -> Result<&'a Node, Box<dyn Error>> {
   let node_idx = lex.split(':').last().unwrap().parse::<usize>()? - 1;
   let node = nodes
     .get(node_idx)
@@ -755,7 +823,11 @@ impl From<&Node> for XProps {
   fn from(node: &Node) -> Self {
     let mut attrs = node.get_attributes();
     let str1 = node.get_content();
-    let content = if str1.is_empty() { None } else { Some(Cow::Owned(str1)) };
+    let content = if str1.is_empty() {
+      None
+    } else {
+      Some(Cow::Owned(str1))
+    };
     let role = attrs.remove("role").map(Cow::Owned);
     let name = attrs.remove("name").map(Cow::Owned);
     let meaning = attrs.remove("meaning").map(Cow::Owned);

@@ -6,7 +6,8 @@ use crate::package::*;
 // Note that \env & \endenv defined by \newenvironment CAN be
 // invoked directly.
 LoadDefinitions!(outer_state, {
-  DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, (star_opt, name, nargs, opt, begin, end), state] {
+  DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
+  sub[stomach, (star_opt, name, nargs, opt, begin, end), state] {
     let gullet = stomach.get_gullet_mut();
     let name = { Expand!(name, gullet).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
@@ -27,7 +28,8 @@ LoadDefinitions!(outer_state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}", sub[stomach, (star, name, nargs, opt, begin, end), state] {
+  DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
+  sub[stomach, (star, name, nargs, opt, begin, end), state] {
     let mut gullet = stomach.get_gullet_mut();
     let name = Expand!(name, gullet).to_string();
     let is_locked = state.lookup_bool(&s!("\\{}:locked",name)) ||

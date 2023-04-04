@@ -10,7 +10,8 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
-  DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star,cs_token,nargs,opt,body), state] {
+  DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
+  sub[stomach, (star,cs_token,nargs,opt,body), state] {
     let nargs = nargs.value_of() as usize;
     if !IsDefinable!(&cs_token) {
       if !state.has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
@@ -23,7 +24,8 @@ LoadDefinitions!(state, {
     DefMacro!(cs_token, macro_args, body);
   });
 
-  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star, cs, nargs_num, opt, body), state] {
+  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
+  sub[stomach, (star, cs, nargs_num, opt, body), state] {
     let nargs = nargs_num.value_of() as usize;
     let opt = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() { None } else { opt }
@@ -38,10 +40,12 @@ LoadDefinitions!(state, {
   // Experiment: use \l@ngrel@x to carry over \protected information from outside, etoolbox-style.
   // DefMacro('\@argdef','\l@ngrel@x\renewcommand');
   //
-  // The etoolbox binding now defines \newrobustcmd & friends directly, so \@argdef is not directly needed
-  // However, we would need to add support for other packages that may leverage that machinery.
+  // The etoolbox binding now defines \newrobustcmd & friends directly, so \@argdef is not directly
+  // needed However, we would need to add support for other packages that may leverage that
+  // machinery.
 
-  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}", sub[stomach, (star, cs, nargs, opt, body), state] {
+  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
+  sub[stomach, (star, cs, nargs, opt, body), state] {
     // TODO: Consider if we should just treat the empty tokens directly in convert_latex_args ?
     let opt_checked = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() {
@@ -56,7 +60,8 @@ LoadDefinitions!(state, {
   });
 
   // Crazy; define \cs in terms of \cs[space] !!!
-  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}", sub[stomach, (star,cs,nargs,opt,body), state] {
+  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
+  sub[stomach, (star,cs,nargs,opt,body), state] {
     let opt_checked = match opt {
       Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
       _ => None
@@ -84,7 +89,8 @@ LoadDefinitions!(state, {
   // It may be that we've already defined it to expand into the above conditional.
   // But more importantly, we don't want to override a hand-written definition (if any).
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}", sub[stomach, (cs, encoding, nargs, opts, expansion), state] {
+  DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}",
+  sub[stomach, (cs, encoding, nargs, opts, expansion), state] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
     let gullet = stomach.get_gullet_mut();
@@ -100,9 +106,13 @@ LoadDefinitions!(state, {
      DefMacro!(ecs, ecs_args, expansion);
   });
 
-  DefMacro!("\\DeclareTextCommandDefault DefToken", "\\DeclareTextCommand{#1}{?}");
+  DefMacro!(
+    "\\DeclareTextCommandDefault DefToken",
+    "\\DeclareTextCommand{#1}{?}"
+  );
 
-  DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}", sub[gullet, (cs, encoding, nargs, opts, expansion), state] {
+  DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}",
+  sub[gullet, (cs, encoding, nargs, opts, expansion), state] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
     if IsDefinable!(&cs) { // If not already defined...
@@ -118,24 +128,30 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefMacro!("\\ProvideTextCommandDefault DefToken", "\\ProvideTextCommand{#1}{?}");
+  DefMacro!(
+    "\\ProvideTextCommandDefault DefToken",
+    "\\ProvideTextCommand{#1}{?}"
+  );
 
   // #------------------------------------------------------------
 
-  DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[stomach, (cs, encoding, code), state] {
+  DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}",
+    sub[stomach, (cs, encoding, code), state] {
     // TODO:
     //     $code = $code->valueOf;
     //     my $css = ToString($cs);
     //     $encoding = ToString(Expand($encoding));
     //     if (isDefinable($cs)) {    # If not already defined...
     //       DefMacroI($cs, undef,
-    // '\expandafter\ifx\csname\cf@encoding\string' . $css . '\endcsname\relax\csname?\string' . $css . '\endcsname'
+    // '\expandafter\ifx\csname\cf@encoding\string' . $css .
+    //  '\endcsname\relax\csname?\string' . $css . '\endcsname'
     //           . '\else\csname\cf@encoding\string' . $css . '\endcsname\fi'); }
     //     my $ecs = T_CS('\\' . $encoding . $css);
     //     DefPrimitiveI($ecs, undef, FontDecode($code, $encoding));
   });
 
-  // hmmm... what needs doing here; basically it means use this encoding as the default for the symbol
+  // hmmm... what needs doing here; basically it means use this encoding as the default for the
+  // symbol
   DefMacro!("\\DeclareTextSymbolDefault DefToken {}", "");
 
   //------------------------------------------------------------
@@ -170,7 +186,8 @@ LoadDefinitions!(state, {
   // The next font declaration commands are based on
   // http://tex.loria.fr/general/new/fntguide.html
   // we ignore font encoding
-  DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}", sub[stomach, (name, enc, family, series, shape), state] {
+  DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}",
+  sub[stomach, (name, enc, family, series, shape), state] {
     AssignValue!(&s!("fontdeclaration@{}", name),
       fontmap!(family => family.to_string(),
         series   => series.to_string(),
@@ -231,8 +248,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\lx@utf@oe", None, "\u{0153}", alias => "\\oe"); // LATIN SMALL LIGATURE OE
   DefMacro!("\\lx@utf@AE", None, "\u{00C6}", alias => "\\AE"); // LATIN CAPITAL LETTER AE
   DefMacro!("\\lx@utf@ae", None, "\u{00E6}", alias => "\\ae"); // LATIN SMALL LETTER AE
-  DefMacro!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA"); // LATIN CAPITAL LETTER A WITH RING ABOVE
-  DefMacro!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa"); // LATIN SMALL LETTER A WITH RING ABOVE
+
+  // LATIN CAPITAL LETTER A WITH RING ABOVE
+  DefMacro!("\\lx@utf@AA", None, "\u{00C5}", alias => "\\AA");
+
+  // LATIN SMALL LETTER A WITH RING ABOVE
+  DefMacro!("\\lx@utf@aa", None, "\u{00E5}", alias => "\\aa");
   DefMacro!("\\lx@utf@O",  None, "\u{00D8}", alias => "\\O"); // LATIN CAPITAL LETTER O WITH STROKE
   DefMacro!("\\lx@utf@o",  None, "\u{00F8}", alias => "\\o"); // LATIN SMALL LETTER O WITH STROKE
   DefMacro!("\\lx@utf@L",  None, "\u{0141}", alias => "\\L"); // LATIN CAPITAL LETTER L WITH STROKE

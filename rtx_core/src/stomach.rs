@@ -1,6 +1,6 @@
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::common::error::*;
@@ -69,14 +69,21 @@ impl<'t> Stomach {
 
   /// Return the digested `List` after reading and digesting a body from the its Gullet.
   /// The body extends until the current level of boxing or environment is closed.
-  pub fn digest_next_body(&mut self, terminal_opt: Option<Token>, state: &mut State) -> Result<Vec<Digested>> {
+  pub fn digest_next_body(
+    &mut self,
+    terminal_opt: Option<Token>,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     let start_location = self.get_locator().unwrap().into_owned();
     let init_depth = self.boxing.len();
     let mut found_terminal = false;
     let local_box_list = self.regurgitate(); // grab the current boxes to emulate local frame;
 
     // try reading a executable token
-    while let Some(token) = self.get_gullet_mut().read_x_token(Some(true), true, state)? {
+    while let Some(token) = self
+      .get_gullet_mut()
+      .read_x_token(Some(true), true, state)?
+    {
       let invoked = self.invoke_token(&token, state)?;
       self.box_list.extend(invoked);
       if let Some(ref terminal) = terminal_opt {
@@ -99,7 +106,11 @@ impl<'t> Stomach {
 
     if let Some(ref terminal) = terminal_opt {
       if !found_terminal {
-        let message = s!("body should have ended with {:?}. current body started at {:?}", terminal, start_location);
+        let message = s!(
+          "body should have ended with {:?}. current body started at {:?}",
+          terminal,
+          start_location
+        );
         Warn!("expected", terminal, self, state, message);
       }
     }
@@ -112,7 +123,11 @@ impl<'t> Stomach {
   /// Digest a list of tokens independent from any current Gullet.
   /// Typically used to digest arguments to primitives or constructors.
   /// Returns a List containing the digested material.
-  pub fn digest<T: Into<Tokens>>(&mut self, tokens: T, outer_state: &mut State) -> Result<Digested> {
+  pub fn digest<T: Into<Tokens>>(
+    &mut self,
+    tokens: T,
+    outer_state: &mut State,
+  ) -> Result<Digested> {
     let tokens: Tokens = tokens.into();
 
     self.reading_from_mouth(Mouth::default(), outer_state, move |stomach, state| {
@@ -120,11 +135,18 @@ impl<'t> Stomach {
 
       stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); // prefixes shouldn't apply here.
-      let mode = if state.lookup_bool("IN_MATH") { TexMode::Math } else { TexMode::Text };
+      let mode = if state.lookup_bool("IN_MATH") {
+        TexMode::Math
+      } else {
+        TexMode::Text
+      };
       let initdepth = stomach.boxing.len();
       let depth = initdepth;
 
-      while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(true), true, state)? {
+      while let Some(token) = stomach
+        .get_gullet_mut()
+        .read_x_token(Some(true), true, state)?
+      {
         // Done if we run out of tokens
         // {
         //   let list = STOMACH_LIST.lock()
@@ -176,7 +198,10 @@ impl<'t> Stomach {
       state,
     )?;
     self.reading_from_mouth(raw_tex_mouth, state, move |stomach, state| -> Result<()> {
-      while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
+      while let Some(token) = stomach
+        .get_gullet_mut()
+        .read_x_token(Some(false), false, state)?
+      {
         if token != T_SPACE!() {
           stomach.invoke_token(&token, state)?;
         }
@@ -193,7 +218,11 @@ impl<'t> Stomach {
   /// possibly arguments will be parsed from the Gullet.
   /// Otherwise, the token is simply digested: turned into an appropriate box.
   /// Returns a list of boxes/whatsits.
-  pub fn invoke_token<'a>(&mut self, input_token: &'a Token, state: &mut State) -> Result<Vec<Digested>> {
+  pub fn invoke_token<'a>(
+    &mut self,
+    input_token: &'a Token,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     let mut maybe_token: Option<Cow<'a, Token>> = Some(Cow::Borrowed(input_token));
     // Overly complex, but want to avoid recursion/stack
     let mut result: Vec<Digested> = Vec::new();
@@ -204,7 +233,14 @@ impl<'t> Stomach {
       state.set_current_token(Arc::clone(&token));
       self.token_stack.push(Arc::clone(&token));
       if self.token_stack.len() > MAXSTACK {
-        fatal!(Stomach, Recursion, s!("Excessive recursion(?): Tokens on stack: {:?}", self.token_stack));
+        fatal!(
+          Stomach,
+          Recursion,
+          s!(
+            "Excessive recursion(?): Tokens on stack: {:?}",
+            self.token_stack
+          )
+        );
       }
       result = Vec::new();
 
@@ -214,7 +250,9 @@ impl<'t> Stomach {
       // constrains us here, we need separate match arms for each
       // distinctly typed enum case.
       match state.lookup_digestable_definition(&token) {
-        None => { result = self.invoke_token_undefined(&token, state)?; },
+        None => {
+          result = self.invoke_token_undefined(&token, state)?;
+        },
         Some(Stored::Token(meaning)) => {
           // Common case
           let cc = meaning.get_catcode();
@@ -225,7 +263,11 @@ impl<'t> Stomach {
               result.push(digested);
             }
           } else {
-            let message = s!("The token {:?} (catcode {:?}) should never reach Stomach!", token, cc);
+            let message = s!(
+              "The token {:?} (catcode {:?}) should never reach Stomach!",
+              token,
+              cc
+            );
             Error!("misdefined", token, self, state, &message);
             if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
@@ -241,7 +283,10 @@ impl<'t> Stomach {
             self.gullet.unread(invoked_meaning);
           }
           // replace the token by it's expansion!!!
-          maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
+          maybe_token = self
+            .gullet
+            .read_x_token(None, false, state)?
+            .map(Cow::Owned);
           self.token_stack.pop();
           state.expire_current_token();
           continue;
@@ -250,7 +295,10 @@ impl<'t> Stomach {
           // Conditionals are "expandable", use the regular invoke.
           let invoked_meaning = meaning.invoke(&mut self.gullet, false, state)?;
           self.gullet.unread(invoked_meaning);
-          maybe_token = self.gullet.read_x_token(None, false, state)?.map(Cow::Owned);
+          maybe_token = self
+            .gullet
+            .read_x_token(None, false, state)?
+            .map(Cow::Owned);
           self.token_stack.pop();
           state.expire_current_token();
           continue;
@@ -285,7 +333,11 @@ impl<'t> Stomach {
           }
         },
         meaning => {
-          fatal!(Stomach, Misdefined, s!("The object {:?} should never reach Stomach!", meaning));
+          fatal!(
+            Stomach,
+            Misdefined,
+            s!("The object {:?} should never reach Stomach!", meaning)
+          );
         },
       }
       state.expire_current_token();
@@ -295,7 +347,11 @@ impl<'t> Stomach {
     Ok(result)
   }
 
-  fn invoke_token_undefined(&mut self, token: &'t Token, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_token_undefined(
+    &mut self,
+    token: &'t Token,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     let cs = token.get_cs_name();
     state.note_status("undefined", cs);
 
@@ -304,7 +360,14 @@ impl<'t> Stomach {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");
       let message = s!("The token {} is not defined.", token.stringify());
-      Error!("undefined", token, self, state, &message, "Defining it now as with \\newif");
+      Error!(
+        "undefined",
+        token,
+        self,
+        state,
+        &message,
+        "Defining it now as with \\newif"
+      );
       // install stub definitions for new conditional
       state.install_definition(
         Expandable::new(
@@ -333,7 +396,14 @@ impl<'t> Stomach {
       Ok(Vec::new())
     } else {
       let message = s!("The token {} is not defined.", token.stringify());
-      Error!("undefined", token, self, state, &message, "Defining it now as <ltx:ERROR/>");
+      Error!(
+        "undefined",
+        token,
+        self,
+        state,
+        &message,
+        "Defining it now as <ltx:ERROR/>"
+      );
       let closure_cs = cs.to_owned();
       state.install_definition(
         Constructor {
@@ -384,9 +454,9 @@ impl<'t> Stomach {
         Ok(Some(Digested::from(Tbox::new(
           text,
           None,
-          None,             // locator
-          Tokens!(meaning), // tokens
-          HashMap::default(),   // properties
+          None,               // locator
+          Tokens!(meaning),   // tokens
+          HashMap::default(), // properties
           state,
         ))))
       },
@@ -397,9 +467,10 @@ impl<'t> Stomach {
   // This reads ONLY from that mouth (or any mouth openned by code in that source),
   // and the mouth should end up empty afterwards, and only be closed here.
 
-  /// TODO: This is a HACK, that copies the `Gullet::reading_from_mouth` function and redoes it in Stomach.
-  /// the need comes from techniques that use a *Stomach* inside the inner reader function, as is done by `Stomach::raw_tex`.
-  /// ideally `reading_from_mouth` should be used with a Gullet, and this variation should be removed.
+  /// TODO: This is a HACK, that copies the `Gullet::reading_from_mouth` function and redoes it in
+  /// Stomach. the need comes from techniques that use a *Stomach* inside the inner reader
+  /// function, as is done by `Stomach::raw_tex`. ideally `reading_from_mouth` should be used with
+  /// a Gullet, and this variation should be removed.
   pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
   where FnR: FnOnce(&mut Stomach, &mut State) -> R {
     let mouth_source = mouth.get_source().to_string();
@@ -418,7 +489,13 @@ impl<'t> Stomach {
             is_mouth = true;
           }
         } else {
-          Error!("unexpected", "runtime", self, state, "TODO: gullet had no active runtime");
+          Error!(
+            "unexpected",
+            "runtime",
+            self,
+            state,
+            "TODO: gullet had no active runtime"
+          );
           break;
         }
       }
@@ -426,7 +503,13 @@ impl<'t> Stomach {
         gullet.close_mouth(true, state);
         break;
       } else if gullet.mouthstack.is_empty() {
-        Error!("unexpected", "<closed>", self, state, "TODO: Mouth is unexpectedly already closed");
+        Error!(
+          "unexpected",
+          "<closed>",
+          self,
+          state,
+          "TODO: Mouth is unexpectedly already closed"
+        );
         // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
         //   "Reading from " . Stringify($mouth) . ", but it has already been closed.");
         break;
@@ -435,7 +518,8 @@ impl<'t> Stomach {
         let mut ready_to_read = false;
         {
           if let Some(ref mut runtime) = gullet.mouth {
-            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input() {
+            if !runtime.autoclose || !runtime.pushback.is_empty() || runtime.mouth.has_more_input()
+            {
               ready_to_read = true;
               stringify_mouth = runtime.mouth.stringify();
             }
@@ -444,7 +528,10 @@ impl<'t> Stomach {
         if ready_to_read {
           let next = gullet.read_token(state);
           let message = s!("Unexpected input remaining: {:?}", next);
-          let detail = s!("Finished reading from {}, but it still has input.", stringify_mouth);
+          let detail = s!(
+            "Finished reading from {}, but it still has input.",
+            stringify_mouth
+          );
           Error!("unexpected", "next", gullet, state, message, detail);
           {
             if let Some(ref mut runtime) = gullet.mouth {
@@ -479,12 +566,28 @@ impl<'t> Stomach {
     };
 
     state.push_frame();
-    state.assign_value("beforeAfterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("afterGroup", Stored::VecDequeStored(VecDeque::new()), Some(Scope::Local)); // ALWAYS bind this!
+    state.assign_value(
+      "beforeAfterGroup",
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Local),
+    ); // ALWAYS bind this!
+    state.assign_value(
+      "afterGroup",
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Local),
+    ); // ALWAYS bind this!
     state.assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value("groupInitiator", (*current_token).clone(), Some(Scope::Local));
-    state.assign_value("groupInitiatorLocator", self.get_locator().unwrap().into_owned(), Some(Scope::Local));
+    state.assign_value(
+      "groupInitiator",
+      (*current_token).clone(),
+      Some(Scope::Local),
+    );
+    state.assign_value(
+      "groupInitiatorLocator",
+      self.get_locator().unwrap().into_owned(),
+      Some(Scope::Local),
+    );
     if !nobox {
       // For begingroup/endgroup
       self.boxing.push((*current_token).clone())
@@ -503,13 +606,13 @@ impl<'t> Stomach {
               // TODO: Anything but Tokens in beforeAfterGroup?
               dbg!(beforeafter_frame);
               unimplemented!();
-            }
+            },
           }
         }
         // TODO
         // if (my ($x) = grep { !$_->isaBox } @result) {
-        // Error('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" . Stringify($x) . "'");
-        // @result = (makeMisdefinedError(@result)); }
+        // Error('misdefined', $x, $self, "Expected a Box|List|Whatsit, but got '" . Stringify($x) .
+        // "'"); @result = (makeMisdefinedError(@result)); }
         self.box_list.extend(result);
       }
     }
@@ -599,7 +702,10 @@ impl<'t> Stomach {
         state.get_current_token().unwrap().to_string(),
         self,
         state,
-        s!("Attempt to close non-boxing group; {}", self.current_frame_message(state))
+        s!(
+          "Attempt to close non-boxing group; {}",
+          self.current_frame_message(state)
+        )
       );
     } else {
       self.pop_stack_frame(true, state)?;
@@ -632,7 +738,11 @@ impl<'t> Stomach {
         color: curfont.color.clone(),
         bg: curfont.bg.clone(),
         size: curfont.size,
-        mathstyle: if isdisplay { Some("display".into()) } else { Some("text".into()) },
+        mathstyle: if isdisplay {
+          Some("display".into())
+        } else {
+          Some("text".into())
+        },
         ..Font::default()
       });
       state.assign_font(Arc::new(new_font), Some(Scope::Local));
@@ -640,13 +750,15 @@ impl<'t> Stomach {
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
-        state.assign_font(Arc::new(
-          saved_font.merge(Font {
+        state.assign_font(
+          Arc::new(saved_font.merge(Font {
             color: curfont.color.clone(),
             bg: curfont.bg.clone(),
             size: curfont.size,
             ..Font::default()
-          })), Some(Scope::Local));
+          })),
+          Some(Scope::Local),
+        );
       }
     }
     Ok(())
@@ -665,7 +777,11 @@ impl<'t> Stomach {
     // Last stack frame was NOT a mode switch!?!?!
     if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
       // Or was a mode switch to a different mode
-      let message = s!("Attempt to end mode `{}` in `{}`", mode, state.lookup_string("MODE"));
+      let message = s!(
+        "Attempt to end mode `{}` in `{}`",
+        mode,
+        state.lookup_string("MODE")
+      );
       let category = match state.get_current_token() {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),

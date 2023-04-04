@@ -1,7 +1,7 @@
+use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock};
-use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -101,9 +101,7 @@ impl PartialEq for Conditional {
 }
 
 impl fmt::Display for Conditional {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}",self.cs)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.cs) }
 }
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
@@ -145,14 +143,24 @@ impl Definition for Conditional {
   fn get_cs_name(&self) -> Cow<str> { Cow::Borrowed(self.cs.get_cs_name()) }
   fn get_alias(&self) -> Option<&String> { None }
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Result<Vec<Digested>> { unimplemented!() }
+  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Result<Vec<Digested>> {
+    unimplemented!()
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Conditional should never be called!");
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>> {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Conditional should never be called!"
+    );
   }
 }
-
 
 /// A Frame of data for the currently active conditional, stored in State
 #[derive(Debug, Clone, PartialEq)]
@@ -299,20 +307,27 @@ impl Conditional {
         },
       };
     }
-    Error!("expected", "\\fi", self, state, "Missing \\fi or \\else, conditional fell off end");
+    Error!(
+      "expected",
+      "\\fi",
+      self,
+      state,
+      "Missing \\fi or \\else, conditional fell off end"
+    );
     Tokens!()
   }
 
   fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let stack_frame_opt = if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-      if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-        Some(Arc::clone(stack_frame))
+    let stack_frame_opt =
+      if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+        if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
+          Some(Arc::clone(stack_frame))
+        } else {
+          None
+        }
       } else {
         None
-      }
-    } else {
-      None
-    };
+      };
     let local_token = state.get_current_token().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.read().unwrap().parsing {
@@ -342,7 +357,10 @@ impl Conditional {
       }
     } else {
       // No if stack entry ?
-      let message = s!("Didn't expect a {:?} since we seem not to be in a conditional", local_token.stringify());
+      let message = s!(
+        "Didn't expect a {:?} since we seem not to be in a conditional",
+        local_token.stringify()
+      );
       let local_token_str = local_token.to_string();
       Error!("unexpected", local_token_str, gullet, state, message);
       Ok(Tokens!())
@@ -350,15 +368,16 @@ impl Conditional {
   }
 
   fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let stack_frame_opt: Option<Arc<RwLock<IfFrame>>> = if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
-      if let Some(Stored::IfFrame(frame)) = stack.front() {
-        Some(Arc::clone(frame))
+    let stack_frame_opt: Option<Arc<RwLock<IfFrame>>> =
+      if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
+        if let Some(Stored::IfFrame(frame)) = stack.front() {
+          Some(Arc::clone(frame))
+        } else {
+          None
+        }
       } else {
         None
-      }
-    } else {
-      None
-    };
+      };
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.read().unwrap().parsing {
         // Defer expanding the \else if we're still parsing the test

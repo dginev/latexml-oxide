@@ -40,7 +40,8 @@ macro_rules! string_map {
   }}
 }
 
-/// A flexary macro for constructing `HashMap<K, V>` maps, where `K` and `V` are both generic (inferred at time of use)
+/// A flexary macro for constructing `HashMap<K, V>` maps, where `K` and `V` are both generic
+/// (inferred at time of use)
 #[macro_export]
 macro_rules! raw_map {
   ($( $key:expr => $val:expr ),*) => {{

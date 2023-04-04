@@ -3,10 +3,10 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
 
+use crate::common::error::Result;
 use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::error::Result;
 use crate::definition::register::RegisterType;
 use crate::mouth;
 use crate::state::State;
@@ -28,13 +28,15 @@ impl Default for Float {
 
 impl Object for Float {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
+  fn revert(&self, _state: &State) -> Result<Tokens> {
+    Ok(Tokens::new(ExplodeText!(&self.to_string())))
+  }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }
 }
 
 impl NumericOps for Float {
   fn new(number: i64) -> Self { Float(number as f64) }
-  fn new_f64(number:f64) -> Self { Float(number) }
+  fn new_f64(number: f64) -> Self { Float(number) }
   fn value_of(self) -> i64 { self.0 as i64 }
   fn value_f64(self) -> f64 { self.0 }
   fn negate(self) -> Self { Float(-self.0) }
@@ -58,24 +60,21 @@ impl fmt::Display for Float {
 }
 
 impl Float {
-  /// Tight formatting of floats, where we emit them as integers when they do not have a decimal part
-  /// used in e.g. the multido.sty binding and test
-  pub fn to_tight_string(&self) -> String {
-    custom_float_format(self.0, true)
-  }
+  /// Tight formatting of floats, where we emit them as integers when they do not have a decimal
+  /// part used in e.g. the multido.sty binding and test
+  pub fn to_tight_string(&self) -> String { custom_float_format(self.0, true) }
 }
 
 /// Utility for formatting sane numbers.
-pub fn floatformat(n:f64) -> String {
-  custom_float_format(n, false)
-}
-pub fn custom_float_format(n:f64, tight: bool) -> String {
+pub fn floatformat(n: f64) -> String { custom_float_format(n, false) }
+pub fn custom_float_format(n: f64, tight: bool) -> String {
   let mut s = format!("{:.5}", n);
   if s.contains('.') {
     s = TRAILING_ZEROS.replace(&s, "").to_string();
   }
   if s.ends_with('.') {
-    if tight { // tight format does not need the trailing dot
+    if tight {
+      // tight format does not need the trailing dot
       s.pop();
     } else {
       s.push('0'); //  Seems TeX prints .0 which in odd corner cases, people use?
@@ -85,12 +84,20 @@ pub fn custom_float_format(n:f64, tight: bool) -> String {
 }
 
 impl From<&str> for Float {
-  fn from(spec:&str) -> Self {
-    Float(spec.parse::<f64>().expect("Float::from(&str) does not handle malformed spec strings"))
+  fn from(spec: &str) -> Self {
+    Float(
+      spec
+        .parse::<f64>()
+        .expect("Float::from(&str) does not handle malformed spec strings"),
+    )
   }
 }
 impl From<String> for Float {
-  fn from(spec:String) -> Self {
-    Float(spec.parse::<f64>().expect("Float::from(String) does not handle malformed spec strings"))
+  fn from(spec: String) -> Self {
+    Float(
+      spec
+        .parse::<f64>()
+        .expect("Float::from(String) does not handle malformed spec strings"),
+    )
   }
 }

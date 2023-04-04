@@ -1,8 +1,8 @@
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Borrow;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
-use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -107,8 +107,16 @@ impl Object for KeyVals {
       let digested_value: Digested = if let Some(keydef) = keyval.get_type(state) {
         // keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
-        // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to keyval specifications.
-        keydef.digest(stomach, ArgWrap::OptionTokens(value_tokens_opt), None, state)?.unwrap()
+        // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to
+        // keyval specifications.
+        keydef
+          .digest(
+            stomach,
+            ArgWrap::OptionTokens(value_tokens_opt),
+            None,
+            state,
+          )?
+          .unwrap()
       } else {
         let value_tokens = value_tokens_opt.unwrap_or_default();
         value_tokens.be_digested(stomach, state)?
@@ -144,7 +152,9 @@ impl BoxOps for KeyVals {
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     unimplemented!();
   }
-  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { Ok(Vec::new()) } // TODO
+  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+    Ok(Vec::new())
+  } // TODO
   fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
@@ -181,10 +191,10 @@ impl KeyVals {
   pub fn new(options: KeyValsOptions, _state: &State) -> Self {
     // parse all the arguments
     let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
-    // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless (ref($keysets) eq 'ARRAY');
-    // let skip = options.get("skip").unwrap_or(false);
-    // $skip = [split(',', ToString(defined($options{skip}) ? $options{skip} : ''))] unless (ref($options{skip}) eq 'ARRAY');
-    // my $set_all       = $options{set_all}       ? 1 : 0;
+    // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless
+    // (ref($keysets) eq 'ARRAY'); let skip = options.get("skip").unwrap_or(false);
+    // $skip = [split(',', ToString(defined($options{skip}) ? $options{skip} : ''))] unless
+    // (ref($options{skip}) eq 'ARRAY'); my $set_all       = $options{set_all}       ? 1 : 0;
     // my $set_internals = $options{set_internals} ? 1 : 0;
     // my $skip_missing  = $options{skip_missing};
     // my $hookMissing  = $options{hookMissing};
@@ -233,8 +243,8 @@ impl KeyVals {
     //   Error(
     //     'undefined', 'Encountered unknown KeyVals key',
     //     "'$key' with prefix '$prefix' not defined in '" . join(",", @keysets) . "', " .
-    //       'were you perhaps using \setkeys instead of \setkeys*?') unless defined($self->getskip_missing);
-    //   return; }
+    //       'were you perhaps using \setkeys instead of \setkeys*?') unless
+    // defined($self->getskip_missing);   return; }
 
     // // return either the first or all of the elements
     // return ($sets[0]) unless $self->getset_all;
@@ -243,13 +253,22 @@ impl KeyVals {
 
   fn get_primary_keyval_of(&self, key: &str, keysets: &[KeyVal]) -> KeyVal {
     if keysets.is_empty() {
-      KeyVal::new(Some(self.prefix.clone()), self.keysets[0].clone(), key.to_string())
+      KeyVal::new(
+        Some(self.prefix.clone()),
+        self.keysets[0].clone(),
+        key.to_string(),
+      )
     } else {
       keysets[0].clone()
     }
   }
 
-  fn read_keyword_from(&self, gullet: &mut Gullet, ignore: &[&Token], state: &mut State) -> Result<(Vec<Token>, Option<Token>)> {
+  fn read_keyword_from(
+    &self,
+    gullet: &mut Gullet,
+    ignore: &[&Token],
+    state: &mut State,
+  ) -> Result<(Vec<Token>, Option<Token>)> {
     // set of tokens we will expand
     let mut tokens = Vec::new();
 
@@ -335,8 +354,8 @@ impl KeyVals {
     //       push(@rmtokens, $self->revertKeyVal($keyval, $value, $useDefault, (@rmtokens ? 0 : 1),
     //           1, $punct, $assign)); }
     //     my @reversion = $self->revertKeyVal($keyval, $value, $useDefault, 1, 1, $punct, $assign);
-    //     push(@tokens, $hookMissing, T_BEGIN, $self->revertKeyVal($keyval, $value, $useDefault, 1, 1, $punct, $assign), T_END) if $hookMissing;
-    //     next; }
+    //     push(@tokens, $hookMissing, T_BEGIN, $self->revertKeyVal($keyval, $value, $useDefault, 1,
+    // 1, $punct, $assign), T_END) if $hookMissing;     next; }
 
     //   // and iterate over all valid keysets
     //   foreach my $keyset (@keyvals) {
@@ -368,7 +387,8 @@ impl KeyVals {
   //     my ($key, $value, $useDefault, $resolution, $keyval) = @$tuple;
   //     # revert a single token
   //     if ($keyval) {    # when is this undef?
-  //       push(@tokens, $self->revertKeyVal($keyval, $value, $useDefault, (@tokens ? 0 : 1), 0, $punct, $assign)); } }
+  //       push(@tokens, $self->revertKeyVal($keyval, $value, $useDefault, (@tokens ? 0 : 1), 0,
+  // $punct, $assign)); } }
 
   //   # and return the list of tokens
   //   return Tokens(@tokens); }
@@ -377,18 +397,29 @@ impl KeyVals {
   // Changing contained values
   //======================================================================
 
-  pub fn add_value(&mut self, key: &str, value: Stored, use_default: bool, no_rebuild: bool, state: &State) {
+  pub fn add_value(
+    &mut self,
+    key: &str,
+    value: Stored,
+    use_default: bool,
+    no_rebuild: bool,
+    state: &State,
+  ) {
     // figure out the keyset(s) for the key to be added
     let keysets = self.resolve_keyval_for(key);
     let headset = self.get_primary_keyval_of(key, &keysets);
 
     // and add the new tuple to the set of tuples
     let value = if use_default {
-      headset.get_default(state).unwrap_or_else(|| Stored::String(String::new()))
+      headset
+        .get_default(state)
+        .unwrap_or_else(|| Stored::String(String::new()))
     } else {
       value
     };
-    self.tuples.push((key.to_string(), value, use_default, keysets, headset));
+    self
+      .tuples
+      .push((key.to_string(), value, use_default, keysets, headset));
     // we now need to rebuild, unless we were asked not to
     // TODO: Maybe only update the last element?
     if !no_rebuild {
@@ -423,7 +454,13 @@ impl KeyVals {
         if key == skip {
           continue;
         }
-        newtuples.push((key.to_string(), value.clone(), *use_default, resolution.to_vec(), keyval.clone()));
+        newtuples.push((
+          key.to_string(),
+          value.clone(),
+          *use_default,
+          resolution.to_vec(),
+          keyval.clone(),
+        ));
       }
       // push key / value into the pair
       pairs.push((key.to_string(), value.clone()));
@@ -484,10 +521,14 @@ impl KeyVals {
     // iterate over all the key-value pairs to read
     loop {
       // Read a single keyword, get a delimiter and a set of keyword tokens
-      let (ktoks, mut delim_opt) = self.read_keyword_from(gullet, &[&until, &assign, &punct], state)?;
+      let (ktoks, mut delim_opt) =
+        self.read_keyword_from(gullet, &[&until, &assign, &punct], state)?;
       // if there was no delimiter at the end, we throw an error
       if delim_opt.is_none() {
-        let message = s!("Fell off end expecting {} while reading KeyVal key", until.stringify());
+        let message = s!(
+          "Fell off end expecting {} while reading KeyVal key",
+          until.stringify()
+        );
         let message2 = s!("key started at {}", startloc.to_string());
         Error!("expected", until, gullet, state, message, message2);
       }
@@ -514,7 +555,9 @@ impl KeyVals {
           // read until $punct
           let mut toks = Vec::new();
           loop {
-            delim_opt = gullet.read_match(&[&punct_tks, &until_tks], state)?.map(|tks| tks.into());
+            delim_opt = gullet
+              .read_match(&[&punct_tks, &until_tks], state)?
+              .map(|tks| tks.into());
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
@@ -573,16 +616,23 @@ impl KeyVals {
   pub fn get_hash(&self) -> HashMap<String, String> {
     let mut hashed = HashMap::default();
     for (k, v) in &self.cached_hash {
-      hashed.insert(k.to_string(), v.iter().map(ToString::to_string).collect::<Vec<String>>().join(""));
+      hashed.insert(
+        k.to_string(),
+        v.iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(""),
+      );
     }
     hashed
   }
 
-  /// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected metadata
-  ///       the long-term solution ought to be via a type system extension, where the arguments to our before-digest closures
-  ///       are a vector of a new type ReadValue ::= [Token, KeyVals, RegisterValue]
-  ///       potentially? On the other hand, we can also put the extra effort of *postponing* the build of KV metadata until digestion,
-  ///       this way not losing any time reserializing metadata
+  /// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected
+  /// metadata       the long-term solution ought to be via a type system extension, where the
+  /// arguments to our before-digest closures       are a vector of a new type ReadValue ::=
+  /// [Token, KeyVals, RegisterValue]       potentially? On the other hand, we can also put the
+  /// extra effort of *postponing* the build of KV metadata until digestion,       this way not
+  /// losing any time reserializing metadata
   pub fn into_tokens(self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut tks: Vec<Token> = Vec::new();
     for (k, v) in self.cached_pairs.into_iter() {

@@ -5,10 +5,10 @@ use std::borrow::Cow;
 use crate::common::error::*;
 
 use crate::mouth;
-use crate::tokens::Tokens;
 use crate::parameter::{Parameter, Parameters};
 use crate::state::State;
 use crate::token::*;
+use crate::tokens::Tokens;
 
 lazy_static! {
   static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
@@ -22,7 +22,10 @@ lazy_static! {
 }
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
-pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(Token, Option<Parameters>)> {
+pub fn parse_prototype(
+  proto: &str,
+  state_opt: Option<&mut State>,
+) -> Result<(Token, Option<Parameters>)> {
   let cs;
   let final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
@@ -41,11 +44,16 @@ pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(To
     SINGLE_CHAR_RE.replace(proto, "").to_string()
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
     // Match an active char
-    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str())).unlist().remove(0);
+    cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()))
+      .unlist()
+      .remove(0);
     // also replace in proto
     ACTIVE_CHAR_RE.replace(proto, "").to_string()
   } else {
-    let message = s!("Definition prototype doesn't have proper control sequence: \"{}\"", proto);
+    let message = s!(
+      "Definition prototype doesn't have proper control sequence: \"{}\"",
+      proto
+    );
     fatal!(Prototype, Misdefined, None, state, message);
   }
   .trim()
@@ -55,7 +63,11 @@ pub fn parse_prototype(proto: &str, state_opt: Option<&mut State>) -> Result<(To
 }
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
-pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option<&mut State>) -> Result<Option<Parameters>> {
+pub fn parse_parameters(
+  mut prototype: String,
+  cs: &Token,
+  mut state_opt: Option<&mut State>,
+) -> Result<Option<Parameters>> {
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
     let next_proto: String;
@@ -114,7 +126,8 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
             Cow::Owned(spec.to_string())
           },
           inner: parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?
-            .map(|ps| ps.into()).unwrap_or_default(),
+            .map(|ps| ps.into())
+            .unwrap_or_default(),
           ..Parameter::default()
         };
         if let Some(ref mut state) = &mut state_opt {
@@ -137,9 +150,13 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
       next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
-      let extra : Vec<Tokens> = if extra_str.is_empty() { Vec::new() } else {
-        extra_str.split('|')
-          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist())).collect()
+      let extra: Vec<Tokens> = if extra_str.is_empty() {
+        Vec::new()
+      } else {
+        extra_str
+          .split('|')
+          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+          .collect()
       };
       let mut p = Parameter {
         name: name.into(),
@@ -155,7 +172,10 @@ pub fn parse_parameters(mut prototype: String, cs: &Token, mut state_opt: Option
       fatal!(
         Parameter,
         Misdefined,
-        s!("Unrecognized parameter specification at \"prototype\" {:?}", cs)
+        s!(
+          "Unrecognized parameter specification at \"prototype\" {:?}",
+          cs
+        )
       );
     }
     prototype = next_proto.to_string();

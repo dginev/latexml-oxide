@@ -7,11 +7,11 @@ pub mod math_primitive;
 pub mod primitive;
 pub mod register;
 
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
-use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -38,12 +38,18 @@ pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) 
 pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<ArgWrap>, &mut State) -> Result<Vec<Digested>>;
 pub type PrimitiveClosure = Arc<PrimitiveFn>;
 pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
-pub type PropertiesClosure = Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
-pub type DigestionClosure = Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Arc<dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>>;
+pub type PropertiesClosure =
+  Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+pub type DigestionClosure =
+  Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
+pub type ReplacementClosure = Arc<
+  dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>,
+>;
 pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
-pub type DigestedReversionClosure = Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
-pub type SizingClosure = Arc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
+pub type DigestedReversionClosure =
+  Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
+pub type SizingClosure =
+  Arc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
 pub type FontClosure = Arc<dyn Fn(Option<&Whatsit>, &mut State) -> Result<Font>>;
 
 #[derive(Clone)]
@@ -72,16 +78,17 @@ impl PartialEq for ExpansionBody {
       ExpansionBody::Closure(self_closure) => match other {
         ExpansionBody::Closure(other_closure) => Arc::ptr_eq(self_closure, other_closure),
         ExpansionBody::Tokens(other_tokens) => {
-          // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint appearing as Tokens and as the original Closure.
-          // if we do this carefully, we can get the two .to_string() variants to match...
-          format!("CODE({:p})",Arc::as_ptr(self_closure)) == other_tokens.to_string()
-        }
+          // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint
+          // appearing as Tokens and as the original Closure. if we do this carefully, we
+          // can get the two .to_string() variants to match...
+          format!("CODE({:p})", Arc::as_ptr(self_closure)) == other_tokens.to_string()
+        },
       },
       ExpansionBody::Tokens(self_tks) => match other {
         ExpansionBody::Tokens(other_tks) => self_tks == other_tks,
         ExpansionBody::Closure(other_closure) => {
-          format!("CODE({:p})",Arc::as_ptr(other_closure)) == self_tks.to_string()
-        }
+          format!("CODE({:p})", Arc::as_ptr(other_closure)) == self_tks.to_string()
+        },
       },
     }
   }
@@ -98,10 +105,10 @@ impl PartialEq for Reversion {
     match self {
       Reversion::Tokens(t) => match other {
         Reversion::Tokens(t2) => t == t2,
-        _ => false
+        _ => false,
       },
       // never compare pointers - i.e. never equal
-      _ => false
+      _ => false,
     }
   }
 }
@@ -144,7 +151,9 @@ impl From<String> for ExpansionBody {
 }
 
 impl From<ArgWrap> for ExpansionBody {
-  fn from(t: ArgWrap) -> ExpansionBody { ExpansionBody::Tokens(t.owned_tokens().unwrap_or_default()) }
+  fn from(t: ArgWrap) -> ExpansionBody {
+    ExpansionBody::Tokens(t.owned_tokens().unwrap_or_default())
+  }
 }
 impl From<ArgWrap> for Option<ExpansionBody> {
   fn from(t: ArgWrap) -> Option<ExpansionBody> {
@@ -234,7 +243,12 @@ pub trait Definition: Object {
 
   // ======================================================================
   // Return the Tokens that would invoke the given definition with arguments.
-  fn invocation(&mut self, args: Vec<Option<Tokens>>, _gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn invocation(
+    &mut self,
+    args: Vec<Option<Tokens>>,
+    _gullet: &mut Gullet,
+    state: &mut State,
+  ) -> Result<Tokens> {
     let mut invocation_result: Vec<Token> = vec![self.get_cs().into_owned()];
 
     match self.get_parameters() {
@@ -250,13 +264,22 @@ pub trait Definition: Object {
 
   fn get_num_args(&self) -> usize { 0 }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>>;
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>>;
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn capture_body(&self) -> bool { false }
 
-  fn execute_before_digest(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
+  fn execute_before_digest(
+    &self,
+    stomach: &mut Stomach,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
@@ -266,7 +289,12 @@ pub trait Definition: Object {
     }
     Ok(before_digested)
   }
-  fn execute_after_digest(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
+  fn execute_after_digest(
+    &self,
+    stomach: &mut Stomach,
+    whatsit: &mut Whatsit,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
@@ -277,7 +305,12 @@ pub trait Definition: Object {
     Ok(after_digested)
   }
 
-  fn execute_after_digest_body(&self, stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut State) -> Result<Vec<Digested>> {
+  fn execute_after_digest_body(
+    &self,
+    stomach: &mut Stomach,
+    whatsit: &mut Whatsit,
+    state: &mut State,
+  ) -> Result<Vec<Digested>> {
     state.unlocked = true;
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
@@ -291,7 +324,9 @@ pub trait Definition: Object {
     Ok(after_body_digested)
   }
 
-  fn value_of(&self, _args: Vec<ArgWrap>, _state: &mut State) -> Option<RegisterValue> { unimplemented!() }
+  fn value_of(&self, _args: Vec<ArgWrap>, _state: &mut State) -> Option<RegisterValue> {
+    unimplemented!()
+  }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }
@@ -309,13 +344,14 @@ pub trait Definition: Object {
   }
 }
 
-// We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's level of meta-programming,
-// since cloning an `Arc<Definition>` for storage makes it impossible to compare with the old `Arc<Definition>`.
-// Hence, we need our own meta-programming "hack", via the `stringify` method that is different for each
-// `definition` implementation (`Primitive`/`Constructor`/etc)
-// and each control sequence
+// We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's
+// level of meta-programming, since cloning an `Arc<Definition>` for storage makes it impossible to
+// compare with the old `Arc<Definition>`. Hence, we need our own meta-programming "hack", via the
+// `stringify` method that is different for each `definition` implementation
+// (`Primitive`/`Constructor`/etc) and each control sequence
 //
-// This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait objects.
+// This could evolve if Rust comes up with a best practice for implementing `PartialEq` on trait
+// objects.
 impl PartialEq for dyn Definition {
   fn eq(&self, other: &dyn Definition) -> bool { self.stringify() == other.stringify() }
 }
@@ -334,7 +370,9 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
-      ExpansionBody::Closure(ref code) => write!(f,"ExpansionBody::Closure({:p})", Arc::as_ptr(code)), // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(ref code) => {
+        write!(f, "ExpansionBody::Closure({:p})", Arc::as_ptr(code))
+      }, // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }
 }

@@ -17,10 +17,18 @@ use std::sync::Arc;
 #[test]
 fn can_complex() {
   let requires = None;
-  rtx_tests_internal("tests/complex", requires, Some(Arc::new(complex_tests_dispatch)));
+  rtx_tests_internal(
+    "tests/complex",
+    requires,
+    Some(Arc::new(complex_tests_dispatch)),
+  );
 }
 
-pub fn complex_tests_dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
+pub fn complex_tests_dispatch(
+  filename: &str,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
     "xii.tex" => Some(helpers::xii_tex::load_definitions(stomach, state)),

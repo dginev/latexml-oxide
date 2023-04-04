@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 use std::error::Error as ErrorTrait;
 use std::fmt;
 use std::io;
@@ -15,22 +15,26 @@ macro_rules! Debug {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     // $state.note_status("debug"); // TODO: We're losing the info count this way...
     use log::debug;
-    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    debug!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("debug"); // TODO: We're losing the debug count this way...
     use log::debug;
-    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    debug!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     use log::debug;
     $state.note_status("debug","");
-    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    debug!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     use log::debug;
     $state.note_status("debug","");
-    debug!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    debug!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
     // $state.note_status("debug"); // TODO: We're losing the info count this way...
@@ -45,22 +49,26 @@ macro_rules! Info {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     use log::info;
     // $state.note_status("info"); // TODO: We're losing the info count this way...
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    info!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("info"); // TODO: We're losing the info count this way...
     use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    info!(target: &s!("{}:{}", $category, $object), "{}",
+       generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     $state.note_status("info","");
     use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    info!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     $state.note_status("info","");
     use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    info!(target: &s!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
     // $state.note_status("debug"); // TODO: We're losing the info count this way...
@@ -74,22 +82,26 @@ macro_rules! Warn {
   ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
     // $state.note_status("warn"); // TODO: We're losing the warn count this way...
     use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    warn!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("warn"); // TODO: We're losing the warn count this way...
     use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    warn!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     $state.note_status("warn","");
     use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    warn!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     $state.note_status("warn","");
     use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    warn!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }}
 }
 
@@ -99,25 +111,29 @@ macro_rules! Error {
     // $state.note_status("error"); // TODO: We're losing the error count this way...
     use log::error;
     use $crate::generate_message;
-    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    error!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
     // $state.note_status("error"); // TODO: We're losing the error count this way...
     use log::error;
     use $crate::generate_message;
-    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    error!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }};
   ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
     use log::error;
     use $crate::generate_message;
     $state.note_status("error","");
-    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1))
+    error!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1))
   }};
  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
     use log::error;
     use $crate::generate_message;
     $state.note_status("error","");
-    error!(target: &format!("{}:{}", $category, $object), "{}", generate_message!($where, $message, -1, $($details),*))
+    error!(target: &format!("{}:{}", $category, $object), "{}",
+      generate_message!($where, $message, -1, $($details),*))
   }}
 }
 
@@ -159,10 +175,24 @@ macro_rules! generate_message {
     format!("{}\n\tIn {}:{}:{}\n", $message, file!(), line!(), column!())
   };
   (None, $message:expr, $level:literal, $detail:expr) => {
-    format!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $detail, file!(), line!(), column!())
+    format!(
+      "{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $detail,
+      file!(),
+      line!(),
+      column!()
+    )
   };
   ($where:ident, $message:expr, $level:literal) => {
-    format!("{}\n\t{}\n\tIn {}:{}:{}\n", $message, $where.get_location(), file!(), line!(), column!())
+    format!(
+      "{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $where.get_location(),
+      file!(),
+      line!(),
+      column!()
+    )
   };
   ($where:ident, $message:expr, $level:literal, $detail:expr) => {
     format!(
@@ -239,11 +269,7 @@ impl fmt::Display for Error {
     match self.category {
       Init => write!(f, "Init"),
       Io(ref err) => err.fmt(f),
-      NotFound => write!(
-        f,
-        "No matching cities with a \
-         population were found."
-      ),
+      NotFound => write!(f, "No matching cities with a population were found."),
       MissingFile => write!(f, "missing file"),
       Misdefined => write!(f, "misdefined"),
       Unknown => write!(f, "unknown"),

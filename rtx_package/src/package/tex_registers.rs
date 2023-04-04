@@ -7,6 +7,7 @@ use chrono::prelude::*;
 // Define a whole mess of useless registers here ...
 // Values are from Appendix B, pp. 348-349 (for whatever its worth)
 //======================================================================
+#[rustfmt::skip]
 LoadDefinitions!(state, {
   //======================================================================
   // Integer registers; TeXBook p. 272-273
@@ -75,10 +76,8 @@ LoadDefinitions!(state, {
   // Most of these are ignored, but...
   DefMacro!(
     "\\tracingall",
-    "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\
-     \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1\
-     \\tracingmacros=2 \\tracingparagraphs=1 \\tracingrestores=1\
-     \\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode"
+    "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\\tracingpages=1 \\tracingoutput=1\\tracinglostchars=1\\tracingmacros=2 %\
+\\tracingparagraphs=1 \\tracingrestores=1\\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode"
   );
 
   let dt = Local::now();
@@ -86,7 +85,11 @@ LoadDefinitions!(state, {
   AssignValue!("\\day", Number!(dt.day()), Scope::Global);
   AssignValue!("\\month", Number!(dt.month()), Scope::Global);
   AssignValue!("\\year", Number!(dt.year()), Scope::Global);
-  AssignValue!("\\time", Number!(60 * dt.hour() + dt.minute()), Scope::Global);
+  AssignValue!(
+    "\\time",
+    Number!(60 * dt.hour() + dt.minute()),
+    Scope::Global
+  );
 
   // Read-only Integer registers
   DefRegister!("\\lastpenalty",Number!(0), readonly => true);

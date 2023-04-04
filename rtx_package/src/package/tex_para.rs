@@ -45,7 +45,8 @@ LoadDefinitions!(state, {
         let element = document.get_element();
         if let Some(mut node) = element {
           let qname = document.get_node_qname(&node, state);
-          if qname == "ltx:para" && node.get_attribute("class").is_none() {  // Only set on the para about to close, if unknown!
+          // Only set on the para about to close, if unknown!
+          if qname == "ltx:para" && node.get_attribute("class").is_none() {
             let class_str = prop_str!(props,"class");
             document.set_attribute(&mut node, "class", class_str, state)?;
           } else if qname == "ltx:figure" {

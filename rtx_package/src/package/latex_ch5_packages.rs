@@ -17,10 +17,10 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@pkgextension", "sty");
   Let!("\\@currext", "\\@empty");
   Let!("\\@currname", "\\@empty");
-  Let!("\\@classoptionslist",     "\\relax");
+  Let!("\\@classoptionslist", "\\relax");
   Let!("\\@raw@classoptionslist", "\\relax");
-  DefMacro!("\\@declaredoptions",  None);
-  DefMacro!("\\@curroptions",      None);
+  DefMacro!("\\@declaredoptions", None);
+  DefMacro!("\\@curroptions", None);
   DefMacro!("\\@unusedoptionlist", None);
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
@@ -30,7 +30,8 @@ LoadDefinitions!(outer_stomach, state, {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
       let package_list = match packages {
-        Some(value) => OPTS_REGEX.split(&value.to_string()).map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
+        Some(value) => OPTS_REGEX.split(&value.to_string())
+          .map(ToString::to_string).filter(|s| !s.starts_with('%')).collect(),
         None => Vec::new(),
       };
       let options_list = match options {
@@ -152,9 +153,11 @@ LoadDefinitions!(outer_stomach, state, {
     //   LoadClass($class, withoptions => 1);
     //   return; });
   );
-  DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[stomach, (name,option1,option2,ext), state] {
+  DefPrimitive!("\\@onefilewithoptions {} [][] {}",
+  sub[stomach, (name,option1,option2,ext), state] {
     unimplemented!();
-    // InputDefinitions(ToString(Expand($name)), type => ToString(Expand($ext)), options => $option1);
+    // InputDefinitions(ToString(Expand($name)),
+    //    type => ToString(Expand($ext)), options => $option1);
     Ok(Vec::new())
   });
 
@@ -192,17 +195,20 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
   DefMacro!("\\@ifl@aded{}{}", sub[gullet, (ext, name), state] {
-    let path = s!("{}.{}", Expand!(name, gullet), Expand!(ext, gullet));
-    // If EITHER the raw TeX or ltxml version of this file was loaded.
-    if state.lookup_bool(&s!("{path}_loaded")) || state.lookup_bool(&s!("{path}_binding_loaded")) {
-      T_CS!("\\@firstoftwo")
-    } else {
-      T_CS!("\\@secondoftwo")
-    }});
+  let path = s!("{}.{}", Expand!(name, gullet), Expand!(ext, gullet));
+  // If EITHER the raw TeX or ltxml version of this file was loaded.
+  if state.lookup_bool(&s!("{path}_loaded")) || state.lookup_bool(&s!("{path}_binding_loaded")) {
+    T_CS!("\\@firstoftwo")
+  } else {
+    T_CS!("\\@secondoftwo")
+  }});
 
   DefMacro!("\\@ifpackagewith", r"\@if@ptions\@pkgextension");
-  DefMacro!("\\@ifclasswith",  r"\@if@ptions\@clsextension");
-  DefMacro!("\\@ptionlist {}", r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}");
+  DefMacro!("\\@ifclasswith", r"\@if@ptions\@clsextension");
+  DefMacro!(
+    "\\@ptionlist {}",
+    r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
+  );
 
   DefPrimitive!("\\g@addto@macro DefToken {}", sub[stomach,(target, content),state] {
     AddToMacro!(target, content, stomach, state);

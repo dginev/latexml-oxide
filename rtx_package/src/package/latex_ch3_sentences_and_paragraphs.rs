@@ -64,7 +64,7 @@ LoadDefinitions!(state, {
   // \noindent, \indent, \par in TeX.pool.ltxml
 
   Let!("\\@@par", "\\par");
-  DefMacro!("\\@par",        r"\let\par\@@par\par");
+  DefMacro!("\\@par", r"\let\par\@@par\par");
   DefMacro!("\\@restorepar", r"\def\par{\@par}");
 
   // Style parameters
@@ -84,16 +84,15 @@ LoadDefinitions!(state, {
   // C.3.3 Footnotes
   //======================================================================
 
-NewCounter!("footnote");
-DefMacro!("\\thefootnote", "\\arabic{footnote}");
-NewCounter!("mpfootnote");
-DefMacro!("\\thempfn",             "\\thefootnote");
-DefMacro!("\\thempfootnote",       "\\arabic{mpfootnote}");
-DefMacro!("\\footnotetyperefname", "footnote");
+  NewCounter!("footnote");
+  DefMacro!("\\thefootnote", "\\arabic{footnote}");
+  NewCounter!("mpfootnote");
+  DefMacro!("\\thempfn", "\\thefootnote");
+  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  DefMacro!("\\footnotetyperefname", "footnote");
 
-
-DefMacro!("\\ext@footnote", None);
-DefConstructor!("\\lx@note[]{}[]{}",
+  DefMacro!("\\ext@footnote", None);
+  DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   mode         => "text", bounded => true,
   before_digest => sub [stomach,state] {
@@ -111,7 +110,7 @@ DefConstructor!("\\lx@note[]{}[]{}",
   },
   reversion => "");
 
-DefConstructor!("\\lx@notemark[]{}[]",
+  DefConstructor!("\\lx@notemark[]{}[]",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text",
   properties => sub[stomach,args,state] {
@@ -126,7 +125,7 @@ DefConstructor!("\\lx@notemark[]{}[]",
   },
   reversion => "");
 
-DefConstructor!("\\lx@notetext[]{}[]{}",
+  DefConstructor!("\\lx@notetext[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   mode       => "text",
   properties => sub [stomach, args,state] {
@@ -145,17 +144,16 @@ DefConstructor!("\\lx@notetext[]{}[]{}",
   },
   reversion => "");
 
-DefMacro!("\\footnote",      "\\lx@note{footnote}",     locked => true);
-DefMacro!("\\footnotemark",  "\\lx@notemark{footnote}", locked => true);
-DefMacro!("\\footnotetext",  "\\lx@notetext{footnote}", locked => true);
-DefMacro!("\\@footnotetext", "\\lx@notetext{footnote}", locked => true);
-// we don't implement the internals directly, so lock them to the latexml variant
-Let!("\\@thefnmark", "\\lx@notemark{footnote}");
+  DefMacro!("\\footnote",      "\\lx@note{footnote}",     locked => true);
+  DefMacro!("\\footnotemark",  "\\lx@notemark{footnote}", locked => true);
+  DefMacro!("\\footnotetext",  "\\lx@notetext{footnote}", locked => true);
+  DefMacro!("\\@footnotetext", "\\lx@notetext{footnote}", locked => true);
+  // we don't implement the internals directly, so lock them to the latexml variant
+  Let!("\\@thefnmark", "\\lx@notemark{footnote}");
 
-Tag!("ltx:note", after_close => sub[doc, node, state] { relocate_footnote(doc, node,state)?; });
+  Tag!("ltx:note", after_close => sub[doc, node, state] { relocate_footnote(doc, node,state)?; });
 
-// Style parameters
-DefRegister!("\\footnotesep" => Dimension::new(0));
-DefPrimitive!("\\footnoterule", None);
-
+  // Style parameters
+  DefRegister!("\\footnotesep" => Dimension::new(0));
+  DefPrimitive!("\\footnoterule", None);
 });

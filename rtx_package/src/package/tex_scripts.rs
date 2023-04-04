@@ -1,6 +1,7 @@
 use crate::package::*;
 lazy_static! {
-  static ref SCRIPT_NAME_RE: Regex = Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap();
+  static ref SCRIPT_NAME_RE: Regex =
+    Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap();
 }
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
@@ -45,7 +46,11 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
       List(list) => list.boxes.iter().all(|b| is_empty(b, state)),
       Whatsit(ws_arc) => {
         let ws = ws_arc.read().unwrap();
-        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap() && ws.get_body().unwrap_or_default().all(|b| is_empty(b, state))
+        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
+          && ws
+            .get_body()
+            .unwrap_or_default()
+            .all(|b| is_empty(b, state))
       },
       Comment(_) => true,
       _ => unimplemented!(),
@@ -63,7 +68,13 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
   if let Some(boxobj) = box_opt {
     if let DigestedData::Whatsit(ref obj) = boxobj.data() {
       // careful w/alias in getCSName!
-      let name = obj.read().unwrap().get_definition().get_cs().get_cs_name().to_string();
+      let name = obj
+        .read()
+        .unwrap()
+        .get_definition()
+        .get_cs()
+        .get_cs_name()
+        .to_string();
       SCRIPT_NAME_RE.captures(&name).map(|cap| {
         (
           cap.get(1).map_or("", |m| m.as_str()).to_owned(),
@@ -86,7 +97,8 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
 // Digested here, we keep having to *clone* incorrectly. The Perl expectation
 // was for something Rust deems highly illegal/unsafe: multiple owners of a
 // mutable reference to a Digested object. This needs to be disentangled
-// in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
+// in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested
+// object from multiple unrelated pieces of code.
 //
 fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Vec<Digested>> {
   //   let mut gullet = stomach.get_gullet_mut();
@@ -105,8 +117,8 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     let mut prevspace = false;
     let mut base = None;
     // Check preceding boxes to determine possible attachment (floating vs post),
-    // Note that this analysis has to be done now (or sometime like it) before grouping lists go away;
-    // and whether there are conflicting preceding scripts, which is an error
+    // Note that this analysis has to be done now (or sometime like it) before grouping lists go
+    // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
     while let Some(prev) = stomach.box_list.pop() {
       if prev.get_property_bool("isSpace") {
@@ -120,9 +132,19 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         if prevop.1 == cc {
           // Whoops, duplicated; better use FLOATING
           putback.push_front(prev);
-          let lcode = if prevop.1 == Catcode::SUPER { "superscript" } else { "subscript" };
+          let lcode = if prevop.1 == Catcode::SUPER {
+            "superscript"
+          } else {
+            "subscript"
+          };
           if !prevspace {
-            Error!("unexpected", s!("double-{}", lcode), stomach, state, s!("Double {}", lcode));
+            Error!(
+              "unexpected",
+              s!("double-{}", lcode),
+              stomach,
+              state,
+              s!("Double {}", lcode)
+            );
           }
           cs = if cc == Catcode::SUPER {
             "\\@@FLOATINGSUPERSCRIPT"
@@ -164,14 +186,23 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     MergeFont!(scripted => true, state);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
+    while let Some(tok) = stomach
+      .get_gullet_mut()
+      .read_x_token(Some(false), false, state)?
+    {
       stuff = stomach.invoke_token(&tok, state)?;
       if !stuff.is_empty() {
         break;
       }
     }
     if stuff.is_empty() {
-      Error!("expected", "{", stomach, state, "Missing sub/superscript argument"); //$gullet->showUnexpected);
+      Error!(
+        "expected",
+        "{",
+        stomach,
+        state,
+        "Missing sub/superscript argument"
+      ); //$gullet->showUnexpected);
       stuff.push(Digested::default());
     }
     let script = stuff.remove(0); // ONLY the first box is the script!
@@ -204,8 +235,18 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     Ok(stuff)
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
-    Error!("Unexpected", c, stomach, state, s!("Script {} can only appear in math mode", c));
-    let placeholder = if cc == Catcode::SUPER { T_SUPER!() } else { T_SUB!() };
+    Error!(
+      "Unexpected",
+      c,
+      stomach,
+      state,
+      s!("Script {} can only appear in math mode", c)
+    );
+    let placeholder = if cc == Catcode::SUPER {
+      T_SUPER!()
+    } else {
+      T_SUB!()
+    };
     Ok(vec![Digested::from(Tbox::new(
       c.to_string(),
       None,
@@ -228,7 +269,10 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   let tokens = script.revert(state)?;
   let mut ts = tokens.unlist();
   // let mut level = 0;
-  if ts.len() > 1 && ts.get(0).unwrap().code == Catcode::BEGIN && ts.last().unwrap().code == Catcode::END {
+  if ts.len() > 1
+    && ts.get(0).unwrap().code == Catcode::BEGIN
+    && ts.last().unwrap().code == Catcode::END
+  {
     Ok(ts)
   } else {
     let mut wrapped = vec![T_BEGIN!()];
@@ -239,22 +283,27 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
 }
 
 LoadDefinitions!(state, {
-  // TODO: Should I add a special macro case that takes an arbitrary token as argument? DefPrimitiveT ?
+  // TODO: Should I add a special macro case that takes an arbitrary token as argument?
+  // DefPrimitiveT ?
   def_primitive(
     T_SUPER!(),
     None,
-    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
-      script_handler(stomach, Catcode::SUPER, state)
-    })),
+    Some(Arc::new(
+      |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
+        script_handler(stomach, Catcode::SUPER, state)
+      },
+    )),
     PrimitiveOptions::default(),
     state,
   );
   def_primitive(
     T_SUB!(),
     None,
-    Some(Arc::new(|stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
-      script_handler(stomach, Catcode::SUB, state)
-    })),
+    Some(Arc::new(
+      |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
+        script_handler(stomach, Catcode::SUB, state)
+      },
+    )),
     PrimitiveOptions::default(),
     state,
   );

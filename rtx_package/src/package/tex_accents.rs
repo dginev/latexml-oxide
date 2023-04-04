@@ -1,6 +1,6 @@
 use crate::package::*;
-use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::compose;
+use unicode_normalization::UnicodeNormalization;
 
 lazy_static! {
   static ref SPACE_RE: Regex = Regex::new(r"\s").unwrap();
@@ -21,14 +21,15 @@ pub fn apply_accent(
   let font = letter_box.get_font(state)?.map(|f| Arc::new((*f).clone()));
 
   let mut string: String = letter_box.to_string();
-  string = string.replace('\u{0131}',"i").replace('\u{0237}',"j");
+  string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
   string = SPACE_RE.replace_all(&string, " ").into_owned();
   let text = if string.chars().all(|l| l.is_whitespace()) {
     standalonechar.to_string()
   } else {
     let mut letters = string.chars();
     let lead_letter = letters.next().unwrap();
-    let mut combined_str = compose(lead_letter,combiningchar).map(|c| c.to_string())
+    let mut combined_str = compose(lead_letter, combiningchar)
+      .map(|c| c.to_string())
       .unwrap_or_else(|| format!("{lead_letter}{combiningchar}"));
     for rest in letters {
       combined_str.push(rest);
@@ -75,11 +76,15 @@ LoadDefinitions!(state, {
   DefAccent!("\\r", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
   DefAccent!("\\H", '\u{030B}', "\u{02DD}"); // COMBINING DOUBLE ACUTE ACCENT & non-combining
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
-                                                            // NOTE: The next two get define for math, as well; See below
+
+  // NOTE: The next two get define for math, as well; See below
+
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
   DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
-  DefAccent!("\\t", '\u{0361}', "-"); // COMBINING DOUBLE INVERTED BREVE & ???? What????
-                                      // this one"s actually defined in mathscinet.sty, but just stick it here!
+
+  // COMBINING DOUBLE INVERTED BREVE & ???? What????
+  DefAccent!("\\t", '\u{0361}', "-");
+  // this one"s actually defined in mathscinet.sty, but just stick it here!
 
   // COMBINING COMMA BELOW
   DefAccent!("\\lfhook", '\u{0326}', ",", below => true);

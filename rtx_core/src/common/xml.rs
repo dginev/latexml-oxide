@@ -1,6 +1,6 @@
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -20,7 +20,11 @@ impl XPath {
     match self.context.register_namespace(codeprefix, namespace) {
       Ok(()) => {},
       Err(_) => {
-        let message = s!("Failed to register an XPath namespace: prefix {:?} and href {:?}", codeprefix, namespace);
+        let message = s!(
+          "Failed to register an XPath namespace: prefix {:?} and href {:?}",
+          codeprefix,
+          namespace
+        );
         Error!("expected", "XPath", None, None, message);
       },
     };

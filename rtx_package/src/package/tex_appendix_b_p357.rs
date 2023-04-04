@@ -11,7 +11,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\raggedleft", ""); // this is actually LaTeX
   DefMacro!("\\ttraggedright", "");
   DefMacro!("\\leavevmode", "");
-  DefMacro!(r"\mathhexbox{}{}{}", r###"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"###);
+  DefMacro!(
+    r"\mathhexbox{}{}{}",
+    r###"\leavevmode\hbox{$\m@th \mathchar"#1#2#3$}"###
+  );
   //----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
 
@@ -103,14 +106,20 @@ LoadDefinitions!(state, {
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
-  DefMacro!("\\,", "\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi");
+  DefMacro!(
+    "\\,",
+    "\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi"
+  );
   // DefConstructor!("\\@math@thinmuskip",
   //   "<ltx:XMHint name='thinspace' width='#width'/>",
   //   alias => '\,',
   //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip'); } });
   // DefPrimitiveI('\@text@thinmuskip', undef, "\x{2009}", alias => '\,');
 
-  DefMacro!("\\!", "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi");
+  DefMacro!(
+    "\\!",
+    "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi"
+  );
   // DefConstructor('\@math@negthinmuskip', undef,
   //   "<ltx:XMHint name='negthinspace' width='#width'/>",
   //   alias => '\!',
@@ -118,7 +127,10 @@ LoadDefinitions!(state, {
   //     width => sub { LookupValue('\thinmuskip')->negate; } });
   // DefPrimitiveI('\@text@negthinmuskip', undef, "", alias => '\!');
 
-  DefMacro!("\\>", "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi");
+  DefMacro!(
+    "\\>",
+    "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi"
+  );
   // DefConstructor('\@math@medmuskip', undef,
   //   "<ltx:XMHint name='medspace' width='#width'/>",
   //   alias => '\>',
@@ -149,7 +161,10 @@ LoadDefinitions!(state, {
   //     width => sub { Dimension('1em'); } });
   // DefPrimitiveI('\@text@tab', undef, UTF(0xA0), alias => "\\\t");    # TAB!!! What else?
 
-  DefMacro!("\\/", "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi");
+  DefMacro!(
+    "\\/",
+    "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi"
+  );
   // DefConstructor("\@math@italiccorr", undef,
   //   "<ltx:XMHint name='italiccorr'/>",
   //   alias => '\/',

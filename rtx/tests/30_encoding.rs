@@ -2,7 +2,7 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 
 #[test]
 #[ignore]

@@ -1,8 +1,8 @@
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::Arc;
-use libxml::tree::Node;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -11,8 +11,8 @@ use crate::common::store::Stored;
 use crate::state::{Scope, State};
 
 use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective, PropertiesClosure, ReplacementClosure, Reversion,
-  SizingClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+  PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
 use crate::gullet::Gullet;
@@ -103,11 +103,10 @@ impl fmt::Debug for ConstructorOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(
       f,
-      "\nConstructorOptions {{nargs:{:?}, bounded:{:?}, mode:{:?}, \n\
-       \tbefore_digest:{:?}, after_digest_begin:{:?}, before_digest_end:{:?},\n\
-       \tafter_digest:{:?}, after_digest_body:{:?}, before_construct:{:?}, after_construct:{:?},\n\
-       \trequire_math:{:?}, forbid_math:{:?}, capture_body:{:?}, scope:{:?},\n\
-       \tlocked:{:?}, alias:{:?} }}\n",
+      "\nConstructorOptions {{nargs:{:?}, bounded:{:?}, mode:{:?}, \n\tbefore_digest:{:?}, \
+       after_digest_begin:{:?}, before_digest_end:{:?},\n\tafter_digest:{:?}, \
+       after_digest_body:{:?}, before_construct:{:?}, after_construct:{:?},\n\trequire_math:{:?}, \
+       forbid_math:{:?}, capture_body:{:?}, scope:{:?},\n\tlocked:{:?}, alias:{:?} }}\n",
       self.nargs,
       self.bounded,
       self.mode,
@@ -185,7 +184,9 @@ impl Definition for Constructor {
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
   fn capture_body(&self) -> bool { self.capture_body }
   fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
+  }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
@@ -219,13 +220,17 @@ impl Definition for Constructor {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
 
-    properties.entry(s!("font")).or_insert_with(|| match state_font {
-      Some(f) => Stored::Font(Arc::clone(&f)),
-      None => Stored::Font(Arc::new(Font::text_default())), // should never happen?
-    });
+    properties
+      .entry(s!("font"))
+      .or_insert_with(|| match state_font {
+        Some(f) => Stored::Font(Arc::clone(&f)),
+        None => Stored::Font(Arc::new(Font::text_default())), // should never happen?
+      });
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
-    properties.entry(s!("isMath")).or_insert_with(|| Stored::Bool(ismath));
+    properties
+      .entry(s!("isMath"))
+      .or_insert_with(|| Stored::Bool(ismath));
     // $properties{level}   = $stomach->getBoxingLevel;
 
     // Now create the Whatsit, itself.
@@ -274,7 +279,12 @@ impl Definition for Constructor {
     // self.nargs = Some(nargs);
   }
 
-  fn do_absorbtion(&self, document: &mut Document, whatsit: &Whatsit, state: &mut State) -> Result<Vec<Node>> {
+  fn do_absorbtion(
+    &self,
+    document: &mut Document,
+    whatsit: &Whatsit,
+    state: &mut State,
+  ) -> Result<Vec<Node>> {
     for pre_closure in &self.before_construct {
       pre_closure(document, whatsit, state)?;
     }
@@ -285,7 +295,12 @@ impl Definition for Constructor {
       },
       Some(ref main_closure) => {
         // info!(target:"constructor:replacement", "invoked for {:?}", self.get_cs_name());
-        main_closure(document, whatsit.get_args(), whatsit.get_properties(), state)?
+        main_closure(
+          document,
+          whatsit.get_args(),
+          whatsit.get_properties(),
+          state,
+        )?
       },
     };
 

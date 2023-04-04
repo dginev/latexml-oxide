@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 use std::error::Error;
 
 use crate::semantics::{Operator, XM};
@@ -71,13 +71,17 @@ impl ValidationPragmatics {
     use ValidationPragmatics::*;
     match self {
       FencedAtomsAreNotFunctions => pragma_fenced_atoms_are_not_functions(tree),
-      UnfencedLetterArgumentsRequireVisualCues => pragma_unfenced_letter_arguments_require_visual_cues(tree),
+      UnfencedLetterArgumentsRequireVisualCues => {
+        pragma_unfenced_letter_arguments_require_visual_cues(tree)
+      },
 
       OpfunctionsAreRarelyArguments => pragma_opfunctions_are_rarely_arguments(tree),
 
       FencedLettersAreFunctionArguments => pragma_fenced_letters_are_function_arguments(tree),
       HigherOrderIDsAreExceptions => pragma_higher_order_ids_are_exceptions(tree),
-      HigherOrderInvisibleOpsAreExceptions => pragma_higher_order_invisible_ops_are_exceptions(tree),
+      HigherOrderInvisibleOpsAreExceptions => {
+        pragma_higher_order_invisible_ops_are_exceptions(tree)
+      },
       AdjacentNumbersDontMultiply => pragma_adjacent_numbers_dont_use_invisible_times(tree),
       AdjacentUnfencedScriptsDontApply => pragma_adjacent_unfenced_scripts_dont_apply(tree),
       StandaloneDiffopsAreNotNumerators => pragma_standalone_diffops_are_not_numerators(tree),
@@ -146,7 +150,11 @@ fn _pragma_letter_blocks(name: &str) -> String {
 /// For example in SUx
 fn _pragma_letter_case(name: &str) -> String {
   let (base, sep, lexeme) = distill_lexeme(name);
-  let lexeme_pragmatic = if lexeme.chars().next().unwrap().is_uppercase() { "U" } else { "l" };
+  let lexeme_pragmatic = if lexeme.chars().next().unwrap().is_uppercase() {
+    "U"
+  } else {
+    "l"
+  };
   base.to_owned() + sep + lexeme_pragmatic
 }
 
@@ -179,7 +187,9 @@ fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>
     if let XM::Lexeme(ref _lexeme, ref atom_meta) = **op {
       if let Some(ref fences) = atom_meta.fenced {
         if fences.as_str() == "parens" {
-          return Err("pruning non-argument parenthetical atom, used as LHS of function application".into());
+          return Err(
+            "pruning non-argument parenthetical atom, used as LHS of function application".into(),
+          );
         }
       }
     }
@@ -196,27 +206,43 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
             if fences.as_str() == "parens" {
               if let XM::Lexeme(lhs_name, _) = top_lhs.get_baseline() {
                 if !lhs_name.starts_with("NUMBER") {
-                  return Err("pruning non-argument parenthetical atom, used as LHS of invisible times".into());
+                  return Err(
+                    "pruning non-argument parenthetical atom, used as LHS of invisible times"
+                      .into(),
+                  );
                 }
               }
             }
           }
 
-          // Slightly tricky check -- the top RHS needs to be fenced, but we care about the "baseline" content being a variable - disregarding scripts.
+          // Slightly tricky check -- the top RHS needs to be fenced, but we care about the
+          // "baseline" content being a variable - disregarding scripts.
           if let Some(top_rhs) = args.trees().get(1) {
             if let XM::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
               if let Some(ref fences) = top_rhs.get_meta().fenced {
                 if fences.as_str() == "parens" {
-                  // if the RHS is a number, prune unless the LHS is fenced (things like cycle notation)
+                  // if the RHS is a number, prune unless the LHS is fenced (things like cycle
+                  // notation)
                   if !rhs_name.starts_with("NUMBER") {
-                    return Err("pruning non-argument parenthetical atom, used as RHS of invisible times".into());
+                    return Err(
+                      "pruning non-argument parenthetical atom, used as RHS of invisible times"
+                        .into(),
+                    );
                   } else {
                     match args.trees().first() {
                       Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
-                        return Err("pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into());
+                        return Err(
+                          "pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times"
+                            .into(),
+                        );
                       },
                       Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
-                        return Err("pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into());
+                        return Err(
+                          "pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times"
+                            .into(),
+                        );
                       },
                       _ => {},
                     }
@@ -233,9 +259,10 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   Ok(())
 }
 
-/// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that interpret them as an application,
-/// unless they have a role that clearly indicates the LHS is intended as a functional.
-/// This may need to be applied as an optional filter at the end of pruning, as there are known, albeit rare, counter-examples ("f x").
+/// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
+/// interpret them as an application, unless they have a role that clearly indicates the LHS is
+/// intended as a functional. This may need to be applied as an optional filter at the end of
+/// pruning, as there are known, albeit rare, counter-examples ("f x").
 fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &XM) -> Result<(), Box<dyn Error>> {
   match *tree {
     XM::Apply(Operator(ref op), ref args, _, _) if args.0.len() == 1 => {
@@ -268,7 +295,9 @@ fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &XM) -> Result<(),
           } else {
             return Ok(()); // rule only applies to single char cases
           };
-          if (op_letter.is_lowercase() && arg_letter.is_lowercase()) || (op_letter.is_uppercase() && arg_letter.is_uppercase()) {
+          if (op_letter.is_lowercase() && arg_letter.is_lowercase())
+            || (op_letter.is_uppercase() && arg_letter.is_uppercase())
+          {
             return Err("operator and argument are visually similar, prune.".into());
           }
         }
@@ -279,8 +308,9 @@ fn pragma_unfenced_letter_arguments_require_visual_cues(tree: &XM) -> Result<(),
   Ok(())
 }
 
-/// OPFUNCTION are explicitly marked to be operators in an application, they should not be in an argument role of a single argument Apply.
-/// Note that this pragma still allows OPFUNCTIONs to appear as list elements.
+/// OPFUNCTION are explicitly marked to be operators in an application, they should not be in an
+/// argument role of a single argument Apply. Note that this pragma still allows OPFUNCTIONs to
+/// appear as list elements.
 fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Error>> {
   match *tree {
     XM::Apply(_, ref args, _, _) if args.0.len() == 1 => {
@@ -342,7 +372,11 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
           if let XM::Lexeme(ref lhs_name, _) = lhs.get_baseline() {
             if let XM::Lexeme(ref rhs_name, _) = rhs.get_baseline() {
               if name_is_functional_or_id(lhs_name) && name_is_functional(rhs_name) {
-                return Err("Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to right-associative readings".into());
+                return Err(
+                  "Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
+                   right-associative readings"
+                    .into(),
+                );
               }
             }
           }
@@ -355,8 +389,9 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
   Ok(())
 }
 
-/// If two numbers are left next to each other, as in "10(5)" it is rarely (never?) the intention that they are to be multiplied
-/// Prune such parses. We have special rules for some notations, such as "dlmf_range".
+/// If two numbers are left next to each other, as in "10(5)" it is rarely (never?) the intention
+/// that they are to be multiplied Prune such parses. We have special rules for some notations, such
+/// as "dlmf_range".
 fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, _, _) = tree {
     match **op {
@@ -367,7 +402,9 @@ fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box
             if lhs.base_operator_name().starts_with("NUMBER") {
               if let Some(rhs) = arg_trees.get(1) {
                 if rhs.base_operator_name().starts_with("NUMBER") {
-                  return Err("pruning two adjacent NUMBERs that used an invisible operator".into());
+                  return Err(
+                    "pruning two adjacent NUMBERs that used an invisible operator".into(),
+                  );
                 }
               }
             }
@@ -399,8 +436,9 @@ fn pragma_standalone_diffops_are_not_numerators(tree: &XM) -> Result<(), Box<dyn
   Ok(())
 }
 
-/// Constructs such as " e_i z_0 " are rarely applying e(z). This is even a common expectation of function symbols say " f_i g_j ".
-/// This pragma prunes trees that applies two adjacent scripted constructs.
+/// Constructs such as " e_i z_0 " are rarely applying e(z). This is even a common expectation of
+/// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
+/// constructs.
 fn pragma_adjacent_unfenced_scripts_dont_apply(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ref args, _, _) = tree {
     if args.trees().len() == 1 {
@@ -410,7 +448,9 @@ fn pragma_adjacent_unfenced_scripts_dont_apply(tree: &XM) -> Result<(), Box<dyn 
           // only subscripts on the outer one to avoid pruning e.g. \nabla^2 u_{0,0}
           if let Some(XM::Apply(Operator(arg_op), _, _, arg_meta)) = args.trees().first() {
             let arg_op_name = arg_op.base_operator_name();
-            if arg_meta.fenced.is_none() && (arg_op_name == "unknown.subscript" || arg_op_name == "unknown.superscript") {
+            if arg_meta.fenced.is_none()
+              && (arg_op_name == "unknown.subscript" || arg_op_name == "unknown.superscript")
+            {
               return Err("Prune: adjacent unfenced scripts do not form an application.".into());
             }
           }
@@ -433,7 +473,9 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn
             if inner_trees.len() == 1 {
               if let XM::Lexeme(rhs_name, _) = inner_args.trees().first().unwrap().get_baseline() {
                 if name_is_functional(rhs_name) {
-                  return Err("Two applied FUNCTIONS as operator violates right-associative behavior.".into());
+                  return Err(
+                    "Two applied FUNCTIONS as operator violates right-associative behavior.".into(),
+                  );
                 }
               }
             }
@@ -475,10 +517,16 @@ fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
         if arg_trees.len() == 2 {
           if let XM::Lexeme(arg1_name, arg1_meta) = arg_trees[0] {
             if let XM::Lexeme(arg2_name, arg2_meta) = arg_trees[1] {
-              if arg1_name.starts_with("NUMBER") && arg2_name.starts_with("NUMBER") && !arg1_meta.syntax_trace.is_empty()
+              if arg1_name.starts_with("NUMBER")
+                && arg2_name.starts_with("NUMBER")
+                && !arg1_meta.syntax_trace.is_empty()
                 || !arg2_meta.syntax_trace.is_empty()
               {
-                return Err("only tokens are allowed in numeric fractions, derived rules are pruned to avoid redundancy.".into());
+                return Err(
+                  "only tokens are allowed in numeric fractions, derived rules are pruned to \
+                   avoid redundancy."
+                    .into(),
+                );
               }
             }
           }
@@ -546,20 +594,29 @@ pub fn greek_name_to_letter(name: &str) -> Option<char> {
 }
 
 pub fn name_is_functional(name: &str) -> bool {
-  name.starts_with("FUNCTION") || name.starts_with("OPFUNCTION") || name.starts_with("TRIGFUNCTION") || name.starts_with("UNKNOWN")
+  name.starts_with("FUNCTION")
+    || name.starts_with("OPFUNCTION")
+    || name.starts_with("TRIGFUNCTION")
+    || name.starts_with("UNKNOWN")
 }
 
-pub fn name_is_functional_or_id(name: &str) -> bool { name.starts_with("ID") || name_is_functional(name) }
+pub fn name_is_functional_or_id(name: &str) -> bool {
+  name.starts_with("ID") || name_is_functional(name)
+}
 
 lazy_static! {
   static ref PRAGMATIC_BLOCK_MAP : HashMap<char, String> = {
-    // generally, we can observe that the latin alphabet shares "intent" in blocks of 3 letter in mathematics,
-    // as a fast-and-loose rule of thumb. a-e is an exception as a rather stable 5 letter block with shared utility.
+    // generally, we can observe that the latin alphabet shares "intent"
+    // in blocks of 3 letter in mathematics,
+    // as a fast-and-loose rule of thumb. a-e is an exception as
+    // a rather stable 5 letter block with shared utility.
     let mut map = HashMap::default();
     // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
-    let latin_blocks = [('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
+    let latin_blocks = [
+      ('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
     // |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
-    let greek_blocks = [('α','γ'),('ζ','θ'),('ι','κ'),('λ','ξ'),('ο','ρ'),('σ','υ'),('ϕ','ψ')];
+    let greek_blocks = [
+      ('α','γ'),('ζ','θ'),('ι','κ'),('λ','ξ'),('ο','ρ'),('σ','υ'),('ϕ','ψ')];
     // | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
     let up_greek_blocks = [('Α','Γ'),('Ζ','Θ'),('Ι','Κ'),('Λ','Ξ'),('Ο','Ρ'),('Σ','Υ'),('Φ','Ψ')];
 

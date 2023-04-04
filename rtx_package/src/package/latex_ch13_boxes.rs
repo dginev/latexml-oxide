@@ -33,7 +33,8 @@ LoadDefinitions!(state, {
         DefRegister!(cs, None, Dimension::new(0));
       },
       Some(defn) => if !defn.is_register() {
-        let message = s!("'{}' length was expected, got {:?} instead of register.", cs.to_string(), defn.register_type());
+        let message = s!("'{}' length was expected, got {:?} instead of register.",
+          cs.to_string(), defn.register_type());
         Error!("misdefined", cs, stomach, state, message);
       }
     };
@@ -46,7 +47,10 @@ LoadDefinitions!(state, {
 
   // TODO: Update these !!!
   DefMacro!("\\setlength{}{}", "\\@check@length{#1}#1#2\\relax");
-  DefMacro!("\\addtolength{}{}", "\\@check@length{#1}\\advance#1 #2\\relax");
+  DefMacro!(
+    "\\addtolength{}{}",
+    "\\@check@length{#1}\\advance#1 #2\\relax"
+  );
 
   DefMacro!(
     "\\@settodim{}{}{}",
@@ -110,7 +114,8 @@ LoadDefinitions!(state, {
     mode => "text",
     bounded => true,
     sizer => "#1",
-    before_digest => sub[stomach, state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    before_digest => sub[stomach, state] {
+      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
@@ -118,7 +123,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
-    before_digest => sub[stomach,state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    before_digest => sub[stomach,state] {
+      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
     // properties   => sub[stomach,args,state] {
     //   let arg1 = &args[0];
     //   let arg2 = &args[1];
@@ -207,7 +213,10 @@ LoadDefinitions!(state, {
   //     my $contents = Digest($_[2]);
   //     AssignValue('box' . $value, $contents); return; });
 
-  DefMacro!("\\savebox{}", "\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}");
+  DefMacro!(
+    "\\savebox{}",
+    "\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}"
+  );
   // DefPrimitive!("\\@savebox DefToken[][]{}", sub {
   //     my ($defn, @args) = @{ LookupDefinition($_[1]) };
   //     my $value = $defn->valueOf(@args);
@@ -284,7 +293,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
-    before_digest => sub[stomach, state] { reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    before_digest => sub[stomach, state] {
+      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );

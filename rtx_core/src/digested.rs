@@ -1,17 +1,12 @@
+use rustc_hash::FxHashMap as HashMap;
 ///! Interface layer for the full range of digested objects
-
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
 use libxml::tree::Node;
 
-use crate::BoxOps;
 use crate::comment::Comment;
-use crate::keyvals::KeyVals;
-use crate::list::List;
-use crate::whatsit::Whatsit;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -21,9 +16,13 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
-use crate::state::{State};
+use crate::keyvals::KeyVals;
+use crate::list::List;
+use crate::state::State;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
+use crate::whatsit::Whatsit;
+use crate::BoxOps;
 
 /// An `Arc`-guarded abstraction for any object encountered at the "digested" phase of processing
 // Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
@@ -135,10 +134,18 @@ impl PartialEq for Digested {
 // Important: we need to postpone the creation of a box until a time where
 // we have the most current font information
 impl<'a> From<&'a String> for Digested {
-  fn from(value: &'a String) -> Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(value))))) }
+  fn from(value: &'a String) -> Digested {
+    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+      ExplodeText!(value),
+    ))))
+  }
 }
 impl From<String> for Digested {
-  fn from(value: String) -> Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(value))))) }
+  fn from(value: String) -> Digested {
+    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+      ExplodeText!(value),
+    ))))
+  }
 }
 impl From<Tokens> for Digested {
   fn from(value: Tokens) -> Digested { Digested(Arc::new(DigestedData::Postponed(value))) }
@@ -150,13 +157,17 @@ impl From<List> for Digested {
   fn from(value: List) -> Digested { Digested(Arc::new(DigestedData::List(value))) }
 }
 impl From<Whatsit> for Digested {
-  fn from(value: Whatsit) -> Digested { Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value)))) }
+  fn from(value: Whatsit) -> Digested {
+    Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value))))
+  }
 }
 impl From<KeyVals> for Digested {
   fn from(value: KeyVals) -> Digested { Digested(Arc::new(DigestedData::KeyVals(value))) }
 }
 impl From<RegisterValue> for Digested {
-  fn from(value: RegisterValue) -> Digested { Digested(Arc::new(DigestedData::RegisterValue(value))) }
+  fn from(value: RegisterValue) -> Digested {
+    Digested(Arc::new(DigestedData::RegisterValue(value)))
+  }
 }
 
 impl<'a> From<&'a Digested> for Option<crate::Digested> {
@@ -216,7 +227,11 @@ impl Object for Digested {
       TBox(ref b) => b.get_locator(),
       List(ref l) => l.get_locator(),
       Comment(ref c) => c.get_locator(),
-      Whatsit(ref w) => w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      Whatsit(ref w) => w
+        .read()
+        .unwrap()
+        .get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
       Postponed(ref _t) => None, // Tokens locator?
@@ -240,7 +255,9 @@ impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     use DigestedData::*;
     match *self.0 {
-      TBox(_) | Whatsit(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => vec![self.clone()],
+      TBox(_) | Whatsit(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
+        vec![self.clone()]
+      },
       List(ref l) => l.unlist(),
     }
   }
@@ -277,7 +294,13 @@ impl BoxOps for Digested {
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
       DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
-      DigestedData::List(ref _l) => Debug!("ignore", "set_property", None, None, format!("List::set_property({key},_)")),
+      DigestedData::List(ref _l) => Debug!(
+        "ignore",
+        "set_property",
+        None,
+        None,
+        format!("List::set_property({key},_)")
+      ),
       _ => unimplemented!(),
     }
   }
@@ -287,7 +310,11 @@ impl BoxOps for Digested {
     match *self.0 {
       TBox(ref b) => b.get_property(key),
       List(ref l) => l.get_property(key),
-      Whatsit(ref w) => w.read().unwrap().get_property(key).map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(ref w) => w
+        .read()
+        .unwrap()
+        .get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
   }
@@ -316,11 +343,23 @@ impl BoxOps for Digested {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => {
-        Error!("digested", "get_body", self, None, s!("Called get_body on Box: {:?}", b));
+        Error!(
+          "digested",
+          "get_body",
+          self,
+          None,
+          s!("Called get_body on Box: {:?}", b)
+        );
         None
       },
       List(ref l) => {
-        Error!("digested", "get_body", self, None, s!("Called get_body on List: {:?}", l));
+        Error!(
+          "digested",
+          "get_body",
+          self,
+          None,
+          s!("Called get_body on List: {:?}", l)
+        );
         None
       },
       Whatsit(ref w) => w.read().unwrap().get_body(),
@@ -341,13 +380,22 @@ impl BoxOps for Digested {
     match *self.0 {
       TBox(ref b) => b.get_font(state),
       List(ref l) => l.get_font(state),
-      Whatsit(ref w) => Ok(w.read().unwrap().get_font(state)?.map(|t| Cow::Owned(t.into_owned()))),
+      Whatsit(ref w) => Ok(
+        w.read()
+          .unwrap()
+          .get_font(state)?
+          .map(|t| Cow::Owned(t.into_owned())),
+      ),
       Postponed(ref _tks) => Ok(None),
       _ => unimplemented!(),
     }
   }
 
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b.compute_size(options, state),
@@ -424,12 +472,11 @@ impl Digested {
   pub fn to_attribute(&self) -> String {
     match *self.0 {
       DigestedData::RegisterValue(ref v) => v.to_attribute(),
-      _ => self.to_string()
+      _ => self.to_string(),
     }
   }
 
-  /// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
-  pub fn untex(&self, state: &mut State) -> Result<String> {
-    Ok(self.revert(state)?.untex())
-  }
+  /// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
+  /// content
+  pub fn untex(&self, state: &mut State) -> Result<String> { Ok(self.revert(state)?.untex()) }
 }

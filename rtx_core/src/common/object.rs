@@ -34,7 +34,10 @@ pub trait Object {
     Self: Sized,
     Self: Debug,
   {
-    panic!("Was it really intended to digest? We don't know how! {self:?} {:?}", self.get_locator());
+    panic!(
+      "Was it really intended to digest? We don't know how! {self:?} {:?}",
+      self.get_locator()
+    );
   }
 
   // fn be_absorbed(&self, _document: Document) { unimplemented!() }

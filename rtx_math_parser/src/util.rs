@@ -97,7 +97,9 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
             // If arg is already XML, it's too late to get automatic ID's
             document.generate_id(&mut node.clone(), "", state)?;
             refs.push(XM::Ref(
-              node.get_attribute("id").expect("generate_id should always succeed in setting an id"),
+              node
+                .get_attribute("id")
+                .expect("generate_id should always succeed in setting an id"),
             ));
           },
         }
@@ -116,8 +118,8 @@ pub fn create_xmrefs(args: &[&XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<d
       //       : (map { $document->getNodeQName($_) => $_->getValue } $arg->attributes));
       //     delete $attr{'xml:id'};
       //     push(@refs, [$qname, {%attr}]); }
-      //   # Likewise, clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef.
-      //   elsif ($qname eq 'ltx:XMRef') {
+      //   # Likewise, clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an
+      // XMRef.   elsif ($qname eq 'ltx:XMRef') {
       //     my $key = ($isarray ? $$arg[1]{_xmkey} : $arg->getAttribute('_xmkey'));
       //     my $id  = ($isarray ? $$arg[1]{idref}  : $arg->getAttribute('idref'));
       //     push(@refs, [$qname, { _xmkey => $key, idref => $id, _box => $box }]); }

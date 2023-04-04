@@ -1,11 +1,13 @@
-use std::borrow::Cow;
 use libxml::tree::Node;
+use std::borrow::Cow;
 
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::state::{Scope, State};
 
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion};
+use crate::definition::{
+  BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion,
+};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
@@ -78,7 +80,9 @@ impl Definition for Primitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
 
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { Ok(Tokens!()) }
+  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+    Ok(Tokens!())
+  }
   fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     Debug!("primitive invoke for {:?}", self.cs);
     // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -102,8 +106,17 @@ impl Definition for Primitive {
     Ok(invoked_boxes)
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>> {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Primitive should never be called!"
+    );
   }
 
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }

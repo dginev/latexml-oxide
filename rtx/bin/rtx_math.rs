@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate rtx_core;
-use std::process;
-use std::env;
 use libxml::tree::SaveOptions;
 use rtx::util::test::lex_single_tex_formula;
-use rtx_math_parser::*;
-use rtx_core::state::{State, StateOptions};
 use rtx_core::common::error::Result;
+use rtx_core::state::{State, StateOptions};
+use rtx_math_parser::*;
+use std::env;
+use std::process;
 
 fn main() -> Result<()> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
@@ -15,7 +15,7 @@ fn main() -> Result<()> {
       "logger",
       None,
       None,
-      "Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly."
+      "Failed to load logger, aborting. Please check rtx_core::util::logger installed correctly."
     );
   }
   let mut argv = env::args();
@@ -24,7 +24,13 @@ fn main() -> Result<()> {
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      Error!("rtx", "", None, None, "Please provide a TeX formula on input! Exiting...");
+      Error!(
+        "rtx",
+        "",
+        None,
+        None,
+        "Please provide a TeX formula on input! Exiting..."
+      );
       process::exit(1);
     },
   };
@@ -54,7 +60,13 @@ fn main() -> Result<()> {
       })
     );
   } else {
-    Warn!("math", "parse", None, None, "Grammar did not recognize expression.");
+    Warn!(
+      "math",
+      "parse",
+      None,
+      None,
+      "Grammar did not recognize expression."
+    );
     process::exit(1);
   }
   Ok(())

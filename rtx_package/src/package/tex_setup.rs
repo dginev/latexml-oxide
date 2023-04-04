@@ -3,8 +3,9 @@ use crate::package::*;
 LoadDefinitions!(state, {
   RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
   RegisterNamespace!("svg", "http://www.w3.org/2000/svg");
-  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink"); // Needed for SVG
-                                                               // Not directly used, but let's stake out the ground
+  // Needed for SVG
+  RegisterNamespace!("xlink", "http://www.w3.org/1999/xlink");
+  // Not directly used, but let's stake out the ground
   RegisterNamespace!("m", "http://www.w3.org/1998/Math/MathML");
   RegisterNamespace!("xhtml", "http://www.w3.org/1999/xhtml");
 
@@ -245,11 +246,13 @@ LoadDefinitions!(state, {
   //   return ($gullet->readFloat || Float(0)); }
 
   // Read a dimension
-  DefParameterType!(Dimension, sub[gullet, _inner, _extra, state] { gullet.read_dimension(state)? });
+  DefParameterType!(Dimension, sub[gullet, _inner, _extra, state] {
+    gullet.read_dimension(state)? });
   // Read a Glue (aka skip)
   DefParameterType!(Glue, sub[gullet, _inner, _extra, state] { gullet.read_glue(state)? });
   // Read a MuDimension (math)
-  DefParameterType!(MuDimension, sub[gullet, _inner, _extra, state] { gullet.read_mu_dimension(state)? });
+  DefParameterType!(MuDimension, sub[gullet, _inner, _extra, state] {
+    gullet.read_mu_dimension(state)? });
   // Read a MuGlue (math)
   DefParameterType!(MuGlue, sub[gullet, _inner, _extra, state] { gullet.read_mu_glue(state)? });
 
@@ -308,7 +311,8 @@ LoadDefinitions!(state, {
         Ok(Tokens!(token))
       }
     } else {
-      Error!("expected","Expanded", gullet, state, "was expecting an Expanded parameter value, found nothing.");
+      Error!("expected","Expanded", gullet, state,
+        "was expecting an Expanded parameter value, found nothing.");
       Ok(Tokens!())
     }
   },
@@ -327,7 +331,8 @@ LoadDefinitions!(state, {
   // IMPORTANTLY, call packParameters early on the tokens read from the Gullet
   // to enact the neutralization and discard the temporary smuggle flag that is required
   //
-  // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a new one.
+  // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a
+  // new one.
   DefParameterType!(DefExpanded, sub[gullet, _inner, _extra, state] {
       state.set_smuggle_the(true);
       let expanded = if let Some(token) = gullet.read_x_token(None, false, state)? {
@@ -361,7 +366,8 @@ LoadDefinitions!(state, {
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
   DefParameterType!(Keyword, sub[gullet, _inner, extra, state] {
-    let extra_string : String = extra.iter().map(ToString::to_string).collect::<Vec<String>>().join("");
+    let extra_string : String = extra.iter().map(ToString::to_string)
+      .collect::<Vec<String>>().join("");
 
     match gullet.read_keyword(&[&extra_string], state)? {
       Some(t) => Ok(Tokens!(T_OTHER!(t))),
@@ -483,19 +489,20 @@ LoadDefinitions!(state, {
   }));
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  DefParameterType!(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
-  reader_predigest => undigested!(),
-  optional => true,
-  reversion => reversion!(gullet, arg, _inner, _extra, _state, {
-    if arg.is_empty() {
-      Ok(Tokens!())
-    } else {
-      let mut read_tokens = vec!(T_OTHER!("["));
-      let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
-      read_tokens.append(&mut reverted_arg);
-      read_tokens.push(T_OTHER!("]"));
-      Ok(Tokens::new(read_tokens))
-    }
+  DefParameterType!(OptionalUndigested,
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
+    reader_predigest => undigested!(),
+    optional => true,
+    reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+      if arg.is_empty() {
+        Ok(Tokens!())
+      } else {
+        let mut read_tokens = vec!(T_OTHER!("["));
+        let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
+        read_tokens.append(&mut reverted_arg);
+        read_tokens.push(T_OTHER!("]"));
+        Ok(Tokens::new(read_tokens))
+      }
   }));
 
   // Read a keyword value (KeyVals), that will not be digested.
@@ -510,7 +517,8 @@ LoadDefinitions!(state, {
     let space_token = T_SPACE!();
 
     while token.is_some() && token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
-      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?.unwrap_or_default().unlist().into_iter().filter(|t| *t != space_token).collect();
+      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?
+        .unwrap_or_default().unlist().into_iter().filter(|t| *t != space_token).collect();
       if !toks.is_empty() {
         token = Some(toks.remove(0));
         if !toks.is_empty() {
@@ -523,7 +531,8 @@ LoadDefinitions!(state, {
     match token {
       Some(t) => Ok(Tokens!(t)),
       None => {
-        Error!("expected","DefToken", gullet, state, "Expected a DefToken parameter, found nothing.");
+        Error!("expected","DefToken", gullet, state,
+          "Expected a DefToken parameter, found nothing.");
         Ok(Tokens!())
       }
     }
@@ -539,7 +548,8 @@ LoadDefinitions!(state, {
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
           let args = defn.read_arguments(gullet, state)?;
-          // TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
+          // TODO: What is this datatype ?
+          // How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
           Ok(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
@@ -653,11 +663,13 @@ LoadDefinitions!(state, {
       //     $gullet->readToken; }
       //   else {
       //     Error('expected', '}', $gullet, "A closing } was supposed to be here"); }
-      //   LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, itemopen => T_BEGIN, itemclose => T_END,
+      //   LaTeXML::Core::Array->new(
+      //     open => T_BEGIN, close => T_END, itemopen => T_BEGIN, itemclose => T_END,
       //     type => LaTeXML::Package::parseParameters(ToString("Semiverbatim"), "CommaList")->[0],
       //     values => [@dirs]); }
       // else {
-      //   Error('expected', 'DirectoryList', $gullet, "A DirectoryList was supposed to be here"); } });
+      //   Error('expected', 'DirectoryList', $gullet,
+      //          "A DirectoryList was supposed to be here"); } });
       unimplemented!();
       Ok(Tokens!())
   });
@@ -678,7 +690,8 @@ LoadDefinitions!(state, {
     if !stuff.is_empty() {
       let tbox = stuff.remove(0);
       let csname = match tbox.data() {
-        DigestedData::Whatsit(ref w) => w.read().unwrap().definition.get_cs_name().to_string(),
+        DigestedData::Whatsit(ref w) =>
+          w.read().unwrap().definition.get_cs_name().to_string(),
         _ => tbox.to_string()
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
@@ -799,7 +812,8 @@ LoadDefinitions!(state, {
   // CommaList expects something like {balancedstuff,...}
   DefParameterType!(CommaList, sub[_gullet, _inner, _extra, _state] {
       // my ($gullet, $type) = @_;
-      // my $typedef = $type && LaTeXML::Package::parseParameters(ToString($type), "CommaList")->[0];
+      // my $typedef = $type &&
+      //       LaTeXML::Package::parseParameters(ToString($type), "CommaList")->[0];
       // my @items = ();
       // if ($gullet->ifNext(T_BEGIN)) {
       //   $gullet->readToken;
@@ -923,7 +937,13 @@ LoadDefinitions!(state, {
   // });
   // //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
 
-  pub fn optional_key_vals(star: bool, plus: bool, keysets: Option<&Parameters>, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  pub fn optional_key_vals(
+    star: bool,
+    plus: bool,
+    keysets: Option<&Parameters>,
+    gullet: &mut Gullet,
+    state: &mut State,
+  ) -> Result<Tokens> {
     if gullet.if_next(T_OTHER!("["), state)? {
       let kvs: KeyVals = keyvals_aux(
         gullet,
@@ -1013,8 +1033,9 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // # Perverse naming convention: not script style, but in the style of a script relative to current.
-    DefParameterType!(InScriptStyle, sub[gullet, _inner, _extra, state] {
+  // # Perverse naming convention: not script style, but in the style of a script relative to
+  // current.
+  DefParameterType!(InScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_arg(state) },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -1048,7 +1069,8 @@ LoadDefinitions!(state, {
   //**********************************************************************
   // LaTeX has a very particular notion of "Undefined",
   // so let's get that squared away at the outset; it's useful for TeX, too!
-  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
+  // \relax
   DefMacro!("\\@ifundefined{}{}{}", sub[gullet, (name, if_token, else_token), inner_state] {
     let cs = T_CS!(s!("\\{}", Expand!(name,gullet).to_string()));
     if IsDefined!(&cs, inner_state) {

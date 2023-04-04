@@ -15,6 +15,7 @@ use rtx_core::util::text::*;
 //  ^      ^ pattern         floats to where pattern would be allowed
 // Each of these can be used literally, if DOUBLED (ie. ## )
 // (except ^ ??? ^^ means something special!)
+#[rustfmt::skip]
 macro_rules! QNAME_RE_STR(() => (r"((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)"));
 macro_rules! PI_RE_STR(() => (concat!(r"^\s*<\?",QNAME_RE_STR!())));
 macro_rules! KEY_RE_STR (() => (concat!(r"^",QNAME_RE_STR!(),r"\s*=\s*")));
@@ -33,8 +34,10 @@ macro_rules! SPECIALS (() => (r"\#\?&\\"));
 macro_rules! QUOTED_SPECIALS (
     () => (concat!(r"\\\\\\[",SPECIALS!(),
                    r"]|\\#\\#|\\&amp;"))); // or special cases: doubled #, &amp;
-macro_rules! LEAD_QUOTED_RE_STR (() => (concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),"'\"])+)")));
-macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),r"<])+)")));
+macro_rules! LEAD_QUOTED_RE_STR (() => (
+  concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),"'\"])+)")));
+macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (
+  concat!(r"^((",QUOTED_SPECIALS!(),r"|[^",SPECIALS!(),r"<])+)")));
 
 lazy_static! {
   // static ref NARGS : i32 = 0;
@@ -67,9 +70,13 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   let replacement: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => {
+        panic!("only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (Lit)")
+      },
     },
-    _ => panic!("only accepts #[replacement = \"value\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[replacement = \"value\"] attribute, mandatory double-quotes (parse_meta)"
+    ),
   };
 
   let compiled_replacement_closure: proc_macro2::TokenStream = if replacement.is_empty() {
@@ -97,7 +104,8 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
 
     quote!(
     Some(Arc::new(
-    |document: &mut Document, args: &Vec<Option<Digested>>, props: &HashMap<String, Stored>, state: &mut State| {
+    |document: &mut Document, args: &Vec<Option<Digested>>,
+      props: &HashMap<String, Stored>, state: &mut State| {
       #[allow(unused_assignments)]
       let mut savenode : Option<Node> = None;
 
@@ -129,13 +137,13 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   // }
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
-  let float_result = FLOAT_RE.replace(&replacement, |refs: &Captures| -> String {
+  let float_res = FLOAT_RE.replace(&replacement, |refs: &Captures| -> String {
     floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
     has_floats = true;
     String::new()
   });
   if has_floats {
-    replacement = float_result.to_string();
+    replacement = float_res.to_string();
   }
   let mut operations = Vec::new();
 
@@ -224,7 +232,8 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         let this_font_opt = match props.get("font") {
           Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
           Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
-          Some(Stored::FontDirective(FontDirective::Closure(code))) => Some(Cow::Owned(code(None, state)?)),
+          Some(Stored::FontDirective(FontDirective::Closure(code))) =>
+            Some(Cow::Owned(code(None, state)?)),
           _ => None
         };
         if let Some(this_font) = this_font_opt {
@@ -247,14 +256,15 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     }
 
     // Close tag: </name>
-    let lead_close_tag_result = LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
-      is_match = true;
-      current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
-      // println!("-- close tag {:?}", current_tag);
-      // handle close tag
-      operations.push(quote!(document.close_element(#current_tag, state)?;));
-      String::new()
-    });
+    let lead_close_tag_result =
+      LEAD_CLOSE_TAG_RE.replace(&replacement, |refs: &Captures| -> String {
+        is_match = true;
+        current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
+        // println!("-- close tag {:?}", current_tag);
+        // handle close tag
+        operations.push(quote!(document.close_element(#current_tag, state)?;));
+        String::new()
+      });
     if is_match {
       replacement = lead_close_tag_result.to_string();
       continue;
@@ -285,16 +295,17 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // Else random text
     let mut has_random_text = false;
-    let lead_random_text_result = LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
-      if let Some(text_match) = refs.get(1) {
-        let escaped_match = &slashify(&unquote(text_match.as_str()));
-        operations.push(quote!(
-          document.absorb_string(#escaped_match, props, state)?;
-        ));
-      }
-      has_random_text = true;
-      String::new()
-    });
+    let lead_random_text_result =
+      LEAD_RANDOM_TEXT_RE.replace(&replacement, |refs: &Captures| -> String {
+        if let Some(text_match) = refs.get(1) {
+          let escaped_match = &slashify(&unquote(text_match.as_str()));
+          operations.push(quote!(
+            document.absorb_string(#escaped_match, props, state)?;
+          ));
+        }
+        has_random_text = true;
+        String::new()
+      });
     if has_random_text {
       replacement = lead_random_text_result.to_string();
     }
@@ -504,7 +515,8 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
   }
   if !is_match {
     // Build the exclusion regex
-    let mut exclusion_str: String = concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
+    let mut exclusion_str: String =
+      concat!(r"^((?:", QUOTED_SPECIALS!(), r"|[^", SPECIALS!()).to_owned();
     exclusion_str = exclusion_str + exclude_chars + r"])+)";
     let exclusion_re: Regex = Regex::new(&exclusion_str).unwrap();
 
@@ -526,7 +538,9 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
 
 fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, String) {
   // Remove leading "?"
-  *text = LEAD_QMARK.replace(text, |_: &Captures| String::new()).to_string();
+  *text = LEAD_QMARK
+    .replace(text, |_: &Captures| String::new())
+    .to_string();
   let translated_bool = translate_value("(", text);
   // Note/TODO: This is a direct redo of latexml's "ToString(v) ? () : ()" approach
   //   for testing the boolean branch

@@ -1,6 +1,6 @@
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::collections::{VecDeque};
-use rustc_hash::{FxHashMap as HashMap};
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
@@ -31,11 +31,9 @@ use crate::BoxOps;
 ///! document elements (eg from \section*); this requires an additional counter
 ///! (eg. UNsection) and  mechanisms to track it.
 
-
 /// configuration for new_counter
 #[derive(Default)]
-pub struct NewCounterOptions<'ct>
- {
+pub struct NewCounterOptions<'ct> {
   /// specifies a prefix to be used in formatting ID's for document structure elements
   /// counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
   pub idprefix: &'ct str,
@@ -52,7 +50,13 @@ pub struct NewCounterOptions<'ct>
 
 /// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
-pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn new_counter(
+  ctr: &str,
+  within: &str,
+  options_opt: Option<NewCounterOptions>,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<()> {
   let unctr = s!("UN{}", ctr); // UNctr is counter for generating ID's for UN-numbered items.
   let cctr = s!("\\c@{}", ctr);
   let clctr = s!("\\cl@{}", ctr);
@@ -82,7 +86,11 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     };
     let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
     clwithin_tokens.append(&mut x);
-    state.assign_value(&clwithin, Stored::Tokens(Tokens::new(clwithin_tokens)), Some(Scope::Global));
+    state.assign_value(
+      &clwithin,
+      Stored::Tokens(Tokens::new(clwithin_tokens)),
+      Some(Scope::Global),
+    );
 
     let mut unx = if let Some(clun) = state.lookup_tokens(&clunwithin) {
       clun.unlist()
@@ -92,12 +100,20 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     let mut clunwithin_tokens = vec![T_CS!(unctr)];
     clunwithin_tokens.append(&mut unx);
 
-    state.assign_value(&clunwithin, Stored::Tokens(Tokens::new(clunwithin_tokens)), Some(Scope::Global))
+    state.assign_value(
+      &clunwithin,
+      Stored::Tokens(Tokens::new(clunwithin_tokens)),
+      Some(Scope::Global),
+    )
   }
 
   if let Some(ref options) = options_opt {
     if !options.nested.is_empty() {
-      state.assign_value(&s!("nested_counters_{}", ctr), options.nested.clone(), Some(Scope::Global))
+      state.assign_value(
+        &s!("nested_counters_{}", ctr),
+        options.nested.clone(),
+        Some(Scope::Global),
+      )
     }
   }
 
@@ -106,10 +122,12 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, inner_state| {
-      let counter_value = counter_value(&ctr_string, inner_state).value_of();
-      Ok(Tokens::new(ExplodeText!(counter_value)))
-    }))),
+    Some(ExpansionBody::Closure(Arc::new(
+      move |_gullet, _args, inner_state| {
+        let counter_value = counter_value(&ctr_string, inner_state).value_of();
+        Ok(Tokens::new(ExplodeText!(counter_value)))
+      },
+    ))),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -135,7 +153,11 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     Some(ref opt) => opt.idprefix.to_string(),
   };
   if !prefix.is_empty() {
-    state.assign_value(&s!("@ID@prefix@{}", ctr), prefix.to_string(), Some(Scope::Global));
+    state.assign_value(
+      &s!("@ID@prefix@{}", ctr),
+      prefix.to_string(),
+      Some(Scope::Global),
+    );
   } else {
     prefix = state.lookup_string(&s!("@ID@prefix@{}", ctr));
     if prefix.is_empty() {
@@ -163,15 +185,18 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, _inner_state| {
-          Ok(mouth::tokenize_internal(&s!(
-            "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
-            idwithin,
-            idwithin,
-            prefix,
-            ctr_string
-          )))
-        }))),
+        Some(ExpansionBody::Closure(Arc::new(
+          move |_gullet, _args, _inner_state| {
+            Ok(mouth::tokenize_internal(&s!(
+              "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
+\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+              idwithin,
+              idwithin,
+              prefix,
+              ctr_string
+            )))
+          },
+        ))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -182,9 +207,15 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(move |_gullet, _args, _inner_state| {
-          Ok(mouth::tokenize_internal(&s!("{}\\csname @{}@ID\\endcsname", prefix, ctr_string)))
-        }))),
+        Some(ExpansionBody::Closure(Arc::new(
+          move |_gullet, _args, _inner_state| {
+            Ok(mouth::tokenize_internal(&s!(
+              "{}\\csname @{}@ID\\endcsname",
+              prefix,
+              ctr_string
+            )))
+          },
+        ))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -237,11 +268,23 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 
 /// Analog of `\stepcounter`, steps the counter and returns the expansion of
 /// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
-pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn step_counter(
+  ctr: &str,
+  noreset: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<()> {
   let value = counter_value(ctr, state);
-  state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
+  state.assign_value(
+    &s!("\\c@{}", ctr),
+    value.add(Number::new(1)),
+    Some(Scope::Global),
+  );
   state.after_assignment(stomach.get_gullet_mut());
-  let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of()));
+  let token_value = Tokens::new(Explode!(state
+    .lookup_number(&s!("\\c@{}", ctr))
+    .unwrap()
+    .value_of()));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
@@ -265,13 +308,25 @@ pub fn step_counter(ctr: &str, noreset: bool, stomach: &mut Stomach, state: &mut
   Ok(())
 }
 
-/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a conceptually better organization?
-///
-pub fn step_counter_gullet(ctr: &str, noreset: bool, gullet: &mut Gullet, state: &mut State) -> Result<()> {
+/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a
+/// conceptually better organization?
+pub fn step_counter_gullet(
+  ctr: &str,
+  noreset: bool,
+  gullet: &mut Gullet,
+  state: &mut State,
+) -> Result<()> {
   let value = counter_value(ctr, state);
-  state.assign_value(&s!("\\c@{}", ctr), value.add(Number::new(1)), Some(Scope::Global));
+  state.assign_value(
+    &s!("\\c@{}", ctr),
+    value.add(Number::new(1)),
+    Some(Scope::Global),
+  );
   state.after_assignment(gullet);
-  let token_value = Tokens::new(Explode!(state.lookup_number(&s!("\\c@{}", ctr)).unwrap().value_of()));
+  let token_value = Tokens::new(Explode!(state
+    .lookup_number(&s!("\\c@{}", ctr))
+    .unwrap()
+    .value_of()));
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
@@ -300,7 +355,12 @@ pub fn step_counter_gullet(ctr: &str, noreset: bool, gullet: &mut Gullet, state:
 /// suitable for use in a `properties` option to constructors.
 /// The `id` is generated in parallel with the reference number
 /// to assist debugging.
-pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
+pub fn ref_step_counter(
+  ctype: &str,
+  noreset: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(Stored::String(ctr)) => ctr.to_string(),
     _ => ctype.to_string(),
@@ -353,7 +413,12 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
-    invocation = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(ctype)))], gullet, state)?;
+    invocation = build_invocation(
+      T_CS!("\\lx@make@tags"),
+      vec![Some(Tokens!(T_OTHER!(ctype)))],
+      gullet,
+      state,
+    )?;
   }
 
   let tags = stomach.digest(invocation, state)?;
@@ -368,7 +433,11 @@ pub fn ref_step_counter(ctype: &str, noreset: bool, stomach: &mut Stomach, state
   let scope = s!("{ctr}:{refnum}");
   let mut receiver = VecDeque::new();
   receiver.push_front(Stored::String(scope.clone()));
-  state.assign_value(&s!("scopes_for_counter:{ctr}"), receiver, Some(Scope::Local));
+  state.assign_value(
+    &s!("scopes_for_counter:{ctr}"),
+    receiver,
+    Some(Scope::Local),
+  );
   state.activate_scope(&scope);
 
   Ok(map!(
@@ -391,10 +460,20 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
     if !norefnum && state.lookup_meaning(&hj_refnum).is_some() {
-      state.let_i(&T_CS!(s!("\\the{ctr}")), hj_refnum, Some(Scope::Global), gullet);
+      state.let_i(
+        &T_CS!(s!("\\the{ctr}")),
+        hj_refnum,
+        Some(Scope::Global),
+        gullet,
+      );
     }
     if state.lookup_meaning(&hj_id).is_some() {
-      state.let_i(&T_CS!(s!("\\the{ctr}@ID")), hj_id, Some(Scope::Global), gullet);
+      state.let_i(
+        &T_CS!(s!("\\the{ctr}@ID")),
+        hj_id,
+        Some(Scope::Global),
+        gullet,
+      );
     }
     let _label = state.lookup_value("PEEKED_LABEL");
     // TODO: Continue once we know the type of "mapper"
@@ -404,16 +483,17 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &
     //     if !state.lookup_neaning(hj_refnum) {    // Save for later
     //       state.let_i(&hj_refnum, T_CS!(s!("\\the{}",ctr)), Some(Scope::Global));
     //     }
-    //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope: Some(Scope::Global),
-    // ..ExpandableOptions::default()}), state);   }
+    //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
+    // Some(Scope::Global), ..ExpandableOptions::default()}), state);   }
     //   if fixedid {
     //     if state.lookup_meaning(&hj_id).is_none() {        // Save for later
     //       state.let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
     //     }
-    //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope: Some(Scope::Global),
-    // ..ExpandableOptions::default()}), state);   }
+    //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
+    // Some(Scope::Global), ..ExpandableOptions::default()}), state);   }
     //   state.remove_value("PEEKED_LABEL"); // CONSUME the label
-    //   state.assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've consumed the label
+    //   state.assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
+    // consumed the label
   }
 }
 
@@ -427,14 +507,20 @@ pub fn maybe_note_label(label: &str, state: &mut State) {
     if processed.is_empty() || processed != label {
       // Only if not already processed
       state.remove_value("PROCESSED_LABEL");
-      state.assign_value("PEEKED_LABEL", Stored::String(label.into_owned()), Some(Scope::Global));
+      state.assign_value(
+        "PEEKED_LABEL",
+        Stored::String(label.into_owned()),
+        Some(Scope::Global),
+      );
     }
   }
 }
 
 fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   //  print STDERR "Unusing scopes for $ctr\n";
-  if let Some(Stored::VecDequeStored(stored_scopes)) = state.lookup_value(&s!("scopes_for_counter:{ctr}")) {
+  if let Some(Stored::VecDequeStored(stored_scopes)) =
+    state.lookup_value(&s!("scopes_for_counter:{ctr}"))
+  {
     for scope_stored in stored_scopes.clone() {
       if let Stored::String(scope) = scope_stored {
         state.deactivate_scope(&scope);
@@ -444,8 +530,10 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
     }
   }
 
-  // TODO: if we ever want to unshift from the nested_counters, we'll need to also use Stored::VecDequeStored for them.
-  if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{ctr}")) {
+  // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
+  // Stored::VecDequeStored for them.
+  if let Some(Stored::VecString(stored_counters)) = state.lookup_value(&s!("nested_counters_{ctr}"))
+  {
     for inner_ctr in stored_counters.clone() {
       deactivate_counter_scope(&inner_ctr, state);
     }
@@ -456,7 +544,11 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
 /// Like `RefStepCounter`, but only steps the "uncounter",
 /// and returns only the id;  This is useful for unnumbered cases
 /// of objects that normally get both a refnum and id.
-pub fn ref_step_id(ctype: &str, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
+pub fn ref_step_id(
+  ctype: &str,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
@@ -489,7 +581,10 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   def_macro(
     T_CS!(s!("\\@{}@ID", ctr)),
     None,
-    Tokens!(Explode!(state.lookup_number(&s!("\\c@{ctr}")).unwrap().value_of())),
+    Tokens!(Explode!(state
+      .lookup_number(&s!("\\c@{ctr}"))
+      .unwrap()
+      .value_of())),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -504,7 +599,11 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
 }
 
 /// Create id, and tags for an itemize type \item
-pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, state: &mut State) -> Result<HashMap<String, Stored>> {
+pub fn ref_step_item_counter(
+  tag_opt: Option<&Tokens>,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<HashMap<String, Stored>> {
   let counter = state.lookup_string("itemcounter");
   let n = state.lookup_int("itemization_items");
   state.assign_value("itemization_items", n + 1, None);
@@ -561,7 +660,15 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>, stomach: &mut Stomach, st
     ]);
     tag_tokens.extend(reverted_tag);
     tag_tokens.push(T_END!());
-    tag_tokens.extend(build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens!(T_OTHER!(counter)))], gullet, state)?.unlist());
+    tag_tokens.extend(
+      build_invocation(
+        T_CS!("\\lx@make@tags"),
+        vec![Some(Tokens!(T_OTHER!(counter)))],
+        gullet,
+        state,
+      )?
+      .unlist(),
+    );
     tag_tokens.push(T_END!());
 
     let tags = stomach.digest(tag_tokens, state)?;
@@ -614,7 +721,10 @@ pub fn begin_itemize(
   let level = state.lookup_int(&s!("{counter}level")) + 1; // level for lists of specific type
   AssignRegister!(
     "\\itemsep",
-    state.lookup_dimension("\\lx@default@itemsep").unwrap_or_default().into(),
+    state
+      .lookup_dimension("\\lx@default@itemsep")
+      .unwrap_or_default()
+      .into(),
     Vec::new(),
     state
   );
@@ -632,8 +742,15 @@ pub fn begin_itemize(
     let itype_cs = T_CS!(s!("\\{itype}@item"));
     state.let_i(&T_CS!("\\item"), itype_cs, None, gullet);
   }
-  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None, gullet); // In case within odd environment.
-  def_macro(T_CS!("\\@listctr"), None, Tokens!(Explode!(usecounter)), None, state);
+  // In case within odd environment.
+  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None, gullet);
+  def_macro(
+    T_CS!("\\@listctr"),
+    None,
+    Tokens!(Explode!(usecounter)),
+    None,
+    state,
+  );
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
   state.assign_value("itemcounter", Stored::String(usecounter.clone()), None);
@@ -647,7 +764,13 @@ pub fn begin_itemize(
     let outerusecounter = s!("{outercounter}{}", roman!(outerlevel).to_string());
     let thectr = s!("\\the{listcounter}@ID");
     let theexpansion = s!("\\the{outerusecounter}@ID.I\\arabic{{{listcounter}}}");
-    def_macro(T_CS!(thectr), None, mouth::tokenize_internal(&theexpansion), None, state);
+    def_macro(
+      T_CS!(thectr),
+      None,
+      mouth::tokenize_internal(&theexpansion),
+      None,
+      state,
+    );
 
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(listcounter)];
@@ -655,13 +778,21 @@ pub fn begin_itemize(
     if let Some(Stored::Tokens(tks)) = state.lookup_value(&cs_name) {
       cl_toks.extend(tks.clone().unlist());
     }
-    state.assign_value(&cs_name, Stored::Tokens(Tokens::new(cl_toks)), Some(Scope::Global));
+    state.assign_value(
+      &cs_name,
+      Stored::Tokens(Tokens::new(cl_toks)),
+      Some(Scope::Global),
+    );
   }
   // format the id of \item's relative to the id of this list
   let useexp = mouth::tokenize_internal(&s!("\\the{listcounter}@ID.i\\@{usecounter}@ID"));
   def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None, state);
 
-  let mut series = if let Some(s) = options.series { s.to_string() } else { String::new() };
+  let mut series = if let Some(s) = options.series {
+    s.to_string()
+  } else {
+    String::new()
+  };
   if let Some(start) = options.start {
     SetCounter!(usecounter, start, stomach, state);
     let gullet = stomach.get_gullet_mut();
@@ -688,7 +819,12 @@ pub fn begin_itemize(
 }
 
 /// Copies the current id, tags, and inlist counter values into whatsit properties
-pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit, _stomach: &mut Stomach, state: &mut State) {
+pub fn rescue_caption_counters(
+  captype: &str,
+  whatsit: &mut Whatsit,
+  _stomach: &mut Stomach,
+  state: &mut State,
+) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state.remove_value(tagskey) {
     state.assign_value(tagskey, false, Some(Scope::Global));

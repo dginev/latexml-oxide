@@ -3,9 +3,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use std::env;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::path::{Path, PathBuf};
 
 /// configuration for filesystem search
 #[derive(Debug, Clone, Default)]
@@ -40,7 +40,9 @@ lazy_static! {
   //         //                 p.to_string_lossy().to_string() + "./..",
   //         //                 p.to_string_lossy().to_string() + "./../..",
   //         //                 p.to_string_lossy().to_string() + "./../../..",
-  //         //                 p.to_string_lossy().to_string() + "./../../../.."], // TODO: HACK, see note on INSTALLDIRS further down
+  //         //                 p.to_string_lossy().to_string() + "./../../../.."],
+
+  // TODO: HACK, see note on INSTALLDIRS further down
   //         None => Vec::new()
   //       }
   //     },
@@ -69,7 +71,13 @@ pub fn is_reloadable(pathname: &str) -> bool {
 /// absolute paths start with the filesystem root - check if this is one
 pub fn is_absolute(path: &str) -> bool { Path::new(&canonical(path)).is_absolute() }
 /// convert a (possibly relative) file path to an absolute one
-pub fn absolute(path: &str) -> String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
+pub fn absolute(path: &str) -> String {
+  Path::new(path)
+    .canonicalize()
+    .unwrap()
+    .to_string_lossy()
+    .to_string()
+}
 
 /// Split the pathname into components (dir,name,type).
 /// If pathname is absolute, dir starts with volume or '/'
@@ -95,7 +103,10 @@ pub fn split(pathname: &str) -> (String, String, String) {
 ///  Simple logic for splitting a URL into protocol://base/path
 pub fn url_split(url: &str) -> (&str, &str) {
   if let Some(caps) = URL_RE.captures(url) {
-    (caps.get(1).map_or("", |m| m.as_str()), caps.get(2).map_or("", |m| m.as_str()))
+    (
+      caps.get(1).map_or("", |m| m.as_str()),
+      caps.get(2).map_or("", |m| m.as_str()),
+    )
   } else {
     (url, "index.tex") // Well, what other default makes sense?
   }
@@ -163,7 +174,11 @@ pub fn concat(dir: &str, file: &str) -> String {
 /// and this simplifies overall.
 pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
   let mut dirs: Vec<String> = Vec::new();
-  let canonical_pathname = if pathname != "*" { canonical(pathname) } else { pathname.to_owned() };
+  let canonical_pathname = if pathname != "*" {
+    canonical(pathname)
+  } else {
+    pathname.to_owned()
+  };
 
   let (pathdir, name, pathname_ext) = split(&canonical_pathname);
 
@@ -175,7 +190,11 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   } else if let Some(paths) = options.paths {
     for p in paths {
       // Complete the search paths by prepending current dir to relative paths,
-      let pp_base = if is_absolute(&p) { canonical(&p) } else { concat(&cwd, &p) };
+      let pp_base = if is_absolute(&p) {
+        canonical(&p)
+      } else {
+        concat(&cwd, &p)
+      };
       let pp = concat(&pp_base, &pathdir);
       // but only include each dir ONCE
       if !dirs.contains(&pp) {

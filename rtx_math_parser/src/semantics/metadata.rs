@@ -67,11 +67,16 @@ impl Meta {
 
   pub fn can_specialize(&self) -> bool {
     // does the meta object have any fields that are meaningful during specialization? Namely:
-    self.fenced.is_some() || self.curry_level.is_some() || !self.syntax_trace.is_empty() || !self.curry_constraints.is_empty()
+    self.fenced.is_some()
+      || self.curry_level.is_some()
+      || !self.syntax_trace.is_empty()
+      || !self.curry_constraints.is_empty()
   }
 
   /// Check if no type fields are set, as would be the default case
-  pub fn is_empty(&self) -> bool { self.fenced.is_none() && self.curry_level.is_none() && self.curry_constraints.is_empty() }
+  pub fn is_empty(&self) -> bool {
+    self.fenced.is_none() && self.curry_level.is_none() && self.curry_constraints.is_empty()
+  }
 
   /// Override all fields of meta with the nonempty fields of the incoming data
   /// Special features:
@@ -80,7 +85,11 @@ impl Meta {
   pub fn with(self, mut other: Meta) -> Result<Self, Box<dyn Error>> {
     // EMBELLISHED specialization
     // overaccents lead to renaming of all pieces
-    let specialize = if other.specialize.is_some() { other.specialize } else { self.specialize };
+    let specialize = if other.specialize.is_some() {
+      other.specialize
+    } else {
+      self.specialize
+    };
 
     // TODO: We would need a smart tracking algorithm to extend the full trace
     // for now keep the last step.
@@ -116,7 +125,11 @@ impl Meta {
     let curry_level = if let Some(current_level) = self.curry_level {
       if let Some(new_level) = other.curry_level {
         if current_level != new_level {
-          curry_constraints.insert(CurryConstraint((current_level, Ordering::Equal, new_level.clone())));
+          curry_constraints.insert(CurryConstraint((
+            current_level,
+            Ordering::Equal,
+            new_level.clone(),
+          )));
         }
         Some(new_level)
       } else {
@@ -154,8 +167,8 @@ impl Meta {
     // massage the name so that cbc solver can handle it without weird glitches.
     let lex_parts = distill_lexeme(name);
     let curry_var = CurryTerm::Var(format!(":{}", lex_parts.2));
-    // We don't have to build this in, since by default we will enforce all variables are in a fixed curry range of [1,10].
-    // into.curry_constraints.insert(CurryConstraint((
+    // We don't have to build this in, since by default we will enforce all variables are in a fixed
+    // curry range of [1,10]. into.curry_constraints.insert(CurryConstraint((
     //   curry_var.clone(),
     //   Ordering::Greater,
     //   CurryTerm::Literal(0),
@@ -163,9 +176,11 @@ impl Meta {
 
     if let Some(ref level) = into.curry_level {
       if &curry_var != level {
-        into
-          .curry_constraints
-          .insert(CurryConstraint((curry_var.clone(), Ordering::Equal, level.clone())));
+        into.curry_constraints.insert(CurryConstraint((
+          curry_var.clone(),
+          Ordering::Equal,
+          level.clone(),
+        )));
       }
     }
     into.curry_level = Some(curry_var);

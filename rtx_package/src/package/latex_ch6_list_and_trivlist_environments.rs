@@ -1,4 +1,6 @@
 use crate::package::*;
+
+#[rustfmt::skip]
 LoadDefinitions!(state, {
   //======================================================================
   // C.6.3 The list and trivlist environments.
@@ -45,14 +47,15 @@ LoadDefinitions!(state, {
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties => sub[stomach, _args, state] { begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
+    properties => sub[stomach, _args, state] {
+      begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
     before_digest_end => { Digest!("\\par")?; }
   );
 
   DefMacro!("\\trivlist@item", "\\par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
-    "<ltx:item xml:id='#id' itemsep='#itemsep'>\
-      <ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",    // At least an empty tag! ?
+    "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
+    // At least an empty tag! ?
     properties => sub[stomach, args, state] {
       if let Some(ref arg) = args[0] {
         if let DigestedData::Postponed(ref tag_tokens) = arg.data() {

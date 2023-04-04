@@ -9,12 +9,16 @@ lazy_static! {
 //**********************************************************************
 // C.6.4 Verbatim
 //**********************************************************************
+#[rustfmt::skip]
 LoadDefinitions!(outer_state, {
   // NOTE: how's the best way to get verbatim material through?
   DefEnvironment!("{verbatim}", "<ltx:verbatim>#body</ltx:verbatim>");
   DefEnvironment!("{verbatim*}", "<ltx:verbatim>#body</ltx:verbatim>");
 
-  DefMacro!("\\@verbatim", r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"); // Close enough?
+  DefMacro!(
+    "\\@verbatim",
+    r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"
+  ); // Close enough?
   DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
   before_digest => sub[stomach,state] {
     state.begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
@@ -79,11 +83,13 @@ LoadDefinitions!(outer_state, {
       stomach.egroup(state)?;
       lines.push("\\end{verbatim}".to_string());
       let boxes = lines.into_iter().map(|line|
-        Tbox::new(line.clone(), font.clone(), loc.clone().map(|l| l.into_owned()), T_OTHER!(line).into(), HashMap::default(), state).into()
+        Tbox::new(line.clone(), font.clone(), loc.clone()
+          .map(|l| l.into_owned()), T_OTHER!(line).into(), HashMap::default(), state).into()
       ).collect();
       whatsit.set_body(boxes, state);
     },
-    before_construct => sub[document, _whatsit, state] { document.maybe_close_element("ltx:p", state)?; }
+    before_construct => sub[document, _whatsit, state] {
+      document.maybe_close_element("ltx:p", state)?; }
   );
 
   DefPrimitive!("\\@vobeyspaces", sub[stomach, (), state] {
@@ -96,7 +102,8 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\verb", sub[gullet, _args, state] {
     let active_chars = &['%', '\\', '{', '}'];
     state.begin_semiverbatim(Some(active_chars));
-    state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
+    // Do NOT (necessarily) skip spaces after \verb!!!
+    state.assign_catcode(' ', Catcode::ACTIVE, None);
     let mut init = gullet.read_token(state);
     let mut starred = false;
     if let Some(ref init_token) = init {
@@ -129,15 +136,18 @@ LoadDefinitions!(outer_state, {
       result.push(T_CS!("\\@hidden@egroup"));
       Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
-      Error!("expected", "delimiter", gullet, state, "Verbatim argument lost\n Bindings for preceding code is probably broken");
+      Error!("expected", "delimiter", gullet, state,
+        "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state.end_semiverbatim()?;
       Ok(Tokens!())
     }
   });
 
   DefPrimitive!("\\lx@use@visiblespace", sub[stomach, (), state] {
-    state.assign_catcode(' ', Catcode::ACTIVE, None); // Do NOT (necessarily) skip spaces after \verb!!!
-    Let!(&T_ACTIVE!(" "), T_OTHER!("\u{2423}")); // Visible space
+    // Do NOT (necessarily) skip spaces after \verb!!!
+    state.assign_catcode(' ', Catcode::ACTIVE, None);
+    // Visible space
+    Let!(&T_ACTIVE!(" "), T_OTHER!("\u{2423}"));
   });
 
   DefConstructor!("\\@internal@verb{} Undigested {}",

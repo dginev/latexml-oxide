@@ -1,6 +1,6 @@
 ///! Extract Model information from a RelaxNG schema
 use crate::document::Document;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 /// an internal representation for a RelaxNG schema
 pub struct Relaxng {
   /// the schema name
@@ -36,12 +36,12 @@ impl Relaxng {
     if self.name != "DTD" {
       // provisions for phasing out DTD
       attributes.insert(s!("RelaxNGSchema"), self.name.clone());
-      document.insert_pi("latexml", Some(attributes)).expect("should never fail");
+      document
+        .insert_pi("latexml", Some(attributes))
+        .expect("should never fail");
     }
   }
 
   /// build the internal representation
-  pub fn load_schema(&self) {
-    unimplemented!()
-  }
+  pub fn load_schema(&self) { unimplemented!() }
 }

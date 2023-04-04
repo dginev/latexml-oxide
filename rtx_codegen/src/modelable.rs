@@ -23,9 +23,13 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   let name: String = match input.attrs[0].parse_meta().unwrap() {
     Meta::NameValue(v) => match v.lit {
       Lit::Str(v) => v.value(),
-      _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"),
+      _ => panic!(
+        "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (Lit)"
+      ),
     },
-    _ => panic!("only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"),
+    _ => panic!(
+      "only accepts #[name = \"filename\"] attribute syntax, mandatory double-quotes (parse_meta)"
+    ),
   };
 
   let pathname_opt = pathname::find(
@@ -69,7 +73,10 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
       let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
       let elements = caps.get(2).map_or("", |m| m.as_str()).to_string();
-      let elements_vec = elements.split(',').map(ToString::to_string).collect::<Vec<String>>();
+      let elements_vec = elements
+        .split(',')
+        .map(ToString::to_string)
+        .collect::<Vec<String>>();
 
       operations.push(quote!(
         model.set_schema_class(#classname,
@@ -82,7 +89,11 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
         model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
       ));
     } else {
-      fatal!(Codegen, Malformed, s!(" Loaded model '{}' is malformatted at \"{}\"", path, line));
+      fatal!(
+        Codegen,
+        Malformed,
+        s!(" Loaded model '{}' is malformatted at \"{}\"", path, line)
+      );
     }
   }
 

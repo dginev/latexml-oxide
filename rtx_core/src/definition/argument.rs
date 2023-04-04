@@ -85,7 +85,8 @@ impl Object for ArgWrap {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     use ArgWrap::*;
     match self {
-      Token(_) | OptionToken(_) | Tokens(_) | OptionTokens(_) | Number(_) | OptionNumber(_) | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) => None,
+      Token(_) | OptionToken(_) | Tokens(_) | OptionTokens(_) | Number(_) | OptionNumber(_)
+      | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) => None,
       Glue(t) => t.get_locator(),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.get_locator(),
@@ -207,7 +208,8 @@ impl ArgWrap {
   pub fn is_none(&self) -> bool {
     use ArgWrap::*;
     match self {
-      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => false,
+      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_)
+      | MuDimension(_) | KV(_) => false,
       OptionToken(t) => t.is_none(),
       OptionTokens(t) => t.is_none(),
       OptionNumber(t) => t.is_none(),
@@ -252,7 +254,13 @@ impl ArgWrap {
       ArgWrap::Token(t) => Ok(t),
       ArgWrap::OptionToken(Some(t)) => Ok(t),
       ArgWrap::Tokens(tks) => Ok(tks.unlist().remove(0)),
-      _ => Err(s!("Hard assumption for Token argument failed. Got instead: {:?}", self).into()),
+      _ => Err(
+        s!(
+          "Hard assumption for Token argument failed. Got instead: {:?}",
+          self
+        )
+        .into(),
+      ),
     }
   }
   pub fn expected_token(self) -> Token {
@@ -267,7 +275,9 @@ impl ArgWrap {
     let result = match self {
       Token(t) => Some(Cow::Owned(Tokens!(t.clone()))), // ? avoid the clone ?
       Tokens(tks) => Some(Cow::Borrowed(tks)),
-      Number(_) |Float(_)|Dimension(_) |Glue(_)|MuGlue(_) | MuDimension(_) | KV(_) => Some(Cow::Owned(self.revert(state)?)),
+      Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => {
+        Some(Cow::Owned(self.revert(state)?))
+      },
       OptionToken(opt) => opt.as_ref().map(|t| Cow::Owned(Tokens!(t.clone()))),
       OptionTokens(opt) => opt.as_ref().map(Cow::Borrowed),
       OptionNumber(opt) => match opt {
@@ -336,13 +346,16 @@ impl ArgWrap {
       Tokens(tks) => Ok(tks.to_number()),
       OptionTokens(tks_opt) => match tks_opt {
         Some(tks) => Ok(tks.to_number()),
-        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got None.".into()),
-        // When is the None case useful? you can see it triggered with an error in the tests.
+        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got
+        // None.".into()), When is the None case useful? you can see it triggered with an
+        // error in the tests.
         None => Ok(crate::common::number::Number::default()),
       },
       OptionToken(tk_opt) => match tk_opt {
         Some(tk) => Ok(tk.to_number()),
-        None => Err("ArgWrap::try_to_number expected a Token for number conversion, but got None.".into()),
+        None => {
+          Err("ArgWrap::try_to_number expected a Token for number conversion, but got None.".into())
+        },
       },
       _ => Err(format!("ArgWrap::to_number not (yet?) defined on {:?}", self).into()),
     }
@@ -459,13 +472,16 @@ impl ArgWrap {
       Tokens(tks) => Ok(tks.to_float()),
       OptionTokens(tks_opt) => match tks_opt {
         Some(tks) => Ok(tks.to_float()),
-        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got None.".into()),
-        // When is the None case useful? you can see it triggered with an error in the tests.
+        // None => Err("ArgWrap::try_to_number expected a Tokens for number conversion, but got
+        // None.".into()), When is the None case useful? you can see it triggered with an
+        // error in the tests.
         None => Ok(crate::common::float::Float::default()),
       },
       OptionToken(tk_opt) => match tk_opt {
         Some(tk) => Ok(tk.to_float()),
-        None => Err("ArgWrap::try_to_float expected a Token for float conversion, but got None.".into()),
+        None => {
+          Err("ArgWrap::try_to_float expected a Token for float conversion, but got None.".into())
+        },
       },
       _ => Err(format!("ArgWrap::to_float not (yet?) defined on {:?}", self).into()),
     }
@@ -502,7 +518,8 @@ impl ArgWrap {
   pub fn is_empty(&self) -> bool {
     use ArgWrap::*;
     match self {
-      Token(_) | Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => false,
+      Token(_) | Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_)
+      | KV(_) => false,
       Tokens(tks) => tks.is_empty(),
       OptionTokens(Some(tks)) => tks.is_empty(),
       OptionToken(None)

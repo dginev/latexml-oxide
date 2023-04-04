@@ -27,7 +27,13 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
   state.assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
-  def_macro(T_CS!("\\inputencodingname"), None, encoding_tokenized, None, state);
+  def_macro(
+    T_CS!("\\inputencodingname"),
+    None,
+    encoding_tokenized,
+    None,
+    state,
+  );
   Ok(())
 }
 
@@ -48,7 +54,8 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\IeC{}", "#1");
 
   DefMacro!("\\@inpenc@undefined", sub[gullet, (), state] {
-    let message = s!("Keyboard character used is undefined in inputencoding {}", state.input_encoding.as_ref().unwrap());
+    let message = s!("Keyboard character used is undefined in inputencoding {}",
+      state.input_encoding.as_ref().unwrap());
     Error!("unexpected", "<char>", gullet, state, message);
   });
 

@@ -22,8 +22,14 @@ pub struct Dimension(pub i64);
 
 impl Object for Dimension {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(Tokens::new(ExplodeText!(&self.to_string()))) }
-  fn be_digested(self, _stomach: &mut crate::stomach::Stomach, _state: &mut State) -> Result<Digested>
+  fn revert(&self, _state: &State) -> Result<Tokens> {
+    Ok(Tokens::new(ExplodeText!(&self.to_string())))
+  }
+  fn be_digested(
+    self,
+    _stomach: &mut crate::stomach::Stomach,
+    _state: &mut State,
+  ) -> Result<Digested>
   where
     Self: Sized,
     Self: fmt::Debug,
@@ -33,7 +39,7 @@ impl Object for Dimension {
 }
 impl NumericOps for Dimension {
   fn new(number: i64) -> Self { Dimension(number) }
-  fn new_f64(number:f64) -> Self { Dimension(kround(number)) }
+  fn new_f64(number: f64) -> Self { Dimension(kround(number)) }
   fn value_of(self) -> i64 { self.0 }
   fn register_type(&self) -> RegisterType { RegisterType::Dimension }
   fn unit(&self) -> Option<&'static str> { Some("pt") }
@@ -41,7 +47,9 @@ impl NumericOps for Dimension {
 }
 
 impl fmt::Display for Dimension {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", fixedformat(self.0, self.unit())) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", fixedformat(self.0, self.unit()))
+  }
 }
 
 impl Dimension {
@@ -51,19 +59,19 @@ impl Dimension {
     } else if let Some(cap) = SPEC_RE.captures(spec) {
       // Dimensions given.
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
-      let num:f64 = num_str.parse::<f64>()?;
+      let num: f64 = num_str.parse::<f64>()?;
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
       let converted_unit = match state_opt {
         Some(state) => state.convert_unit(&unit),
         None => {
           let state = STD_STATE.read().unwrap(); // TODO: is this really the way?
           state.convert_unit(&unit)
-        }
+        },
       };
       Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {
-      // When scaled points passed in (typically the result of Perl calculations on other Dimensions),
-      // you might think truncation (int) is more TeX-like.
+      // When scaled points passed in (typically the result of Perl calculations on other
+      // Dimensions), you might think truncation (int) is more TeX-like.
       // Recall that TeX arithmatic truncates, whereas reading by Gullet tends to round.
       // The Perl arithmetic is replacing an unknown combination of those truncates & rounds.
       // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
@@ -73,7 +81,10 @@ impl Dimension {
     }
   }
   pub fn from_str(spec: &str, state: &State) -> Result<Dimension> {
-    Ok(Dimension::new_f64(Dimension::spec_to_f64(spec, Some(state))?))
+    Ok(Dimension::new_f64(Dimension::spec_to_f64(
+      spec,
+      Some(state),
+    )?))
   }
 }
 // Dimension!() macro is in setup.rs, since it binds state

@@ -118,7 +118,7 @@ LoadDefinitions!(state, {
         let is_space = if let Some(space_val) = boxes[0].get_property("isSpace") {
           match space_val {
             Cow::Borrowed(Stored::Bool(space_bool)) => *space_bool,
-            Cow::Owned(Stored::Bool(ref space_bool))  => *space_bool, // TODO : is there match syntax for Cow ?
+            Cow::Owned(Stored::Bool(ref space_bool))  => *space_bool,
             _ => false
           }
         } else {
@@ -143,7 +143,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\afterassignment Token", sub[stomach, (t), state] {
     state.assign_value("afterAssignment", t, Some(Scope::Global));
   });
-  // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
+  // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
+  // egroup or }
   DefPrimitive!("\\aftergroup Token", sub[stomach, (t), state] {
     state.push_value("afterGroup", t);
   });
@@ -184,7 +185,8 @@ LoadDefinitions!(state, {
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
-    if let Some(path) = find_file(&filename, Some(FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()}), state) {
+    if let Some(path) = find_file(&filename, Some(
+      FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()}), state) {
       let content_str = LookupString!(&s!("{}_contents",path));
       let content = if content_str.is_empty() {
         None
@@ -201,7 +203,8 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\closein Number", sub[stomach, (port), state] {
     // Clone the Rc<> for mouth out of state, since we'll be mutating.
-    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&s!("input_file:{}", port)) {
+    let file_key = s!("input_file:{}", port);
+    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&file_key) {
       Some(Arc::clone(mouth))
     } else {
       None
@@ -213,7 +216,8 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[stomach, (port, token), state] {
+  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
+    sub[stomach, (port, token), state] {
     if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&format!("input_file:{port}")) {
       let mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
@@ -251,7 +255,8 @@ LoadDefinitions!(state, {
 
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
-  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName", sub[stomach, (port, filename), state] {
+  DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
+    sub[stomach, (port, filename), state] {
     let port = port.to_string();
     let filename = filename.to_string();
     let contents_key = &s!("{}_contents",filename);
@@ -287,7 +292,10 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\special {}", None);
   DefPrimitive!("\\penalty Number", None);
   DefPrimitive!("\\kern Dimension", None);
-  DefMacro!("\\mkern MuGlue", "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi");
+  DefMacro!(
+    "\\mkern MuGlue",
+    "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi"
+  );
   DefPrimitive!("\\unpenalty", None);
   DefPrimitive!("\\unkern", None);
   // ## Worrisome, but...
@@ -300,11 +308,13 @@ LoadDefinitions!(state, {
 
   // DefPrimitive!("\\mark{}", None);
   // # \insert<8bit><filler>{<vertical mode material>}
-  DefPrimitive!("\\insert Number", None); // Just let the insertion get processed(?)
-                                          // \vadjust<filler>{<vertical mode material>}
-                                          // Note: \vadjust ignores in vertical mode...
-                                          // is it sufficient to just clear the macro to avoid recursion?
-                                          // (we don't track horizontal/vertical mode)
+  DefPrimitive!("\\insert Number", None);
+
+  // Just let the insertion get processed(?)
+  // \vadjust<filler>{<vertical mode material>}
+  // Note: \vadjust ignores in vertical mode...
+  // is it sufficient to just clear the macro to avoid recursion?
+  // (we don't track horizontal/vertical mode)
   DefMacro!("\\LTX@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{}");
   DefMacro!(
     "\\LTX@clear@vadjust@afterpar",

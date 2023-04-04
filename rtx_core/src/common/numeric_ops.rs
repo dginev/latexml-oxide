@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use std::fmt::Display;
 
 pub const UNITY: i64 = 65536;
-pub const UNITY_F64:f64 = 65536.0;
+pub const UNITY_F64: f64 = 65536.0;
 pub const EPSILON: f64 = 0.000_000_119_209_29;
 pub const ROUNDING_HALF: f64 = 0.49999994;
 pub const SCALES: &[i32] = &[1, 10, 100, 1000, 10000, 100_000];
@@ -31,11 +31,14 @@ pub fn round_to(number: f64, prec_opt: Option<u8>) -> f64 {
 
 /// An attempt at rounding floats to integers (like scaled points),
 /// in a (hopefully) Knuthian manner (like round_decimals \S102 in Tex The Program)
-///
 // DG: Note that we have to go to the largest `i64` type to contain the truncation
 // of large SP values multiplied up by UNITY
 pub fn kround(number: f64) -> i64 {
-  let rounded = if number < 0.0 { number - ROUNDING_HALF } else { number + ROUNDING_HALF };
+  let rounded = if number < 0.0 {
+    number - ROUNDING_HALF
+  } else {
+    number + ROUNDING_HALF
+  };
   rounded.trunc() as i64
 }
 
@@ -114,5 +117,7 @@ pub trait NumericOps {
   }
   fn register_type(&self) -> RegisterType;
   fn to_attribute(&self) -> String
-  where Self: Display { self.to_string() }
+  where Self: Display {
+    self.to_string()
+  }
 }

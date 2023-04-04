@@ -1,8 +1,8 @@
+use libxml::tree::Node;
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
-use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -106,7 +106,7 @@ impl Object for RegisterValue {
 
 impl NumericOps for RegisterValue {
   fn new(number: i64) -> Self { RegisterValue::Number(Number::new(number)) }
-  fn new_f64(number:f64) -> Self { RegisterValue::Number(Number::new_f64(number)) }
+  fn new_f64(number: f64) -> Self { RegisterValue::Number(Number::new_f64(number)) }
   fn value_of(self) -> i64 {
     match self {
       RegisterValue::Number(v) => v.value_of(),
@@ -202,7 +202,7 @@ impl NumericOps for RegisterValue {
     }
   }
   fn to_attribute(&self) -> String
-    where Self: fmt::Display {
+  where Self: fmt::Display {
     match self {
       RegisterValue::Number(v) => v.to_attribute(),
       RegisterValue::Dimension(v) => v.to_attribute(),
@@ -210,7 +210,7 @@ impl NumericOps for RegisterValue {
       RegisterValue::Glue(v) => v.to_attribute(),
       RegisterValue::MuGlue(v) => v.to_attribute(),
       // Token, Tokens?
-      other => other.to_string()
+      other => other.to_string(),
     }
   }
 }
@@ -273,7 +273,10 @@ impl<'a> From<&'a RegisterValue> for Dimension {
       RegisterValue::MuGlue(other) => Dimension::new(other.value_of()),
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
-        let message = s!("Token register can not be cast into a dimension: {:?}", other);
+        let message = s!(
+          "Token register can not be cast into a dimension: {:?}",
+          other
+        );
         Error!("expected", "dimension", None, None, message);
         Dimension::new(0)
       },
@@ -376,8 +379,8 @@ pub enum RegisterType {
 }
 
 // why mutable state in the Getter closure? Because the `.get_width` and friends methods have a
-// caching optimization, which requires writing new properties while they are stored in the State table
-// if we decide that isn't needed, we can go back to immutable.
+// caching optimization, which requires writing new properties while they are stored in the State
+// table if we decide that isn't needed, we can go back to immutable.
 /// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
 pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
 /// sets a register value in the State frame
@@ -413,7 +416,9 @@ impl Default for Register {
       name: String::from("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Arc::new(|_: Vec<ArgWrap>, _: &mut State| Some(RegisterValue::Number(Number::new(0)))),
+      getter: Arc::new(|_: Vec<ArgWrap>, _: &mut State| {
+        Some(RegisterValue::Number(Number::new(0)))
+      }),
       setter: Arc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
@@ -423,7 +428,10 @@ impl Default for Register {
 }
 impl PartialEq for Register {
   fn eq(&self, other: &Register) -> bool {
-    self.register_type == other.register_type && self.parameters == other.parameters && self.value == other.value && self.name == other.name
+    self.register_type == other.register_type
+      && self.parameters == other.parameters
+      && self.value == other.value
+      && self.name == other.name
   }
 }
 impl fmt::Debug for Register {
@@ -449,8 +457,10 @@ impl Definition for Register {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.borrow().readonly }
   // not implemented for primitives
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> { unimplemented!() }
-  fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() } // TODO: How do we do this with a RefCell ?!
+  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+    unimplemented!()
+  }
+  fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
   fn get_alias(&self) -> Option<&String> { None }
@@ -493,8 +503,17 @@ impl Definition for Register {
     }
   }
 
-  fn do_absorbtion(&self, _document: &mut Document, _whatsit: &Whatsit, _state: &mut State) -> Result<Vec<Node>> {
-    fatal!(Definition, Unexpected, "do_absorbtion on Primitive should never be called!");
+  fn do_absorbtion(
+    &self,
+    _document: &mut Document,
+    _whatsit: &Whatsit,
+    _state: &mut State,
+  ) -> Result<Vec<Node>> {
+    fatal!(
+      Definition,
+      Unexpected,
+      "do_absorbtion on Primitive should never be called!"
+    );
   }
   fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {
     if self.borrow().register_type == RegisterType::CharDef {

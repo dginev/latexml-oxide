@@ -1,7 +1,7 @@
 use crate::package::*;
 LoadDefinitions!(state, {
-
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 \def\etb@catcodes{\do\&\do\|\do\:\do\-\do\=\do\<\do\>}
 \def\do#1{\catcode\number`#1=\the\catcode`#1\relax}
 \edef\etb@catcodes{\etb@catcodes}
@@ -20,9 +20,10 @@ RawTeX!(r###"
 \protected\def\etb@warning{\PackageWarning{etoolbox}}
 \protected\def\etb@info{\PackageInfo{etoolbox}}
 \newcount\etb@tempcnta
-"###);
+"###
+  );
 
-DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
+  DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
   if !is_definable(&cs, state) {
     if !state.lookup_bool(&s!("{cs}:locked")) {
       Info!("ignore", cs, stomach, state,
@@ -33,18 +34,19 @@ DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_
   }
   Tokens!() });
 
-DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
+  DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
   let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
   DefMacro!(cs, args, body, protected => true, long => true);
   Tokens!() });
 
-DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body), state] {
+  DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body), state] {
   if is_definable(&cs, state) {
     let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
   Tokens!() });
 
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 % {<csname>}
 
 \newrobustcmd*{\csshow}[1]{%
@@ -160,13 +162,14 @@ RawTeX!(r###"
   \ifcsdef{#1}
     {\expandafter\ifdefparam\csname#1\endcsname}
     {\@secondoftwo}}
-"###);
+"###
+  );
 
-// If we want to allow raw interpretation, we need to define the discrepant macros *before*
-// we load the native package, since they are used within it extensively.
-// Hence we need to lock them, to avoid the native redefinition.
+  // If we want to allow raw interpretation, we need to define the discrepant macros *before*
+  // we load the native package, since they are used within it extensively.
+  // Hence we need to lock them, to avoid the native redefinition.
 
-DefMacro!("\\ifdefprotected DefToken {} {}", sub[gullet,(cs,ttrue,tfalse),state] {
+  DefMacro!("\\ifdefprotected DefToken {} {}", sub[gullet,(cs,ttrue,tfalse),state] {
   let definition = state.lookup_definition(&cs);
   if definition.is_none() || !definition.as_ref().unwrap().is_expandable() {
     // Undefined, or not an expandable definition, therefore not protected
@@ -184,7 +187,13 @@ DefMacro!("\\ifdefprotected DefToken {} {}", sub[gullet,(cs,ttrue,tfalse),state]
     tfalse
   } }, protected => true);
 
-RawTeX!(r###"
+  // latexml does not implement x@protect for DeclareRobustCommand, skip
+  //\ifx\etb@resrvda\etb@resrvdb
+  //  \noexpand\x@protect
+  //  \noexpand#1%
+  //\fi
+  RawTeX!(
+    r###"
 % {<csname>}{<true>}{<false>}
 
 \newcommand*{\ifcsprotected}[1]{%
@@ -200,11 +209,6 @@ RawTeX!(r###"
   \def\etb@resrvdb{#1}%
   \edef\etb@resrvdb{\expandafter\strip@prefix\meaning\etb@resrvdb}%
   \edef\etb@resrvda{%
-    % latexml does not implement x@protect for DeclareRobustCommand, skip
-    %\ifx\etb@resrvda\etb@resrvdb
-    %  \noexpand\x@protect
-    %  \noexpand#1%
-    %\fi
     \noexpand\protect\expandafter\noexpand
     \csname\expandafter\@gobble\string#1 \endcsname}%
   \expandafter\endgroup\ifx#1\etb@resrvda
@@ -1150,18 +1154,20 @@ RawTeX!(r###"
   \else
     \expandafter\@secondoftwo
   \fi}
-"###);
+"###
+  );
 
-// STOPGAP! Because a lot of LaTeXML definitions are realized via Perl subroutines,
-// the "\meaning#1" tests in the native definition of this macro would return CODE(...) strings
-// that makes the test always fail.
-//
-// An observation from studying etoolbox.sty is that this macro is both internal (not meant for authors),
-// and is only used as a error-handling guard for \patchcmd and similar, i.e. it returns the "true"
-// case in all intended correct uses. Hence:
-DefMacro!("\\etb@ifpattern DefToken {}", "\\begingroup\\@firstoftwo", protected => true);
+  // STOPGAP! Because a lot of LaTeXML definitions are realized via Perl subroutines,
+  // the "\meaning#1" tests in the native definition of this macro would return CODE(...) strings
+  // that makes the test always fail.
+  //
+  // An observation from studying etoolbox.sty is that this macro is both internal (not meant for
+  // authors), and is only used as a error-handling guard for \patchcmd and similar, i.e. it
+  // returns the "true" case in all intended correct uses. Hence:
+  DefMacro!("\\etb@ifpattern DefToken {}", "\\begingroup\\@firstoftwo", protected => true);
 
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 % {<string>}{<true}{<false>}
 
 \protected\long\def\etb@ifhashcheck#1{%
@@ -1263,11 +1269,12 @@ RawTeX!(r###"
              {}%
            \etb@dbg@info{pos}\@firstoftwo}}
        {\etb@dbg@fail{mac}\@secondoftwo}}}
-"###);
+"###
+  );
 
-// Need to be able to examine a Macro's replacement for a match (and then replace)
-// we can only do this for token expansions, and should return failure for all else.
-DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(_prefix,cs,search,replace,success,failure), state] {
+  // Need to be able to examine a Macro's replacement for a match (and then replace)
+  // we can only do this for token expansions, and should return failure for all else.
+  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(_prefix,cs,search,replace,success,failure), state] {
   let definition = state.lookup_definition(&cs);
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
@@ -1297,7 +1304,8 @@ DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(_prefix,cs,search,repla
   }
 }, protected => true);
 
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
     {\etb@dbg@succ{ret}%
@@ -1680,40 +1688,42 @@ RawTeX!(r###"
 
 \newcommand*{\dolistcsloop}{\forlistcsloop\do}
 
-"###);
-//======================================================================
-// 2.5 Additional Document Hooks
-// \AfterPreamble
-// \AtEndPreamble
-// \AfterEndPreamble
-// \AfterEndDocument
-DefMacro!("\\AfterPreamble{}", sub[gullet,(arg),state] {
+"###
+  );
+  //======================================================================
+  // 2.5 Additional Document Hooks
+  // \AfterPreamble
+  // \AtEndPreamble
+  // \AfterEndPreamble
+  // \AfterEndDocument
+  DefMacro!("\\AfterPreamble{}", sub[gullet,(arg),state] {
   if state.lookup_bool("inPreamble") {
     state.push_value("@at@begin@document", arg.unlist());
     Tokens!()
   } else {
     arg
   }});
-DefMacro!("\\AtEndPreamble{}", sub[gullet,(arg),state] {
+  DefMacro!("\\AtEndPreamble{}", sub[gullet,(arg),state] {
   state.push_value("@document@preamble@atend", arg.unlist()); });
-DefMacro!("\\AfterEndPreamble{}", sub[gullet,(arg),state] {
+  DefMacro!("\\AfterEndPreamble{}", sub[gullet,(arg),state] {
   state.push_value("@document@preamble@afterend", arg.unlist()); });
-DefMacro!("\\AfterEndDocument{}", sub[gullet,(arg),state] {
+  DefMacro!("\\AfterEndDocument{}", sub[gullet,(arg),state] {
   state.push_value("@after@end@document", arg.unlist()); });
 
-RawTeX!(r###"
+  RawTeX!(
+    r###"
 \AtEndDocument{\let\AfterEndPreamble\@gobble}
-"###);
-//======================================================================
-// 2.6 Environment Hooks
+"###
+  );
+  //======================================================================
+  // 2.6 Environment Hooks
 
-DefMacro!("\\AtBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
+  DefMacro!("\\AtBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
     state.push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist()); });
-DefMacro!("\\AtEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
+  DefMacro!("\\AtEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
     state.push_value(&format!("@environment@{arg1}@atend"), arg2.unlist()); });
-DefMacro!("\\BeforeBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
+  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
     state.push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist()); });
-DefMacro!("\\AfterEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
+  DefMacro!("\\AfterEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
     state.push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist()); });
-
 });

@@ -1,5 +1,4 @@
 //! The Core of rtx - roughly the equivalent of TeX conversion.
-//!
 
 #![allow(missing_docs)]
 extern crate rustc_hash;
@@ -23,6 +22,8 @@ pub mod binding;
 pub mod comment;
 /// All possible definitions for TeX-native commands (expandable, primitive, constructor,...)
 pub mod definition;
+/// a shared interface for digested objects
+pub mod digested;
 /// An abstraction layer over the converted XML document
 pub mod document;
 /// The Gullet is responsible for reading Tokens and other data from the Mouth
@@ -35,15 +36,19 @@ pub mod keyvals;
 pub mod ligature;
 /// A list of `Digested` objects
 pub mod list;
-/// The mouth is a thin interface over a file, responsible for reading characters and associating them with catcodes
+/// The mouth is a thin interface over a file, responsible for reading characters and associating
+/// them with catcodes
 pub mod mouth;
-/// The abstraction layer used by the Gullet to read arguments for the various kinds of TeX object definitions
+/// The abstraction layer used by the Gullet to read arguments for the various kinds of TeX object
+/// definitions
 pub mod parameter;
 /// Rules for rewriting the constructed XML document, after core processing has completed
 pub mod rewrite;
-/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the conversion
+/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the
+/// conversion
 pub mod state;
-/// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the Gullet into Boxes
+/// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
+/// Gullet into Boxes
 pub mod stomach;
 /// A TeX-like digested Box
 pub mod tbox;
@@ -51,16 +56,13 @@ pub mod tbox;
 pub mod util;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
-/// a shared interface for digested objects
-pub mod digested;
 
+use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use rustc_hash::{FxHashMap as HashMap};
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
 use libxml::tree::Node;
-
 
 use crate::common::dimension::Dimension;
 pub use crate::common::error::*;
@@ -71,30 +73,34 @@ use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
+use crate::digested::{Digested, DigestedData};
 use crate::document::Document;
 use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
-use crate::digested::{Digested,DigestedData};
 
-// DG: I have experimented with doing the Perl-style "global singleton STATE with interior mutability"
-//     and it just takes away from the elegance and guarantees of Rust style code. It's nasty.
-//     consider that in a long chain of invocations (e.g. \input loading a binding, which loads another binding)
-//     we have a dependency hierarchy of a mutable "&mut state" getting passed around.
-//     During which time we can not *safely* obtain a "reading lock" over a RwLock wrapper around state.
+// DG: I have experimented with doing the Perl-style "global singleton STATE with interior
+// mutability"     and it just takes away from the elegance and guarantees of Rust style code. It's
+// nasty.     consider that in a long chain of invocations (e.g. \input loading a binding, which
+// loads another binding)     we have a dependency hierarchy of a mutable "&mut state" getting
+// passed around.     During which time we can not *safely* obtain a "reading lock" over a RwLock
+// wrapper around state.
 //
-//     To make anything work, we would need to hide the *entire* API of State behind a lock request/grant/release lifecycle
-//     with a State struct that wraps: State(Arc<RwLock<StateData>>), where each call to say "lookup_value" will have to get+release a lock.
+//     To make anything work, we would need to hide the *entire* API of State behind a lock
+// request/grant/release lifecycle     with a State struct that wraps:
+// State(Arc<RwLock<StateData>>), where each call to say "lookup_value" will have to get+release a
+// lock.
 //
-//     It is certainly possible. But at what cost? Runtime locking + reference counting costs, and then a *real risk* of deadlocking when locking
-//      in complicated call chains. (Remember that RwLock allows for multiple readers, but the moment there is a writer,
-//      no further locks will be granted until the writer is done)
+//     It is certainly possible. But at what cost? Runtime locking + reference counting costs, and
+// then a *real risk* of deadlocking when locking      in complicated call chains. (Remember that
+// RwLock allows for multiple readers, but the moment there is a writer,      no further locks will
+// be granted until the writer is done)
 //
-//      I am leaving the trace that this has been tried. But I will continue to give it my all to avoid the global setup.
-// lazy_static! {
-//   static ref STATE: Arc<RwLock<State>> = Arc::new(RwLock::new(State::new(StateOptions::default())));
-// }
+//      I am leaving the trace that this has been tried. But I will continue to give it my all to
+// avoid the global setup. lazy_static! {
+//   static ref STATE: Arc<RwLock<State>> =
+// Arc::new(RwLock::new(State::new(StateOptions::default()))); }
 
 /// The Core conversion runtime
 pub struct Core {
@@ -165,7 +171,11 @@ impl Core {
 
     // *STATE.write().unwrap() = istate;
     // Core { state: Arc::clone(&STATE), stomach, preload }
-    Core { state, stomach, preload }
+    Core {
+      state,
+      stomach,
+      preload,
+    }
   }
 
   /// borrow the current state
@@ -193,7 +203,10 @@ pub trait BoxOps: Object {
       match self.get_properties().get(key) {
         Some(value) => Some(Cow::Borrowed(value)),
         None => {
-          let tex = self.get_tokens().map(|tks| tks.clone().untex()).unwrap_or_default(); // !
+          let tex = self
+            .get_tokens()
+            .map(|tks| tks.clone().untex())
+            .unwrap_or_default(); // !
           if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
             // Check the TeX code, not (just) the string!
             Some(Cow::Owned(Stored::Bool(true)))
@@ -212,7 +225,13 @@ pub trait BoxOps: Object {
   fn get_property_bool(&self, _key: &str) -> bool;
   /// obtains the "body" of a digested object which captured it
   fn get_body(&self) -> Option<Digested> {
-    Error!("boxops", "get_body", self, None, "Generic BoxOps::get_body should never be called!");
+    Error!(
+      "boxops",
+      "get_body",
+      self,
+      None,
+      "Generic BoxOps::get_body should never be called!"
+    );
     None
   }
   /// gets the associated font, if any
@@ -231,7 +250,11 @@ pub trait BoxOps: Object {
   // However, when requesting the size of a box, you'd get either (w/ explicit size overriding)
 
   /// gets the "width" property value, if any
-  fn get_width(&mut self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<Option<RegisterValue>> {
+  fn get_width(
+    &mut self,
+    options: Option<HashMap<String, Stored>>,
+    state: &mut State,
+  ) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cwidth") {
       // TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default(), state)?
@@ -266,9 +289,14 @@ pub trait BoxOps: Object {
     }
   }
   /// gets the box size as a triple of (width, height, depth)
-  fn get_size(&self, options: Option<HashMap<String, Stored>>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  fn get_size(
+    &self,
+    options: Option<HashMap<String, Stored>>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     // TODO: Reintroduce caching?
-    if !(self.has_property("cwidth") && self.has_property("cheight") && self.has_property("cdepth")) {
+    if !(self.has_property("cwidth") && self.has_property("cheight") && self.has_property("cdepth"))
+    {
       return self.compute_size(options.unwrap_or_default(), state);
     }
     let props = self.get_properties();
@@ -276,9 +304,10 @@ pub trait BoxOps: Object {
     // Debug("SIZE of $self"
     //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
     //     . "\n calculated : " . _showsize($$props{cwidth}, $$props{cheight}, $$props{cdepth})
-    //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys %options)
-    //     . "\n =>: " . _showsize($$props{width} || $$props{cwidth}, $$props{height} || $$props{cheight}, $$props{depth} || $$props{cdepth})
-    //     . "\n   Of " . ToString($self)) if $LaTeXML::DEBUG{size};
+    //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys
+    // %options)     . "\n =>: " . _showsize($$props{width} || $$props{cwidth}, $$props{height}
+    // || $$props{cheight}, $$props{depth} || $$props{cdepth})     . "\n   Of " .
+    // ToString($self)) if $LaTeXML::DEBUG{size};
     Ok((
       match props.get("width") {
         Some(Stored::Dimension(w)) => *w,
@@ -305,7 +334,11 @@ pub trait BoxOps: Object {
   }
 
   /// deprecated/to be revisited - computes and caches the size of a box-like object
-  fn compute_size_store(&mut self, mut options: HashMap<String, Stored>, state: &mut State) -> Result<()> {
+  fn compute_size_store(
+    &mut self,
+    mut options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<()> {
     for key in ["width", "height", "depth", "vattach", "layout"] {
       if let Some(v) = self.get_property(key) {
         options.insert(String::from(key), v.into_owned());
@@ -327,7 +360,11 @@ pub trait BoxOps: Object {
   }
 
   /// computes and returns the size of a box-like object
-  fn compute_size(&self, options: HashMap<String, Stored>, state: &mut State) -> Result<(Dimension, Dimension, Dimension)>;
+  fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)>;
 }
 
 /// The current TeX processing mode

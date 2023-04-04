@@ -1,5 +1,5 @@
 use libxml::tree::Node;
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 use std::sync::Arc;
 
 use crate::common::error::*;
@@ -23,7 +23,14 @@ pub enum TagOptionName {
 impl TagOptionName {
   pub fn all() -> Vec<TagOptionName> {
     use self::TagOptionName::*;
-    vec![AfterOpen, AfterOpenEarly, AfterOpenLate, AfterClose, AfterCloseEarly, AfterCloseLate]
+    vec![
+      AfterOpen,
+      AfterOpenEarly,
+      AfterOpenLate,
+      AfterClose,
+      AfterCloseEarly,
+      AfterCloseLate,
+    ]
   }
   pub fn is_prepend(&self) -> bool {
     use self::TagOptionName::*;
@@ -31,7 +38,10 @@ impl TagOptionName {
   }
   pub fn is_append(&self) -> bool {
     use self::TagOptionName::*;
-    matches!(*self, AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate)
+    matches!(
+      *self,
+      AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate
+    )
   }
 }
 
