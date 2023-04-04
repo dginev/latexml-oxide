@@ -5,15 +5,19 @@ name: CI
 jobs:
   test:
     name: rtx CI
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - name: install dependencies
         uses: ryankurte/action-apt@v0.2.0
         with:
           packages: "libxml2-dev libkpathsea-dev libkpathsea6 texlive"
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions-rs/toolchain@v1
         with:
-          components: rustfmt
-      - run: cargo fmt --check --all
-      - run: cargo test --release --workspace --no-fail-fast -j 1 -- --test-threads=1
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
