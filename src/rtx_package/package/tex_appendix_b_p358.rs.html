@@ -379,11 +379,19 @@
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">// Match negations of many operators
 // our %NOTS
 </span><span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>MATH_CHAR_NEGATIONS : HashMap&lt;String, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = <span class="macro">map!</span>(<span class="string">&quot;=&quot; </span>=&gt; <span class="string">&quot;\u{2260}&quot;</span>, <span class="string">&quot;&lt;&quot; </span>=&gt; <span class="string">&quot;\u{226E}&quot;</span>, <span class="string">&quot;&gt;&quot; </span>=&gt; <span class="string">&quot;\u{226F}&quot;</span>,
+  <span class="kw">static </span><span class="kw-2">ref </span>MATH_CHAR_NEGATIONS : HashMap&lt;String, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
+    <span class="macro">map!</span>(<span class="string">&quot;=&quot; </span>=&gt; <span class="string">&quot;\u{2260}&quot;</span>, <span class="string">&quot;&lt;&quot; </span>=&gt; <span class="string">&quot;\u{226E}&quot;</span>, <span class="string">&quot;&gt;&quot; </span>=&gt; <span class="string">&quot;\u{226F}&quot;</span>,
 <span class="string">&quot;\u{2208}&quot; </span>=&gt; <span class="string">&quot;\u{2209}&quot;</span>,                              <span class="comment">//\in=&gt;\notin
 </span><span class="string">&quot;\u{2264}&quot; </span>=&gt; <span class="string">&quot;\u{2270}&quot;</span>, <span class="string">&quot;\u{2265}&quot; </span>=&gt; <span class="string">&quot;\u{2271}&quot;</span>,    <span class="comment">// Less eq, greater eq.
 </span><span class="string">&quot;\u{227A}&quot; </span>=&gt; <span class="string">&quot;\u{2280}&quot;</span>, <span class="string">&quot;\u{227B}&quot; </span>=&gt; <span class="string">&quot;\u{2281}&quot;</span>,    <span class="comment">// prec, succ
@@ -585,8 +593,8 @@
   // DefConstructor(&#39;\nolimits&#39;, undef, sub {
   //     my $node = $_[0]-&gt;getElement;
   //     $node = $_[0]-&gt;getLastChildElement($node) || $node;
-  //     $node-&gt;removeAttribute(&#39;scriptpos&#39;); });    # default is &#39;post&#39;, so we can just remove the attrib.
-  // DefConstructor(&#39;\displaylimits&#39;, undef, sub {
+  //     $node-&gt;removeAttribute(&#39;scriptpos&#39;); });    # default is &#39;post&#39;, so we can just remove the
+  // attrib. DefConstructor(&#39;\displaylimits&#39;, undef, sub {
   //     my ($document, %props) = @_;
   //     my $node = $_[0]-&gt;getElement;
   //     $node = $_[0]-&gt;getLastChildElement($node) || $node;
@@ -629,10 +637,11 @@
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\bigtriangledown&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{25BD}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\triangleleft&quot;</span>,    <span class="prelude-val">None</span>, <span class="string">&quot;\u{25C1}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\triangleright&quot;</span>,   <span class="prelude-val">None</span>, <span class="string">&quot;\u{25B7}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lhd&quot;</span>,             <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B2}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;subgroup-of&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\rhd&quot;</span>,             <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B3}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;contains-as-subgroup&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lhd&quot;</span>,           <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B2}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;subgroup-of&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\rhd&quot;</span>,           <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B3}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;contains-as-subgroup&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\unlhd&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B4}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;subgroup-of-or-equals&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\unrhd&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B5}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;contains-as-subgroup-or-equals&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\unrhd&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22B5}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>,
+    meaning =&gt; <span class="string">&quot;contains-as-subgroup-or-equals&quot;</span>);
 
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\oplus&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2295}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;direct-sum&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\ominus&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2296}&quot;</span>, role =&gt; <span class="string">&quot;ADDOP&quot;</span>, meaning =&gt; <span class="string">&quot;symmetric-difference&quot;</span>);
@@ -654,7 +663,8 @@
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\subset&quot;</span>,     <span class="prelude-val">None</span>, <span class="string">&quot;\u{2282}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;subset-of&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\subseteq&quot;</span>,   <span class="prelude-val">None</span>, <span class="string">&quot;\u{2286}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;subset-of-or-equals&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsubset&quot;</span>,   <span class="prelude-val">None</span>, <span class="string">&quot;\u{228F}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;square-image-of&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsubseteq&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2291}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;square-image-of-or-equals&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsubseteq&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2291}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
+    meaning =&gt; <span class="string">&quot;square-image-of-or-equals&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\in&quot;</span>,         <span class="prelude-val">None</span>, <span class="string">&quot;\u{2208}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;element-of&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\vdash&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22A2}&quot;</span>, role =&gt; <span class="string">&quot;METARELOP&quot;</span>, meaning =&gt; <span class="string">&quot;proves&quot;</span>);
 
@@ -665,7 +675,8 @@
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\supset&quot;</span>,   <span class="prelude-val">None</span>, <span class="string">&quot;\u{2283}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;superset-of&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\supseteq&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2287}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;superset-of-or-equals&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsupset&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2290}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;square-original-of&quot;</span>);
-  <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsupseteq&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2292}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>, meaning =&gt; <span class="string">&quot;square-original-of-or-equals&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\sqsupseteq&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{2292}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,
+    meaning =&gt; <span class="string">&quot;square-original-of-or-equals&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\ni&quot;</span>,    <span class="prelude-val">None</span>, <span class="string">&quot;\u{220B}&quot;</span>, role =&gt; <span class="string">&quot;RELOP&quot;</span>,     meaning =&gt; <span class="string">&quot;contains&quot;</span>);
   <span class="macro">DefMath!</span>(<span class="string">&quot;\\dashv&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22A3}&quot;</span>, role =&gt; <span class="string">&quot;METARELOP&quot;</span>, meaning =&gt; <span class="string">&quot;does-not-prove&quot;</span>);
 
@@ -704,7 +715,8 @@
   </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\not&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{FF0F}&quot;</span>, role =&gt; <span class="string">&quot;OPFUNCTION&quot;</span>, meaning =&gt; <span class="string">&quot;not&quot;</span>);
 
   <span class="comment">// For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
-  </span><span class="macro">DefRewrite!</span>(select =&gt; <span class="string">&quot;descendant-or-self::ltx:XMTok[text()=&#39;\u{FF0F}&#39; and @meaning=&#39;not&#39;][following-sibling::*]&quot;</span>,
+  </span><span class="macro">DefRewrite!</span>(select =&gt;
+    <span class="string">&quot;descendant-or-self::ltx:XMTok[text()=&#39;\u{FF0F}&#39; and @meaning=&#39;not&#39;][following-sibling::*]&quot;</span>,
   select_count =&gt; <span class="number">2</span>,
   replace =&gt;  sub[document, nodes, state] {
     <span class="comment">// TODO: This argument low-level boilerplate is annoying
@@ -717,9 +729,10 @@
       <span class="kw">_ </span>=&gt; String::new()
     };
     <span class="kw">if </span>text.len() != <span class="number">1 </span>{ <span class="comment">// Not simple char token.
+      // Wrap with a cancel op
       </span>document.open_element(<span class="string">&quot;ltx:XMApp&quot;</span>,
-        <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">&quot;_box&quot; </span>=&gt; not_node.to_hashable().to_string())), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>; <span class="comment">// Wrap with a cancel op
-      </span><span class="kw">let </span><span class="kw-2">mut </span>strike = document.insert_math_token(<span class="string">&quot;&quot;</span>,
+        <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">&quot;_box&quot; </span>=&gt; not_node.to_hashable().to_string())), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      <span class="kw">let </span><span class="kw-2">mut </span>strike = document.insert_math_token(<span class="string">&quot;&quot;</span>,
         <span class="macro">string_map!</span>(<span class="string">&quot;role&quot; </span>=&gt; <span class="string">&quot;ENCLOSE&quot;</span>, <span class="string">&quot;enclose&quot; </span>=&gt; <span class="string">&quot;updiagonalstrike&quot;</span>,
         <span class="string">&quot;meaning&quot; </span>=&gt; <span class="string">&quot;not&quot;</span>, <span class="string">&quot;_box&quot; </span>=&gt; not_node.to_hashable()), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = not_node.get_attribute_ns(<span class="string">&quot;id&quot;</span>,XML_NS) {
@@ -753,7 +766,8 @@
       </span>document.get_node_mut().add_child(thing)<span class="question-mark">?</span>;
       <span class="comment">// Since the &lt;not&gt; element is disappearing, if it had an id that was referenced...!?!?
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(id) = not_node.get_attribute_ns(<span class="string">&quot;id&quot;</span>,XML_NS) {
-        <span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;descendant-or-self::ltx:XMRef[@idref=&#39;{id}&#39;]&quot;</span>), <span class="prelude-val">None</span>, state) {
+        <span class="kw">let </span>idref_xpath = <span class="macro">format!</span>(<span class="string">&quot;descendant-or-self::ltx:XMRef[@idref=&#39;{id}&#39;]&quot;</span>);
+        <span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="kw-2">&amp;</span>idref_xpath, <span class="prelude-val">None</span>, state) {
           document.remove_node(<span class="kw-2">&amp;mut </span>n);
         }
       }   <span class="comment">// ? Hopefully this is safe.

@@ -454,8 +454,26 @@
 <a href="#454" id="454">454</a>
 <a href="#455" id="455">455</a>
 <a href="#456" id="456">456</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::common::xml::{XML_NS};
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::xml::XML_NS;
+<span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::collections::hash_map::Entry;
 
 <span class="comment">//**********************************************************************
@@ -463,181 +481,191 @@
 // Support for Declarations &amp; Presentation/Semantic Duality
 //**********************************************************************
 </span><span class="macro">LoadDefinitions!</span>(state, {
+  <span class="comment">//======================================================================
+  // Normally definitions disappear; the macros are expanded or have their expected effect.
+  // But in a few cases (eg tabular column definitions, or LaTeX \Declarexxxx)
+  // they will need declarations in the (La)TeX preamble to allow (La)TeX to process snippets
+  // (eg. math) in order to create images.
+  // Returning a call to this utility from Primitives will add a preamble Processing Instruction
 
-<span class="comment">//======================================================================
-// Normally definitions disappear; the macros are expanded or have their expected effect.
-// But in a few cases (eg tabular column definitions, or LaTeX \Declarexxxx)
-// they will need declarations in the (La)TeX preamble to allow (La)TeX to process snippets
-// (eg. math) in order to create images.
-// Returning a call to this utility from Primitives will add a preamble Processing Instruction
+  // sub AddToPreamble {
+  //   my ($cs, @args) = @_;
+  //   return Digest(Invocation(T_CS(&#39;\lx@add@Preamble@PI&#39;), Invocation((ref $cs ? $cs : T_CS($cs)),
+  // @args))); }
 
-// sub AddToPreamble {
-//   my ($cs, @args) = @_;
-//   return Digest(Invocation(T_CS(&#39;\lx@add@Preamble@PI&#39;), Invocation((ref $cs ? $cs : T_CS($cs)), @args))); }
+  </span><span class="macro">DefConstructor!</span>(
+    <span class="string">&quot;\\lx@add@Preamble@PI Undigested&quot;</span>,
+    <span class="string">&quot;&lt;?latexml preamble=&#39;#1&#39;?&gt;&quot;
+  </span>);
 
-</span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@add@Preamble@PI Undigested&quot;</span>, <span class="string">&quot;&lt;?latexml preamble=&#39;#1&#39;?&gt;&quot;</span>);
+  <span class="comment">// ======================================================================
+  //  Support for constructing mathematical expressions
 
-<span class="comment">// ======================================================================
-//  Support for constructing mathematical expressions
+  // # Common XMath pattern for assigning attributes from Whatsit properties.
+  // our $XMath_attributes =
+  //   &quot; role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39;&quot;
+  //   . &quot; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39;&quot;
+  //   . &quot; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&quot;;
 
-// # Common XMath pattern for assigning attributes from Whatsit properties.
-// our $XMath_attributes =
-//   &quot; role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39;&quot;
-//   . &quot; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39;&quot;
-//   . &quot; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&quot;;
+  // sub XMath_copy_keyvals {
+  //   my ($stomach, $whatsit) = @_;
+  //   my $kv = $whatsit-&gt;getArg(1);
+  //   $whatsit-&gt;setProperties($kv-&gt;getPairs) if $kv;
+  //   return; }
 
-// sub XMath_copy_keyvals {
-//   my ($stomach, $whatsit) = @_;
-//   my $kv = $whatsit-&gt;getArg(1);
-//   $whatsit-&gt;setProperties($kv-&gt;getPairs) if $kv;
-//   return; }
+  // # Build an ltx:XMApp, application of function/operator to arguments
+  // # first piece of (TeX) argument is expected to be the operator
+  // # Usually used on content side, but at least the arguments should be properly encapsulated:
+  // # They should build individual subtrees; use ltx::XMArg, ltx:XMWrap ... if needed
+  // DefConstructor(&#39;\lx@apply OptionalKeyVals:XMath {}{}&#39;,
+  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;#2#3&lt;/ltx:XMApp&gt;&quot;,
+  //   reversion   =&gt; &#39;#2#3&#39;,
+  //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
-// # Build an ltx:XMApp, application of function/operator to arguments
-// # first piece of (TeX) argument is expected to be the operator
-// # Usually used on content side, but at least the arguments should be properly encapsulated:
-// # They should build individual subtrees; use ltx::XMArg, ltx:XMWrap ... if needed
-// DefConstructor(&#39;\lx@apply OptionalKeyVals:XMath {}{}&#39;,
-//   &quot;&lt;ltx:XMApp $XMath_attributes&gt;#2#3&lt;/ltx:XMApp&gt;&quot;,
-//   reversion   =&gt; &#39;#2#3&#39;,
-//   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
+  // # Build an ltx:XMTok, a mathematical symbol, with given attributes
+  // # the argument should create text to be the content of the token.
+  // DefConstructor(&#39;\lx@symbol OptionalKeyVals:XMath {}&#39;,
+  //   &quot;&lt;ltx:XMTok $XMath_attributes&gt;#2&lt;/ltx:XMTok&gt;&quot;,
+  //   reversion   =&gt; &#39;#2&#39;,
+  //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
-// # Build an ltx:XMTok, a mathematical symbol, with given attributes
-// # the argument should create text to be the content of the token.
-// DefConstructor(&#39;\lx@symbol OptionalKeyVals:XMath {}&#39;,
-//   &quot;&lt;ltx:XMTok $XMath_attributes&gt;#2&lt;/ltx:XMTok&gt;&quot;,
-//   reversion   =&gt; &#39;#2&#39;,
-//   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
+  // # Wrap the contents in an ltx:XMWrap, to stand as a single subtree &amp; providing attributes
+  // # The ltx:XMWrap may be collapsed, later, by parsing
+  // DefConstructor(&#39;\lx@wrap OptionalKeyVals:XMath {}&#39;,
+  //   &quot;&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;&quot;,
+  //   reversion   =&gt; &#39;#2&#39;,
+  //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
 
-// # Wrap the contents in an ltx:XMWrap, to stand as a single subtree &amp; providing attributes
-// # The ltx:XMWrap may be collapsed, later, by parsing
-// DefConstructor(&#39;\lx@wrap OptionalKeyVals:XMath {}&#39;,
-//   &quot;&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;&quot;,
-//   reversion   =&gt; &#39;#2&#39;,
-//   afterDigest =&gt; sub { XMath_copy_keyvals(@_); });
+  // # Convert a hashref into a list of tokens of the form key=value,...
+  // sub I_keyvals {
+  //   my ($keyvals) = @_;
+  //   my @options = ();
+  //   if ($keyvals) {
+  //     while (my ($key, $value) = each %$keyvals) {
+  //       $value = TokenizeInternal($value) if defined $value &amp;&amp; !ref $value;
+  //       push(@options, T_OTHER(&#39;,&#39;)) if @options;
+  //       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); } }
+  //   return (@options ? Tokens(T_OTHER(&#39;[&#39;), @options, T_OTHER(&#39;]&#39;)) : ()); }
 
-// # Convert a hashref into a list of tokens of the form key=value,...
-// sub I_keyvals {
-//   my ($keyvals) = @_;
-//   my @options = ();
-//   if ($keyvals) {
-//     while (my ($key, $value) = each %$keyvals) {
-//       $value = TokenizeInternal($value) if defined $value &amp;&amp; !ref $value;
-//       push(@options, T_OTHER(&#39;,&#39;)) if @options;
-//       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); } }
-//   return (@options ? Tokens(T_OTHER(&#39;[&#39;), @options, T_OTHER(&#39;]&#39;)) : ()); }
+  // sub I_apply {
+  //   my ($kv, $op, @args) = @_;
+  //   return Tokens(T_CS(&#39;\lx@apply&#39;), I_keyvals($kv),
+  //     T_BEGIN, T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $op, T_END, T_END,
+  //     T_BEGIN, (map { (T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $_, T_END); } @args), T_END); }
 
-// sub I_apply {
-//   my ($kv, $op, @args) = @_;
-//   return Tokens(T_CS(&#39;\lx@apply&#39;), I_keyvals($kv),
-//     T_BEGIN, T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $op, T_END, T_END,
-//     T_BEGIN, (map { (T_CS(&#39;\lx@wrap&#39;), T_BEGIN, $_, T_END); } @args), T_END); }
+  // sub I_symbol {
+  //   my ($kv, $text) = @_;
+  //   return Tokens(T_CS(&#39;\lx@symbol&#39;), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()),
+  // T_END); }
 
-// sub I_symbol {
-//   my ($kv, $text) = @_;
-//   return Tokens(T_CS(&#39;\lx@symbol&#39;), I_keyvals($kv), T_BEGIN, (defined $text ? $text : ()), T_END); }
+  // sub I_wrap {
+  //   my ($kv, @stuff) = @_;
+  //   return Tokens(T_CS(&#39;\lx@wrap&#39;), I_keyvals($kv), T_BEGIN, @stuff, T_END); }
 
-// sub I_wrap {
-//   my ($kv, @stuff) = @_;
-//   return Tokens(T_CS(&#39;\lx@wrap&#39;), I_keyvals($kv), T_BEGIN, @stuff, T_END); }
+  // # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
+  // # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
+  // # To do that we need to sniff at the base, whether it already contains scripts.
+  // # However, IsScript isn&#39;t quite sufficient if the scripts are hidden within Whatsits, duals,
+  // etc. # Currently, LaTeXML manages to deal with the double scripts anyway;
+  // # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid
+  // Errors) DefConstructor(&#39;\lx@superscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
+  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
+  //     . &quot;&lt;ltx:XMTok role=&#39;SUPERSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39;
+  // scriptpos=&#39;#scriptpos&#39;/&gt;&quot;     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
+  //     . &quot;&lt;ltx:XMArg rule=&#39;Superscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
+  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
+  //   reversion   =&gt; sub {
+  //     my ($whatsit, $kv, $base, $sup) = @_;
+  //     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
+  //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
+  //     ($sup &amp;&amp; $sup-&gt;unlist
+  //       ? (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER,
+  // revertScript($sup))       : Revert($base)); },
+  //   properties =&gt; sub {
+  //     my ($stomach, $kv, $base, $script) = @_;
+  //     my $basetype = IsScript($base);
+  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUPERSCRIPT&#39;) ? 1 : 0);
+  //     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
+  //       bump =&gt; $bump); },
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUPERSCRIPT&#39;, &#39;post&#39;);
+  // });
 
-// # These two accept key operator_meaning, operator_omcd to give a meaning to the sub/superscript
-// # NOTE (BUG): We SHOULD nest paired sub/superscripts, but avoid conflicting double scripts
-// # To do that we need to sniff at the base, whether it already contains scripts.
-// # However, IsScript isn&#39;t quite sufficient if the scripts are hidden within Whatsits, duals, etc.
-// # Currently, LaTeXML manages to deal with the double scripts anyway;
-// # The reversion ALWAYS wraps the base (which will render non-optimally in images but avoid Errors)
-// DefConstructor(&#39;\lx@superscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
-//   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
-//     . &quot;&lt;ltx:XMTok role=&#39;SUPERSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39; scriptpos=&#39;#scriptpos&#39;/&gt;&quot;
-//     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
-//     . &quot;&lt;ltx:XMArg rule=&#39;Superscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
-//     . &quot;&lt;/ltx:XMApp&gt;&quot;,
-//   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
-//   reversion   =&gt; sub {
-//     my ($whatsit, $kv, $base, $sup) = @_;
-//     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
-//     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
-//     ($sup &amp;&amp; $sup-&gt;unlist
-//       ? (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUPER, revertScript($sup))
-//       : Revert($base)); },
-//   properties =&gt; sub {
-//     my ($stomach, $kv, $base, $script) = @_;
-//     my $basetype = IsScript($base);
-//     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUPERSCRIPT&#39;) ? 1 : 0);
-//     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
-//       bump =&gt; $bump); },
-//   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUPERSCRIPT&#39;, &#39;post&#39;); });
+  // DefConstructor(&#39;\lx@subscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
+  //   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
+  //     . &quot;&lt;ltx:XMTok role=&#39;SUBSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39;
+  // scriptpos=&#39;#scriptpos&#39;/&gt;&quot;     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
+  //     . &quot;&lt;ltx:XMArg rule=&#39;Subscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
+  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  //   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
+  //   reversion   =&gt; sub {
+  //     my ($whatsit, $kv, $base, $sub) = @_;
+  //     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
+  //     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
+  //     ($sub &amp;&amp; $sub-&gt;unlist
+  // ###      ? (T_BEGIN, Revert($base), T_END, T_SUB, revertScript($sub))
+  //       ? (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB, revertScript($sub))
+  //       : Revert($base)); },
+  //   properties =&gt; sub {
+  //     my ($stomach, $kv, $base, $script) = @_;
+  //     my $basetype = IsScript($base);
+  //     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUBSCRIPT&#39;) ? 1 : 0);
+  //     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
+  //       bump =&gt; $bump); },
+  //   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUBSCRIPT&#39;, &#39;post&#39;);
+  // });
 
-// DefConstructor(&#39;\lx@subscript OptionalKeyVals:XMath {} InScriptStyle&#39;,
-//   &quot;&lt;ltx:XMApp $XMath_attributes&gt;&quot;
-//     . &quot;&lt;ltx:XMTok role=&#39;SUBSCRIPTOP&#39; meaning=&#39;#operator_meaning&#39; omcd=&#39;#operator_omcd&#39; scriptpos=&#39;#scriptpos&#39;/&gt;&quot;
-//     . &quot;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&quot;
-//     . &quot;&lt;ltx:XMArg rule=&#39;Subscript&#39;&gt;#3&lt;/ltx:XMArg&gt;&quot;
-//     . &quot;&lt;/ltx:XMApp&gt;&quot;,
-//   afterDigest =&gt; sub { XMath_copy_keyvals(@_); },
-//   reversion   =&gt; sub {
-//     my ($whatsit, $kv, $base, $sub) = @_;
-//     my $bump = $whatsit-&gt;getProperty(&#39;bump&#39;);
-//     $bump = 1;    # For now: ALWAYS {} wrap base in the reversion!
-//     ($sub &amp;&amp; $sub-&gt;unlist
-// ###      ? (T_BEGIN, Revert($base), T_END, T_SUB, revertScript($sub))
-//       ? (($bump ? (T_BEGIN, Revert($base), T_END) : Revert($base)), T_SUB, revertScript($sub))
-//       : Revert($base)); },
-//   properties =&gt; sub {
-//     my ($stomach, $kv, $base, $script) = @_;
-//     my $basetype = IsScript($base);
-//     my $bump     = ($basetype &amp;&amp; ($$basetype[1] eq &#39;SUBSCRIPT&#39;) ? 1 : 0);
-//     (scriptpos =&gt; &quot;post&quot; . ($_[0]-&gt;getScriptLevel + $bump),
-//       bump =&gt; $bump); },
-//   sizer =&gt; sub { scriptSizer($_[0]-&gt;getArg(3), $_[0]-&gt;getArg(2), undef, &#39;SUBSCRIPT&#39;, &#39;post&#39;); });
+  // # Ignore $kv for the moment?????
+  // sub I_subscript {
+  //   my ($kv, $base, $script) = @_;
+  //   return Tokens(T_CS(&#39;\lx@subscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script,
+  // T_END); }
 
-// # Ignore $kv for the moment?????
-// sub I_subscript {
-//   my ($kv, $base, $script) = @_;
-//   return Tokens(T_CS(&#39;\lx@subscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  // sub I_superscript {
+  //   my ($kv, $base, $script) = @_;
+  //   return Tokens(T_CS(&#39;\lx@superscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN,
+  // $script, T_END); }
 
-// sub I_superscript {
-//   my ($kv, $base, $script) = @_;
-//   return Tokens(T_CS(&#39;\lx@superscript&#39;), I_keyvals($kv), T_BEGIN, $base, T_END, T_BEGIN, $script, T_END); }
+  // # Superscript meaning power
+  // DefMacro(&#39;\lx@power{}{}&#39;, &#39;\lx@superscript[operator_meaning=power]{#1}{#2}&#39;);
+  // # Superscript meaning functional (or applicative) power; iterated function/operator application
+  // DefMacro(&#39;\lx@functionalpower{}{}&#39;,
+  // &#39;\lx@superscript[operator_meaning=functional-power]{#1}{#2}&#39;);
 
-// # Superscript meaning power
-// DefMacro(&#39;\lx@power{}{}&#39;, &#39;\lx@superscript[operator_meaning=power]{#1}{#2}&#39;);
-// # Superscript meaning functional (or applicative) power; iterated function/operator application
-// DefMacro(&#39;\lx@functionalpower{}{}&#39;, &#39;\lx@superscript[operator_meaning=functional-power]{#1}{#2}&#39;);
+  // # These to be used in presentation side
+  // DefMathI(&#39;\lx@ApplyFunction&#39;, undef, &quot;\x{2061}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, role =&gt;
+  // &#39;APPLYOP&#39;); DefMathI(&#39;\lx@InvisibleTimes&#39;, undef, &quot;\x{2062}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;,
+  // meaning =&gt; &#39;times&#39;, role =&gt; &#39;MULOP&#39;); DefMathI(&#39;\lx@InvisibleComma&#39;, undef, &quot;\x{2063}&quot;,
+  // reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, role =&gt; &#39;PUNCT&#39;); DefMathI(&#39;\lx@InvisiblePlus&#39;, undef,
+  // &quot;\x{2064}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, meaning =&gt; &#39;plus&#39;, role =&gt; &#39;ADDOP&#39;);
 
-// # These to be used in presentation side
-// DefMathI(&#39;\lx@ApplyFunction&#39;, undef, &quot;\x{2061}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, role =&gt; &#39;APPLYOP&#39;);
-// DefMathI(&#39;\lx@InvisibleTimes&#39;, undef, &quot;\x{2062}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, meaning =&gt; &#39;times&#39;, role =&gt; &#39;MULOP&#39;);
-// DefMathI(&#39;\lx@InvisibleComma&#39;, undef, &quot;\x{2063}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, role =&gt; &#39;PUNCT&#39;);
-// DefMathI(&#39;\lx@InvisiblePlus&#39;, undef, &quot;\x{2064}&quot;, reversion =&gt; &#39;&#39;, name =&gt; &#39;&#39;, meaning =&gt; &#39;plus&#39;, role =&gt; &#39;ADDOP&#39;);
+  // DefConstructor(&#39;\lx@kludged{}&#39;,
+  //   &quot;?#isMath(&lt;ltx:XMWrap rule=&#39;kludge&#39;&gt;#1&lt;/ltx:XMWrap&gt;)(#1)&quot;,
+  //   reversion =&gt; &#39;#1&#39;);
+  // DefConstructor(&#39;\lx@padded[MuDimension]{MuDimension}{}&#39;,
+  //   &#39;#3&#39;,
+  //   afterConstruct =&gt; sub {
+  //     my ($document, $whatsit) = @_;
+  //     my $node = $document-&gt;getLastChildElement($document-&gt;getNode);
+  //     if ($document-&gt;getNodeQName($node) eq &#39;ltx:XMDual&#39;) {
+  //       my (@ch) = $node-&gt;childNodes;
+  //       $node = $ch[1]; }
+  //     if (my $lpadding = $whatsit-&gt;getArg(1)) {
+  //       $document-&gt;setAttribute($node, lpadding =&gt; $lpadding); }
+  //     if (my $rpadding = $whatsit-&gt;getArg(2)) {
+  //       $document-&gt;setAttribute($node, rpadding =&gt; $rpadding); } },
+  //   reversion =&gt; &#39;#3&#39;);
 
-// DefConstructor(&#39;\lx@kludged{}&#39;,
-//   &quot;?#isMath(&lt;ltx:XMWrap rule=&#39;kludge&#39;&gt;#1&lt;/ltx:XMWrap&gt;)(#1)&quot;,
-//   reversion =&gt; &#39;#1&#39;);
-// DefConstructor(&#39;\lx@padded[MuDimension]{MuDimension}{}&#39;,
-//   &#39;#3&#39;,
-//   afterConstruct =&gt; sub {
-//     my ($document, $whatsit) = @_;
-//     my $node = $document-&gt;getLastChildElement($document-&gt;getNode);
-//     if ($document-&gt;getNodeQName($node) eq &#39;ltx:XMDual&#39;) {
-//       my (@ch) = $node-&gt;childNodes;
-//       $node = $ch[1]; }
-//     if (my $lpadding = $whatsit-&gt;getArg(1)) {
-//       $document-&gt;setAttribute($node, lpadding =&gt; $lpadding); }
-//     if (my $rpadding = $whatsit-&gt;getArg(2)) {
-//       $document-&gt;setAttribute($node, rpadding =&gt; $rpadding); } },
-//   reversion =&gt; &#39;#3&#39;);
+  // #======================================================================
+  // # Building XMDuals for Mathematical Parallel markup
+  // # Used when the content and presentation forms have different structure.
 
-// #======================================================================
-// # Building XMDuals for Mathematical Parallel markup
-// # Used when the content and presentation forms have different structure.
+  // TODO:
+  //DefKeyVal!(&quot;XMath&quot;, &quot;reversion&quot;,              &quot;UndigestedDefKey&quot;);
+  //DefKeyVal!(&quot;XMath&quot;, &quot;content_reversion&quot;,      &quot;UndigestedDefKey&quot;);
+  //DefKeyVal!(&quot;XMath&quot;, &quot;presentation_reversion&quot;, &quot;UndigestedDefKey&quot;);
 
-// TODO:
-//DefKeyVal!(&quot;XMath&quot;, &quot;reversion&quot;,              &quot;UndigestedDefKey&quot;);
-//DefKeyVal!(&quot;XMath&quot;, &quot;content_reversion&quot;,      &quot;UndigestedDefKey&quot;);
-//DefKeyVal!(&quot;XMath&quot;, &quot;presentation_reversion&quot;, &quot;UndigestedDefKey&quot;);
-
-</span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@dual OptionalKeyVals:XMath {}{}&quot;</span>,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@dual OptionalKeyVals:XMath {}{}&quot;</span>,
   <span class="string">&quot;&lt;ltx:XMDual role=&#39;#role&#39; name=&#39;#name&#39; meaning=&#39;#meaning&#39; omcd=&#39;#omcd&#39; width=&#39;#width&#39; height=&#39;#height&#39; xoffset=&#39;#xoffset&#39; yoffset=&#39;#yoffset&#39; lpadding=&#39;#lpadding&#39; rpadding=&#39;#rpadding&#39;&gt;#2&lt;ltx:XMWrap&gt;#3&lt;/ltx:XMWrap&gt;&lt;/ltx:XMDual&gt;&quot;</span>,
   before_digest =&gt; sub[_stomach,state] {
     state.push_value(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>, Stored::HashStored(HashMap::default()));
@@ -702,213 +730,221 @@
     }
     <span class="prelude-val">Ok</span>(Vec::new())
   },
-  sizer =&gt; <span class="string">&quot;#3&quot;</span>);    <span class="comment">// size according to presentation
+  sizer =&gt; <span class="string">&quot;#3&quot;</span>); <span class="comment">// size according to presentation
 
-// These are used within XMDual
-// The XMDual represents both a content &amp; presentation representation of some
-// possibly exotic structure (&quot;Transfix notation&quot;),
-// or just a somewhat complex presentation that corresponds (often) to a simpler
-// applicative content structure.
-// Invoking such a mathematical object to &quot;arguments&quot; requires that both the
-// content &amp; presentation branches contain those arguments.
-// There will be an XMArg, with an ID, containing the actual markup, and an XMRef that referrs to it.
-// The XMArg will usually be in the presentation branch (so that it inherits appropriate style),
-// unless the arg is &quot;hidden&quot; (ie. semantic, but not displayed).
-// This means that we don&#39;t know which one appears first! (See Package&#39;s dualize_arglist)
-//
-// To get a &quot;proper id&quot;, we&#39;ll use a temporary label-like attribute (_xmkey)
-// and establish an id and idref later.
-</span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmarg{}{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMArg _xmkey=&#39;#1&#39;&gt;#2&lt;/ltx:XMArg&gt;&quot;</span>,
-  reversion   =&gt; <span class="string">&quot;#2&quot;</span>,
-  after_digest =&gt; sub[_stomach,whatsit,state] {
-    <span class="kw">let </span>xmid = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
-    <span class="kw">let </span>arg = whatsit.get_arg(<span class="number">2</span>);
-    <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">&quot;xref:{}@reversion&quot;</span>, xmid);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>pending)) = state.lookup_value_mut(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>) {
-      pending.insert(xmid, arg.into());
-    }
-    <span class="comment">// TODO: Must we store the (currently &amp;mut) Whatsit?
-    // let whatsit_stored = Stored::Digested(whatsit.into());
-    </span>state.assign_value(<span class="kw-2">&amp;</span>reversion_key, Stored::Tokens(whatsit.revert(state)<span class="question-mark">?</span>), <span class="prelude-val">Some</span>(Scope::Global));
-    <span class="comment">// state.assign_value(&amp;s!(&quot;xref:{}@size&quot;, xmid), whatsit.get_size(None,state), Some(Scope::Global));
+  // These are used within XMDual
+  // The XMDual represents both a content &amp; presentation representation of some
+  // possibly exotic structure (&quot;Transfix notation&quot;),
+  // or just a somewhat complex presentation that corresponds (often) to a simpler
+  // applicative content structure.
+  // Invoking such a mathematical object to &quot;arguments&quot; requires that both the
+  // content &amp; presentation branches contain those arguments.
+  // There will be an XMArg, with an ID, containing the actual markup, and an XMRef that referrs to
+  // it. The XMArg will usually be in the presentation branch (so that it inherits appropriate
+  // style), unless the arg is &quot;hidden&quot; (ie. semantic, but not displayed).
+  // This means that we don&#39;t know which one appears first! (See Package&#39;s dualize_arglist)
+  //
+  // To get a &quot;proper id&quot;, we&#39;ll use a temporary label-like attribute (_xmkey)
+  // and establish an id and idref later.
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmarg{}{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMArg _xmkey=&#39;#1&#39;&gt;#2&lt;/ltx:XMArg&gt;&quot;</span>,
+    reversion   =&gt; <span class="string">&quot;#2&quot;</span>,
+    after_digest =&gt; sub[_stomach,whatsit,state] {
+      <span class="kw">let </span>xmid = whatsit.get_arg(<span class="number">1</span>).map(ToString::to_string).unwrap_or_default();
+      <span class="kw">let </span>arg = whatsit.get_arg(<span class="number">2</span>);
+      <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">&quot;xref:{}@reversion&quot;</span>, xmid);
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>pending)) =
+        state.lookup_value_mut(<span class="string">&quot;PENDING_DUAL_XMARGS&quot;</span>) {
+          pending.insert(xmid, arg.into());
+      }
+      <span class="comment">// TODO: Must we store the (currently &amp;mut) Whatsit?
+      // let whatsit_stored = Stored::Digested(whatsit.into());
+      </span>state.assign_value(<span class="kw-2">&amp;</span>reversion_key, Stored::Tokens(whatsit.revert(state)<span class="question-mark">?</span>),
+        <span class="prelude-val">Some</span>(Scope::Global));
+      <span class="comment">// state.assign_value(&amp;s!(&quot;xref:{}@size&quot;, xmid),
+      //   whatsit.get_size(None,state), Some(Scope::Global));
 
-</span>});
+  </span>});
 
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmref{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMRef _xmkey=&#39;#1&#39;/&gt;&quot;</span>,
-  <span class="comment">// TODO: Must we store and lookup the Whatsit?
-  </span>reversion =&gt; sub[_stomach,args,state] {
-    <span class="kw">let </span>xmid = args[<span class="number">0</span>].as_ref().unwrap().to_string();
-    <span class="prelude-val">Ok</span>( state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;xref:{xmid}@reversion&quot;</span>)).unwrap_or_default() )},
-  <span class="comment">// sizer =&gt; sub { LookupValue(&#39;xref:&#39; . ToString($_[0]-&gt;getArg(1)))-&gt;getSize; }
-</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@xmref{}&quot;</span>, <span class="string">&quot;&lt;ltx:XMRef _xmkey=&#39;#1&#39;/&gt;&quot;</span>,
+    <span class="comment">// TODO: Must we store and lookup the Whatsit?
+    </span>reversion =&gt; sub[_stomach,args,state] {
+      <span class="kw">let </span>xmid = args[<span class="number">0</span>].as_ref().unwrap().to_string();
+      <span class="prelude-val">Ok</span>( state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;xref:{xmid}@reversion&quot;</span>)).unwrap_or_default() )},
+    <span class="comment">// sizer =&gt; sub { LookupValue(&#39;xref:&#39; . ToString($_[0]-&gt;getArg(1)))-&gt;getSize; }
+  </span>);
 
-<span class="comment">// Connect up the XMRef/XMArg pairs (actually can be multiple XMRef&#39;s)
-// We want to set the idref of the XMRef&#39;s to point to the id of the XMArg (or other XM element),
-// but usually the XMRef is created first, and we want to let the referred to element
-// get it&#39;s id computed by whatever means it prefers.
-// so we have to work both ways (use state to record associations, to avoid expensive xpath)
-// Set id&#39;s on any non-XMRef nodes that have an _xmkey
-// This gets a more natural ordering
-</span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:*&quot;</span>, after_open_late =&gt; sub[document,node,state] {
-  <span class="kw">if </span>node.has_attribute(<span class="string">&quot;_xmkey&quot;</span>) {
-    <span class="kw">let </span>qname = document.get_node_qname(node, state);
-    <span class="kw">if </span>(qname != <span class="string">&quot;ltx:XMRef&quot;</span>) &amp;&amp; qname.starts_with(<span class="string">&quot;ltx:XM&quot;</span>) &amp;&amp; !node.has_attribute(<span class="string">&quot;xml:id&quot;</span>) {
-      document.generate_id(node, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
-    }
-  }
-});
-
-<span class="macro">Tag!</span>(<span class="string">&quot;ltx:XMDual&quot;</span>, after_close_late =&gt; sub[document,node,state] {
-  <span class="kw">let </span><span class="kw-2">mut </span>ids  = HashMap::default();
-  <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
-  <span class="comment">// Collect all children with _xmkey attribute
-  </span><span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::*[@_xmkey]&quot;</span>, <span class="prelude-val">Some</span>(node), state) {
-    <span class="kw">if </span>(document.get_node_qname(<span class="kw-2">&amp;</span>n, state) == <span class="string">&quot;ltx:XMRef&quot;</span>) &amp;&amp; !n.has_attribute(<span class="string">&quot;idref&quot;</span>) {
-      refs.push(n);    <span class="comment">// we&#39;ll fill these in next
-    </span>} <span class="kw">else </span>{ <span class="comment">// generate &amp; record ids for all referenced noces
-      </span><span class="kw">let </span>key = n.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
-      <span class="kw">if let </span>Entry::Vacant(e) = ids.entry(key) {
-        document.generate_id(<span class="kw-2">&amp;mut </span>n, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>; <span class="comment">// Generate id if none already.
-        </span>e.insert(n.get_attribute_ns(<span class="string">&quot;id&quot;</span>,XML_NS).unwrap_or_default());
+  <span class="comment">// Connect up the XMRef/XMArg pairs (actually can be multiple XMRef&#39;s)
+  // We want to set the idref of the XMRef&#39;s to point to the id of the XMArg (or other XM element),
+  // but usually the XMRef is created first, and we want to let the referred to element
+  // get it&#39;s id computed by whatever means it prefers.
+  // so we have to work both ways (use state to record associations, to avoid expensive xpath)
+  // Set id&#39;s on any non-XMRef nodes that have an _xmkey
+  // This gets a more natural ordering
+  </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:*&quot;</span>, after_open_late =&gt; sub[document,node,state] {
+    <span class="kw">if </span>node.has_attribute(<span class="string">&quot;_xmkey&quot;</span>) {
+      <span class="kw">let </span>qname = document.get_node_qname(node, state);
+      <span class="kw">if </span>(qname != <span class="string">&quot;ltx:XMRef&quot;</span>) &amp;&amp; qname.starts_with(<span class="string">&quot;ltx:XM&quot;</span>) &amp;&amp; !node.has_attribute(<span class="string">&quot;xml:id&quot;</span>) {
+        document.generate_id(node, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
       }
     }
-  }
-  <span class="kw">for </span><span class="kw-2">mut </span>r <span class="kw">in </span>refs {                        <span class="comment">// Now fill in the references
-    </span><span class="kw">let </span>r_xmkey = r.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
-    document.set_attribute(<span class="kw-2">&amp;mut </span>r, <span class="string">&quot;idref&quot;</span>, ids.get(<span class="kw-2">&amp;</span>r_xmkey).unwrap(), state)<span class="question-mark">?</span>;
-    r.remove_attribute(<span class="string">&quot;_xmkey&quot;</span>)<span class="question-mark">?</span>;
-  }
-});
+  });
 
-<span class="comment">// # Construction aids
-// # Build an XMDual (via \lx@dual) given the content &amp; presentation forms.
-// # These forms are provided as Tokens, invoking the appropriate constructor macros,
-// # and refering to any arguments using #1, #2.... (see T_XMArg for syntactic sugar)
-// # The arguments (if any) are given separately; within the content &amp; presentation
-// # they are replaced by \lx@xmref and \lx@xmarg, appropriately,
-// # so that they will be linked/shared in the XML tree.
-// # The keyvals argument is a hash containing any properties of the construct,
-// # along with reversion, content_reversion  &amp; presentation_reversion, which are
-// # substituted for arguments as well.
-// sub I_dual {
-//   my ($keyvals, $content, $presentation, @args) = @_;
-//   $content      = TokenizeInternal($content)      if $content      &amp;&amp; !ref $content;
-//   $presentation = TokenizeInternal($presentation) if $presentation &amp;&amp; !ref $presentation;
-//   my (@revargs, @pargs, @cargs);
-//   foreach my $arg (@args) {
-//     my $id = LaTeXML::Package::getXMArgID();
-//     push(@revargs, Tokens(I_arg(ToString($id))));
-//     push(@pargs,   Invocation(T_CS(&#39;\lx@xmarg&#39;), $id, $arg));
-//     push(@cargs,   Invocation(T_CS(&#39;\lx@xmref&#39;), $id)); }
-//   my $optional = undef;
-//   if ($keyvals) {
-//     my @options = ();
-//     while (my ($key, $value) = each %$keyvals) {
-//       $value = TokenizeInternal($value) if $value &amp;&amp; !ref $value;
-//       if ($key =~ /^(?:presentation_|content_|)reversion$/) {
-//         $value = $value-&gt;substituteParameters(@revargs); }
-//       push(@options, T_OTHER(&#39;,&#39;)) if @options;
-//       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); }
-//     $optional = Tokens(@options); }
-//   return
-//     Invocation(T_CS(&#39;\lx@dual&#39;), $optional,
-//     $content-&gt;substituteParameters(@cargs),
-//     I_wrap({}, $presentation-&gt;substituteParameters(@pargs))); }
+  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:XMDual&quot;</span>, after_close_late =&gt; sub[document,node,state] {
+    <span class="kw">let </span><span class="kw-2">mut </span>ids  = HashMap::default();
+    <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
+    <span class="comment">// Collect all children with _xmkey attribute
+    </span><span class="kw">for </span><span class="kw-2">mut </span>n <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::*[@_xmkey]&quot;</span>, <span class="prelude-val">Some</span>(node), state) {
+      <span class="kw">if </span>(document.get_node_qname(<span class="kw-2">&amp;</span>n, state) == <span class="string">&quot;ltx:XMRef&quot;</span>) &amp;&amp; !n.has_attribute(<span class="string">&quot;idref&quot;</span>) {
+        refs.push(n);    <span class="comment">// we&#39;ll fill these in next
+      </span>} <span class="kw">else </span>{ <span class="comment">// generate &amp; record ids for all referenced noces
+        </span><span class="kw">let </span>key = n.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
+        <span class="kw">if let </span>Entry::Vacant(e) = ids.entry(key) {
+          document.generate_id(<span class="kw-2">&amp;mut </span>n, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>; <span class="comment">// Generate id if none already.
+          </span>e.insert(n.get_attribute_ns(<span class="string">&quot;id&quot;</span>,XML_NS).unwrap_or_default());
+        }
+      }
+    }
+    <span class="kw">for </span><span class="kw-2">mut </span>r <span class="kw">in </span>refs {                        <span class="comment">// Now fill in the references
+      </span><span class="kw">let </span>r_xmkey = r.get_attribute(<span class="string">&quot;_xmkey&quot;</span>).unwrap();
+      document.set_attribute(<span class="kw-2">&amp;mut </span>r, <span class="string">&quot;idref&quot;</span>, ids.get(<span class="kw-2">&amp;</span>r_xmkey).unwrap(), state)<span class="question-mark">?</span>;
+      r.remove_attribute(<span class="string">&quot;_xmkey&quot;</span>)<span class="question-mark">?</span>;
+    }
+  });
 
-// # A little helper to shorten things up a bit; simply generates #1 (or whatever)
-// sub I_arg {    # uncoditionally create an arg token
-//   return bless [&quot;$_[0]&quot;, CC_ARG], &#39;LaTeXML::Core::Token&#39;; }
+  <span class="comment">// # Construction aids
+  // # Build an XMDual (via \lx@dual) given the content &amp; presentation forms.
+  // # These forms are provided as Tokens, invoking the appropriate constructor macros,
+  // # and refering to any arguments using #1, #2.... (see T_XMArg for syntactic sugar)
+  // # The arguments (if any) are given separately; within the content &amp; presentation
+  // # they are replaced by \lx@xmref and \lx@xmarg, appropriately,
+  // # so that they will be linked/shared in the XML tree.
+  // # The keyvals argument is a hash containing any properties of the construct,
+  // # along with reversion, content_reversion  &amp; presentation_reversion, which are
+  // # substituted for arguments as well.
+  // sub I_dual {
+  //   my ($keyvals, $content, $presentation, @args) = @_;
+  //   $content      = TokenizeInternal($content)      if $content      &amp;&amp; !ref $content;
+  //   $presentation = TokenizeInternal($presentation) if $presentation &amp;&amp; !ref $presentation;
+  //   my (@revargs, @pargs, @cargs);
+  //   foreach my $arg (@args) {
+  //     my $id = LaTeXML::Package::getXMArgID();
+  //     push(@revargs, Tokens(I_arg(ToString($id))));
+  //     push(@pargs,   Invocation(T_CS(&#39;\lx@xmarg&#39;), $id, $arg));
+  //     push(@cargs,   Invocation(T_CS(&#39;\lx@xmref&#39;), $id)); }
+  //   my $optional = undef;
+  //   if ($keyvals) {
+  //     my @options = ();
+  //     while (my ($key, $value) = each %$keyvals) {
+  //       $value = TokenizeInternal($value) if $value &amp;&amp; !ref $value;
+  //       if ($key =~ /^(?:presentation_|content_|)reversion$/) {
+  //         $value = $value-&gt;substituteParameters(@revargs); }
+  //       push(@options, T_OTHER(&#39;,&#39;)) if @options;
+  //       push(@options, T_OTHER($key), T_OTHER(&#39;=&#39;), T_BEGIN, $value, T_END); }
+  //     $optional = Tokens(@options); }
+  //   return
+  //     Invocation(T_CS(&#39;\lx@dual&#39;), $optional,
+  //     $content-&gt;substituteParameters(@cargs),
+  //     I_wrap({}, $presentation-&gt;substituteParameters(@pargs))); }
 
-// sub I_xmarg {
-//   my ($id, $arg) = @_;
-//   return Tokens(T_CS(&#39;\lx@xmarg&#39;),
-//     T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END, T_BEGIN, $arg, T_END); }
+  // # A little helper to shorten things up a bit; simply generates #1 (or whatever)
+  // sub I_arg {    # uncoditionally create an arg token
+  //   return bless [&quot;$_[0]&quot;, CC_ARG], &#39;LaTeXML::Core::Token&#39;; }
 
-// sub I_xmref {
-//   my ($id) = @_;
-//   return Tokens(T_CS(&#39;\lx@xmref&#39;), T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END); }
+  // sub I_xmarg {
+  //   my ($id, $arg) = @_;
+  //   return Tokens(T_CS(&#39;\lx@xmarg&#39;),
+  //     T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END, T_BEGIN, $arg, T_END); }
 
-// #----------------------------------------------------------------------
-// # This group should be renamed to \lx@somethings and deprecated
-// # NOTE: work through this systematically!
-</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\FCN{}&quot;</span>,            <span class="string">r&quot;\lx@wrap[role=FUNCTION]{#1}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\ROLE{}{}&quot;</span>,         <span class="string">r&quot;\lx@wrap[role={#1}]{#2}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@SYMBOL{}&quot;</span>,        <span class="string">r&quot;\lx@wrap[role=ID]{#1}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@CSYMBOL{}&quot;</span>,       <span class="string">r&quot;\lx@symbol[meaning={#1}]{}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@APPLY{}&quot;</span>,         <span class="string">r&quot;\lx@apply[]{#1}{}&quot;</span>);                             <span class="comment">// Sorta broken?
-</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@MAYBEAPPLY{}{}&quot;</span>,  <span class="string">r&quot;\ifx.#2.#1\else\lx@apply{#1}{#2}\fi&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@WRAP{}&quot;</span>,          <span class="string">r&quot;\lx@wrap[]{#1}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@TOKEN{}&quot;</span>,         <span class="string">r&quot;\lx@symbol[name={#1}]{}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@SUPERSCRIPT{}{}&quot;</span>, <span class="string">r&quot;\ifx.#2.#1\else\lx@superscript[]{#1}{#2}\fi&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@SUBSCRIPT{}{}&quot;</span>,   <span class="string">r&quot;\ifx.#2.#1\else\lx@subscript[]{#1}{#2}\fi&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@PADDED&quot;</span>,         <span class="string">&quot;\\lx@padded&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\DUAL&quot;</span>,            <span class="string">&quot;\\lx@dual&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@XMArg&quot;</span>,          <span class="string">&quot;\\lx@xmarg&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@XMRef&quot;</span>,          <span class="string">&quot;\\lx@xmref&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@APPLYFUNCTION&quot;</span>,  <span class="string">&quot;\\lx@ApplyFunction&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLETIMES&quot;</span>, <span class="string">&quot;\\lx@InvisibleTimes&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLECOMMA&quot;</span>, <span class="string">&quot;\\lx@InvisibleComma&quot;</span>);
-<span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLEPLUS&quot;</span>,  <span class="string">&quot;\\lx@InvisiblePlus&quot;</span>);
+  // sub I_xmref {
+  //   my ($id) = @_;
+  //   return Tokens(T_CS(&#39;\lx@xmref&#39;), T_BEGIN, (ref $id ? $id : T_OTHER($id)), T_END); }
 
-<span class="comment">// # End of stuff to be deprecated.
-// #----------------------------------------------------------------------
-// #======================================================================
+  // #----------------------------------------------------------------------
+  // # This group should be renamed to \lx@somethings and deprecated
+  // # NOTE: work through this systematically!
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\FCN{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role=FUNCTION]{#1}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ROLE{}{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role={#1}]{#2}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@SYMBOL{}&quot;</span>, <span class="string">r&quot;\lx@wrap[role=ID]{#1}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@CSYMBOL{}&quot;</span>, <span class="string">r&quot;\lx@symbol[meaning={#1}]{}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@APPLY{}&quot;</span>, <span class="string">r&quot;\lx@apply[]{#1}{}&quot;</span>); <span class="comment">// Sorta broken?
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@MAYBEAPPLY{}{}&quot;</span>, <span class="string">r&quot;\ifx.#2.#1\else\lx@apply{#1}{#2}\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@WRAP{}&quot;</span>, <span class="string">r&quot;\lx@wrap[]{#1}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@TOKEN{}&quot;</span>, <span class="string">r&quot;\lx@symbol[name={#1}]{}&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\@SUPERSCRIPT{}{}&quot;</span>,
+    <span class="string">r&quot;\ifx.#2.#1\else\lx@superscript[]{#1}{#2}\fi&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\@SUBSCRIPT{}{}&quot;</span>,
+    <span class="string">r&quot;\ifx.#2.#1\else\lx@subscript[]{#1}{#2}\fi&quot;
+  </span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@PADDED&quot;</span>, <span class="string">&quot;\\lx@padded&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\DUAL&quot;</span>, <span class="string">&quot;\\lx@dual&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@XMArg&quot;</span>, <span class="string">&quot;\\lx@xmarg&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@XMRef&quot;</span>, <span class="string">&quot;\\lx@xmref&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@APPLYFUNCTION&quot;</span>, <span class="string">&quot;\\lx@ApplyFunction&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLETIMES&quot;</span>, <span class="string">&quot;\\lx@InvisibleTimes&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLECOMMA&quot;</span>, <span class="string">&quot;\\lx@InvisibleComma&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@INVISIBLEPLUS&quot;</span>, <span class="string">&quot;\\lx@InvisiblePlus&quot;</span>);
 
-// # We OUGHT to be able to do this using \llap,\rlap,\hss...
-// DefMacro(&#39;\lx@tweaked{}{}&#39;, &#39;\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi&#39;);
-// DefConstructor(&#39;\lx@math@tweaked RequiredKeyVals {}&#39;,
-//   &quot;&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;&quot;,
-//   afterDigest =&gt; sub {
-//     my ($stomach, $whatsit) = @_;
-//     my ($kv,      $body)    = $whatsit-&gt;getArgs;
-//     XMath_copy_keyvals($stomach, $whatsit);
-//     $whatsit-&gt;setFont($body-&gt;getFont);
-//     return; },
-//   reversion =&gt; &#39;#2&#39;);
+  <span class="comment">// # End of stuff to be deprecated.
+  // #----------------------------------------------------------------------
+  // #======================================================================
 
-// DefConstructor(&#39;\lx@text@tweaked RequiredKeyVals {}&#39;,
-//   &quot;&lt;ltx:text _noautoclose=&#39;1&#39; %&amp;GetKeyVals(#1)&gt;#2&lt;/ltx:text&gt;&quot;,
-//   afterDigest =&gt; sub {
-//     my ($stomach, $whatsit) = @_;
-//     my ($kv,      $body)    = $whatsit-&gt;getArgs;
-//     $whatsit-&gt;setProperties($kv-&gt;getPairs); });
+  // # We OUGHT to be able to do this using \llap,\rlap,\hss...
+  // DefMacro(&#39;\lx@tweaked{}{}&#39;,
+  // &#39;\ifmmode\lx@math@tweaked{#1}{#2}\else\lx@text@tweaked{#1}{#2}\fi&#39;); DefConstructor(&#39;\lx@
+  // math@tweaked RequiredKeyVals {}&#39;,   &quot;&lt;ltx:XMWrap $XMath_attributes&gt;#2&lt;/ltx:XMWrap&gt;&quot;,
+  //   afterDigest =&gt; sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my ($kv,      $body)    = $whatsit-&gt;getArgs;
+  //     XMath_copy_keyvals($stomach, $whatsit);
+  //     $whatsit-&gt;setFont($body-&gt;getFont);
+  //     return; },
+  //   reversion =&gt; &#39;#2&#39;);
 
-// DefMacro(&#39;\lx@nounicode {}&#39;, &#39;\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi&#39;);
+  // DefConstructor(&#39;\lx@text@tweaked RequiredKeyVals {}&#39;,
+  //   &quot;&lt;ltx:text _noautoclose=&#39;1&#39; %&amp;GetKeyVals(#1)&gt;#2&lt;/ltx:text&gt;&quot;,
+  //   afterDigest =&gt; sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my ($kv,      $body)    = $whatsit-&gt;getArgs;
+  //     $whatsit-&gt;setProperties($kv-&gt;getPairs); });
 
-// DefConstructor(&#39;\lx@framed[]{}&#39;,
-//   &quot;&lt;ltx:text framed=&#39;#frame&#39; _noautoclose=&#39;1&#39;&gt;#2&lt;/ltx:text&gt;&quot;,
-//   properties =&gt; { frame =&gt; sub { ToString($_[1] || &#39;rectangle&#39;); } });
-// DefConstructor(&#39;\lx@hflipped{}&#39;,
-//   &quot;&lt;ltx:text class=&#39;ltx_hflipped&#39; _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;);
+  // DefMacro(&#39;\lx@nounicode {}&#39;, &#39;\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi&#39;);
 
-// sub reportNoUnicode {
-//   my ($cs) = @_;
-//   $cs = ToString($cs);
-//   if (!LookupMapping(&#39;missing_unicode&#39; =&gt; $cs)) {
-//     Warn(&#39;expected&#39;, &#39;unicode&#39;, $cs,
-//       &quot;There&#39;s no Unicode equivalent for the symbol &#39;$cs&#39;&quot;);
-//     AssignMapping(&#39;missing_unicode&#39; =&gt; $cs =&gt; 1); }
-//   return; }
-// # Slightly contrived so that this can be used within a DefMath
-// # and still declare &amp; get the semantic properties.
-// DefPrimitive(&#39;\lx@math@nounicode DefToken&#39;, sub {
-//     my ($stomach, $cs) = @_;
-//     reportNoUnicode($cs);
-//     Box(ToString($cs), undef, undef, $cs, class =&gt; &#39;ltx_nounicode&#39;); });
+  // DefConstructor(&#39;\lx@framed[]{}&#39;,
+  //   &quot;&lt;ltx:text framed=&#39;#frame&#39; _noautoclose=&#39;1&#39;&gt;#2&lt;/ltx:text&gt;&quot;,
+  //   properties =&gt; { frame =&gt; sub { ToString($_[1] || &#39;rectangle&#39;); } });
+  // DefConstructor(&#39;\lx@hflipped{}&#39;,
+  //   &quot;&lt;ltx:text class=&#39;ltx_hflipped&#39; _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;);
 
-// DefConstructor(&#39;\lx@text@nounicode DefToken&#39;,
-//   &quot;&lt;ltx:text _no_autoclose=&#39;true&#39; class=&#39;ltx_nounicode&#39;&gt;#1&lt;/ltx:text&gt;&quot;,
-//   afterDigest =&gt; sub {
-//     reportNoUnicode(ToString($_[1]-&gt;getArg(0))); });
+  // sub reportNoUnicode {
+  //   my ($cs) = @_;
+  //   $cs = ToString($cs);
+  //   if (!LookupMapping(&#39;missing_unicode&#39; =&gt; $cs)) {
+  //     Warn(&#39;expected&#39;, &#39;unicode&#39;, $cs,
+  //       &quot;There&#39;s no Unicode equivalent for the symbol &#39;$cs&#39;&quot;);
+  //     AssignMapping(&#39;missing_unicode&#39; =&gt; $cs =&gt; 1); }
+  //   return; }
+  // # Slightly contrived so that this can be used within a DefMath
+  // # and still declare &amp; get the semantic properties.
+  // DefPrimitive(&#39;\lx@math@nounicode DefToken&#39;, sub {
+  //     my ($stomach, $cs) = @_;
+  //     reportNoUnicode($cs);
+  //     Box(ToString($cs), undef, undef, $cs, class =&gt; &#39;ltx_nounicode&#39;); });
 
-// DefConstructor(&#39;\@ERROR{}{}&#39;, &quot;&lt;ltx:ERROR class=&#39;ltx_#1&#39;&gt;#2&lt;/ltx:ERROR&gt;&quot;);
+  // DefConstructor(&#39;\lx@text@nounicode DefToken&#39;,
+  //   &quot;&lt;ltx:text _no_autoclose=&#39;true&#39; class=&#39;ltx_nounicode&#39;&gt;#1&lt;/ltx:text&gt;&quot;,
+  //   afterDigest =&gt; sub {
+  //     reportNoUnicode(ToString($_[1]-&gt;getArg(0))); });
 
-// #**********************************************************************
-// DefConstructor(&#39;\WildCard[]&#39;, &quot;&lt;_WildCard_&gt;#1&lt;/_WildCard_&gt;&quot;);
-// DefConstructorI(&#39;\WildCardA&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
-// DefConstructorI(&#39;\WildCardB&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
-// DefConstructorI(&#39;\WildCardC&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
+  // DefConstructor(&#39;\@ERROR{}{}&#39;, &quot;&lt;ltx:ERROR class=&#39;ltx_#1&#39;&gt;#2&lt;/ltx:ERROR&gt;&quot;);
 
+  // #**********************************************************************
+  // DefConstructor(&#39;\WildCard[]&#39;, &quot;&lt;_WildCard_&gt;#1&lt;/_WildCard_&gt;&quot;);
+  // DefConstructorI(&#39;\WildCardA&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
+  // DefConstructorI(&#39;\WildCardB&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
+  // DefConstructorI(&#39;\WildCardC&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
 </span>});
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

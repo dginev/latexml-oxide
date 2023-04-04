@@ -54,10 +54,25 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -87,7 +102,9 @@
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {<span class="macro">unimplemented!</span>();}
+  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {
+    <span class="macro">unimplemented!</span>();
+  }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>)) }
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     document.insert_comment(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>, state)<span class="question-mark">?</span>;
@@ -97,18 +114,31 @@
   <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="bool-val">false </span>}
   <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="bool-val">false </span>}
-  <span class="kw">fn </span>get_width(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
+  <span class="kw">fn </span>get_width(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    _options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::new(<span class="number">0</span>))))
   }
 
-  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, _options: HashMap&lt;String, Stored&gt;, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
-    <span class="prelude-val">Ok</span>((Dimension::default(), Dimension::default(), Dimension::default()))
+  <span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    _options: HashMap&lt;String, Stored&gt;,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+    <span class="prelude-val">Ok</span>((
+      Dimension::default(),
+      Dimension::default(),
+      Dimension::default(),
+    ))
   }
 
   <span class="comment">// sub getHeight      { return Dimension(0); }
   // sub getTotalHeight { return Dimension(0); }
   // sub getDepth       { return Dimension(0); }
-  // sub getSize { return (Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0)); }
+  // sub getSize { return (Dimension(0), Dimension(0), Dimension(0), Dimension(0), Dimension(0),
+  // Dimension(0)); }
 </span>}
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -111,6 +111,17 @@
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
@@ -135,8 +146,14 @@
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Dimension {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string()))) }
-  <span class="kw">fn </span>be_digested(<span class="self">self</span>, _stomach: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::stomach::Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string())))
+  }
+  <span class="kw">fn </span>be_digested(
+    <span class="self">self</span>,
+    _stomach: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::stomach::Stomach,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt;
   <span class="kw">where
     </span><span class="self">Self</span>: Sized,
     <span class="self">Self</span>: fmt::Debug,
@@ -146,7 +163,7 @@
 }
 <span class="kw">impl </span>NumericOps <span class="kw">for </span>Dimension {
   <span class="kw">fn </span>new(number: i64) -&gt; <span class="self">Self </span>{ Dimension(number) }
-  <span class="kw">fn </span>new_f64(number:f64) -&gt; <span class="self">Self </span>{ Dimension(kround(number)) }
+  <span class="kw">fn </span>new_f64(number: f64) -&gt; <span class="self">Self </span>{ Dimension(kround(number)) }
   <span class="kw">fn </span>value_of(<span class="self">self</span>) -&gt; i64 { <span class="self">self</span>.<span class="number">0 </span>}
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RegisterType { RegisterType::Dimension }
   <span class="kw">fn </span>unit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; { <span class="prelude-val">Some</span>(<span class="string">&quot;pt&quot;</span>) }
@@ -154,7 +171,9 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Dimension {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, fixedformat(<span class="self">self</span>.<span class="number">0</span>, <span class="self">self</span>.unit())) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, fixedformat(<span class="self">self</span>.<span class="number">0</span>, <span class="self">self</span>.unit()))
+  }
 }
 
 <span class="kw">impl </span>Dimension {
@@ -164,19 +183,19 @@
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(cap) = SPEC_RE.captures(spec) {
       <span class="comment">// Dimensions given.
       </span><span class="kw">let </span>num_str = cap.get(<span class="number">1</span>).map_or(String::new(), |m| m.as_str().to_string());
-      <span class="kw">let </span>num:f64 = num_str.parse::&lt;f64&gt;()<span class="question-mark">?</span>;
+      <span class="kw">let </span>num: f64 = num_str.parse::&lt;f64&gt;()<span class="question-mark">?</span>;
       <span class="kw">let </span>unit = cap.get(<span class="number">2</span>).map_or(String::new(), |m| m.as_str().to_string());
       <span class="kw">let </span>converted_unit = <span class="kw">match </span>state_opt {
         <span class="prelude-val">Some</span>(state) =&gt; state.convert_unit(<span class="kw-2">&amp;</span>unit),
         <span class="prelude-val">None </span>=&gt; {
           <span class="kw">let </span>state = STD_STATE.read().unwrap(); <span class="comment">// TODO: is this really the way?
           </span>state.convert_unit(<span class="kw-2">&amp;</span>unit)
-        }
+        },
       };
       <span class="prelude-val">Ok</span>(fixpoint(num, <span class="prelude-val">Some</span>(converted_unit)) <span class="kw">as </span>f64)
     } <span class="kw">else </span>{
-      <span class="comment">// When scaled points passed in (typically the result of Perl calculations on other Dimensions),
-      // you might think truncation (int) is more TeX-like.
+      <span class="comment">// When scaled points passed in (typically the result of Perl calculations on other
+      // Dimensions), you might think truncation (int) is more TeX-like.
       // Recall that TeX arithmatic truncates, whereas reading by Gullet tends to round.
       // The Perl arithmetic is replacing an unknown combination of those truncates &amp; rounds.
       // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
@@ -186,7 +205,10 @@
     }
   }
   <span class="kw">pub fn </span>from_str(spec: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Dimension&gt; {
-    <span class="prelude-val">Ok</span>(Dimension::new_f64(Dimension::spec_to_f64(spec, <span class="prelude-val">Some</span>(state))<span class="question-mark">?</span>))
+    <span class="prelude-val">Ok</span>(Dimension::new_f64(Dimension::spec_to_f64(
+      spec,
+      <span class="prelude-val">Some</span>(state),
+    )<span class="question-mark">?</span>))
   }
 }
 <span class="comment">// Dimension!() macro is in setup.rs, since it binds state

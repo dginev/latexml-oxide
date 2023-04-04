@@ -651,6 +651,12 @@
 <a href="#651" id="651">651</a>
 <a href="#652" id="652">652</a>
 <a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">//======================================================================
 // Basic alignment support needed by most environments &amp; commands.
@@ -685,7 +691,8 @@
   //     Let(&#39;\centerline&#39;, &#39;\relax&#39;); },
   //   afterConstruct =&gt; sub {    # Override nowrap on right,left,center cells
   //     my $cell = $_[0]-&gt;getElement;
-  //     $_[0]-&gt;addClass($cell, &#39;ltx_wrap&#39;) unless ($cell-&gt;getAttribute(&#39;align&#39;) || &#39;&#39;) eq &#39;justify&#39;; });
+  //     $_[0]-&gt;addClass($cell, &#39;ltx_wrap&#39;) unless ($cell-&gt;getAttribute(&#39;align&#39;) || &#39;&#39;) eq
+  // &#39;justify&#39;; });
 
   // DefColumnType(&#39;p{Dimension}&#39;, sub {
   //     $LaTeXML::BUILD_TEMPLATE-&gt;addColumn(before =&gt; Tokens(T_CS(&#39;\tabularcell@hbox&#39;), T_BEGIN),
@@ -780,7 +787,8 @@
   //       T_CS(&#39;\@alignment@newline@marker&#39;),
   //       T_CS(&#39;\@open@row&#39;), T_CS(&#39;\@open@column&#39;), T_CS(&#39;\@open@inner@column&#39;)); });
 
-  // DefConstructor(&#39;\@alignment@newline@marker&#39;, undef, &#39;&#39;, reversion =&gt; Tokens(T_CS(&quot;\\\\&quot;), T_CR));
+  // DefConstructor(&#39;\@alignment@newline@marker&#39;, undef, &#39;&#39;, reversion =&gt; Tokens(T_CS(&quot;\\\\&quot;),
+  // T_CR));
 
   // DefConstructor(&#39;\@alignment@hline&#39;, undef, &#39;&#39;,
   //   afterDigest =&gt; sub {
@@ -816,14 +824,14 @@
   // DefPrimitiveI(&#39;\@dollar@in@mathmode&#39;, undef, sub {
   //     my ($stomach) = @_;
   //     my $level = $stomach-&gt;getBoxingLevel;
-  //     if ((LookupValue(&#39;MATH_ALIGN_$_BEGUN&#39;) || 0) == $level) { # If we&#39;re begun making _something_ with $.
-  //       my @l = ();
+  //     if ((LookupValue(&#39;MATH_ALIGN_$_BEGUN&#39;) || 0) == $level) { # If we&#39;re begun making
+  // _something_ with $.       my @l = ();
   //       if (LookupValue(&#39;IN_MATH&#39;)) {                           # But we&#39;re somehow in math?
   //         @l = $stomach-&gt;invokeToken(T_CS(&#39;\@@ENDINLINEMATH&#39;)); }
   //       else {
   //         @l = $stomach-&gt;invokeToken(T_CS(&#39;\@@ENDINLINETEXT&#39;)); }
-  //       AssignValue(&#39;MATH_ALIGN_$_BEGUN&#39; =&gt; 0);                 # Reset this AFTER finishing the something
-  //       @l; }
+  //       AssignValue(&#39;MATH_ALIGN_$_BEGUN&#39; =&gt; 0);                 # Reset this AFTER finishing the
+  // something       @l; }
   //     else {
   //       AssignValue(&#39;MATH_ALIGN_$_BEGUN&#39; =&gt; $level + 1);        # Note that we&#39;ve begun something
   //       if (LookupValue(&#39;IN_MATH&#39;)) {                           # If we&#39;re &quot;still&quot; in math
@@ -839,7 +847,8 @@
   // DefConstructor(&#39;\@@ENDINLINETEXT&#39;, undef, &quot;&quot;, alias =&gt; &#39;$&#39;,
   //   beforeDigest =&gt; sub { $_[0]-&gt;endMode(&#39;text&#39;); });
 
-  // DefPrimitiveI(&#39;\@LTX@nonumber&#39;, undef, sub { AssignValue(EQUATIONROW_NUMBER =&gt; 0, &#39;global&#39;); });
+  // DefPrimitiveI(&#39;\@LTX@nonumber&#39;, undef, sub { AssignValue(EQUATIONROW_NUMBER =&gt; 0, &#39;global&#39;);
+  // });
 
   // # \noalign{} provides vertical material that doesn&#39;t get aligned.
   // # This could be a bunch of text that would be treated like AMS&#39; \intertext,
@@ -852,8 +861,8 @@
   // # See the peculiar construct in LaTeX for \hline and \@xhline
   // DefMacro(&#39;\noalign Expanded&#39;,
   //   &#39;\if@in@alignment&#39;
-  //     . &#39;\@multicolumn{\@alignment@ncolumns}{l}{\@@LTX@noalign{#1}}\@LTX@nonumber\@alignment@newline&#39;
-  //     . &#39;\else#1\fi&#39;);
+  //     . &#39;\@multicolumn{\@alignment@ncolumns}{l}{\@@LTX@noalign{#1}}\@LTX@nonumber\@alignment@
+  // newline&#39;     . &#39;\else#1\fi&#39;);
   // # This just processes the argument in text mode, but notices whether it is &quot;empty&quot; or not.
   // # If so, tell the current row that it can safely be collapsed later on.
   // DefConstructor(&#39;\@@LTX@noalign{}&#39;, sub {
@@ -968,7 +977,8 @@
   // sub translateAttachment {
   //   my ($pos) = @_;
   //   $pos = ($pos ? ToString($pos) : &#39;&#39;);
-  //   return ($pos eq &#39;t&#39; ? &#39;top&#39; : ($pos eq &#39;b&#39; ? &#39;bottom&#39; : &#39;middle&#39;)); }    # undef meaning &#39;baseline&#39;
+  //   return ($pos eq &#39;t&#39; ? &#39;top&#39; : ($pos eq &#39;b&#39; ? &#39;bottom&#39; : &#39;middle&#39;)); }    # undef meaning
+  // &#39;baseline&#39;
 
   // #----------------------------------------------------------------------
   // # To recognize where rows &amp; columns start and stop, we need to
@@ -1023,8 +1033,9 @@
   // # colspan &gt; 1. Also, inner columns recognize \omit which removes the
   // # before &amp; after tokens which would otherwise wrap the inner column.
 
-  // DefPrimitiveI(&#39;\@tabular@begin@heading&#39;, undef, sub { AssignValue(IN_TABULAR_HEAD =&gt; 1, &#39;global&#39;); });
-  // DefPrimitiveI(&#39;\@tabular@end@heading&#39;, undef, sub { AssignValue(IN_TABULAR_HEAD =&gt; 0, &#39;global&#39;); });
+  // DefPrimitiveI(&#39;\@tabular@begin@heading&#39;, undef, sub { AssignValue(IN_TABULAR_HEAD =&gt; 1,
+  // &#39;global&#39;); }); DefPrimitiveI(&#39;\@tabular@end@heading&#39;, undef, sub {
+  // AssignValue(IN_TABULAR_HEAD =&gt; 0, &#39;global&#39;); });
 
   // DefMacroI(&#39;\@close@column&#39;,  undef, &#39;\@column@after\@@close@column&#39;);
   // DefMacroI(&#39;\@open@column&#39;,   undef, &#39;\@@open@column\@column@before&#39;);
@@ -1112,7 +1123,8 @@
   // PushValue(ALIGNMENT_LINE_COMMANDS =&gt; T_CS(&#39;\label&#39;));
 
   // DefMacroI(&#39;\@open@inner@column&#39;,  undef, &#39;\@@open@inner@column\@inner@column@before&#39;);
-  // DefMacroI(&#39;\@close@inner@column&#39;, undef, &#39;\@@eat@space\@inner@column@after\@@close@inner@column&#39;);
+  // DefMacroI(&#39;\@close@inner@column&#39;, undef,
+  // &#39;\@@eat@space\@inner@column@after\@@close@inner@column&#39;);
 
   // DefMacroI(&#39;\@inner@column@before&#39;, undef, &#39;&#39;);
   // DefMacroI(&#39;\@inner@column@after&#39;, undef, sub {
@@ -1138,14 +1150,14 @@
   //       if ($tok-&gt;equals(T_SPACE)) { }    # Skip leading space
   //       elsif (grep { $tok-&gt;equals($_) } @line_tokens) {    # Save line commands
   //         push(@lines, $stomach-&gt;invokeToken($tok)); }
-  //       elsif (Equals($tok, T_BEGIN)) {                     # Crazy... seems { doesn&#39;t &quot;block&quot; \omit!
-  //         push(@savedtokens, $tok); }
+  //       elsif (Equals($tok, T_BEGIN)) {                     # Crazy... seems { doesn&#39;t &quot;block&quot;
+  // \omit!         push(@savedtokens, $tok); }
   //       else {
-  //         if (Equals($tok, T_CS(&#39;\omit&#39;))) {    # \omit removes the before/after tokens for this column.
-  //           $$colspec{before} = $$colspec{after} = Tokens(); }
+  //         if (Equals($tok, T_CS(&#39;\omit&#39;))) {    # \omit removes the before/after tokens for this
+  // column.           $$colspec{before} = $$colspec{after} = Tokens(); }
   //         ## If we find \@@eat@space, we&#39;re at end of the columns content, so consider it empty
-  //         elsif (Equals($tok, T_CS(&#39;\@@eat@space&#39;))) {    # First non-empty token implies column is empty.
-  //           $$colspec{empty} = 1; }
+  //         elsif (Equals($tok, T_CS(&#39;\@@eat@space&#39;))) {    # First non-empty token implies column
+  // is empty.           $$colspec{empty} = 1; }
   //         $gullet-&gt;unread($tok); last; } }
   //     $gullet-&gt;unread(@savedtokens);
   //     $gullet-&gt;unread(beforeCellUnlist($$colspec{before}));
@@ -1226,8 +1238,8 @@
   //         push(@template, $t); } }
   //     # Convert the template
   //     my $ismath  = $STATE-&gt;lookupValue(&#39;IN_MATH&#39;);
-  //     my $before  = 1;                                # true if we&#39;re before a # in current column
-  //     my @pre     = ();
+  //     my $before  = 1;                                # true if we&#39;re before a # in current
+  // column     my @pre     = ();
   //     my @post    = ();
   //     my @cols    = ();
   //     my @nonreps = ();
@@ -1236,10 +1248,10 @@
   //       if ($t-&gt;equals(T_PARAM)) {
   //         $before = 0; }
   //       elsif ($t-&gt;equals(T_ALIGN)) {
-  //         if ($before) { @nonreps = @cols; @cols = (); } # A &amp; while we&#39;re before a column means Repeated columns
-  //         else {                                         # Finished column spec; add it
-  //               # Try some magic for math, so we can create a valid math matrix (maybe!)
-  //               # DAMN \halign can&#39;t be in math, anyway.
+  //         if ($before) { @nonreps = @cols; @cols = (); } # A &amp; while we&#39;re before a column means
+  // Repeated columns         else {                                         # Finished column
+  // spec; add it               # Try some magic for math, so we can create a valid math matrix
+  // (maybe!)               # DAMN \halign can&#39;t be in math, anyway.
   //               # So, to get a matrix, we&#39;ll have to rewrite the alignment!
   //           if ($ismath) {
   //             push(@pre, T_MATH); unshift(@post, T_MATH); }

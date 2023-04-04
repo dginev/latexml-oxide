@@ -326,14 +326,33 @@
 <a href="#326" id="326">326</a>
 <a href="#327" id="327">327</a>
 <a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
 </pre><pre class="rust"><code><span class="kw">use </span>kpathsea::Kpaths;
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span>std::env;
+<span class="kw">use </span>std::path::{Path, PathBuf};
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::sync::Mutex;
-<span class="kw">use </span>std::path::{Path, PathBuf};
 
 <span class="doccomment">/// configuration for filesystem search
 </span><span class="attr">#[derive(Debug, Clone, Default)]
@@ -368,7 +387,9 @@
   //         //                 p.to_string_lossy().to_string() + &quot;./..&quot;,
   //         //                 p.to_string_lossy().to_string() + &quot;./../..&quot;,
   //         //                 p.to_string_lossy().to_string() + &quot;./../../..&quot;,
-  //         //                 p.to_string_lossy().to_string() + &quot;./../../../..&quot;], // TODO: HACK, see note on INSTALLDIRS further down
+  //         //                 p.to_string_lossy().to_string() + &quot;./../../../..&quot;],
+
+  // TODO: HACK, see note on INSTALLDIRS further down
   //         None =&gt; Vec::new()
   //       }
   //     },
@@ -397,7 +418,13 @@
 <span class="doccomment">/// absolute paths start with the filesystem root - check if this is one
 </span><span class="kw">pub fn </span>is_absolute(path: <span class="kw-2">&amp;</span>str) -&gt; bool { Path::new(<span class="kw-2">&amp;</span>canonical(path)).is_absolute() }
 <span class="doccomment">/// convert a (possibly relative) file path to an absolute one
-</span><span class="kw">pub fn </span>absolute(path: <span class="kw-2">&amp;</span>str) -&gt; String { Path::new(path).canonicalize().unwrap().to_string_lossy().to_string() }
+</span><span class="kw">pub fn </span>absolute(path: <span class="kw-2">&amp;</span>str) -&gt; String {
+  Path::new(path)
+    .canonicalize()
+    .unwrap()
+    .to_string_lossy()
+    .to_string()
+}
 
 <span class="doccomment">/// Split the pathname into components (dir,name,type).
 /// If pathname is absolute, dir starts with volume or &#39;/&#39;
@@ -423,7 +450,10 @@
 <span class="doccomment">///  Simple logic for splitting a URL into protocol://base/path
 </span><span class="kw">pub fn </span>url_split(url: <span class="kw-2">&amp;</span>str) -&gt; (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str) {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = URL_RE.captures(url) {
-    (caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()), caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()))
+    (
+      caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+      caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
+    )
   } <span class="kw">else </span>{
     (url, <span class="string">&quot;index.tex&quot;</span>) <span class="comment">// Well, what other default makes sense?
   </span>}
@@ -491,7 +521,11 @@
 /// and this simplifies overall.
 </span><span class="kw">pub fn </span>candidate_pathnames(pathname: <span class="kw-2">&amp;</span>str, options: PathnameFindOptions) -&gt; Vec&lt;String&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>dirs: Vec&lt;String&gt; = Vec::new();
-  <span class="kw">let </span>canonical_pathname = <span class="kw">if </span>pathname != <span class="string">&quot;*&quot; </span>{ canonical(pathname) } <span class="kw">else </span>{ pathname.to_owned() };
+  <span class="kw">let </span>canonical_pathname = <span class="kw">if </span>pathname != <span class="string">&quot;*&quot; </span>{
+    canonical(pathname)
+  } <span class="kw">else </span>{
+    pathname.to_owned()
+  };
 
   <span class="kw">let </span>(pathdir, name, pathname_ext) = split(<span class="kw-2">&amp;</span>canonical_pathname);
 
@@ -503,7 +537,11 @@
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(paths) = options.paths {
     <span class="kw">for </span>p <span class="kw">in </span>paths {
       <span class="comment">// Complete the search paths by prepending current dir to relative paths,
-      </span><span class="kw">let </span>pp_base = <span class="kw">if </span>is_absolute(<span class="kw-2">&amp;</span>p) { canonical(<span class="kw-2">&amp;</span>p) } <span class="kw">else </span>{ concat(<span class="kw-2">&amp;</span>cwd, <span class="kw-2">&amp;</span>p) };
+      </span><span class="kw">let </span>pp_base = <span class="kw">if </span>is_absolute(<span class="kw-2">&amp;</span>p) {
+        canonical(<span class="kw-2">&amp;</span>p)
+      } <span class="kw">else </span>{
+        concat(<span class="kw-2">&amp;</span>cwd, <span class="kw-2">&amp;</span>p)
+      };
       <span class="kw">let </span>pp = concat(<span class="kw-2">&amp;</span>pp_base, <span class="kw-2">&amp;</span>pathdir);
       <span class="comment">// but only include each dir ONCE
       </span><span class="kw">if </span>!dirs.contains(<span class="kw-2">&amp;</span>pp) {

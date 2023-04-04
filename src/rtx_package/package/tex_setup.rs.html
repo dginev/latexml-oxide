@@ -1059,13 +1059,36 @@
 <a href="#1059" id="1059">1059</a>
 <a href="#1060" id="1060">1060</a>
 <a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
   <span class="macro">RegisterNamespace!</span>(<span class="string">&quot;ltx&quot;</span>, <span class="string">&quot;http://dlmf.nist.gov/LaTeXML&quot;</span>);
   <span class="macro">RegisterNamespace!</span>(<span class="string">&quot;svg&quot;</span>, <span class="string">&quot;http://www.w3.org/2000/svg&quot;</span>);
-  <span class="macro">RegisterNamespace!</span>(<span class="string">&quot;xlink&quot;</span>, <span class="string">&quot;http://www.w3.org/1999/xlink&quot;</span>); <span class="comment">// Needed for SVG
-                                                               // Not directly used, but let&#39;s stake out the ground
+  <span class="comment">// Needed for SVG
+  </span><span class="macro">RegisterNamespace!</span>(<span class="string">&quot;xlink&quot;</span>, <span class="string">&quot;http://www.w3.org/1999/xlink&quot;</span>);
+  <span class="comment">// Not directly used, but let&#39;s stake out the ground
   </span><span class="macro">RegisterNamespace!</span>(<span class="string">&quot;m&quot;</span>, <span class="string">&quot;http://www.w3.org/1998/Math/MathML&quot;</span>);
   <span class="macro">RegisterNamespace!</span>(<span class="string">&quot;xhtml&quot;</span>, <span class="string">&quot;http://www.w3.org/1999/xhtml&quot;</span>);
 
@@ -1306,11 +1329,13 @@
   //   return ($gullet-&gt;readFloat || Float(0)); }
 
   // Read a dimension
-  </span><span class="macro">DefParameterType!</span>(Dimension, sub[gullet, _inner, _extra, state] { gullet.read_dimension(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(Dimension, sub[gullet, _inner, _extra, state] {
+    gullet.read_dimension(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a Glue (aka skip)
   </span><span class="macro">DefParameterType!</span>(Glue, sub[gullet, _inner, _extra, state] { gullet.read_glue(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a MuDimension (math)
-  </span><span class="macro">DefParameterType!</span>(MuDimension, sub[gullet, _inner, _extra, state] { gullet.read_mu_dimension(state)<span class="question-mark">? </span>});
+  </span><span class="macro">DefParameterType!</span>(MuDimension, sub[gullet, _inner, _extra, state] {
+    gullet.read_mu_dimension(state)<span class="question-mark">? </span>});
   <span class="comment">// Read a MuGlue (math)
   </span><span class="macro">DefParameterType!</span>(MuGlue, sub[gullet, _inner, _extra, state] { gullet.read_mu_glue(state)<span class="question-mark">? </span>});
 
@@ -1369,7 +1394,8 @@
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token))
       }
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;Expanded&quot;</span>, gullet, state, <span class="string">&quot;was expecting an Expanded parameter value, found nothing.&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;Expanded&quot;</span>, gullet, state,
+        <span class="string">&quot;was expecting an Expanded parameter value, found nothing.&quot;</span>);
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
     }
   },
@@ -1388,7 +1414,8 @@
   // IMPORTANTLY, call packParameters early on the tokens read from the Gullet
   // to enact the neutralization and discard the temporary smuggle flag that is required
   //
-  // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a new one.
+  // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a
+  // new one.
   </span><span class="macro">DefParameterType!</span>(DefExpanded, sub[gullet, _inner, _extra, state] {
       state.set_smuggle_the(<span class="bool-val">true</span>);
       <span class="kw">let </span>expanded = <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
@@ -1422,7 +1449,8 @@
   <span class="comment">// Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
   </span><span class="macro">DefParameterType!</span>(Keyword, sub[gullet, _inner, extra, state] {
-    <span class="kw">let </span>extra_string : String = extra.iter().map(ToString::to_string).collect::&lt;Vec&lt;String&gt;&gt;().join(<span class="string">&quot;&quot;</span>);
+    <span class="kw">let </span>extra_string : String = extra.iter().map(ToString::to_string)
+      .collect::&lt;Vec&lt;String&gt;&gt;().join(<span class="string">&quot;&quot;</span>);
 
     <span class="kw">match </span>gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>extra_string], state)<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(t))),
@@ -1544,19 +1572,20 @@
   }));
 
   <span class="comment">// Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
-  </span><span class="macro">DefParameterType!</span>(OptionalUndigested, sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
-  reader_predigest =&gt; <span class="macro">undigested!</span>(),
-  optional =&gt; <span class="bool-val">true</span>,
-  reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
-    <span class="kw">if </span>arg.is_empty() {
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-    } <span class="kw">else </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>read_tokens = <span class="macro">vec!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
-      <span class="kw">let </span><span class="kw-2">mut </span>reverted_arg = arg.into_iter().map(Token::revert).collect();
-      read_tokens.append(<span class="kw-2">&amp;mut </span>reverted_arg);
-      read_tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
-      <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
-    }
+  </span><span class="macro">DefParameterType!</span>(OptionalUndigested,
+    sub[gullet, _inner, _extra, state] { gullet.read_optional(<span class="prelude-val">None</span>, state) },
+    reader_predigest =&gt; <span class="macro">undigested!</span>(),
+    optional =&gt; <span class="bool-val">true</span>,
+    reversion =&gt; <span class="macro">reversion!</span>(gullet, arg, _inner, _extra, _state, {
+      <span class="kw">if </span>arg.is_empty() {
+        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+      } <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>read_tokens = <span class="macro">vec!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>reverted_arg = arg.into_iter().map(Token::revert).collect();
+        read_tokens.append(<span class="kw-2">&amp;mut </span>reverted_arg);
+        read_tokens.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
+        <span class="prelude-val">Ok</span>(Tokens::new(read_tokens))
+      }
   }));
 
   <span class="comment">// Read a keyword value (KeyVals), that will not be digested.
@@ -1571,7 +1600,8 @@
     <span class="kw">let </span>space_token = <span class="macro">T_SPACE!</span>();
 
     <span class="kw">while </span>token.is_some() &amp;&amp; token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
-      <span class="kw">let </span><span class="kw-2">mut </span>toks : Vec&lt;Token&gt; = gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>.unwrap_or_default().unlist().into_iter().filter(|t| <span class="kw-2">*</span>t != space_token).collect();
+      <span class="kw">let </span><span class="kw-2">mut </span>toks : Vec&lt;Token&gt; = gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">?
+        </span>.unwrap_or_default().unlist().into_iter().filter(|t| <span class="kw-2">*</span>t != space_token).collect();
       <span class="kw">if </span>!toks.is_empty() {
         token = <span class="prelude-val">Some</span>(toks.remove(<span class="number">0</span>));
         <span class="kw">if </span>!toks.is_empty() {
@@ -1584,7 +1614,8 @@
     <span class="kw">match </span>token {
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t)),
       <span class="prelude-val">None </span>=&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;DefToken&quot;</span>, gullet, state, <span class="string">&quot;Expected a DefToken parameter, found nothing.&quot;</span>);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;DefToken&quot;</span>, gullet, state,
+          <span class="string">&quot;Expected a DefToken parameter, found nothing.&quot;</span>);
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       }
     }
@@ -1600,7 +1631,8 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = defn_opt {
         <span class="kw">if </span>defn.is_register() &amp;&amp; !defn.is_readonly() {
           <span class="kw">let </span>args = defn.read_arguments(gullet, state)<span class="question-mark">?</span>;
-          <span class="comment">// TODO: What is this datatype ? How does it fit the rtx typed interfaces for parameter types?
+          <span class="comment">// TODO: What is this datatype ?
+          // How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
           </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
@@ -1714,11 +1746,13 @@
       //     $gullet-&gt;readToken; }
       //   else {
       //     Error(&#39;expected&#39;, &#39;}&#39;, $gullet, &quot;A closing } was supposed to be here&quot;); }
-      //   LaTeXML::Core::Array-&gt;new(open =&gt; T_BEGIN, close =&gt; T_END, itemopen =&gt; T_BEGIN, itemclose =&gt; T_END,
+      //   LaTeXML::Core::Array-&gt;new(
+      //     open =&gt; T_BEGIN, close =&gt; T_END, itemopen =&gt; T_BEGIN, itemclose =&gt; T_END,
       //     type =&gt; LaTeXML::Package::parseParameters(ToString(&quot;Semiverbatim&quot;), &quot;CommaList&quot;)-&gt;[0],
       //     values =&gt; [@dirs]); }
       // else {
-      //   Error(&#39;expected&#39;, &#39;DirectoryList&#39;, $gullet, &quot;A DirectoryList was supposed to be here&quot;); } });
+      //   Error(&#39;expected&#39;, &#39;DirectoryList&#39;, $gullet,
+      //          &quot;A DirectoryList was supposed to be here&quot;); } });
       </span><span class="macro">unimplemented!</span>();
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   });
@@ -1739,7 +1773,8 @@
     <span class="kw">if </span>!stuff.is_empty() {
       <span class="kw">let </span>tbox = stuff.remove(<span class="number">0</span>);
       <span class="kw">let </span>csname = <span class="kw">match </span>tbox.data() {
-        DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt; w.read().unwrap().definition.get_cs_name().to_string(),
+        DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt;
+          w.read().unwrap().definition.get_cs_name().to_string(),
         <span class="kw">_ </span>=&gt; tbox.to_string()
       };
       <span class="kw">if </span>csname != <span class="string">&quot;\\hbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vtop&quot; </span>{
@@ -1860,7 +1895,8 @@
   // CommaList expects something like {balancedstuff,...}
   </span><span class="macro">DefParameterType!</span>(CommaList, sub[_gullet, _inner, _extra, _state] {
       <span class="comment">// my ($gullet, $type) = @_;
-      // my $typedef = $type &amp;&amp; LaTeXML::Package::parseParameters(ToString($type), &quot;CommaList&quot;)-&gt;[0];
+      // my $typedef = $type &amp;&amp;
+      //       LaTeXML::Package::parseParameters(ToString($type), &quot;CommaList&quot;)-&gt;[0];
       // my @items = ();
       // if ($gullet-&gt;ifNext(T_BEGIN)) {
       //   $gullet-&gt;readToken;
@@ -1984,7 +2020,13 @@
   // });
   // //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
 
-  </span><span class="kw">pub fn </span>optional_key_vals(star: bool, plus: bool, keysets: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">pub fn </span>optional_key_vals(
+    star: bool,
+    plus: bool,
+    keysets: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
+    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">if </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
       <span class="kw">let </span>kvs: KeyVals = keyvals_aux(
         gullet,
@@ -2074,8 +2116,9 @@
   //   afterDigest =&gt; sub {
   //     $_[0]-&gt;egroup; },
   //   reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // # Perverse naming convention: not script style, but in the style of a script relative to current.
-    </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[gullet, _inner, _extra, state] {
+  // # Perverse naming convention: not script style, but in the style of a script relative to
+  // current.
+  </span><span class="macro">DefParameterType!</span>(InScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_arg(state) },
   <span class="comment">//   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
@@ -2109,7 +2152,8 @@
   //**********************************************************************
   // LaTeX has a very particular notion of &quot;Undefined&quot;,
   // so let&#39;s get that squared away at the outset; it&#39;s useful for TeX, too!
-  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as \relax
+  // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
+  // \relax
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@ifundefined{}{}{}&quot;</span>, sub[gullet, (name, if_token, else_token), inner_state] {
     <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, <span class="macro">Expand!</span>(name,gullet).to_string()));
     <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs, inner_state) {

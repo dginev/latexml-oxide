@@ -286,11 +286,21 @@
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
 </pre><pre class="rust"><code><span class="comment">// use crate::argument::Argument;
 // use minilp::{ComparisonOp, Variable};
 // use quote::ToTokens;
-</span><span class="kw">use </span>std::cmp::Ordering;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
+</span><span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
+<span class="kw">use </span>std::cmp::Ordering;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 
 <span class="doccomment">/// A CurryConstraint is a simple linear constraint between named variables and literals
@@ -346,10 +356,10 @@
 //       CurryTerm::Arg(v) =&gt; quote!(
 //           args[#v].as_ref().unwrap()
 //             .get_meta().curry_level
-//             .as_ref().expect(&amp;format!(&quot;Failed to resolve the curry_level of an argument at {:?}&quot;, args)).clone()),
-//       CurryTerm::Sub(lhs, rhs) =&gt; quote!(CurryTerm::Sub(Box::new(#lhs), Box::new(#rhs))),
-//       CurryTerm::Add(lhs, rhs) =&gt; quote!(CurryTerm::Add(Box::new(#lhs), Box::new(#rhs))),
-//     });
+//             .as_ref().expect(&amp;format!(&quot;Failed to resolve the curry_level of an argument at {:?}&quot;,
+// args)).clone()),       CurryTerm::Sub(lhs, rhs) =&gt; quote!(CurryTerm::Sub(Box::new(#lhs),
+// Box::new(#rhs))),       CurryTerm::Add(lhs, rhs) =&gt; quote!(CurryTerm::Add(Box::new(#lhs),
+// Box::new(#rhs))),     });
 //   }
 // }
 
@@ -361,8 +371,9 @@
   //   match self {
   //     CurryTerm::Literal(v) =&gt; CurryTerm::Literal(*v),
   //     CurryTerm::Var(v) =&gt; CurryTerm::Var(v.clone()),
-  //     CurryTerm::Sub(lhs, rhs) =&gt; CurryTerm::Sub(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
-  //     CurryTerm::Add(lhs, rhs) =&gt; CurryTerm::Add(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
+  //     CurryTerm::Sub(lhs, rhs) =&gt; CurryTerm::Sub(Box::new(lhs.fill_arguments(args)),
+  // Box::new(rhs.fill_arguments(args))),     CurryTerm::Add(lhs, rhs) =&gt;
+  // CurryTerm::Add(Box::new(lhs.fill_arguments(args)), Box::new(rhs.fill_arguments(args))),
   //     CurryTerm::Arg(id) =&gt; {
   //       let arg = args
   //         .iter()
@@ -417,7 +428,12 @@
     }
   }
 
-  <span class="kw">pub fn </span>to_minilp&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, var_values: <span class="kw-2">&amp;mut </span>HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String, f64&gt;, rhs_minilp: <span class="kw-2">&amp;mut </span>f64, negate: bool) {
+  <span class="kw">pub fn </span>to_minilp&lt;<span class="lifetime">&#39;a</span>&gt;(
+    <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+    var_values: <span class="kw-2">&amp;mut </span>HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String, f64&gt;,
+    rhs_minilp: <span class="kw-2">&amp;mut </span>f64,
+    negate: bool,
+  ) {
     <span class="kw">use </span>CurryTerm::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
       Literal(v) =&gt; {
@@ -516,7 +532,11 @@
         <span class="macro">panic!</span>(<span class="string">&quot;Tried to solve a problem that has not filled in its arguments!&quot;</span>)
       },
       Sub(sub_left, sub_right) =&gt; {
-        new_lhs = Sub(Add(lhs.clone().into(), sub_right.clone()).into(), sub_left.clone()).simplify();
+        new_lhs = Sub(
+          Add(lhs.clone().into(), sub_right.clone()).into(),
+          sub_left.clone(),
+        )
+        .simplify();
         new_rhs = Literal(<span class="number">0</span>);
       },
       Add(<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
@@ -531,15 +551,15 @@
     CurryConstraint((new_lhs, new_cmp, new_rhs))
   }
 
-  <span class="comment">// pub fn to_minilp(&amp;self, varmap: &amp;HashMap&lt;&amp;String, Variable&gt;) -&gt; (Vec&lt;(Variable, f64)&gt;, ComparisonOp, f64) {
-  //   let (lhs, cmp, rhs) = &amp;self.0;
+  <span class="comment">// pub fn to_minilp(&amp;self, varmap: &amp;HashMap&lt;&amp;String, Variable&gt;) -&gt; (Vec&lt;(Variable, f64)&gt;,
+  // ComparisonOp, f64) {   let (lhs, cmp, rhs) = &amp;self.0;
   //   let mut rhs_minilp = if let CurryTerm::Literal(v) = rhs {
   //     (*v).into()
   //   } else {
-  //     panic!(&quot;RHS of a CurryConstraint should be a literal by the time it is solved (i.e. mapped to minilp)&quot;)
-  //   };
-  //   // A bit of silly adjustments here, as minilp only has the &quot;-or-equal&quot; variants, while the rust &quot;Ordering&quot; only has the strict relations.
-  //   let cmp_lp = match cmp {
+  //     panic!(&quot;RHS of a CurryConstraint should be a literal by the time it is solved (i.e. mapped
+  // to minilp)&quot;)   };
+  //   // A bit of silly adjustments here, as minilp only has the &quot;-or-equal&quot; variants, while the
+  // rust &quot;Ordering&quot; only has the strict relations.   let cmp_lp = match cmp {
   //     Ordering::Less =&gt; {
   //       rhs_minilp -= 1.0;
   //       ComparisonOp::Le
@@ -554,8 +574,8 @@
 
   //   lhs.to_minilp(&amp;mut var_values, &amp;mut rhs_minilp, false);
 
-  //   let lhs_minilp: Vec&lt;(Variable, f64)&gt; = var_values.into_iter().map(|(var, val)| (*varmap.get(&amp;var).unwrap(), val)).collect();
-  //   (lhs_minilp, cmp_lp, rhs_minilp)
+  //   let lhs_minilp: Vec&lt;(Variable, f64)&gt; = var_values.into_iter().map(|(var, val)|
+  // (*varmap.get(&amp;var).unwrap(), val)).collect();   (lhs_minilp, cmp_lp, rhs_minilp)
   // }
 </span>}
 

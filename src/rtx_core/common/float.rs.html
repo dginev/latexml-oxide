@@ -94,15 +94,22 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::common::error::Result;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::mouth;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
@@ -124,13 +131,15 @@
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Float {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string()))) }
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.to_string())))
+  }
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;Float[{}]&quot;</span>, <span class="self">self</span>.<span class="number">0</span>) }
 }
 
 <span class="kw">impl </span>NumericOps <span class="kw">for </span>Float {
   <span class="kw">fn </span>new(number: i64) -&gt; <span class="self">Self </span>{ Float(number <span class="kw">as </span>f64) }
-  <span class="kw">fn </span>new_f64(number:f64) -&gt; <span class="self">Self </span>{ Float(number) }
+  <span class="kw">fn </span>new_f64(number: f64) -&gt; <span class="self">Self </span>{ Float(number) }
   <span class="kw">fn </span>value_of(<span class="self">self</span>) -&gt; i64 { <span class="self">self</span>.<span class="number">0 </span><span class="kw">as </span>i64 }
   <span class="kw">fn </span>value_f64(<span class="self">self</span>) -&gt; f64 { <span class="self">self</span>.<span class="number">0 </span>}
   <span class="kw">fn </span>negate(<span class="self">self</span>) -&gt; <span class="self">Self </span>{ Float(-<span class="self">self</span>.<span class="number">0</span>) }
@@ -154,24 +163,21 @@
 }
 
 <span class="kw">impl </span>Float {
-  <span class="doccomment">/// Tight formatting of floats, where we emit them as integers when they do not have a decimal part
-  /// used in e.g. the multido.sty binding and test
-  </span><span class="kw">pub fn </span>to_tight_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    custom_float_format(<span class="self">self</span>.<span class="number">0</span>, <span class="bool-val">true</span>)
-  }
+  <span class="doccomment">/// Tight formatting of floats, where we emit them as integers when they do not have a decimal
+  /// part used in e.g. the multido.sty binding and test
+  </span><span class="kw">pub fn </span>to_tight_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { custom_float_format(<span class="self">self</span>.<span class="number">0</span>, <span class="bool-val">true</span>) }
 }
 
 <span class="doccomment">/// Utility for formatting sane numbers.
-</span><span class="kw">pub fn </span>floatformat(n:f64) -&gt; String {
-  custom_float_format(n, <span class="bool-val">false</span>)
-}
-<span class="kw">pub fn </span>custom_float_format(n:f64, tight: bool) -&gt; String {
+</span><span class="kw">pub fn </span>floatformat(n: f64) -&gt; String { custom_float_format(n, <span class="bool-val">false</span>) }
+<span class="kw">pub fn </span>custom_float_format(n: f64, tight: bool) -&gt; String {
   <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="macro">format!</span>(<span class="string">&quot;{:.5}&quot;</span>, n);
   <span class="kw">if </span>s.contains(<span class="string">&#39;.&#39;</span>) {
     s = TRAILING_ZEROS.replace(<span class="kw-2">&amp;</span>s, <span class="string">&quot;&quot;</span>).to_string();
   }
   <span class="kw">if </span>s.ends_with(<span class="string">&#39;.&#39;</span>) {
-    <span class="kw">if </span>tight { <span class="comment">// tight format does not need the trailing dot
+    <span class="kw">if </span>tight {
+      <span class="comment">// tight format does not need the trailing dot
       </span>s.pop();
     } <span class="kw">else </span>{
       s.push(<span class="string">&#39;0&#39;</span>); <span class="comment">//  Seems TeX prints .0 which in odd corner cases, people use?
@@ -181,13 +187,21 @@
 }
 
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Float {
-  <span class="kw">fn </span>from(spec:<span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-    Float(spec.parse::&lt;f64&gt;().expect(<span class="string">&quot;Float::from(&amp;str) does not handle malformed spec strings&quot;</span>))
+  <span class="kw">fn </span>from(spec: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+    Float(
+      spec
+        .parse::&lt;f64&gt;()
+        .expect(<span class="string">&quot;Float::from(&amp;str) does not handle malformed spec strings&quot;</span>),
+    )
   }
 }
 <span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>Float {
-  <span class="kw">fn </span>from(spec:String) -&gt; <span class="self">Self </span>{
-    Float(spec.parse::&lt;f64&gt;().expect(<span class="string">&quot;Float::from(String) does not handle malformed spec strings&quot;</span>))
+  <span class="kw">fn </span>from(spec: String) -&gt; <span class="self">Self </span>{
+    Float(
+      spec
+        .parse::&lt;f64&gt;()
+        .expect(<span class="string">&quot;Float::from(String) does not handle malformed spec strings&quot;</span>),
+    )
   }
 }
 </code></pre></div>

@@ -705,9 +705,145 @@
 <a href="#705" id="705">705</a>
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{VecDeque};
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+</pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
@@ -738,11 +874,9 @@
 ///! document elements (eg from \section*); this requires an additional counter
 ///! (eg. UNsection) and  mechanisms to track it.
 
-
 /// configuration for new_counter
 </span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>NewCounterOptions&lt;<span class="lifetime">&#39;ct</span>&gt;
- {
+</span><span class="kw">pub struct </span>NewCounterOptions&lt;<span class="lifetime">&#39;ct</span>&gt; {
   <span class="doccomment">/// specifies a prefix to be used in formatting ID&#39;s for document structure elements
   /// counted by this counter.  Ie. subsection 3 in section 2 might get: id=&quot;S2.SS3&quot;
   </span><span class="kw">pub </span>idprefix: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ct </span>str,
@@ -759,7 +893,13 @@
 
 <span class="doccomment">/// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
-</span><span class="kw">pub fn </span>new_counter(ctr: <span class="kw-2">&amp;</span>str, within: <span class="kw-2">&amp;</span>str, options_opt: <span class="prelude-ty">Option</span>&lt;NewCounterOptions&gt;, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>new_counter(
+  ctr: <span class="kw-2">&amp;</span>str,
+  within: <span class="kw-2">&amp;</span>str,
+  options_opt: <span class="prelude-ty">Option</span>&lt;NewCounterOptions&gt;,
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">&quot;UN{}&quot;</span>, ctr); <span class="comment">// UNctr is counter for generating ID&#39;s for UN-numbered items.
   </span><span class="kw">let </span>cctr = <span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr);
   <span class="kw">let </span>clctr = <span class="macro">s!</span>(<span class="string">&quot;\\cl@{}&quot;</span>, ctr);
@@ -789,7 +929,11 @@
     };
     <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(unctr)];
     clwithin_tokens.append(<span class="kw-2">&amp;mut </span>x);
-    state.assign_value(<span class="kw-2">&amp;</span>clwithin, Stored::Tokens(Tokens::new(clwithin_tokens)), <span class="prelude-val">Some</span>(Scope::Global));
+    state.assign_value(
+      <span class="kw-2">&amp;</span>clwithin,
+      Stored::Tokens(Tokens::new(clwithin_tokens)),
+      <span class="prelude-val">Some</span>(Scope::Global),
+    );
 
     <span class="kw">let </span><span class="kw-2">mut </span>unx = <span class="kw">if let </span><span class="prelude-val">Some</span>(clun) = state.lookup_tokens(<span class="kw-2">&amp;</span>clunwithin) {
       clun.unlist()
@@ -799,12 +943,20 @@
     <span class="kw">let </span><span class="kw-2">mut </span>clunwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(unctr)];
     clunwithin_tokens.append(<span class="kw-2">&amp;mut </span>unx);
 
-    state.assign_value(<span class="kw-2">&amp;</span>clunwithin, Stored::Tokens(Tokens::new(clunwithin_tokens)), <span class="prelude-val">Some</span>(Scope::Global))
+    state.assign_value(
+      <span class="kw-2">&amp;</span>clunwithin,
+      Stored::Tokens(Tokens::new(clunwithin_tokens)),
+      <span class="prelude-val">Some</span>(Scope::Global),
+    )
   }
 
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>options) = options_opt {
     <span class="kw">if </span>!options.nested.is_empty() {
-      state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;nested_counters_{}&quot;</span>, ctr), options.nested.clone(), <span class="prelude-val">Some</span>(Scope::Global))
+      state.assign_value(
+        <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;nested_counters_{}&quot;</span>, ctr),
+        options.nested.clone(),
+        <span class="prelude-val">Some</span>(Scope::Global),
+      )
     }
   }
 
@@ -813,10 +965,12 @@
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{}&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, inner_state| {
-      <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string, inner_state).value_of();
-      <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
-    }))),
+    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+      <span class="kw">move </span>|_gullet, _args, inner_state| {
+        <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string, inner_state).value_of();
+        <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
+      },
+    ))),
     <span class="prelude-val">Some</span>(ExpandableOptions {
       scope: <span class="prelude-val">Some</span>(Scope::Global),
       ..ExpandableOptions::default()
@@ -842,7 +996,11 @@
     <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>opt) =&gt; opt.idprefix.to_string(),
   };
   <span class="kw">if </span>!prefix.is_empty() {
-    state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;@ID@prefix@{}&quot;</span>, ctr), prefix.to_string(), <span class="prelude-val">Some</span>(Scope::Global));
+    state.assign_value(
+      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;@ID@prefix@{}&quot;</span>, ctr),
+      prefix.to_string(),
+      <span class="prelude-val">Some</span>(Scope::Global),
+    );
   } <span class="kw">else </span>{
     prefix = state.lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;@ID@prefix@{}&quot;</span>, ctr));
     <span class="kw">if </span>prefix.is_empty() {
@@ -870,15 +1028,18 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, _inner_state| {
-          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-            <span class="string">&quot;\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname&quot;</span>,
-            idwithin,
-            idwithin,
-            prefix,
-            ctr_string
-          )))
-        }))),
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+          <span class="kw">move </span>|_gullet, _args, _inner_state| {
+            <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+              <span class="string">&quot;\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
+\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname&quot;</span>,
+              idwithin,
+              idwithin,
+              prefix,
+              ctr_string
+            )))
+          },
+        ))),
         <span class="prelude-val">Some</span>(ExpandableOptions {
           scope: <span class="prelude-val">Some</span>(Scope::Global),
           ..ExpandableOptions::default()
@@ -889,9 +1050,15 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(<span class="kw">move </span>|_gullet, _args, _inner_state| {
-          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}\\csname @{}@ID\\endcsname&quot;</span>, prefix, ctr_string)))
-        }))),
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+          <span class="kw">move </span>|_gullet, _args, _inner_state| {
+            <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+              <span class="string">&quot;{}\\csname @{}@ID\\endcsname&quot;</span>,
+              prefix,
+              ctr_string
+            )))
+          },
+        ))),
         <span class="prelude-val">Some</span>(ExpandableOptions {
           scope: <span class="prelude-val">Some</span>(Scope::Global),
           ..ExpandableOptions::default()
@@ -944,11 +1111,23 @@
 
 <span class="doccomment">/// Analog of `\stepcounter`, steps the counter and returns the expansion of
 /// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
-</span><span class="kw">pub fn </span>step_counter(ctr: <span class="kw-2">&amp;</span>str, noreset: bool, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">pub fn </span>step_counter(
+  ctr: <span class="kw-2">&amp;</span>str,
+  noreset: bool,
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>value = counter_value(ctr, state);
-  state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr), value.add(Number::new(<span class="number">1</span>)), <span class="prelude-val">Some</span>(Scope::Global));
+  state.assign_value(
+    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr),
+    value.add(Number::new(<span class="number">1</span>)),
+    <span class="prelude-val">Some</span>(Scope::Global),
+  );
   state.after_assignment(stomach.get_gullet_mut());
-  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr)).unwrap().value_of()));
+  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(state
+    .lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr))
+    .unwrap()
+    .value_of()));
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
@@ -972,13 +1151,25 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a conceptually better organization?
-///
-</span><span class="kw">pub fn </span>step_counter_gullet(ctr: <span class="kw-2">&amp;</span>str, noreset: bool, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="doccomment">/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a
+/// conceptually better organization?
+</span><span class="kw">pub fn </span>step_counter_gullet(
+  ctr: <span class="kw-2">&amp;</span>str,
+  noreset: bool,
+  gullet: <span class="kw-2">&amp;mut </span>Gullet,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>value = counter_value(ctr, state);
-  state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr), value.add(Number::new(<span class="number">1</span>)), <span class="prelude-val">Some</span>(Scope::Global));
+  state.assign_value(
+    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr),
+    value.add(Number::new(<span class="number">1</span>)),
+    <span class="prelude-val">Some</span>(Scope::Global),
+  );
   state.after_assignment(gullet);
-  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr)).unwrap().value_of()));
+  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(state
+    .lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, ctr))
+    .unwrap()
+    .value_of()));
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
@@ -1007,7 +1198,12 @@
 /// suitable for use in a `properties` option to constructors.
 /// The `id` is generated in parallel with the reference number
 /// to assist debugging.
-</span><span class="kw">pub fn </span>ref_step_counter(ctype: <span class="kw-2">&amp;</span>str, noreset: bool, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
+</span><span class="kw">pub fn </span>ref_step_counter(
+  ctype: <span class="kw-2">&amp;</span>str,
+  noreset: bool,
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">let </span>ctr = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;counter_for_type&quot;</span>, ctype) {
     <span class="prelude-val">Some</span>(Stored::String(ctr)) =&gt; ctr.to_string(),
     <span class="kw">_ </span>=&gt; ctype.to_string(),
@@ -1060,7 +1256,12 @@
   <span class="kw">let </span>invocation;
   {
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    invocation = build_invocation(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(ctype)))], gullet, state)<span class="question-mark">?</span>;
+    invocation = build_invocation(
+      <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>),
+      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(ctype)))],
+      gullet,
+      state,
+    )<span class="question-mark">?</span>;
   }
 
   <span class="kw">let </span>tags = stomach.digest(invocation, state)<span class="question-mark">?</span>;
@@ -1075,7 +1276,11 @@
   <span class="kw">let </span>scope = <span class="macro">s!</span>(<span class="string">&quot;{ctr}:{refnum}&quot;</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>receiver = VecDeque::new();
   receiver.push_front(Stored::String(scope.clone()));
-  state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scopes_for_counter:{ctr}&quot;</span>), receiver, <span class="prelude-val">Some</span>(Scope::Local));
+  state.assign_value(
+    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scopes_for_counter:{ctr}&quot;</span>),
+    receiver,
+    <span class="prelude-val">Some</span>(Scope::Local),
+  );
   state.activate_scope(<span class="kw-2">&amp;</span>scope);
 
   <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(
@@ -1098,10 +1303,20 @@
     <span class="kw">let </span>hj_id = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\_PREEMPTED_ID_{ctr}&quot;</span>));
     <span class="comment">// First, restore the \the&lt;ctr&gt; and \the&lt;ctr&gt;@ID macros to defaults
     </span><span class="kw">if </span>!norefnum &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>hj_refnum).is_some() {
-      state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}&quot;</span>)), hj_refnum, <span class="prelude-val">Some</span>(Scope::Global), gullet);
+      state.let_i(
+        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}&quot;</span>)),
+        hj_refnum,
+        <span class="prelude-val">Some</span>(Scope::Global),
+        gullet,
+      );
     }
     <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>hj_id).is_some() {
-      state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}@ID&quot;</span>)), hj_id, <span class="prelude-val">Some</span>(Scope::Global), gullet);
+      state.let_i(
+        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}@ID&quot;</span>)),
+        hj_id,
+        <span class="prelude-val">Some</span>(Scope::Global),
+        gullet,
+      );
     }
     <span class="kw">let </span>_label = state.lookup_value(<span class="string">&quot;PEEKED_LABEL&quot;</span>);
     <span class="comment">// TODO: Continue once we know the type of &quot;mapper&quot;
@@ -1111,16 +1326,17 @@
     //     if !state.lookup_neaning(hj_refnum) {    // Save for later
     //       state.let_i(&amp;hj_refnum, T_CS!(s!(&quot;\\the{}&quot;,ctr)), Some(Scope::Global));
     //     }
-    //     def_macro(T_CS!(s!(&quot;\\the{}&quot;,ctr)), None, fixedrefnum, Some(ExpandableOptions { scope: Some(Scope::Global),
-    // ..ExpandableOptions::default()}), state);   }
+    //     def_macro(T_CS!(s!(&quot;\\the{}&quot;,ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
+    // Some(Scope::Global), ..ExpandableOptions::default()}), state);   }
     //   if fixedid {
     //     if state.lookup_meaning(&amp;hj_id).is_none() {        // Save for later
     //       state.let_i(&amp;hj_id, T_CS!(s!(&quot;\\the{}@ID&quot;,ctr)), Some(Scope::Global));
     //     }
-    //     def_macro(T_CS!(s!(&quot;\\the{}@ID&quot;,ctr)), None, fixedid, Some(ExpandableOptions { scope: Some(Scope::Global),
-    // ..ExpandableOptions::default()}), state);   }
+    //     def_macro(T_CS!(s!(&quot;\\the{}@ID&quot;,ctr)), None, fixedid, Some(ExpandableOptions { scope:
+    // Some(Scope::Global), ..ExpandableOptions::default()}), state);   }
     //   state.remove_value(&quot;PEEKED_LABEL&quot;); // CONSUME the label
-    //   state.assign_value(&quot;PROCESSED_LABEL&quot;, label, Some(Scope::Global));    // Note that we&#39;ve consumed the label
+    //   state.assign_value(&quot;PROCESSED_LABEL&quot;, label, Some(Scope::Global));    // Note that we&#39;ve
+    // consumed the label
   </span>}
 }
 
@@ -1134,14 +1350,20 @@
     <span class="kw">if </span>processed.is_empty() || processed != label {
       <span class="comment">// Only if not already processed
       </span>state.remove_value(<span class="string">&quot;PROCESSED_LABEL&quot;</span>);
-      state.assign_value(<span class="string">&quot;PEEKED_LABEL&quot;</span>, Stored::String(label.into_owned()), <span class="prelude-val">Some</span>(Scope::Global));
+      state.assign_value(
+        <span class="string">&quot;PEEKED_LABEL&quot;</span>,
+        Stored::String(label.into_owned()),
+        <span class="prelude-val">Some</span>(Scope::Global),
+      );
     }
   }
 }
 
 <span class="kw">fn </span>deactivate_counter_scope(ctr: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="comment">//  print STDERR &quot;Unusing scopes for $ctr\n&quot;;
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stored_scopes)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scopes_for_counter:{ctr}&quot;</span>)) {
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stored_scopes)) =
+    state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scopes_for_counter:{ctr}&quot;</span>))
+  {
     <span class="kw">for </span>scope_stored <span class="kw">in </span>stored_scopes.clone() {
       <span class="kw">if let </span>Stored::String(scope) = scope_stored {
         state.deactivate_scope(<span class="kw-2">&amp;</span>scope);
@@ -1151,8 +1373,10 @@
     }
   }
 
-  <span class="comment">// TODO: if we ever want to unshift from the nested_counters, we&#39;ll need to also use Stored::VecDequeStored for them.
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecString(stored_counters)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;nested_counters_{ctr}&quot;</span>)) {
+  <span class="comment">// TODO: if we ever want to unshift from the nested_counters, we&#39;ll need to also use
+  // Stored::VecDequeStored for them.
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecString(stored_counters)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;nested_counters_{ctr}&quot;</span>))
+  {
     <span class="kw">for </span>inner_ctr <span class="kw">in </span>stored_counters.clone() {
       deactivate_counter_scope(<span class="kw-2">&amp;</span>inner_ctr, state);
     }
@@ -1163,7 +1387,11 @@
 /// Like `RefStepCounter`, but only steps the &quot;uncounter&quot;,
 /// and returns only the id;  This is useful for unnumbered cases
 /// of objects that normally get both a refnum and id.
-</span><span class="kw">pub fn </span>ref_step_id(ctype: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
+</span><span class="kw">pub fn </span>ref_step_id(
+  ctype: <span class="kw-2">&amp;</span>str,
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">let </span>ctr = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;counter_for_type&quot;</span>, ctype) {
     <span class="prelude-val">Some</span>(map) =&gt; map.to_string(),
     <span class="prelude-val">None </span>=&gt; ctype.to_string(),
@@ -1196,7 +1424,10 @@
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
-    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{ctr}&quot;</span>)).unwrap().value_of())),
+    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(state
+      .lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{ctr}&quot;</span>))
+      .unwrap()
+      .value_of())),
     <span class="prelude-val">Some</span>(ExpandableOptions {
       scope: <span class="prelude-val">Some</span>(Scope::Global),
       ..ExpandableOptions::default()
@@ -1211,7 +1442,11 @@
 }
 
 <span class="doccomment">/// Create id, and tags for an itemize type \item
-</span><span class="kw">pub fn </span>ref_step_item_counter(tag_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
+</span><span class="kw">pub fn </span>ref_step_item_counter(
+  tag_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;,
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">let </span>counter = state.lookup_string(<span class="string">&quot;itemcounter&quot;</span>);
   <span class="kw">let </span>n = state.lookup_int(<span class="string">&quot;itemization_items&quot;</span>);
   state.assign_value(<span class="string">&quot;itemization_items&quot;</span>, n + <span class="number">1</span>, <span class="prelude-val">None</span>);
@@ -1268,7 +1503,15 @@
     ]);
     tag_tokens.extend(reverted_tag);
     tag_tokens.push(<span class="macro">T_END!</span>());
-    tag_tokens.extend(build_invocation(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(counter)))], gullet, state)<span class="question-mark">?</span>.unlist());
+    tag_tokens.extend(
+      build_invocation(
+        <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>),
+        <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(counter)))],
+        gullet,
+        state,
+      )<span class="question-mark">?
+      </span>.unlist(),
+    );
     tag_tokens.push(<span class="macro">T_END!</span>());
 
     <span class="kw">let </span>tags = stomach.digest(tag_tokens, state)<span class="question-mark">?</span>;
@@ -1321,7 +1564,10 @@
   </span><span class="kw">let </span>level = state.lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{counter}level&quot;</span>)) + <span class="number">1</span>; <span class="comment">// level for lists of specific type
   </span><span class="macro">AssignRegister!</span>(
     <span class="string">&quot;\\itemsep&quot;</span>,
-    state.lookup_dimension(<span class="string">&quot;\\lx@default@itemsep&quot;</span>).unwrap_or_default().into(),
+    state
+      .lookup_dimension(<span class="string">&quot;\\lx@default@itemsep&quot;</span>)
+      .unwrap_or_default()
+      .into(),
     Vec::new(),
     state
   );
@@ -1339,8 +1585,15 @@
     <span class="kw">let </span>itype_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{itype}@item&quot;</span>));
     state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\item&quot;</span>), itype_cs, <span class="prelude-val">None</span>, gullet);
   }
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\normal@par&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// In case within odd environment.
-  </span>def_macro(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@listctr&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(usecounter)), <span class="prelude-val">None</span>, state);
+  <span class="comment">// In case within odd environment.
+  </span>state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\normal@par&quot;</span>), <span class="prelude-val">None</span>, gullet);
+  def_macro(
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\@listctr&quot;</span>),
+    <span class="prelude-val">None</span>,
+    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(usecounter)),
+    <span class="prelude-val">None</span>,
+    state,
+  );
   <span class="comment">// Now arrange that this list&#39;s id&#39;s are relative to the current (outer) item (if any)
   // And that the items within this list&#39;s id&#39;s are relative to this (new) list.
   </span>state.assign_value(<span class="string">&quot;itemcounter&quot;</span>, Stored::String(usecounter.clone()), <span class="prelude-val">None</span>);
@@ -1354,7 +1607,13 @@
     </span><span class="kw">let </span>outerusecounter = <span class="macro">s!</span>(<span class="string">&quot;{outercounter}{}&quot;</span>, <span class="macro">roman!</span>(outerlevel).to_string());
     <span class="kw">let </span>thectr = <span class="macro">s!</span>(<span class="string">&quot;\\the{listcounter}@ID&quot;</span>);
     <span class="kw">let </span>theexpansion = <span class="macro">s!</span>(<span class="string">&quot;\\the{outerusecounter}@ID.I\\arabic{{{listcounter}}}&quot;</span>);
-    def_macro(<span class="macro">T_CS!</span>(thectr), <span class="prelude-val">None</span>, mouth::tokenize_internal(<span class="kw-2">&amp;</span>theexpansion), <span class="prelude-val">None</span>, state);
+    def_macro(
+      <span class="macro">T_CS!</span>(thectr),
+      <span class="prelude-val">None</span>,
+      mouth::tokenize_internal(<span class="kw-2">&amp;</span>theexpansion),
+      <span class="prelude-val">None</span>,
+      state,
+    );
 
     <span class="comment">// AND reset this list&#39;s counter when the outer item is stepped
     </span><span class="kw">let </span><span class="kw-2">mut </span>cl_toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(listcounter)];
@@ -1362,13 +1621,21 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(tks)) = state.lookup_value(<span class="kw-2">&amp;</span>cs_name) {
       cl_toks.extend(tks.clone().unlist());
     }
-    state.assign_value(<span class="kw-2">&amp;</span>cs_name, Stored::Tokens(Tokens::new(cl_toks)), <span class="prelude-val">Some</span>(Scope::Global));
+    state.assign_value(
+      <span class="kw-2">&amp;</span>cs_name,
+      Stored::Tokens(Tokens::new(cl_toks)),
+      <span class="prelude-val">Some</span>(Scope::Global),
+    );
   }
   <span class="comment">// format the id of \item&#39;s relative to the id of this list
   </span><span class="kw">let </span>useexp = mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\the{listcounter}@ID.i\\@{usecounter}@ID&quot;</span>));
   def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{usecounter}@ID&quot;</span>)), <span class="prelude-val">None</span>, useexp, <span class="prelude-val">None</span>, state);
 
-  <span class="kw">let </span><span class="kw-2">mut </span>series = <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = options.series { s.to_string() } <span class="kw">else </span>{ String::new() };
+  <span class="kw">let </span><span class="kw-2">mut </span>series = <span class="kw">if let </span><span class="prelude-val">Some</span>(s) = options.series {
+    s.to_string()
+  } <span class="kw">else </span>{
+    String::new()
+  };
   <span class="kw">if let </span><span class="prelude-val">Some</span>(start) = options.start {
     <span class="macro">SetCounter!</span>(usecounter, start, stomach, state);
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
@@ -1395,7 +1662,12 @@
 }
 
 <span class="doccomment">/// Copies the current id, tags, and inlist counter values into whatsit properties
-</span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit, _stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) {
+</span><span class="kw">pub fn </span>rescue_caption_counters(
+  captype: <span class="kw-2">&amp;</span>str,
+  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
+  _stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  state: <span class="kw-2">&amp;mut </span>State,
+) {
   <span class="kw">let </span>tagskey = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{captype}_tags&quot;</span>);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = state.remove_value(tagskey) {
     state.assign_value(tagskey, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));

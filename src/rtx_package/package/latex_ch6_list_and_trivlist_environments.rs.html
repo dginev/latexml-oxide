@@ -103,8 +103,13 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">LoadDefinitions!</span>(state, {
+
+<span class="attr">#[rustfmt::skip]
+</span><span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//======================================================================
   // C.6.3 The list and trivlist environments.
   //======================================================================
@@ -150,14 +155,15 @@
 
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{trivlist}&quot;</span>,
     <span class="string">&quot;&lt;ltx:itemize&gt;#body&lt;/ltx:itemize&gt;&quot;</span>,
-    properties =&gt; sub[stomach, _args, state] { begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state) },
+    properties =&gt; sub[stomach, _args, state] {
+      begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state) },
     before_digest_end =&gt; { <span class="macro">Digest!</span>(<span class="string">&quot;\\par&quot;</span>)<span class="question-mark">?</span>; }
   );
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\trivlist@item&quot;</span>, <span class="string">&quot;\\par\\trivlist@item@&quot;</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\trivlist@item@ OptionalUndigested&quot;</span>,
-    <span class="string">&quot;&lt;ltx:item xml:id=&#39;#id&#39; itemsep=&#39;#itemsep&#39;&gt;\
-      &lt;ltx:tags&gt;&lt;ltx:tag&gt;#tag&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;&quot;</span>,    <span class="comment">// At least an empty tag! ?
+    <span class="string">&quot;&lt;ltx:item xml:id=&#39;#id&#39; itemsep=&#39;#itemsep&#39;&gt;&lt;ltx:tags&gt;&lt;ltx:tag&gt;#tag&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;&quot;</span>,
+    <span class="comment">// At least an empty tag! ?
     </span>properties =&gt; sub[stomach, args, state] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="number">0</span>] {
         <span class="kw">if let </span>DigestedData::Postponed(<span class="kw-2">ref </span>tag_tokens) = arg.data() {

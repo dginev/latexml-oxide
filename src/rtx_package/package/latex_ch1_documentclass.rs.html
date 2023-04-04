@@ -90,6 +90,7 @@
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>OPTS_REGEX: Regex = Regex::new(<span class="string">r&quot;,\s*&quot;</span>).unwrap();
@@ -131,7 +132,8 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\warn@unusedclassoptions&quot;</span>, sub[stomach,_args,state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecString(unused)) = state.lookup_value(<span class="string">&quot;@unusedoptionlist&quot;</span>) {
       <span class="kw">if </span>!unused.is_empty() {
-        <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;options&quot;</span>, stomach, state, <span class="string">&quot;Unused global options: {}&quot;</span>,unused.join(<span class="string">&quot;,&quot;</span>));
+        <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;options&quot;</span>, stomach, state,
+              <span class="string">&quot;Unused global options: {}&quot;</span>,unused.join(<span class="string">&quot;,&quot;</span>));
         state.assign_value(<span class="string">&quot;@unusedoptionlist&quot;</span>, Stored::VecString(Vec::new()), <span class="prelude-val">None</span>);
       }
     }
@@ -150,8 +152,8 @@
   //     $options = [($options ? split(/,\s*/, ToString($options)) : ())];
   //     # Watch out; In principle, compatibility mode wants a .sty, not a .cls!!!
   //     # But, we&#39;d prefer .cls, since we&#39;ll have better bindings.
-  //     # And in fact, nobody&#39;s likely to write a binding for a .sty that wants to be a class anyway.
-  //     # So, we&#39;ll just try for a .cls, punting to OmniBus if needed.
+  //     # And in fact, nobody&#39;s likely to write a binding for a .sty that wants to be a class
+  // anyway.     # So, we&#39;ll just try for a .cls, punting to OmniBus if needed.
   //     # If we start wanting to read style files by default, we&#39;ll still need to handle this
   //     # specially, since class (or sty files pretending to be) cover so much more.
   //     LoadClass($class, options =&gt; $options, after =&gt; Tokens(T_CS(&#39;\compat@loadpackages&#39;)));
@@ -166,13 +168,13 @@
   //         RequirePackage($option); }
   //       else {
   //         $hadmissing = 1;
-  //         Info(&#39;unexpected&#39;, $option, $_[0], &quot;Unexpected option &#39;$option&#39; passed to $name.$type&quot;); } }
-  //     # Often, in compatibility mode, the options are used to load what are effectively
-  //     # document classes for specific journals, etc that introduce a bunch of new frontmatter!
-  //     # To try to recover from this, we&#39;ll go ahead &amp; load the OmniBus class.
+  //         Info(&#39;unexpected&#39;, $option, $_[0], &quot;Unexpected option &#39;$option&#39; passed to
+  // $name.$type&quot;); } }     # Often, in compatibility mode, the options are used to load what are
+  // effectively     # document classes for specific journals, etc that introduce a bunch of new
+  // frontmatter!     # To try to recover from this, we&#39;ll go ahead &amp; load the OmniBus class.
   //     if ($hadmissing &amp;&amp; !LookupValue(&#39;OmniBus.cls_loaded&#39;)) {
-  //       Info(&#39;note&#39;, &#39;OmniBus&#39;, $_[0], &quot;Loading OmniBus class to attempt to cover missing options&quot;);
-  //       LoadClass(&#39;OmniBus&#39;); }
+  //       Info(&#39;note&#39;, &#39;OmniBus&#39;, $_[0], &quot;Loading OmniBus class to attempt to cover missing
+  // options&quot;);       LoadClass(&#39;OmniBus&#39;); }
   //     AssignValue(&#39;@unusedoptionlist&#39;, []); });
 
   // sub onlyPreamble {

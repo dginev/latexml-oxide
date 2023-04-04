@@ -96,6 +96,8 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//======================================================================
@@ -134,13 +136,15 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textasciitilde&quot;</span>, <span class="string">&quot;~&quot;</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textcompwordmark&quot;</span>, <span class="string">&quot;&quot;</span>); <span class="comment">// ???
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textunderscore&quot;</span>, <span class="string">&quot;_&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textvisiblespace&quot;</span>, <span class="string">&quot;\u{2423}&quot;</span>); <span class="comment">// SYMBOL FOR SPACE;  Not really the right symbol!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textellipsis&quot;</span>, <span class="string">&quot;\u{2026}&quot;</span>); <span class="comment">// HORIZONTAL ELLIPSIS
+  <span class="comment">// SYMBOL FOR SPACE;  Not really the right symbol!
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textvisiblespace&quot;</span>, <span class="string">&quot;\u{2423}&quot;</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textellipsis&quot;</span>, <span class="string">&quot;\u{2026}&quot;</span>); <span class="comment">// HORIZONTAL ELLIPSIS
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textregistered&quot;</span>, <span class="string">&quot;\u{00AE}&quot;</span>); <span class="comment">// REGISTERED SIGN
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\texttrademark&quot;</span>, <span class="string">&quot;\u{2122}&quot;</span>); <span class="comment">// TRADE MARK SIGN
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\textsuperscript{}&quot;</span>, <span class="string">&quot;&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;&quot;</span>,  mode =&gt; <span class="string">&quot;text&quot;</span>);
   <span class="comment">// This is something coming from xetex/xelatex ? Why define this way?
-  //DefConstructor!(&quot;\\realsuperscript{}&#39;, &quot;&lt;ltx:text yoffset=&#39;0.5em&#39; _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;);
+  //DefConstructor!(&quot;\\realsuperscript{}&#39;, &quot;&lt;ltx:text yoffset=&#39;0.5em&#39;
+  // _noautoclose=&#39;1&#39;&gt;#1&lt;/ltx:text&gt;&quot;);
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\realsuperscript{}&quot;</span>, <span class="string">&quot;&lt;ltx:sup&gt;#1&lt;/ltx:sup&gt;&quot;</span>,  mode =&gt; <span class="string">&quot;text&quot;</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textordfeminine&quot;</span>, <span class="string">&quot;\u{00AA}&quot;</span>); <span class="comment">// FEMININE ORDINAL INDICATOR
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\textordmasculine&quot;</span>, <span class="string">&quot;\u{00BA}&quot;</span>); <span class="comment">// MASCULINE ORDINAL INDICATOR

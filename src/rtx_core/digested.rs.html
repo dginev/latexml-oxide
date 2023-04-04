@@ -433,20 +433,62 @@
 <a href="#433" id="433">433</a>
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
-</pre><pre class="rust"><code><span class="doccomment">///! Interface layer for the full range of digested objects
-
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+</pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="doccomment">///! Interface layer for the full range of digested objects
 </span><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock}; <span class="comment">//,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
 </span><span class="kw">use </span>libxml::tree::Node;
 
-<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 <span class="kw">use </span><span class="kw">crate</span>::comment::Comment;
-<span class="kw">use </span><span class="kw">crate</span>::keyvals::KeyVals;
-<span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -456,9 +498,13 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span><span class="kw">crate</span>::state::{State};
+<span class="kw">use </span><span class="kw">crate</span>::keyvals::KeyVals;
+<span class="kw">use </span><span class="kw">crate</span>::list::List;
+<span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
+<span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
+<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 
 <span class="doccomment">/// An `Arc`-guarded abstraction for any object encountered at the &quot;digested&quot; phase of processing
 </span><span class="comment">// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
@@ -570,10 +616,18 @@
 <span class="comment">// Important: we need to postpone the creation of a box until a time where
 // we have the most current font information
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(<span class="macro">ExplodeText!</span>(value))))) }
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; Digested {
+    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+      <span class="macro">ExplodeText!</span>(value),
+    ))))
+  }
 }
 <span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: String) -&gt; Digested { Digested(Arc::new(DigestedData::Postponed(Tokens::new(<span class="macro">ExplodeText!</span>(value))))) }
+  <span class="kw">fn </span>from(value: String) -&gt; Digested {
+    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+      <span class="macro">ExplodeText!</span>(value),
+    ))))
+  }
 }
 <span class="kw">impl </span>From&lt;Tokens&gt; <span class="kw">for </span>Digested {
   <span class="kw">fn </span>from(value: Tokens) -&gt; Digested { Digested(Arc::new(DigestedData::Postponed(value))) }
@@ -585,13 +639,17 @@
   <span class="kw">fn </span>from(value: List) -&gt; Digested { Digested(Arc::new(DigestedData::List(value))) }
 }
 <span class="kw">impl </span>From&lt;Whatsit&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: Whatsit) -&gt; Digested { Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value)))) }
+  <span class="kw">fn </span>from(value: Whatsit) -&gt; Digested {
+    Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value))))
+  }
 }
 <span class="kw">impl </span>From&lt;KeyVals&gt; <span class="kw">for </span>Digested {
   <span class="kw">fn </span>from(value: KeyVals) -&gt; Digested { Digested(Arc::new(DigestedData::KeyVals(value))) }
 }
 <span class="kw">impl </span>From&lt;RegisterValue&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: RegisterValue) -&gt; Digested { Digested(Arc::new(DigestedData::RegisterValue(value))) }
+  <span class="kw">fn </span>from(value: RegisterValue) -&gt; Digested {
+    Digested(Arc::new(DigestedData::RegisterValue(value)))
+  }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Digested&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
@@ -651,7 +709,11 @@
       TBox(<span class="kw-2">ref </span>b) =&gt; b.get_locator(),
       List(<span class="kw-2">ref </span>l) =&gt; l.get_locator(),
       Comment(<span class="kw-2">ref </span>c) =&gt; c.get_locator(),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.read().unwrap().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w
+        .read()
+        .unwrap()
+        .get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
       KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.get_locator(), <span class="comment">// KeyVals locator?
       </span>RegisterValue(<span class="kw-2">ref </span>rv) =&gt; rv.get_locator(),
       Postponed(<span class="kw-2">ref </span>_t) =&gt; <span class="prelude-val">None</span>, <span class="comment">// Tokens locator?
@@ -675,7 +737,9 @@
   <span class="kw">fn </span>unlist(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Digested&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[<span class="self">self</span>.clone()],
+      TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; {
+        <span class="macro">vec!</span>[<span class="self">self</span>.clone()]
+      },
       List(<span class="kw-2">ref </span>l) =&gt; l.unlist(),
     }
   }
@@ -712,7 +776,13 @@
       // Digested::TBox(ref b) =&gt; b.set_property(key, value),
       // Digested::List(ref l) =&gt; l.set_property(key, value),
       </span>DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt; w.write().unwrap().set_property(key, value),
-      DigestedData::List(<span class="kw-2">ref </span>_l) =&gt; <span class="macro">Debug!</span>(<span class="string">&quot;ignore&quot;</span>, <span class="string">&quot;set_property&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">format!</span>(<span class="string">&quot;List::set_property({key},_)&quot;</span>)),
+      DigestedData::List(<span class="kw-2">ref </span>_l) =&gt; <span class="macro">Debug!</span>(
+        <span class="string">&quot;ignore&quot;</span>,
+        <span class="string">&quot;set_property&quot;</span>,
+        <span class="prelude-val">None</span>,
+        <span class="prelude-val">None</span>,
+        <span class="macro">format!</span>(<span class="string">&quot;List::set_property({key},_)&quot;</span>)
+      ),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
   }
@@ -722,7 +792,11 @@
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw-2">ref </span>b) =&gt; b.get_property(key),
       List(<span class="kw-2">ref </span>l) =&gt; l.get_property(key),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.read().unwrap().get_property(key).map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w
+        .read()
+        .unwrap()
+        .get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
   }
@@ -751,11 +825,23 @@
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw-2">ref </span>b) =&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;digested&quot;</span>, <span class="string">&quot;get_body&quot;</span>, <span class="self">self</span>, <span class="prelude-val">None</span>, <span class="macro">s!</span>(<span class="string">&quot;Called get_body on Box: {:?}&quot;</span>, b));
+        <span class="macro">Error!</span>(
+          <span class="string">&quot;digested&quot;</span>,
+          <span class="string">&quot;get_body&quot;</span>,
+          <span class="self">self</span>,
+          <span class="prelude-val">None</span>,
+          <span class="macro">s!</span>(<span class="string">&quot;Called get_body on Box: {:?}&quot;</span>, b)
+        );
         <span class="prelude-val">None
       </span>},
       List(<span class="kw-2">ref </span>l) =&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;digested&quot;</span>, <span class="string">&quot;get_body&quot;</span>, <span class="self">self</span>, <span class="prelude-val">None</span>, <span class="macro">s!</span>(<span class="string">&quot;Called get_body on List: {:?}&quot;</span>, l));
+        <span class="macro">Error!</span>(
+          <span class="string">&quot;digested&quot;</span>,
+          <span class="string">&quot;get_body&quot;</span>,
+          <span class="self">self</span>,
+          <span class="prelude-val">None</span>,
+          <span class="macro">s!</span>(<span class="string">&quot;Called get_body on List: {:?}&quot;</span>, l)
+        );
         <span class="prelude-val">None
       </span>},
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.read().unwrap().get_body(),
@@ -776,13 +862,22 @@
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw-2">ref </span>b) =&gt; b.get_font(state),
       List(<span class="kw-2">ref </span>l) =&gt; l.get_font(state),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="prelude-val">Ok</span>(w.read().unwrap().get_font(state)<span class="question-mark">?</span>.map(|t| Cow::Owned(t.into_owned()))),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="prelude-val">Ok</span>(
+        w.read()
+          .unwrap()
+          .get_font(state)<span class="question-mark">?
+          </span>.map(|t| Cow::Owned(t.into_owned())),
+      ),
       Postponed(<span class="kw-2">ref </span>_tks) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
   }
 
-  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw-2">ref </span>b) =&gt; b.compute_size(options, state),
@@ -859,14 +954,13 @@
   </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       DigestedData::RegisterValue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
-      <span class="kw">_ </span>=&gt; <span class="self">self</span>.to_string()
+      <span class="kw">_ </span>=&gt; <span class="self">self</span>.to_string(),
     }
   }
 
-  <span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its content
-  </span><span class="kw">pub fn </span>untex(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
-    <span class="prelude-val">Ok</span>(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.untex())
-  }
+  <span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
+  /// content
+  </span><span class="kw">pub fn </span>untex(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.untex()) }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

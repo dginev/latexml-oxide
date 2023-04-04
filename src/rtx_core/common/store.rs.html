@@ -1002,10 +1002,22 @@
 <a href="#1002" id="1002">1002</a>
 <a href="#1003" id="1003">1003</a>
 <a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::{VecDeque};
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock};
 
@@ -1018,7 +1030,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
-<span class="kw">use </span><span class="kw">crate</span>::definition::Reversion;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{Conditional, IfFrame};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
@@ -1027,6 +1038,7 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::primitive::Primitive;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterValue};
 <span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
+<span class="kw">use </span><span class="kw">crate</span>::definition::Reversion;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagData;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::ligature::Ligature;
@@ -1063,8 +1075,8 @@
 // 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
 //    e.g. Rc&lt;Font&gt;
 
-</span><span class="doccomment">/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an extremely permissive
-/// struct that affords all essential kinds of values that appear essential.
+</span><span class="doccomment">/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
+/// extremely permissive struct that affords all essential kinds of values that appear essential.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub enum </span>Stored {
   <span class="doccomment">/// if we want to keep a key but make it &#39;undef&#39;, set it to None
@@ -1228,8 +1240,8 @@
   }
 }
 <span class="doccomment">/// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
-/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior mutability
-/// Worse: some conditions depend on the Stateful meaning of Token&#39;s,
+/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior
+/// mutability Worse: some conditions depend on the Stateful meaning of Token&#39;s,
 ///        so the perfect equality check would need State as an argument :(
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Stored {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Stored) -&gt; bool {
@@ -1312,7 +1324,7 @@
         } <span class="kw">else </span>{
           <span class="bool-val">false
         </span>}
-      }
+      },
       Catcode(<span class="kw-2">ref </span>cc) =&gt; {
         <span class="kw">if let </span>Catcode(cc2) = other {
           <span class="kw-2">*</span>cc == <span class="kw-2">*</span>cc2
@@ -1485,9 +1497,13 @@
       HashStored(<span class="kw-2">ref </span>hs) =&gt; {
         <span class="kw">if let </span>HashStored(hs2) = other {
           hs.len() == hs2.len()
-            &amp;&amp; hs
-              .iter()
-              .all(|(key, value)| <span class="kw">if let </span><span class="prelude-val">Some</span>(item2) = hs2.get(key) { value == item2 } <span class="kw">else </span>{ <span class="bool-val">false </span>})
+            &amp;&amp; hs.iter().all(|(key, value)| {
+              <span class="kw">if let </span><span class="prelude-val">Some</span>(item2) = hs2.get(key) {
+                value == item2
+              } <span class="kw">else </span>{
+                <span class="bool-val">false
+              </span>}
+            })
         } <span class="kw">else </span>{
           <span class="bool-val">false
         </span>}
@@ -1542,7 +1558,8 @@
       e =&gt; <span class="prelude-val">Err</span>(<span class="macro">s!</span>(<span class="string">&quot;.read_arguments not defined for stored variant {:?}&quot;</span>, e).into()),
     }
   }
-  <span class="doccomment">/// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise `ToString::to_string`
+  <span class="doccomment">/// Uses `NumericOps::to_attribute` for Stored values supporting it, otherwise
+  /// `ToString::to_string`
   </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
     <span class="kw">match </span><span class="self">self </span>{
       Stored::Dimension(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
@@ -1550,7 +1567,7 @@
       <span class="comment">//Stored::MuDimension(ref v) =&gt; v.to_attribute(),
       </span>Stored::Glue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
       Stored::MuGlue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
-      other =&gt; other.to_string()
+      other =&gt; other.to_string(),
     }
   }
 }
@@ -1597,7 +1614,7 @@
 }
 
 <span class="kw">impl </span>From&lt;f64&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value:f64) -&gt; <span class="self">Self </span>{ Stored::Number(Number::new(value.floor() <span class="kw">as </span>i64)) }
+  <span class="kw">fn </span>from(value: f64) -&gt; <span class="self">Self </span>{ Stored::Number(Number::new(value.floor() <span class="kw">as </span>i64)) }
 }
 
 <span class="kw">impl </span>From&lt;Catcode&gt; <span class="kw">for </span>Stored {
@@ -1678,7 +1695,7 @@
   <span class="kw">fn </span>from(value_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">crate</span>::Digested&gt;) -&gt; <span class="self">Self </span>{
     <span class="kw">match </span>value_opt {
       <span class="prelude-val">Some</span>(v) =&gt; v.into(),
-      <span class="prelude-val">None </span>=&gt; Stored::None
+      <span class="prelude-val">None </span>=&gt; Stored::None,
     }
   }
 }
@@ -1741,7 +1758,14 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;) -&gt; <span class="self">Self </span>{ Stored::VecString(value.iter().map(ToString::to_string).collect::&lt;Vec&lt;String&gt;&gt;()) }
+  <span class="kw">fn </span>from(value: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt;) -&gt; <span class="self">Self </span>{
+    Stored::VecString(
+      value
+        .iter()
+        .map(ToString::to_string)
+        .collect::&lt;Vec&lt;String&gt;&gt;(),
+    )
+  }
 }
 
 <span class="kw">impl </span>From&lt;Vec&lt;Token&gt;&gt; <span class="kw">for </span>Stored {
@@ -1897,9 +1921,9 @@
       Stored::VecDequeStored(vdq) =&gt; {
         <span class="comment">// Each item in the queue can be unlisted into a Vec&lt;Token&gt;
         // and then the result can be re-cast as a single Tokens
-        </span><span class="kw">let </span><span class="kw-2">mut </span>collected : Vec&lt;Token&gt; = Vec::new();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>collected: Vec&lt;Token&gt; = Vec::new();
         <span class="kw">for </span>item <span class="kw">in </span>vdq {
-          <span class="kw">let </span>item_tokens_opt : <span class="prelude-ty">Option</span>&lt;Tokens&gt; = item.into();
+          <span class="kw">let </span>item_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = item.into();
           <span class="kw">if let </span><span class="prelude-val">Some</span>(item_tokens) = item_tokens_opt {
             collected.extend(item_tokens.unlist());
           }

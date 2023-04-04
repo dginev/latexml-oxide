@@ -406,6 +406,71 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -548,7 +613,7 @@
       mfill: <span class="prelude-val">None</span>,
     }
   }
-  <span class="kw">fn </span>new_f64(number:f64) -&gt; <span class="self">Self </span>{
+  <span class="kw">fn </span>new_f64(number: f64) -&gt; <span class="self">Self </span>{
     <span class="kw">let </span>(skip, plus, pfill, minus, mfill) = new_setup(number, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
     Glue {
       skip,
@@ -574,14 +639,22 @@
   <span class="kw">if let </span><span class="prelude-val">Some</span>(plus) = plus_opt {
     <span class="kw">if </span>plus != <span class="number">0 </span>{
       string.push_str(<span class="string">&quot; plus &quot;</span>);
-      <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = pfill_opt { fill.to_str() } <span class="kw">else </span>{ unit };
+      <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = pfill_opt {
+        fill.to_str()
+      } <span class="kw">else </span>{
+        unit
+      };
       string.push_str(<span class="kw-2">&amp;</span>fixedformat(plus, <span class="prelude-val">Some</span>(p_fill)))
     }
   }
   <span class="kw">if let </span><span class="prelude-val">Some</span>(minus) = minus_opt {
     <span class="kw">if </span>minus != <span class="number">0 </span>{
       string.push_str(<span class="string">&quot; minus &quot;</span>);
-      <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = mfill_opt { fill.to_str() } <span class="kw">else </span>{ unit };
+      <span class="kw">let </span>p_fill = <span class="kw">if let </span><span class="prelude-val">Some</span>(fill) = mfill_opt {
+        fill.to_str()
+      } <span class="kw">else </span>{
+        unit
+      };
       string.push_str(<span class="kw-2">&amp;</span>fixedformat(minus, <span class="prelude-val">Some</span>(p_fill)))
     }
   }
@@ -590,7 +663,9 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Glue {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="kw">let </span>string = glue_string(<span class="self">self</span>.skip, <span class="self">self</span>.plus, <span class="self">self</span>.pfill, <span class="self">self</span>.minus, <span class="self">self</span>.mfill, <span class="string">&quot;pt&quot;</span>);
+    <span class="kw">let </span>string = glue_string(
+      <span class="self">self</span>.skip, <span class="self">self</span>.plus, <span class="self">self</span>.pfill, <span class="self">self</span>.minus, <span class="self">self</span>.mfill, <span class="string">&quot;pt&quot;</span>,
+    );
     <span class="macro">write!</span>(f, <span class="string">&quot;{string}&quot;</span>)
   }
 }
@@ -599,14 +674,26 @@
 }
 
 <span class="kw">pub fn </span>new_setup(
-  skip:f64,
+  skip: f64,
   plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
-) -&gt; (i64, <span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;, <span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;) {
+) -&gt; (
+  i64,
+  <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+  <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+) {
   <span class="comment">// See comment in Dimension for why kround rather than int
-  </span>(kround(skip), plus.map(kround), pfill, minus.map(kround), mfill)
+  </span>(
+    kround(skip),
+    plus.map(kround),
+    pfill,
+    minus.map(kround),
+    mfill,
+  )
 }
 
 <span class="kw">pub fn </span>spec_setup(
@@ -617,10 +704,16 @@
   <span class="kw-2">mut </span>mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
   unit: <span class="kw-2">&amp;</span>str,
   state: <span class="kw-2">&amp;</span>State,
-) -&gt; (i64, <span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;, <span class="prelude-ty">Option</span>&lt;i64&gt;, <span class="prelude-ty">Option</span>&lt;FillCode&gt;) {
+) -&gt; (
+  i64,
+  <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+  <span class="prelude-ty">Option</span>&lt;i64&gt;,
+  <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+) {
   <span class="kw">if </span>!UNIT_RE.is_match(spec) {
     <span class="comment">// If no units, expect fixedpoint values
-    </span><span class="kw">let </span>skip:f64 = spec.parse::&lt;f64&gt;().unwrap_or_default();
+    </span><span class="kw">let </span>skip: f64 = spec.parse::&lt;f64&gt;().unwrap_or_default();
     new_setup(skip, plus, pfill, minus, mfill)
   } <span class="kw">else </span>{
     <span class="kw">let </span>is_mu = unit == <span class="string">&quot;mu&quot;</span>;
@@ -634,11 +727,17 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(cs) = GLUE_RE.captures(spec) {
       <span class="kw">let </span>(f, unit, p, punit, m, munit) = (
-        cs.get(<span class="number">1</span>).map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default()).unwrap_or_default(),
+        cs.get(<span class="number">1</span>)
+          .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
-        cs.get(<span class="number">4</span>).map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default()).unwrap_or_default(),
+        cs.get(<span class="number">4</span>)
+          .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(<span class="number">5</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
-        cs.get(<span class="number">7</span>).map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default()).unwrap_or_default(),
+        cs.get(<span class="number">7</span>)
+          .map(|v| v.as_str().parse::&lt;f64&gt;().unwrap_or_default())
+          .unwrap_or_default(),
         cs.get(<span class="number">8</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()),
       );
       <span class="kw">let </span>skip = <span class="kw">if </span>unit.is_empty() {
@@ -704,7 +803,10 @@
       }
       (skip, plus, pfill, minus, mfill)
     } <span class="kw">else </span>{
-      <span class="kw">let </span>msg = <span class="macro">s!</span>(<span class="string">&quot;Missing {} specification assuming 0pt&quot;</span>, <span class="kw">if </span>is_mu { <span class="string">&quot;MuGlue&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Glue&quot; </span>});
+      <span class="kw">let </span>msg = <span class="macro">s!</span>(
+        <span class="string">&quot;Missing {} specification assuming 0pt&quot;</span>,
+        <span class="kw">if </span>is_mu { <span class="string">&quot;MuGlue&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Glue&quot; </span>}
+      );
       <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, spec, <span class="prelude-val">None</span>, state, msg);
       (<span class="number">0</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
     }
@@ -712,7 +814,13 @@
 }
 
 <span class="kw">impl </span>Glue {
-  <span class="kw">pub fn </span>new_full(skip: i64, plus: <span class="prelude-ty">Option</span>&lt;i64&gt;, pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;, minus: <span class="prelude-ty">Option</span>&lt;i64&gt;, mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;) -&gt; <span class="self">Self </span>{
+  <span class="kw">pub fn </span>new_full(
+    skip: i64,
+    plus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+    minus: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+  ) -&gt; <span class="self">Self </span>{
     Glue {
       skip,
       plus,
@@ -721,7 +829,13 @@
       mfill,
     }
   }
-  <span class="kw">pub fn </span>new_full_f64(skip:f64, plus: <span class="prelude-ty">Option</span>&lt;f64&gt;, pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;, minus: <span class="prelude-ty">Option</span>&lt;f64&gt;, mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;) -&gt; <span class="self">Self </span>{
+  <span class="kw">pub fn </span>new_full_f64(
+    skip: f64,
+    plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+    minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+  ) -&gt; <span class="self">Self </span>{
     <span class="kw">let </span>(skip, plus, pfill, minus, mfill) = new_setup(skip, plus, pfill, minus, mfill);
     Glue {
       skip,
@@ -731,8 +845,16 @@
       mfill,
     }
   }
-  <span class="kw">pub fn </span>new_spec(spec: <span class="kw-2">&amp;</span>str, plus: <span class="prelude-ty">Option</span>&lt;f64&gt;, pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;, minus: <span class="prelude-ty">Option</span>&lt;f64&gt;, mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
-    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) = spec_setup(spec, plus, pfill, minus, mfill, <span class="string">&quot;pt&quot;</span>, state);
+  <span class="kw">pub fn </span>new_spec(
+    spec: <span class="kw-2">&amp;</span>str,
+    plus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    pfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+    minus: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+    mfill: <span class="prelude-ty">Option</span>&lt;FillCode&gt;,
+    state: <span class="kw-2">&amp;</span>State,
+  ) -&gt; <span class="self">Self </span>{
+    <span class="kw">let </span>(skip, plus, pfill, minus, mfill) =
+      spec_setup(spec, plus, pfill, minus, mfill, <span class="string">&quot;pt&quot;</span>, state);
     Glue {
       skip,
       plus,
@@ -800,14 +922,22 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(plus) = <span class="self">self</span>.plus {
       <span class="kw">if </span>plus != <span class="number">0 </span>{
         string.push_str(<span class="string">&quot; plus &quot;</span>);
-        <span class="kw">let </span>fill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(pfill) = <span class="self">self</span>.pfill { pfill.to_str() } <span class="kw">else </span>{ u };
+        <span class="kw">let </span>fill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(pfill) = <span class="self">self</span>.pfill {
+          pfill.to_str()
+        } <span class="kw">else </span>{
+          u
+        };
         string.push_str(<span class="kw-2">&amp;</span>attribute_format(plus, <span class="prelude-val">Some</span>(fill_u)));
       }
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(minus) = <span class="self">self</span>.minus {
       <span class="kw">if </span>minus != <span class="number">0 </span>{
         string.push_str(<span class="string">&quot; minus &quot;</span>);
-        <span class="kw">let </span>mfill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(mfill) = <span class="self">self</span>.mfill { mfill.to_str() } <span class="kw">else </span>{ u };
+        <span class="kw">let </span>mfill_u = <span class="kw">if let </span><span class="prelude-val">Some</span>(mfill) = <span class="self">self</span>.mfill {
+          mfill.to_str()
+        } <span class="kw">else </span>{
+          u
+        };
         string.push_str(<span class="kw-2">&amp;</span>attribute_format(minus, <span class="prelude-val">Some</span>(mfill_u)));
       }
     }

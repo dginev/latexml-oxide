@@ -47,7 +47,7 @@
 <a href="#47" id="47">47</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Extract Model information from a RelaxNG schema
 </span><span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="doccomment">/// an internal representation for a RelaxNG schema
 </span><span class="kw">pub struct </span>Relaxng {
   <span class="doccomment">/// the schema name
@@ -83,14 +83,14 @@
     <span class="kw">if </span><span class="self">self</span>.name != <span class="string">&quot;DTD&quot; </span>{
       <span class="comment">// provisions for phasing out DTD
       </span>attributes.insert(<span class="macro">s!</span>(<span class="string">&quot;RelaxNGSchema&quot;</span>), <span class="self">self</span>.name.clone());
-      document.insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes)).expect(<span class="string">&quot;should never fail&quot;</span>);
+      document
+        .insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes))
+        .expect(<span class="string">&quot;should never fail&quot;</span>);
     }
   }
 
   <span class="doccomment">/// build the internal representation
-  </span><span class="kw">pub fn </span>load_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-    <span class="macro">unimplemented!</span>()
-  }
+  </span><span class="kw">pub fn </span>load_schema(<span class="kw-2">&amp;</span><span class="self">self</span>) { <span class="macro">unimplemented!</span>() }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -166,6 +166,26 @@
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
@@ -173,10 +193,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::mouth;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::{Parameter, Parameters};
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>CSNAME_MACRO_RE: Regex = Regex::new(<span class="string">r&quot;^\\csname\s+(.*)\\endcsname&quot;</span>).unwrap();
@@ -190,7 +210,10 @@
 }
 
 <span class="doccomment">/// If calling at compile-time, pass `None` for state, to avoid initialization.
-</span><span class="kw">pub fn </span>parse_prototype(proto: <span class="kw-2">&amp;</span>str, state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Token, <span class="prelude-ty">Option</span>&lt;Parameters&gt;)&gt; {
+</span><span class="kw">pub fn </span>parse_prototype(
+  proto: <span class="kw-2">&amp;</span>str,
+  state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(Token, <span class="prelude-ty">Option</span>&lt;Parameters&gt;)&gt; {
   <span class="kw">let </span>cs;
   <span class="kw">let </span>final_proto = <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str())));
@@ -209,11 +232,16 @@
     </span>SINGLE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = ACTIVE_CHAR_RE.captures(proto) {
     <span class="comment">// Match an active char
-    </span>cs = mouth::tokenize_internal(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str())).unlist().remove(<span class="number">0</span>);
+    </span>cs = mouth::tokenize_internal(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()))
+      .unlist()
+      .remove(<span class="number">0</span>);
     <span class="comment">// also replace in proto
     </span>ACTIVE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
   } <span class="kw">else </span>{
-    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Definition prototype doesn&#39;t have proper control sequence: \&quot;{}\&quot;&quot;</span>, proto);
+    <span class="kw">let </span>message = <span class="macro">s!</span>(
+      <span class="string">&quot;Definition prototype doesn&#39;t have proper control sequence: \&quot;{}\&quot;&quot;</span>,
+      proto
+    );
     <span class="macro">fatal!</span>(Prototype, Misdefined, <span class="prelude-val">None</span>, state, message);
   }
   .trim()
@@ -223,7 +251,11 @@
 }
 
 <span class="doccomment">/// If calling at compile-time, pass `None` for state, to avoid initialization.
-</span><span class="kw">pub fn </span>parse_parameters(<span class="kw-2">mut </span>prototype: String, cs: <span class="kw-2">&amp;</span>Token, <span class="kw-2">mut </span>state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+</span><span class="kw">pub fn </span>parse_parameters(
+  <span class="kw-2">mut </span>prototype: String,
+  cs: <span class="kw-2">&amp;</span>Token,
+  <span class="kw-2">mut </span>state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>parameters = Vec::new();
   <span class="kw">while </span>!prototype.is_empty() {
     <span class="kw">let </span>next_proto: String;
@@ -282,7 +314,8 @@
             Cow::Owned(spec.to_string())
           },
           inner: parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())<span class="question-mark">?
-            </span>.map(|ps| ps.into()).unwrap_or_default(),
+            </span>.map(|ps| ps.into())
+            .unwrap_or_default(),
           ..Parameter::default()
         };
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>state) = <span class="kw-2">&amp;mut </span>state_opt {
@@ -305,9 +338,13 @@
       <span class="kw">let </span>name = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
       <span class="kw">let </span>extra_str = captures.get(<span class="number">4</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
       next_proto = PARAMSPECT_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>).to_string();
-      <span class="kw">let </span>extra : Vec&lt;Tokens&gt; = <span class="kw">if </span>extra_str.is_empty() { Vec::new() } <span class="kw">else </span>{
-        extra_str.split(<span class="string">&#39;|&#39;</span>)
-          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist())).collect()
+      <span class="kw">let </span>extra: Vec&lt;Tokens&gt; = <span class="kw">if </span>extra_str.is_empty() {
+        Vec::new()
+      } <span class="kw">else </span>{
+        extra_str
+          .split(<span class="string">&#39;|&#39;</span>)
+          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+          .collect()
       };
       <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
         name: name.into(),
@@ -323,7 +360,10 @@
       <span class="macro">fatal!</span>(
         Parameter,
         Misdefined,
-        <span class="macro">s!</span>(<span class="string">&quot;Unrecognized parameter specification at \&quot;prototype\&quot; {:?}&quot;</span>, cs)
+        <span class="macro">s!</span>(
+          <span class="string">&quot;Unrecognized parameter specification at \&quot;prototype\&quot; {:?}&quot;</span>,
+          cs
+        )
       );
     }
     prototype = next_proto.to_string();

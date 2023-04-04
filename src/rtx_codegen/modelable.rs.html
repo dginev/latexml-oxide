@@ -96,6 +96,17 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
@@ -121,9 +132,13 @@
   <span class="kw">let </span>name: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;
+    </span>),
   };
 
   <span class="kw">let </span>pathname_opt = pathname::find(
@@ -167,7 +182,10 @@
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = CLASS_MODEL_LINE.captures(<span class="kw-2">&amp;</span>line) {
       <span class="kw">let </span>classname = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
       <span class="kw">let </span>elements = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
-      <span class="kw">let </span>elements_vec = elements.split(<span class="string">&#39;,&#39;</span>).map(ToString::to_string).collect::&lt;Vec&lt;String&gt;&gt;();
+      <span class="kw">let </span>elements_vec = elements
+        .split(<span class="string">&#39;,&#39;</span>)
+        .map(ToString::to_string)
+        .collect::&lt;Vec&lt;String&gt;&gt;();
 
       operations.push(<span class="macro">quote!</span>(
         model.set_schema_class(#classname,
@@ -180,7 +198,11 @@
         model.register_document_namespace(#prefix, <span class="prelude-val">Some</span>(#namespace.to_owned()));
       ));
     } <span class="kw">else </span>{
-      <span class="macro">fatal!</span>(Codegen, Malformed, <span class="macro">s!</span>(<span class="string">&quot; Loaded model &#39;{}&#39; is malformatted at \&quot;{}\&quot;&quot;</span>, path, line));
+      <span class="macro">fatal!</span>(
+        Codegen,
+        Malformed,
+        <span class="macro">s!</span>(<span class="string">&quot; Loaded model &#39;{}&#39; is malformatted at \&quot;{}\&quot;&quot;</span>, path, line)
+      );
     }
   }
 

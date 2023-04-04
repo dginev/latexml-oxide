@@ -363,6 +363,23 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre><pre class="rust"><code><span class="comment">//----------------------------------------------------------------------
 // General support for Front Matter.
 // Not (yet) used by TeX (finish plain?)
@@ -388,9 +405,13 @@
   <span class="string">&quot;ltx:classification&quot;</span>,
   <span class="string">&quot;ltx:acknowledgements&quot;</span>,
 ];
-
-<span class="macro">LoadDefinitions!</span>(state, {
-  <span class="macro">AssignValue!</span>(<span class="string">&quot;frontmatter&quot;</span>, Stored::HashTagData(HashMap::default()), <span class="prelude-val">Some</span>(Scope::Global));
+<span class="attr">#[rustfmt::skip]
+</span><span class="macro">LoadDefinitions!</span>(state, {
+  <span class="macro">AssignValue!</span>(
+    <span class="string">&quot;frontmatter&quot;</span>,
+    Stored::HashTagData(HashMap::default()),
+    <span class="prelude-val">Some</span>(Scope::Global)
+  );
 
   <span class="comment">// // Add a new frontmatter item that will be enclosed in &lt;$tag %attr&gt;...&lt;/$tag&gt;
   // // The content is the result of digesting $tokens.
@@ -514,7 +535,10 @@
     }
   });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\beginsection Until:\\par&quot;</span>, <span class="string">&quot;&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;&quot;</span>);
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">&quot;\\beginsection Until:\\par&quot;</span>,
+    <span class="string">&quot;&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;&quot;
+  </span>);
 
   <span class="comment">// // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   // //  If so, how do know when the theorem ends?
@@ -550,11 +574,12 @@
 
   // This collects up the various declared ltx:tag&#39;s into an ltx:tags
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@make@tags {}&quot;</span>, sub[gullet, (ttype), state] {
-    <span class="kw">let </span>formatters = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(formatters)) = state.lookup_value(<span class="string">&quot;type_tag_formatter&quot;</span>) {
-      <span class="prelude-val">Some</span>(formatters.clone())
-    } <span class="kw">else </span>{
-      <span class="prelude-val">None
-    </span>};
+    <span class="kw">let </span>formatters = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(formatters)) =
+      state.lookup_value(<span class="string">&quot;type_tag_formatter&quot;</span>) {
+        <span class="prelude-val">Some</span>(formatters.clone())
+      } <span class="kw">else </span>{
+        <span class="prelude-val">None
+      </span>};
 
     <span class="kw">let </span><span class="kw-2">mut </span>tags = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(formatters) = formatters {
@@ -621,11 +646,20 @@
       ctr_type
     }
   });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@the@@{}&quot;</span>, <span class="string">&quot;\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\lx@the@@{}&quot;</span>,
+    <span class="string">&quot;\\expandafter\\lx@@the@@\\expandafter{\\lx@counterfor{#1}}&quot;
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@@the@@{}&quot;</span>, <span class="string">&quot;\\csname the#1\\endcsname&quot;</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@therefnum@@{}&quot;</span>, <span class="string">&quot;\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@@therefnum@@{}&quot;</span>, <span class="string">&quot;{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\lx@therefnum@@{}&quot;</span>,
+    <span class="string">&quot;\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\lx@@therefnum@@{}&quot;</span>,
+    <span class="string">&quot;{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}&quot;
+  </span>);
 
   <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;refnum&quot; </span>=&gt; <span class="string">&quot;\\lx@therefnum@@&quot;</span>);
 
@@ -634,7 +668,10 @@
   // Customize by defining \fnum@&lt;type&gt; or \&lt;type&gt;name and \fnum@font@&lt;type&gt;
   // Default uses \fnum@font@&lt;type&gt; \&lt;type&gt;name prefix + space (if any) and \the&lt;counter&gt;.
   // When using the &quot;name&quot;, uses \&lt;type&gt;name in preference to fallback \lx@name@&lt;type&gt;
-  </span><span class="macro">DefMacro!</span>(<span class="string">r&quot;\lx@refnum@compose{}{}&quot;</span>, <span class="string">r&quot;\expandafter\lx@refnum@compose@\expandafter{#2}{#1}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">r&quot;\lx@refnum@compose{}{}&quot;</span>,
+    <span class="string">r&quot;\expandafter\lx@refnum@compose@\expandafter{#2}{#1}&quot;
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">r&quot;\lx@refnum@compose@{}{}&quot;</span>, <span class="string">r&quot;\if.#1.#2\else#2\space#1\fi&quot;</span>);
 
   <span class="macro">DefMacro!</span>(
@@ -647,8 +684,7 @@
   // BUT amsthm defines \thmname{}!
   </span><span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\lx@@fnum@@ {}&quot;</span>,
-    <span class="string">r&quot;\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}
-    {\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}&quot;
+    <span class="string">r&quot;\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}&quot;
   </span>);
 
   <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;&quot; </span>=&gt; <span class="string">&quot;\\lx@fnum@@&quot;</span>); <span class="comment">// Default!
@@ -659,8 +695,7 @@
   // Default uses just \\the&lt;counter&gt;, else composes using \\lx@@fnum@@{type}
   </span><span class="macro">DefMacro!</span>(
     <span class="string">r&quot;\lx@fnum@toc@@{}&quot;</span>,
-    <span class="string">r&quot;{\normalfont\@ifundefined{fnum@tocfont@#1}{}
-      {\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}&quot;
+    <span class="string">r&quot;{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname}}&quot;
   </span>);
 
   <span class="comment">//----------------------------------------------------------------------
@@ -670,16 +705,12 @@
   // \\the&lt;counter&gt;
   </span><span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\lx@typerefnum@@{}&quot;</span>,
-    <span class="string">&quot;{\\normalfont\\@ifundefined{typerefnum@font@#1}{}\
-     {\\csname typerefnum@font@#1\\endcsname}\\@ifundefined{typerefnum@#1}\
-     {\\lx@@typerefnum@@{#1}}{\\csname typerefnum@#1\\endcsname}}&quot;
+    <span class="string">r&quot;{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}&quot;
   </span>);
 
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\lx@@typerefnum@@{}&quot;</span>,
-    <span class="string">&quot;\\@ifundefined{#1typerefname}{\\@ifundefined{#1name}{}{\
-     \\lx@refnum@compose{\\csname #1name\\endcsname}{\\lx@the@@{#1}}}}\
-     {\\lx@refnum@compose{\\csname #1typerefname\\endcsname}{\\lx@the@@{#1}}}&quot;
+    <span class="string">r&quot;\@ifundefined{#1typerefname}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@the@@{#1}}}&quot;
   </span>);
 
   <span class="macro">AssignMapping!</span>(<span class="string">&quot;type_tag_formatter&quot;</span>, <span class="string">&quot;typerefnum&quot; </span>=&gt; <span class="string">&quot;\\lx@typerefnum@@&quot;</span>);
@@ -694,7 +725,10 @@
   // Format a title (or caption) appropriately for type.
   // Customize by defining \format@title@type{title}
   // Default composes \lx@fnum@@{type} space title.
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@format@title@@{}{}&quot;</span>, <span class="string">r&quot;\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\lx@format@title@@{}{}&quot;</span>,
+    <span class="string">r&quot;\lx@@format@title@@{#1}{{\lx@format@title@font@@{#1}#2}}&quot;
+  </span>);
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\lx@@format@title@@{}{}&quot;</span>,
     <span class="string">r&quot;{\@ifundefined{format@title@#1}{\lx@@compose@title{\lx@fnum@@{#1}}{#2}}{\csname format@title@#1\endcsname{#2}}}&quot;

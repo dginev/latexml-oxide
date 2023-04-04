@@ -371,6 +371,16 @@
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::list::List;
 <span class="kw">use </span>rtx_core::tbox::Tbox;
@@ -491,8 +501,8 @@
         <span class="kw">let </span>is_space = <span class="kw">if let </span><span class="prelude-val">Some</span>(space_val) = boxes[<span class="number">0</span>].get_property(<span class="string">&quot;isSpace&quot;</span>) {
           <span class="kw">match </span>space_val {
             Cow::Borrowed(Stored::Bool(space_bool)) =&gt; <span class="kw-2">*</span>space_bool,
-            Cow::Owned(Stored::Bool(<span class="kw-2">ref </span>space_bool))  =&gt; <span class="kw-2">*</span>space_bool, <span class="comment">// TODO : is there match syntax for Cow ?
-            </span><span class="kw">_ </span>=&gt; <span class="bool-val">false
+            Cow::Owned(Stored::Bool(<span class="kw-2">ref </span>space_bool))  =&gt; <span class="kw-2">*</span>space_bool,
+            <span class="kw">_ </span>=&gt; <span class="bool-val">false
           </span>}
         } <span class="kw">else </span>{
           <span class="bool-val">false
@@ -516,7 +526,8 @@
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\afterassignment Token&quot;</span>, sub[stomach, (t), state] {
     state.assign_value(<span class="string">&quot;afterAssignment&quot;</span>, t, <span class="prelude-val">Some</span>(Scope::Global));
   });
-  <span class="comment">// \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next egroup or }
+  <span class="comment">// \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
+  // egroup or }
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\aftergroup Token&quot;</span>, sub[stomach, (t), state] {
     state.push_value(<span class="string">&quot;afterGroup&quot;</span>, t);
   });
@@ -557,7 +568,8 @@
     <span class="kw">let </span>filename = filename.to_string();
     <span class="comment">// possibly should close $port if it&#39;s already been opened?
     // Rely on FindFile to enforce any access restrictions
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>filename, <span class="prelude-val">Some</span>(FindFileOptions {forbid_ltxml: <span class="bool-val">true</span>, ..FindFileOptions::default()}), state) {
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>filename, <span class="prelude-val">Some</span>(
+      FindFileOptions {forbid_ltxml: <span class="bool-val">true</span>, ..FindFileOptions::default()}), state) {
       <span class="kw">let </span>content_str = <span class="macro">LookupString!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,path));
       <span class="kw">let </span>content = <span class="kw">if </span>content_str.is_empty() {
         <span class="prelude-val">None
@@ -574,7 +586,8 @@
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\closein Number&quot;</span>, sub[stomach, (port), state] {
     <span class="comment">// Clone the Rc&lt;&gt; for mouth out of state, since we&#39;ll be mutating.
-    </span><span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(<span class="kw-2">ref </span>mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port)) {
+    </span><span class="kw">let </span>file_key = <span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port);
+    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(<span class="kw-2">ref </span>mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span>file_key) {
       <span class="prelude-val">Some</span>(Arc::clone(mouth))
     } <span class="kw">else </span>{
       <span class="prelude-val">None
@@ -586,7 +599,8 @@
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\read Number SkipKeyword:to SkipSpaces Token&quot;</span>, sub[stomach, (port, token), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\read Number SkipKeyword:to SkipSpaces Token&quot;</span>,
+    sub[stomach, (port, token), state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth_stored)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>)) {
       <span class="kw">let </span>mouth_obj = Arc::clone(mouth_stored);
       stomach.bgroup(state);
@@ -624,7 +638,8 @@
 
   <span class="comment">// For output files, we&#39;ll write the data to a cached internal copy
   // rather than to the actual file system.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\openout Number SkipMatch:= SkipSpaces TeXFileName&quot;</span>, sub[stomach, (port, filename), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\openout Number SkipMatch:= SkipSpaces TeXFileName&quot;</span>,
+    sub[stomach, (port, filename), state] {
     <span class="kw">let </span>port = port.to_string();
     <span class="kw">let </span>filename = filename.to_string();
     <span class="kw">let </span>contents_key = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,filename);
@@ -660,7 +675,10 @@
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\special {}&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\penalty Number&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\kern Dimension&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\mkern MuGlue&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\mkern MuGlue&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi&quot;
+  </span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unpenalty&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unkern&quot;</span>, <span class="prelude-val">None</span>);
   <span class="comment">// ## Worrisome, but...
@@ -673,11 +691,13 @@
 
   // DefPrimitive!(&quot;\\mark{}&quot;, None);
   // # \insert&lt;8bit&gt;&lt;filler&gt;{&lt;vertical mode material&gt;}
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\insert Number&quot;</span>, <span class="prelude-val">None</span>); <span class="comment">// Just let the insertion get processed(?)
-                                          // \vadjust&lt;filler&gt;{&lt;vertical mode material&gt;}
-                                          // Note: \vadjust ignores in vertical mode...
-                                          // is it sufficient to just clear the macro to avoid recursion?
-                                          // (we don&#39;t track horizontal/vertical mode)
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\insert Number&quot;</span>, <span class="prelude-val">None</span>);
+
+  <span class="comment">// Just let the insertion get processed(?)
+  // \vadjust&lt;filler&gt;{&lt;vertical mode material&gt;}
+  // Note: \vadjust ignores in vertical mode...
+  // is it sufficient to just clear the macro to avoid recursion?
+  // (we don&#39;t track horizontal/vertical mode)
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\LTX@vadjust@afterpar&quot;</span>, <span class="string">&quot;\\def\\LTX@vadjust@afterpar{}&quot;</span>);
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\LTX@clear@vadjust@afterpar&quot;</span>,

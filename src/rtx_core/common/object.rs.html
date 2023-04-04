@@ -55,6 +55,9 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
@@ -91,7 +94,10 @@
     </span><span class="self">Self</span>: Sized,
     <span class="self">Self</span>: Debug,
   {
-    <span class="macro">panic!</span>(<span class="string">&quot;Was it really intended to digest? We don&#39;t know how! {self:?} {:?}&quot;</span>, <span class="self">self</span>.get_locator());
+    <span class="macro">panic!</span>(
+      <span class="string">&quot;Was it really intended to digest? We don&#39;t know how! {self:?} {:?}&quot;</span>,
+      <span class="self">self</span>.get_locator()
+    );
   }
 
   <span class="comment">// fn be_absorbed(&amp;self, _document: Document) { unimplemented!() }

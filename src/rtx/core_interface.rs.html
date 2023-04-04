@@ -363,16 +363,45 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::{Captures, Regex};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::sync::Arc;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 
 <span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rtx_core::common::DigestionMode;
 <span class="kw">use </span>rtx_core::definition::expandable::Expandable;
+<span class="kw">use </span>rtx_core::digested::Digested;
 <span class="kw">use </span>rtx_core::document::Document;
 <span class="kw">use </span>rtx_core::list::List;
 <span class="kw">use </span>rtx_core::state::{Scope, Stored}; <span class="comment">// State
@@ -380,13 +409,14 @@
 <span class="kw">use </span>rtx_core::tokens::Tokens;
 <span class="kw">use </span>rtx_core::util::pathname;
 <span class="kw">use </span>rtx_core::util::pathname::PathnameFindOptions;
-<span class="kw">use </span>rtx_core::digested::Digested;
 <span class="comment">// TODO: Clean up these imports -- what belongs where?
 </span><span class="kw">use </span>rtx_core::{fatal, map, s, Core, Debug, Explode, T_CS, T_OTHER, T_SPACE};
 
 <span class="kw">use </span>rtx_codegen::LoadModel;
 <span class="kw">use </span>rtx_math_parser::MathParser;
-<span class="kw">use </span>rtx_package::{input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions};
+<span class="kw">use </span>rtx_package::{
+  input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
+};
 
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>CLS_EXT_REGEX: Regex = Regex::new(<span class="string">r&quot;\.cls$&quot;</span>).unwrap();
@@ -430,13 +460,19 @@
     </span>state.assign_value(<span class="string">&quot;InitialPreloads&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="self">self</span>.stomach.write().unwrap();
     <span class="kw">for </span>preload <span class="kw">in </span>preloads {
-      input_definitions(<span class="kw-2">&amp;</span>preload, InputDefinitionOptions::default(), <span class="kw-2">&amp;mut </span>stomach, state)<span class="question-mark">?</span>;
+      input_definitions(
+        <span class="kw-2">&amp;</span>preload,
+        InputDefinitionOptions::default(),
+        <span class="kw-2">&amp;mut </span>stomach,
+        state,
+      )<span class="question-mark">?</span>;
     }
     state.assign_value(<span class="string">&quot;InitialPreloads&quot;</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="comment">// TODO: We should choose between this function or digest_file, rather than implement twice, right?
+  <span class="comment">// TODO: We should choose between this function or digest_file, rather than implement twice,
+  // right?
   </span><span class="kw">fn </span>digest(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     request: String,
@@ -501,7 +537,12 @@
     );
 
     <span class="comment">// $self-&gt;loadPostamble($options{postamble}) if $options{postamble};
-    </span>input_content(<span class="kw-2">&amp;</span>request, InputOptions::default(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.stomach.write().unwrap(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.state)<span class="question-mark">?</span>;
+    </span>input_content(
+      <span class="kw-2">&amp;</span>request,
+      InputOptions::default(),
+      <span class="kw-2">&amp;mut </span><span class="self">self</span>.stomach.write().unwrap(),
+      <span class="kw-2">&amp;mut </span><span class="self">self</span>.state,
+    )<span class="question-mark">?</span>;
     <span class="comment">// $self-&gt;loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
@@ -527,8 +568,12 @@
     <span class="kw">let </span><span class="kw-2">mut </span>document = Document::new();
     {
       <span class="kw">let </span>state = <span class="self">self</span>.get_state_mut();
-      <span class="kw">let </span>paths_stored = state.search_paths.clone(); <span class="comment">// TODO: Can we disentangle the ownership to avoid the clone?
-      </span><span class="kw">let </span>schema_paths = paths_stored.iter().map(String::as_str).collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;();
+      <span class="comment">// TODO: Can we disentangle the ownership to avoid the clone?
+      </span><span class="kw">let </span>paths_stored = state.search_paths.clone();
+      <span class="kw">let </span>schema_paths = paths_stored
+        .iter()
+        .map(String::as_str)
+        .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;();
       <span class="kw">let </span>default_model_load = <span class="kw">match </span>state.model.schema_data {
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
         <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>v) =&gt; v.last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>String::from(<span class="string">&quot;LaTeXML&quot;</span>)),
@@ -544,7 +589,12 @@
       <span class="kw">if </span>!state.search_paths.is_empty() {
         {
           <span class="kw">if </span>state.lookup_bool(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
-            <span class="kw">let </span>paths_string = state.search_paths.iter().map(String::as_str).collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;().join(<span class="string">&quot;,&quot;</span>);
+            <span class="kw">let </span>paths_string = state
+              .search_paths
+              .iter()
+              .map(String::as_str)
+              .collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt;()
+              .join(<span class="string">&quot;,&quot;</span>);
             <span class="kw">let </span>attributes = <span class="macro">map! </span>{<span class="macro">s!</span>(<span class="string">&quot;paths&quot;</span>) =&gt; paths_string};
             document.insert_pi(<span class="string">&quot;latexml&quot;</span>, <span class="prelude-val">Some</span>(attributes))<span class="question-mark">?</span>;
           }
@@ -584,8 +634,9 @@
       <span class="comment">// TODO: What is the right way to do rewrites in a daemon-safe manner?
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(rules)) = state.remove_value(<span class="string">&quot;DOCUMENT_REWRITE_RULES&quot;</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = document.get_document().get_root_element() {
-          <span class="comment">// Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
-          // (TODO: obviously, this could be avoided if they never needed mutable state. When do they?)
+          <span class="comment">// Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+          // state. (TODO: obviously, this could be avoided if they never needed mutable
+          // state. When do they?)
           </span><span class="kw">let </span><span class="kw-2">mut </span>rewrites = Vec::new();
           <span class="kw">for </span>rule <span class="kw">in </span>rules {
             <span class="kw">if let </span>Stored::Rewrite(<span class="kw-2">mut </span>rewrite_rule) = rule {
@@ -710,7 +761,12 @@
     {
       <span class="comment">// Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
       </span><span class="kw">let </span><span class="kw-2">mut </span>stomach = <span class="self">self</span>.stomach.write().unwrap();
-      input_content(<span class="kw-2">&amp;</span>request, InputOptions::default(), <span class="kw-2">&amp;mut </span>stomach, <span class="kw-2">&amp;mut </span><span class="self">self</span>.state)<span class="question-mark">?</span>;
+      input_content(
+        <span class="kw-2">&amp;</span>request,
+        InputOptions::default(),
+        <span class="kw-2">&amp;mut </span>stomach,
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.state,
+      )<span class="question-mark">?</span>;
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(preamble) = options.preamble {

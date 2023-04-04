@@ -192,6 +192,8 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">//----------------------------------------------------------------------
 // LaTeX; Table 3.10. Delimiters, p.47
@@ -200,191 +202,193 @@
 // rather than the individual tokens.
 // This meaning is handled in MathParser (for now)
 </span><span class="macro">LoadDefinitions!</span>(state, {
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\{&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\}&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@lbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;{&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@rbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>);
-<span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@lbrace&quot;</span>, <span class="string">&quot;{&quot;</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>,
-  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>);    <span class="comment">// Since not DefMath!
-</span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@rbrace&quot;</span>, <span class="string">&quot;}&quot;</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>,
-  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>);    <span class="comment">// Since not DefMath!
-</span><span class="macro">Let!</span>(<span class="string">&quot;\\lbrace&quot;</span>, <span class="string">&quot;\\{&quot;</span>);
-<span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\lbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
-<span class="macro">Let!</span>(<span class="string">&quot;\\rbrace&quot;</span>, <span class="string">&quot;\\}&quot;</span>);
-<span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\rbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\lceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2308}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>);    <span class="comment">// LEFT CEILING
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2309}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>);    <span class="comment">// RIGHT CEILING
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230A}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>);    <span class="comment">// LEFT FLOOR
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230B}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>);    <span class="comment">// RIGHT FLOOR
-// Note: We should be using 27E8,27E9, which are &quot;mathematical&quot;, not 2329,232A
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\langle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E8}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rangle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E9}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\{&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\}&quot;</span>, <span class="string">r&quot;\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi&quot;</span>, protected =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@lbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;{&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lx@math@rbrace&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@lbrace&quot;</span>, <span class="string">&quot;{&quot;</span>, alias =&gt; <span class="string">&quot;\\{&quot;</span>,
+  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@text@rbrace&quot;</span>, <span class="string">&quot;}&quot;</span>, alias =&gt; <span class="string">&quot;\\}&quot;</span>,
+  font =&gt; { shape =&gt; <span class="string">&quot;upright&quot; </span>}, bounded =&gt; <span class="bool-val">true</span>); <span class="comment">// Since not DefMath!
+  </span><span class="macro">Let!</span>(<span class="string">&quot;\\lbrace&quot;</span>, <span class="string">&quot;\\{&quot;</span>);
+  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\lbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>));
+  <span class="macro">Let!</span>(<span class="string">&quot;\\rbrace&quot;</span>, <span class="string">&quot;\\}&quot;</span>);
+  <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\rbrack&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\lceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2308}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT CEILING
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rceil&quot;</span>,  <span class="prelude-val">None</span>, <span class="string">&quot;\u{2309}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT CEILING
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230A}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT FLOOR
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rfloor&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{230B}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT FLOOR
 
-// Not sure these should be defined here, or latex, or even latex compat mode.
-</span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;(&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\rgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;)&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>);
-<span class="macro">DefMath!</span>(<span class="string">&quot;\\bracevert&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;|&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;VERTBAR&quot;</span>);
+  // Note: We should be using 27E8,27E9, which are &quot;mathematical&quot;, not 2329,232A
 
-<span class="comment">// TeX marks some symbols as delimiters which can be used with \left,\right,
-// but many of which have different grammatical roles otherwise, eg. arrows, &lt;, &gt;.
-// Short of setting up TeX&#39;s complicated encoding machinery, I need an explicit
-// mapping.  Unfortunately, this doesn&#39;t (yet) support people declaring thier own delimiters!
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\langle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E8}&quot;</span>, role =&gt; <span class="string">&quot;OPEN&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// LEFT-POINTING ANGLE BRACKET
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\rangle&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{27E9}&quot;</span>, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>); <span class="comment">// RIGHT-POINTING ANGLE BRACKET
 
-// # This duplicates in slightly different way what DefMath has put together.
-// our %DELIMITER_MAP =
-//   (&#39;(&#39; =&gt; { char =&gt; &quot;(&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;)&#39;          =&gt; { char =&gt; &quot;)&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;[&#39;          =&gt; { char =&gt; &quot;[&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;]&#39;          =&gt; { char =&gt; &quot;]&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;\{&#39;         =&gt; { char =&gt; &quot;{&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;\}&#39;         =&gt; { char =&gt; &quot;}&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
-//   &#39;\lfloor&#39;    =&gt; { char =&gt; &quot;\u{230A}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;lfloor&#39; },
-//   &#39;\rfloor&#39;    =&gt; { char =&gt; &quot;\u{230B}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rfloor&#39; },
-//   &#39;\lceil&#39;     =&gt; { char =&gt; &quot;\u{2308}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;lceil&#39; },
-//   &#39;\rceil&#39;     =&gt; { char =&gt; &quot;\u{2309}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rceil&#39; },
-//   &#39;\langle&#39;    =&gt; { char =&gt; &quot;\u{27E8}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;langle&#39; },
-//   &#39;\rangle&#39;    =&gt; { char =&gt; &quot;\u{27E9}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rangle&#39; },
-//   &#39;&lt;&#39;          =&gt; { char =&gt; &quot;\u{27E8}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;langle&#39; },
-//   &#39;&gt;&#39;          =&gt; { char =&gt; &quot;\u{27E9}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rangle&#39; },
-//   &#39;/&#39;          =&gt; { char =&gt; &quot;/&quot;,        lrole =&gt; &#39;MULOP&#39;,   rrole =&gt; &#39;MULOP&#39; },
-//   &#39;\backslash&#39; =&gt; { char =&gt; UTF(0x5C),  lrole =&gt; &#39;MULOP&#39;,   rrole =&gt; &#39;MULOP&#39;, name =&gt; &#39;backslash&#39; },
-//   &#39;|&#39;          =&gt; { char =&gt; &quot;|&quot;,        lrole =&gt; &#39;VERTBAR&#39;, rrole =&gt; &#39;VERTBAR&#39; },
-//   &#39;\|&#39;         =&gt; { char =&gt; &quot;\u{2225}&quot;, lrole =&gt; &#39;VERTBAR&#39;, rrole =&gt; &#39;VERTBAR&#39; },
-//   &#39;\uparrow&#39;   =&gt; { char =&gt; &quot;\u{2191}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;uparrow&#39; },   # ??
-//   &#39;\Uparrow&#39;   =&gt; { char =&gt; &quot;\u{21D1}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;Uparrow&#39; },   # ??
-//   &#39;\downarrow&#39; =&gt; { char =&gt; &quot;\u{2193}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;downarrow&#39; }, # ??
-//   &#39;\Downarrow&#39; =&gt; { char =&gt; &quot;\u{21D3}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;Downarrow&#39; }, # ??
-//   &#39;\updownarrow&#39; =&gt; { char =&gt; &quot;\u{2195}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;updownarrow&#39; }, # ??
-//   &#39;\Updownarrow&#39; =&gt; { char =&gt; &quot;\u{21D5}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;Updownarrow&#39; }, # ??
-//   );
+  // Not sure these should be defined here, or latex, or even latex compat mode.
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\lgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;(&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;OPEN&quot;</span>,  stretchy =&gt; <span class="bool-val">false</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\rgroup&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;)&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;CLOSE&quot;</span>, stretchy =&gt; <span class="bool-val">false</span>);
+  <span class="macro">DefMath!</span>(<span class="string">&quot;\\bracevert&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;|&quot;</span>, font =&gt; { series =&gt; <span class="string">&quot;bold&quot; </span>}, role =&gt; <span class="string">&quot;VERTBAR&quot;</span>);
 
-// # With new treatment of Simple Symbols as just Box&#39;s with assigned attributes,
-// # we&#39;re not getting whatsits, and so we&#39;re not looking them up the same way!!!
-// # TEMPORARILY (?) hack the Delimiter map
-// foreach my $entry (values %DELIMITER_MAP) {
-//   $DELIMITER_MAP{ $$entry{char} } = $entry; }
+  <span class="comment">// TeX marks some symbols as delimiters which can be used with \left,\right,
+  // but many of which have different grammatical roles otherwise, eg. arrows, &lt;, &gt;.
+  // Short of setting up TeX&#39;s complicated encoding machinery, I need an explicit
+  // mapping.  Unfortunately, this doesn&#39;t (yet) support people declaring thier own delimiters!
 
-// sub lookup_delimiter {
-//   my ($delim) = @_;
-//   return $DELIMITER_MAP{$delim}; }
+  // # This duplicates in slightly different way what DefMath has put together.
+  // our %DELIMITER_MAP =
+  //   (&#39;(&#39; =&gt; { char =&gt; &quot;(&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;)&#39;          =&gt; { char =&gt; &quot;)&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;[&#39;          =&gt; { char =&gt; &quot;[&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;]&#39;          =&gt; { char =&gt; &quot;]&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;\{&#39;         =&gt; { char =&gt; &quot;{&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;\}&#39;         =&gt; { char =&gt; &quot;}&quot;,        lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39; },
+  //   &#39;\lfloor&#39;    =&gt; { char =&gt; &quot;\u{230A}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;lfloor&#39;
+  // },   &#39;\rfloor&#39;    =&gt; { char =&gt; &quot;\u{230B}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt;
+  // &#39;rfloor&#39; },   &#39;\lceil&#39;     =&gt; { char =&gt; &quot;\u{2308}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;,
+  // name =&gt; &#39;lceil&#39; },   &#39;\rceil&#39;     =&gt; { char =&gt; &quot;\u{2309}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole =&gt;
+  // &#39;CLOSE&#39;, name =&gt; &#39;rceil&#39; },   &#39;\langle&#39;    =&gt; { char =&gt; &quot;\u{27E8}&quot;, lrole =&gt; &#39;OPEN&#39;,    rrole
+  // =&gt; &#39;CLOSE&#39;, name =&gt; &#39;langle&#39; },   &#39;\rangle&#39;    =&gt; { char =&gt; &quot;\u{27E9}&quot;, lrole =&gt; &#39;OPEN&#39;,
+  // rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rangle&#39; },   &#39;&lt;&#39;          =&gt; { char =&gt; &quot;\u{27E8}&quot;, lrole =&gt;
+  // &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;langle&#39; },   &#39;&gt;&#39;          =&gt; { char =&gt; &quot;\u{27E9}&quot;,
+  // lrole =&gt; &#39;OPEN&#39;,    rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;rangle&#39; },   &#39;/&#39;          =&gt; { char =&gt; &quot;/&quot;,
+  // lrole =&gt; &#39;MULOP&#39;,   rrole =&gt; &#39;MULOP&#39; },   &#39;\backslash&#39; =&gt; { char =&gt; UTF(0x5C),  lrole =&gt;
+  // &#39;MULOP&#39;,   rrole =&gt; &#39;MULOP&#39;, name =&gt; &#39;backslash&#39; },   &#39;|&#39;          =&gt; { char =&gt; &quot;|&quot;,
+  // lrole =&gt; &#39;VERTBAR&#39;, rrole =&gt; &#39;VERTBAR&#39; },   &#39;\|&#39;         =&gt; { char =&gt; &quot;\u{2225}&quot;, lrole =&gt;
+  // &#39;VERTBAR&#39;, rrole =&gt; &#39;VERTBAR&#39; },   &#39;\uparrow&#39;   =&gt; { char =&gt; &quot;\u{2191}&quot;, lrole =&gt; &#39;OPEN&#39;,
+  // rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;uparrow&#39; },   # ??   &#39;\Uparrow&#39;   =&gt; { char =&gt; &quot;\u{21D1}&quot;, lrole
+  // =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;Uparrow&#39; },   # ??   &#39;\downarrow&#39; =&gt; { char =&gt;
+  // &quot;\u{2193}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;downarrow&#39; }, # ??   &#39;\Downarrow&#39; =&gt;
+  // { char =&gt; &quot;\u{21D3}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt; &#39;Downarrow&#39; }, # ??
+  //   &#39;\updownarrow&#39; =&gt; { char =&gt; &quot;\u{2195}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt; &#39;CLOSE&#39;, name =&gt;
+  // &#39;updownarrow&#39; }, # ??   &#39;\Updownarrow&#39; =&gt; { char =&gt; &quot;\u{21D5}&quot;, lrole =&gt; &#39;OPEN&#39;, rrole =&gt;
+  // &#39;CLOSE&#39;, name =&gt; &#39;Updownarrow&#39; }, # ??   );
 
-// This is a little messier than you&#39;d think.
-// These effectively create a group between the \left,\right.
-// And this also gives us a single list of things to parse separately.
-// Since \left,\right are TeX, primitives and must be paired up,
-// we use a bit of macro trickery to simulate.
-// [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
-// HOWEVER, an additional complication is that it is a common mistake to omit the balancing \right!
-// Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
-</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\left XToken&quot;</span>, <span class="string">r&quot;\@left #1\@hidden@bgroup&quot;</span>);
-<span class="comment">// # Like \@hidden@egroup, but softer about missing \left
-// DefConstructor(&#39;\right@hidden@egroup&#39;, &#39;&#39;,
-//   afterDigest =&gt; sub {
-//     my ($stomach) = @_;
-//     if ($STATE-&gt;isValueBound(&#39;MODE&#39;, 0)    # Last stack frame was a mode switch!?!?!
-//       || $STATE-&gt;lookupValue(&#39;groupNonBoxing&#39;)) {    # or group was opened with \begingroup
-//       Error(&#39;unexpected&#39;, &#39;\right&#39;, undef, &quot;Unbalanced \\right, no balancing \\left.&quot;); }
-//     else {
-//       $stomach-&gt;egroup; } },
-//   reversion =&gt; &#39;&#39;);
+  // # With new treatment of Simple Symbols as just Box&#39;s with assigned attributes,
+  // # we&#39;re not getting whatsits, and so we&#39;re not looking them up the same way!!!
+  // # TEMPORARILY (?) hack the Delimiter map
+  // foreach my $entry (values %DELIMITER_MAP) {
+  //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
 
-</span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\right XToken&quot;</span>, <span class="string">r&quot;\right@hidden@egroup\@right #1&quot;</span>);
+  // sub lookup_delimiter {
+  //   my ($delim) = @_;
+  //   return $DELIMITER_MAP{$delim}; }
 
-<span class="comment">// DefConstructor(&#39;\@left Token&#39;,
-//   &quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)&quot;
-//     . &quot;(?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;,
-//   afterDigest =&gt; sub { my ($stomach, $whatsit) = @_;
-//     my $arg   = $whatsit-&gt;getArg(1);
-//     my $delim = ToString($arg);
-//     if ($delim eq &#39;.&#39;) {
-//       $whatsit-&gt;setProperty(hint =&gt; 1); }
-//     elsif (my $entry = $DELIMITER_MAP{$delim}) {
-//       $whatsit-&gt;setProperties(role =&gt; $$entry{lrole},
-//         char     =&gt; $$entry{char},
-//         name     =&gt; $$entry{name},
-//         stretchy =&gt; &#39;true&#39;);
-//       $whatsit-&gt;setFont($arg-&gt;getFont()); }
-//     elsif (($arg-&gt;getProperty(&#39;role&#39;) || &#39;&#39;) eq &#39;OPEN&#39;) {
-//       $arg-&gt;setProperty(stretchy =&gt; &#39;true&#39;); }
-//     else {
-//       Warn(&#39;unexpected&#39;, $delim, $stomach,
-//         &quot;Missing delimiter; &#39;.&#39; inserted&quot;); }
-//     return; },
-//   alias =&gt; &#39;\left&#39;);
-// DefConstructor(&#39;\@right Token&#39;,
-//   &quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)&quot;
-//     . &quot;(?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;,
-//   afterDigest =&gt; sub { my ($stomach, $whatsit) = @_;
-//     my $arg   = $whatsit-&gt;getArg(1);
-//     my $delim = ToString($arg);
-//     if ($delim eq &#39;.&#39;) {
-//       $whatsit-&gt;setProperty(hint =&gt; 1); }
-//     elsif (my $entry = $DELIMITER_MAP{$delim}) {
-//       $whatsit-&gt;setProperties(role =&gt; $$entry{rrole},
-//         char     =&gt; $$entry{char},
-//         name     =&gt; $$entry{name},
-//         stretchy =&gt; &#39;true&#39;);
-//       $whatsit-&gt;setFont($arg-&gt;getFont()); }
-//     elsif (($arg-&gt;getProperty(&#39;role&#39;) || &#39;&#39;) eq &#39;CLOSE&#39;) {
-//       $arg-&gt;setProperty(stretchy =&gt; &#39;true&#39;); }
-//     else {
-//       Warn(&#39;unexpected&#39;, $delim, $stomach,
-//         &quot;Missing delimiter; &#39;.&#39; inserted)&quot;); }
-//     return; },
-//   alias =&gt; &#39;\right&#39;);
+  // This is a little messier than you&#39;d think.
+  // These effectively create a group between the \left,\right.
+  // And this also gives us a single list of things to parse separately.
+  // Since \left,\right are TeX, primitives and must be paired up,
+  // we use a bit of macro trickery to simulate.
+  // [The \@hidden@bgroup/egroup keep from putting a {} into the UnTeX]
+  // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
+  // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\left XToken&quot;</span>, <span class="string">r&quot;\@left #1\@hidden@bgroup&quot;</span>);
+  <span class="comment">// # Like \@hidden@egroup, but softer about missing \left
+  // DefConstructor(&#39;\right@hidden@egroup&#39;, &#39;&#39;,
+  //   afterDigest =&gt; sub {
+  //     my ($stomach) = @_;
+  //     if ($STATE-&gt;isValueBound(&#39;MODE&#39;, 0)    # Last stack frame was a mode switch!?!?!
+  //       || $STATE-&gt;lookupValue(&#39;groupNonBoxing&#39;)) {    # or group was opened with \begingroup
+  //       Error(&#39;unexpected&#39;, &#39;\right&#39;, undef, &quot;Unbalanced \\right, no balancing \\left.&quot;); }
+  //     else {
+  //       $stomach-&gt;egroup; } },
+  //   reversion =&gt; &#39;&#39;);
 
-// These originally had Token as parameter, rather than {}..... Why?
-// Note that in TeX, \big{((} will only enlarge the 1st paren!!!
-</span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.2 </span>});
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.6 </span>});
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.1 </span>});
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.6 </span>});
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\right XToken&quot;</span>, <span class="string">r&quot;\right@hidden@egroup\@right #1&quot;</span>);
 
-<span class="comment">// sub addDelimiterRole {
-//   my ($document, $role) = @_;
-//   my $current = $document-&gt;getNode;
-//   my $delim   = $document-&gt;getLastChildElement($current) || $current;
-//   my $delim_role = (($delim &amp;&amp; ($delim-&gt;nodeType == XML_ELEMENT_NODE) &amp;&amp; $delim-&gt;getAttribute(&#39;role&#39;)) || &#39;&lt;none&gt;&#39;);
-//   # if there is some delimiter-like role on the &quot;delimiter&quot;, switch it, otherwise, leave it alone!
-//   if ($delim &amp;&amp; ($delim_role =~ /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {
-//     ## Maybe we shouldn&#39;t switch VERTBAR ?
-//     ## The catch is that occasionally people use a single \Bigl (or whatever)
-//     ## where they should have used a \Big
-//     $document-&gt;setAttribute($delim, role =&gt; $role); }
-//   return; }
+  <span class="comment">// DefConstructor(&#39;\@left Token&#39;,
+  //   &quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)&quot;
+  //     . &quot;(?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;,
+  //   afterDigest =&gt; sub { my ($stomach, $whatsit) = @_;
+  //     my $arg   = $whatsit-&gt;getArg(1);
+  //     my $delim = ToString($arg);
+  //     if ($delim eq &#39;.&#39;) {
+  //       $whatsit-&gt;setProperty(hint =&gt; 1); }
+  //     elsif (my $entry = $DELIMITER_MAP{$delim}) {
+  //       $whatsit-&gt;setProperties(role =&gt; $$entry{lrole},
+  //         char     =&gt; $$entry{char},
+  //         name     =&gt; $$entry{name},
+  //         stretchy =&gt; &#39;true&#39;);
+  //       $whatsit-&gt;setFont($arg-&gt;getFont()); }
+  //     elsif (($arg-&gt;getProperty(&#39;role&#39;) || &#39;&#39;) eq &#39;OPEN&#39;) {
+  //       $arg-&gt;setProperty(stretchy =&gt; &#39;true&#39;); }
+  //     else {
+  //       Warn(&#39;unexpected&#39;, $delim, $stomach,
+  //         &quot;Missing delimiter; &#39;.&#39; inserted&quot;); }
+  //     return; },
+  //   alias =&gt; &#39;\left&#39;);
+  // DefConstructor(&#39;\@right Token&#39;,
+  //   &quot;?#char(&lt;ltx:XMTok role=&#39;#role&#39; name=&#39;#name&#39; stretchy=&#39;#stretchy&#39;&gt;#char&lt;/ltx:XMTok&gt;)&quot;
+  //     . &quot;(?#hint(&lt;ltx:XMHint/&gt;)(#1))&quot;,
+  //   afterDigest =&gt; sub { my ($stomach, $whatsit) = @_;
+  //     my $arg   = $whatsit-&gt;getArg(1);
+  //     my $delim = ToString($arg);
+  //     if ($delim eq &#39;.&#39;) {
+  //       $whatsit-&gt;setProperty(hint =&gt; 1); }
+  //     elsif (my $entry = $DELIMITER_MAP{$delim}) {
+  //       $whatsit-&gt;setProperties(role =&gt; $$entry{rrole},
+  //         char     =&gt; $$entry{char},
+  //         name     =&gt; $$entry{name},
+  //         stretchy =&gt; &#39;true&#39;);
+  //       $whatsit-&gt;setFont($arg-&gt;getFont()); }
+  //     elsif (($arg-&gt;getProperty(&#39;role&#39;) || &#39;&#39;) eq &#39;CLOSE&#39;) {
+  //       $arg-&gt;setProperty(stretchy =&gt; &#39;true&#39;); }
+  //     else {
+  //       Warn(&#39;unexpected&#39;, $delim, $stomach,
+  //         &quot;Missing delimiter; &#39;.&#39; inserted)&quot;); }
+  //     return; },
+  //   alias =&gt; &#39;\right&#39;);
 
-// # The &quot;m&quot; versions are defined in e-Tex and other places.
-// DefConstructor(&#39;\bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-// DefConstructor(&#39;\bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-// DefConstructor(&#39;\bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // These originally had Token as parameter, rather than {}..... Why?
+  // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.2 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Big {}&quot;</span>,  <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">1.6 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.1 </span>});
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\Bigg {}&quot;</span>, <span class="string">&quot;#1&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, font =&gt; { size =&gt; <span class="number">2.6 </span>});
 
-// DefConstructor(&#39;\Bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-// DefConstructor(&#39;\Bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-// DefConstructor(&#39;\Bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  <span class="comment">// sub addDelimiterRole {
+  //   my ($document, $role) = @_;
+  //   my $current = $document-&gt;getNode;
+  //   my $delim   = $document-&gt;getLastChildElement($current) || $current;
+  //   my $delim_role = (($delim &amp;&amp; ($delim-&gt;nodeType == XML_ELEMENT_NODE) &amp;&amp;
+  // $delim-&gt;getAttribute(&#39;role&#39;)) || &#39;&lt;none&gt;&#39;);   # if there is some delimiter-like role on the
+  // &quot;delimiter&quot;, switch it, otherwise, leave it alone!   if ($delim &amp;&amp; ($delim_role =~
+  // /^(OPEN|MIDDLE|CLOSE|VERTBAR|&lt;none&gt;)$/)) {     ## Maybe we shouldn&#39;t switch VERTBAR ?
+  //     ## The catch is that occasionally people use a single \Bigl (or whatever)
+  //     ## where they should have used a \Big
+  //     $document-&gt;setAttribute($delim, role =&gt; $role); }
+  //   return; }
 
-// DefConstructor(&#39;\biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-// DefConstructor(&#39;\biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-// DefConstructor(&#39;\biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // # The &quot;m&quot; versions are defined in e-Tex and other places.
+  // DefConstructor(&#39;\bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
+  // DefConstructor(&#39;\bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
+  // DefConstructor(&#39;\bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
 
-// DefConstructor(&#39;\Biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
-// DefConstructor(&#39;\Biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
-// DefConstructor(&#39;\Biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
-//   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+  // DefConstructor(&#39;\Bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
+  // DefConstructor(&#39;\Bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
+  // DefConstructor(&#39;\Bigr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Big&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+
+  // DefConstructor(&#39;\biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
+  // DefConstructor(&#39;\biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
+  // DefConstructor(&#39;\biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
+
+  // DefConstructor(&#39;\Biggl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
+  // DefConstructor(&#39;\Biggm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;MIDDLE&#39;); });
+  // DefConstructor(&#39;\Biggr {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;Bigg&#39; },
+  //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;CLOSE&#39;); });
 
   </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\vert&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;|&quot;</span>));
   <span class="macro">Let!</span>(<span class="string">&quot;\\Vert&quot;</span>, <span class="string">&quot;\\|&quot;</span>);
-
 });
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

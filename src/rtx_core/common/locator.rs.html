@@ -171,6 +171,18 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
 <span class="kw">use </span>std::borrow::Cow;
@@ -221,7 +233,13 @@
 }
 
 <span class="kw">impl </span>Locator {
-  <span class="kw">pub fn </span>new(source: String, from_line: usize, from_column: usize, to_line: usize, to_column: usize) -&gt; <span class="self">Self </span>{
+  <span class="kw">pub fn </span>new(
+    source: String,
+    from_line: usize,
+    from_column: usize,
+    to_line: usize,
+    to_column: usize,
+  ) -&gt; <span class="self">Self </span>{
     Locator {
       source,
       from_line,
@@ -244,7 +262,13 @@
     } <span class="kw">else </span>{
       (to.from_line, to.from_column)
     };
-    <span class="prelude-val">Some</span>(Locator::new(from.source, from.from_line, from.from_column, to_line, to_column))
+    <span class="prelude-val">Some</span>(Locator::new(
+      from.source,
+      from.from_line,
+      from.from_column,
+      to_line,
+      to_column,
+    ))
   }
 
   <span class="kw">pub fn </span>is_range(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.to_line &gt; <span class="number">0 </span>|| <span class="self">self</span>.to_column &gt; <span class="number">0 </span>}

@@ -172,6 +172,9 @@
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
 
@@ -181,6 +184,7 @@
 // Define a whole mess of useless registers here ...
 // Values are from Appendix B, pp. 348-349 (for whatever its worth)
 //======================================================================
+</span><span class="attr">#[rustfmt::skip]
 </span><span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//======================================================================
   // Integer registers; TeXBook p. 272-273
@@ -249,10 +253,8 @@
   <span class="comment">// Most of these are ignored, but...
   </span><span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\tracingall&quot;</span>,
-    <span class="string">&quot;\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\
-     \\tracingpages=1 \\tracingoutput=1 \\tracinglostchars=1\
-     \\tracingmacros=2 \\tracingparagraphs=1 \\tracingrestores=1\
-     \\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode&quot;
+    <span class="string">&quot;\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\\tracingpages=1 \\tracingoutput=1\\tracinglostchars=1\\tracingmacros=2 %\
+\\tracingparagraphs=1 \\tracingrestores=1\\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode&quot;
   </span>);
 
   <span class="kw">let </span>dt = Local::now();
@@ -260,7 +262,11 @@
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\day&quot;</span>, <span class="macro">Number!</span>(dt.day()), Scope::Global);
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\month&quot;</span>, <span class="macro">Number!</span>(dt.month()), Scope::Global);
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\year&quot;</span>, <span class="macro">Number!</span>(dt.year()), Scope::Global);
-  <span class="macro">AssignValue!</span>(<span class="string">&quot;\\time&quot;</span>, <span class="macro">Number!</span>(<span class="number">60 </span>* dt.hour() + dt.minute()), Scope::Global);
+  <span class="macro">AssignValue!</span>(
+    <span class="string">&quot;\\time&quot;</span>,
+    <span class="macro">Number!</span>(<span class="number">60 </span>* dt.hour() + dt.minute()),
+    Scope::Global
+  );
 
   <span class="comment">// Read-only Integer registers
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\lastpenalty&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);

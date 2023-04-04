@@ -43,6 +43,8 @@
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
 <a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Node, NodeType};
 
 <span class="kw">pub fn </span>get_grammatical_role(node: <span class="kw-2">&amp;</span>Node) -&gt; String {
@@ -54,7 +56,9 @@
         <span class="string">&quot;UNKNOWN&quot;</span>.to_string()
       } <span class="kw">else if </span>tag == <span class="string">&quot;XMDual&quot; </span>{
         <span class="kw">match </span>node.get_first_element_child() {
-          <span class="prelude-val">Some</span>(child) =&gt; child.get_attribute(<span class="string">&quot;role&quot;</span>).unwrap_or_else(|| <span class="string">&quot;UNKNOWN&quot;</span>.to_string()),
+          <span class="prelude-val">Some</span>(child) =&gt; child
+            .get_attribute(<span class="string">&quot;role&quot;</span>)
+            .unwrap_or_else(|| <span class="string">&quot;UNKNOWN&quot;</span>.to_string()),
           <span class="prelude-val">None </span>=&gt; <span class="string">&quot;UNKNOWN&quot;</span>.to_string(),
         }
       } <span class="kw">else </span>{

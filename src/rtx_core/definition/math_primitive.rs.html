@@ -285,9 +285,32 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
-<span class="kw">use </span>libxml::tree::Node;
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="comment">// use crate::common::font::Font;
@@ -295,7 +318,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State};
 
-<span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, ConstructionClosure, Reversion};
+<span class="kw">use </span><span class="kw">crate</span>::definition::{
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+  PrimitiveClosure, Reversion,
+};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
@@ -408,7 +434,9 @@
   }
 }
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>MathPrimitiveOptions {
-  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>MathPrimitiveOptions) -&gt; bool { <span class="self">self</span>.name == other.name &amp;&amp; <span class="self">self</span>.meaning == other.meaning &amp;&amp; <span class="self">self</span>.role == other.role }
+  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>MathPrimitiveOptions) -&gt; bool {
+    <span class="self">self</span>.name == other.name &amp;&amp; <span class="self">self</span>.meaning == other.meaning &amp;&amp; <span class="self">self</span>.role == other.role
+  }
 }
 
 <span class="kw">impl </span>MathPrimitiveOptions {
@@ -439,7 +467,10 @@
       h.insert(<span class="string">&quot;scriptpos&quot;</span>.to_string(), Stored::Int(<span class="kw-2">*</span>scriptpos <span class="kw">as </span>i64));
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>operator_scriptpos) = <span class="self">self</span>.operator_scriptpos {
-      h.insert(<span class="string">&quot;operator_scriptpos&quot;</span>.to_string(), Stored::Int(<span class="kw-2">*</span>operator_scriptpos <span class="kw">as </span>i64));
+      h.insert(
+        <span class="string">&quot;operator_scriptpos&quot;</span>.to_string(),
+        Stored::Int(<span class="kw-2">*</span>operator_scriptpos <span class="kw">as </span>i64),
+      );
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>stretchy) = <span class="self">self</span>.stretchy {
       h.insert(<span class="string">&quot;stretchy&quot;</span>.to_string(), (<span class="kw-2">*</span>stretchy).into());
@@ -452,7 +483,10 @@
     }
     <span class="comment">// TODO: Do we want to run the font closures here? Maybe?
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font_directive) = <span class="self">self</span>.font {
-      h.insert(<span class="string">&quot;font&quot;</span>.to_string(), Stored::FontDirective(font_directive.clone()));
+      h.insert(
+        <span class="string">&quot;font&quot;</span>.to_string(),
+        Stored::FontDirective(font_directive.clone()),
+      );
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>lpadding) = <span class="self">self</span>.lpadding {
       h.insert(<span class="string">&quot;lpadding&quot;</span>.to_string(), (<span class="kw-2">*</span>lpadding).into());
@@ -468,7 +502,8 @@
   </span><span class="doccomment">/// Checks if complex options are present,
   /// suggestive of using a `Constructor` instead of a `Primitive`
   </span><span class="kw">pub fn </span>has_complex_option(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-    <span class="comment">//DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should we even?)
+    <span class="comment">//DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should
+    // we even?)
     </span><span class="self">self</span>.bounded
       || <span class="self">self</span>.mode.is_some()
       || !<span class="self">self</span>.before_digest.is_empty()
@@ -529,7 +564,9 @@
 <span class="kw">impl </span>Definition <span class="kw">for </span>MathPrimitive {
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.options.before_digest) }
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.options.after_digest) }
-  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+  }
   <span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     <span class="comment">// Info!(&quot;MathPrimitive&quot;, &quot;invoke&quot;, stomach, state, &quot;invoke for {:?}&quot;, self.cs);
     // my $profiled = $STATE-&gt;lookupValue(&#39;PROFILING&#39;) &amp;&amp; ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -552,8 +589,17 @@
     </span><span class="prelude-val">Ok</span>(result)
   }
 
-  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="macro">fatal!</span>(Definition, Unexpected, <span class="string">&quot;do_absorbtion on MathPrimitive should never be called!&quot;</span>);
+  <span class="kw">fn </span>do_absorbtion(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    _document: <span class="kw-2">&amp;mut </span>Document,
+    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="macro">fatal!</span>(
+      Definition,
+      Unexpected,
+      <span class="string">&quot;do_absorbtion on MathPrimitive should never be called!&quot;
+    </span>);
   }
 
   <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.cs) }

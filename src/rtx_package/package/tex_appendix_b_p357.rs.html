@@ -161,6 +161,21 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -174,7 +189,10 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\raggedleft&quot;</span>, <span class="string">&quot;&quot;</span>); <span class="comment">// this is actually LaTeX
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\ttraggedright&quot;</span>, <span class="string">&quot;&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\leavevmode&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">r&quot;\mathhexbox{}{}{}&quot;</span>, <span class="string">r###&quot;\leavevmode\hbox{$\m@th \mathchar&quot;#1#2#3$}&quot;###</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">r&quot;\mathhexbox{}{}{}&quot;</span>,
+    <span class="string">r###&quot;\leavevmode\hbox{$\m@th \mathchar&quot;#1#2#3$}&quot;###
+  </span>);
   <span class="comment">//----------------------------------------------------------------------
   // Actually from LaTeX; Table 3.2. Non-English Symbols, p.39
 
@@ -266,14 +284,20 @@
   </span><span class="macro">Let!</span>(<span class="string">&quot;\\sp&quot;</span>, <span class="macro">T_SUPER!</span>());
   <span class="macro">Let!</span>(<span class="string">&quot;\\sb&quot;</span>, <span class="macro">T_SUB!</span>());
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\,&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\,&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor!(&quot;\\@math@thinmuskip&quot;,
   //   &quot;&lt;ltx:XMHint name=&#39;thinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\,&#39;,
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { LookupValue(&#39;\thinmuskip&#39;); } });
   // DefPrimitiveI(&#39;\@text@thinmuskip&#39;, undef, &quot;\x{2009}&quot;, alias =&gt; &#39;\,&#39;);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\!&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\!&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@negthinmuskip&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;negthinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\!&#39;,
@@ -281,7 +305,10 @@
   //     width =&gt; sub { LookupValue(&#39;\thinmuskip&#39;)-&gt;negate; } });
   // DefPrimitiveI(&#39;\@text@negthinmuskip&#39;, undef, &quot;&quot;, alias =&gt; &#39;\!&#39;);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\&gt;&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\&gt;&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@medmuskip&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;medspace&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\&gt;&#39;,
@@ -312,7 +339,10 @@
   //     width =&gt; sub { Dimension(&#39;1em&#39;); } });
   // DefPrimitiveI(&#39;\@text@tab&#39;, undef, UTF(0xA0), alias =&gt; &quot;\\\t&quot;);    # TAB!!! What else?
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\/&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\/&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&quot;\@math@italiccorr&quot;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;italiccorr&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\/&#39;,

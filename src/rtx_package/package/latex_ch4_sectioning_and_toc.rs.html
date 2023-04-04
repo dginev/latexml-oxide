@@ -284,6 +284,32 @@
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
 </pre><pre class="rust"><code><span class="comment">//**********************************************************************
 // C.4 Sectioning and Table of Contents
 //**********************************************************************
@@ -308,13 +334,26 @@
   // These are defined in terms of \@startsection so that
   // casual user redefinitions work, too.
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\chapter&quot;</span>, <span class="string">&quot;\\@startsection{chapter}{0}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\part&quot;</span>, <span class="string">&quot;\\@startsection{part}{-1}{}{}{}{}&quot;</span>); <span class="comment">// not locked since sometimes redefined as partition?
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\section&quot;</span>, <span class="string">&quot;\\@startsection{section}{1}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
+
+  // not locked since sometimes redefined as partition?
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\part&quot;</span>, <span class="string">&quot;\\@startsection{part}{-1}{}{}{}{}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\section&quot;</span>, <span class="string">&quot;\\@startsection{section}{1}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\subsection&quot;</span>, <span class="string">&quot;\\@startsection{subsection}{2}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\subsubsection&quot;</span>, <span class="string">&quot;\\@startsection{subsubsection}{3}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\subsubsection&quot;</span>,
+    <span class="string">&quot;\\@startsection{subsubsection}{3}{}{}{}{}&quot;
+  </span>); <span class="comment">// TODO: locked =&gt; true);
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\paragraph&quot;</span>, <span class="string">&quot;\\@startsection{paragraph}{4}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\subparagraph&quot;</span>, <span class="string">&quot;\\@startsection{subparagraph}{5}{}{}{}{}&quot;</span>); <span class="comment">// TODO: locked =&gt; true);
-  </span><span class="kw">for </span>tag <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">&quot;part&quot;</span>, <span class="string">&quot;chapter&quot;</span>, <span class="string">&quot;section&quot;</span>, <span class="string">&quot;subsection&quot;</span>, <span class="string">&quot;subsubsection&quot;</span>, <span class="string">&quot;paragraph&quot;</span>, <span class="string">&quot;subparagraph&quot;</span>] {
+  </span><span class="kw">for </span>tag <span class="kw">in </span><span class="kw-2">&amp;</span>[
+    <span class="string">&quot;part&quot;</span>,
+    <span class="string">&quot;chapter&quot;</span>,
+    <span class="string">&quot;section&quot;</span>,
+    <span class="string">&quot;subsection&quot;</span>,
+    <span class="string">&quot;subsubsection&quot;</span>,
+    <span class="string">&quot;paragraph&quot;</span>,
+    <span class="string">&quot;subparagraph&quot;</span>,
+  ] {
     <span class="macro">Tag!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;ltx:{}&quot;</span>,tag), auto_close =&gt; <span class="bool-val">true</span>);
   }
 
@@ -342,14 +381,16 @@
       };
       <span class="kw">let </span><span class="kw-2">mut </span>tokens: Vec&lt;Token&gt;;
       <span class="kw">if </span>flag.is_some() { <span class="comment">// No number, not in TOC
-        </span>tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@unnumbered@section&quot;</span>),
+        </span>tokens = <span class="macro">vec!</span>[
+          <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@unnumbered@section&quot;</span>),
         <span class="macro">T_BEGIN!</span>()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(<span class="macro">vec!</span>[<span class="macro">T_END!</span>(), <span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>()]);
       } <span class="kw">else if </span>level_int &gt; <span class="macro">CounterValue!</span>(<span class="string">&quot;secnumdepth&quot;</span>, state).value_of() ||
         state.lookup_bool(<span class="string">&quot;no_number_sections&quot;</span>) {
         <span class="comment">// No number, but in TOC
-        </span>tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@unnumbered@section&quot;</span>),
+        </span>tokens = <span class="macro">vec!</span>[
+          <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@unnumbered@section&quot;</span>),
         <span class="macro">T_BEGIN!</span>()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(<span class="macro">vec!</span>[<span class="macro">T_END!</span>(), <span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(<span class="string">&quot;toc&quot;</span>), <span class="macro">T_END!</span>()]);
@@ -383,16 +424,20 @@
       // &quot;args&quot; and &quot;props&quot; children ... will come back here after performance becomes
       // an issue again
       //
-      // Part 2: I have now, with great attention and profiling, solidified the position that Whatsits are immutable
-      // during the absorbtion phase -- and hense the args and props passed in here will remain immutable in rtx.
+      // Part 2: I have now, with great attention and profiling, solidified the position that
+      //       Whatsits are immutable during the absorbtion phase -- and hence
+      // the args and props passed in here will remain immutable in rtx.
       // Hence, for this absorb call to run correctly, it must either:
       // 1) Accept a cloned value as currently, paying with performance
-      // 2) Accept immutable references to digested objects, which may lead to far-reaching borrowing constraints
-      //   e.g. unlist()-ing a digested List will have to produce box references, rather than provide the owned boxes directly.
+      // 2) Accept immutable references to digested objects,
+      // which may lead to far-reaching borrowing constraints
+      //   e.g. unlist()-ing a digested List will have to produce box references,
+      //  rather than provide the owned boxes directly.
       //   would have to experiment with this - as it is of course much lighter on performance
       //
 
-      // Update 2022: The notes are generally still accurate, but cloning a Digested object is now cheap enough,
+      // Update 2022: The notes are generally still accurate,
+      // but cloning a Digested object is now cheap enough,
       // as each enum variant is guarded by an Arc reference counter. Arc&lt;Tbox&gt;, Arc&lt;List&gt;, etc.
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(tags)) = props.get(<span class="string">&quot;tags&quot;</span>) {
         document.absorb(tags, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
@@ -425,14 +470,16 @@
       <span class="kw">let </span>invoked_title;
       {
         <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-        invoked_title = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@format@title@@&quot;</span>), <span class="macro">vec!</span>[stype_tokens, title_tokens], gullet)<span class="question-mark">?</span>;
+        invoked_title =
+          <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@format@title@@&quot;</span>), <span class="macro">vec!</span>[stype_tokens, title_tokens], gullet)<span class="question-mark">?</span>;
       }
       <span class="kw">let </span>xtitle    = stomach.digest(invoked_title, state)<span class="question-mark">?</span>;
 
       <span class="kw">let </span>invoked_toctitle;
       {
         <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-        invoked_toctitle = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@format@toctitle@@&quot;</span>), <span class="macro">vec!</span>[stype.revert(state)<span class="question-mark">?</span>, toctitle.revert(state)<span class="question-mark">?</span>], gullet, state)<span class="question-mark">?</span>;
+        invoked_toctitle = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@format@toctitle@@&quot;</span>),
+          <span class="macro">vec!</span>[stype.revert(state)<span class="question-mark">?</span>, toctitle.revert(state)<span class="question-mark">?</span>], gullet, state)<span class="question-mark">?</span>;
       }
       <span class="kw">let </span>xtoctitle = stomach.digest(invoked_toctitle, state)<span class="question-mark">?</span>;
 
@@ -446,7 +493,8 @@
   );
 
   <span class="comment">// No tags, at all? Consider...
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@unnumbered@section{} Undigested OptionalUndigested Undigested&quot;</span>, sub[document, args, props, state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@unnumbered@section{} Undigested OptionalUndigested Undigested&quot;</span>,
+  sub[document, args, props, state] {
       <span class="kw">let </span>stype = args[<span class="number">0</span>].as_ref().unwrap();
       <span class="kw">let </span>inlist = args[<span class="number">1</span>].as_ref().unwrap();
       <span class="comment">// let toctitle_arg = args[2].as_ref();
@@ -478,7 +526,9 @@
         <span class="comment">// TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn&#39;t ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        </span>stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@bgroup&quot;</span>), tokens.clone().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>)), state)<span class="question-mark">?
+        </span>stomach.digest(
+          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@bgroup&quot;</span>), tokens.clone().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>)),
+          state)<span class="question-mark">?
       </span>} <span class="kw">else </span>{
         title.clone()
       };
@@ -488,7 +538,9 @@
         <span class="kw">if let </span>Postponed(toctokens) = toctitle.data() {
           <span class="kw">if </span>!toctokens.is_empty() {
             <span class="kw">let </span>toctitle_digested = stomach.digest(
-              <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@bgroup&quot;</span>), toctokens.clone().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>)), state)<span class="question-mark">?</span>;
+              <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@bgroup&quot;</span>),
+                toctokens.clone().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>)),
+              state)<span class="question-mark">?</span>;
             props.insert(<span class="string">&quot;toctitle&quot;</span>.to_string(), toctitle_digested.into());
           }
         }

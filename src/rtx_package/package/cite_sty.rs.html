@@ -63,11 +63,9 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(outer_stomach, state, {
-
   <span class="comment">// Ignore the resorting of citations
   // &quot;Compression&quot; of citation lists doesn&#39;t make much sense in XML.
 
@@ -77,15 +75,16 @@
   // the XML at the end.
   // An alternative would be to store various styling info,
   // but I&#39;ll leave that off, for now.
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\citeleft&quot;</span>,   <span class="string">&quot;[&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citeright&quot;</span>,  <span class="string">&quot;]&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citedash&quot;</span>,   <span class="string">&quot;--&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citemid&quot;</span>,    <span class="string">&quot;, &quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citepunct&quot;</span>,  <span class="string">&quot;, &quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\citeleft&quot;</span>, <span class="string">&quot;[&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citeright&quot;</span>, <span class="string">&quot;]&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citedash&quot;</span>, <span class="string">&quot;--&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citemid&quot;</span>, <span class="string">&quot;, &quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citepunct&quot;</span>, <span class="string">&quot;, &quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\citeform{}&quot;</span>, <span class="string">&quot;#1&quot;</span>);
 
   <span class="comment">// Copy of natbib&#39;s \citet
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\citen OptionalMatch:* [][] Semiverbatim&quot;</span>, sub[gullet, (_star,_pre,_post,_tkeys), _state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\citen OptionalMatch:* [][] Semiverbatim&quot;</span>,
+    sub[gullet, (_star,_pre,_post,_tkeys), _state] {
     <span class="macro">unimplemented!</span>();
       <span class="comment">// my ($style, $open, $close, $ns)
       //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
@@ -126,9 +125,8 @@
       </span>()
   });
 
-  <span class="macro">Let!</span>(<span class="string">&quot;\\citenum&quot;</span>,    <span class="string">&quot;\\citen&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\citenum&quot;</span>, <span class="string">&quot;\\citen&quot;</span>);
   <span class="macro">Let!</span>(<span class="string">&quot;\\citeonline&quot;</span>, <span class="string">&quot;\\citen&quot;</span>);
-
 });
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -131,10 +131,29 @@
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -161,7 +180,7 @@
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>List {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">for </span>tbox <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.boxes {
-      <span class="macro">writeln!</span>(f, <span class="string">&quot;{}&quot;</span>,tbox.stringify())<span class="question-mark">?</span>;
+      <span class="macro">writeln!</span>(f, <span class="string">&quot;{}&quot;</span>, tbox.stringify())<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(())
   }
@@ -178,14 +197,17 @@
 
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>List {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-    <span class="self">self</span>.boxes.len() == other.boxes.len() &amp;&amp; <span class="self">self</span>.boxes.iter().zip(other.boxes.iter()).all(|(box1, box2)| box1 == box2)
+    <span class="self">self</span>.boxes.len() == other.boxes.len()
+      &amp;&amp; <span class="self">self
+        </span>.boxes
+        .iter()
+        .zip(other.boxes.iter())
+        .all(|(box1, box2)| box1 == box2)
   }
 }
 
 <span class="kw">impl </span>Object <span class="kw">for </span>List {
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>)
-  }
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.locator)) }
 
   <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
@@ -199,15 +221,27 @@
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>List {
   <span class="kw">fn </span>unlist(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Digested&gt; { <span class="self">self</span>.boxes.clone() }
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="self">self</span>.properties.contains_key(key) }
-  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>))) }
+  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)))
+  }
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) { <span class="self">self</span>.properties.insert(key.to_string(), value.into()); }
+  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="self">self</span>.properties.insert(key.to_string(), value.into());
+  }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
   <span class="doccomment">/// NOTE: No longer used; Document-&gt;absorb bypasses this for stack efficiency.
-  </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="macro">unimplemented!</span>() }
+  </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="macro">unimplemented!</span>()
+  }
 
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.as_ref().map(Cow::Borrowed)) }
-  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
+    <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.as_ref().map(Cow::Borrowed))
+  }
+  <span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.font {
       <span class="prelude-val">Some</span>(f) =&gt; f.compute_boxes_size(<span class="kw-2">&amp;</span><span class="self">self</span>.boxes, options, state)<span class="question-mark">?</span>,
       <span class="kw">_ </span>=&gt; Font::text_default().compute_boxes_size(<span class="kw-2">&amp;</span><span class="self">self</span>.boxes, options, state)<span class="question-mark">?</span>,
@@ -219,7 +253,8 @@
   <span class="kw">pub fn </span>new(boxes: Vec&lt;Digested&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="self">Self </span>{
     <span class="comment">// while (defined($bx = shift(@bxs)) &amp;&amp; (!defined $locator)) {
     //   $locator = $bx-&gt;getLocator unless defined $locator; }
-    // TODO: Should the locators be an Option&lt;&gt; type? Or can we test for the default here, since it&#39;s rare? Hmmmm
+    // TODO: Should the locators be an Option&lt;&gt; type? Or can we test for the default here, since
+    // it&#39;s rare? Hmmmm
     </span><span class="kw">let </span><span class="kw-2">mut </span>locator: Locator = Locator::default();
     <span class="kw">for </span>bx <span class="kw">in </span>boxes.iter().rev() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(bx_locator) = bx.get_locator() {
@@ -234,7 +269,10 @@
     // font!) ???
     </span><span class="kw">let </span><span class="kw-2">mut </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt; = <span class="prelude-val">None</span>;
     <span class="kw">for </span>bx <span class="kw">in </span>boxes.iter().rev() {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(bx_font) = bx.get_font(state).expect(<span class="string">&quot;getting a font should go well during List construction&quot;</span>) {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(bx_font) = bx
+        .get_font(state)
+        .expect(<span class="string">&quot;getting a font should go well during List construction&quot;</span>)
+      {
         font = <span class="prelude-val">Some</span>(bx_font.into_owned());
         <span class="kw">break</span>;
       }

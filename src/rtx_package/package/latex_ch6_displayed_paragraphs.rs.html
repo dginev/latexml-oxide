@@ -81,9 +81,9 @@
 //**********************************************************************
 
 </span><span class="macro">LoadDefinitions!</span>(state, {
-
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{center}&quot;</span>, sub[document, _args, props, state] {
-    document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>;                       <span class="comment">// this starts a new vertical block
+    document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, state)<span class="question-mark">?</span>;
+    <span class="comment">// this starts a new vertical block
     </span>aligning_environment(<span class="string">&quot;center&quot;</span>, <span class="string">&quot;ltx_centering&quot;</span>, document, props, state)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
   },   <span class="comment">// aligning will take care of \\\\ &quot;rows&quot;
@@ -92,9 +92,8 @@
     <span class="macro">Let!</span>(<span class="string">&quot;\\\\&quot;</span>, <span class="string">&quot;\\inner@par&quot;</span>);
   });
   <span class="comment">// HOWEVER, define a plain \center to act like \centering (?)
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\center&quot;</span>,    <span class="string">&quot;\\centering&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\center&quot;</span>, <span class="string">&quot;\\centering&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endcenter&quot;</span>, <span class="prelude-val">None</span>);
-
 
   <span class="comment">// DefEnvironment(&#39;{flushleft}&#39;, sub {
   //     $_[0]-&gt;maybeCloseElement(&#39;ltx:p&#39;);    # this starts a new vertical block
@@ -109,17 +108,18 @@
   //     Let(&#39;\par&#39;, &#39;\inner@par&#39;);
   //     Let(&#39;\\\\&#39;, &#39;\inner@par&#39;); });
 
-  // # These add an operation to be carried out on the current node &amp; following siblings, when the current group ends.
-  // # These operators will add alignment (class) attributes to each &quot;line&quot; in the current block.
-  // #DefPrimitiveI(&#39;\centering&#39;,   undef, sub { UnshiftValue(beforeAfterGroup=&gt;T_CS(&#39;\@add@centering&#39;)); });
-  // # NOTE: THere&#39;s a problem here.  The current method seems to work right for these operators
-  // # appearing within the typical environments.  HOWEVER, it doesn&#39;t work for a simple \bgroup or \begingroup!!!
-  // # (they don&#39;t create a node! or even a whatsit!)
+  // # These add an operation to be carried out on the current node &amp; following siblings, when the
+  // current group ends. # These operators will add alignment (class) attributes to each &quot;line&quot; in
+  // the current block. #DefPrimitiveI(&#39;\centering&#39;,   undef, sub {
+  // UnshiftValue(beforeAfterGroup=&gt;T_CS(&#39;\@add@centering&#39;)); }); # NOTE: THere&#39;s a problem here.
+  // The current method seems to work right for these operators # appearing within the typical
+  // environments.  HOWEVER, it doesn&#39;t work for a simple \bgroup or \begingroup!!! # (they don&#39;t
+  // create a node! or even a whatsit!)
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\centering&quot;</span>, sub[doc,_args,state] {
-    state.assign_value(<span class="string">&quot;ALIGNING_NODE&quot;</span>, doc.get_element().unwrap(), <span class="prelude-val">None</span>); },
-    before_digest =&gt; sub[gullet,state] {
-      state.unshift_value(<span class="string">&quot;beforeAfterGroup&quot;</span>, <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\@add@centering&quot;</span>)]);
-    });
+  state.assign_value(<span class="string">&quot;ALIGNING_NODE&quot;</span>, doc.get_element().unwrap(), <span class="prelude-val">None</span>); },
+  before_digest =&gt; sub[gullet,state] {
+    state.unshift_value(<span class="string">&quot;beforeAfterGroup&quot;</span>, <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\@add@centering&quot;</span>)]);
+  });
   <span class="comment">// DefConstructorI(&#39;\raggedright&#39;, undef,
   //   sub { AssignValue(ALIGNING_NODE =&gt; $_[0]-&gt;getElement); return; },
   //   beforeDigest =&gt; sub { UnshiftValue(beforeAfterGroup =&gt; T_CS(&#39;\@add@raggedright&#39;)); });

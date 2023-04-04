@@ -157,8 +157,6 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
 </pre><pre class="rust"><code><span class="comment">//**********************************************************************
 // C.3. Sentences and Paragraphs
 //**********************************************************************
@@ -225,7 +223,7 @@
   // \noindent, \indent, \par in TeX.pool.ltxml
 
   </span><span class="macro">Let!</span>(<span class="string">&quot;\\@@par&quot;</span>, <span class="string">&quot;\\par&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@par&quot;</span>,        <span class="string">r&quot;\let\par\@@par\par&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@par&quot;</span>, <span class="string">r&quot;\let\par\@@par\par&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@restorepar&quot;</span>, <span class="string">r&quot;\def\par{\@par}&quot;</span>);
 
   <span class="comment">// Style parameters
@@ -245,16 +243,15 @@
   // C.3.3 Footnotes
   //======================================================================
 
-</span><span class="macro">NewCounter!</span>(<span class="string">&quot;footnote&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\thefootnote&quot;</span>, <span class="string">&quot;\\arabic{footnote}&quot;</span>);
-<span class="macro">NewCounter!</span>(<span class="string">&quot;mpfootnote&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\thempfn&quot;</span>,             <span class="string">&quot;\\thefootnote&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\thempfootnote&quot;</span>,       <span class="string">&quot;\\arabic{mpfootnote}&quot;</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotetyperefname&quot;</span>, <span class="string">&quot;footnote&quot;</span>);
+  </span><span class="macro">NewCounter!</span>(<span class="string">&quot;footnote&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thefootnote&quot;</span>, <span class="string">&quot;\\arabic{footnote}&quot;</span>);
+  <span class="macro">NewCounter!</span>(<span class="string">&quot;mpfootnote&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thempfn&quot;</span>, <span class="string">&quot;\\thefootnote&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thempfootnote&quot;</span>, <span class="string">&quot;\\arabic{mpfootnote}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotetyperefname&quot;</span>, <span class="string">&quot;footnote&quot;</span>);
 
-
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\ext@footnote&quot;</span>, <span class="prelude-val">None</span>);
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@note[]{}[]{}&quot;</span>,
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ext@footnote&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@note[]{}[]{}&quot;</span>,
   <span class="string">&quot;^&lt;ltx:note role=&#39;#role&#39; mark=&#39;#mark&#39; xml:id=&#39;#id&#39; inlist=&#39;#list&#39;&gt;#tags#4&lt;/ltx:note&gt;&quot;</span>,
   mode         =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>,
   before_digest =&gt; sub [stomach,state] {
@@ -272,7 +269,7 @@
   },
   reversion =&gt; <span class="string">&quot;&quot;</span>);
 
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@notemark[]{}[]&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@notemark[]{}[]&quot;</span>,
   <span class="string">&quot;^&lt;ltx:note role=&#39;#role&#39; mark=&#39;#mark&#39; xml:id=&#39;#id&#39; inlist=&#39;#list&#39;&gt;#tags&lt;/ltx:note&gt;&quot;</span>,
   mode       =&gt; <span class="string">&quot;text&quot;</span>,
   properties =&gt; sub[stomach,args,state] {
@@ -287,7 +284,7 @@
   },
   reversion =&gt; <span class="string">&quot;&quot;</span>);
 
-<span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@notetext[]{}[]{}&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@notetext[]{}[]{}&quot;</span>,
   <span class="string">&quot;^&lt;ltx:note role=&#39;#role&#39; mark=&#39;#mark&#39; xml:id=&#39;#id&#39;&gt;#4&lt;/ltx:note&gt;&quot;</span>,
   mode       =&gt; <span class="string">&quot;text&quot;</span>,
   properties =&gt; sub [stomach, args,state] {
@@ -306,19 +303,18 @@
   },
   reversion =&gt; <span class="string">&quot;&quot;</span>);
 
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnote&quot;</span>,      <span class="string">&quot;\\lx@note{footnote}&quot;</span>,     locked =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotemark&quot;</span>,  <span class="string">&quot;\\lx@notemark{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotetext&quot;</span>,  <span class="string">&quot;\\lx@notetext{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
-<span class="macro">DefMacro!</span>(<span class="string">&quot;\\@footnotetext&quot;</span>, <span class="string">&quot;\\lx@notetext{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
-<span class="comment">// we don&#39;t implement the internals directly, so lock them to the latexml variant
-</span><span class="macro">Let!</span>(<span class="string">&quot;\\@thefnmark&quot;</span>, <span class="string">&quot;\\lx@notemark{footnote}&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnote&quot;</span>,      <span class="string">&quot;\\lx@note{footnote}&quot;</span>,     locked =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotemark&quot;</span>,  <span class="string">&quot;\\lx@notemark{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\footnotetext&quot;</span>,  <span class="string">&quot;\\lx@notetext{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@footnotetext&quot;</span>, <span class="string">&quot;\\lx@notetext{footnote}&quot;</span>, locked =&gt; <span class="bool-val">true</span>);
+  <span class="comment">// we don&#39;t implement the internals directly, so lock them to the latexml variant
+  </span><span class="macro">Let!</span>(<span class="string">&quot;\\@thefnmark&quot;</span>, <span class="string">&quot;\\lx@notemark{footnote}&quot;</span>);
 
-<span class="macro">Tag!</span>(<span class="string">&quot;ltx:note&quot;</span>, after_close =&gt; sub[doc, node, state] { relocate_footnote(doc, node,state)<span class="question-mark">?</span>; });
+  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:note&quot;</span>, after_close =&gt; sub[doc, node, state] { relocate_footnote(doc, node,state)<span class="question-mark">?</span>; });
 
-<span class="comment">// Style parameters
-</span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\footnotesep&quot; </span>=&gt; Dimension::new(<span class="number">0</span>));
-<span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\footnoterule&quot;</span>, <span class="prelude-val">None</span>);
-
+  <span class="comment">// Style parameters
+  </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\footnotesep&quot; </span>=&gt; Dimension::new(<span class="number">0</span>));
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\footnoterule&quot;</span>, <span class="prelude-val">None</span>);
 });
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -372,13 +372,43 @@
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
-</span><span class="kw">use </span>std::collections::{VecDeque};
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+</span><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::Arc;
-<span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -390,7 +420,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, FontDirective, Reversion};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::state::{STD_STATE,State};
+<span class="kw">use </span><span class="kw">crate</span>::state::{State, STD_STATE};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData, TexMode};
@@ -489,26 +519,38 @@
     }
   }
   <span class="doccomment">/// Sets the body of the `whatsit` to the boxes in `body`.
-  /// The last box in `body` is assumed to represent the `trailer`, that is the result of the invocation
-  /// that closed the environment or math.  It is stored separately in the properties under &quot;trailer&quot;.
+  /// The last box in `body` is assumed to represent the `trailer`, that is the result of the
+  /// invocation that closed the environment or math.  It is stored separately in the properties
+  /// under &quot;trailer&quot;.
   </span><span class="kw">pub fn </span>set_body(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>body: Vec&lt;Digested&gt;, state: <span class="kw-2">&amp;mut </span>State) {
     <span class="kw">let </span>trailer_opt = body.pop();
-    <span class="kw">let </span>mode = <span class="kw">if </span><span class="self">self</span>.is_math() { TexMode::Math } <span class="kw">else </span>{ TexMode::Text };
+    <span class="kw">let </span>mode = <span class="kw">if </span><span class="self">self</span>.is_math() {
+      TexMode::Math
+    } <span class="kw">else </span>{
+      TexMode::Text
+    };
 
     <span class="kw">let </span><span class="kw-2">mut </span>list = List::new(body, state);
     <span class="kw">if </span><span class="self">self</span>.is_math() {
       list.mode = <span class="prelude-val">Some</span>(mode);
     }
-    <span class="self">self</span>.properties.insert(<span class="macro">s!</span>(<span class="string">&quot;body&quot;</span>), Digested::from(list).into());
+    <span class="self">self
+      </span>.properties
+      .insert(<span class="macro">s!</span>(<span class="string">&quot;body&quot;</span>), Digested::from(list).into());
     <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = trailer_opt {
       <span class="kw">if let </span>DigestedData::Whatsit(<span class="kw-2">ref </span>trailer) = digested.data() {
         <span class="comment">// And copy any otherwise undefined properties from the trailer
         </span><span class="kw">let </span>trailer_val = trailer.read().unwrap();
         <span class="kw">let </span>props = trailer_val.get_properties();
         <span class="kw">for </span>(prop, value) <span class="kw">in </span>props {
-          <span class="self">self</span>.properties.entry(prop.to_string()).or_insert_with(|| value.clone());
+          <span class="self">self
+            </span>.properties
+            .entry(prop.to_string())
+            .or_insert_with(|| value.clone());
         }
-        <span class="self">self</span>.properties.insert(<span class="macro">s!</span>(<span class="string">&quot;trailer&quot;</span>), digested.clone().into());
+        <span class="self">self
+          </span>.properties
+          .insert(<span class="macro">s!</span>(<span class="string">&quot;trailer&quot;</span>), digested.clone().into());
       }
     }
   }
@@ -517,8 +559,9 @@
   /// #&lt;digit&gt; is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
   </span><span class="kw">fn </span>substitute_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>, spec: Tokens, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-    <span class="comment">// TODO: This is kind of unfortunate -- I am not sure what are the reasonable &quot;entryways&quot; into the Whatsit substituteParameters. For Expandable we
-    // now have guarantees that &quot;#,i&quot; has been mapped into a single T_ARG(#i), but not here. so for now run on each call?
+    <span class="comment">// TODO: This is kind of unfortunate -- I am not sure what are the reasonable &quot;entryways&quot; into
+    // the Whatsit substituteParameters. For Expandable we now have guarantees that &quot;#,i&quot; has
+    // been mapped into a single T_ARG(#i), but not here. so for now run on each call?
     </span><span class="kw">let </span><span class="kw-2">mut </span>in_toks = VecDeque::from(spec.unlist());
     <span class="kw">let </span>args = <span class="self">self</span>.get_args();
     <span class="kw">let </span>props = <span class="kw-2">&amp;</span><span class="self">self</span>.properties;
@@ -535,7 +578,9 @@
         } <span class="kw">else </span>{
           <span class="kw">match </span>props.get(s) {
             <span class="prelude-val">Some</span>(Stored::Digested(v)) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>v).clone()),
-            <span class="prelude-val">Some</span>(other) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;unexpected prop in substitute_parameters, needed Digested, got: {other:?}&quot;</span>),
+            <span class="prelude-val">Some</span>(other) =&gt; {
+              <span class="macro">panic!</span>(<span class="string">&quot;unexpected prop in substitute_parameters, needed Digested, got: {other:?}&quot;</span>)
+            },
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
           }
         };
@@ -566,7 +611,7 @@
         pieces.push(trailer.to_string());
       }
     }
-    <span class="macro">write!</span>(f,<span class="string">&quot;{}]&quot;</span>,pieces.join(<span class="string">&quot;,&quot;</span>))
+    <span class="macro">write!</span>(f, <span class="string">&quot;{}]&quot;</span>, pieces.join(<span class="string">&quot;,&quot;</span>))
   }
 }
 
@@ -580,9 +625,7 @@
 <span class="kw">impl </span>Object <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.locator)) }
 
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-      <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>)
-  }
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>) }
 
   <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// WARNING: Forbidden knowledge?
@@ -629,13 +672,15 @@
             tokens.push(defn.get_cs().into_owned());
           }
           <span class="kw">if let </span><span class="prelude-val">Some</span>(parameters) = defn.get_parameters() {
-            <span class="comment">// TODO: This is a sticking point. Both in terms of type mismatch between revert_arguments and get_args,
-            // but much worse with the expectation of passing in a gullet and state for the parameter reversion
+            <span class="comment">// TODO: This is a sticking point. Both in terms of type mismatch between
+            // revert_arguments and get_args, but much worse with the expectation of
+            // passing in a gullet and state for the parameter reversion
             // for now approximate this with some slight of hand ...
             // tokens.extend(parameters.revert_arguments(self.get_args())?);
             //
-            // Note 2: I&#39;ve already had to dance around the T_BEGIN/T_END wrappers with my hacky workaround
-            // so maybe worth taking some time and aligning the idea here with `.revert_arguments` to avoid the insanity?
+            // Note 2: I&#39;ve already had to dance around the T_BEGIN/T_END wrappers with my hacky
+            // workaround so maybe worth taking some time and aligning the idea here
+            // with `.revert_arguments` to avoid the insanity?
             //
             // GOAL: push(@tokens, $parameters-&gt;revertArguments($self-&gt;getArgs)); } }
             </span><span class="kw">let </span>args = <span class="self">self
@@ -677,7 +722,9 @@
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.to_string())) }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
+    <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.to_string()))
+  }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="comment">// Significant time is consumed here, and associated with a specific CS,
@@ -690,15 +737,20 @@
 
     </span><span class="self">self</span>.definition.do_absorbtion(document, <span class="self">self</span>, state)
     <span class="comment">// LaTeXML::Definition::stopProfiling($profiled, &#39;absorb&#39;) if $profiled;
-
   </span>}
 
-  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; { <span class="self">self</span>.properties.get(key).map(Cow::Borrowed) }
+  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
+    <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
+  }
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="self">self</span>.properties.contains_key(key) }
 
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) { <span class="self">self</span>.properties.insert(key.to_string(), value.into()); }
+  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="self">self</span>.properties.insert(key.to_string(), value.into());
+  }
 
-  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>))) }
+  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)))
+  }
   <span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
     <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">&quot;body&quot;</span>) {
       <span class="prelude-val">Some</span>(Stored::Digested(body)) =&gt; <span class="prelude-val">Some</span>(body.clone()),
@@ -717,9 +769,17 @@
     }
   }
 
-  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Arc&lt;Font&gt;) { <span class="self">self</span>.properties.insert(<span class="string">&quot;font&quot;</span>.to_string(), Stored::Font(font)); }
+  <span class="kw">fn </span>set_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, font: Arc&lt;Font&gt;) {
+    <span class="self">self
+      </span>.properties
+      .insert(<span class="string">&quot;font&quot;</span>.to_string(), Stored::Font(font));
+  }
 
-  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
       sizer(<span class="self">self</span>, state)

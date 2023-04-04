@@ -390,8 +390,34 @@
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
 <a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::error::Error <span class="kw">as </span>ErrorTrait;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::io;
@@ -407,22 +433,26 @@
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="comment">// $state.note_status(&quot;debug&quot;); // TODO: We&#39;re losing the info count this way...
     </span><span class="kw">use </span>log::debug;
-    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;debug&quot;); // TODO: We&#39;re losing the debug count this way...
     </span><span class="kw">use </span>log::debug;
-    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="kw">use </span>log::debug;
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;debug&quot;</span>,<span class="string">&quot;&quot;</span>);
-    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">use </span>log::debug;
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;debug&quot;</span>,<span class="string">&quot;&quot;</span>);
-    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   ($(<span class="macro-nonterminal">$simple</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;debug&quot;); // TODO: We&#39;re losing the info count this way...
@@ -437,22 +467,26 @@
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="kw">use </span>log::info;
     <span class="comment">// $state.note_status(&quot;info&quot;); // TODO: We&#39;re losing the info count this way...
-    </span><span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    </span><span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;info&quot;); // TODO: We&#39;re losing the info count this way...
     </span><span class="kw">use </span>log::info;
-    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+       <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;info&quot;</span>,<span class="string">&quot;&quot;</span>);
     <span class="kw">use </span>log::info;
-    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;info&quot;</span>,<span class="string">&quot;&quot;</span>);
     <span class="kw">use </span>log::info;
-    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">info!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   ($(<span class="macro-nonterminal">$simple</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;debug&quot;); // TODO: We&#39;re losing the info count this way...
@@ -466,22 +500,26 @@
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="comment">// $state.note_status(&quot;warn&quot;); // TODO: We&#39;re losing the warn count this way...
     </span><span class="kw">use </span>log::warn;
-    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;warn&quot;); // TODO: We&#39;re losing the warn count this way...
     </span><span class="kw">use </span>log::warn;
-    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;warn&quot;</span>,<span class="string">&quot;&quot;</span>);
     <span class="kw">use </span>log::warn;
-    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;warn&quot;</span>,<span class="string">&quot;&quot;</span>);
     <span class="kw">use </span>log::warn;
-    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">warn!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }}
 }
 
@@ -491,25 +529,29 @@
     <span class="comment">// $state.note_status(&quot;error&quot;); // TODO: We&#39;re losing the error count this way...
     </span><span class="kw">use </span>log::error;
     <span class="kw">use </span><span class="macro-nonterminal">$crate::generate_message</span>;
-    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="comment">// $state.note_status(&quot;error&quot;); // TODO: We&#39;re losing the error count this way...
     </span><span class="kw">use </span>log::error;
     <span class="kw">use </span><span class="macro-nonterminal">$crate::generate_message</span>;
-    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }};
   (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr) =&gt; {{
     <span class="kw">use </span>log::error;
     <span class="kw">use </span><span class="macro-nonterminal">$crate::generate_message</span>;
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;error&quot;</span>,<span class="string">&quot;&quot;</span>);
-    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
+    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>))
   }};
  (<span class="macro-nonterminal">$category</span>:expr, <span class="macro-nonterminal">$object</span>:expr, <span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$state</span>:expr, <span class="macro-nonterminal">$message</span>:expr, $(<span class="macro-nonterminal">$details</span>:expr),<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">use </span>log::error;
     <span class="kw">use </span><span class="macro-nonterminal">$crate::generate_message</span>;
     <span class="macro-nonterminal">$state</span>.note_status(<span class="string">&quot;error&quot;</span>,<span class="string">&quot;&quot;</span>);
-    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>, <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
+    <span class="macro">error!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">&quot;{}&quot;</span>,
+      <span class="macro">generate_message!</span>(<span class="macro-nonterminal">$</span><span class="kw">where</span>, <span class="macro-nonterminal">$message</span>, -<span class="number">1</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
   }}
 }
 
@@ -551,10 +593,24 @@
     <span class="macro">format!</span>(<span class="string">&quot;{}\n\tIn {}:{}:{}\n&quot;</span>, <span class="macro-nonterminal">$message</span>, <span class="macro">file!</span>(), <span class="macro">line!</span>(), <span class="macro">column!</span>())
   };
   (<span class="prelude-val">None</span>, <span class="macro-nonterminal">$message</span>:expr, <span class="macro-nonterminal">$level</span>:literal, <span class="macro-nonterminal">$detail</span>:expr) =&gt; {
-    <span class="macro">format!</span>(<span class="string">&quot;{}\n\t{}\n\tIn {}:{}:{}\n&quot;</span>, <span class="macro-nonterminal">$message</span>, <span class="macro-nonterminal">$detail</span>, <span class="macro">file!</span>(), <span class="macro">line!</span>(), <span class="macro">column!</span>())
+    <span class="macro">format!</span>(
+      <span class="string">&quot;{}\n\t{}\n\tIn {}:{}:{}\n&quot;</span>,
+      <span class="macro-nonterminal">$message</span>,
+      <span class="macro-nonterminal">$detail</span>,
+      <span class="macro">file!</span>(),
+      <span class="macro">line!</span>(),
+      <span class="macro">column!</span>()
+    )
   };
   (<span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$message</span>:expr, <span class="macro-nonterminal">$level</span>:literal) =&gt; {
-    <span class="macro">format!</span>(<span class="string">&quot;{}\n\t{}\n\tIn {}:{}:{}\n&quot;</span>, <span class="macro-nonterminal">$message</span>, <span class="macro-nonterminal">$</span><span class="kw">where</span>.<span class="macro-nonterminal">get_location</span>(), <span class="macro">file!</span>(), <span class="macro">line!</span>(), <span class="macro">column!</span>())
+    <span class="macro">format!</span>(
+      <span class="string">&quot;{}\n\t{}\n\tIn {}:{}:{}\n&quot;</span>,
+      <span class="macro-nonterminal">$message</span>,
+      <span class="macro-nonterminal">$</span><span class="kw">where</span>.<span class="macro-nonterminal">get_location</span>(),
+      <span class="macro">file!</span>(),
+      <span class="macro">line!</span>(),
+      <span class="macro">column!</span>()
+    )
   };
   (<span class="macro-nonterminal">$</span><span class="kw">where</span>:<span class="macro-nonterminal">ident</span>, <span class="macro-nonterminal">$message</span>:expr, <span class="macro-nonterminal">$level</span>:literal, <span class="macro-nonterminal">$detail</span>:expr) =&gt; {
     <span class="macro">format!</span>(
@@ -631,11 +687,7 @@
     <span class="kw">match </span><span class="self">self</span>.category {
       Init =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Init&quot;</span>),
       Io(<span class="kw-2">ref </span>err) =&gt; err.fmt(f),
-      NotFound =&gt; <span class="macro">write!</span>(
-        f,
-        <span class="string">&quot;No matching cities with a \
-         population were found.&quot;
-      </span>),
+      NotFound =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;No matching cities with a population were found.&quot;</span>),
       MissingFile =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;missing file&quot;</span>),
       Misdefined =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;misdefined&quot;</span>),
       Unknown =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;unknown&quot;</span>),

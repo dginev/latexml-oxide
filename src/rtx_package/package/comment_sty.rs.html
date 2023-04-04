@@ -58,6 +58,19 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(outer_state, {
@@ -88,7 +101,12 @@
   // twice instead, via a macro
   </span><span class="kw">let </span>define_included: PrimitiveClosure = <span class="macro">primitiveproc!</span>(_stomach, args, inner_state, {
     args.reverse(); <span class="comment">// we&#39;ll be using .pop() from the front
-    </span><span class="kw">let </span>name = args.pop().unwrap().owned_tokens().expect(<span class="string">&quot;expecting a Tokens argument&quot;</span>).to_string();
+    </span><span class="kw">let </span>name = args
+      .pop()
+      .unwrap()
+      .owned_tokens()
+      .expect(<span class="string">&quot;expecting a Tokens argument&quot;</span>)
+      .to_string();
     <span class="kw">let </span><span class="kw-2">mut </span>before_tokens = <span class="kw">match </span>args.pop() {
       <span class="prelude-val">Some</span>(arg) =&gt; arg.unlist(),
       <span class="prelude-val">None </span>=&gt; Vec::new(),
@@ -107,11 +125,19 @@
       gullet.read_raw_line(macro_state); <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
       </span>before_tokens.clone()
     });
-    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\end{{{name}}}&quot;</span>)), <span class="prelude-val">None</span>, Tokens::new(after_tokens));
+    <span class="macro">DefMacro!</span>(
+      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\end{{{name}}}&quot;</span>)),
+      <span class="prelude-val">None</span>,
+      Tokens::new(after_tokens)
+    );
   });
 
   <span class="kw">let </span><span class="kw-2">mut </span>mock_stomach = Stomach::default();
-  define_excluded(<span class="kw-2">&amp;mut </span>mock_stomach, <span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">&quot;comment&quot;</span>, <span class="prelude-val">None</span>))], outer_state)<span class="question-mark">?</span>;
+  define_excluded(
+    <span class="kw-2">&amp;mut </span>mock_stomach,
+    <span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">&quot;comment&quot;</span>, <span class="prelude-val">None</span>))],
+    outer_state,
+  )<span class="question-mark">?</span>;
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\includecomment{}&quot;</span>, <span class="prelude-val">Some</span>(Arc::clone(<span class="kw-2">&amp;</span>define_included)));
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\excludecomment{}&quot;</span>, <span class="prelude-val">Some</span>(define_excluded));

@@ -296,11 +296,26 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::Arc;
-<span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -309,8 +324,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State};
 
 <span class="kw">use </span><span class="kw">crate</span>::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective, PropertiesClosure, ReplacementClosure, Reversion,
-  SizingClosure,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+  PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
 };
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
@@ -401,11 +416,10 @@
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="macro">write!</span>(
       f,
-      <span class="string">&quot;\nConstructorOptions {{nargs:{:?}, bounded:{:?}, mode:{:?}, \n\
-       \tbefore_digest:{:?}, after_digest_begin:{:?}, before_digest_end:{:?},\n\
-       \tafter_digest:{:?}, after_digest_body:{:?}, before_construct:{:?}, after_construct:{:?},\n\
-       \trequire_math:{:?}, forbid_math:{:?}, capture_body:{:?}, scope:{:?},\n\
-       \tlocked:{:?}, alias:{:?} }}\n&quot;</span>,
+      <span class="string">&quot;\nConstructorOptions {{nargs:{:?}, bounded:{:?}, mode:{:?}, \n\tbefore_digest:{:?}, \
+       after_digest_begin:{:?}, before_digest_end:{:?},\n\tafter_digest:{:?}, \
+       after_digest_body:{:?}, before_construct:{:?}, after_construct:{:?},\n\trequire_math:{:?}, \
+       forbid_math:{:?}, capture_body:{:?}, scope:{:?},\n\tlocked:{:?}, alias:{:?} }}\n&quot;</span>,
       <span class="self">self</span>.nargs,
       <span class="self">self</span>.bounded,
       <span class="self">self</span>.mode,
@@ -483,7 +497,9 @@
   <span class="kw">fn </span>after_digest_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.after_digest_body) }
   <span class="kw">fn </span>capture_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.capture_body }
   <span class="kw">fn </span>get_sizer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SizingClosure&gt; { <span class="self">self</span>.sizer.clone() }
-  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+  }
   <span class="doccomment">/// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
@@ -517,13 +533,17 @@
     //   if (ref $value eq &#39;CODE&#39;) {
     //     $properties{$key} = &amp;$value($stomach, @args); } }
 
-    </span>properties.entry(<span class="macro">s!</span>(<span class="string">&quot;font&quot;</span>)).or_insert_with(|| <span class="kw">match </span>state_font {
-      <span class="prelude-val">Some</span>(f) =&gt; Stored::Font(Arc::clone(<span class="kw-2">&amp;</span>f)),
-      <span class="prelude-val">None </span>=&gt; Stored::Font(Arc::new(Font::text_default())), <span class="comment">// should never happen?
-    </span>});
+    </span>properties
+      .entry(<span class="macro">s!</span>(<span class="string">&quot;font&quot;</span>))
+      .or_insert_with(|| <span class="kw">match </span>state_font {
+        <span class="prelude-val">Some</span>(f) =&gt; Stored::Font(Arc::clone(<span class="kw-2">&amp;</span>f)),
+        <span class="prelude-val">None </span>=&gt; Stored::Font(Arc::new(Font::text_default())), <span class="comment">// should never happen?
+      </span>});
     <span class="comment">// $properties{locator} = $stomach-&gt;getGullet-&gt;getMouth-&gt;getLocator unless defined
     // $properties{locator};
-    </span>properties.entry(<span class="macro">s!</span>(<span class="string">&quot;isMath&quot;</span>)).or_insert_with(|| Stored::Bool(ismath));
+    </span>properties
+      .entry(<span class="macro">s!</span>(<span class="string">&quot;isMath&quot;</span>))
+      .or_insert_with(|| Stored::Bool(ismath));
     <span class="comment">// $properties{level}   = $stomach-&gt;getBoxingLevel;
 
     // Now create the Whatsit, itself.
@@ -572,7 +592,12 @@
     <span class="comment">// self.nargs = Some(nargs);
   </span>}
 
-  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, whatsit: <span class="kw-2">&amp;</span>Whatsit, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>do_absorbtion(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    document: <span class="kw-2">&amp;mut </span>Document,
+    whatsit: <span class="kw-2">&amp;</span>Whatsit,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="kw">for </span>pre_closure <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.before_construct {
       pre_closure(document, whatsit, state)<span class="question-mark">?</span>;
     }
@@ -583,7 +608,12 @@
       </span>},
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>main_closure) =&gt; {
         <span class="comment">// info!(target:&quot;constructor:replacement&quot;, &quot;invoked for {:?}&quot;, self.get_cs_name());
-        </span>main_closure(document, whatsit.get_args(), whatsit.get_properties(), state)<span class="question-mark">?
+        </span>main_closure(
+          document,
+          whatsit.get_args(),
+          whatsit.get_properties(),
+          state,
+        )<span class="question-mark">?
       </span>},
     };
 

@@ -163,6 +163,30 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -189,10 +213,16 @@
   <span class="comment">//======================================================================
   // Mostly simplified versions of what&quot;s in verbatim....
   </span><span class="macro">DefMacro!</span>(<span class="string">r&quot;\verbatim@startline&quot;</span>, <span class="string">r&quot;\verbatim@line{}&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">r&quot;\verbatim@addtoline{}&quot;</span>, <span class="string">r&quot;\verbatim@line\expandafter{\the\verbatim@line#1}&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">r&quot;\verbatim@addtoline{}&quot;</span>,
+    <span class="string">r&quot;\verbatim@line\expandafter{\the\verbatim@line#1}&quot;
+  </span>);
   <span class="macro">DefMacro!</span>(<span class="string">r&quot;\verbatim@processline&quot;</span>, <span class="string">r&quot;\the\verbatim@line\par&quot;</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">r&quot;\verbatim@font&quot;</span>, <span class="string">r&quot;\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">r&quot;\verbatim@font&quot;</span>,
+    <span class="string">r&quot;\normalfont\ttfamily\hyphenchar\font\m@ne\@noligs&quot;
+  </span>);
   <span class="macro">DefMacro!</span>(
     <span class="string">r&quot;\@verbatim&quot;</span>,
     <span class="string">r&quot;\the\every@verbatim
@@ -203,19 +233,32 @@
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@verbatim@&quot;</span>, <span class="string">&quot;&lt;ltx:verbatim font=&#39;#font&#39;&gt;&quot;</span>,
     before_digest =&gt; { <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CR!</span>()); },
-    before_construct =&gt; sub[document, _whatsit, inner_state] { document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, inner_state)<span class="question-mark">?</span>; }
+    before_construct =&gt; sub[document, _whatsit, inner_state] {
+      document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, inner_state)<span class="question-mark">?</span>; }
   );
 
   <span class="comment">// We HAVE to get this guy in, to close the &lt;ltx:verbatim&gt;&quot;
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@end@verbatim@{}&quot;</span>, <span class="string">&quot;&lt;/ltx:verbatim&gt;&quot;</span>);
 
   <span class="comment">// Note: We need the internal T_CS!(&quot;\\foo*&quot;) to attach the star to the CS, however,
-  //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the RHS
+  //       the current DefMacroI can not accept a string expansion, hence TokenizeInternal!() the
+  // RHS
   //
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verbatim&quot;</span>, <span class="string">&quot;\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim*&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">TokenizeInternal!</span>(<span class="string">&quot;\\begingroup\\@verbatim\\verbatim@start&quot;</span>));
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\verbatim&quot;</span>,
+    <span class="string">&quot;\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim*&quot;</span>),
+    <span class="prelude-val">None</span>,
+    <span class="macro">TokenizeInternal!</span>(<span class="string">&quot;\\begingroup\\@verbatim\\verbatim@start&quot;</span>)
+  );
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endverbatim&quot;</span>, <span class="string">&quot;\\lx@end@verbatim@\\endgroup&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endverbatim*&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">TokenizeInternal!</span>(<span class="string">&quot;\\lx@end@verbatim@\\endgroup&quot;</span>));
+  <span class="macro">DefMacro!</span>(
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\endverbatim*&quot;</span>),
+    <span class="prelude-val">None</span>,
+    <span class="macro">TokenizeInternal!</span>(<span class="string">&quot;\\lx@end@verbatim@\\endgroup&quot;</span>)
+  );
 
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\comment&quot;</span>,
@@ -240,7 +283,8 @@
     <span class="kw">let </span>env = state.lookup_string(<span class="string">&quot;current_environment&quot;</span>);
     <span class="comment">// Note: This should allow a regexp, since there can be spaces between \end and { !!!
     </span><span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
-    <span class="comment">// TODO: UGH!!! Isn&#39;t there a better way to approximate the Perl simplicity of writing an inline regex?
+    <span class="comment">// TODO: UGH!!! Isn&#39;t there a better way to approximate
+    // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     </span><span class="kw">let </span>env_re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$&quot;</span>)).unwrap();
     <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = gullet.read_raw_line(state) {
@@ -263,7 +307,8 @@
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">for </span>line <span class="kw">in </span><span class="kw-2">&amp;</span>lines {
       tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@startline&quot;</span>));
-      tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@addtoline&quot;</span>), <span class="macro">vec!</span>[Tokens::new(<span class="macro">ExplodeText!</span>(line))], gullet)<span class="question-mark">?</span>.unlist());
+      tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@addtoline&quot;</span>),
+        <span class="macro">vec!</span>[Tokens::new(<span class="macro">ExplodeText!</span>(line))], gullet)<span class="question-mark">?</span>.unlist());
       tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@processline&quot;</span>));
     }
     tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\end&quot;</span>), <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(env)], gullet)<span class="question-mark">?</span>.unlist());
@@ -286,11 +331,13 @@
           <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
           <span class="kw">for </span>line <span class="kw">in </span>lines.into_iter() {
             tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@startline&quot;</span>));
-            tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@addtoline&quot;</span>), <span class="macro">vec!</span>[Tokens::new(<span class="macro">ExplodeText!</span>(line))], igullet, istate)<span class="question-mark">?</span>.unlist());
+            tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@addtoline&quot;</span>),
+              <span class="macro">vec!</span>[Tokens::new(<span class="macro">ExplodeText!</span>(line))], igullet, istate)<span class="question-mark">?</span>.unlist());
             tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\verbatim@processline&quot;</span>));
           }
           <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(
-            <span class="macro">T_CS!</span>(<span class="string">&quot;\\begingroup&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@verbatim&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\frenchspacing&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@vobeyspaces&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">&quot;\\begingroup&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@verbatim&quot;</span>),
+            <span class="macro">T_CS!</span>(<span class="string">&quot;\\frenchspacing&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@vobeyspaces&quot;</span>),
             <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@verbatim@&quot;</span>), tokens, <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@end@verbatim@&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\endgroup&quot;</span>))
           )
         },
@@ -313,7 +360,8 @@
   //     AssignCatcode(&#39;{&#39;,  CC_OTHER);
   //     AssignCatcode(&#39;}&#39;,  CC_OTHER);
   //     $init = $mouth-&gt;readToken;
-  //     $init = $mouth-&gt;readToken if ToString($init) == &quot;*&quot;;    // Should I bother handling \verb* ?
+  //     $init = $mouth-&gt;readToken if ToString($init) == &quot;*&quot;;    // Should I bother handling \verb*
+  // ?
 
   //     if (!$init) {    // typically read too far, got \verb and the content is somewhere else..?
   //       Error(&quot;expected&quot;, &quot;delimiter&quot;, $stomach,

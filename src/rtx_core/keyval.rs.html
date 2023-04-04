@@ -55,6 +55,14 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre><pre class="rust"><code><span class="comment">// use std::borrow::Cow;
 // use rustc_hash::{FxHashMap as HashMap};
 // use std::fmt;
@@ -94,7 +102,11 @@
 <span class="kw">impl </span>KeyVal {
   <span class="kw">pub fn </span>new(prefix: <span class="prelude-ty">Option</span>&lt;String&gt;, keyset: String, key: String) -&gt; <span class="self">Self </span>{
     <span class="kw">let </span>prefix = prefix.unwrap_or_else(|| <span class="string">&quot;KV&quot;</span>.to_string());
-    KeyVal { prefix, key, keyset }
+    KeyVal {
+      prefix,
+      key,
+      keyset,
+    }
   }
 
   <span class="kw">pub fn </span>get_header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;{}@{}@{}&quot;</span>, <span class="self">self</span>.prefix, <span class="self">self</span>.keyset, <span class="self">self</span>.key) }
@@ -103,8 +115,12 @@
   // Property access
   //======================================================================
 
-  </span><span class="kw">pub fn </span>get_prop&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; { state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;KEYVAL@{}@{}&quot;</span>, key, <span class="self">self</span>.get_header())) }
-  <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; { <span class="self">self</span>.get_prop(<span class="string">&quot;default&quot;</span>, state).map(|v| (<span class="kw-2">*</span>v).clone()) }
+  </span><span class="kw">pub fn </span>get_prop&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; {
+    state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;KEYVAL@{}@{}&quot;</span>, key, <span class="self">self</span>.get_header()))
+  }
+  <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
+    <span class="self">self</span>.get_prop(<span class="string">&quot;default&quot;</span>, state).map(|v| (<span class="kw-2">*</span>v).clone())
+  }
   <span class="kw">pub fn </span>get_type&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Parameter&gt;&gt; {
     <span class="kw">match </span><span class="self">self</span>.get_prop(<span class="string">&quot;type&quot;</span>, state) {
       <span class="prelude-val">Some</span>(Stored::Parameter(p)) =&gt; <span class="prelude-val">Some</span>(Arc::clone(p)),

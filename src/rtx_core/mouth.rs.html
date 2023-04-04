@@ -801,6 +801,43 @@
 <a href="#801" id="801">801</a>
 <a href="#802" id="802">802</a>
 <a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
@@ -809,7 +846,7 @@
 <span class="kw">use </span>std::io::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::io::BufReader;
 <span class="kw">use </span>std::str;
-<span class="kw">use </span>std::sync::{Mutex};
+<span class="kw">use </span>std::sync::Mutex;
 
 <span class="kw">use </span>core::ops::RangeBounds;
 <span class="comment">// TODO:
@@ -845,7 +882,8 @@
 }
 
 <span class="kw">impl </span>FoodType {
-  <span class="doccomment">/// TODO: Should be a From trait implementation, but am not allowed due to both &amp;str and Option being external. Argh.
+  <span class="doccomment">/// TODO: Should be a From trait implementation, but am not allowed due to both &amp;str and Option
+  /// being external. Argh.
   </span><span class="kw">pub fn </span>opt_from_str(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;FoodType&gt; {
     <span class="kw">use </span><span class="self">self</span>::FoodType::<span class="kw-2">*</span>;
     <span class="kw">match </span>text.to_lowercase().as_str() {
@@ -932,13 +970,23 @@
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">s!</span>(<span class="string">&quot;Mouth[&lt;string&gt;{}x{}]&quot;</span>, <span class="self">self</span>.lineno, <span class="self">self</span>.colno) }
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; {
     <span class="kw">let </span>(to_line, to_column) = (<span class="self">self</span>.lineno, <span class="self">self</span>.colno);
-    <span class="kw">let </span>max_col = <span class="kw">if </span><span class="self">self</span>.nchars &gt; <span class="number">0 </span>{ <span class="self">self</span>.nchars - <span class="number">1 </span>} <span class="kw">else </span>{ <span class="self">self</span>.nchars }; <span class="comment">// There is always a trailing EOL char, if any
+    <span class="kw">let </span>max_col = <span class="kw">if </span><span class="self">self</span>.nchars &gt; <span class="number">0 </span>{
+      <span class="self">self</span>.nchars - <span class="number">1
+    </span>} <span class="kw">else </span>{
+      <span class="self">self</span>.nchars
+    }; <span class="comment">// There is always a trailing EOL char, if any
     </span><span class="kw">let </span>(from_line, from_column) = <span class="kw">if </span>to_column &gt; <span class="number">0 </span>&amp;&amp; to_column &gt;= max_col {
       (to_line, <span class="number">0</span>)
     } <span class="kw">else </span>{
       (to_line, to_column)
     };
-    <span class="prelude-val">Some</span>(Cow::Owned(Locator::new(<span class="self">self</span>.source.clone(), from_line, from_column, to_line, to_column)))
+    <span class="prelude-val">Some</span>(Cow::Owned(Locator::new(
+      <span class="self">self</span>.source.clone(),
+      from_line,
+      from_column,
+      to_line,
+      to_column,
+    )))
   }
 }
 
@@ -950,8 +998,9 @@
   //  atletter,
   //  content
   //
-  // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more compact in this particular application
-  //     we&#39;re really looking at a unified Mouth application logic, with a capacity of reading different kinds of sources
+  // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more
+  // compact in this particular application     we&#39;re really looking at a unified Mouth
+  // application logic, with a capacity of reading different kinds of sources
   </span><span class="kw">pub fn </span>create(source: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>options: MouthOptions, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(content) = options.content.take() {
       <span class="comment">// we&#39;ve cached the content of this source
@@ -1078,7 +1127,8 @@
         note_end(msg);
       }
     }
-    <span class="self">self</span>.reader.take(); <span class="comment">// if we have a reader, this will force a Drop at the end of finish(), which will close the file handle
+    <span class="self">self</span>.reader.take(); <span class="comment">// if we have a reader, this will force a Drop at the end of finish(), which
+                        // will close the file handle
   </span>}
   <span class="comment">// Auxiliaries
 
@@ -1086,7 +1136,10 @@
   /// into &quot;lines&quot; ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   </span><span class="kw">fn </span>split_lines(lines: <span class="kw-2">&amp;</span>str) -&gt; VecDeque&lt;String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>lines: VecDeque&lt;String&gt; = LINEBREAK_REGEX.split(lines).map(ToString::to_string).collect(); <span class="comment">// And split.
+    <span class="kw">let </span><span class="kw-2">mut </span>lines: VecDeque&lt;String&gt; = LINEBREAK_REGEX
+      .split(lines)
+      .map(ToString::to_string)
+      .collect(); <span class="comment">// And split.
     </span><span class="kw">if </span>lines.iter().last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>String::new()) {
       lines.pop_back();
     }
@@ -1114,14 +1167,17 @@
             <span class="number">0
           </span>},
         };
-        <span class="self">self</span>.reader.take(); <span class="comment">// remove the now exhausted reader
-                            // Note: the original latexml code first split the perl string into lines, and only THEN decoded it
-                            // however, executing a rust regex on a Vec&lt;u8&gt; is just not going to be a sane way forward.
-                            // we will first decode the read-in bytes to the right String form, and THEN split lines.
-                            // as such, decoding is the first action taken on bytes read in from a file.
+        <span class="comment">// remove the now exhausted reader
+        </span><span class="self">self</span>.reader.take();
+        <span class="comment">// Note: the original latexml code first split the perl string into lines, and only THEN
+        // decoded it however, executing a rust regex on a Vec&lt;u8&gt; is
+        // just not going to be a sane way forward. we will first decode
+        // the read-in bytes to the right String form, and THEN split lines.
+        // as such, decoding is the first action taken on bytes read in from a file.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_encoding) = state.input_encoding {
           <span class="comment">// TODO: What are characters that fail to decode replaced by in Rust?
-          // Bruce suggested that for TeX&#39;s behaviour we actually should turn such un-decodeable chars to space(?).
+          // Bruce suggested that for TeX&#39;s behaviour we actually should turn such un-decodeable
+          // chars to space(?).
           </span><span class="macro">unimplemented!</span>();
           <span class="comment">//let message = s!(&quot;input isn&#39;t valid under encoding {}&quot;, encoding);
           //Info!(&quot;misdefined&quot;, encoding, self, state, message);
@@ -1164,9 +1220,13 @@
         <span class="comment">// ^^ followed by TWO LOWERCASE Hex digits???
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(c1) = c1_opt {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(c2) = c2_opt {
-            <span class="kw">if </span>(<span class="self">self</span>.colno + <span class="number">2 </span>&lt; <span class="self">self</span>.nchars) &amp;&amp; LOWERHEX_REGEX.is_match(<span class="kw-2">&amp;</span>c1.to_string()) &amp;&amp; LOWERHEX_REGEX.is_match(<span class="kw-2">&amp;</span>c2.to_string()) {
-              <span class="kw">let </span>hex = u8::from_str_radix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}{}&quot;</span>, c1, c2), <span class="number">16</span>).unwrap(); <span class="comment">// TODO: Maybe Result type warranted here?
-              </span>ch = hex <span class="kw">as </span>char;
+            <span class="kw">if </span>(<span class="self">self</span>.colno + <span class="number">2 </span>&lt; <span class="self">self</span>.nchars)
+              &amp;&amp; LOWERHEX_REGEX.is_match(<span class="kw-2">&amp;</span>c1.to_string())
+              &amp;&amp; LOWERHEX_REGEX.is_match(<span class="kw-2">&amp;</span>c2.to_string())
+            {
+              <span class="comment">// TODO: Maybe Result type warranted here?
+              </span><span class="kw">let </span>hex = u8::from_str_radix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}{}&quot;</span>, c1, c2), <span class="number">16</span>).unwrap();
+              ch = hex <span class="kw">as </span>char;
               <span class="self">self</span>.splice(<span class="self">self</span>.colno - <span class="number">1</span>..<span class="self">self</span>.colno + <span class="number">3</span>, <span class="kw-2">&amp;</span>[ch]);
               <span class="self">self</span>.nchars -= <span class="number">3</span>;
               two_hex = <span class="bool-val">true</span>;
@@ -1190,7 +1250,9 @@
     </span>}
   }
   <span class="kw">pub fn </span>has_more_input(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-    <span class="self">self</span>.colno &lt; <span class="self">self</span>.nchars || !<span class="self">self</span>.buffer.is_empty() || (<span class="self">self</span>.reader.is_some() &amp;&amp; !<span class="self">self</span>.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
+    <span class="self">self</span>.colno &lt; <span class="self">self</span>.nchars
+      || !<span class="self">self</span>.buffer.is_empty()
+      || (<span class="self">self</span>.reader.is_some() &amp;&amp; !<span class="self">self</span>.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
   }
 
   <span class="doccomment">/// Read the next token, or undef if exhausted.
@@ -1284,7 +1346,11 @@
         }
         <span class="comment">// Sneak a comment out, every so often.
         </span><span class="kw">if </span>(<span class="self">self</span>.lineno % READLINE_PROGRESS_QUANTUM) == <span class="number">0 </span>&amp;&amp; state.lookup_bool(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>) {
-          <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_COMMENT!</span>(<span class="macro">s!</span>(<span class="string">&quot;**** {} Line {} ****&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.shortsource, <span class="kw-2">&amp;</span><span class="self">self</span>.lineno.to_string())));
+          <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="macro">T_COMMENT!</span>(<span class="macro">s!</span>(
+            <span class="string">&quot;**** {} Line {} ****&quot;</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.shortsource,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lineno.to_string()
+          )));
         }
       }
       <span class="kw">if </span><span class="self">self</span>.skipping_spaces {
@@ -1330,7 +1396,11 @@
     <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.read_token(state) {
       tokens.push(token);
     }
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(Token { code: Catcode::SPACE, .. }) = tokens.last() {
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(Token {
+      code: Catcode::SPACE,
+      ..
+    }) = tokens.last()
+    {
       <span class="comment">// Remove trailing space
       </span>tokens.pop();
     }
@@ -1501,8 +1571,8 @@
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>((ch, <span class="kw-2">mut </span>cc)) = <span class="self">self</span>.get_next_char(state) {
       <span class="comment">// Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
-      </span><span class="kw">let </span><span class="kw-2">mut </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, ch); <span class="comment">// I need this standardized to be able to lookup tokens (A better way???)
-      </span><span class="kw">if </span>cc == Catcode::LETTER {
+      </span><span class="kw">let </span><span class="kw-2">mut </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, ch);
+      <span class="kw">if </span>cc == Catcode::LETTER {
         <span class="comment">// For letter, read more letters for csname.
         </span><span class="kw">while let </span><span class="prelude-val">Some</span>((nch, ncc)) = <span class="self">self</span>.get_next_char(state) {
           cc = ncc;
@@ -1577,11 +1647,11 @@
 // We also allow for explicitly passing the state in, so that one could memoize state creation
 // using lazy_static doesnt work here as State is too complex an object
 
-// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that is actually slow in practice,
-// but it ought to be at least suboptimal.
-// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at compile_time,
-// we can bunch them together as a global object in codegen maybe? Then at least we can optimize the compile pass
-// + avoid runtime tokenization in the literal binding definitions.
+// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that
+// is actually slow in practice, but it ought to be at least suboptimal.
+// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at
+// compile_time, we can bunch them together as a global object in codegen maybe? Then at least we
+// can optimize the compile pass + avoid runtime tokenization in the literal binding definitions.
 
 </span><span class="kw">pub fn </span>tokenize(text: <span class="kw-2">&amp;</span>str, state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; Tokens {
   <span class="comment">// special case! empty input is empty Tokens
@@ -1591,7 +1661,9 @@
   <span class="kw">match </span>state_opt {
     <span class="prelude-val">None </span>=&gt; {
       <span class="kw">let </span><span class="kw-2">mut </span>state = STD_STATE.write().unwrap();
-      Mouth::new(text, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>state).unwrap().read_tokens(<span class="kw-2">&amp;mut </span>state)
+      Mouth::new(text, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>state)
+        .unwrap()
+        .read_tokens(<span class="kw-2">&amp;mut </span>state)
     },
     <span class="prelude-val">Some</span>(s) =&gt; Mouth::new(text, <span class="prelude-val">None</span>, s).unwrap().read_tokens(s),
   }
@@ -1602,7 +1674,9 @@
     <span class="kw">return </span>Tokens::default();
   }
   <span class="kw">let </span><span class="kw-2">mut </span>state = STY_STATE.write().unwrap();
-  Mouth::new(text, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>state).unwrap().read_tokens(<span class="kw-2">&amp;mut </span>state)
+  Mouth::new(text, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>state)
+    .unwrap()
+    .read_tokens(<span class="kw-2">&amp;mut </span>state)
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

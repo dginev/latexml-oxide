@@ -194,8 +194,11 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">LoadDefinitions!</span>(state, {
+<span class="attr">#[rustfmt::skip]
+</span><span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//======================================================================
   // C.5.4 The Title Page and Abstract
   //======================================================================
@@ -206,7 +209,8 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@date&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\date{}&quot;</span>,
-    <span class="string">r&quot;\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}&quot;
+    <span class="string">r&quot;\def\@date{#1}\
+\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}&quot;
   </span>);
 
   <span class="comment">// TODO: ^
@@ -227,8 +231,7 @@
   });
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\lx@author{}&quot;</span>,
-    <span class="string">&quot;\\lx@count@author\
-     \\@add@frontmatter{ltx:creator}[role=author]{\\lx@author@prefix\\@personname{#1}}&quot;
+    <span class="string">r&quot;\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}&quot;
   </span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
@@ -258,29 +261,27 @@
     <span class="macro">AssignMapping!</span>(<span class="string">&quot;DOCUMENT_CLASSES&quot;</span>, <span class="string">&quot;ltx_authors_multiline&quot; </span>=&gt; <span class="bool-val">true</span>);
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@add@conversion@date&quot;</span>, <span class="string">&quot;\\@add@frontmatter{ltx:date}[role=creation]{\\today}&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\@add@conversion@date&quot;</span>,
+    <span class="string">&quot;\\@add@frontmatter{ltx:date}[role=creation]{\\today}&quot;
+  </span>);
 
   <span class="comment">// Doesn&quot;t produce anything (we&#39;re already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
   </span><span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\maketitle&quot;</span>,
-    <span class="string">&quot;\\@startsection@hook\
-     \\global\\let\\thanks\\relax\
-     \\global\\let\\maketitle\\relax\
-     \\global\\let\\@maketitle\\relax\
-     \\global\\let\\@thanks\\@empty\
-     \\global\\let\\@author\\@empty\
-     \\global\\let\\@date\\@empty\
-     \\global\\let\\@title\\@empty\
-     \\global\\let\\title\\relax\
-     \\global\\let\\author\\relax\
-     \\global\\let\\date\\relax\
-     \\global\\let\\and\\relax&quot;
+    <span class="string">r&quot;\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
+\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
+\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
+\global\let\author\relax\global\let\date\relax\global\let\and\relax&quot;
   </span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@thanks&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\thanks{}&quot;</span>, <span class="string">&quot;\\def\\@thanks{#1}\\lx@make@thanks{#1}&quot;</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@make@thanks{}&quot;</span>, <span class="string">&quot;&lt;ltx:note role=&#39;thanks&#39;&gt;#1&lt;/ltx:note&gt;&quot;</span>);
+  <span class="macro">DefConstructor!</span>(
+    <span class="string">&quot;\\lx@make@thanks{}&quot;</span>,
+    <span class="string">&quot;&lt;ltx:note role=&#39;thanks&#39;&gt;#1&lt;/ltx:note&gt;&quot;
+  </span>);
 
   <span class="comment">// Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
   // For one thing, we&#39;d like to just write
@@ -311,14 +312,17 @@
       <span class="macro">AddToMacro!</span>(<span class="string">&quot;\\@startsection@hook&quot;</span>, <span class="string">&quot;\\maybe@end@abstract&quot;</span>);
     },
     after_digest =&gt; sub[stomach, _args, state] {
-      <span class="kw">let </span>abstract_title = stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\format@title@abstract&quot;</span>),<span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstractname&quot;</span>), <span class="macro">T_END!</span>()), state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>abstract_title = stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\format@title@abstract&quot;</span>),
+        <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstractname&quot;</span>), <span class="macro">T_END!</span>()), state)<span class="question-mark">?</span>;
       <span class="kw">let </span>regurgitated = List::new(stomach.regurgitate(), state);
       <span class="kw">let </span>frontmatter = <span class="kw">match </span>state.lookup_value_mut(<span class="string">&quot;frontmatter&quot;</span>) {
         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
-        <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected, stomach, state, <span class="string">&quot;Global TeX Frontmatter hash was not available, should never happen&quot;</span>),
+        <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected, stomach, state,
+             <span class="string">&quot;Global TeX Frontmatter hash was not available, should never happen&quot;</span>),
       };
       <span class="kw">let </span>abstr = frontmatter.entry(<span class="string">&quot;ltx:abstract&quot;</span>.to_string()).or_insert_with(Vec::new);
-      abstr.push((<span class="string">&quot;ltx:abstract&quot;</span>.to_string(), <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;name&quot; </span>=&gt; abstract_title)), regurgitated.into()));
+      abstr.push((<span class="string">&quot;ltx:abstract&quot;</span>.to_string(),
+        <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;name&quot; </span>=&gt; abstract_title)), regurgitated.into()));
       <span class="macro">DefMacro!</span>(<span class="string">&quot;\\maybe@end@abstract&quot;</span>, <span class="string">&quot;&quot;</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
     },
     locked =&gt; <span class="bool-val">true</span>,
@@ -359,8 +363,8 @@
   // There&#39;s a title and other stuff in here, but how could we guess?
   // Well, there&#39;s likely to be a sequence of &lt;p&gt;&lt;text font=&quot;xx&quot; fontsize=&quot;yy&quot;&gt;...&lt;/text&gt;&lt;/p&gt;
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
-  // Particularly, if they start with a pseudo superscript or other &quot;marker&quot;, they&#39;re probably affil!
-  // For now, we just give an info message
+  // Particularly, if they start with a pseudo superscript or other &quot;marker&quot;, they&#39;re probably
+  // affil! For now, we just give an info message
   </span><span class="macro">DefEnvironment!</span>(<span class="string">&quot;{titlepage}&quot;</span>, <span class="string">&quot;&lt;ltx:titlepage&gt;#body&quot;</span>,
     <span class="comment">// TODO
     // before_digest =&gt; sub { Let(&#39;\centering&#39;, &#39;\relax&#39;);

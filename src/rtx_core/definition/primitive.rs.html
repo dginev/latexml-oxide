@@ -123,14 +123,29 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>libxml::tree::Node;
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>std::borrow::Cow;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State};
 
-<span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion};
+<span class="kw">use </span><span class="kw">crate</span>::definition::{
+  BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion,
+};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
@@ -203,7 +218,9 @@
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.after_digest) }
   <span class="kw">fn </span>is_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.is_prefix }
 
-  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+  <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _once_only: bool, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+  }
   <span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     <span class="macro">Debug!</span>(<span class="string">&quot;primitive invoke for {:?}&quot;</span>, <span class="self">self</span>.cs);
     <span class="comment">// my $profiled = $STATE-&gt;lookupValue(&#39;PROFILING&#39;) &amp;&amp; ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -227,8 +244,17 @@
     </span><span class="prelude-val">Ok</span>(invoked_boxes)
   }
 
-  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="macro">fatal!</span>(Definition, Unexpected, <span class="string">&quot;do_absorbtion on Primitive should never be called!&quot;</span>);
+  <span class="kw">fn </span>do_absorbtion(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    _document: <span class="kw-2">&amp;mut </span>Document,
+    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="macro">fatal!</span>(
+      Definition,
+      Unexpected,
+      <span class="string">&quot;do_absorbtion on Primitive should never be called!&quot;
+    </span>);
   }
 
   <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.cs) }

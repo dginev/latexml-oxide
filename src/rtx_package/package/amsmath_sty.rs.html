@@ -69,12 +69,12 @@
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { LookupValue(&#39;\medmuskip&#39;)-&gt;negate; } });
   </span><span class="macro">DefConstructor!</span>(
     <span class="string">&quot;\\thickspace&quot;</span>,
-    <span class="string">&quot;?#isMath(&lt;ltx:XMHint name=&#39;thickspace&#39; width=&#39;#width&#39;/&gt;)(\u{2004})&quot; </span><span class="comment">/* TODO:
-                                                                          * properties =&gt; {
-                                                                          *map!(&quot;isSpace&quot; =&gt; true, &quot;width&quot; =&gt; sub { LookupValue(&#39;\thickmuskip&#39;); }
-                                                                          * } */
+    <span class="string">&quot;?#isMath(&lt;ltx:XMHint name=&#39;thickspace&#39; width=&#39;#width&#39;/&gt;)(\u{2004})&quot;
   </span>);
-  <span class="comment">// DefConstructorI(&#39;\negthickspace&#39;, undef,
+  <span class="comment">// TODO:
+  //  properties =&gt; { map!(&quot;isSpace&quot; =&gt; true, &quot;width&quot; =&gt; sub { LookupValue(&#39;\thickmuskip&#39;); } }
+
+  // DefConstructorI(&#39;\negthickspace&#39;, undef,
   //   &quot;?#isMath(&lt;ltx:XMHint name=&#39;negthickspace&#39; width=&#39;#width&#39;/&gt;)(\x{2004})&quot;,
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { LookupValue(&#39;\thickmuskip&#39;)-&gt;negate; } });
 

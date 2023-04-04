@@ -214,13 +214,14 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre><pre class="rust"><code><span class="attr">#![allow(unreachable_code)]
 </span><span class="kw">pub use </span>lazy_static::lazy_static;
 <span class="kw">pub use </span>libxml::tree::{Namespace, Node};
 <span class="kw">pub use </span>log;
 <span class="kw">pub use </span>regex::Regex;
+<span class="kw">pub use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">pub use </span>std::borrow::Cow;
-<span class="kw">pub use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">pub use </span>std::collections::VecDeque;
 <span class="kw">pub use </span>std::sync::{Arc, RwLock};
 
@@ -230,8 +231,7 @@
 
 <span class="kw">pub use </span>rtx_core::aux_macros::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::common::cleaners::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>rtx_core::common::xml::XML_NS;
-<span class="kw">pub use </span>rtx_core::common::float::{Float, floatformat};
+<span class="kw">pub use </span>rtx_core::common::float::{floatformat, Float};
 <span class="kw">pub use </span>rtx_core::common::font;
 <span class="kw">pub use </span>rtx_core::common::font::Font;
 <span class="kw">pub use </span>rtx_core::common::glue::Glue;
@@ -240,6 +240,7 @@
 <span class="kw">pub use </span>rtx_core::common::number::Number;
 <span class="kw">pub use </span>rtx_core::common::numeric_ops::NumericOps;
 <span class="kw">pub use </span>rtx_core::common::object::Object;
+<span class="kw">pub use </span>rtx_core::common::xml::XML_NS;
 <span class="kw">pub use </span>rtx_core::definition::argument::ArgWrap;
 <span class="kw">pub use </span>rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 <span class="kw">pub use </span>rtx_core::definition::constructor::ConstructorOptions;
@@ -249,9 +250,11 @@
 <span class="kw">pub use </span>rtx_core::definition::register::{Register, RegisterType, RegisterValue};
 <span class="kw">pub use </span>rtx_core::definition::ConditionalClosure;
 <span class="kw">pub use </span>rtx_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure, ExpansionBody, ExpansionClosure, FontClosure,
-  FontDirective, PrimitiveClosure, PrimitiveFn, ReplacementClosure, Reversion,
+  BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
+  ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveClosure, PrimitiveFn,
+  ReplacementClosure, Reversion,
 };
+<span class="kw">pub use </span>rtx_core::digested::{Digested, DigestedData};
 <span class="kw">pub use </span>rtx_core::document::resource::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::document::tag::{TagOptionName, TagOptions};
 <span class="kw">pub use </span>rtx_core::document::Document;
@@ -271,7 +274,6 @@
 <span class="kw">pub use </span>rtx_core::util::pathname;
 <span class="kw">pub use </span>rtx_core::util::radix;
 <span class="kw">pub use </span>rtx_core::whatsit::Whatsit;
-<span class="kw">pub use </span>rtx_core::digested::{Digested, DigestedData};
 <span class="kw">pub use </span>rtx_core::{BoxOps, Core, TexMode};
 
 <span class="comment">// ------------------------------------------------------------------------------------------------
@@ -378,27 +380,27 @@
 </span><span class="kw">pub mod </span>pdftex;
 
 <span class="comment">// Supported package bindings
-</span><span class="kw">pub mod </span>latexml_sty;
-<span class="kw">pub mod </span>alltt_sty;
+</span><span class="kw">pub mod </span>alltt_sty;
 <span class="kw">pub mod </span>amsmath_sty;
 <span class="kw">pub mod </span>amsthm_sty;
 <span class="kw">pub mod </span>article_cls;
+<span class="kw">pub mod </span>cite_sty;
 <span class="kw">pub mod </span>comment_sty;
+<span class="kw">pub mod </span>etoolbox_sty;
 <span class="kw">pub mod </span>fontenc_sty;
+<span class="kw">pub mod </span>hyperref_sty;
 <span class="kw">pub mod </span>ieeetran_cls;
 <span class="kw">pub mod </span>inputenc_sty;
+<span class="kw">pub mod </span>latexml_sty;
+<span class="kw">pub mod </span>multido_sty;
 <span class="kw">pub mod </span>t1_fontmap;
 <span class="kw">pub mod </span>t1enc_def;
 <span class="kw">pub mod </span>t1enc_sty;
+<span class="kw">pub mod </span>textcase_sty;
 <span class="kw">pub mod </span>textcomp_sty;
 <span class="kw">pub mod </span>url_sty;
-<span class="kw">pub mod </span>hyperref_sty;
-<span class="kw">pub mod </span>etoolbox_sty;
-<span class="kw">pub mod </span>verbatim_sty;
-<span class="kw">pub mod </span>multido_sty;
 <span class="kw">pub mod </span>utf8_def;
-<span class="kw">pub mod </span>textcase_sty;
-<span class="kw">pub mod </span>cite_sty;
+<span class="kw">pub mod </span>verbatim_sty;
 
 <span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
   <span class="prelude-val">Some</span>(<span class="kw">match </span>filename {
@@ -424,7 +426,7 @@
     <span class="string">&quot;t1enc.sty&quot; </span>=&gt; t1enc_def::load_definitions(stomach, state),
     <span class="string">&quot;t1enc.def&quot; </span>=&gt; t1enc_sty::load_definitions(stomach, state),
     <span class="string">&quot;t1.fontmap&quot; </span>=&gt; t1_fontmap::load_definitions(stomach, state),
-    <span class="string">&quot;utf8.def&quot;  </span>=&gt; utf8_def::load_definitions(stomach, state),
+    <span class="string">&quot;utf8.def&quot; </span>=&gt; utf8_def::load_definitions(stomach, state),
     <span class="string">&quot;textcase.sty&quot; </span>=&gt; textcase_sty::load_definitions(stomach, state),
     <span class="string">&quot;cite.sty&quot; </span>=&gt; cite_sty::load_definitions(stomach, state),
     _other =&gt; <span class="kw">return </span><span class="prelude-val">None</span>,

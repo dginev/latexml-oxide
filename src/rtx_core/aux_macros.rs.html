@@ -104,6 +104,7 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Helper macros for quicker and more idiomatic construction and access to data structures.
 
 /// A flexary macro for constructing `HashMap&lt;&amp;&#39;static str, &amp;&#39;static str&gt;` maps
@@ -146,7 +147,8 @@
   }}
 }
 
-<span class="doccomment">/// A flexary macro for constructing `HashMap&lt;K, V&gt;` maps, where `K` and `V` are both generic (inferred at time of use)
+<span class="doccomment">/// A flexary macro for constructing `HashMap&lt;K, V&gt;` maps, where `K` and `V` are both generic
+/// (inferred at time of use)
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>raw_map {
   ($( <span class="macro-nonterminal">$key</span>:expr =&gt; <span class="macro-nonterminal">$val</span>:expr ),<span class="kw-2">*</span>) =&gt; {{

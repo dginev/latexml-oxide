@@ -1235,22 +1235,22 @@
 <a href="#1235" id="1235">1235</a>
 <a href="#1236" id="1236">1236</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 
 <span class="kw">pub struct </span>MetricData {
   <span class="kw">pub </span>file: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
   <span class="kw">pub </span>encoding: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-  <span class="kw">pub </span>space:f64,
-  <span class="kw">pub </span>spaceshrink:f64,
-  <span class="kw">pub </span>emwidth:f64,
-  <span class="kw">pub </span>spacestretch:f64,
-  <span class="kw">pub </span>quad:f64,
-  <span class="kw">pub </span>extraspace:f64,
-  <span class="kw">pub </span>exheight:f64,
+  <span class="kw">pub </span>space: f64,
+  <span class="kw">pub </span>spaceshrink: f64,
+  <span class="kw">pub </span>emwidth: f64,
+  <span class="kw">pub </span>spacestretch: f64,
+  <span class="kw">pub </span>quad: f64,
+  <span class="kw">pub </span>extraspace: f64,
+  <span class="kw">pub </span>exheight: f64,
   <span class="kw">pub </span>ligatures: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64, f64, f64)&gt;,
   <span class="kw">pub </span>sizes: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, (f64, f64, f64, f64)&gt;,
   <span class="kw">pub </span>kerns: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64&gt;,
-  <span class="kw">pub </span>slant:f64,
+  <span class="kw">pub </span>slant: f64,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>MetricData {

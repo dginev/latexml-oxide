@@ -140,6 +140,9 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::state::State;
 
@@ -273,7 +276,10 @@
             <span class="macro">MergeFont!</span>(encoding =&gt; encoding.to_string());
           }
         } <span class="kw">else </span>{
-          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Only strings should be stored as font encoding names, at: {:?}&quot;</span>, encoding_stored);
+          <span class="kw">let </span>message = <span class="macro">s!</span>(
+            <span class="string">&quot;Only strings should be stored as font encoding names, at: {:?}&quot;</span>,
+            encoding_stored
+          );
           <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, stomach, state, message);
         }
       }

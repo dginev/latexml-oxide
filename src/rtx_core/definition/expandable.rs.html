@@ -226,6 +226,19 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::fmt;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -284,7 +297,9 @@
   }
 }
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Expandable {
-  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Expandable) -&gt; bool { <span class="self">self</span>.paramlist == other.paramlist &amp;&amp; <span class="self">self</span>.expansion == other.expansion }
+  <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Expandable) -&gt; bool {
+    <span class="self">self</span>.paramlist == other.paramlist &amp;&amp; <span class="self">self</span>.expansion == other.expansion
+  }
 }
 
 <span class="comment">// impl fmt::Display for Expandable {
@@ -414,11 +429,22 @@
   }
 
   <span class="comment">// Not implemented for expandable
-  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; { <span class="prelude-val">Ok</span>(Vec::new()) }
+  </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+    <span class="prelude-val">Ok</span>(Vec::new())
+  }
   <span class="kw">fn </span>before_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;BeforeDigestClosure&gt;&gt; { <span class="prelude-val">None </span>}
   <span class="kw">fn </span>after_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;DigestionClosure&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>do_absorbtion(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="macro">fatal!</span>(Definition, Unexpected, <span class="string">&quot;do_absorbtion on Expandable should never be called!&quot;</span>);
+  <span class="kw">fn </span>do_absorbtion(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    _document: <span class="kw-2">&amp;mut </span>Document,
+    _whatsit: <span class="kw-2">&amp;</span>Whatsit,
+    _state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="macro">fatal!</span>(
+      Definition,
+      Unexpected,
+      <span class="string">&quot;do_absorbtion on Expandable should never be called!&quot;
+    </span>);
   }
 }
 

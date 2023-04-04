@@ -52,6 +52,8 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
@@ -67,11 +69,13 @@
 </span><span class="kw">pub struct </span>Number(<span class="kw">pub </span>i64);
 <span class="kw">impl </span>Object <span class="kw">for </span>Number {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">None </span>}
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.to_string()))) }
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+    <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>.to_string())))
+  }
 }
 <span class="kw">impl </span>NumericOps <span class="kw">for </span>Number {
   <span class="kw">fn </span>new(number: i64) -&gt; <span class="self">Self </span>{ Number(number) }
-  <span class="kw">fn </span>new_f64(number:f64) -&gt; <span class="self">Self </span>{ Number(number.trunc() <span class="kw">as </span>i64) }
+  <span class="kw">fn </span>new_f64(number: f64) -&gt; <span class="self">Self </span>{ Number(number.trunc() <span class="kw">as </span>i64) }
   <span class="kw">fn </span>value_of(<span class="self">self</span>) -&gt; i64 { <span class="self">self</span>.<span class="number">0 </span>}
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RegisterType { RegisterType::Number }
 }

@@ -340,11 +340,18 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rtx_core::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::common::object::Object;
 <span class="kw">use </span>rtx_core::common::{Config, DataSize, OutputFormat};
-<span class="kw">use </span>rtx_core::document::Document;
 <span class="kw">use </span>rtx_core::digested::Digested;
+<span class="kw">use </span>rtx_core::document::Document;
 <span class="kw">use </span>rtx_core::list::List;
 <span class="kw">use </span>rtx_core::state::State;
 <span class="kw">use </span>rtx_core::{generate_message, s, Core, CoreOptions, Error, Info};
@@ -510,9 +517,13 @@
     // &quot;Conversion timed out after &quot; . $$opts{timeout} . &quot; seconds!\n&quot;); };
     // alarm($$opts{timeout});
     // my $mode = ($$opts{type} eq &#39;auto&#39;) ? &#39;TeX&#39; : $$opts{type};
-    </span><span class="kw">let </span>digest_result = <span class="self">self
-      </span>.core
-      .digest(source, current_preamble, current_postamble, <span class="self">self</span>.opts.mode.clone(), <span class="bool-val">true</span>);
+    </span><span class="kw">let </span>digest_result = <span class="self">self</span>.core.digest(
+      source,
+      current_preamble,
+      current_postamble,
+      <span class="self">self</span>.opts.mode.clone(),
+      <span class="bool-val">true</span>,
+    );
     <span class="kw">let </span>digested = <span class="kw">match </span>digest_result {
       <span class="prelude-val">Err</span>(e) =&gt; {
         <span class="comment">// TODO digestion failed, report
@@ -675,7 +686,10 @@
     }
   }
 
-  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">&#39;preplifetime</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>, _opts: <span class="kw-2">&amp;</span><span class="lifetime">&#39;preplifetime </span>Config) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">&#39;preplifetime</span>&gt;(
+    <span class="kw-2">&amp;</span><span class="lifetime">&#39;preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>,
+    _opts: <span class="kw-2">&amp;</span><span class="lifetime">&#39;preplifetime </span>Config,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span>!<span class="self">self</span>.ready {
       <span class="self">self</span>.initialize_session()<span class="question-mark">?
     </span>}

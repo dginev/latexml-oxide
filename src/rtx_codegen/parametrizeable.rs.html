@@ -100,27 +100,49 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
 </pre><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>quote::{format_ident, quote};
 <span class="kw">use </span>rtx_core::common::def_parser::parse_prototype;
 <span class="kw">use </span>syn::{DeriveInput, Lit, Meta};
 
-<span class="doccomment">/// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from rtx_package
-/// until we can figure out how to improve the code organization.
+<span class="doccomment">/// For now this prototype compilation technique is tied tightly to the `TypedMacroWO!` macro from
+/// rtx_package until we can figure out how to improve the code organization.
 </span><span class="kw">pub fn </span>compile_prototype_for(input: DeriveInput) -&gt; TokenStream {
   <span class="kw">let </span>prototype: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes(parse_meta)&quot;
+    </span>),
   };
   <span class="kw">let </span>inner: String = <span class="kw">match </span>input.attrs[<span class="number">1</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[macro = \&quot;TypedMacro\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[macro = \&quot;TypedMacro\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[macro = \&quot;TypedMacro\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[macro = \&quot;TypedMacro\&quot;] attribute syntax, mandatory double-quotes(parse_meta)&quot;
+    </span>),
   };
 
   <span class="kw">if </span>prototype.is_empty() {
@@ -159,9 +181,11 @@
         <span class="kw">let </span>inneri = <span class="macro">format_ident!</span>(<span class="string">&quot;{}&quot;</span>, inner);
         <span class="macro">quote!</span>(
           <span class="macro">macro_rules! </span>this_prototype {
-          (sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ), <span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {
+          (sub [ <span class="macro-nonterminal">$gullet</span>:ident, ( $(<span class="macro-nonterminal">$var</span>:ident),* ), <span class="macro-nonterminal">$inner_state</span>:ident ]
+            <span class="macro-nonterminal">$body</span>:block $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {
             <span class="kw">let </span>these_parameters = #quoted_params;
-            #<span class="macro">inneri!</span>(#csname, these_parameters, sub [ <span class="macro-nonterminal">$gullet</span>, ( $(<span class="macro-nonterminal">$var</span>),* ):(#(#proto_types),<span class="kw-2">*</span>), <span class="macro-nonterminal">$inner_state </span>] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>)
+            #<span class="macro">inneri!</span>(#csname, these_parameters, sub [ <span class="macro-nonterminal">$gullet</span>, ( $(<span class="macro-nonterminal">$var</span>),* ):(#(#proto_types),<span class="kw-2">*</span>),
+              <span class="macro-nonterminal">$inner_state </span>] <span class="macro-nonterminal">$body </span>$(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>)
           }
         }
         )
@@ -176,9 +200,13 @@
   <span class="kw">let </span>prototype: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[prototype = \&quot;value\&quot;] attribute syntax, mandatory double-quotes(parse_meta)&quot;
+    </span>),
   };
   <span class="kw">if </span>prototype.is_empty() {
     <span class="macro">panic!</span>(<span class="string">&quot;Must never call on empty prototype?! input was {prototype}&quot;</span>);

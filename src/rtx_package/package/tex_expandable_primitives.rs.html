@@ -412,11 +412,31 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>LEAD_W_COLON_RE: Regex = Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap();
   <span class="kw">static </span><span class="kw-2">ref </span>UNTIL_SPEC: Regex = Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex = Regex::new(<span class="string">&quot;^\\\\(?:(?:un)?expanded|detokenize)$&quot;</span>).unwrap();
+  <span class="kw">static </span><span class="kw-2">ref </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex =
+    Regex::new(<span class="string">&quot;^\\\\(?:(?:un)?expanded|detokenize)$&quot;</span>).unwrap();
 }
 <span class="comment">//=======================
 // -- Main Definitions --
@@ -457,7 +477,7 @@
     <span class="kw">let </span>token = <span class="kw">match </span>token_opt {
       <span class="prelude-val">None </span>=&gt; {
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet, state,
-          <span class="string">&quot;conditional expected a token argument, readXToken came back empty. Falling back to \\@empty&quot;</span>);
+          <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
         <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>) },
       <span class="prelude-val">Some</span>(t) =&gt; t
     };
@@ -521,7 +541,11 @@
 
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\jobname&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>()); <span class="comment">// Set to the filename by initialization
 
-  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\fontname&quot;</span>), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">Explode!</span>(<span class="string">&quot;fontname not implemented&quot;</span>)));
+  </span><span class="macro">DefMacro!</span>(
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\fontname&quot;</span>),
+    <span class="prelude-val">None</span>,
+    Tokens::new(<span class="macro">Explode!</span>(<span class="string">&quot;fontname not implemented&quot;</span>))
+  );
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\meaning Token&quot;</span>, sub[gullet, (token), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>meaning = String::from(<span class="string">&quot;undefined&quot;</span>);
@@ -530,11 +554,15 @@
     } <span class="kw">else </span>{
       state.lookup_meaning(<span class="kw-2">&amp;</span>token).map(|d| d.into_owned())
     } {
-      <span class="comment">// First, if this definition is a primitive|conditional|constructor, check to see if it has an alias, which would allow us to work with a token
+      <span class="comment">// First, if this definition is a primitive|conditional|constructor,
+      // check to see if it has an alias, which would allow us to work with a token
       </span><span class="kw">let </span>definition : Stored = <span class="kw">match </span>definition {
-        Stored::Primitive(primitive) =&gt; Stored::Token(primitive.get_cs_or_alias().into_owned()),
-        Stored::Constructor(constructor) =&gt; Stored::Token(constructor.get_cs_or_alias().into_owned()),
-        Stored::Conditional(cond) =&gt; Stored::Token(cond.get_cs_or_alias().into_owned()),
+        Stored::Primitive(primitive) =&gt;
+          Stored::Token(primitive.get_cs_or_alias().into_owned()),
+        Stored::Constructor(constructor) =&gt;
+          Stored::Token(constructor.get_cs_or_alias().into_owned()),
+        Stored::Conditional(cond) =&gt;
+          Stored::Token(cond.get_cs_or_alias().into_owned()),
         other =&gt; other
       };
       <span class="comment">// TODO: Also check for fontinfo_ when implemented
@@ -614,8 +642,10 @@
                 p_spec = Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;#{arg_index}{p_spec}&quot;</span>));
               },
               other =&gt; { <span class="comment">// regular parameter, increment
-                </span><span class="kw">if </span>param.novalue { <span class="comment">// skip the latexml-only requirement params, but only here, since Match also have &quot;novalue&quot; set.
-                  </span><span class="kw">continue</span>;
+              // skip the latexml-only requirement params, but only here,
+              // since Match also have &quot;novalue&quot; set.
+                </span><span class="kw">if </span>param.novalue {
+                  <span class="kw">continue</span>;
                 }
                 arg_index+=<span class="number">1</span>;
                 p_spec = Cow::Owned(<span class="macro">s!</span>(<span class="string">&quot;#{arg_index}&quot;</span>));
@@ -669,7 +699,9 @@
       <span class="kw">let </span>cc = token.get_catcode();
       <span class="kw">if </span>cc == Catcode::CS {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
-          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The control sequence {:?} should not appear between \\csname and \\endcsname&quot;</span>, token);
+          <span class="kw">let </span>message =
+            <span class="macro">s!</span>(<span class="string">&quot;The control sequence {:?} should not appear between \\csname and \\endcsname&quot;</span>,
+              token);
           <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, token, gullet, state, message);
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The token {:?} is not defined&quot;</span>, token);
@@ -774,8 +806,10 @@
       <span class="comment">// let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn-&gt;getCS);
-      //       Error(&#39;unexpected&#39;, &quot;\\the$cs&quot;, $gullet, &quot;You can&#39;t use $cs after \\the&quot;); return (); }
-      </span><span class="kw">let </span>defn = rtoken.to_register(state).expect(<span class="string">&quot;if a Register parameter provides a token, it must have a Register definition.&quot;</span>);
+      //       Error(&#39;unexpected&#39;, &quot;\\the$cs&quot;, $gullet,
+      //     &quot;You can&#39;t use $cs after \\the&quot;); return (); }
+      </span><span class="kw">let </span>defn = rtoken.to_register(state)
+        .expect(<span class="string">&quot;if a Register parameter provides a token, it must have a Register definition.&quot;</span>);
       <span class="kw">let </span>value = defn.value_of(inner, state)
         .unwrap_or_else(|| RegisterValue::Tokens(<span class="macro">Tokens!</span>()));
       <span class="comment">// In all cases, these should be OTHER, except for space. (!?)
@@ -821,7 +855,11 @@
   } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">&quot;&gt;&quot;</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@&gt;&quot;</span>) {
     <span class="prelude-val">Ok</span>(u &gt; v)
   } <span class="kw">else </span>{
-    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Expected a relational token for comparision. Got {:?} (cc {:?})&quot;</span>, rel, rel.get_catcode());
+    <span class="kw">let </span>message = <span class="macro">s!</span>(
+      <span class="string">&quot;Expected a relational token for comparision. Got {:?} (cc {:?})&quot;</span>,
+      rel,
+      rel.get_catcode()
+    );
     <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, message);
     <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
   }

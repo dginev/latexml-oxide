@@ -92,9 +92,14 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span>unicode_normalization::UnicodeNormalization;
 <span class="kw">use </span>unicode_normalization::char::compose;
+<span class="kw">use </span>unicode_normalization::UnicodeNormalization;
 
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>SPACE_RE: Regex = Regex::new(<span class="string">r&quot;\s&quot;</span>).unwrap();
@@ -115,14 +120,15 @@
   <span class="kw">let </span>font = letter_box.get_font(state)<span class="question-mark">?</span>.map(|f| Arc::new((<span class="kw-2">*</span>f).clone()));
 
   <span class="kw">let </span><span class="kw-2">mut </span>string: String = letter_box.to_string();
-  string = string.replace(<span class="string">&#39;\u{0131}&#39;</span>,<span class="string">&quot;i&quot;</span>).replace(<span class="string">&#39;\u{0237}&#39;</span>,<span class="string">&quot;j&quot;</span>);
+  string = string.replace(<span class="string">&#39;\u{0131}&#39;</span>, <span class="string">&quot;i&quot;</span>).replace(<span class="string">&#39;\u{0237}&#39;</span>, <span class="string">&quot;j&quot;</span>);
   string = SPACE_RE.replace_all(<span class="kw-2">&amp;</span>string, <span class="string">&quot; &quot;</span>).into_owned();
   <span class="kw">let </span>text = <span class="kw">if </span>string.chars().all(|l| l.is_whitespace()) {
     standalonechar.to_string()
   } <span class="kw">else </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>letters = string.chars();
     <span class="kw">let </span>lead_letter = letters.next().unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>combined_str = compose(lead_letter,combiningchar).map(|c| c.to_string())
+    <span class="kw">let </span><span class="kw-2">mut </span>combined_str = compose(lead_letter, combiningchar)
+      .map(|c| c.to_string())
       .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;{lead_letter}{combiningchar}&quot;</span>));
     <span class="kw">for </span>rest <span class="kw">in </span>letters {
       combined_str.push(rest);
@@ -169,11 +175,15 @@
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\r&quot;</span>, <span class="string">&#39;\u{030A}&#39;</span>, <span class="string">&quot;o&quot;</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\H&quot;</span>, <span class="string">&#39;\u{030B}&#39;</span>, <span class="string">&quot;\u{02DD}&quot;</span>); <span class="comment">// COMBINING DOUBLE ACUTE ACCENT &amp; non-combining
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\c&quot;</span>, <span class="string">&#39;\u{0327}&#39;</span>, <span class="string">&quot;\u{00B8}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING CEDILLA &amp; CEDILLA
-                                                            // NOTE: The next two get define for math, as well; See below
+
+  // NOTE: The next two get define for math, as well; See below
+
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@daccent&quot;</span>, <span class="string">&#39;\u{0323}&#39;</span>, <span class="string">&quot;.&quot;</span>,       below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING DOT BELOW &amp; DOT (?)
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@baccent&quot;</span>, <span class="string">&#39;\u{0331}&#39;</span>, <span class="string">&quot;\u{00AF}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING MACRON BELOW  &amp; MACRON
-  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\t&quot;</span>, <span class="string">&#39;\u{0361}&#39;</span>, <span class="string">&quot;-&quot;</span>); <span class="comment">// COMBINING DOUBLE INVERTED BREVE &amp; ???? What????
-                                      // this one&quot;s actually defined in mathscinet.sty, but just stick it here!
+
+  // COMBINING DOUBLE INVERTED BREVE &amp; ???? What????
+  </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\t&quot;</span>, <span class="string">&#39;\u{0361}&#39;</span>, <span class="string">&quot;-&quot;</span>);
+  <span class="comment">// this one&quot;s actually defined in mathscinet.sty, but just stick it here!
 
   // COMBINING COMMA BELOW
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\lfhook&quot;</span>, <span class="string">&#39;\u{0326}&#39;</span>, <span class="string">&quot;,&quot;</span>, below =&gt; <span class="bool-val">true</span>);

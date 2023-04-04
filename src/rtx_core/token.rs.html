@@ -781,6 +781,25 @@
 <a href="#781" id="781">781</a>
 <a href="#782" id="782">782</a>
 <a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
@@ -788,11 +807,11 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
 <span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
 <span class="kw">use </span><span class="kw">crate</span>::common::mudimension::MuDimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::Register;
@@ -802,8 +821,9 @@
 <span class="kw">use crate</span>::{fatal, Digested, Fatal};
 
 <span class="kw">static </span>CONTROLNAME: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-  <span class="string">&quot;NUL&quot;</span>, <span class="string">&quot;SOH&quot;</span>, <span class="string">&quot;STX&quot;</span>, <span class="string">&quot;ETX&quot;</span>, <span class="string">&quot;EOT&quot;</span>, <span class="string">&quot;ENQ&quot;</span>, <span class="string">&quot;ACK&quot;</span>, <span class="string">&quot;BEL&quot;</span>, <span class="string">&quot;BS&quot;</span>, <span class="string">&quot;HT&quot;</span>, <span class="string">&quot;LF&quot;</span>, <span class="string">&quot;VT&quot;</span>, <span class="string">&quot;FF&quot;</span>, <span class="string">&quot;CR&quot;</span>, <span class="string">&quot;SO&quot;</span>, <span class="string">&quot;SI&quot;</span>, <span class="string">&quot;DLE&quot;</span>, <span class="string">&quot;DC1&quot;</span>, <span class="string">&quot;DC2&quot;</span>, <span class="string">&quot;DC3&quot;</span>, <span class="string">&quot;DC4&quot;</span>, <span class="string">&quot;NAK&quot;</span>,
-  <span class="string">&quot;SYN&quot;</span>, <span class="string">&quot;ETB&quot;</span>, <span class="string">&quot;CAN&quot;</span>, <span class="string">&quot;EM&quot;</span>, <span class="string">&quot;SUB&quot;</span>, <span class="string">&quot;ESC&quot;</span>, <span class="string">&quot;FS&quot;</span>, <span class="string">&quot;GS&quot;</span>, <span class="string">&quot;RS&quot;</span>, <span class="string">&quot;US&quot;</span>,
+  <span class="string">&quot;NUL&quot;</span>, <span class="string">&quot;SOH&quot;</span>, <span class="string">&quot;STX&quot;</span>, <span class="string">&quot;ETX&quot;</span>, <span class="string">&quot;EOT&quot;</span>, <span class="string">&quot;ENQ&quot;</span>, <span class="string">&quot;ACK&quot;</span>, <span class="string">&quot;BEL&quot;</span>, <span class="string">&quot;BS&quot;</span>, <span class="string">&quot;HT&quot;</span>, <span class="string">&quot;LF&quot;</span>, <span class="string">&quot;VT&quot;</span>, <span class="string">&quot;FF&quot;</span>, <span class="string">&quot;CR&quot;</span>, <span class="string">&quot;SO&quot;</span>,
+  <span class="string">&quot;SI&quot;</span>, <span class="string">&quot;DLE&quot;</span>, <span class="string">&quot;DC1&quot;</span>, <span class="string">&quot;DC2&quot;</span>, <span class="string">&quot;DC3&quot;</span>, <span class="string">&quot;DC4&quot;</span>, <span class="string">&quot;NAK&quot;</span>, <span class="string">&quot;SYN&quot;</span>, <span class="string">&quot;ETB&quot;</span>, <span class="string">&quot;CAN&quot;</span>, <span class="string">&quot;EM&quot;</span>, <span class="string">&quot;SUB&quot;</span>, <span class="string">&quot;ESC&quot;</span>, <span class="string">&quot;FS&quot;</span>,
+  <span class="string">&quot;GS&quot;</span>, <span class="string">&quot;RS&quot;</span>, <span class="string">&quot;US&quot;</span>,
 ];
 
 <span class="kw">pub const </span>MOCK_TOKEN: Token = Token {
@@ -999,7 +1019,9 @@
       <span class="comment">// Primitives
       </span>ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-primitive
-      </span>IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE =&gt; <span class="bool-val">false</span>,
+      </span>IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE =&gt; {
+        <span class="bool-val">false
+      </span>},
     }
   }
   <span class="doccomment">///
@@ -1009,7 +1031,8 @@
       <span class="comment">// Executable
       </span>BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-executable
-      </span>EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG | SmuggleTHE =&gt; <span class="bool-val">false</span>,
+      </span>EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG
+      | SmuggleTHE =&gt; <span class="bool-val">false</span>,
     }
   }
   <span class="doccomment">///
@@ -1019,7 +1042,8 @@
       <span class="comment">// Neutralizable
       </span>MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE =&gt; <span class="bool-val">true</span>,
       <span class="comment">// Non-neutralizable
-      </span>ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE =&gt; <span class="bool-val">false</span>,
+      </span>ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS
+      | MARKER | ARG | SmuggleTHE =&gt; <span class="bool-val">false</span>,
     }
   }
   <span class="doccomment">///
@@ -1092,9 +1116,9 @@
 // That is NOT done here; see Equals(x,y) and XEquals(x,y)
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Token {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Token) -&gt; bool {
-    <span class="self">self</span>.code == other.code &amp;&amp; (<span class="self">self</span>.code == Catcode::SPACE ||
-      (<span class="kw-2">*</span><span class="self">self</span>.text == <span class="kw-2">*</span>other.text)) &amp;&amp;
-      (<span class="self">self</span>.smuggled.is_none() == other.smuggled.is_none())
+    <span class="self">self</span>.code == other.code
+      &amp;&amp; (<span class="self">self</span>.code == Catcode::SPACE || (<span class="kw-2">*</span><span class="self">self</span>.text == <span class="kw-2">*</span>other.text))
+      &amp;&amp; (<span class="self">self</span>.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -1370,7 +1394,13 @@
 /// Accessors.
 </span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Token {
   <span class="doccomment">/// simple Token constructor, wrapping over text and catcode
-  </span><span class="kw">pub fn </span>new(text: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, code: Catcode) -&gt; <span class="self">Self </span>{ Token { text, code, smuggled: <span class="prelude-val">None </span>} }
+  </span><span class="kw">pub fn </span>new(text: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, code: Catcode) -&gt; <span class="self">Self </span>{
+    Token {
+      text,
+      code,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  }
 
   <span class="doccomment">/// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It&#39;s the same for various `different&#39; BEGIN tokens, eg.
@@ -1481,7 +1511,8 @@
       Catcode::SmuggleTHE =&gt; {
         <span class="comment">// LaTeXML Bug, we haven&#39;t correctly emulated scan_toks! Offending token was:
         </span><span class="kw">let </span>msg = <span class="macro">s!</span>(
-          <span class="string">&quot;We are marking as \\noexpand a masked \\the-produced token, this must Never happen. Illegal: {}&quot;</span>,
+          <span class="string">&quot;We are marking as \\noexpand a masked \\the-produced token, this must Never happen. \
+           Illegal: {}&quot;</span>,
           <span class="kw-2">&amp;</span><span class="self">self</span>.stringify()
         );
         <span class="macro">Fatal!</span>(Parameter, Unexpected, <span class="prelude-val">None</span>, state, msg);
@@ -1547,13 +1578,19 @@
     <span class="macro">s!</span>(<span class="string">&quot;{}[{}]&quot;</span>, <span class="self">self</span>.code.short_name(), string)
   }
 
-  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; { state.lookup_register_definition(<span class="self">self</span>) }
+  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
+    state.lookup_register_definition(<span class="self">self</span>)
+  }
 
   <span class="kw">pub fn </span>to_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Number { Number::new(<span class="self">self</span>.text.parse::&lt;i64&gt;().unwrap_or(<span class="number">0</span>)) }
 
-  <span class="kw">pub fn </span>to_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Dimension { Dimension::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)) }
+  <span class="kw">pub fn </span>to_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Dimension {
+    Dimension::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+  }
 
-  <span class="kw">pub fn </span>to_mu_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MuDimension { MuDimension::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)) }
+  <span class="kw">pub fn </span>to_mu_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MuDimension {
+    MuDimension::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+  }
 
   <span class="kw">pub fn </span>to_glue(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Glue { Glue::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)) }
 
@@ -1561,8 +1598,9 @@
 
   <span class="kw">pub fn </span>to_float(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Float { Float::new_f64(<span class="self">self</span>.text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)) }
 
-
-  <span class="kw">pub fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; { stomach.digest(Tokens::new(<span class="macro">vec!</span>[<span class="self">self</span>]), state) }
+  <span class="kw">pub fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+    stomach.digest(Tokens::new(<span class="macro">vec!</span>[<span class="self">self</span>]), state)
+  }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

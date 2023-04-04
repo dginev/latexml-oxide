@@ -93,6 +93,19 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre><pre class="rust"><code><span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>quote::quote;
 <span class="kw">use </span>syn::{DeriveInput, Lit, Meta};
@@ -107,9 +120,13 @@
   <span class="kw">let </span>expansion: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[name = \&quot;filename\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;
+    </span>),
   };
   <span class="kw">let </span>compiled_expansion = <span class="kw">if </span>expansion.is_empty() {
     <span class="macro">quote!</span>(<span class="prelude-val">None</span>)
@@ -123,10 +140,11 @@
       <span class="comment">// println!(&quot;expanded into: {:?} tokens: {:?}&quot;, performed_expansion.len(),
       // performed_expansion);
       //
-      // TODO: Should &quot;substitute_parameters&quot; be specially performed for runtime-read expansions (via RawTeX?), e.g. when
-      // reading external style files? should that even be allowed? We can easily pre-compile all of texlive
-      // (or the ~200 supported sty and cls files in the ecosystem) once
-      // and have all expansions handled by this code snippet. Hmmm... arguable benefit at this early stage, maybe something beyond 1.0
+      // TODO: Should &quot;substitute_parameters&quot; be specially performed for runtime-read expansions
+      // (via RawTeX?), e.g. when reading external style files? should that even be allowed?
+      // We can easily pre-compile all of texlive (or the ~200 supported sty and cls files in
+      // the ecosystem) once and have all expansions handled by this code snippet. Hmmm...
+      // arguable benefit at this early stage, maybe something beyond 1.0
       </span><span class="macro">quote!</span>(
         <span class="prelude-val">Some</span>(ExpansionBody::Tokens(#expansion))
       )
@@ -147,9 +165,13 @@
   <span class="kw">let </span>literal: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;
+    </span>),
   };
 
   <span class="kw">let </span>tokenized = <span class="kw">if </span>literal.is_empty() {
@@ -170,9 +192,13 @@
   <span class="kw">let </span>literal: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+        <span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;
+      </span>),
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[literal = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;
+    </span>),
   };
 
   <span class="kw">let </span>tokenized = <span class="kw">if </span>literal.is_empty() {

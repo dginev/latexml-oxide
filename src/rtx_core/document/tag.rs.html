@@ -134,8 +134,18 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -159,7 +169,14 @@
 <span class="kw">impl </span>TagOptionName {
   <span class="kw">pub fn </span>all() -&gt; Vec&lt;TagOptionName&gt; {
     <span class="kw">use </span><span class="self">self</span>::TagOptionName::<span class="kw-2">*</span>;
-    <span class="macro">vec!</span>[AfterOpen, AfterOpenEarly, AfterOpenLate, AfterClose, AfterCloseEarly, AfterCloseLate]
+    <span class="macro">vec!</span>[
+      AfterOpen,
+      AfterOpenEarly,
+      AfterOpenLate,
+      AfterClose,
+      AfterCloseEarly,
+      AfterCloseLate,
+    ]
   }
   <span class="kw">pub fn </span>is_prepend(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="self">self</span>::TagOptionName::<span class="kw-2">*</span>;
@@ -167,7 +184,10 @@
   }
   <span class="kw">pub fn </span>is_append(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span><span class="self">self</span>::TagOptionName::<span class="kw-2">*</span>;
-    <span class="macro">matches!</span>(<span class="kw-2">*</span><span class="self">self</span>, AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate)
+    <span class="macro">matches!</span>(
+      <span class="kw-2">*</span><span class="self">self</span>,
+      AfterOpen | AfterClose | AfterOpenLate | AfterCloseLate
+    )
   }
 }
 

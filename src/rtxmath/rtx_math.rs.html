@@ -59,15 +59,27 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">extern crate </span>rtx_core;
-<span class="kw">use </span>std::process;
-<span class="kw">use </span>std::env;
 <span class="kw">use </span>libxml::tree::SaveOptions;
 <span class="kw">use </span>rtx::util::test::lex_single_tex_formula;
-<span class="kw">use </span>rtx_math_parser::<span class="kw-2">*</span>;
-<span class="kw">use </span>rtx_core::state::{State, StateOptions};
 <span class="kw">use </span>rtx_core::common::error::Result;
+<span class="kw">use </span>rtx_core::state::{State, StateOptions};
+<span class="kw">use </span>rtx_math_parser::<span class="kw-2">*</span>;
+<span class="kw">use </span>std::env;
+<span class="kw">use </span>std::process;
 
 <span class="kw">fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
@@ -76,7 +88,7 @@
       <span class="string">&quot;logger&quot;</span>,
       <span class="prelude-val">None</span>,
       <span class="prelude-val">None</span>,
-      <span class="string">&quot;Failed to load logger, aborting early. Please check rtx_core::util::logger installed correctly.&quot;
+      <span class="string">&quot;Failed to load logger, aborting. Please check rtx_core::util::logger installed correctly.&quot;
     </span>);
   }
   <span class="kw">let </span><span class="kw-2">mut </span>argv = env::args();
@@ -85,7 +97,13 @@
   <span class="kw">let </span>source = <span class="kw">match </span>argv.next() {
     <span class="prelude-val">Some</span>(s) =&gt; s,
     <span class="prelude-val">None </span>=&gt; {
-      <span class="macro">Error!</span>(<span class="string">&quot;rtx&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Please provide a TeX formula on input! Exiting...&quot;</span>);
+      <span class="macro">Error!</span>(
+        <span class="string">&quot;rtx&quot;</span>,
+        <span class="string">&quot;&quot;</span>,
+        <span class="prelude-val">None</span>,
+        <span class="prelude-val">None</span>,
+        <span class="string">&quot;Please provide a TeX formula on input! Exiting...&quot;
+      </span>);
       process::exit(<span class="number">1</span>);
     },
   };
@@ -115,7 +133,13 @@
       })
     );
   } <span class="kw">else </span>{
-    <span class="macro">Warn!</span>(<span class="string">&quot;math&quot;</span>, <span class="string">&quot;parse&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Grammar did not recognize expression.&quot;</span>);
+    <span class="macro">Warn!</span>(
+      <span class="string">&quot;math&quot;</span>,
+      <span class="string">&quot;parse&quot;</span>,
+      <span class="prelude-val">None</span>,
+      <span class="prelude-val">None</span>,
+      <span class="string">&quot;Grammar did not recognize expression.&quot;
+    </span>);
     process::exit(<span class="number">1</span>);
   }
   <span class="prelude-val">Ok</span>(())

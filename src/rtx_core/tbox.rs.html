@@ -184,11 +184,34 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::Arc;
-<span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -242,9 +265,7 @@
 <span class="kw">impl </span>Object <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.locator)) }
   <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.tokens.clone()) }
-  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-      <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>)
-  }
+  <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>) }
 }
 <span class="kw">impl </span>Tbox {
   <span class="doccomment">/// creates a new Tbox.
@@ -274,7 +295,9 @@
     };
 
     <span class="kw">if </span>properties.contains_key(<span class="string">&quot;isSpace&quot;</span>)
-      &amp;&amp; (properties.contains_key(<span class="string">&quot;width&quot;</span>) || properties.contains_key(<span class="string">&quot;height&quot;</span>) || properties.contains_key(<span class="string">&quot;depth&quot;</span>))
+      &amp;&amp; (properties.contains_key(<span class="string">&quot;width&quot;</span>)
+        || properties.contains_key(<span class="string">&quot;height&quot;</span>)
+        || properties.contains_key(<span class="string">&quot;depth&quot;</span>))
     {
       properties
         .entry(String::from(<span class="string">&quot;width&quot;</span>))
@@ -289,9 +312,13 @@
     <span class="kw">if </span>state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) {
       properties.insert(<span class="macro">s!</span>(<span class="string">&quot;mode&quot;</span>), String::from(<span class="string">&quot;math&quot;</span>).into());
       <span class="kw">if </span>!text.is_empty() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attr)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;math_token_attributes_{}&quot;</span>, text)) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attr)) =
+          state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;math_token_attributes_{}&quot;</span>, text))
+        {
           <span class="kw">for </span>(key, value) <span class="kw">in </span>attr.iter() {
-            properties.entry(key.to_string()).or_insert_with(|| Stored::String(value.to_owned()));
+            properties
+              .entry(key.to_string())
+              .or_insert_with(|| Stored::String(value.to_owned()));
           }
         }
       }
@@ -320,10 +347,16 @@
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>get_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.tokens) }
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
-  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>))) }
+  <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="macro">matches!</span>(<span class="self">self</span>.properties.get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)))
+  }
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="self">self</span>.properties.contains_key(key) }
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) { <span class="self">self</span>.properties.insert(key.to_string(), value.into()); }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Borrowed(<span class="self">self</span>.text.as_str())) }
+  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="self">self</span>.properties.insert(key.to_string(), value.into());
+  }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, str&gt;&gt; {
+    <span class="prelude-val">Ok</span>(Cow::Borrowed(<span class="self">self</span>.text.as_str()))
+  }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="kw">let </span>text = <span class="kw-2">&amp;</span><span class="self">self</span>.text;
@@ -335,13 +368,16 @@
 
     <span class="kw">if </span>!text.is_empty() {
       <span class="kw">if </span>mode == <span class="string">&quot;math&quot; </span>{
-        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
-          document.insert_math_token(text, Stored::cast_to_string_hash(<span class="kw-2">&amp;</span><span class="self">self</span>.properties), <span class="prelude-val">Some</span>(font), state)<span class="question-mark">?
-        </span>])
+        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[document.insert_math_token(
+          text,
+          Stored::cast_to_string_hash(<span class="kw-2">&amp;</span><span class="self">self</span>.properties),
+          <span class="prelude-val">Some</span>(font),
+          state,
+        )<span class="question-mark">?</span>])
       } <span class="kw">else </span>{
         <span class="kw">match </span>document.open_text(text, font, state)<span class="question-mark">? </span>{
           <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(Vec::new()),
-          <span class="prelude-val">Some</span>(node) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node])
+          <span class="prelude-val">Some</span>(node) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node]),
         }
       }
     } <span class="kw">else </span>{
@@ -349,9 +385,15 @@
     }
   }
 
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.font))) }
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.font)))
+  }
 
-  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  <span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">&quot;body&quot;</span>) {
       <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
         body.compute_size(options, state)
@@ -359,7 +401,11 @@
         <span class="macro">panic!</span>(<span class="string">&quot;the stored &#39;body&#39; property should always be a Stored::Digested enum case.&quot;</span>);
       }
     } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>.get_string(state)<span class="question-mark">?</span>, options, state))
+      <span class="prelude-val">Ok</span>(
+        <span class="self">self
+          </span>.font
+          .compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>.get_string(state)<span class="question-mark">?</span>, options, state),
+      )
     }
   }
 }

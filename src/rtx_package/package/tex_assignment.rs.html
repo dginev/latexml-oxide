@@ -374,6 +374,14 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//======================================================================
@@ -440,19 +448,23 @@
   // &lt;code assignment&gt; = &lt;codename&gt;&lt;8bit&gt;&lt;equals&gt;&lt;number&gt;
 
   // Need to handle &quot;at&quot; too!!!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\font Token SkipMatch:= SkipSpaces TeXFileName&quot;</span>, sub[stomach, (cs, name_arg), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\font Token SkipMatch:= SkipSpaces TeXFileName&quot;</span>,
+  sub[stomach, (cs, name_arg), state] {
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
     <span class="kw">let </span>name = name_arg.to_string();
     <span class="kw">let </span>props_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>props) = font::decode_fontname(<span class="kw-2">&amp;</span>name,
-      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;at&quot;</span>], state)<span class="question-mark">?</span>.map(|<span class="kw">_</span>| gullet.read_dimension(state).unwrap().pt_value(<span class="prelude-val">None</span>)),
-      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;scaled&quot;</span>], state)<span class="question-mark">?</span>.map(|<span class="kw">_</span>| gullet.read_number(state).unwrap().value_of() <span class="kw">as </span>f64 / <span class="number">1000.0</span>)) {
+      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;at&quot;</span>], state)<span class="question-mark">?
+        </span>.map(|<span class="kw">_</span>| gullet.read_dimension(state).unwrap().pt_value(<span class="prelude-val">None</span>)),
+      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;scaled&quot;</span>], state)<span class="question-mark">?
+        </span>.map(|<span class="kw">_</span>| gullet.read_number(state).unwrap().value_of() <span class="kw">as </span>f64 / <span class="number">1000.0</span>)) {
       props.name = <span class="prelude-val">Some</span>(Cow::Owned(name));
       <span class="prelude-val">Some</span>(props)
     } <span class="kw">else </span>{ <span class="comment">// Failed?
 
       // TODO: add this back when we have the fonts, too loud now
 
-      // let message = s!(&quot;Unrecognized font name {:?} Font switch macro {:?} will have no effect&quot;, name, cs.stringify());
+      // let message = s!(&quot;Unrecognized font name {:?} Font switch macro {:?}
+      // will have no effect&quot;, name, cs.stringify());
       // Info!(&quot;unexpected&quot;, name, gullet, state, message);
       </span><span class="prelude-val">None
     </span>};
@@ -496,7 +508,8 @@
           <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
           defn.set_value(defn_value.add(summand), defn_args, state);
         } <span class="kw">else </span>{
-          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\advance expected a defined variable for {:?}, found no definition&quot;</span>, defn_token_rc);
+          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\advance expected a defined variable for {:?}, found no definition&quot;</span>,
+            defn_token_rc);
           <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
         }
         state.expire_current_token();
@@ -514,7 +527,8 @@
         <span class="kw">let </span>scale_value = scale.to_number().value_of();
         defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } <span class="kw">else </span>{
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\multiply expected a defined variable for {:?}, found no definition&quot;</span>, varname);
+        <span class="kw">let </span>message =
+          <span class="macro">s!</span>(<span class="string">&quot;\\multiply expected a defined variable for {:?}, found no definition&quot;</span>, varname);
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
       }
     } <span class="kw">else </span>{
@@ -537,7 +551,8 @@
         }
         defn.set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } <span class="kw">else </span>{
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\divide expected a defined variable for {:?}, found no definition&quot;</span>, varname);
+        <span class="kw">let </span>message =
+          <span class="macro">s!</span>(<span class="string">&quot;\\divide expected a defined variable for {:?}, found no definition&quot;</span>, varname);
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
       }
     } <span class="kw">else </span>{
@@ -549,14 +564,15 @@
   <span class="comment">// &lt;let assignment&gt; = \futurelet &lt;control sequence&gt;&lt;token&gt;&lt;token&gt;
   //  | \let&lt;control sequence&gt;&lt;equals&gt;&lt;one optional space&gt;&lt;token&gt;
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\let Token SkipMatch:= Skip1Space Token&quot;</span>, sub[stomach, (token1, token2), state] {
-   <span class="macro">Let!</span>(<span class="kw-2">&amp;</span>token1, token2);
-   <span class="prelude-val">Ok</span>(Vec::new())
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span>token1, token2);
+    <span class="prelude-val">Ok</span>(Vec::new())
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\futurelet Token Token Token&quot;</span>, sub[stomach, (cs, token1, token2), state] {
-      stomach.get_gullet_mut().unread(<span class="macro">Tokens!</span>(token1,token2.clone())); <span class="comment">// NOT expandable, but puts tokens back
-      </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span>cs, token2);
-      <span class="prelude-val">Ok</span>(Vec::new())
+    <span class="comment">// NOT expandable, but puts tokens back
+    </span>stomach.get_gullet_mut().unread(<span class="macro">Tokens!</span>(token1,token2.clone()));
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span>cs, token2);
+    <span class="prelude-val">Ok</span>(Vec::new())
   });
 
   <span class="comment">// &lt;shorthand definition&gt; = \chardef&lt;control sequence&gt;&lt;equals&gt;&lt;8bit&gt;

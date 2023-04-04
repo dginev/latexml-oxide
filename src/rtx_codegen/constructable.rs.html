@@ -556,6 +556,20 @@
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
 <a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>regex::{Captures, Regex};
 
@@ -573,6 +587,7 @@
 //  ^      ^ pattern         floats to where pattern would be allowed
 // Each of these can be used literally, if DOUBLED (ie. ## )
 // (except ^ ??? ^^ means something special!)
+</span><span class="attr">#[rustfmt::skip]
 </span><span class="macro">macro_rules! </span>QNAME_RE_STR(() =&gt; (<span class="string">r&quot;((?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:)(?:\p{Ll}|\p{Lu}|\p{Lo}|\p{Lt}|\p{Nl}|_|:|\p{M}|\p{Lm}|\p{Nd}|\.|-)*)&quot;</span>));
 <span class="macro">macro_rules! </span>PI_RE_STR(() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^\s*&lt;\?&quot;</span>,<span class="macro">QNAME_RE_STR!</span>())));
 <span class="macro">macro_rules! </span>KEY_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^&quot;</span>,<span class="macro">QNAME_RE_STR!</span>(),<span class="string">r&quot;\s*=\s*&quot;</span>)));
@@ -591,8 +606,10 @@
 </span><span class="macro">macro_rules! </span>QUOTED_SPECIALS (
     () =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;\\\\\\[&quot;</span>,<span class="macro">SPECIALS!</span>(),
                    <span class="string">r&quot;]|\\#\\#|\\&amp;amp;&quot;</span>))); <span class="comment">// or special cases: doubled #, &amp;amp;
-</span><span class="macro">macro_rules! </span>LEAD_QUOTED_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">&quot;&#39;\&quot;])+)&quot;</span>)));
-<span class="macro">macro_rules! </span>LEAD_RANDOM_TEXT_RE_STR (() =&gt; (<span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">r&quot;&lt;])+)&quot;</span>)));
+</span><span class="macro">macro_rules! </span>LEAD_QUOTED_RE_STR (() =&gt; (
+  <span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">&quot;&#39;\&quot;])+)&quot;</span>)));
+<span class="macro">macro_rules! </span>LEAD_RANDOM_TEXT_RE_STR (() =&gt; (
+  <span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">r&quot;&lt;])+)&quot;</span>)));
 
 <span class="macro">lazy_static! </span>{
   <span class="comment">// static ref NARGS : i32 = 0;
@@ -625,9 +642,13 @@
   <span class="kw">let </span>replacement: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {
     Meta::NameValue(v) =&gt; <span class="kw">match </span>v.lit {
       Lit::Str(v) =&gt; v.value(),
-      <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (Lit)&quot;</span>),
+      <span class="kw">_ </span>=&gt; {
+        <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute, mandatory double-quotes (Lit)&quot;</span>)
+      },
     },
-    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute syntax, mandatory double-quotes (parse_meta)&quot;</span>),
+    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(
+      <span class="string">&quot;only accepts #[replacement = \&quot;value\&quot;] attribute, mandatory double-quotes (parse_meta)&quot;
+    </span>),
   };
 
   <span class="kw">let </span>compiled_replacement_closure: proc_macro2::TokenStream = <span class="kw">if </span>replacement.is_empty() {
@@ -655,7 +676,8 @@
 
     </span><span class="macro">quote!</span>(
     <span class="prelude-val">Some</span>(Arc::new(
-    |document: <span class="kw-2">&amp;mut </span>Document, args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;, props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State| {
+    |document: <span class="kw-2">&amp;mut </span>Document, args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
+      props: <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State| {
       <span class="attr">#[allow(unused_assignments)]
       </span><span class="kw">let </span><span class="kw-2">mut </span>savenode : <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
 
@@ -687,13 +709,13 @@
   // }
   </span><span class="kw">let </span><span class="kw-2">mut </span>floats: String = String::new();
   <span class="kw">let </span><span class="kw-2">mut </span>has_floats: bool = <span class="bool-val">false</span>;
-  <span class="kw">let </span>float_result = FLOAT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
+  <span class="kw">let </span>float_res = FLOAT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
     floats = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
     has_floats = <span class="bool-val">true</span>;
     String::new()
   });
   <span class="kw">if </span>has_floats {
-    replacement = float_result.to_string();
+    replacement = float_res.to_string();
   }
   <span class="kw">let </span><span class="kw-2">mut </span>operations = Vec::new();
 
@@ -782,7 +804,8 @@
         <span class="kw">let </span>this_font_opt = <span class="kw">match </span>props.get(<span class="string">&quot;font&quot;</span>) {
           <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>f)),
           <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Asset(fa))) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;**</span>fa)),
-          <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>)),
+          <span class="prelude-val">Some</span>(Stored::FontDirective(FontDirective::Closure(code))) =&gt;
+            <span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>)),
           <span class="kw">_ </span>=&gt; <span class="prelude-val">None
         </span>};
         <span class="kw">if let </span><span class="prelude-val">Some</span>(this_font) = this_font_opt {
@@ -805,14 +828,15 @@
     }
 
     <span class="comment">// Close tag: &lt;/name&gt;
-    </span><span class="kw">let </span>lead_close_tag_result = LEAD_CLOSE_TAG_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-      is_match = <span class="bool-val">true</span>;
-      current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
-      <span class="comment">// println!(&quot;-- close tag {:?}&quot;, current_tag);
-      // handle close tag
-      </span>operations.push(<span class="macro">quote!</span>(document.close_element(#current_tag, state)<span class="question-mark">?</span>;));
-      String::new()
-    });
+    </span><span class="kw">let </span>lead_close_tag_result =
+      LEAD_CLOSE_TAG_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
+        is_match = <span class="bool-val">true</span>;
+        current_tag = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+        <span class="comment">// println!(&quot;-- close tag {:?}&quot;, current_tag);
+        // handle close tag
+        </span>operations.push(<span class="macro">quote!</span>(document.close_element(#current_tag, state)<span class="question-mark">?</span>;));
+        String::new()
+      });
     <span class="kw">if </span>is_match {
       replacement = lead_close_tag_result.to_string();
       <span class="kw">continue</span>;
@@ -843,16 +867,17 @@
 
     <span class="comment">// Else random text
     </span><span class="kw">let </span><span class="kw-2">mut </span>has_random_text = <span class="bool-val">false</span>;
-    <span class="kw">let </span>lead_random_text_result = LEAD_RANDOM_TEXT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(text_match) = refs.get(<span class="number">1</span>) {
-        <span class="kw">let </span>escaped_match = <span class="kw-2">&amp;</span>slashify(<span class="kw-2">&amp;</span>unquote(text_match.as_str()));
-        operations.push(<span class="macro">quote!</span>(
-          document.absorb_string(#escaped_match, props, state)<span class="question-mark">?</span>;
-        ));
-      }
-      has_random_text = <span class="bool-val">true</span>;
-      String::new()
-    });
+    <span class="kw">let </span>lead_random_text_result =
+      LEAD_RANDOM_TEXT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(text_match) = refs.get(<span class="number">1</span>) {
+          <span class="kw">let </span>escaped_match = <span class="kw-2">&amp;</span>slashify(<span class="kw-2">&amp;</span>unquote(text_match.as_str()));
+          operations.push(<span class="macro">quote!</span>(
+            document.absorb_string(#escaped_match, props, state)<span class="question-mark">?</span>;
+          ));
+        }
+        has_random_text = <span class="bool-val">true</span>;
+        String::new()
+      });
     <span class="kw">if </span>has_random_text {
       replacement = lead_random_text_result.to_string();
     }
@@ -1062,7 +1087,8 @@
   }
   <span class="kw">if </span>!is_match {
     <span class="comment">// Build the exclusion regex
-    </span><span class="kw">let </span><span class="kw-2">mut </span>exclusion_str: String = <span class="macro">concat!</span>(<span class="string">r&quot;^((?:&quot;</span>, <span class="macro">QUOTED_SPECIALS!</span>(), <span class="string">r&quot;|[^&quot;</span>, <span class="macro">SPECIALS!</span>()).to_owned();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>exclusion_str: String =
+      <span class="macro">concat!</span>(<span class="string">r&quot;^((?:&quot;</span>, <span class="macro">QUOTED_SPECIALS!</span>(), <span class="string">r&quot;|[^&quot;</span>, <span class="macro">SPECIALS!</span>()).to_owned();
     exclusion_str = exclusion_str + exclude_chars + <span class="string">r&quot;])+)&quot;</span>;
     <span class="kw">let </span>exclusion_re: Regex = Regex::new(<span class="kw-2">&amp;</span>exclusion_str).unwrap();
 
@@ -1084,7 +1110,9 @@
 
 <span class="kw">fn </span>parse_conditional(text: <span class="kw-2">&amp;mut </span>String) -&gt; (proc_macro2::TokenStream, String, String) {
   <span class="comment">// Remove leading &quot;?&quot;
-  </span><span class="kw-2">*</span>text = LEAD_QMARK.replace(text, |<span class="kw">_</span>: <span class="kw-2">&amp;</span>Captures| String::new()).to_string();
+  </span><span class="kw-2">*</span>text = LEAD_QMARK
+    .replace(text, |<span class="kw">_</span>: <span class="kw-2">&amp;</span>Captures| String::new())
+    .to_string();
   <span class="kw">let </span>translated_bool = translate_value(<span class="string">&quot;(&quot;</span>, text);
   <span class="comment">// Note/TODO: This is a direct redo of latexml&#39;s &quot;ToString(v) ? () : ()&quot; approach
   //   for testing the boolean branch

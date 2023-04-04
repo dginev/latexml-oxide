@@ -265,6 +265,17 @@
 <a href="#265" id="265">265</a>
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(outer_state, {
@@ -298,7 +309,8 @@
 
   // \readline; like \read, but only spaces &amp; other
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\readline Number SkipKeyword:to SkipSpaces Token&quot;</span>, sub[gullet, (port, token), state] {
-    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>)) {
+    <span class="kw">let </span>file_key = <span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>);
+    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span>file_key) {
       <span class="prelude-val">Some</span>(Arc::clone(mouth)) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
     <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = mouth_opt {
       <span class="kw">let </span><span class="kw-2">mut </span>raw_line = mouth.write().unwrap().read_raw_line(<span class="bool-val">false</span>, state).unwrap_or_default();
@@ -444,7 +456,11 @@
   // # since we don&#39;t know where it ends, we can&#39;t easily use Parse::RecDescent.
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
-  </span><span class="kw">fn </span>etex_readexpr(gullet: <span class="kw-2">&amp;mut </span>Gullet, rtype: RegisterType, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
+  </span><span class="kw">fn </span>etex_readexpr(
+    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+    rtype: RegisterType,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
     <span class="kw">let </span>value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state) {
       <span class="comment">// Skip \relax
@@ -455,7 +471,12 @@
     <span class="prelude-val">Ok</span>(value)
   }
 
-  <span class="kw">fn </span>etex_readexpr_i(gullet: <span class="kw-2">&amp;mut </span>Gullet, rtype: RegisterType, prec: usize, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
+  <span class="kw">fn </span>etex_readexpr_i(
+    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+    rtype: RegisterType,
+    prec: usize,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
     <span class="comment">// Read a first value
     </span><span class="kw">let </span>token = <span class="kw">match </span>gullet.read_x_non_space(state)<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; t,
@@ -463,7 +484,8 @@
     };
     <span class="kw">let </span><span class="kw-2">mut </span>value = <span class="kw">if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">&quot;(&quot;</span>) {
       <span class="kw">let </span>i_value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
-      <span class="kw">let </span>close = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>; <span class="comment">// close parenthesis should have terminated recursive call
+      <span class="kw">let </span>close = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
+      <span class="comment">// close parenthesis should have terminated recursive call
       </span><span class="kw">if </span>close.is_none() || !(close == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;)&quot;</span>))) {
         <span class="macro">unimplemented!</span>();
         <span class="comment">//       Error(&#39;expected&#39;, &#39;)&#39;, $gullet,

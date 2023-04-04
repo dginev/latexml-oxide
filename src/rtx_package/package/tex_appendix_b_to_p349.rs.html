@@ -646,6 +646,35 @@
 <a href="#646" id="646">646</a>
 <a href="#647" id="647">647</a>
 <a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="macro">lazy_static! </span>{
@@ -803,17 +832,17 @@
   // If we have a non-negative integer (no signs, decimals,...)
   // followed by a fraction dividing two non-negative integers,
   // Figure it&#39;s a mixed fraction --- ADDING the fraction to the number, not multiplying!
-  // DefRewrite(select =&gt; [&#39;descendant-or-self::ltx:XMTok[@role=&quot;NUMBER&quot; and translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;
-  //       . &#39;[ following-sibling::*[1][self::ltx:XMApp]&#39;
+  // DefRewrite(select =&gt; [&#39;descendant-or-self::ltx:XMTok[@role=&quot;NUMBER&quot; and
+  // translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;       . &#39;[ following-sibling::*[1][self::ltx:XMApp]&#39;
   //       . &#39; [child::*[1][self::ltx:XMTok[@meaning=&quot;divide&quot;]]]&#39;
   //       . &#39; [child::*[2][&#39;
   //       . &#39;self::ltx:XMTok[@role=&quot;NUMBER&quot; and translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;
-  //       . &#39;or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role=&quot;NUMBER&quot; and translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;
-  //       . &#39;]]&#39;
+  //       . &#39;or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role=&quot;NUMBER&quot; and
+  // translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;       . &#39;]]&#39;
   //       . &#39; [child::*[3][&#39;
   //       . &#39;self::ltx:XMTok[@role=&quot;NUMBER&quot; and translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;
-  //       . &#39;or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role=&quot;NUMBER&quot; and translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;
-  //       . &#39;]]&#39;
+  //       . &#39;or self::ltx:XMArg[count(child::*)=1]/ltx:XMTok[@role=&quot;NUMBER&quot; and
+  // translate(@meaning,&quot;0123456789&quot;,&quot;&quot;)=&quot;&quot;]&#39;       . &#39;]]&#39;
   //       . &#39;]&#39;,
   //     2],
   //   replace =&gt; sub { my ($document, $number, $frac) = @_;
@@ -965,10 +994,22 @@
     <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span>c                  =&gt; n + <span class="number">1</span>,     <span class="prelude-val">Some</span>(Scope::Global));
     <span class="macro">AssignValue!</span>(<span class="string">&quot;\\allocationnumber&quot; </span>=&gt; <span class="macro">Number!</span>(n), <span class="prelude-val">Some</span>(Scope::Global));
   });
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\newread Token&quot;</span>, <span class="string">r&quot;\alloc@@{read}\global\chardef#1=\allocationnumber&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\newwrite Token&quot;</span>, <span class="string">r&quot;\alloc@@{write}\global\chardef#1=\allocationnumber&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\newfam Token&quot;</span>, <span class="string">r&quot;\alloc@@{fam}\global\chardef#1=\allocationnumber&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\newlanguage Token&quot;</span>, <span class="string">r&quot;\alloc@@{language}\global\chardef#1=\allocationnumber&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\newread Token&quot;</span>,
+    <span class="string">r&quot;\alloc@@{read}\global\chardef#1=\allocationnumber&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\newwrite Token&quot;</span>,
+    <span class="string">r&quot;\alloc@@{write}\global\chardef#1=\allocationnumber&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\newfam Token&quot;</span>,
+    <span class="string">r&quot;\alloc@@{fam}\global\chardef#1=\allocationnumber&quot;
+  </span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\newlanguage Token&quot;</span>,
+    <span class="string">r&quot;\alloc@@{language}\global\chardef#1=\allocationnumber&quot;
+  </span>);
 
   <span class="comment">// # This implementation is quite wrong
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\newinsert Token&quot;</span>, sub[_stomach, args, state] {
@@ -1106,7 +1147,8 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\frenchspacing&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\nonfrenchspacing&quot;</span>, <span class="prelude-val">None</span>);
   <span class="comment">// DefMacro!(&quot;\\normalbaselines&quot;, undef,
-  //   &#39;\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\normallineskiplimit&#39;);
+  //   &#39;\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\
+  // normallineskiplimit&#39;);
   </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_SPACE!</span>());
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lq&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;`&quot;</span>));
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\rq&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>));
@@ -1151,14 +1193,20 @@
   &quot;###
   </span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\enskip&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\enskip&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@enskip&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;enskip&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\enskip&#39;,
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { Dimension(&#39;0.5em&#39;); } });
   // DefPrimitiveI(&#39;\@text@enskip&#39;, undef, &quot;\x{2002}&quot;, alias =&gt; &#39;\enskip&#39;);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\enspace&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\enspace&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@enspace&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;enskip&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\enspace&#39;,
@@ -1180,14 +1228,20 @@
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { Dimension(&#39;2em&#39;); } });
   // DefPrimitiveI(&#39;\@text@qquad&#39;, undef, &quot;\x{2003}\x{2003}&quot;, alias =&gt; &#39;\qquad&#39;);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\thinspace&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\thinspace&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@thinspace&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;thinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\thinspace&#39;,
   //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { Dimension(&#39;0.16667em&#39;); } });
   // DefPrimitiveI(&#39;\@text@thinspace&#39;, undef, &quot;\x{2009}&quot;, alias =&gt; &#39;\thinspace&#39;);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\negthinspace&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\negthinspace&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi&quot;
+  </span>);
   <span class="comment">// DefConstructor(&#39;\@math@negthinspace&#39;, undef,
   //   &quot;&lt;ltx:XMHint name=&#39;negthinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
   //   alias =&gt; &#39;\negthinspace&#39;,
@@ -1211,10 +1265,14 @@
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\break&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\nobreak&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\allowbreak&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\nobreakspace&quot;</span>, <span class="string">&quot;\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\nobreakspace&quot;</span>,
+    <span class="string">&quot;\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi&quot;
+  </span>);
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\text@nobreakspace&quot;</span>, sub[stomach, (), state] {
-    Tbox::new(String::from(<span class="string">&quot;\u{00A0}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>)), <span class="macro">map!</span>(<span class="string">&quot;isSpace&quot; </span>=&gt; Stored::Bool(<span class="bool-val">true</span>)), state)
+    Tbox::new(String::from(<span class="string">&quot;\u{00A0}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>)), <span class="macro">map!</span>(<span class="string">&quot;isSpace&quot; </span>=&gt; Stored::Bool(<span class="bool-val">true</span>)), state)
   });
 
   <span class="comment">// DefConstructor!(&quot;\\math@nobreakspace&quot;, &quot;&lt;ltx:XMHint name=&#39;nobreakspace&#39; width=&#39;#width&#39;/&gt;&quot;,

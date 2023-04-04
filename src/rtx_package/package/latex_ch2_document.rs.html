@@ -107,6 +107,15 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -131,8 +140,9 @@
   // AND, lower-level so that we can cope with common errors at document end.
   </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document, _args, props, state] {
     <span class="kw">let </span>id = <span class="macro">prop_str!</span>(props,<span class="string">&quot;id&quot;</span>);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>docel) = document.findnode(<span class="string">&quot;/ltx:document&quot;</span>, <span class="prelude-val">None</span>, state) { <span class="comment">// Already (auto) created?
-      </span><span class="kw">if </span>!id.is_empty() {
+    <span class="comment">// Already (auto) created?
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>docel) = document.findnode(<span class="string">&quot;/ltx:document&quot;</span>, <span class="prelude-val">None</span>, state) {
+      <span class="kw">if </span>!id.is_empty() {
         document.set_attribute(<span class="kw-2">&amp;mut </span>docel, <span class="string">&quot;xml:id&quot;</span>, id, state)<span class="question-mark">?</span>;
       }
     } <span class="kw">else </span>{
@@ -165,7 +175,11 @@
   });
 
   <span class="comment">// \document is used directly in e.g. expl3.sty
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\document&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
+  </span><span class="macro">Let!</span>(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\document&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\begin{document}&quot;</span>),
+    <span class="prelude-val">Some</span>(Scope::Global)
+  );
 
   <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>), <span class="prelude-val">None</span>, sub[document,_args,_props,state] {
       document.close_element(<span class="string">&quot;ltx:document&quot;</span>, state)<span class="question-mark">?</span>;
@@ -214,7 +228,11 @@
   });
 
   <span class="comment">// \enddocument is used directly in e.g. standalone.cls
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\enddocument&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
+  </span><span class="macro">Let!</span>(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\enddocument&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\end{document}&quot;</span>),
+    <span class="prelude-val">Some</span>(Scope::Global)
+  );
 });
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -161,6 +161,12 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>unp {
   (<span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident) =&gt; (<span class="kw">let </span><span class="macro-nonterminal">$var </span>= <span class="macro-nonterminal">$args</span>.remove(<span class="number">0</span>););
@@ -255,15 +261,18 @@
   (<span class="macro-nonterminal">$name</span>:ident = $(<span class="macro-nonterminal">$parts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$action</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>:<span class="macro-nonterminal">ident</span>)<span class="question-mark">?</span>) =&gt; {
     <span class="kw">let </span><span class="macro-nonterminal">$name </span>= <span class="kw">match </span><span class="macro">grammar!</span>().rule(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>[$(<span class="macro-nonterminal">$parts</span>),+]) {
       <span class="prelude-val">Ok</span>(r) =&gt; r,
-      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate rule \&quot;{} ={}\&quot; ({:?})&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
+      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate rule \&quot;{} ={}\&quot; ({:?})&quot;</span>,
+        <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
     };
     <span class="macro">builder!</span>().rule(<span class="macro-nonterminal">$name</span>.rule());
     <span class="macro">register!</span>(<span class="macro-nonterminal">$name</span>, $(<span class="macro-nonterminal">$parts</span>)+ $(=&gt; <span class="macro-nonterminal">$action</span>)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>)<span class="question-mark">?</span>);
   };
-  (<span class="macro-nonterminal">$name</span>:ident = $(<span class="macro-nonterminal">$parts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$action</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>:<span class="macro-nonterminal">ident</span>)<span class="question-mark">? </span>| $($(<span class="macro-nonterminal">$moreparts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$moreaction</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$morefn</span>:ident)<span class="question-mark">?</span>)|+) =&gt; {
+  (<span class="macro-nonterminal">$name</span>:ident = $(<span class="macro-nonterminal">$parts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$action</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>:<span class="macro-nonterminal">ident</span>)<span class="question-mark">? </span>|
+    $($(<span class="macro-nonterminal">$moreparts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$moreaction</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$morefn</span>:ident)<span class="question-mark">?</span>)|+) =&gt; {
     <span class="kw">let </span><span class="macro-nonterminal">$name </span>= <span class="kw">match </span><span class="macro">grammar!</span>().rule(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>[$(<span class="macro-nonterminal">$parts</span>),+]) {
       <span class="prelude-val">Ok</span>(r) =&gt; r,
-      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate rule \&quot;{} ={}\&quot; ({:?})&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
+      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate rule \&quot;{} ={}\&quot; ({:?})&quot;</span>,
+        <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
     };
     <span class="macro">builder!</span>().rule(<span class="macro-nonterminal">$name</span>.rule());
     <span class="macro">register!</span>(<span class="macro-nonterminal">$name</span>, $(<span class="macro-nonterminal">$parts</span>)+ $(=&gt; <span class="macro-nonterminal">$action</span>)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>)<span class="question-mark">?</span>);
@@ -273,7 +282,8 @@
   </span>(<span class="macro-nonterminal">$name</span>:ident += $(<span class="macro-nonterminal">$parts</span>:ident)+$(=&gt; <span class="macro-nonterminal">$action</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>:<span class="macro-nonterminal">ident</span>)<span class="question-mark">?</span>) =&gt; {
     <span class="kw">let </span>subrule = <span class="kw">match </span><span class="macro">grammar!</span>().rule(<span class="prelude-val">Some</span>(<span class="macro-nonterminal">$name</span>), <span class="kw-2">&amp;</span>[$(<span class="macro-nonterminal">$parts</span>),+]) {
       <span class="prelude-val">Ok</span>(r) =&gt; r,
-      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate subrule \&quot;{} = {}\&quot; ({:?})&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
+      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate subrule \&quot;{} = {}\&quot; ({:?})&quot;</span>,
+        <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
     };
     <span class="macro">builder!</span>().rule(subrule.rule());
     <span class="macro">register!</span>(subrule, $(<span class="macro-nonterminal">$parts</span>)+ $(=&gt; <span class="macro-nonterminal">$action</span>)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>)<span class="question-mark">?</span>);
@@ -282,7 +292,8 @@
     $($(<span class="macro-nonterminal">$moreparts</span>:ident)+ $(=&gt; <span class="macro-nonterminal">$moreaction</span>:block)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$morefn</span>:ident)<span class="question-mark">?</span>)|+) =&gt; {
     <span class="kw">let </span>subrule = <span class="kw">match </span><span class="macro">grammar!</span>().rule(<span class="prelude-val">Some</span>(<span class="macro-nonterminal">$name</span>), <span class="kw-2">&amp;</span>[$(<span class="macro-nonterminal">$parts</span>),+]) {
       <span class="prelude-val">Ok</span>(r) =&gt; r,
-      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate subrule \&quot;{} = {}\&quot; ({:?})&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
+      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to instantiate subrule \&quot;{} = {}\&quot; ({:?})&quot;</span>,
+        <span class="macro">stringify!</span>(<span class="macro-nonterminal">$name</span>), <span class="macro">stringify!</span>($(<span class="macro-nonterminal">$parts</span>),+), e)
     };
     <span class="macro">builder!</span>().rule(subrule.rule());
     <span class="macro">register!</span>(subrule, $(<span class="macro-nonterminal">$parts</span>)+ $(=&gt; <span class="macro-nonterminal">$action</span>)<span class="question-mark">?</span>$(=&gt; <span class="macro-nonterminal">$</span><span class="kw">fn</span>)<span class="question-mark">?</span>);
@@ -308,7 +319,8 @@
   };
   (<span class="macro-nonterminal">$name</span>:ident ~ <span class="macro-nonterminal">$literal</span>:literal) =&gt; {
     <span class="kw">let </span>literal_piece = <span class="macro">grammar!</span>().literal_string(<span class="prelude-val">None</span>, <span class="macro-nonterminal">$literal</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="macro-nonterminal">$name </span>= <span class="macro">grammar!</span>().rule(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>[literal_piece, <span class="macro">lexeme_sep!</span>(), <span class="macro">lex_plus!</span>(), <span class="macro">lexeme_sep!</span>(), <span class="macro">d_plus!</span>(),<span class="macro">ws_char!</span>()])<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="macro-nonterminal">$name </span>= <span class="macro">grammar!</span>().rule(<span class="prelude-val">None</span>,
+      <span class="kw-2">&amp;</span>[literal_piece, <span class="macro">lexeme_sep!</span>(), <span class="macro">lex_plus!</span>(), <span class="macro">lexeme_sep!</span>(), <span class="macro">d_plus!</span>(),<span class="macro">ws_char!</span>()])<span class="question-mark">?</span>;
     <span class="macro">builder!</span>().token(<span class="macro-nonterminal">$name</span>.rule());
   };
   (<span class="macro-nonterminal">$name</span>:ident = [ $(<span class="macro-nonterminal">$part</span>:ident)+ ]) =&gt; {

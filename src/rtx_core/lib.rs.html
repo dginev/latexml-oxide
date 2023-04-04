@@ -338,8 +338,44 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre><pre class="rust"><code><span class="doccomment">//! The Core of rtx - roughly the equivalent of TeX conversion.
-//!
 
 </span><span class="attr">#![allow(missing_docs)]
 </span><span class="kw">extern crate </span>rustc_hash;
@@ -363,6 +399,8 @@
 </span><span class="kw">pub mod </span>comment;
 <span class="doccomment">/// All possible definitions for TeX-native commands (expandable, primitive, constructor,...)
 </span><span class="kw">pub mod </span>definition;
+<span class="doccomment">/// a shared interface for digested objects
+</span><span class="kw">pub mod </span>digested;
 <span class="doccomment">/// An abstraction layer over the converted XML document
 </span><span class="kw">pub mod </span>document;
 <span class="doccomment">/// The Gullet is responsible for reading Tokens and other data from the Mouth
@@ -375,15 +413,19 @@
 </span><span class="kw">pub mod </span>ligature;
 <span class="doccomment">/// A list of `Digested` objects
 </span><span class="kw">pub mod </span>list;
-<span class="doccomment">/// The mouth is a thin interface over a file, responsible for reading characters and associating them with catcodes
+<span class="doccomment">/// The mouth is a thin interface over a file, responsible for reading characters and associating
+/// them with catcodes
 </span><span class="kw">pub mod </span>mouth;
-<span class="doccomment">/// The abstraction layer used by the Gullet to read arguments for the various kinds of TeX object definitions
+<span class="doccomment">/// The abstraction layer used by the Gullet to read arguments for the various kinds of TeX object
+/// definitions
 </span><span class="kw">pub mod </span>parameter;
 <span class="doccomment">/// Rules for rewriting the constructed XML document, after core processing has completed
 </span><span class="kw">pub mod </span>rewrite;
-<span class="doccomment">/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the conversion
+<span class="doccomment">/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the
+/// conversion
 </span><span class="kw">pub mod </span>state;
-<span class="doccomment">/// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the Gullet into Boxes
+<span class="doccomment">/// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
+/// Gullet into Boxes
 </span><span class="kw">pub mod </span>stomach;
 <span class="doccomment">/// A TeX-like digested Box
 </span><span class="kw">pub mod </span>tbox;
@@ -391,16 +433,13 @@
 </span><span class="kw">pub mod </span>util;
 <span class="doccomment">/// A TeX-like digested Whatsit
 </span><span class="kw">pub mod </span>whatsit;
-<span class="doccomment">/// a shared interface for digested objects
-</span><span class="kw">pub mod </span>digested;
 
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::{Arc, RwLock}; <span class="comment">//,RwLockReadGuard,RwLockWriteGuard};
                               //use lazy_static::lazy_static;
 </span><span class="kw">use </span>libxml::tree::Node;
-
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">pub use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -411,30 +450,34 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterValue;
+<span class="kw">use </span><span class="kw">crate</span>::digested::{Digested, DigestedData};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::state::{State, StateOptions};
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use </span><span class="kw">crate</span>::digested::{Digested,DigestedData};
 
-<span class="comment">// DG: I have experimented with doing the Perl-style &quot;global singleton STATE with interior mutability&quot;
-//     and it just takes away from the elegance and guarantees of Rust style code. It&#39;s nasty.
-//     consider that in a long chain of invocations (e.g. \input loading a binding, which loads another binding)
-//     we have a dependency hierarchy of a mutable &quot;&amp;mut state&quot; getting passed around.
-//     During which time we can not *safely* obtain a &quot;reading lock&quot; over a RwLock wrapper around state.
+<span class="comment">// DG: I have experimented with doing the Perl-style &quot;global singleton STATE with interior
+// mutability&quot;     and it just takes away from the elegance and guarantees of Rust style code. It&#39;s
+// nasty.     consider that in a long chain of invocations (e.g. \input loading a binding, which
+// loads another binding)     we have a dependency hierarchy of a mutable &quot;&amp;mut state&quot; getting
+// passed around.     During which time we can not *safely* obtain a &quot;reading lock&quot; over a RwLock
+// wrapper around state.
 //
-//     To make anything work, we would need to hide the *entire* API of State behind a lock request/grant/release lifecycle
-//     with a State struct that wraps: State(Arc&lt;RwLock&lt;StateData&gt;&gt;), where each call to say &quot;lookup_value&quot; will have to get+release a lock.
+//     To make anything work, we would need to hide the *entire* API of State behind a lock
+// request/grant/release lifecycle     with a State struct that wraps:
+// State(Arc&lt;RwLock&lt;StateData&gt;&gt;), where each call to say &quot;lookup_value&quot; will have to get+release a
+// lock.
 //
-//     It is certainly possible. But at what cost? Runtime locking + reference counting costs, and then a *real risk* of deadlocking when locking
-//      in complicated call chains. (Remember that RwLock allows for multiple readers, but the moment there is a writer,
-//      no further locks will be granted until the writer is done)
+//     It is certainly possible. But at what cost? Runtime locking + reference counting costs, and
+// then a *real risk* of deadlocking when locking      in complicated call chains. (Remember that
+// RwLock allows for multiple readers, but the moment there is a writer,      no further locks will
+// be granted until the writer is done)
 //
-//      I am leaving the trace that this has been tried. But I will continue to give it my all to avoid the global setup.
-// lazy_static! {
-//   static ref STATE: Arc&lt;RwLock&lt;State&gt;&gt; = Arc::new(RwLock::new(State::new(StateOptions::default())));
-// }
+//      I am leaving the trace that this has been tried. But I will continue to give it my all to
+// avoid the global setup. lazy_static! {
+//   static ref STATE: Arc&lt;RwLock&lt;State&gt;&gt; =
+// Arc::new(RwLock::new(State::new(StateOptions::default()))); }
 
 </span><span class="doccomment">/// The Core conversion runtime
 </span><span class="kw">pub struct </span>Core {
@@ -505,7 +548,11 @@
 
     <span class="comment">// *STATE.write().unwrap() = istate;
     // Core { state: Arc::clone(&amp;STATE), stomach, preload }
-    </span>Core { state, stomach, preload }
+    </span>Core {
+      state,
+      stomach,
+      preload,
+    }
   }
 
   <span class="doccomment">/// borrow the current state
@@ -533,7 +580,10 @@
       <span class="kw">match </span><span class="self">self</span>.get_properties().get(key) {
         <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(value)),
         <span class="prelude-val">None </span>=&gt; {
-          <span class="kw">let </span>tex = <span class="self">self</span>.get_tokens().map(|tks| tks.clone().untex()).unwrap_or_default(); <span class="comment">// !
+          <span class="kw">let </span>tex = <span class="self">self
+            </span>.get_tokens()
+            .map(|tks| tks.clone().untex())
+            .unwrap_or_default(); <span class="comment">// !
           </span><span class="kw">if </span>!tex.is_empty() &amp;&amp; tex.chars().all(char::is_whitespace) {
             <span class="comment">// Check the TeX code, not (just) the string!
             </span><span class="prelude-val">Some</span>(Cow::Owned(Stored::Bool(<span class="bool-val">true</span>)))
@@ -552,7 +602,13 @@
   </span><span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool;
   <span class="doccomment">/// obtains the &quot;body&quot; of a digested object which captured it
   </span><span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
-    <span class="macro">Error!</span>(<span class="string">&quot;boxops&quot;</span>, <span class="string">&quot;get_body&quot;</span>, <span class="self">self</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Generic BoxOps::get_body should never be called!&quot;</span>);
+    <span class="macro">Error!</span>(
+      <span class="string">&quot;boxops&quot;</span>,
+      <span class="string">&quot;get_body&quot;</span>,
+      <span class="self">self</span>,
+      <span class="prelude-val">None</span>,
+      <span class="string">&quot;Generic BoxOps::get_body should never be called!&quot;
+    </span>);
     <span class="prelude-val">None
   </span>}
   <span class="doccomment">/// gets the associated font, if any
@@ -571,7 +627,11 @@
   // However, when requesting the size of a box, you&#39;d get either (w/ explicit size overriding)
 
   </span><span class="doccomment">/// gets the &quot;width&quot; property value, if any
-  </span><span class="kw">fn </span>get_width(<span class="kw-2">&amp;mut </span><span class="self">self</span>, options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
+  </span><span class="kw">fn </span>get_width(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
     <span class="kw">if </span>!<span class="self">self</span>.has_property(<span class="string">&quot;width&quot;</span>) &amp;&amp; !<span class="self">self</span>.has_property(<span class="string">&quot;cwidth&quot;</span>) {
       <span class="comment">// TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default(), state)?
@@ -606,9 +666,14 @@
     }
   }
   <span class="doccomment">/// gets the box size as a triple of (width, height, depth)
-  </span><span class="kw">fn </span>get_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+  </span><span class="kw">fn </span>get_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, Stored&gt;&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="comment">// TODO: Reintroduce caching?
-    </span><span class="kw">if </span>!(<span class="self">self</span>.has_property(<span class="string">&quot;cwidth&quot;</span>) &amp;&amp; <span class="self">self</span>.has_property(<span class="string">&quot;cheight&quot;</span>) &amp;&amp; <span class="self">self</span>.has_property(<span class="string">&quot;cdepth&quot;</span>)) {
+    </span><span class="kw">if </span>!(<span class="self">self</span>.has_property(<span class="string">&quot;cwidth&quot;</span>) &amp;&amp; <span class="self">self</span>.has_property(<span class="string">&quot;cheight&quot;</span>) &amp;&amp; <span class="self">self</span>.has_property(<span class="string">&quot;cdepth&quot;</span>))
+    {
       <span class="kw">return </span><span class="self">self</span>.compute_size(options.unwrap_or_default(), state);
     }
     <span class="kw">let </span>props = <span class="self">self</span>.get_properties();
@@ -616,9 +681,10 @@
     <span class="comment">// Debug(&quot;SIZE of $self&quot;
     //     . &quot;\n preassigned: &quot; . _showsize($$props{width},  $$props{height},  $$props{depth})
     //     . &quot;\n calculated : &quot; . _showsize($$props{cwidth}, $$props{cheight}, $$props{cdepth})
-    //     . &quot;\n w/options &quot; . join(&#39;,&#39;, map { $_ . &quot;=&quot; . ToString($options{$_}); } sort keys %options)
-    //     . &quot;\n =&gt;: &quot; . _showsize($$props{width} || $$props{cwidth}, $$props{height} || $$props{cheight}, $$props{depth} || $$props{cdepth})
-    //     . &quot;\n   Of &quot; . ToString($self)) if $LaTeXML::DEBUG{size};
+    //     . &quot;\n w/options &quot; . join(&#39;,&#39;, map { $_ . &quot;=&quot; . ToString($options{$_}); } sort keys
+    // %options)     . &quot;\n =&gt;: &quot; . _showsize($$props{width} || $$props{cwidth}, $$props{height}
+    // || $$props{cheight}, $$props{depth} || $$props{cdepth})     . &quot;\n   Of &quot; .
+    // ToString($self)) if $LaTeXML::DEBUG{size};
     </span><span class="prelude-val">Ok</span>((
       <span class="kw">match </span>props.get(<span class="string">&quot;width&quot;</span>) {
         <span class="prelude-val">Some</span>(Stored::Dimension(w)) =&gt; <span class="kw-2">*</span>w,
@@ -645,7 +711,11 @@
   }
 
   <span class="doccomment">/// deprecated/to be revisited - computes and caches the size of a box-like object
-  </span><span class="kw">fn </span>compute_size_store(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>compute_size_store(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    <span class="kw-2">mut </span>options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>, <span class="string">&quot;vattach&quot;</span>, <span class="string">&quot;layout&quot;</span>] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = <span class="self">self</span>.get_property(key) {
         options.insert(String::from(key), v.into_owned());
@@ -667,7 +737,11 @@
   }
 
   <span class="doccomment">/// computes and returns the size of a box-like object
-  </span><span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;String, Stored&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;;
+  </span><span class="kw">fn </span>compute_size(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    options: HashMap&lt;String, Stored&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt;;
 }
 
 <span class="doccomment">/// The current TeX processing mode

@@ -585,8 +585,65 @@
 <a href="#585" id="585">585</a>
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
 </pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
-<span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap};
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::error::Error;
 
 <span class="kw">use </span><span class="kw">crate</span>::semantics::{Operator, XM};
@@ -658,13 +715,17 @@
     <span class="kw">use </span>ValidationPragmatics::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
       FencedAtomsAreNotFunctions =&gt; pragma_fenced_atoms_are_not_functions(tree),
-      UnfencedLetterArgumentsRequireVisualCues =&gt; pragma_unfenced_letter_arguments_require_visual_cues(tree),
+      UnfencedLetterArgumentsRequireVisualCues =&gt; {
+        pragma_unfenced_letter_arguments_require_visual_cues(tree)
+      },
 
       OpfunctionsAreRarelyArguments =&gt; pragma_opfunctions_are_rarely_arguments(tree),
 
       FencedLettersAreFunctionArguments =&gt; pragma_fenced_letters_are_function_arguments(tree),
       HigherOrderIDsAreExceptions =&gt; pragma_higher_order_ids_are_exceptions(tree),
-      HigherOrderInvisibleOpsAreExceptions =&gt; pragma_higher_order_invisible_ops_are_exceptions(tree),
+      HigherOrderInvisibleOpsAreExceptions =&gt; {
+        pragma_higher_order_invisible_ops_are_exceptions(tree)
+      },
       AdjacentNumbersDontMultiply =&gt; pragma_adjacent_numbers_dont_use_invisible_times(tree),
       AdjacentUnfencedScriptsDontApply =&gt; pragma_adjacent_unfenced_scripts_dont_apply(tree),
       StandaloneDiffopsAreNotNumerators =&gt; pragma_standalone_diffops_are_not_numerators(tree),
@@ -733,7 +794,11 @@
 /// For example in SUx
 </span><span class="kw">fn </span>_pragma_letter_case(name: <span class="kw-2">&amp;</span>str) -&gt; String {
   <span class="kw">let </span>(base, sep, lexeme) = distill_lexeme(name);
-  <span class="kw">let </span>lexeme_pragmatic = <span class="kw">if </span>lexeme.chars().next().unwrap().is_uppercase() { <span class="string">&quot;U&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;l&quot; </span>};
+  <span class="kw">let </span>lexeme_pragmatic = <span class="kw">if </span>lexeme.chars().next().unwrap().is_uppercase() {
+    <span class="string">&quot;U&quot;
+  </span>} <span class="kw">else </span>{
+    <span class="string">&quot;l&quot;
+  </span>};
   base.to_owned() + sep + lexeme_pragmatic
 }
 
@@ -766,7 +831,9 @@
     <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>_lexeme, <span class="kw-2">ref </span>atom_meta) = <span class="kw-2">**</span>op {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = atom_meta.fenced {
         <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
-          <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of function application&quot;</span>.into());
+          <span class="kw">return </span><span class="prelude-val">Err</span>(
+            <span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of function application&quot;</span>.into(),
+          );
         }
       }
     }
@@ -783,27 +850,43 @@
             <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
               <span class="kw">if let </span>XM::Lexeme(lhs_name, <span class="kw">_</span>) = top_lhs.get_baseline() {
                 <span class="kw">if </span>!lhs_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
-                  <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of invisible times&quot;</span>.into());
+                  <span class="kw">return </span><span class="prelude-val">Err</span>(
+                    <span class="string">&quot;pruning non-argument parenthetical atom, used as LHS of invisible times&quot;
+                      </span>.into(),
+                  );
                 }
               }
             }
           }
 
-          <span class="comment">// Slightly tricky check -- the top RHS needs to be fenced, but we care about the &quot;baseline&quot; content being a variable - disregarding scripts.
+          <span class="comment">// Slightly tricky check -- the top RHS needs to be fenced, but we care about the
+          // &quot;baseline&quot; content being a variable - disregarding scripts.
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(top_rhs) = args.trees().get(<span class="number">1</span>) {
             <span class="kw">if let </span>XM::Lexeme(rhs_name, <span class="kw">_</span>) = top_rhs.get_baseline() {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = top_rhs.get_meta().fenced {
                 <span class="kw">if </span>fences.as_str() == <span class="string">&quot;parens&quot; </span>{
-                  <span class="comment">// if the RHS is a number, prune unless the LHS is fenced (things like cycle notation)
+                  <span class="comment">// if the RHS is a number, prune unless the LHS is fenced (things like cycle
+                  // notation)
                   </span><span class="kw">if </span>!rhs_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning non-argument parenthetical atom, used as RHS of invisible times&quot;</span>.into());
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(
+                      <span class="string">&quot;pruning non-argument parenthetical atom, used as RHS of invisible times&quot;
+                        </span>.into(),
+                    );
                   } <span class="kw">else </span>{
                     <span class="kw">match </span>args.trees().first() {
                       <span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw">_</span>, lhs_meta)) <span class="kw">if </span>lhs_meta.fenced.is_none() =&gt; {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible times&quot;</span>.into());
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(
+                          <span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times&quot;
+                            </span>.into(),
+                        );
                       },
                       <span class="prelude-val">Some</span>(XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, lhs_meta)) <span class="kw">if </span>lhs_meta.fenced.is_none() =&gt; {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible times&quot;</span>.into());
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(
+                          <span class="string">&quot;pruning non-argument parenthetical NUMBER, used as RHS of invisible \
+                           times&quot;
+                            </span>.into(),
+                        );
                       },
                       <span class="kw">_ </span>=&gt; {},
                     }
@@ -820,9 +903,10 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// If we have two standalone letters in the same, such as &quot;A x&quot; or &quot;F X&quot;, prune parses that interpret them as an application,
-/// unless they have a role that clearly indicates the LHS is intended as a functional.
-/// This may need to be applied as an optional filter at the end of pruning, as there are known, albeit rare, counter-examples (&quot;f x&quot;).
+<span class="doccomment">/// If we have two standalone letters in the same, such as &quot;A x&quot; or &quot;F X&quot;, prune parses that
+/// interpret them as an application, unless they have a role that clearly indicates the LHS is
+/// intended as a functional. This may need to be applied as an optional filter at the end of
+/// pruning, as there are known, albeit rare, counter-examples (&quot;f x&quot;).
 </span><span class="kw">fn </span>pragma_unfenced_letter_arguments_require_visual_cues(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">match </span><span class="kw-2">*</span>tree {
     XM::Apply(Operator(<span class="kw-2">ref </span>op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
@@ -855,7 +939,9 @@
           } <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// rule only applies to single char cases
           </span>};
-          <span class="kw">if </span>(op_letter.is_lowercase() &amp;&amp; arg_letter.is_lowercase()) || (op_letter.is_uppercase() &amp;&amp; arg_letter.is_uppercase()) {
+          <span class="kw">if </span>(op_letter.is_lowercase() &amp;&amp; arg_letter.is_lowercase())
+            || (op_letter.is_uppercase() &amp;&amp; arg_letter.is_uppercase())
+          {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;operator and argument are visually similar, prune.&quot;</span>.into());
           }
         }
@@ -866,8 +952,9 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// OPFUNCTION are explicitly marked to be operators in an application, they should not be in an argument role of a single argument Apply.
-/// Note that this pragma still allows OPFUNCTIONs to appear as list elements.
+<span class="doccomment">/// OPFUNCTION are explicitly marked to be operators in an application, they should not be in an
+/// argument role of a single argument Apply. Note that this pragma still allows OPFUNCTIONs to
+/// appear as list elements.
 </span><span class="kw">fn </span>pragma_opfunctions_are_rarely_arguments(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">match </span><span class="kw-2">*</span>tree {
     XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>=&gt; {
@@ -929,7 +1016,11 @@
           <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>lhs_name, <span class="kw">_</span>) = lhs.get_baseline() {
             <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>rhs_name, <span class="kw">_</span>) = rhs.get_baseline() {
               <span class="kw">if </span>name_is_functional_or_id(lhs_name) &amp;&amp; name_is_functional(rhs_name) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Pruning higher order &#39;FUNCTION x FUNCTION&#39; parse to give precedence to right-associative readings&quot;</span>.into());
+                <span class="kw">return </span><span class="prelude-val">Err</span>(
+                  <span class="string">&quot;Pruning higher order &#39;FUNCTION x FUNCTION&#39; parse to give precedence to \
+                   right-associative readings&quot;
+                    </span>.into(),
+                );
               }
             }
           }
@@ -942,8 +1033,9 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// If two numbers are left next to each other, as in &quot;10(5)&quot; it is rarely (never?) the intention that they are to be multiplied
-/// Prune such parses. We have special rules for some notations, such as &quot;dlmf_range&quot;.
+<span class="doccomment">/// If two numbers are left next to each other, as in &quot;10(5)&quot; it is rarely (never?) the intention
+/// that they are to be multiplied Prune such parses. We have special rules for some notations, such
+/// as &quot;dlmf_range&quot;.
 </span><span class="kw">fn </span>pragma_adjacent_numbers_dont_use_invisible_times(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">match </span><span class="kw-2">**</span>op {
@@ -954,7 +1046,9 @@
             <span class="kw">if </span>lhs.base_operator_name().starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(rhs) = arg_trees.get(<span class="number">1</span>) {
                 <span class="kw">if </span>rhs.base_operator_name().starts_with(<span class="string">&quot;NUMBER&quot;</span>) {
-                  <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;pruning two adjacent NUMBERs that used an invisible operator&quot;</span>.into());
+                  <span class="kw">return </span><span class="prelude-val">Err</span>(
+                    <span class="string">&quot;pruning two adjacent NUMBERs that used an invisible operator&quot;</span>.into(),
+                  );
                 }
               }
             }
@@ -986,8 +1080,9 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Constructs such as &quot; e_i z_0 &quot; are rarely applying e(z). This is even a common expectation of function symbols say &quot; f_i g_j &quot;.
-/// This pragma prunes trees that applies two adjacent scripted constructs.
+<span class="doccomment">/// Constructs such as &quot; e_i z_0 &quot; are rarely applying e(z). This is even a common expectation of
+/// function symbols say &quot; f_i g_j &quot;. This pragma prunes trees that applies two adjacent scripted
+/// constructs.
 </span><span class="kw">fn </span>pragma_adjacent_unfenced_scripts_dont_apply(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, <span class="kw">_</span>, <span class="kw">_</span>) = tree {
     <span class="kw">if </span>args.trees().len() == <span class="number">1 </span>{
@@ -997,7 +1092,9 @@
           <span class="comment">// only subscripts on the outer one to avoid pruning e.g. \nabla^2 u_{0,0}
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Apply(Operator(arg_op), <span class="kw">_</span>, <span class="kw">_</span>, arg_meta)) = args.trees().first() {
             <span class="kw">let </span>arg_op_name = arg_op.base_operator_name();
-            <span class="kw">if </span>arg_meta.fenced.is_none() &amp;&amp; (arg_op_name == <span class="string">&quot;unknown.subscript&quot; </span>|| arg_op_name == <span class="string">&quot;unknown.superscript&quot;</span>) {
+            <span class="kw">if </span>arg_meta.fenced.is_none()
+              &amp;&amp; (arg_op_name == <span class="string">&quot;unknown.subscript&quot; </span>|| arg_op_name == <span class="string">&quot;unknown.superscript&quot;</span>)
+            {
               <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Prune: adjacent unfenced scripts do not form an application.&quot;</span>.into());
             }
           }
@@ -1020,7 +1117,9 @@
             <span class="kw">if </span>inner_trees.len() == <span class="number">1 </span>{
               <span class="kw">if let </span>XM::Lexeme(rhs_name, <span class="kw">_</span>) = inner_args.trees().first().unwrap().get_baseline() {
                 <span class="kw">if </span>name_is_functional(rhs_name) {
-                  <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Two applied FUNCTIONS as operator violates right-associative behavior.&quot;</span>.into());
+                  <span class="kw">return </span><span class="prelude-val">Err</span>(
+                    <span class="string">&quot;Two applied FUNCTIONS as operator violates right-associative behavior.&quot;</span>.into(),
+                  );
                 }
               }
             }
@@ -1062,10 +1161,16 @@
         <span class="kw">if </span>arg_trees.len() == <span class="number">2 </span>{
           <span class="kw">if let </span>XM::Lexeme(arg1_name, arg1_meta) = arg_trees[<span class="number">0</span>] {
             <span class="kw">if let </span>XM::Lexeme(arg2_name, arg2_meta) = arg_trees[<span class="number">1</span>] {
-              <span class="kw">if </span>arg1_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) &amp;&amp; arg2_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>) &amp;&amp; !arg1_meta.syntax_trace.is_empty()
+              <span class="kw">if </span>arg1_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>)
+                &amp;&amp; arg2_name.starts_with(<span class="string">&quot;NUMBER&quot;</span>)
+                &amp;&amp; !arg1_meta.syntax_trace.is_empty()
                 || !arg2_meta.syntax_trace.is_empty()
               {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;only tokens are allowed in numeric fractions, derived rules are pruned to avoid redundancy.&quot;</span>.into());
+                <span class="kw">return </span><span class="prelude-val">Err</span>(
+                  <span class="string">&quot;only tokens are allowed in numeric fractions, derived rules are pruned to \
+                   avoid redundancy.&quot;
+                    </span>.into(),
+                );
               }
             }
           }
@@ -1133,20 +1238,29 @@
 }
 
 <span class="kw">pub fn </span>name_is_functional(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
-  name.starts_with(<span class="string">&quot;FUNCTION&quot;</span>) || name.starts_with(<span class="string">&quot;OPFUNCTION&quot;</span>) || name.starts_with(<span class="string">&quot;TRIGFUNCTION&quot;</span>) || name.starts_with(<span class="string">&quot;UNKNOWN&quot;</span>)
+  name.starts_with(<span class="string">&quot;FUNCTION&quot;</span>)
+    || name.starts_with(<span class="string">&quot;OPFUNCTION&quot;</span>)
+    || name.starts_with(<span class="string">&quot;TRIGFUNCTION&quot;</span>)
+    || name.starts_with(<span class="string">&quot;UNKNOWN&quot;</span>)
 }
 
-<span class="kw">pub fn </span>name_is_functional_or_id(name: <span class="kw-2">&amp;</span>str) -&gt; bool { name.starts_with(<span class="string">&quot;ID&quot;</span>) || name_is_functional(name) }
+<span class="kw">pub fn </span>name_is_functional_or_id(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
+  name.starts_with(<span class="string">&quot;ID&quot;</span>) || name_is_functional(name)
+}
 
 <span class="macro">lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>PRAGMATIC_BLOCK_MAP : HashMap&lt;char, String&gt; = {
-    <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot; in blocks of 3 letter in mathematics,
-    // as a fast-and-loose rule of thumb. a-e is an exception as a rather stable 5 letter block with shared utility.
+    <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot;
+    // in blocks of 3 letter in mathematics,
+    // as a fast-and-loose rule of thumb. a-e is an exception as
+    // a rather stable 5 letter block with shared utility.
     </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
     <span class="comment">// |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
-    </span><span class="kw">let </span>latin_blocks = [(<span class="string">&#39;a&#39;</span>,<span class="string">&#39;e&#39;</span>),(<span class="string">&#39;f&#39;</span>,<span class="string">&#39;h&#39;</span>),(<span class="string">&#39;i&#39;</span>,<span class="string">&#39;k&#39;</span>),(<span class="string">&#39;l&#39;</span>,<span class="string">&#39;n&#39;</span>),(<span class="string">&#39;o&#39;</span>,<span class="string">&#39;q&#39;</span>),(<span class="string">&#39;r&#39;</span>,<span class="string">&#39;t&#39;</span>),(<span class="string">&#39;u&#39;</span>,<span class="string">&#39;w&#39;</span>),(<span class="string">&#39;x&#39;</span>,<span class="string">&#39;z&#39;</span>)];
+    </span><span class="kw">let </span>latin_blocks = [
+      (<span class="string">&#39;a&#39;</span>,<span class="string">&#39;e&#39;</span>),(<span class="string">&#39;f&#39;</span>,<span class="string">&#39;h&#39;</span>),(<span class="string">&#39;i&#39;</span>,<span class="string">&#39;k&#39;</span>),(<span class="string">&#39;l&#39;</span>,<span class="string">&#39;n&#39;</span>),(<span class="string">&#39;o&#39;</span>,<span class="string">&#39;q&#39;</span>),(<span class="string">&#39;r&#39;</span>,<span class="string">&#39;t&#39;</span>),(<span class="string">&#39;u&#39;</span>,<span class="string">&#39;w&#39;</span>),(<span class="string">&#39;x&#39;</span>,<span class="string">&#39;z&#39;</span>)];
     <span class="comment">// |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
-    </span><span class="kw">let </span>greek_blocks = [(<span class="string">&#39;α&#39;</span>,<span class="string">&#39;γ&#39;</span>),(<span class="string">&#39;ζ&#39;</span>,<span class="string">&#39;θ&#39;</span>),(<span class="string">&#39;ι&#39;</span>,<span class="string">&#39;κ&#39;</span>),(<span class="string">&#39;λ&#39;</span>,<span class="string">&#39;ξ&#39;</span>),(<span class="string">&#39;ο&#39;</span>,<span class="string">&#39;ρ&#39;</span>),(<span class="string">&#39;σ&#39;</span>,<span class="string">&#39;υ&#39;</span>),(<span class="string">&#39;ϕ&#39;</span>,<span class="string">&#39;ψ&#39;</span>)];
+    </span><span class="kw">let </span>greek_blocks = [
+      (<span class="string">&#39;α&#39;</span>,<span class="string">&#39;γ&#39;</span>),(<span class="string">&#39;ζ&#39;</span>,<span class="string">&#39;θ&#39;</span>),(<span class="string">&#39;ι&#39;</span>,<span class="string">&#39;κ&#39;</span>),(<span class="string">&#39;λ&#39;</span>,<span class="string">&#39;ξ&#39;</span>),(<span class="string">&#39;ο&#39;</span>,<span class="string">&#39;ρ&#39;</span>),(<span class="string">&#39;σ&#39;</span>,<span class="string">&#39;υ&#39;</span>),(<span class="string">&#39;ϕ&#39;</span>,<span class="string">&#39;ψ&#39;</span>)];
     <span class="comment">// | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
     </span><span class="kw">let </span>up_greek_blocks = [(<span class="string">&#39;Α&#39;</span>,<span class="string">&#39;Γ&#39;</span>),(<span class="string">&#39;Ζ&#39;</span>,<span class="string">&#39;Θ&#39;</span>),(<span class="string">&#39;Ι&#39;</span>,<span class="string">&#39;Κ&#39;</span>),(<span class="string">&#39;Λ&#39;</span>,<span class="string">&#39;Ξ&#39;</span>),(<span class="string">&#39;Ο&#39;</span>,<span class="string">&#39;Ρ&#39;</span>),(<span class="string">&#39;Σ&#39;</span>,<span class="string">&#39;Υ&#39;</span>),(<span class="string">&#39;Φ&#39;</span>,<span class="string">&#39;Ψ&#39;</span>)];
 

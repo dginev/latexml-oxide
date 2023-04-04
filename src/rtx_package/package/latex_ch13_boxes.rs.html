@@ -289,6 +289,16 @@
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
@@ -324,7 +334,8 @@
         <span class="macro">DefRegister!</span>(cs, <span class="prelude-val">None</span>, Dimension::new(<span class="number">0</span>));
       },
       <span class="prelude-val">Some</span>(defn) =&gt; <span class="kw">if </span>!defn.is_register() {
-        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;&#39;{}&#39; length was expected, got {:?} instead of register.&quot;</span>, cs.to_string(), defn.register_type());
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;&#39;{}&#39; length was expected, got {:?} instead of register.&quot;</span>,
+          cs.to_string(), defn.register_type());
         <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, cs, stomach, state, message);
       }
     };
@@ -337,7 +348,10 @@
 
   <span class="comment">// TODO: Update these !!!
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\setlength{}{}&quot;</span>, <span class="string">&quot;\\@check@length{#1}#1#2\\relax&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\addtolength{}{}&quot;</span>, <span class="string">&quot;\\@check@length{#1}\\advance#1 #2\\relax&quot;</span>);
+  <span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\addtolength{}{}&quot;</span>,
+    <span class="string">&quot;\\@check@length{#1}\\advance#1 #2\\relax&quot;
+  </span>);
 
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\@settodim{}{}{}&quot;</span>,
@@ -401,7 +415,8 @@
     mode =&gt; <span class="string">&quot;text&quot;</span>,
     bounded =&gt; <span class="bool-val">true</span>,
     sizer =&gt; <span class="string">&quot;#1&quot;</span>,
-    before_digest =&gt; sub[stomach, state] { reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
+    before_digest =&gt; sub[stomach, state] {
+      reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
   );
 
   <span class="comment">// our %makebox_alignment = (l =&gt; &#39;left&#39;, r =&gt; &#39;right&#39;, s =&gt; &#39;justified&#39;);
@@ -409,7 +424,8 @@
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@makebox[Dimension][]{}&quot;</span>,
     <span class="string">&quot;&lt;ltx:text ?#width(width=&#39;#width&#39;) ?#align(align=&#39;#align&#39;) _noautoclose=&#39;1&#39;&gt;#3&lt;/ltx:text&gt;&quot;</span>,
     mode         =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>, alias =&gt; <span class="string">&quot;\\makebox&quot;</span>, sizer =&gt; <span class="string">&quot;#3&quot;</span>,
-    before_digest =&gt; sub[stomach,state] { reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
+    before_digest =&gt; sub[stomach,state] {
+      reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
     <span class="comment">// properties   =&gt; sub[stomach,args,state] {
     //   let arg1 = &amp;args[0];
     //   let arg2 = &amp;args[1];
@@ -498,7 +514,10 @@
   //     my $contents = Digest($_[2]);
   //     AssignValue(&#39;box&#39; . $value, $contents); return; });
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\savebox{}&quot;</span>, <span class="string">&quot;\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\savebox{}&quot;</span>,
+    <span class="string">&quot;\\@ifnextchar({\\pic@savebox#1}{\\@savebox#1}&quot;
+  </span>);
   <span class="comment">// DefPrimitive!(&quot;\\@savebox DefToken[][]{}&quot;, sub {
   //     my ($defn, @args) = @{ LookupDefinition($_[1]) };
   //     my $value = $defn-&gt;valueOf(@args);
@@ -575,7 +594,8 @@
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\raisebox{Dimension}[Dimension][Dimension]{}&quot;</span>,
     <span class="string">&quot;&lt;ltx:text yoffset=&#39;#1&#39; _noautoclose=&#39;1&#39;&gt;#4&lt;/ltx:text&gt;&quot;</span>,
     mode         =&gt; <span class="string">&quot;text&quot;</span>, bounded =&gt; <span class="bool-val">true</span>,
-    before_digest =&gt; sub[stomach, state] { reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
+    before_digest =&gt; sub[stomach, state] {
+      reenter_text_mode(<span class="bool-val">false</span>, stomach.get_gullet_mut(), state); }
     <span class="comment">// TODO
     // sizer        =&gt; sub { raisedSizer($_[0]-&gt;getArg(4), $_[0]-&gt;getArg(1)); }
   </span>);

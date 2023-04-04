@@ -680,6 +680,43 @@
 <a href="#680" id="680">680</a>
 <a href="#681" id="681">681</a>
 <a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
@@ -828,7 +865,8 @@
   </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\if@lx@inbibliography&quot;</span>);
   <span class="comment">// Should be an environment, but people seem to want to misuse it.
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\thebibliography&quot;</span>,
-    <span class="string">&quot;&lt;ltx:bibliography xml:id=&#39;#id&#39;&gt;&lt;ltx:title font=&#39;#titlefont&#39; _force_font=&#39;true&#39;&gt;#title&lt;/ltx:title&gt;&lt;ltx:biblist&gt;&quot;</span>,
+    <span class="string">&quot;&lt;ltx:bibliography xml:id=&#39;#id&#39;&gt;&lt;ltx:title font=&#39;#titlefont&#39;
+    _force_font=&#39;true&#39;&gt;#title&lt;/ltx:title&gt;&lt;ltx:biblist&gt;&quot;</span>,
      before_digest =&gt; sub[stomach, state] {
         <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot;</span>, <span class="bool-val">false</span>);
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@lx@inbibliographytrue&quot;</span>)), state)<span class="question-mark">?</span>])
@@ -876,7 +914,10 @@
 
   <span class="comment">// If we hit a real \bibitem, put \par &amp; \bibitem back to correct defn, and then \bibitem.
   // A bibitem with now key or label...
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\restoring@bibitem&quot;</span>, <span class="string">&quot;\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(
+    <span class="string">&quot;\\restoring@bibitem&quot;</span>,
+    <span class="string">&quot;\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem&quot;
+  </span>);
 
   <span class="macro">NewCounter!</span>(<span class="string">&quot;@bibitem&quot;</span>, <span class="string">&quot;bibliography&quot;</span>, idprefix =&gt; <span class="string">&quot;bib&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\the@bibitem&quot;</span>, <span class="string">&quot;\\arabic{@bibitem}&quot;</span>);
@@ -886,7 +927,8 @@
   </span><span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\bibitem&quot;</span>,
     <span class="string">&quot;\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem&quot;</span>, locked=&gt;<span class="bool-val">true</span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@bibitem[] Semiverbatim&quot;</span>, <span class="string">&quot;&lt;ltx:bibitem key=&#39;#key&#39; xml:id=&#39;#id&#39;&gt;#tags&lt;ltx:bibblock&gt;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@bibitem[] Semiverbatim&quot;</span>,
+    <span class="string">&quot;&lt;ltx:bibitem key=&#39;#key&#39; xml:id=&#39;#id&#39;&gt;#tags&lt;ltx:bibblock&gt;&quot;</span>,
     after_digest =&gt; sub[stomach, whatsit, state] {
       <span class="kw">let </span>tag_opt = whatsit.get_arg(<span class="number">1</span>);
       <span class="kw">let </span>key = <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = whatsit.get_arg(<span class="number">2</span>) {
@@ -900,7 +942,8 @@
             <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\def&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\the@bibitem&quot;</span>), <span class="macro">T_BEGIN!</span>()];
         tag_tokens.extend(<span class="macro">Revert!</span>(tag));
         tag_tokens.push(<span class="macro">T_END!</span>());
-        tag_tokens.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>), <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">&quot;@bibitem&quot;</span>)], gullet)<span class="question-mark">?</span>.unlist());
+        tag_tokens.extend(
+          <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>), <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">&quot;@bibitem&quot;</span>)], gullet)<span class="question-mark">?</span>.unlist());
         tag_tokens.push(<span class="macro">T_END!</span>());
         properties.insert(<span class="string">&quot;tags&quot;</span>.to_string(),
           stomach.digest(tag_tokens, state)<span class="question-mark">?</span>.into());
@@ -933,7 +976,8 @@
     }
     <span class="comment">// else ? it probably isn&#39;t going to work??
     </span><span class="macro">Info!</span>(<span class="string">&quot;Now, try to open {{thebibliography}}&quot;</span>);
-    tokens.extend(<span class="macro">Invocation!</span>(<span class="string">&quot;\\begin&quot;</span>, <span class="macro">vec!</span>[<span class="macro">Tokenize!</span>(<span class="string">&quot;thebibliography&quot;</span>), <span class="macro">Tokens!</span>()], gullet)<span class="question-mark">?</span>.unlist());
+    tokens.extend(<span class="macro">Invocation!</span>(<span class="string">&quot;\\begin&quot;</span>,
+      <span class="macro">vec!</span>[<span class="macro">Tokenize!</span>(<span class="string">&quot;thebibliography&quot;</span>), <span class="macro">Tokens!</span>()], gullet)<span class="question-mark">?</span>.unlist());
     <span class="kw">let </span>tokens = Tokens::new(tokens);
     <span class="macro">Info!</span>(<span class="string">&quot;PATCHING with {:?}&quot;</span>, tokens.to_string());
     <span class="prelude-val">Ok</span>(tokens)
@@ -992,7 +1036,8 @@
 
   <span class="comment">// \@@bibref{what to show}{bibkeys}{phrase1}{phrase2}
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@bibref Semiverbatim Semiverbatim {}{}&quot;</span>,
-    <span class="string">&quot;&lt;ltx:bibref show=&#39;#1&#39; bibrefs=&#39;#bibrefs&#39; separator=&#39;#separator&#39; yyseparator=&#39;#yyseparator&#39;&gt;#3#4&lt;/ltx:bibref&gt;&quot;</span>,
+    <span class="string">&quot;&lt;ltx:bibref show=&#39;#1&#39; bibrefs=&#39;#bibrefs&#39; separator=&#39;#separator&#39;
+      yyseparator=&#39;#yyseparator&#39;&gt;#3#4&lt;/ltx:bibref&gt;&quot;</span>,
     properties =&gt; sub[stomach, args, state] {
       <span class="macro">unref!</span>(args =&gt; show, keys, phrase1, phrase2);
       <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(<span class="string">&quot;bibrefs&quot; </span>=&gt; clean_bib_key(<span class="kw-2">&amp;</span>keys.to_string()).into(),
@@ -1025,7 +1070,8 @@
       post_wrapped.extend(post_tokens);
       post_tokens = post_wrapped;
     }
-    <span class="kw">let </span>bibref = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@@bibref&quot;</span>), <span class="macro">vec!</span>[<span class="macro">Tokens!</span>(), keys, <span class="macro">Tokens!</span>(), <span class="macro">Tokens!</span>()], gullet)<span class="question-mark">?</span>;
+    <span class="kw">let </span>bibref = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@@bibref&quot;</span>),
+      <span class="macro">vec!</span>[<span class="macro">Tokens!</span>(), keys, <span class="macro">Tokens!</span>(), <span class="macro">Tokens!</span>()], gullet)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>arg_tokens = open.unlist();
     arg_tokens.extend(bibref.unlist());
     arg_tokens.extend(post_tokens);
@@ -1228,8 +1274,8 @@
   //   my ($string) = @_;
   //   $string =~ s/(\\\@|\\,|\\:|\\;|\\!|\\ |\\\/|)//g;
   //   $string =~
-  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\tt|\\small|\\tiny)//g;
-  //   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
+  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\
+  // tt|\\small|\\tiny)//g;   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
   //   $string =~ s/(\\|\{|\})//g;
   //   $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
   //   $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=&gt;1 mapping???
@@ -1317,23 +1363,51 @@
 </span><span class="kw">fn </span>setup_pseudo_bibitem(state: <span class="kw-2">&amp;mut </span>State, gullet: <span class="kw-2">&amp;mut </span>Gullet) {
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\save@bibitem&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\bibitem&quot;</span>), <span class="prelude-val">None</span>, gullet);
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\save@par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="prelude-val">None</span>, gullet);
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\bibitem&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\restoring@bibitem&quot;</span>), <span class="prelude-val">None</span>, gullet);
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\par@in@bibliography&quot;</span>), <span class="prelude-val">None</span>, gullet);
+  state.let_i(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\bibitem&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\restoring@bibitem&quot;</span>),
+    <span class="prelude-val">None</span>,
+    gullet,
+  );
+  state.let_i(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\par@in@bibliography&quot;</span>),
+    <span class="prelude-val">None</span>,
+    gullet,
+  );
   <span class="comment">// Moreover some people use \item instead of \bibitem
-  </span>state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\item&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\item@in@bibliography&quot;</span>), <span class="prelude-val">None</span>, gullet);
+  </span>state.let_i(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\item&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\item@in@bibliography&quot;</span>),
+    <span class="prelude-val">None</span>,
+    gullet,
+  );
   <span class="comment">// And protect from redefinitions.
-  </span>state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\newblock&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@bibnewblock&quot;</span>), <span class="prelude-val">None</span>, gullet);
+  </span>state.let_i(
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\newblock&quot;</span>),
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@bibnewblock&quot;</span>),
+    <span class="prelude-val">None</span>,
+    gullet,
+  );
 }
 <span class="comment">// This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
-</span><span class="kw">fn </span>begin_bibliography(stomach: <span class="kw-2">&amp;mut </span>Stomach, whatsit: <span class="kw-2">&amp;mut </span>Whatsit, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+</span><span class="kw">fn </span>begin_bibliography(
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   begin_bibliography_clean(stomach, whatsit, state)<span class="question-mark">?</span>;
   <span class="comment">// Fix for missing \bibitems!
   </span>setup_pseudo_bibitem(state, stomach.get_gullet_mut());
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>begin_bibliography_clean(stomach: <span class="kw-2">&amp;mut </span>Stomach, whatsit: <span class="kw-2">&amp;mut </span>Whatsit, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">fn </span>begin_bibliography_clean(
+  stomach: <span class="kw-2">&amp;mut </span>Stomach,
+  whatsit: <span class="kw-2">&amp;mut </span>Whatsit,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="macro">BindState!</span>(stomach, state);
   <span class="comment">// Try to compute a reasonable, but unique ID;
   // relative to the document&#39;s ID, if any.

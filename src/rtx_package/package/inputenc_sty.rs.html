@@ -66,6 +66,13 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//**********************************************************************
@@ -95,7 +102,13 @@
   // In latter case, perhaps it doesn&#39;t matter as long as we end up with the same bytes in/out???
   </span>state.assign_value(<span class="string">&quot;INPUT_ENCODING&quot;</span>, encoding.to_string(), <span class="prelude-val">None</span>);
   <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(encoding);
-  def_macro(<span class="macro">T_CS!</span>(<span class="string">&quot;\\inputencodingname&quot;</span>), <span class="prelude-val">None</span>, encoding_tokenized, <span class="prelude-val">None</span>, state);
+  def_macro(
+    <span class="macro">T_CS!</span>(<span class="string">&quot;\\inputencodingname&quot;</span>),
+    <span class="prelude-val">None</span>,
+    encoding_tokenized,
+    <span class="prelude-val">None</span>,
+    state,
+  );
   <span class="prelude-val">Ok</span>(())
 }
 
@@ -116,7 +129,8 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\IeC{}&quot;</span>, <span class="string">&quot;#1&quot;</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@inpenc@undefined&quot;</span>, sub[gullet, (), state] {
-    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Keyboard character used is undefined in inputencoding {}&quot;</span>, state.input_encoding.as_ref().unwrap());
+    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Keyboard character used is undefined in inputencoding {}&quot;</span>,
+      state.input_encoding.as_ref().unwrap());
     <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;&lt;char&gt;&quot;</span>, gullet, state, message);
   });
 
