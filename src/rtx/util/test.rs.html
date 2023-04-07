@@ -170,11 +170,49 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
 <span class="kw">use </span>libxml::tree::{Node, SaveOptions};
-<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
@@ -187,15 +225,15 @@
 
 <span class="kw">pub fn </span>rtx_tests(
   dirpath: <span class="kw-2">&amp;</span>str,
-  requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
+  requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
   dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 ) {
   rtx_tests_internal(dirpath, requires, dispatcher_opt)
 }
 <span class="kw">pub fn </span>rtx_tests_internal(
   dirpath: <span class="kw-2">&amp;</span>str,
-  requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
-  extra_bindings_dispatcher: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
+  requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
+  dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 ) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   <span class="kw">if </span>!validate_requirements(dirpath, requires) {
@@ -212,7 +250,7 @@
         tex_file_string,
         xml_file_str,
         name,
-        extra_bindings_dispatcher.clone(),
+        dispatcher_opt.clone(),
       );
     } <span class="kw">else </span>{
       <span class="comment">// Skip, these could be tex fragment files.
@@ -220,7 +258,26 @@
   }
 }
 
-<span class="kw">fn </span>validate_requirements(_dirpath: <span class="kw-2">&amp;</span>str, _requires: <span class="prelude-ty">Option</span>&lt;HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;) -&gt; bool {
+<span class="kw">pub fn </span>rtx_test_single(tex_file_str:<span class="kw-2">&amp;</span>str, name:<span class="kw-2">&amp;</span>str, dirpath:<span class="kw-2">&amp;</span>str, requires:<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
+  <span class="kw">if </span>!validate_requirements(dirpath, requires) {
+    <span class="kw">return</span>; <span class="comment">// test group only if required files are found.
+  </span>}
+  <span class="kw">let </span>tex_file = PathBuf::from(tex_file_str);
+  <span class="kw">let </span>xml_file = tex_file.with_extension(<span class="string">&quot;xml&quot;</span>);
+  <span class="kw">if </span>xml_file.exists() {
+    rtx_ok_internal(
+      tex_file_str,
+      <span class="kw-2">&amp;</span>xml_file.to_string_lossy(),
+      name,
+      dispatcher_opt,
+    );
+  } <span class="kw">else </span>{
+    <span class="comment">// Skip, these could be tex fragment files.
+  </span>}
+
+}
+
+<span class="kw">fn </span>validate_requirements(_dirpath: <span class="kw-2">&amp;</span>str, _requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;) -&gt; bool {
   <span class="comment">// TODO
   </span><span class="bool-val">true
 </span>}
@@ -342,5 +399,23 @@
     <span class="prelude-val">None </span>=&gt; (Vec::new(), Vec::new(), <span class="prelude-val">None</span>, doc),
   }
 }
-</code></pre></div>
+
+<span class="doccomment">/// Build a test function for each &quot;*.tex&quot; source found in a given directory path.
+/// The path should be absolute, or relative to the root rtx checkout.
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules! </span>tex_tests {
+    (<span class="macro-nonterminal">$dir</span>:literal) =&gt; {<span class="macro">tex_tests!</span>(<span class="macro-nonterminal">$dir</span>,<span class="prelude-val">None</span>,<span class="prelude-val">None</span>);};
+    (<span class="macro-nonterminal">$dir</span>:literal, <span class="macro-nonterminal">$requires</span>:expr, <span class="macro-nonterminal">$dispatch</span>:expr) =&gt; {
+      <span class="macro">macro_rules! </span>this_test_requires {
+        () =&gt; {<span class="macro-nonterminal">$requires</span>}
+      }
+      <span class="macro">macro_rules! </span>this_test_dispatch {
+        () =&gt; {<span class="macro-nonterminal">$dispatch</span>};
+      }
+      <span class="kw">use </span>rtx_codegen::GlobTeXTests;
+      <span class="attr">#[derive(GlobTeXTests)]
+      #[directory=<span class="macro-nonterminal">$dir</span>]
+      </span><span class="kw">struct </span>_TestDirective;
+    };
+}</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

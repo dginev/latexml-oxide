@@ -126,6 +126,13 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre><pre class="rust"><code><span class="attr">#![recursion_limit = <span class="string">&quot;100&quot;</span>]
 </span><span class="kw">extern crate </span>proc_macro; <span class="comment">// workaround until proc_macro becomes available normally
 
@@ -137,6 +144,7 @@
 <span class="kw">mod </span>modelable;
 <span class="kw">mod </span>parametrizeable;
 <span class="kw">mod </span>tokenizeable;
+<span class="kw">mod </span>testable;
 
 <span class="attr">#[proc_macro_derive(CompileReplacement, attributes(replacement))]
 </span><span class="kw">pub fn </span>derive_compile_replacement(input: TokenStream) -&gt; TokenStream {
@@ -253,6 +261,12 @@
 </span><span class="kw">pub fn </span>end_state_frame(_input: TokenStream) -&gt; TokenStream {
   <span class="kw">unsafe </span>{ CONTEXT_DEPTH -= <span class="number">1 </span>};
   TokenStream::new()
+}
+
+<span class="attr">#[proc_macro_derive(GlobTeXTests, attributes(directory))]
+</span><span class="kw">pub fn </span>derive_tex_tests(input: TokenStream) -&gt; TokenStream {
+  <span class="kw">let </span>item = <span class="macro">parse_macro_input!</span>(input <span class="kw">as </span>DeriveInput);
+  testable::compile_tests_at(item)
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_codegen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
