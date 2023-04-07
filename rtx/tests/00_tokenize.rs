@@ -3,4 +3,4 @@
 ///**********************************************************************
 use rtx::tex_tests;
 
-tex_tests!("tests/tokenize", None, None);
+tex_tests!("tests/tokenize");
