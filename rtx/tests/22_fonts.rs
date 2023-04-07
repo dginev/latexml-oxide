@@ -3,4 +3,4 @@
 ///**********************************************************************
 use rtx::tex_tests;
 
-tex_tests!("tests/fonts", None, None);
+tex_tests!("tests/fonts");

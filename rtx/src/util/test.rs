@@ -194,6 +194,7 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
 /// The path should be absolute, or relative to the root rtx checkout.
 #[macro_export]
 macro_rules! tex_tests {
+    ($dir:literal) => {tex_tests!($dir,None,None);};
     ($dir:literal, $requires:expr, $dispatch:expr) => {
       macro_rules! this_test_requires {
         () => {$requires}
