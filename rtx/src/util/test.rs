@@ -2,7 +2,7 @@ use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
-use rustc_hash::FxHashMap as HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::core_interface::DigestionAPI;
@@ -15,15 +15,15 @@ use rtx_package::package;
 
 pub fn rtx_tests(
   dirpath: &str,
-  requires: Option<HashMap<&str, &str>>,
+  requires: Option<&phf::Map<&str, &str>>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   rtx_tests_internal(dirpath, requires, dispatcher_opt)
 }
 pub fn rtx_tests_internal(
   dirpath: &str,
-  requires: Option<HashMap<&str, &str>>,
-  extra_bindings_dispatcher: Option<BindingDispatcher>,
+  requires: Option<&phf::Map<&str, &str>>,
+  dispatcher_opt: Option<BindingDispatcher>,
 ) {
   rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   if !validate_requirements(dirpath, requires) {
@@ -40,7 +40,7 @@ pub fn rtx_tests_internal(
         tex_file_string,
         xml_file_str,
         name,
-        extra_bindings_dispatcher.clone(),
+        dispatcher_opt.clone(),
       );
     } else {
       // Skip, these could be tex fragment files.
@@ -48,7 +48,26 @@ pub fn rtx_tests_internal(
   }
 }
 
-fn validate_requirements(_dirpath: &str, _requires: Option<HashMap<&str, &str>>) -> bool {
+pub fn rtx_test_single(tex_file_str:&str, name:&str, dirpath:&str, requires:Option<&phf::Map<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {
+  if !validate_requirements(dirpath, requires) {
+    return; // test group only if required files are found.
+  }
+  let tex_file = PathBuf::from(tex_file_str);
+  let xml_file = tex_file.with_extension("xml");
+  if xml_file.exists() {
+    rtx_ok_internal(
+      tex_file_str,
+      &xml_file.to_string_lossy(),
+      name,
+      dispatcher_opt,
+    );
+  } else {
+    // Skip, these could be tex fragment files.
+  }
+
+}
+
+fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>>) -> bool {
   // TODO
   true
 }
@@ -169,4 +188,22 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
     },
     None => (Vec::new(), Vec::new(), None, doc),
   }
+}
+
+/// Build a test function for each "*.tex" source found in a given directory path.
+/// The path should be absolute, or relative to the root rtx checkout.
+#[macro_export]
+macro_rules! tex_tests {
+    ($dir:literal, $requires:expr, $dispatch:expr) => {
+      macro_rules! this_test_requires {
+        () => {$requires}
+      }
+      macro_rules! this_test_dispatch {
+        () => {$dispatch};
+      }
+      use rtx_codegen::GlobTeXTests;
+      #[derive(GlobTeXTests)]
+      #[directory=$dir]
+      struct _TestDirective;
+    };
 }

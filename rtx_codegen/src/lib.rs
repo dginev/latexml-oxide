@@ -9,6 +9,7 @@ mod constructable;
 mod modelable;
 mod parametrizeable;
 mod tokenizeable;
+mod testable;
 
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {
@@ -125,4 +126,10 @@ pub fn start_state_frame(_input: TokenStream) -> TokenStream {
 pub fn end_state_frame(_input: TokenStream) -> TokenStream {
   unsafe { CONTEXT_DEPTH -= 1 };
   TokenStream::new()
+}
+
+#[proc_macro_derive(GlobTeXTests, attributes(directory))]
+pub fn derive_tex_tests(input: TokenStream) -> TokenStream {
+  let item = parse_macro_input!(input as DeriveInput);
+  testable::compile_tests_at(item)
 }

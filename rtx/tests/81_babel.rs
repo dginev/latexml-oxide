@@ -2,18 +2,17 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use rustc_hash::FxHashMap as HashMap;
+use phf::{phf_map};
+static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
+  "*" => "babel.sty",
+  "numprints" => "numprint.sty",
+  "german" => "germanb.ldf",
+  "greek" => "greek.ldf",
+  "french" => "frenchb.ldf",
+  "page545" => "germanb.ldf"};
 
 #[test]
 #[ignore]
 fn can_babel() {
-  let mut requires = HashMap::default();
-  requires.insert("*", "babel.sty");
-  requires.insert("numprints", "numprint.sty");
-  requires.insert("german", "germanb.ldf");
-  requires.insert("greek", "greek.ldf");
-  requires.insert("french", "frenchb.ldf");
-  requires.insert("page545", "germanb.ldf");
-
-  rtx_tests("tests/babel", Some(requires), None);
+  rtx_tests("tests/babel", Some(&REQUIRES), None);
 }

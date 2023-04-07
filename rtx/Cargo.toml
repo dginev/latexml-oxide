@@ -36,3 +36,4 @@ rtx_core = {path = "../rtx_core"}
 rtx_package = {path = "../rtx_package"}
 rtx_contrib = {path = "../rtx_contrib"}
 rtx_math_parser = {path = "../rtx_math_parser"}
+phf = { version = "0.11.1", features = ["macros"] }

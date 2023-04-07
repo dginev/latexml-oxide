@@ -1,12 +1,9 @@
-use rtx::util::test::*;
+use rtx::tex_tests;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rustc_hash::FxHashMap as HashMap;
+use phf::{phf_map};
+static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
+  "csquotes" => "csquotes.sty" };
 
-#[test]
-fn can_structure() {
-  let mut requires = HashMap::default();
-  requires.insert("csquotes", "csquotes.sty");
-  rtx_tests("tests/structure", Some(requires), None);
-}
+tex_tests!("tests/structure", Some(&REQUIRES), None);

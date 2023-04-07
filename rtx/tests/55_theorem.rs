@@ -2,12 +2,12 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use rustc_hash::FxHashMap as HashMap;
 
+use phf::{phf_map};
+static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
+  "ntheorem" => "ntheorem.std" };
 #[test]
 #[ignore]
 fn can_theorem() {
-  let mut requires = HashMap::default();
-  requires.insert("ntheorem", "ntheorem.std");
-  rtx_tests("tests/theorem", Some(requires), None);
+  rtx_tests("tests/theorem", Some(&REQUIRES), None);
 }
