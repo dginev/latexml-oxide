@@ -13,20 +13,11 @@ mod helpers;
 ///**********************************************************************
 use std::sync::Arc;
 
-use rtx::util::test::*;
+use rtx::tex_tests;
 use rtx_core::common::error::Result;
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;
 use rtx_package::package;
-
-#[test]
-fn can_digest() {
-  rtx_tests(
-    "tests/digestion",
-    None,
-    Some(Arc::new(digestion_tests_dispatch)),
-  );
-}
 
 fn digestion_tests_dispatch(
   filename: &str,
@@ -38,3 +29,5 @@ fn digestion_tests_dispatch(
     other => package::dispatch(other, stomach, state),
   }
 }
+
+tex_tests!("tests/digestion",None,Some(Arc::new(digestion_tests_dispatch)));

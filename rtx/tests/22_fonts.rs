@@ -1,8 +1,6 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx::util::test::*;
+use rtx::tex_tests;
 
-#[test]
-#[ignore]
-fn can_group() { rtx_tests("tests/fonts", None, None); }
+tex_tests!("tests/fonts", None, None);

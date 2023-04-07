@@ -1,10 +1,6 @@
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use rtx::util::test::*;
+use rtx::tex_tests;
 
-#[test]
-fn can_tokenize() {
-  let requires = None;
-  rtx_tests("tests/tokenize", requires, None);
-}
+tex_tests!("tests/tokenize", None, None);

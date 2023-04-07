@@ -5,7 +5,6 @@ extern crate rtx_package;
 
 mod helpers;
 
-use rustc_hash::FxHashMap as HashMap;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
@@ -15,21 +14,13 @@ use rtx_core::common::error::Result;
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;
 use rtx_package::package;
+use rtx::tex_tests;
 
-use rtx::util::test::*;
+use phf::{phf_map};
+static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
+  "meaning" => "t1enc.def",
+  "ifthen" => "ifthen.sty"};
 
-#[test]
-fn can_expand() {
-  let mut requires = HashMap::default();
-  requires.insert("meaning", "t1enc.def");
-  requires.insert("ifthen", "ifthen.sty");
-
-  rtx_tests(
-    "tests/expansion",
-    Some(requires),
-    Some(Arc::new(expansion_tests_dispatch)),
-  );
-}
 pub fn expansion_tests_dispatch(
   filename: &str,
   stomach: &mut Stomach,
@@ -41,3 +32,8 @@ pub fn expansion_tests_dispatch(
     other => package::dispatch(other, stomach, state),
   }
 }
+
+tex_tests!(
+  "tests/expansion",
+  Some(&REQUIRES),
+  Some(Arc::new(expansion_tests_dispatch)));

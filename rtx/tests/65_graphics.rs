@@ -2,13 +2,13 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use rustc_hash::FxHashMap as HashMap;
+use phf::{phf_map};
+static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
+  "colors" => "dvipsnam.def",
+  "xcolors" => "dvipsnam.def" };
 
 #[test]
 #[ignore]
 fn can_graphics() {
-  let mut requires = HashMap::default();
-  requires.insert("colors", "dvipsnam.def");
-  requires.insert("xcolors", "dvipsnam.def");
-  rtx_tests("tests/graphics", Some(requires), None);
+  rtx_tests("tests/graphics", Some(&REQUIRES), None);
 }
