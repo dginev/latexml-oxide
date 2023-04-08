@@ -479,7 +479,7 @@ LoadDefinitions!(state, {
   Let!("\\empty", "\\@empty");
   //DefMacro!("\\null", "\hbox{}");
   Let!("\\bgroup", T_BEGIN!());
-  Let!("\\egroup", T_END.clone());
+  Let!("\\egroup", T_END!());
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
 

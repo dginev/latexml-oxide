@@ -1181,7 +1181,7 @@ pub fn build_invocation<T: Into<Token>>(
         if let Some(arg) = arg_opt {
           wrapped.append(&mut arg.unlist());
         }
-        wrapped.push(T_END.clone());
+        wrapped.push(T_END!());
         wrapped
       })
       .collect();

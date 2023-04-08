@@ -701,7 +701,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
     .flat_map(|t| {
       let mut with_cs = vec![cs.clone(), T_BEGIN!()];
       with_cs.extend(t.unlist());
-      with_cs.push(T_END.clone());
+      with_cs.push(T_END!());
       with_cs
     })
     .collect()

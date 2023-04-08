@@ -70,10 +70,10 @@ LoadDefinitions!(state, {
     let mut tks = first.unlist();
     tks.push(T_BEGIN!());
     tks.append(&mut Expand!(second, gullet).unlist());
-    tks.push(T_END.clone());
+    tks.push(T_END!());
     tks.push(T_BEGIN!());
     tks.append(&mut Expand!(third, gullet).unlist());
-    tks.push(T_END.clone());
+    tks.push(T_END!());
     tks });
 
   DefMacro!("\\@makeother {}", sub[gullet,(arg),state] {

@@ -63,7 +63,7 @@ LoadDefinitions!(state, {
     // WAS:  $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
-    wrapped_tokens.push(T_END.clone());
+    wrapped_tokens.push(T_END!());
     let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
     let frontmatter = match state.lookup_value_mut("frontmatter") {
@@ -221,7 +221,7 @@ LoadDefinitions!(state, {
     for invoked_tag in tags {
       lx_tags.append(&mut invoked_tag.unlist());
     }
-    lx_tags.push(T_END.clone());
+    lx_tags.push(T_END!());
     Ok(Tokens::new(lx_tags))
   });
 

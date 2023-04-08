@@ -8,7 +8,7 @@ LoadDefinitions!(outer_stomach, state, {
     let next = gullet.read_non_space(state);
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
-    let next_test = next.as_ref().unwrap_or(&*T_END);
+    let next_test = next.as_ref().unwrap_or(&*TOKEN_END);
     let which = if XEquals!(&token, next_test) {
       t_if
     } else {
@@ -61,7 +61,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
   DefMacro!("\\@testopt{}{}", sub[gullet,(cmd, option),state] {
-    if gullet.if_next(T_OTHER!("["), state)? {
+    if gullet.if_next(&T_OTHER!("["), state)? {
       Ok(cmd)
     } else {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))

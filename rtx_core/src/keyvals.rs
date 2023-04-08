@@ -18,7 +18,7 @@ use crate::document::Document;
 // use crate::list::List;
 use crate::keyval::KeyVal;
 use crate::state::State;
-use crate::token::{Catcode, Token, T_END};
+use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
 
@@ -568,7 +568,7 @@ impl KeyVals {
                 if let Some(balanced) = gullet.read_balanced(false, state)? {
                   rest.append(&mut balanced.unlist());
                 }
-                rest.push(T_END.clone());
+                rest.push(T_END!());
               }
               // record for keyvals
               toks.push(tok);

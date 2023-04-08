@@ -276,7 +276,7 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   } else {
     let mut wrapped = vec![T_BEGIN!()];
     wrapped.append(&mut ts);
-    wrapped.push(T_END.clone());
+    wrapped.push(T_END!());
     Ok(wrapped)
   }
 }
@@ -341,7 +341,7 @@ LoadDefinitions!(state, {
   "###,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END.clone(), T_SUPER!(), revert_script(arg,state)?)) }
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
   );
   DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
@@ -351,25 +351,25 @@ LoadDefinitions!(state, {
   "###,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END.clone(), T_SUB!(), revert_script(arg,state)?)) }
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
   );
 
   DefMacro!("'", sub[gullet,_args,state] {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
-    while gullet.if_next(T_OTHER!("'"), state)? {
+    while gullet.if_next(&T_OTHER!("'"), state)? {
       gullet.read_token(state);
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(T_SUPER!(), state)? {
+    if gullet.if_next(&*TOKEN_SUPER, state)? {
       gullet.read_token(state);
       sup.extend(gullet.read_arg(state)?.unlist());
     }
-    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END.clone())
+    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
   },
   mathactive => true); // Only in math!
 });

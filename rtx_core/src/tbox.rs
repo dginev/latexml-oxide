@@ -1,5 +1,6 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
@@ -7,6 +8,7 @@ use std::sync::Arc;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
+use crate::common::arena;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -20,7 +22,7 @@ use crate::{BoxOps, Digested};
 #[derive(Debug, Clone)]
 pub struct Tbox {
   /// plain-text content
-  pub text: String,
+  pub text: SymbolU32,
   /// associated font for `text`
   pub font: Arc<Font>,
   /// source location where the box originated
@@ -34,7 +36,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text: String::new(),
+      text: arena::pin(""),
       font: Arc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),
@@ -51,7 +53,7 @@ impl PartialEq for Tbox {
 //======================================================================
 // Exported constructors
 impl fmt::Display for Tbox {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.text) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", arena::resolve(self.text)) }
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
@@ -115,7 +117,7 @@ impl Tbox {
       }
       let font = Arc::new(font.specialize(&text));
       Tbox {
-        text,
+        text: arena::pin(text),
         font, // $locator,
         properties,
         tokens,
@@ -123,7 +125,7 @@ impl Tbox {
       }
     } else {
       Tbox {
-        text,
+        text: arena::pin(text),
         font, // $locator,
         properties,
         tokens,
@@ -132,7 +134,7 @@ impl Tbox {
     }
   }
   /// checks if the text content is empty
-  pub fn is_empty(&self) -> bool { self.text.is_empty() }
+  pub fn is_empty(&self) -> bool { arena::resolve(self.text).is_empty() }
 }
 
 impl BoxOps for Tbox {
@@ -146,11 +148,11 @@ impl BoxOps for Tbox {
     self.properties.insert(key.to_string(), value.into());
   }
   fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
-    Ok(Cow::Borrowed(self.text.as_str()))
+    Ok(Cow::Borrowed(arena::resolve(self.text)))
   }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
-    let text = &self.text;
+    let text = self.get_string(state)?;
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(Stored::String(s)) => s.as_str(),
@@ -160,13 +162,13 @@ impl BoxOps for Tbox {
     if !text.is_empty() {
       if mode == "math" {
         Ok(vec![document.insert_math_token(
-          text,
+          &text,
           Stored::cast_to_string_hash(&self.properties),
           Some(font),
           state,
         )?])
       } else {
-        match document.open_text(text, font, state)? {
+        match document.open_text(&text, font, state)? {
           None => Ok(Vec::new()),
           Some(node) => Ok(vec![node]),
         }

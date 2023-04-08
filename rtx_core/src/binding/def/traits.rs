@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
+use crate::common::arena;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
@@ -138,7 +139,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         };
         font.compute_boxes_size(
           &[Digested::from(Tbox {
-            text: sized_data.clone(),
+            text: arena::pin(&sized_data),
             ..Tbox::default()
           })],
           HashMap::default(),

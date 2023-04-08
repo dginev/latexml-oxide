@@ -115,7 +115,7 @@ LoadDefinitions!(state, {
     },
     after_digest => sub[stomach, _args, state] {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),
-        T_BEGIN!(), T_CS!("\\abstractname"), T_END.clone()), state)?;
+        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
       let regurgitated = List::new(stomach.regurgitate(), state);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
@@ -133,7 +133,7 @@ LoadDefinitions!(state, {
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
   DefMacro!("\\abstract", sub[gullet, _args, state] {
-    if gullet.if_next(T_BEGIN!(), state)? {
+    if gullet.if_next(&*TOKEN_BEGIN, state)? {
       T_CS!("\\abstract@onearg")
     } else {
       T_CS!("\\begin{abstract}")

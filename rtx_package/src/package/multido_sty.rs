@@ -60,7 +60,7 @@ LoadDefinitions!(state, {
           inits.push(var.clone());
           inits.push(T_BEGIN!());
           inits.extend(init.unlist());
-          inits.push(T_END.clone());
+          inits.push(T_END!());
           if gullet.read_keyword(&["+"], state)?.is_none() {
             Error!("expected", "+", gullet, state, "Missing + in multido variables");
           }
@@ -92,7 +92,7 @@ LoadDefinitions!(state, {
           steps.push(var);
           steps.push(T_BEGIN!());
           steps.extend(step.unlist());
-          steps.push(T_END.clone());
+          steps.push(T_END!());
           if gullet.read_keyword(&[","], state)?.is_none() {
             break;
           }
