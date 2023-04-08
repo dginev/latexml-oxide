@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use rtx::core::DigestionAPI;
+use rtx::core_interface::DigestionAPI;
 use rtx_core::{Core, CoreOptions};
 
 /// Convenience function for iteratively executing rtx under a Bencher

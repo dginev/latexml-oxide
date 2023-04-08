@@ -1,8 +1,6 @@
 use crate::package::*;
 
-lazy_static! {
-  static ref LEADING_BACKSLASH_RE: Regex = Regex::new(r"^\\").unwrap();
-}
+static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
 
 LoadDefinitions!(state, {
   AssignValue!("BASE_URL", "");

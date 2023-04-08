@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::error::Error;
 
@@ -130,12 +130,12 @@ fn _pragma_letter_blocks(name: &str) -> String {
   let (base, sep, lexeme) = distill_lexeme(name);
   let lexeme_pragmatic = if lexeme.len() == 1 {
     let letter = lexeme.chars().next().unwrap();
-    match PRAGMATIC_BLOCK_MAP.get(&letter) {
+    match _PRAGMATIC_BLOCK_MAP.get(&letter) {
       Some(block) => block,
       None => lexeme,
     }
   } else if let Some(greek_letter) = greek_name_to_letter(lexeme) {
-    match PRAGMATIC_BLOCK_MAP.get(&greek_letter) {
+    match _PRAGMATIC_BLOCK_MAP.get(&greek_letter) {
       Some(block_name) => block_name,
       None => lexeme,
     }
@@ -604,41 +604,37 @@ pub fn name_is_functional_or_id(name: &str) -> bool {
   name.starts_with("ID") || name_is_functional(name)
 }
 
-lazy_static! {
-  static ref PRAGMATIC_BLOCK_MAP : HashMap<char, String> = {
-    // generally, we can observe that the latin alphabet shares "intent"
-    // in blocks of 3 letter in mathematics,
-    // as a fast-and-loose rule of thumb. a-e is an exception as
-    // a rather stable 5 letter block with shared utility.
-    let mut map = HashMap::default();
-    // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
-    let latin_blocks = [
-      ('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
-    // |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
-    let greek_blocks = [
-      ('α','γ'),('ζ','θ'),('ι','κ'),('λ','ξ'),('ο','ρ'),('σ','υ'),('ϕ','ψ')];
-    // | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
-    let up_greek_blocks = [('Α','Γ'),('Ζ','Θ'),('Ι','Κ'),('Λ','Ξ'),('Ο','Ρ'),('Σ','Υ'),('Φ','Ψ')];
-
-    for (start,end) in latin_blocks.iter() {
-      let mark = format!("{start}{end}");
-      let up_start = start.to_ascii_uppercase();
-      let up_end = end.to_ascii_uppercase();
-      for c_u8 in (*start as u8) ..= (*end as u8) {
-        map.insert(c_u8.into(), mark.clone());
-      }
-      let up_mark = format!("{up_start}{up_end}");
-      for c_u8 in (up_start as u8)..=(up_end as u8) {
-        map.insert(c_u8.into(), up_mark.clone());
-      }
+static _PRAGMATIC_BLOCK_MAP : Lazy<HashMap<char, String>> = Lazy::new(|| {
+  // generally, we can observe that the latin alphabet shares "intent"
+  // in blocks of 3 letter in mathematics,
+  // as a fast-and-loose rule of thumb. a-e is an exception as
+  // a rather stable 5 letter block with shared utility.
+  let mut map = HashMap::default();
+  // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
+  let latin_blocks = [
+    ('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
+  // |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
+  let greek_blocks = [
+    ('α','γ'),('ζ','θ'),('ι','κ'),('λ','ξ'),('ο','ρ'),('σ','υ'),('ϕ','ψ')];
+  // | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
+  let up_greek_blocks = [('Α','Γ'),('Ζ','Θ'),('Ι','Κ'),('Λ','Ξ'),('Ο','Ρ'),('Σ','Υ'),('Φ','Ψ')];
+  for (start,end) in latin_blocks.iter() {
+    let mark = format!("{start}{end}");
+    let up_start = start.to_ascii_uppercase();
+    let up_end = end.to_ascii_uppercase();
+    for c_u8 in (*start as u8) ..= (*end as u8) {
+      map.insert(c_u8.into(), mark.clone());
     }
-
-    for (start,end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
-      let mark = format!("{start}{end}");
-      for c_u32 in (*start as u32) ..= (*end as u32) {
-        map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
-      }
+    let up_mark = format!("{up_start}{up_end}");
+    for c_u8 in (up_start as u8)..=(up_end as u8) {
+      map.insert(c_u8.into(), up_mark.clone());
     }
-    map
-  };
-}
+  }
+  for (start,end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
+    let mark = format!("{start}{end}");
+    for c_u32 in (*start as u32) ..= (*end as u32) {
+      map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
+    }
+  }
+  map
+});

@@ -1,10 +1,8 @@
 use crate::package::*;
-lazy_static! {
-  static ref LEAD_W_COLON_RE: Regex = Regex::new(r"^(\w+):").unwrap();
-  static ref UNTIL_SPEC: Regex = Regex::new("^\\w?Until(\\w*):").unwrap();
-  static ref EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex =
-    Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap();
-}
+static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
+static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
+static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(||
+    Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap());
 //=======================
 // -- Main Definitions --
 //=======================

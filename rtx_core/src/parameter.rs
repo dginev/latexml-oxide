@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use proc_macro2::TokenStream; // use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens};
 use regex::Regex;
@@ -38,10 +38,8 @@ pub type ReaderClosure = Arc<ReaderFn>;
 pub type ReversionClosure =
   Arc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
 
-lazy_static! {
-  static ref LAST_WCHAR_RE: Regex = Regex::new(r"\w$").unwrap();
-  static ref FIRST_WCHAR_RE: Regex = Regex::new(r"^\w").unwrap();
-}
+static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
+static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
@@ -118,10 +116,8 @@ impl Object for Parameter {
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 
-lazy_static! {
-  static ref OPTIONAL_REGEX: Regex = Regex::new(r"^Optional(.+)$").unwrap();
-  static ref SKIP_REGEX: Regex = Regex::new(r"^Skip(.+)$").unwrap();
-}
+static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
+static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 impl Parameter {
   pub fn new(name: Cow<'static, str>, spec: Cow<'static, str>, state: &mut State) -> Result<Self> {

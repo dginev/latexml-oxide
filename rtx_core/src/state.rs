@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
@@ -33,23 +33,21 @@ use crate::util::pathname;
 
 static CODE_TEX_EXT: &str = ".code.tex";
 
-lazy_static! {
-  /// regex for *.tex and *.bib
-  static ref TEX_OR_BIB_EXT_RE: Regex = Regex::new(r"\.(tex|bib)$").unwrap();
-  /// Used in conversion to scaled points
-  pub static ref UNITS: HashMap<String, f64> = map!(
-    "pt" => 65536.0,
-    "pc" => 12.0 * 65536.0,
-    "in" => 72.27 * 65536.0,
-    "bp" => 72.27 * 65536.0 / 72.0,
-    "px" => 72.27 * 65536.0 / 72.0,   // Assume px=bp ?
-    "cm" => 72.27 * 65536.0 / 2.54,
-    "mm" => 72.27 * 65536.0 / 2.54 / 10.0,
-    "dd" => 1238.0 * 65536.0 / 1157.0,
-    "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0,
-    "sp" => 1.0
-  );
-}
+/// regex for *.tex and *.bib
+static TEX_OR_BIB_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.(tex|bib)$").unwrap());
+/// Used in conversion to scaled points
+pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| map!(
+  "pt" => 65536.0,
+  "pc" => 12.0 * 65536.0,
+  "in" => 72.27 * 65536.0,
+  "bp" => 72.27 * 65536.0 / 72.0,
+  "px" => 72.27 * 65536.0 / 72.0,   // Assume px=bp ?
+  "cm" => 72.27 * 65536.0 / 2.54,
+  "mm" => 72.27 * 65536.0 / 2.54 / 10.0,
+  "dd" => 1238.0 * 65536.0 / 1157.0,
+  "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0,
+  "sp" => 1.0
+));
 
 /// installation scope in the State tables
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -322,16 +320,16 @@ impl Default for State {
     }
   }
 }
-lazy_static! {
-  pub static ref STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Style),
-    ..StateOptions::default()
-  }));
-  pub static ref STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Standard),
-    ..StateOptions::default()
-  }));
-}
+
+pub static STY_STATE: Lazy<RwLock<State>> = Lazy::new(|| RwLock::new(State::new(StateOptions {
+  catcodes: Some(Catcodes::Style),
+  ..StateOptions::default()
+})));
+pub static STD_STATE: Lazy<RwLock<State>> = Lazy::new(|| RwLock::new(State::new(StateOptions {
+  catcodes: Some(Catcodes::Standard),
+  ..StateOptions::default()
+})));
+
 /// State fields allowed for customization during construction
 #[derive(Default)]
 pub struct StateOptions {

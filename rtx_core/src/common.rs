@@ -1,3 +1,4 @@
+pub mod arena;
 #[macro_use]
 pub mod error;
 pub mod cleaners;

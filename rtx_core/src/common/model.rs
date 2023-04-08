@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
@@ -22,13 +22,11 @@ use libxml::tree::Node;
 pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
-lazy_static! {
-  static ref PREFIXED_LOCALNAME_RE: Regex = Regex::new(r"^([^:]+):(.+)$").unwrap();
-  static ref CAPTURE_TAG_RE: Regex = Regex::new(r"(.*?:)?_Capture_$").unwrap();
-  static ref TAG_MODEL_LINE: Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
-  static ref CLASS_MODEL_LINE: Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
-  static ref NAMESPACE_MODEL_LINE: Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
-}
+static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
+static CAPTURE_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(.*?:)?_Capture_$").unwrap());
+static TAG_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static CLASS_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
+static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 #[derive(Default)]
 pub struct TagFrame {

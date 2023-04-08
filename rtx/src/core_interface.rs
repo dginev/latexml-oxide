@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
@@ -25,11 +25,10 @@ use rtx_package::{
   input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
 };
 
-lazy_static! {
-  static ref CLS_EXT_REGEX: Regex = Regex::new(r"\.cls$").unwrap();
-  static ref STY_EXT_REGEX: Regex = Regex::new(r"\.sty$").unwrap();
-  static ref LATEX_OPTION_REGEX: Regex = Regex::new(r"^\[([^\]]*)\]").unwrap();
-}
+static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());
+static STY_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.sty$").unwrap());
+static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
+
 
 #[derive(Default)]
 pub struct DigestionOptions {

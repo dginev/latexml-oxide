@@ -2,7 +2,7 @@ pub mod helpers;
 pub mod resource;
 pub mod tag;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
@@ -32,27 +32,26 @@ use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
 use crate::Tbox;
 use crate::{BoxOps, Digested, DigestedData};
 
-lazy_static! {
-  static ref HAS_NONSPACE_RE: Regex = Regex::new(r"\S").unwrap();
-  static ref ONLY_SPACE_RE: Regex = Regex::new(r"^\s+$").unwrap();
-  static ref DASHES_RE: Regex = Regex::new(r"\-\-+").unwrap();
-  static ref NON_MERGEABLE_ATTRIBUTES : HashSet<&'static str> =
+
+  static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
+  static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
+  static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
+  static NON_MERGEABLE_ATTRIBUTES : Lazy<HashSet<&'static str>> = Lazy::new(||
     HashSet::from(["about","aboutlabelref","aboutidref",
    "resource","resourcelabelref","resourceidref",
    "property","rel","rev","tyupeof","datatype",
-   "content","data","datamimetype","dataencoding"]);
+   "content","data","datamimetype","dataencoding"]));
   // When merging attributes of two nodes, some attributes should be combined
   // Merged space separated
-  static ref MERGE_ATTRIBUTE_SPACEJOIN : HashSet<&'static str> =
-    HashSet::from(["class","lists","inlist","labels"]);
+  static MERGE_ATTRIBUTE_SPACEJOIN : Lazy<HashSet<&'static str>> =
+    Lazy::new(|| HashSet::from(["class","lists","inlist","labels"]));
   // Merged ";" separated
-  static ref MERGE_ATTRIBUTE_SEMICOLONJOIN : HashSet<&'static str> =
-    HashSet::from(["cssstyle"]);
+  static MERGE_ATTRIBUTE_SEMICOLONJOIN : Lazy<HashSet<&'static str>> =
+    Lazy::new(|| HashSet::from(["cssstyle"]));
   // Summed lengths
-  static ref MERGE_ATTRIBUTE_SUMLENGTH : HashSet<&'static str> =
-    HashSet::from(["xoffset","yoffset","lpadding","rpadding","xtranslate",
-    "ytranslate"]);
-}
+  static MERGE_ATTRIBUTE_SUMLENGTH : Lazy<HashSet<&'static str>> =
+    Lazy::new(|| HashSet::from(["xoffset","yoffset","lpadding","rpadding","xtranslate",
+    "ytranslate"]));
 
 pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";

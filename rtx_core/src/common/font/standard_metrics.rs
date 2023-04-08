@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
 pub struct MetricData {
@@ -37,8 +37,7 @@ impl Default for MetricData {
   }
 }
 
-lazy_static! {
-  pub static ref STDMETRICS: HashMap<&'static str, MetricData> = raw_map!(
+pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| raw_map!(
   "amsa" => MetricData {
     quad: 65536.18,
     encoding: "AMSa",
@@ -1232,5 +1231,4 @@ lazy_static! {
     exheight: 28216.87,
     ..MetricData::default()}
 
-  );
-}
+  ));

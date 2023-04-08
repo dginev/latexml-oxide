@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
@@ -23,9 +23,8 @@ use crate::Digested;
 
 use crate::binding::def::dialect::def_macro;
 
-lazy_static! {
-  static ref QUOTE_WRAPPED: Regex = Regex::new("^\"(.+)\"$").unwrap();
-}
+static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap());
+
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 pub struct InputDefinitionOptions {
   /// an optional extension (such as "sty")
