@@ -5,7 +5,6 @@ use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::{s, Explode, T_CS, T_OTHER, T_SPACE};
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
 use std::collections::VecDeque;
 
 #[test]

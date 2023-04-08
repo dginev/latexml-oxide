@@ -95,7 +95,7 @@ pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let name = token.get_string();
   (name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == state.lookup_meaning(&T_RELAX)))
+    && (meaning.is_none() || (meaning == state.lookup_meaning(&T_CS!("\\relax"))))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -491,8 +491,8 @@ pub fn def_math_dual(
           } else {
           } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
-        dtks.push(T_END!());
-        dtks.push(T_END!());
+        dtks.push(T_END.clone());
+        dtks.push(T_END.clone());
         dtks.push(T_BEGIN!());
         dtks.push(captured_pres_cs.clone());
         dtks.push(T_BEGIN!());
@@ -502,8 +502,8 @@ pub fn def_math_dual(
           } else {
           } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
-        dtks.push(T_END!());
-        dtks.push(T_END!());
+        dtks.push(T_END.clone());
+        dtks.push(T_END.clone());
 
         Ok(Tokens::new(dtks))
       })),
@@ -1284,16 +1284,16 @@ pub fn dualize_arglist(
             T_CS!("\\lx@xmarg"),
             T_BEGIN!(),
             id.clone().unlist(),
-            T_END!(),
+            T_END.clone(),
             T_BEGIN!(),
             arg_toks.unlist(),
-            T_END!()
+            T_END.clone()
           ))); // put XMArg in presentation
           cargs.push(Some(Tokens!(
             T_CS!("\\lx@xmref"),
             T_BEGIN!(),
             id.unlist(),
-            T_END!()
+            T_END.clone()
           )));
         } else {
           // Hidden arg, put XMArg in content.
@@ -1302,16 +1302,16 @@ pub fn dualize_arglist(
             T_CS!("\\lx@xmarg"),
             T_BEGIN!(),
             id.clone().unlist(),
-            T_END!(),
+            T_END.clone(),
             T_BEGIN!(),
             arg_toks.unlist(),
-            T_END!()
+            T_END.clone()
           )));
           pargs.push(Some(Tokens!(
             T_CS!("\\lx@xmref"),
             T_BEGIN!(),
             id.unlist(),
-            T_END!()
+            T_END.clone()
           )));
         }
       },

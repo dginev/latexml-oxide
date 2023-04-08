@@ -260,7 +260,7 @@ impl From<Number> for MuGlue {
 // TODO: Does this successfully emulate the behavior in latexml?
 //   see example use in gullet::read_tokens_value
 impl From<RegisterValue> for Tokens {
-  fn from(v: RegisterValue) -> Tokens { Tokens!(T_OTHER!(v.value_of())) }
+  fn from(v: RegisterValue) -> Tokens { Tokens!(T_OTHER!(v.value_of().to_string())) }
 }
 
 impl<'a> From<&'a RegisterValue> for Dimension {

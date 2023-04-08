@@ -80,7 +80,7 @@ impl Tbox {
     let _locator = locator_opt;
 
     let tokens = if !text.is_empty() && tokens_opt.is_empty() {
-      Tokens!(T_OTHER!(text))
+      Tokens!(T_OTHER!(&text))
     } else {
       tokens_opt
     };

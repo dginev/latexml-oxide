@@ -53,7 +53,7 @@ LoadDefinitions!(state, {
     sub[stomach, (), state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
-      Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::default(), state)
+      Tbox::new(String::new(), f, None, Tokens!(T_END.clone()), HashMap::default(), state)
     }
   );
 

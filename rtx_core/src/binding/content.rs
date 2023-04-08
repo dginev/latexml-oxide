@@ -726,7 +726,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     state.let_i(
       &T_CS!(s!("\\ds@{}", option)),
-      T_RELAX,
+      T_CS!("\\relax"),
       None,
       stomach.get_gullet_mut(),
     );
@@ -1181,7 +1181,7 @@ pub fn build_invocation<T: Into<Token>>(
         if let Some(arg) = arg_opt {
           wrapped.append(&mut arg.unlist());
         }
-        wrapped.push(T_END!());
+        wrapped.push(T_END.clone());
         wrapped
       })
       .collect();

@@ -521,7 +521,7 @@ impl ToTokens for Token {
     let code = self.get_catcode();
     stream.extend(quote! {
       Token {
-        text: Cow::Borrowed(#text),
+        text: rtx_core::common::arena::pin(#text),
         code: #code,
         smuggled: None
       }

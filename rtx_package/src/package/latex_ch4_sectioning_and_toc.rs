@@ -73,7 +73,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
           T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
-        tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
+        tokens.extend(vec![T_END.clone(), T_BEGIN!(), T_END.clone()]);
       } else if level_int > CounterValue!("secnumdepth", state).value_of() ||
         state.lookup_bool("no_number_sections") {
         // No number, but in TOC
@@ -81,12 +81,12 @@ LoadDefinitions!(outer_stomach, outer_state, {
           T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
-        tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
+        tokens.extend(vec![T_END.clone(), T_BEGIN!(), T_OTHER!("toc"), T_END.clone()]);
       } else { // Number and in TOC
         tokens = vec![T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@numbered@section"),
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
-        tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
+        tokens.extend(vec![T_END.clone(), T_BEGIN!(), T_OTHER!("toc"), T_END.clone()]);
       };
       Ok(Tokens::new(tokens))
     },
