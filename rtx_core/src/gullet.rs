@@ -22,7 +22,7 @@ use crate::definition::register::{RegisterType, RegisterValue};
 use crate::definition::Definition;
 use crate::mouth::Mouth;
 use crate::state::State;
-use crate::token::{Catcode, Token, T_END};
+use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
@@ -570,7 +570,7 @@ impl Gullet {
           if let Some(balanced) = self.read_balanced(false, state)? {
             tokens.append(&mut balanced.unlist());
           }
-          tokens.push(T_END.clone());
+          tokens.push(T_END!());
         } else {
           tokens.push(token);
         }
@@ -598,7 +598,7 @@ impl Gullet {
             if let Some(balanced) = self.read_balanced(false, state)? {
               tokens.append(&mut balanced.unlist());
             }
-            tokens.push(T_END.clone()); // Copy directly to result
+            tokens.push(T_END!()); // Copy directly to result
             ring = VecDeque::new(); // and retry
           } else {
             ring.push_back(token);
@@ -712,10 +712,10 @@ impl Gullet {
     }
   }
 
-  pub fn if_next(&mut self, token: Token, state: &mut State) -> Result<bool> {
+  pub fn if_next(&mut self, token: &Token, state: &mut State) -> Result<bool> {
     let mut is_next = false;
     if let Some(tok) = self.read_token(state) {
-      is_next = tok == token;
+      is_next = tok == *token;
       if let Some(mouth) = self.mouth.as_mut() {
         mouth.pushback.push_front(tok); // Unread
       } else {

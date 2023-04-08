@@ -5,7 +5,7 @@
 // grown, but this will be a start
 #[macro_use]
 extern crate rtx_core;
-use rtx_core::token::{Catcode, Token, T_END};
+use rtx_core::token::{Catcode, Token};
 
 #[test]
 fn unit_examples() {
@@ -50,7 +50,7 @@ fn unit_examples() {
     T_LETTER!("a"),
     T_BEGIN!(),
     T_OTHER!("..."),
-    T_END.clone(),
+    T_END!(),
     T_LETTER!("z")
   );
   assert!(balanced.is_balanced(), "Check is balanced");
@@ -76,7 +76,7 @@ fn unit_examples() {
     T_LETTER!("m"),
     T_PARAM!(),
     T_OTHER!("2"),
-    T_END.clone(),
+    T_END!(),
     T_LETTER!("z")
   )
   .pack_parameters();

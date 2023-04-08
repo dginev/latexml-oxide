@@ -158,7 +158,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       let gullet = stomach.get_gullet_mut();
       gullet.skip_spaces(state);
-      if gullet.if_next(T_BEGIN!(), state)? {
+      if gullet.if_next(&*TOKEN_BEGIN, state)? {
         gullet.read_arg(state)?;
       }
       begin_bibliography(stomach, whatsit, state)?;
@@ -185,10 +185,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
           Ok(Tokens!(tok))
         } else {
           gullet.unread_one(tok);
-          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END.clone()))
+          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
         }
       } else {
-        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END.clone()))
+        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
       }
   });
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
@@ -222,10 +222,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
-        tag_tokens.push(T_END.clone());
+        tag_tokens.push(T_END!());
         tag_tokens.extend(
           Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet)?.unlist());
-        tag_tokens.push(T_END.clone());
+        tag_tokens.push(T_END!());
         properties.insert("tags".to_string(),
           stomach.digest(tag_tokens, state)?.into());
         whatsit.set_properties(properties);

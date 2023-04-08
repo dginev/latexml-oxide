@@ -104,7 +104,7 @@ LoadDefinitions!(state, {
         let mut arg_reverted = arg.iter().map(|t| t.clone().revert()).collect();
         read_tokens.append(&mut arg_reverted);
       }
-      read_tokens.push(T_END.clone());
+      read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     })
   );
@@ -127,7 +127,7 @@ LoadDefinitions!(state, {
        let mut arg_reverted = arg.iter().map(|t| t.clone().revert()).collect();
        read_tokens.append(&mut arg_reverted);
      }
-     read_tokens.push(T_END.clone());
+     read_tokens.push(T_END!());
      Ok(Tokens::new(read_tokens))
     })
   );
@@ -287,7 +287,7 @@ LoadDefinitions!(state, {
       } else if token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
         tokens.extend(gullet.read_balanced(false, state)?.unwrap_or_default().unlist());
-        tokens.push(T_END.clone());
+        tokens.push(T_END!());
       } else if let Some(defn) = state.lookup_definition_stored(&token) {
         let args = defn.read_arguments(gullet, state)?;
         tokens.extend(Invocation!(token, args, gullet, state)?.unlist());
@@ -320,7 +320,7 @@ LoadDefinitions!(state, {
     let arg_rev : Vec<Token> = arg.into_iter().map(Token::revert).collect();
     let mut tks = vec![T_BEGIN!()];
     tks.extend(arg_rev);
-    tks.push(T_END.clone());
+    tks.push(T_END!());
     Ok(Tokens::new(tks))
   })
   );
@@ -351,7 +351,7 @@ LoadDefinitions!(state, {
     },
     pack_parameters => true,
     reversion      => reversion!(gullet, arg, _inner, _extra, _state, {
-      Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END.clone())) })
+      Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) })
   );
 
   // Read a matching keyword, eg. Match:=
@@ -393,7 +393,7 @@ LoadDefinitions!(state, {
         let mut reverted_arg = arg.iter().map(|t| t.clone().revert()).collect();
         read_tokens.append(&mut reverted_arg);
       }
-      read_tokens.push(T_END.clone());
+      read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }),
     semiverbatim => Some(Vec::new()));
@@ -437,7 +437,7 @@ LoadDefinitions!(state, {
       let mut reverted = vec![T_BEGIN!()];
       let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
-      reverted.push(T_END.clone());
+      reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     })
   );
@@ -469,7 +469,7 @@ LoadDefinitions!(state, {
       let mut reverted = vec![T_BEGIN!()];
       let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
-      reverted.push(T_END.clone());
+      reverted.push(T_END!());
       Ok(Tokens::new(reverted))
     })
   );
@@ -483,7 +483,7 @@ LoadDefinitions!(state, {
       let mut read_tokens = vec!(T_BEGIN!());
       let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
       read_tokens.append(&mut reverted_arg);
-      read_tokens.push(T_END.clone());
+      read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }
   }));
@@ -944,7 +944,7 @@ LoadDefinitions!(state, {
     gullet: &mut Gullet,
     state: &mut State,
   ) -> Result<Tokens> {
-    if gullet.if_next(T_OTHER!("["), state)? {
+    if gullet.if_next(&T_OTHER!("["), state)? {
       let kvs: KeyVals = keyvals_aux(
         gullet,
         Some(T_OTHER!("]")),
@@ -1043,7 +1043,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
       reversion => reversion!(gullet, arg, _inner, _extra, _state, {
-        Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END.clone())) })
+        Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!())) })
     );
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!

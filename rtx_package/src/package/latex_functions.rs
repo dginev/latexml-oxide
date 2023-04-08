@@ -66,19 +66,19 @@ pub fn make_note_tags(
             T_CS!(s!("\\the{counter}")),
             T_BEGIN!(),
             tag.revert(state)?,
-            T_END.clone(),
+            T_END!(),
             T_CS!("\\def"),
             T_CS!(s!("\\typerefnum@{counter}")),
             T_BEGIN!(),
             T_CS!(s!("\\{counter}typerefname")),
             T_SPACE!(),
             tag.revert(state)?,
-            T_END.clone(),
+            T_END!(),
             T_CS!("\\lx@make@tags"),
             T_BEGIN!(),
             T_OTHER!(counter),
-            T_END.clone(),
-            T_END.clone()
+            T_END!(),
+            T_END!()
           ),
           state,
         )?

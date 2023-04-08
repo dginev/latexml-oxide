@@ -622,7 +622,7 @@ impl Mouth {
       },
       END => {
         if ch == '}' {
-          Some(T_END.clone())
+          Some(T_END!())
         } else {
           Some(CharToken!(ch, END))
         }

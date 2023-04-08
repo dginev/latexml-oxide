@@ -18,6 +18,7 @@ use std::sync::Arc;
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
+use crate::common::arena;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml::{self, XML_NS};
@@ -2928,7 +2929,7 @@ impl Document {
     attrib.insert(s!("type"), resource.mimetype);
     attrib.insert(s!("media"), resource.media);
     let content_box = Digested::from(Tbox {
-      text: resource.content,
+      text: arena::pin(resource.content),
       ..Tbox::default()
     });
     self.insert_element("ltx:resource", vec![&content_box], Some(attrib), state)?;

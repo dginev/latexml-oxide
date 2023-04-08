@@ -649,8 +649,8 @@ pub fn ref_step_item_counter(
     let reverted_tag = (*tag).clone().revert();
     tag_tokens.extend(reverted_tag.clone());
     tag_tokens.extend(vec![
-      T_END.clone(),
-      T_END.clone(),
+      T_END!(),
+      T_END!(),
       T_CS!("\\def"),
       T_CS!(s!("\\typerefnum@{counter}")),
       T_BEGIN!(),
@@ -658,7 +658,7 @@ pub fn ref_step_item_counter(
       T_SPACE!(),
     ]);
     tag_tokens.extend(reverted_tag);
-    tag_tokens.push(T_END.clone());
+    tag_tokens.push(T_END!());
     tag_tokens.extend(
       build_invocation(
         T_CS!("\\lx@make@tags"),
@@ -668,7 +668,7 @@ pub fn ref_step_item_counter(
       )?
       .unlist(),
     );
-    tag_tokens.push(T_END.clone());
+    tag_tokens.push(T_END!());
 
     let tags = stomach.digest(tag_tokens, state)?;
     if !tags.is_empty() {

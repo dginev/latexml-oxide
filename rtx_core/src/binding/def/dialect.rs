@@ -11,6 +11,7 @@ use crate::binding::counter::dialect::step_counter_gullet;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::font::Font;
 use crate::common::object::Object;
+use crate::common::arena;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
@@ -491,8 +492,8 @@ pub fn def_math_dual(
           } else {
           } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
-        dtks.push(T_END.clone());
-        dtks.push(T_END.clone());
+        dtks.push(T_END!());
+        dtks.push(T_END!());
         dtks.push(T_BEGIN!());
         dtks.push(captured_pres_cs.clone());
         dtks.push(T_BEGIN!());
@@ -502,8 +503,8 @@ pub fn def_math_dual(
           } else {
           } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
-        dtks.push(T_END.clone());
-        dtks.push(T_END.clone());
+        dtks.push(T_END!());
+        dtks.push(T_END!());
 
         Ok(Tokens::new(dtks))
       })),
@@ -632,7 +633,7 @@ pub fn def_math_primitive(
         });
 
         Ok(vec![Digested::from(Tbox {
-          text: presentation.clone(),
+          text: arena::pin(&presentation),
           tokens: Tokens!(cs.clone()),
           font,
           properties: properties.to_hash_stored(),
@@ -1284,16 +1285,16 @@ pub fn dualize_arglist(
             T_CS!("\\lx@xmarg"),
             T_BEGIN!(),
             id.clone().unlist(),
-            T_END.clone(),
+            T_END!(),
             T_BEGIN!(),
             arg_toks.unlist(),
-            T_END.clone()
+            T_END!()
           ))); // put XMArg in presentation
           cargs.push(Some(Tokens!(
             T_CS!("\\lx@xmref"),
             T_BEGIN!(),
             id.unlist(),
-            T_END.clone()
+            T_END!()
           )));
         } else {
           // Hidden arg, put XMArg in content.
@@ -1302,16 +1303,16 @@ pub fn dualize_arglist(
             T_CS!("\\lx@xmarg"),
             T_BEGIN!(),
             id.clone().unlist(),
-            T_END.clone(),
+            T_END!(),
             T_BEGIN!(),
             arg_toks.unlist(),
-            T_END.clone()
+            T_END!()
           )));
           pargs.push(Some(Tokens!(
             T_CS!("\\lx@xmref"),
             T_BEGIN!(),
             id.unlist(),
-            T_END.clone()
+            T_END!()
           )));
         }
       },
