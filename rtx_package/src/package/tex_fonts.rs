@@ -385,7 +385,7 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
@@ -429,7 +429,7 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&T_CS!("\\relax")).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();
     // eprintln!(" ** {} + {}", value,csname);
@@ -453,7 +453,7 @@ LoadDefinitions!(outer_state, {
               vec![CharToken!(glyph_c,Catcode::OTHER)]
             } else {
               let v = value.value_of().to_string();
-              vec![T_CS!("\\mathchar"),T_OTHER!(v),T_CS!("\\relax")]
+              vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
             }))
         }
       );

@@ -332,7 +332,7 @@ impl Conditional {
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.read().unwrap().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
+        Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
       } else if stack_frame.read().unwrap().elses {
         // Already seen an \else's at this level?
         let message = s!(
@@ -382,7 +382,7 @@ impl Conditional {
       if stack_frame.read().unwrap().parsing {
         // Defer expanding the \else if we're still parsing the test
         let local_token = state.get_current_token().unwrap();
-        Ok(Tokens!(T_CS!("\\relax"), (*local_token).clone()))
+        Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
         state.set_ifframe(Some(stack_frame));
