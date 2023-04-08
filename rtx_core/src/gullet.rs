@@ -352,7 +352,7 @@ impl Gullet {
       // This is *required to be different* from the noexpand flag, as per the B Book
       for item in expansion.unlist_mut() {
         if item.get_catcode().can_smuggle_the() {
-          let taken = mem::replace(item, T_CS!("\\relax"));
+          let taken = mem::replace(item, T_RELAX!());
           *item = T_SMUGGLE_THE!(taken);
         }
       }

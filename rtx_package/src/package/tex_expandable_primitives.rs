@@ -52,7 +52,7 @@ LoadDefinitions!(outer_state, {
         // treat as active character, if originally such
         token.without_dont_expand()
       } else { // otherwise, treat as relax for comparisons
-        T_CS!("\\relax")
+        T_RELAX!()
       }
     } else {   // normal case, treat token as-is
       token
@@ -283,7 +283,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if state.lookup_meaning(&token).is_none() {
-      state.assign_meaning(&token, state.lookup_meaning(&T_CS!("\\relax")).unwrap().into_owned(), None);
+      state.assign_meaning(&token, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
     }
     token
   });

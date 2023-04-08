@@ -339,6 +339,10 @@ pub static TOKEN_SPACE : Lazy<Token> = Lazy::new(||
 pub static TOKEN_CR : Lazy<Token> = Lazy::new(||
   Token { text: arena::pin("\n"),code: Catcode::SPACE, smuggled: None});
 
+/// constant for T_CS("\relax")
+pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(||
+  Token { text: arena::pin("\\relax"),code: Catcode::CS, smuggled: None});
+
 #[macro_export]
 /// macro for a BEGIN "{" token
 macro_rules! T_BEGIN(() => { (*$crate::token::TOKEN_BEGIN).clone() });
@@ -426,6 +430,11 @@ macro_rules! T_CS {
     }
   };
 }
+
+/// macro for T_CS("\\relax")
+#[macro_export]
+macro_rules! T_RELAX(() => { (*$crate::token::TOKEN_RELAX).clone() });
+
 /// macro for a tracing MARKER token
 #[macro_export]
 macro_rules! T_MARKER {

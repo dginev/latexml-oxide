@@ -726,7 +726,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     state.let_i(
       &T_CS!(s!("\\ds@{}", option)),
-      T_CS!("\\relax"),
+      T_RELAX!(),
       None,
       stomach.get_gullet_mut(),
     );

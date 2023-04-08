@@ -96,7 +96,7 @@ pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let name = token.get_string();
   (name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == state.lookup_meaning(&T_CS!("\\relax"))))
+    && (meaning.is_none() || (meaning == state.lookup_meaning(&*TOKEN_RELAX)))
 }
 
 /// unconditionally wraps a CS token around a string
