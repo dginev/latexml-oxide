@@ -1,6 +1,4 @@
-lazy_static! {
-  static ref DNIR_REX: Regex = Regex::new("^\\\\((?i)[dnir])").unwrap();
-}
+static DNIR_REX: Lazy<Regex> = Lazy::new(|| Regex::new("^\\\\((?i)[dnir])").unwrap());
 
 use crate::package::*;
 #[rustfmt::skip]

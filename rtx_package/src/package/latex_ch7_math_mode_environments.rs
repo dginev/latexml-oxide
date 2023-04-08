@@ -1,9 +1,8 @@
 use crate::package::*;
 use std::sync::Arc;
 
-lazy_static! {
-  static ref STORED_EQUATION_LABEL: Stored = Stored::String(String::from("equation"));
-}
+static STORED_EQUATION_LABEL: Lazy<Stored> = Lazy::new(|| Stored::String(String::from("equation")));
+
 //======================================================================
 // C.7.1 Math Mode Environments
 //======================================================================

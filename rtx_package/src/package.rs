@@ -1,5 +1,5 @@
 #![allow(unreachable_code)]
-pub use lazy_static::lazy_static;
+pub use once_cell::sync::Lazy;
 pub use libxml::tree::{Namespace, Node};
 pub use log;
 pub use regex::Regex;

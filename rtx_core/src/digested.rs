@@ -3,7 +3,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
-                              //use lazy_static::lazy_static;
+                              //use once_cell::sync::Lazy;
 use libxml::tree::Node;
 
 use crate::comment::Comment;

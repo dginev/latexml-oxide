@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::common::error::*;
@@ -13,9 +13,7 @@ use crate::state::{State, STD_STATE};
 use crate::tokens::Tokens;
 use crate::{Digested, RegisterValue};
 
-lazy_static! {
-  static ref SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap();
-}
+static SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap());
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Dimension(pub i64);

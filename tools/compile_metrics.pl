@@ -129,7 +129,7 @@ $latexml->withState(sub {
       print $FH "    ..MetricData::default()}$sep\n";
     }
 
-    print $FH "\n  );\n}\n";
+    print $FH "\n  );\n)\n";
     close($FH);
     print STDERR "Wrote Standard font metrics to $MODULEPATH\n";
     return; });
@@ -143,7 +143,7 @@ sub read_tfm {
 
 BEGIN {
   $HEADER = << 'EoHeader';
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 pub struct MetricData {
@@ -182,7 +182,6 @@ impl Default for MetricData {
   }
 }
 
-lazy_static! {
-  pub static ref STDMETRICS: HashMap<&'static str, MetricData> = raw_map!(
+pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| raw_map!(
 EoHeader
 }

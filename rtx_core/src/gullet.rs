@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
 use std::borrow::Cow;
@@ -25,13 +25,11 @@ use crate::state::State;
 use crate::token::{Catcode, Token, MOCK_TOKEN};
 use crate::tokens::Tokens;
 
-lazy_static! {
-  static ref DIGIT_RE: Regex = Regex::new(r"[0-9]").unwrap();
-  static ref OCT_RE: Regex = Regex::new(r"[0-7]").unwrap();
-  static ref HEX_RE: Regex = Regex::new(r"[0-9A-F]").unwrap();
-  static ref SMUGGLE_THE_COMMANDS: HashSet<&'static str> =
-    set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize");
-}
+static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
+static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
+static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
+static SMUGGLE_THE_COMMANDS: Lazy<HashSet<&'static str>> = Lazy::new(||
+  set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize"));
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {

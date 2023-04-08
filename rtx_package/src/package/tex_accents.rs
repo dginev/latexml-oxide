@@ -2,9 +2,8 @@ use crate::package::*;
 use unicode_normalization::char::compose;
 use unicode_normalization::UnicodeNormalization;
 
-lazy_static! {
-  static ref SPACE_RE: Regex = Regex::new(r"\s").unwrap();
-}
+static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
+
 // Create a box applying an accent to a letter
 // Hopefully, we'll get a Box from digestion with a plain string.
 // Then we can apply combining accents to it.

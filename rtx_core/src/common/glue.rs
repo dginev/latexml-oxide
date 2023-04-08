@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 use std::cmp::Ordering;
@@ -93,14 +93,12 @@ static GLUE_RE_STR: &str = concat!(
   r")?$"
 );
 
-lazy_static! {
-  static ref NUM_RE: Regex = Regex::new(num_re_str!()).unwrap();
-  static ref UNIT_RE: Regex = Regex::new(unit_re_str!()).unwrap();
-  static ref FILL_RE: Regex = Regex::new(fill_re_str!()).unwrap();
-  static ref PLUS_RE: Regex = Regex::new(plus_re_str!()).unwrap();
-  static ref MINUS_RE: Regex = Regex::new(minus_re_str!()).unwrap();
-  static ref GLUE_RE: Regex = Regex::new(GLUE_RE_STR).unwrap();
-}
+static _NUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(num_re_str!()).unwrap());
+static UNIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(unit_re_str!()).unwrap());
+static _FILL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(fill_re_str!()).unwrap());
+static _PLUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(plus_re_str!()).unwrap());
+static _MINUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(minus_re_str!()).unwrap());
+static GLUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(GLUE_RE_STR).unwrap());
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Glue {

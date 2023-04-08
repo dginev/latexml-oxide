@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 
@@ -10,16 +10,18 @@ use crate::state::State;
 use crate::token::*;
 use crate::tokens::Tokens;
 
-lazy_static! {
-  static ref CSNAME_MACRO_RE: Regex = Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap();
-  static ref CS_RE: Regex = Regex::new(r"^(\\[a-zA-Z@]+)").unwrap();
-  static ref SINGLE_CHAR_RE: Regex = Regex::new(r"^(\\.)").unwrap();
-  static ref ACTIVE_CHAR_RE: Regex = Regex::new(r"^(.)").unwrap();
-  static ref DEFAULT_CHECK_RE: Regex = Regex::new(r"^Default:(.*)$").unwrap();
-  static ref NESTED_CHECK_RE: Regex = Regex::new(r"^(\{([^\}]*)\})\s*").unwrap();
-  static ref OPTIONAL_CHECK_RE: Regex = Regex::new(r"^(\[([^\]]*)\])\s*").unwrap();
-  static ref PARAMSPECT_CHECK_RE: Regex = Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap();
-}
+
+static CSNAME_MACRO_RE: Lazy<Regex> = Lazy::new(||
+  Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
+static CS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@]+)").unwrap());
+static SINGLE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\.)").unwrap());
+static ACTIVE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.)").unwrap());
+static DEFAULT_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Default:(.*)$").unwrap());
+static NESTED_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\{([^\}]*)\})\s*").unwrap());
+static OPTIONAL_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\[([^\]]*)\])\s*").unwrap());
+static PARAMSPECT_CHECK_RE: Lazy<Regex> = Lazy::new(||
+  Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap());
+
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_prototype(

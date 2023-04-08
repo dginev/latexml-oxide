@@ -1,8 +1,7 @@
 use crate::package::*;
 // Match negations of many operators
 // our %NOTS
-lazy_static! {
-  static ref MATH_CHAR_NEGATIONS : HashMap<String, &'static str> =
+static MATH_CHAR_NEGATIONS : Lazy<HashMap<String, &'static str>> = Lazy::new(||
     map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
 "\u{2208}" => "\u{2209}",                              //\in=>\notin
 "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
@@ -16,7 +15,7 @@ lazy_static! {
 "\u{22B2}" => "\u{22EA}", "\u{22B3}" => "\u{22EB}",    // lhd, rhd
 "\u{22B4}" => "\u{22EC}", "\u{22B5}" => "\u{22ED}",    // unlhd, unrhd
 "\u{2203}" => "\u{2204}"                              // Exists
-); }
+));
 
 //======================================================================
 // TeX Book, Appendix B. p. 358

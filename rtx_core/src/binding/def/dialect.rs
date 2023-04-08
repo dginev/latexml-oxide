@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::{Borrow, Cow};
 use std::sync::Arc;
@@ -46,26 +46,28 @@ const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "rpadding",
 ];
 
-lazy_static! {
-  /// regex for the prefix of a conditional command sequence
-  pub static ref CONDITIONAL_CS_RE: Regex = Regex::new(r"^\\(?:if(.*)|unless)$").unwrap();
-  /// regex for the prefix of a protocol (such as literal:)
-  pub static ref LEADING_PROTOCOL_RE: Regex = Regex::new(r"^\w+:").unwrap();
-  /// regex for a trailing slash (trivial, but aids replacement of said slash)
-  pub static ref TRAILING_SLASH_RE: Regex = Regex::new(r"/$").unwrap();
-  /// regex for one-or-more spaces
-  pub static ref SPACES_RE: Regex = Regex::new(r"\s+").unwrap();
-  /// regex for ${}^{label}$
-  pub static ref DIRTY_ID_IDIOM_RE: Regex = Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap();
-  /// regex for characters not expected in a usual id attribute
-  pub static ref NON_ID_CHARSET_RE: Regex = Regex::new(r"[^\w_\-.]+").unwrap();
-  /// regex for a strange noisy TeX `\\~{}`
-  pub static ref TILDE_NOISE_RE: Regex = Regex::new(r"\\~\{\}").unwrap();
-  /// regex for a TeX argument specifier or any command sequence
-  pub static ref HAS_ARG_OR_CS : Regex = Regex::new(r"#\d|\\.").unwrap();
-  /// regex for the usual argument placeholders `#1`-`#9`
-  pub static ref ARG_HOLE : Regex = Regex::new(r"#(\d)").unwrap();
-}
+
+/// regex for the prefix of a conditional command sequence
+pub static CONDITIONAL_CS_RE: Lazy<Regex> = Lazy::new(||
+  Regex::new(r"^\\(?:if(.*)|unless)$").unwrap());
+/// regex for the prefix of a protocol (such as literal:)
+pub static LEADING_PROTOCOL_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"^\w+:").unwrap());
+/// regex for a trailing slash (trivial, but aids replacement of said slash)
+pub static TRAILING_SLASH_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"/$").unwrap());
+/// regex for one-or-more spaces
+pub static SPACES_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"\s+").unwrap());
+/// regex for ${}^{label}$
+pub static DIRTY_ID_IDIOM_RE: Lazy<Regex> = Lazy::new(||
+  Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap());
+/// regex for characters not expected in a usual id attribute
+pub static NON_ID_CHARSET_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"[^\w_\-.]+").unwrap());
+/// regex for a strange noisy TeX `\\~{}`
+pub static TILDE_NOISE_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"\\~\{\}").unwrap());
+/// regex for a TeX argument specifier or any command sequence
+pub static HAS_ARG_OR_CS : Lazy<Regex> = Lazy::new(||  Regex::new(r"#\d|\\.").unwrap());
+/// regex for the usual argument placeholders `#1`-`#9`
+pub static ARG_HOLE : Lazy<Regex> = Lazy::new(||  Regex::new(r"#(\d)").unwrap());
+
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {

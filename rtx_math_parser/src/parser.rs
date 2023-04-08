@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use libxml::tree::{Node, NodeType};
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
@@ -19,29 +19,27 @@ use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::tree_builder::TreeBuilder;
 
-lazy_static! {
-  static ref PREFIX_ALIAS : HashMap<&'static str, &'static str> = static_map!(
-      "SUPERSCRIPTOP" => "^",
-      "SUBSCRIPTOP" => "_",
-      "times" => "*",
-      "equals" => "=",
-      "less-than" => "<",
-      "greater-than" => ">",
-      "less-than-or-equals" => "<=",
-      "greater-than-or-equals" => ">=",
-      "much-less-than" => "<<",
-      "much-greater-than" => ">>",
-      "plus" => "+",
-      "minus" => "-",
-      "divide" => "/");
-  // Put infix, along with `binding power'
-  static ref IS_INFIX : HashMap<String, usize> = map!(
-    "METARELOP" => 1,
-    "RELOP"         => 2,    "ARROW"       => 2,
-    "ADDOP"         => 10,   "MULOP"       => 100, "FRACOP" => 100,
-    "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000);
-  static ref PRE_DIGITS_RE : Regex = Regex::new(r"^pre\d+$").unwrap();
-}
+static PREFIX_ALIAS : Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| static_map!(
+    "SUPERSCRIPTOP" => "^",
+    "SUBSCRIPTOP" => "_",
+    "times" => "*",
+    "equals" => "=",
+    "less-than" => "<",
+    "greater-than" => ">",
+    "less-than-or-equals" => "<=",
+    "greater-than-or-equals" => ">=",
+    "much-less-than" => "<<",
+    "much-greater-than" => ">>",
+    "plus" => "+",
+    "minus" => "-",
+    "divide" => "/"));
+// Put infix, along with `binding power'
+static IS_INFIX : Lazy<HashMap<String, usize>> = Lazy::new(|| map!(
+  "METARELOP" => 1,
+  "RELOP"         => 2,    "ARROW"       => 2,
+  "ADDOP"         => 10,   "MULOP"       => 100, "FRACOP" => 100,
+  "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000));
+static PRE_DIGITS_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
 
 pub struct MathParser {
   // grammar: MarpaGrammar,

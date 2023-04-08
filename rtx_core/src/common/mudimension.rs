@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
@@ -8,9 +8,7 @@ use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY_F64};
 use crate::definition::register::RegisterType;
 use crate::{Locator, Object};
 
-lazy_static! {
-  static ref MUDIM_SPEC_RE: Regex = Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap();
-}
+static MUDIM_SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
 
 #[derive(Debug, Copy, Clone, PartialEq, Default, Eq)]
 pub struct MuDimension(pub i64);

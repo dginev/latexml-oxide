@@ -12,7 +12,7 @@ use core::ops::RangeBounds;
 // TODO:
 // use encoding::all::ISO_8859_1;
 // use encoding::{EncoderTrap, Encoding};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::common::error::*;
@@ -22,13 +22,13 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::state::{Scope, State, STD_STATE, STY_STATE};
 use crate::token::*;
-use crate::tokens::Tokens;
+use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
 
-lazy_static! {
-  static ref CS_ENDLINECHAR: Token = T_CS!("\\endlinechar");
-  static ref TRAILING_SPACE_CHARS: Regex = Regex::new("(?s) +$").unwrap();
-}
+
+static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
+static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
+
 
 const READLINE_PROGRESS_QUANTUM: usize = 25;
 
@@ -57,12 +57,12 @@ impl FoodType {
   }
 }
 
-lazy_static! {
-  static ref LASTID: Mutex<u32> = Mutex::new(0);
-  static ref LINEBREAK_REGEX: Regex = Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap();
-  static ref LOWERHEX_REGEX: Regex = Regex::new(r"^[0-9a-f]$").unwrap();
-  static ref SANITIZE_LINE_REGEX: Regex = Regex::new(r"((\\ )*)\s*$").unwrap();
-}
+
+static LASTID: Lazy<Mutex<u32>> = Lazy::new(|| Mutex::new(0));
+static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
+static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
+static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
+
 
 #[derive(Debug, Default)]
 pub struct MouthOptions {
@@ -556,10 +556,7 @@ impl Mouth {
     while let Some(token) = self.read_token(state) {
       tokens.push(token);
     }
-    while let Some(Token {
-      code: Catcode::SPACE,
-      ..
-    }) = tokens.last()
+    while let Some(Token {code: Catcode::SPACE,..}) = tokens.last()
     {
       // Remove trailing space
       tokens.pop();
@@ -799,24 +796,11 @@ impl Mouth {
   pub fn at_eof(&self) -> bool { self.at_eof }
 }
 
-// WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.
-// The State normally contains ALL the bindings, etc and links to other important objects.
-// We CAN do that here, since we are ONLY tokenizing from a new Mouth, bypassing stomach & gullet.
-// However, be careful with any changes.
-//
-// We also allow for explicitly passing the state in, so that one could memoize state creation
-// using lazy_static doesnt work here as State is too complex an object
-
-// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that
-// is actually slow in practice, but it ought to be at least suboptimal.
-// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at
-// compile_time, we can bunch them together as a global object in codegen maybe? Then at least we
-// can optimize the compile pass + avoid runtime tokenization in the literal binding definitions.
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
-    return Tokens::default();
+    return NO_TOKENS;
   }
   match state_opt {
     None => {
@@ -831,7 +815,7 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
 pub fn tokenize_internal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
-    return Tokens::default();
+    return NO_TOKENS;
   }
   let mut state = STY_STATE.write().unwrap();
   Mouth::new(text, None, &mut state)

@@ -61,7 +61,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
-                              //use lazy_static::lazy_static;
+                              //use once_cell::sync::Lazy;
 use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
@@ -79,28 +79,6 @@ use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
-
-// DG: I have experimented with doing the Perl-style "global singleton STATE with interior
-// mutability"     and it just takes away from the elegance and guarantees of Rust style code. It's
-// nasty.     consider that in a long chain of invocations (e.g. \input loading a binding, which
-// loads another binding)     we have a dependency hierarchy of a mutable "&mut state" getting
-// passed around.     During which time we can not *safely* obtain a "reading lock" over a RwLock
-// wrapper around state.
-//
-//     To make anything work, we would need to hide the *entire* API of State behind a lock
-// request/grant/release lifecycle     with a State struct that wraps:
-// State(Arc<RwLock<StateData>>), where each call to say "lookup_value" will have to get+release a
-// lock.
-//
-//     It is certainly possible. But at what cost? Runtime locking + reference counting costs, and
-// then a *real risk* of deadlocking when locking      in complicated call chains. (Remember that
-// RwLock allows for multiple readers, but the moment there is a writer,      no further locks will
-// be granted until the writer is done)
-//
-//      I am leaving the trace that this has been tried. But I will continue to give it my all to
-// avoid the global setup. lazy_static! {
-//   static ref STATE: Arc<RwLock<State>> =
-// Arc::new(RwLock::new(State::new(StateOptions::default()))); }
 
 /// The Core conversion runtime
 pub struct Core {

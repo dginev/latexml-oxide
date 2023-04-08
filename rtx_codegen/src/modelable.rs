@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use proc_macro::TokenStream;
@@ -13,11 +13,9 @@ use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::{fatal, s};
 
-lazy_static! {
-  static ref TAG_MODEL_LINE: Regex = Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap();
-  static ref CLASS_MODEL_LINE: Regex = Regex::new(r"^([^:=]+):=(.*?)$").unwrap();
-  static ref NAMESPACE_MODEL_LINE: Regex = Regex::new(r"^([^=]+)=(.*?)$").unwrap();
-}
+static TAG_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static CLASS_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
+static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   let name: String = match input.attrs[0].parse_meta().unwrap() {

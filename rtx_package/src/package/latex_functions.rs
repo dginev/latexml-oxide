@@ -1,14 +1,12 @@
 use crate::package::*;
 use rustc_hash::FxHashMap as HashMap;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use libxml::tree::Node;
 use regex::Regex;
 
-lazy_static! {
-  static ref NOTE_TEXT_END: Regex = Regex::new("^(\\w+?)text$").unwrap();
-  static ref NOTE_MARK_END: Regex = Regex::new("^(\\w+?)mark$").unwrap();
-}
+static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
+static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
 
 pub fn start_appendices(kind: &str, state: &mut State) { begin_appendices(kind, state) }
 

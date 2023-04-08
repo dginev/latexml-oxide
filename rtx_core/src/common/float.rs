@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
@@ -12,9 +12,7 @@ use crate::mouth;
 use crate::state::State;
 use crate::tokens::Tokens;
 
-lazy_static! {
-  static ref TRAILING_ZEROS: Regex = Regex::new(r"0+$").unwrap();
-}
+static TRAILING_ZEROS: Lazy<Regex> = Lazy::new(|| Regex::new(r"0+$").unwrap());
 
 //======================================================================
 // Strictly speaking, Float isn't part of TeX, but it's handy.

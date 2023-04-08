@@ -108,7 +108,7 @@ LoadDefinitions!(state, {
   // output any frontmatter that was accumulated.
 
   Tag!("ltx:document", after_open_late => sub[document, _node, state] {
-    // this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
+    // this happens only once per conversion, so not a big deal to keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
     let mut frontmatter = match state.remove_value("frontmatter") {
