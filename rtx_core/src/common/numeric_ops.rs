@@ -1,7 +1,6 @@
 use crate::common::glue::Glue;
 use crate::definition::register::RegisterType;
 use crate::token::{Catcode, Token};
-use std::borrow::Cow;
 use std::fmt::Display;
 
 pub const UNITY: i64 = 65536;

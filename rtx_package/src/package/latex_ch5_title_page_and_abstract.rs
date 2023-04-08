@@ -115,7 +115,7 @@ LoadDefinitions!(state, {
     },
     after_digest => sub[stomach, _args, state] {
       let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),
-        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
+        T_BEGIN!(), T_CS!("\\abstractname"), T_END.clone()), state)?;
       let regurgitated = List::new(stomach.regurgitate(), state);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,

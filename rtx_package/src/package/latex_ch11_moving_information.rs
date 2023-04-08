@@ -185,10 +185,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
           Ok(Tokens!(tok))
         } else {
           gullet.unread_one(tok);
-          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END.clone()))
         }
       } else {
-        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+        Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END.clone()))
       }
   });
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
@@ -222,10 +222,10 @@ LoadDefinitions!(outer_stomach, outer_state, {
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
-        tag_tokens.push(T_END!());
+        tag_tokens.push(T_END.clone());
         tag_tokens.extend(
           Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")], gullet)?.unlist());
-        tag_tokens.push(T_END!());
+        tag_tokens.push(T_END.clone());
         properties.insert("tags".to_string(),
           stomach.digest(tag_tokens, state)?.into());
         whatsit.set_properties(properties);
@@ -701,7 +701,7 @@ fn begin_bibliography_clean(
     docid += ".";
   }
   let bibid = s!("{}bib{}", docid, radix::radix_alpha(bibnumber - 1));
-  DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(bibid), scope => Some(Scope::Global));
+  DefMacro!(T_CS!("\\thebibliography@ID"), None, T_OTHER!(&bibid), scope => Some(Scope::Global));
   whatsit.set_property("id", bibid);
   let title_opt = match DigestIf!("\\refname", stomach)? {
     Some(v) => Some(v),

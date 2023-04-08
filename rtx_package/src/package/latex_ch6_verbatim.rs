@@ -22,7 +22,7 @@ LoadDefinitions!(outer_state, {
     state.begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"), state);
     state.assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
-    Let!(&T_ACTIVE!(" "), T_SPACE!());
+    Let!(&T_ACTIVE!(' '), T_SPACE!());
   });
   DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
     before_digest => sub[_stomach,state] { state.end_semiverbatim()?; });
@@ -92,7 +92,7 @@ LoadDefinitions!(outer_state, {
 
   DefPrimitive!("\\@vobeyspaces", sub[stomach, (), state] {
     AssignCatcode!(' ', Catcode::ACTIVE);
-    Let!(&T_ACTIVE!(" "), T_CS!("\\nobreakspace"));
+    Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
   });
 
   // WARNING: Need to be careful about what catcodes are active here
@@ -145,7 +145,7 @@ LoadDefinitions!(outer_state, {
     // Do NOT (necessarily) skip spaces after \verb!!!
     state.assign_catcode(' ', Catcode::ACTIVE, None);
     // Visible space
-    Let!(&T_ACTIVE!(" "), T_OTHER!("\u{2423}"));
+    Let!(&T_ACTIVE!(' '), T_OTHER!("\u{2423}"));
   });
 
   DefConstructor!("\\@internal@verb{} Undigested {}",

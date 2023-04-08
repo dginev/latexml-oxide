@@ -63,7 +63,7 @@ LoadDefinitions!(state, {
     // WAS:  $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
-    wrapped_tokens.push(T_END!());
+    wrapped_tokens.push(T_END.clone());
     let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
     let frontmatter = match state.lookup_value_mut("frontmatter") {
@@ -221,7 +221,7 @@ LoadDefinitions!(state, {
     for invoked_tag in tags {
       lx_tags.append(&mut invoked_tag.unlist());
     }
-    lx_tags.push(T_END!());
+    lx_tags.push(T_END.clone());
     Ok(Tokens::new(lx_tags))
   });
 
@@ -259,7 +259,7 @@ LoadDefinitions!(state, {
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
   DefMacro!("\\lx@counterfor{}", sub[gullet, (ctr_type), state] {
     if let Some(ctr) = LookupMapping!("counter_for_type", &ctr_type.to_string()) {
-      Tokens!(T_OTHER!(ctr))
+      Tokens!(T_OTHER!(ctr.to_string()))
     } else {
       ctr_type
     }

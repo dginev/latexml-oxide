@@ -22,7 +22,7 @@ use crate::definition::register::{RegisterType, RegisterValue};
 use crate::definition::Definition;
 use crate::mouth::Mouth;
 use crate::state::State;
-use crate::token::{Catcode, Token, MOCK_TOKEN};
+use crate::token::{Catcode, Token, T_END};
 use crate::tokens::Tokens;
 
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
@@ -352,7 +352,7 @@ impl Gullet {
       // This is *required to be different* from the noexpand flag, as per the B Book
       for item in expansion.unlist_mut() {
         if item.get_catcode().can_smuggle_the() {
-          let taken = mem::replace(item, MOCK_TOKEN);
+          let taken = mem::replace(item, T_CS!("\\relax"));
           *item = T_SMUGGLE_THE!(taken);
         }
       }
@@ -570,7 +570,7 @@ impl Gullet {
           if let Some(balanced) = self.read_balanced(false, state)? {
             tokens.append(&mut balanced.unlist());
           }
-          tokens.push(T_END!());
+          tokens.push(T_END.clone());
         } else {
           tokens.push(token);
         }
@@ -598,7 +598,7 @@ impl Gullet {
             if let Some(balanced) = self.read_balanced(false, state)? {
               tokens.append(&mut balanced.unlist());
             }
-            tokens.push(T_END!()); // Copy directly to result
+            tokens.push(T_END.clone()); // Copy directly to result
             ring = VecDeque::new(); // and retry
           } else {
             ring.push_back(token);

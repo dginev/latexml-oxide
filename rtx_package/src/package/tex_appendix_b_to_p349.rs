@@ -314,7 +314,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\alloc@@ {}", sub[gullet, (atype_tokens), state] {
     let atype = atype_tokens.to_string();
     let c = s!("allocation @{}", atype);
-    let n = LookupRegisterOrDefault!(c).value_of();
+    let n = LookupRegisterOrDefault!(&c).value_of();
     AssignValue!(&c                  => n + 1,     Some(Scope::Global));
     AssignValue!("\\allocationnumber" => Number!(n), Some(Scope::Global));
   });
@@ -479,7 +479,7 @@ LoadDefinitions!(state, {
   Let!("\\empty", "\\@empty");
   //DefMacro!("\\null", "\hbox{}");
   Let!("\\bgroup", T_BEGIN!());
-  Let!("\\egroup", T_END!());
+  Let!("\\egroup", T_END.clone());
   Let!("\\endgraf", "\\par");
   Let!("\\endline", "\\cr");
 
@@ -487,7 +487,7 @@ LoadDefinitions!(state, {
 
   // Use \r for the newline from TeX!!!
   DefMacro!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
-  Let!(&T_ACTIVE!("\r"), T_CS!("\\par")); // (or is this just LaTeX?)
+  Let!(&T_ACTIVE!('\r'), T_CS!("\\par")); // (or is this just LaTeX?)
 
   Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
 
@@ -496,15 +496,15 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\obeyspaces", {
     AssignCatcode!(' ', Catcode::ACTIVE);
-    Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
+    Let!(&T_ACTIVE!(' '), T_CS!("\\space"));
   });
   // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
   // EVEN before it is made active. (see p.380)
-  Let!(&T_ACTIVE!(" "), T_CS!("\\space"));
+  Let!(&T_ACTIVE!(' '), T_CS!("\\space"));
 
   DefPrimitive!("\\obeylines", {
     AssignCatcode!('\r', Catcode::ACTIVE);
-    Let!(&T_ACTIVE!("\r"), T_CS!("\\@break")); // More appropriate than \par, I think?
+    Let!(&T_ACTIVE!('\r'), T_CS!("\\@break")); // More appropriate than \par, I think?
   });
 
   DefConstructor!("\\@break", "<ltx:break/>");

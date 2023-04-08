@@ -276,7 +276,7 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   } else {
     let mut wrapped = vec![T_BEGIN!()];
     wrapped.append(&mut ts);
-    wrapped.push(T_END!());
+    wrapped.push(T_END.clone());
     Ok(wrapped)
   }
 }
@@ -341,7 +341,7 @@ LoadDefinitions!(state, {
   "###,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
+      Ok(Tokens!(T_BEGIN!(), T_END.clone(), T_SUPER!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
   );
   DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
@@ -351,7 +351,7 @@ LoadDefinitions!(state, {
   "###,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
+      Ok(Tokens!(T_BEGIN!(), T_END.clone(), T_SUB!(), revert_script(arg,state)?)) }
     // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
   );
 
@@ -369,7 +369,7 @@ LoadDefinitions!(state, {
       gullet.read_token(state);
       sup.extend(gullet.read_arg(state)?.unlist());
     }
-    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
+    Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END.clone())
   },
   mathactive => true); // Only in math!
 });

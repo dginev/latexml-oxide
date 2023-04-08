@@ -1,10 +1,12 @@
-use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
+use once_cell::sync::Lazy;
+use string_interner::symbol::SymbolU32;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::arena;
 use crate::common::float::Float;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
@@ -24,21 +26,9 @@ static CONTROLNAME: &[&str] = &[
   "GS", "RS", "US",
 ];
 
-pub const MOCK_TOKEN: Token = Token {
-  text: Cow::Borrowed(""),
-  code: Catcode::MARKER,
-  smuggled: None,
-};
-pub const T_RELAX: Token = Token {
-  text: Cow::Borrowed("\\relax"),
-  code: Catcode::CS,
-  smuggled: None,
-};
-pub const T_EMPTY: Token = Token {
-  text: Cow::Borrowed("\\@empty"),
-  code: Catcode::CS,
-  smuggled: None,
-};
+/// constant for an END "}" token
+pub static T_END : Lazy<Token> = Lazy::new(|| Token { text:arena::pin("}"),code: Catcode::END, smuggled: None});
+
 
 /// A Token category code, as in TeX
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
@@ -276,13 +266,13 @@ impl Catcode {
 /// We allow the fields to be public, so that we can use builder macros such as
 /// ```
 /// macro_rules! T_SPACE(() => {
-///     Token { text: Cow::Borrowed(" "),code: Catcode::SPACE}
+///     Token { text: arena::pin(" "), code: Catcode::SPACE}
 ///   });
 /// ```
 #[derive(Clone)]
 pub struct Token {
   /// the character content for this token
-  pub text: Cow<'static, str>,
+  pub text: SymbolU32,
   /// a TeX catcode
   pub code: Catcode,
   /// possibly smuggled inner token (for \noexpand)
@@ -292,9 +282,9 @@ pub struct Token {
 impl fmt::Debug for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     if self.code == Catcode::ARG {
-      write!(f, "\"#{}\"", self.text)
+      write!(f, "\"#{}\"", self.get_string())
     } else {
-      write!(f, "{:?}", self.text)
+      write!(f, "{:?}", self.get_string())
     }
   }
 }
@@ -304,7 +294,7 @@ impl Display for Token {
     if self.code == Catcode::ARG {
       write!(f, "#")?;
     }
-    write!(f, "{}", self.text)
+    write!(f, "{}", self.get_string())
   }
 }
 
@@ -315,7 +305,7 @@ impl Display for Token {
 impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
     self.code == other.code
-      && (self.code == Catcode::SPACE || (*self.text == *other.text))
+      && (self.code == Catcode::SPACE || (self.text == other.text))
       && (self.smuggled.is_none() == other.smuggled.is_none())
   }
 }
@@ -323,65 +313,60 @@ impl PartialEq for Token {
 #[macro_export]
 /// macro for a BEGIN "{" token
 macro_rules! T_BEGIN(() => {
-  Token { text: Cow::Borrowed("{"),code: Catcode::BEGIN, smuggled: None}
+  Token { text: $crate::common::arena::pin("{"),code: Catcode::BEGIN, smuggled: None}
 });
 
-/// macro for an END "}" token
-#[macro_export]
-macro_rules! T_END(() => {
-  Token { text: Cow::Borrowed("}"),code: Catcode::END, smuggled: None}
-});
 /// macro for a MATH "$" token
 #[macro_export]
 macro_rules! T_MATH(() => {
-  Token { text: Cow::Borrowed("$"),code: Catcode::MATH, smuggled: None}
+  Token { text: $crate::common::arena::pin("$"),code: Catcode::MATH, smuggled: None}
 });
 /// macro for an ALIGN "&" token
 #[macro_export]
 macro_rules! T_ALIGN(() => {
-  Token { text: Cow::Borrowed("&"),code: Catcode::ALIGN, smuggled: None}
+  Token { text: $crate::common::arena::pin("&"),code: Catcode::ALIGN, smuggled: None}
 });
 /// macro for a PARAM "#" token
 #[macro_export]
 macro_rules! T_PARAM(() => {
-  Token { text: Cow::Borrowed("#"),code: Catcode::PARAM, smuggled: None}
+  Token { text: $crate::common::arena::pin("#"),code: Catcode::PARAM, smuggled: None}
 });
 /// macro for a SUPER "^" token
 #[macro_export]
 macro_rules! T_SUPER(() => {
- Token { text: Cow::Borrowed("^"),code: Catcode::SUPER, smuggled: None}
+ Token { text: $crate::common::arena::pin("^"),code: Catcode::SUPER, smuggled: None}
 });
 /// macro for a SUB "_" token
 #[macro_export]
 macro_rules! T_SUB(() => {
-  Token { text: Cow::Borrowed("_"),code: Catcode::SUB, smuggled: None}
+  Token { text: $crate::common::arena::pin("_"),code: Catcode::SUB, smuggled: None}
 });
 /// macro for a SPACE " " token
 #[macro_export]
 macro_rules! T_SPACE(() => {
-  Token { text: Cow::Borrowed(" "),code: Catcode::SPACE, smuggled: None}
+  Token { text: $crate::common::arena::pin(" "),code: Catcode::SPACE, smuggled: None}
 };
 ($text:literal) => {
-  Token { text: Cow::Borrowed($text),code: Catcode::SPACE, smuggled: None}
+  Token { text: $crate::common::arena::pin($text),code: Catcode::SPACE, smuggled: None}
 });
 /// macro for a CR "\n" token
 #[macro_export]
 macro_rules! T_CR(() => (
-  Token { text: Cow::Borrowed("\n"),code: Catcode::SPACE, smuggled: None}
+  Token { text: $crate::common::arena::pin("\n"),code: Catcode::SPACE, smuggled: None}
 ));
 /// macro for a LETTER token
 #[macro_export]
 macro_rules! T_LETTER {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned(String::from($text)),
+      text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
       smuggled: None,
     }
@@ -392,14 +377,14 @@ macro_rules! T_LETTER {
 macro_rules! T_OTHER {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
       smuggled: None,
     }
@@ -408,34 +393,29 @@ macro_rules! T_OTHER {
 /// macro for an ACTIVE char token
 #[macro_export]
 macro_rules! T_ACTIVE {
-  ($text:literal) => {
+  ($c:expr) => {{
+    let mut tmp = [0u8; 3];
+    let s = $c.encode_utf8(&mut tmp);
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
       smuggled: None,
     }
-  };
-  ($text:expr) => {
-    Token {
-      text: Cow::Owned($text.to_string()),
-      code: Catcode::ACTIVE,
-      smuggled: None,
-    }
-  };
+  }};
 }
 /// macro for a COMMENT content token
 #[macro_export]
 macro_rules! T_COMMENT {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::COMMENT,
       smuggled: None,
     }
@@ -446,14 +426,14 @@ macro_rules! T_COMMENT {
 macro_rules! T_CS {
   ($text:literal) => {
     $crate::token::Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::CS,
       smuggled: None,
     }
@@ -464,14 +444,14 @@ macro_rules! T_CS {
 macro_rules! T_MARKER {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
       smuggled: None,
     }
@@ -483,14 +463,14 @@ macro_rules! T_MARKER {
 macro_rules! T_ARG {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::ARG,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::ARG,
       smuggled: None,
     }
@@ -513,7 +493,7 @@ macro_rules! T_SMUGGLE_THE {
         );
       },
       cc if cc.can_smuggle_the() => Token {
-        text: Cow::Borrowed("SMUGGLE_THE"),
+        text: $crate::common::arena::pin("SMUGGLE_THE"),
         code: Catcode::SmuggleTHE,
         smuggled: Some(Box::new($t)),
       },
@@ -527,32 +507,42 @@ macro_rules! T_SMUGGLE_THE {
 macro_rules! Token {
   ($text:literal) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
       smuggled: None,
     }
   };
   ($text:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
       smuggled: None,
     }
   };
   ($text:literal, $cc:expr) => {
     Token {
-      text: Cow::Borrowed($text),
+      text: $crate::common::arena::pin($text),
       code: $cc,
       smuggled: None,
     }
   };
   ($text:expr, $cc:expr) => {
     Token {
-      text: Cow::Owned($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: $cc,
       smuggled: None,
     }
   };
+}
+
+/// Special case: a character needs swift string conversion, so let's use a dedicated macro
+#[macro_export]
+macro_rules! CharToken {
+  ($c:expr, $cc:expr) => {{
+    let mut tmp = [0u8; 3];
+    let s = $c.encode_utf8(&mut tmp);
+    Token!(s, $cc)
+  }}
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
@@ -560,7 +550,11 @@ macro_rules! Token {
 macro_rules! Explode(($text:expr) => (
   $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
-    else { T_OTHER!(c) }
+    else {
+      let mut tmp = [0u8; 3];
+      let s = c.encode_utf8(&mut tmp);
+      T_OTHER!(s)
+    }
   ).collect::<Vec<Token>>()
 ));
 
@@ -571,8 +565,12 @@ macro_rules! ExplodeText(($text:expr) => ({
   use $crate::token::{Catcode,Token};
   $text.to_string().as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
-    else if c.is_alphabetic() { T_LETTER!(c) }
-    else { T_OTHER!(c) }
+    else {
+      let mut tmp = [0u8; 3];
+      let s = c.encode_utf8(&mut tmp);
+      if c.is_alphabetic() {
+      T_LETTER!(s) }
+    else { T_OTHER!(s) }}
   ).collect::<Vec<Token>>()
 }));
 
@@ -581,7 +579,7 @@ macro_rules! ExplodeText(($text:expr) => ({
 impl Default for Token {
   fn default() -> Self {
     Token {
-      text: Cow::Borrowed("EXPECTED_TOKEN"),
+      text: arena::pin("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
       smuggled: None,
     }
@@ -592,9 +590,9 @@ impl Default for Token {
 /// Accessors.
 impl<'a> Token {
   /// simple Token constructor, wrapping over text and catcode
-  pub fn new(text: Cow<'static, str>, code: Catcode) -> Self {
+  pub fn new<T:AsRef<str>>(text: T, code: Catcode) -> Self {
     Token {
-      text,
+      text: arena::pin(text),
       code,
       smuggled: None,
     }
@@ -606,7 +604,7 @@ impl<'a> Token {
     if self.code.is_primitive() {
       self.code.name()
     } else {
-      &self.text
+      self.get_string()
     }
   }
 
@@ -623,7 +621,7 @@ impl<'a> Token {
   pub fn get_executable_name(&self) -> String {
     let cc = self.code;
     if cc.is_executable() {
-      self.get_primitive_name().unwrap_or(&self.text).to_string()
+      self.get_primitive_name().unwrap_or(self.get_string()).to_string()
     } else {
       String::new()
     }
@@ -641,14 +639,16 @@ impl<'a> Token {
 
   /// Return the the borrowed &str "text" of the token
   /// use `to_string` instead for an owned String
-  pub fn get_string(&self) -> &str { &self.text }
+  pub fn get_string(&self) -> &str {
+    arena::resolve(self.text)
+  }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
   /// sequence
   pub fn get_charcode(&self) -> u32 {
     if self.code == Catcode::CS {
       256
-    } else if let Some(c) = self.text.chars().next() {
+    } else if let Some(c) = self.get_string().chars().next() {
       c as u32
     } else {
       0
@@ -668,7 +668,7 @@ impl<'a> Token {
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Token {
-    let ch = match self.text.chars().next() {
+    let ch = match self.get_string().chars().next() {
       Some(ch) => ch,
       None => return self,
     };
@@ -676,13 +676,17 @@ impl<'a> Token {
     if cc.is_neutralizable() {
       for extra in extraspecials {
         if extra == &ch {
-          return T_OTHER!(ch);
+          let mut tmp = [0u8; 3];
+          let s = ch.encode_utf8(&mut tmp);
+          return T_OTHER!(s);
         }
       }
       if let Some(Stored::VecChar(ref specials_list)) = state.lookup_value("SPECIALS") {
         for special in specials_list.iter() {
           if *special == ch {
-            return T_OTHER!(ch);
+            let mut tmp = [0u8; 3];
+            let s = ch.encode_utf8(&mut tmp);
+            return T_OTHER!(s);
           }
         }
       }
@@ -693,7 +697,7 @@ impl<'a> Token {
   pub fn substitute_parameters(self, args: &[&Token]) -> Self {
     if self.code == Catcode::ARG {
       let arg_idx = self
-        .text
+        .get_string()
         .parse::<usize>()
         .expect("ARG catcode tokens should always contain numeric literals as text");
       args[arg_idx - 1].clone()
@@ -718,7 +722,7 @@ impl<'a> Token {
       Catcode::CS | Catcode::ACTIVE => {
         if state.is_dont_expandable(&self) {
           Ok(Token {
-            text: Cow::Borrowed("\\relax"),
+            text: arena::pin("\\relax"),
             code: Catcode::CS,
             smuggled: Some(Box::new(self)),
           })
@@ -761,10 +765,10 @@ impl<'a> Token {
   pub fn revert(self) -> Token { self }
 
   /// borrow the string content of this Token
-  pub fn as_str(&self) -> &str { &self.text }
+  pub fn as_str(&self) -> &str { self.get_string() }
   /// A string form which is primarily used for error-reporting
   pub fn stringify(&self) -> String {
-    let mut string = self.text.to_string();
+    let mut string = self.get_string().to_string();
     // Make the token's char content more printable, since this is for a visual messages.
     if string.len() == 1 {
       let c = string.chars().next().unwrap() as u16;
@@ -780,23 +784,29 @@ impl<'a> Token {
     state.lookup_register_definition(self)
   }
 
-  pub fn to_number(&self) -> Number { Number::new(self.text.parse::<i64>().unwrap_or(0)) }
+  pub fn to_number(&self) -> Number { Number::new(self.get_string().parse::<i64>().unwrap_or(0)) }
 
   pub fn to_dimension(&self) -> Dimension {
-    Dimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0))
+    Dimension::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
   }
 
   pub fn to_mu_dimension(&self) -> MuDimension {
-    MuDimension::new_f64(self.text.parse::<f64>().unwrap_or(0.0))
+    MuDimension::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
   }
 
-  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_float(&self) -> Float { Float::new_f64(self.text.parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_float(&self) -> Float { Float::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens::new(vec![self]), state)
+  }
+}
+
+impl AsRef<str> for Token {
+  fn as_ref(&self) -> &str {
+    self.get_string()
   }
 }

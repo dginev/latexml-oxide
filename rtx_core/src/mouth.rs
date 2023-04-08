@@ -460,7 +460,7 @@ impl Mouth {
               if eolcc == Catcode::EOL {
                 Some(T_CS!("\\par"))
               } else {
-                Some(Token!(eolch_content, eolcc))
+                Some(CharToken!(eolch_content, eolcc))
               }
             } else {
               None
@@ -617,28 +617,28 @@ impl Mouth {
         if ch == '{' {
           Some(T_BEGIN!())
         } else {
-          Some(Token!(ch, BEGIN))
+          Some(CharToken!(ch, BEGIN))
         }
       },
       END => {
         if ch == '}' {
-          Some(T_END!())
+          Some(T_END.clone())
         } else {
-          Some(Token!(ch, END))
+          Some(CharToken!(ch, END))
         }
       },
       MATH => {
         if ch == '$' {
           Some(T_MATH!())
         } else {
-          Some(Token!(ch, MATH))
+          Some(CharToken!(ch, MATH))
         }
       },
       ALIGN => {
         if ch == '&' {
           Some(T_ALIGN!())
         } else {
-          Some(Token!(ch, ALIGN))
+          Some(CharToken!(ch, ALIGN))
         }
       },
       EOL => self.handle_end_of_line(state),
@@ -646,29 +646,29 @@ impl Mouth {
         if ch == '#' {
           Some(T_PARAM!())
         } else {
-          Some(Token!(ch, PARAM))
+          Some(CharToken!(ch, PARAM))
         }
       }, // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
         } else {
-          Some(Token!(ch, SUPER))
+          Some(CharToken!(ch, SUPER))
         }
       }, // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
         } else {
-          Some(Token!(ch, SUB))
+          Some(CharToken!(ch, SUB))
         }
       }, // T_SUB
       SPACE => self.handle_space(state),
-      LETTER => Some(T_LETTER!(ch.to_string())),
-      OTHER => Some(T_OTHER!(ch.to_string())),
-      ACTIVE => Some(T_ACTIVE!(ch.to_string())),
+      LETTER => Some(CharToken!(ch, Catcode::LETTER)),
+      OTHER => Some(CharToken!(ch, Catcode::OTHER)),
+      ACTIVE => Some(T_ACTIVE!(ch)),
       COMMENT => self.handle_comment(state),
-      INVALID => Some(T_OTHER!(ch.to_string())), // T_INVALID (we could get unicode!)
+      INVALID => Some(CharToken!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
       _ => None,                                 // IGNORE, others
     }
   }

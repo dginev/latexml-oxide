@@ -215,9 +215,9 @@ LoadDefinitions!(state, {
     // TODO:
     // AddToMacro!(T_CS!("\\cdp@list"), T_CS!("\\cdp@elt"),
     //   T_BEGIN!(), encoding.unlist(), T_END,
-    //   T_BEGIN!(), T_CS!("\\default@family"), T_END!(),
-    //   T_BEGIN!(), T_CS!("\\default@series"), T_END!(),
-    //   T_BEGIN!(), T_CS!("\\default@shape"),  T_END!());
+    //   T_BEGIN!(), T_CS!("\\default@family"), *T_END,
+    //   T_BEGIN!(), T_CS!("\\default@series"), *T_END,
+    //   T_BEGIN!(), T_CS!("\\default@shape"),  *T_END);
     let gullet = stomach.get_gullet_mut();
     let e = Expand!(encoding, gullet, state);
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());

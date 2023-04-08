@@ -1,7 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
 

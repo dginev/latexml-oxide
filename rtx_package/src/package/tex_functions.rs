@@ -701,7 +701,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
     .flat_map(|t| {
       let mut with_cs = vec![cs.clone(), T_BEGIN!()];
       with_cs.extend(t.unlist());
-      with_cs.push(T_END!());
+      with_cs.push(T_END.clone());
       with_cs
     })
     .collect()
@@ -898,11 +898,7 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
     result.push(thischar);
   }
   if result != initial_string {
-    Token {
-      text: Cow::Owned(result),
-      code: token.get_catcode(),
-      smuggled: None,
-    }
+    Token::new(result, token.get_catcode())
   } else {
     token
   }

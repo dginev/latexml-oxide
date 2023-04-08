@@ -1,5 +1,4 @@
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
@@ -63,14 +62,14 @@ pub fn new_counter(
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
 
-  def_register(T_CS!(cctr), None, Number::new(0), None, state);
+  def_register(T_CS!(&cctr), None, Number::new(0), None, state);
   state.assign_value(&cctr, Number::new(0), Some(Scope::Global));
   state.after_assignment(stomach.get_gullet_mut());
   if state.lookup_value(&clctr).is_none() {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  def_register(T_CS!(cunctr), None, Number::new(0), None, state);
+  def_register(T_CS!(&cunctr), None, Number::new(0), None, state);
   state.assign_value(&cunctr, Number::new(0), Some(Scope::Global));
   if state.lookup_value(&clunctr).is_none() {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
@@ -84,7 +83,7 @@ pub fn new_counter(
     } else {
       Vec::new()
     };
-    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(unctr)];
+    let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(&unctr)];
     clwithin_tokens.append(&mut x);
     state.assign_value(
       &clwithin,
@@ -569,7 +568,7 @@ pub fn ref_step_id(
   );
 
   let thectr = s!("\\the{ctr}@ID");
-  def_macro(T_CS!("\\@currentID"), None, T_CS!(thectr), None, state);
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
   Ok(stored_map!("id" =>
     clean_id(&digest_literal(T_CS!(thectr), stomach, state)?.to_string())))
 }
@@ -650,8 +649,8 @@ pub fn ref_step_item_counter(
     let reverted_tag = (*tag).clone().revert();
     tag_tokens.extend(reverted_tag.clone());
     tag_tokens.extend(vec![
-      T_END!(),
-      T_END!(),
+      T_END.clone(),
+      T_END.clone(),
       T_CS!("\\def"),
       T_CS!(s!("\\typerefnum@{counter}")),
       T_BEGIN!(),
@@ -659,7 +658,7 @@ pub fn ref_step_item_counter(
       T_SPACE!(),
     ]);
     tag_tokens.extend(reverted_tag);
-    tag_tokens.push(T_END!());
+    tag_tokens.push(T_END.clone());
     tag_tokens.extend(
       build_invocation(
         T_CS!("\\lx@make@tags"),
@@ -669,7 +668,7 @@ pub fn ref_step_item_counter(
       )?
       .unlist(),
     );
-    tag_tokens.push(T_END!());
+    tag_tokens.push(T_END.clone());
 
     let tags = stomach.digest(tag_tokens, state)?;
     if !tags.is_empty() {
@@ -773,7 +772,7 @@ pub fn begin_itemize(
     );
 
     // AND reset this list's counter when the outer item is stepped
-    let mut cl_toks = vec![T_CS!(listcounter)];
+    let mut cl_toks = vec![T_CS!(&listcounter)];
     let cs_name = s!("\\cl@{outerusecounter}");
     if let Some(Stored::Tokens(tks)) = state.lookup_value(&cs_name) {
       cl_toks.extend(tks.clone().unlist());
