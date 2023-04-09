@@ -313,7 +313,7 @@ impl Gullet {
               if let Some(defn) = state.lookup_definition(&token) {
                 if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
                   // is this the right logic here? don't expand unless digesting?
-                  state.set_current_token(Arc::new(token));
+                  state.set_current_token(token);
                   let result =
                     self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
                   state.expire_current_token();
