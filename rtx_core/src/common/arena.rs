@@ -1,11 +1,14 @@
+use std::hash::BuildHasherDefault;
 use once_cell::sync::Lazy;
 use string_interner::backend::StringBackend;
 use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
+use rustc_hash::FxHasher;
 // use std::sync::Mutex;
 
-static mut T: Lazy<StringInterner<StringBackend>> = Lazy::new(|| {
-  let mut interner = StringInterner::with_capacity(10_000);
+static mut T: Lazy<StringInterner<StringBackend, BuildHasherDefault<FxHasher>>> = Lazy::new(|| {
+  let mut interner = StringInterner::with_capacity_and_hasher(10_000,
+    BuildHasherDefault::<FxHasher>::default());
   interner.extend(
     [
       " ", "!", "\"", "#", "$", "%", "&", "\"", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1",
