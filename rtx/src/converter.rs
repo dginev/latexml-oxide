@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use crate::core_interface::DigestionAPI;
 
-const CONVERTER_IDENTITY: &str = "rtx (v0.1.12)";
+const CONVERTER_IDENTITY: &str = "rtx (v0.3.0)";
 
 pub struct ConversionResponse {
   pub result: Option<String>,
