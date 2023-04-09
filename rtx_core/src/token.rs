@@ -267,7 +267,7 @@ impl Catcode {
 /// ```
 #[derive(Clone)]
 pub struct Token {
-  /// the character content for this token
+  /// an arena id the character content for this token
   pub text: SymbolU32,
   /// a TeX catcode
   pub code: Catcode,
