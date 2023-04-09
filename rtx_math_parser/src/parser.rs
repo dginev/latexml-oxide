@@ -7,6 +7,7 @@ use std::io::Cursor;
 
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
+use rtx_core::common::arena;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{fatal, map, s, static_map, Error};
@@ -298,7 +299,7 @@ impl MathParser {
     for nested in document.findnodes("descendant::ltx:XMath", Some(node), state) {
       self.parse(nested, document, state)?;
     }
-    let tag = document.get_node_qname(node, state);
+    let tag = arena::as_static(document.get_node_qname(node, state));
     let rule = if let Some(requested_rule) = node.get_attribute("rule") {
       requested_rule
     } else {
@@ -309,7 +310,7 @@ impl MathParser {
       self.parse_kludge(node, document, state);
       Ok(None)
     } else if let Some(mut result) = self.parse_single(node, document, state, &rule)? {
-      *self.passed.entry(tag.clone()).or_insert(0) += 1;
+      *self.passed.entry(tag.to_string()).or_insert(0) += 1;
       if tag == "ltx:XMath" {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
@@ -334,7 +335,7 @@ impl MathParser {
 
         // add to result, even allowing modification of xml node, since we're committed.
         // [Annotate converts node to array which messes up clearing the id!]
-        let rtag = document.get_node_qname(&result, state);
+        let rtag = arena::as_static(document.get_node_qname(&result, state));
         // TODO: Is this needed in a world where `result` is always a `Node` ?
         // // // Make sure font is "Appropriate", if we're creating a new token (yuck)
         // // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
@@ -354,7 +355,7 @@ impl MathParser {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
         for (key, value) in attr {
-          if !(key.starts_with('_') || document.can_have_attribute(&rtag, &key, state)) {
+          if !(key.starts_with('_') || document.can_have_attribute(rtag, &key, state)) {
             continue;
           }
           if key == "xml:id" {
@@ -401,7 +402,7 @@ impl MathParser {
   ) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
-      match tag.as_str() {
+      match tag {
         "ltx:XMArg" => {
           self.parse_rec(&mut child, "Anything", document, state)?;
         },
@@ -628,7 +629,7 @@ fn textrec(
       None => meaning,
     };
   }
-  match tag.as_str() {
+  match tag {
     "ltx:XMApp" => {
       let mut args = element_nodes(&node);
       if args.is_empty() {

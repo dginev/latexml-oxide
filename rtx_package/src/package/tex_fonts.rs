@@ -113,7 +113,7 @@ LoadDefinitions!(outer_state, {
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
   DefParameterType!(FontToken, reader => reader!(gullet, _inner, _extra, state, {
     let token = gullet.read_token(state).unwrap();
-    if FONT_TOKEN_RE.is_match(&token.to_string()) {
+    if FONT_TOKEN_RE.is_match(token.as_ref()) {
       gullet.read_number(state)?;
     }
     token
@@ -385,7 +385,7 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
     let csname = newcs.get_cs_name().to_owned();
     let internalcs = T_CS!(s!("\\@chardef@{}", csname));
@@ -429,7 +429,7 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     let csname = newcs.get_cs_name().to_owned();
     // eprintln!(" ** {} + {}", value,csname);

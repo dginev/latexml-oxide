@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
@@ -8,6 +9,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
+use crate::common::arena::{self, LTX_P_SYM, PCDATA_SYM, EMPTY_SYM};
 use crate::common::font::Font;
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
@@ -228,7 +230,7 @@ pub struct State {
   /// the schema-derived model used for the current document
   pub model: Model,
   prefixes: HashMap<String, bool>, // ?
-  pub tag_properties: HashMap<String, TagOptions>,
+  pub tag_properties: HashMap<SymbolU32, TagOptions>,
   /// an optional indirect model for long-distance relationships
   pub indirect_model: Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
@@ -1833,42 +1835,39 @@ impl State {
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
     let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-    let mut openable: HashSet<String> = HashSet::default();
-    for tag in self.model.get_tags() {
+    let mut openable: HashSet<SymbolU32> = HashSet::default();
+    for tag in self.model.get_sym_tags() {
       if let Some(x) = self.tag_properties.get(&tag) {
         if let Some(true) = x.auto_open {
-          openable.insert(tag.to_owned());
+          openable.insert(tag);
         }
       }
     }
 
-    for tag in self.model.get_tags() {
-      let mut desc: HashMap<String, HashMap<String, usize>> = HashMap::default();
+    for tag in self.model.get_sym_tags() {
+      let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
       {
-        self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
+        self.compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
       }
 
-      let desc_keys: Vec<String> = desc.keys().map(ToString::to_string).collect();
-      // desc_keys.sort(); // TODO: why sort?
+      let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
       for kid in desc_keys {
         let mut best = 0; // Find best path to $kid.
-        let desc_kid_keys: Vec<String> = desc
-          .entry(kid.to_owned())
+        let desc_kid_keys: Vec<SymbolU32> = desc
+          .entry(kid)
           .or_insert_with(HashMap::default)
-          .keys()
-          .map(ToString::to_string)
-          .collect();
+          .keys().copied().collect();
         // desc_kid_keys.sort(); // TODO: why sort?
         for start in desc_kid_keys {
           let start_entry = {
-            let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
+            let kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
             *kid_entry.entry(start.to_owned()).or_insert(0)
           };
           if start_entry > best {
             imodel
-              .entry(tag.to_owned())
+              .entry(tag)
               .or_insert_with(HashMap::default)
-              .insert(kid.to_owned(), start.to_owned());
+              .insert(kid, start.to_owned());
             {
               best = desc[&kid][&start];
             }
@@ -1880,9 +1879,9 @@ impl State {
     if self.model.permissive {
       // !!! Alarm!!!
       imodel
-        .entry(s!("#Document"))
+        .entry(arena::pin("#Document"))
         .or_insert_with(HashMap::default)
-        .insert(s!("#PCDATA"), s!("ltx:p"));
+        .insert(*PCDATA_SYM, *LTX_P_SYM);
     }
 
     imodel
@@ -1890,51 +1889,48 @@ impl State {
 
   fn compute_indirect_model_aux(
     &mut self,
-    tag: &str,
-    start_opt: Option<String>,
+    tag: SymbolU32,
+    start_opt: Option<SymbolU32>,
     desirability: usize,
-    openable: &mut HashSet<String>,
-    desc: &mut HashMap<String, HashMap<String, usize>>,
+    openable: &mut HashSet<SymbolU32>,
+    desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
   ) {
     let start = match start_opt {
       Some(s) => s,
-      None => String::new(),
+      None => *EMPTY_SYM,
     };
 
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<String> = self
+    let tag_contents: Vec<SymbolU32> = self
       .model
-      .get_tag_contents(tag)
-      .iter()
-      .map(ToString::to_string)
-      .collect();
+      .get_sym_tag_contents(&tag);
 
     for kid in tag_contents {
       if desc
-        .entry(kid.clone())
+        .entry(kid)
         .or_insert_with(HashMap::default)
         .contains_key(&start)
       {
         continue;
       } // Already solved
 
-      if !start.is_empty() {
+      if start != *EMPTY_SYM {
         desc
-          .entry(kid.clone())
+          .entry(kid)
           .or_insert_with(HashMap::default)
-          .insert(start.clone(), desirability);
+          .insert(start, desirability);
       }
 
-      if kid != "#PCDATA" && openable.contains(&kid) {
-        let inner = if !start.is_empty() {
-          start.clone()
+      if kid != *PCDATA_SYM && openable.contains(&kid) {
+        let inner = if start != *EMPTY_SYM {
+          start
         } else {
-          kid.to_string()
+          kid
         };
 
-        self.compute_indirect_model_aux(&kid, Some(inner), desirability, openable, desc);
+        self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
       }
     }
   }

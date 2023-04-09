@@ -446,7 +446,7 @@ pub fn insert_block(
       && state.model.get_node_qname(rows.first().unwrap()) == "ltx:p"
       && document.can_contain(
         &blocknode.get_parent().unwrap(),
-        &state.model.get_node_qname(&crows[0]),
+        state.model.get_node_qname(&crows[0]),
         state,
       )
     // TODO: && (!hasattr || blockattr.keys().any(...
@@ -461,7 +461,7 @@ pub fn insert_block(
     } else if rows.len() == 1
       && document.can_contain(
         &blocknode.get_parent().unwrap(),
-        &state.model.get_node_qname(&rows[0]),
+        state.model.get_node_qname(&rows[0]),
         state,
       )
     // if allowed.
@@ -956,9 +956,9 @@ pub fn set_align_or_class(
   if qname == "ltx:tag" {
   }
   // HACK
-  else if !align.is_empty() && state.model.can_have_attribute(&qname, "align") {
+  else if !align.is_empty() && state.model.can_have_attribute(qname, "align") {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty() && state.model.can_have_attribute(&qname, "class") {
+  } else if !class.is_empty() && state.model.can_have_attribute(qname, "class") {
     document.add_class(node, class, state)?;
   }
   Ok(())

@@ -256,7 +256,7 @@ LoadDefinitions!(state, {
     url_wrapped.extend(toks.clone());
     url_wrapped.push(T_CS!("\\UrlRight"));
     let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
-        Tokens!(T_OTHER!(cmd.to_string())),
+        Tokens!(T_OTHER!(cmd)),
         Tokens!(open),
         Tokens!(close),
         Tokens::new(toks),
