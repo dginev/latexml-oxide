@@ -96,7 +96,7 @@ pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   let name = token.get_string();
   (name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == state.lookup_meaning(&*TOKEN_RELAX)))
+    && (meaning.is_none() || (meaning == state.lookup_meaning(&TOKEN_RELAX)))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -319,7 +319,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   };
 
   // Not really right to set the value!
-  state.assign_value(&cs.to_string(), value, None);
+  state.assign_value(cs.as_ref(), value, None);
   state.install_definition(
     Register {
       cs,

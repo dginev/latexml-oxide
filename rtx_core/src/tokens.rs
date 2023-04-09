@@ -233,7 +233,7 @@ impl Tokens {
     while let Some(key) = toks_iter.next() {
       if let Some(value) = toks_iter.next() {
         kvs.add_value(
-          &key.to_string(),
+          key.as_ref(),
           Stored::Token(value.clone()),
           false,
           false,
@@ -241,7 +241,7 @@ impl Tokens {
         );
       } else {
         kvs.add_value(
-          &key.to_string(),
+          key.as_ref(),
           Stored::Tokens(Tokens!()),
           false,
           false,

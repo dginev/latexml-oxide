@@ -41,7 +41,7 @@ pub fn parse_prototype(
     CS_RE.replace(proto, "").to_string()
   } else if let Some(captures) = SINGLE_CHAR_RE.captures(proto) {
     // Match a single char cs, env name,...
-    cs = T_CS!(captures.get(1).map_or("", |m| m.as_str()).to_string());
+    cs = T_CS!(captures.get(1).map_or("", |m| m.as_str()));
     // also replace in proto
     SINGLE_CHAR_RE.replace(proto, "").to_string()
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {

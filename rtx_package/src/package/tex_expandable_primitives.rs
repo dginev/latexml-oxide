@@ -283,7 +283,7 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if state.lookup_meaning(&token).is_none() {
-      state.assign_meaning(&token, state.lookup_meaning(&*TOKEN_RELAX).unwrap().into_owned(), None);
+      state.assign_meaning(&token, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     }
     token
   });

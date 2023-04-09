@@ -42,7 +42,7 @@ pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"]
 // static FORCE_SERIES : i8 = 0x2;
 // static FORCE_SHAPE : i8  = 0x4;
 
-pub static FONT_TEXT_DEFAULT :Lazy<Font> = Lazy::new(|| Font::text_default());
+pub static FONT_TEXT_DEFAULT :Lazy<Font> = Lazy::new(Font::text_default);
 static LATIN_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Latin}&&\pL]$").unwrap());
 static GREEK_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Greek}&&\pL]$").unwrap());
 static UPPER_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Lu}]$").unwrap());

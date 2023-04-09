@@ -365,7 +365,7 @@ LoadDefinitions!(state, {
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&*TOKEN_SUPER, state)? {
+    if gullet.if_next(&TOKEN_SUPER, state)? {
       gullet.read_token(state);
       sup.extend(gullet.read_arg(state)?.unlist());
     }

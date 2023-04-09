@@ -18,7 +18,7 @@ use std::sync::Arc;
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
-use crate::common::arena;
+use crate::common::arena::{self, LTX_STAR_SYM};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml::{self, XML_NS};
@@ -177,7 +177,7 @@ impl Document {
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  pub fn get_node_qname(&self, node: &Node, state: &State) -> String {
+  pub fn get_node_qname(&self, node: &Node, state: &State) -> &str {
     state.model.get_node_qname(node)
   }
 
@@ -239,7 +239,7 @@ impl Document {
         && !pending_declaration.is_empty()
       {
         for (key, (value, properties)) in &pending_declaration {
-          if state.model.can_have_attribute(&qname, key) {
+          if state.model.can_have_attribute(qname, key) {
             attrs_to_set.push((key.to_string(), value.to_string()));
             // Merge to set the font currently in effect
             declared_font = Cow::Owned(declared_font.merge(properties.clone()));
@@ -266,7 +266,7 @@ impl Document {
     if qname != "ltx:document"
       && state.lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
-      && self.can_have_attribute(&qname, "xml:id", state)
+      && self.can_have_attribute(qname, "xml:id", state)
     {
       self.generate_id(node, "", state)?;
     }
@@ -284,7 +284,7 @@ impl Document {
         {
           let grandchildren = child.get_child_nodes();
           if grandchildren.iter().all(|gchild| {
-            self.can_contain_qname(&qname, &state.model.get_node_qname(gchild), state)
+            self.can_contain_qname(qname, state.model.get_node_qname(gchild), state)
           }) {
             Debug!(
               "will replace {} grandchildren nodes in finalize_rec",
@@ -674,7 +674,7 @@ impl Document {
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
       let node_qname = self.get_node_qname(&node, state);
-      if self.can_contain_somehow(&node_qname, qname, state) {
+      if self.can_contain_somehow(node_qname, qname, state) {
         return true;
       } else if !self.can_auto_close(&node, state) {
         return false; // could close, then check if parent can contain
@@ -870,7 +870,7 @@ impl Document {
         if !node.has_attribute("_noautoclose") {
           if node.has_attribute("_autoclose") {
             true
-          } else if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
+          } else if let Some(props) = state.tag_properties.get(&arena::pin(self.get_node_qname(node, state))) {
             props.auto_close.unwrap_or(false)
           } else {
             false
@@ -911,14 +911,14 @@ impl Document {
 
     let tag_hash = state
       .tag_properties
-      .entry(tag.to_string())
+      .entry(arena::pin(tag))
       .or_insert_with(TagOptions::default)
       .clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
     let all_hash = state
       .tag_properties
-      .entry(s!("ltx:*"))
+      .entry(*LTX_STAR_SYM)
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -1040,7 +1040,7 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
-          state.model.can_contain(&node_qname, "#PCDATA")
+          state.model.can_contain(node_qname, "#PCDATA")
         };
 
         if !noindent {
@@ -1306,7 +1306,7 @@ impl Document {
 
   pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
     let tag = state.model.get_node_qname(node);
-    state.model.can_contain(&tag, child)
+    state.model.can_contain(tag, child)
   }
 
   pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -1316,7 +1316,7 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(&self, tag: &str, child: &str, state: &mut State) -> Option<String> {
+  pub fn can_contain_indirect(&self, tag: &str, child: &str, state: &mut State) -> Option<&'static str> {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model->getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -1327,14 +1327,15 @@ impl Document {
 
     let imodel = state.indirect_model.as_ref().unwrap();
     // returning inner_node
-    match imodel.get(tag) {
-      Some(sub_m) => sub_m.get(child).map(|node| node.to_string()),
+    match imodel.get(&arena::pin(tag)) {
+      Some(sub_m) => sub_m.get(&arena::pin(child))
+        .map(|sym| arena::resolve(*sym)),
       None => None,
     }
   }
 
   pub fn can_contain_node_somehow(&self, tag: &Node, child: &str, state: &mut State) -> bool {
-    self.can_contain_somehow(&state.model.get_node_qname(tag), child, state)
+    self.can_contain_somehow(state.model.get_node_qname(tag), child, state)
   }
 
   pub fn can_contain_somehow(&self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -1344,9 +1345,9 @@ impl Document {
   pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
     state
       .model
-      .can_have_attribute(&state.model.get_node_qname(node), attrib)
+      .can_have_attribute(state.model.get_node_qname(node), attrib)
   }
-  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str, state: &mut State) -> bool {
+  pub fn can_have_attribute(&self, tag: &str, attrib: &str, state: &mut State) -> bool {
     state.model.can_have_attribute(tag, attrib)
   }
 
@@ -1408,13 +1409,13 @@ impl Document {
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_NAME)
-        && state.model.can_have_attribute(&qname, "font")
+        && state.model.can_have_attribute(qname, "font")
         && c[0]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
           .all(|v| {
-            state.model.can_have_attribute(&qname, v)
+            state.model.can_have_attribute(qname, v)
               && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
           })
         && !c[0].has_attribute("_force_font")
@@ -1712,21 +1713,21 @@ impl Document {
   pub fn find_insertion_point(
     &mut self,
     qname: &str,
-    has_opened_opt: Option<String>,
+    has_opened_opt: Option<&str>,
     state: &mut State,
   ) -> Result<Node> {
     self.close_text_internal(state)?; // Close any current text node.
     let cur_qname = state.model.get_node_qname(&self.node);
     // If `qname` is allowed at the current point, we're done.
-    if self.can_contain_qname(&cur_qname, qname, state) {
+    if self.can_contain_qname(cur_qname, qname, state) {
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
-    } else if let Some(inter) = self.can_contain_indirect(&cur_qname, qname, state) {
+    } else if let Some(inter) = self.can_contain_indirect(cur_qname, qname, state) {
       if (inter != qname) && (inter != cur_qname) {
         // TODO: can we avoid the clone here? there is a mutability conflict...
         let node_font = self.get_node_font(&self.node).clone();
-        self.open_element(&inter, None, Some(&node_font), state)?;
+        self.open_element(inter, None, Some(&node_font), state)?;
 
         return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should
                                                                      // work now).
@@ -1750,11 +1751,11 @@ impl Document {
       let mut close_to = None;
       while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node, state) {
         let parent_opt = node.get_parent();
-        let parent = match parent_opt {
-          None => String::new(),
+        let parent_name = match parent_opt {
+          None => "",
           Some(ref p) => state.model.get_node_qname(p),
         };
-        if self.can_contain_somehow(&parent, qname, state) {
+        if self.can_contain_somehow(parent_name, qname, state) {
           close_to = Some(node);
           break;
         }
@@ -1869,7 +1870,7 @@ impl Document {
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
       let qname = state.model.get_node_qname(&self.node);
-      if key.starts_with('_') || state.model.can_have_attribute(&qname, key) {
+      if key.starts_with('_') || state.model.can_have_attribute(qname, key) {
         self.node.set_attribute(key, value)?;
       }
     } else {
@@ -2711,7 +2712,7 @@ impl Document {
     let savenode = self.node.clone();
     self.set_node(node);
     let node_qname = self.get_node_qname(node, state);
-    for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterOpen, state) {
+    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterOpen, state) {
       action(self, node, state)?;
     }
     self.set_node(&savenode);
@@ -2722,7 +2723,7 @@ impl Document {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
     let node_qname = self.get_node_qname(node, state);
-    for action in self.get_tag_action_list(&node_qname, TagOptionName::AfterClose, state) {
+    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose, state) {
       action(self, node, state)?;
     }
     self.set_node(&savenode);
@@ -3123,7 +3124,7 @@ impl Document {
     let node_qname = self.get_node_qname(node, state);
     // but isn't a _Capture_ node (which ultimately should disappear)
     if !node.has_attribute_ns("id", XML_NS)
-      && self.can_have_attribute(&node_qname, "xml:id", state)
+      && self.can_have_attribute(node_qname, "xml:id", state)
       && (node_qname != "ltx:_Capture_")
     {
       let mut ancestor = self
@@ -3196,7 +3197,7 @@ impl Document {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
-          let tag = self.get_node_qname(&child, state);
+          let tag: &str = arena::as_static(self.get_node_qname(&child, state));
           let attributes = child.get_attributes().into_iter().collect();
 
           // map { $_->nodeType == XML_ATTRIBUTE_NODE ? ($self->getNodeQName($_) => $_->getValue) :
@@ -3208,7 +3209,7 @@ impl Document {
           //           $child->removeAttribute('xml:id');
           //           $self->unRecordID($id); }
 
-          let mut new = self.open_element_at(node, &tag, Some(attributes), None, state)?;
+          let mut new = self.open_element_at(node, tag, Some(attributes), None, state)?;
           self.append_tree(&mut new, child.get_child_nodes(), state)?;
           self.close_element_at(&mut new, state)?;
         },

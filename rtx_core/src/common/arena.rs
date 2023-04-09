@@ -24,3 +24,13 @@ pub fn resolve(sym: SymbolU32) -> &'static str {
   unsafe { T.resolve(sym) }
     .expect("arena::fetch should only be called when the string is guaranteed to be allocated.")
 }
+
+pub fn as_static<S:AsRef<str>>(raw: S) -> &'static str {
+  resolve(pin(raw))
+}
+
+pub static ANY_SYM: Lazy<SymbolU32> = Lazy::new(|| pin("ANY") );
+pub static PCDATA_SYM : Lazy<SymbolU32> = Lazy::new(|| pin("#PCDATA"));
+pub static EMPTY_SYM : Lazy<SymbolU32> = Lazy::new(|| pin(""));
+pub static LTX_STAR_SYM : Lazy<SymbolU32> = Lazy::new(|| pin("ltx:*"));
+pub static LTX_P_SYM : Lazy<SymbolU32> = Lazy::new(|| pin("ltx:p"));
