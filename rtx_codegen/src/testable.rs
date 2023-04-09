@@ -20,21 +20,26 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
     ),
   };
   // TODO: How do we best manage the relative directories changing from compile-time to test-time?
-  let test_functions: Vec<_> = glob(&format!("rtx/{directory}/*.tex")).unwrap().flatten().map(|pb| {
-    let filebase = pb.file_stem().unwrap().to_string_lossy();
-    let file = pb.to_string_lossy();
-    let fn_filename = filebase
-      .replace(['-', ' ', '.'], "_");
-    let fn_name = format_ident!("{fn_filename}_test");
-    quote!(
-      #[test]
-      fn #fn_name() {
-        rtx::util::test::rtx_test_single(#file, #filebase, #directory, this_test_requires!(), this_test_dispatch!())
-      }
-    )
-  }).collect();
+  let test_functions: Vec<_> = glob(&format!("rtx/{directory}/*.tex"))
+    .unwrap()
+    .flatten()
+    .map(|pb| {
+      let filebase = pb.file_stem().unwrap().to_string_lossy();
+      let file = pb.to_string_lossy();
+      let fn_filename = filebase.replace(['-', ' ', '.'], "_");
+      let fn_name = format_ident!("{fn_filename}_test");
+      quote!(
+        #[test]
+        fn #fn_name() {
+          rtx::util::test::rtx_test_single(#file, #filebase, #directory,
+            this_test_requires!(), this_test_dispatch!())
+        }
+      )
+    })
+    .collect();
 
   quote!(
     #(#test_functions)*
-  ).into()
+  )
+  .into()
 }

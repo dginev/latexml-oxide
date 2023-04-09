@@ -240,13 +240,7 @@ impl Tokens {
           state,
         );
       } else {
-        kvs.add_value(
-          key.as_ref(),
-          Stored::Tokens(Tokens!()),
-          false,
-          false,
-          state,
-        );
+        kvs.add_value(key.as_ref(), Stored::Tokens(Tokens!()), false, false, state);
       }
     }
     kvs

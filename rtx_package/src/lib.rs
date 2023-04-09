@@ -13,6 +13,6 @@ pub mod package;
 //  use rtx_package::*;
 pub use package::*;
 pub use rtx_core::{
-  Tokens, T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_LETTER, T_MARKER,
-  T_MATH, T_OTHER, T_PARAM, T_SPACE, T_SUB, T_SUPER,
+  Tokens, T_ACTIVE, T_ALIGN, T_ARG, T_BEGIN, T_COMMENT, T_CR, T_CS, T_LETTER, T_MARKER, T_MATH,
+  T_OTHER, T_PARAM, T_SPACE, T_SUB, T_SUPER,
 };

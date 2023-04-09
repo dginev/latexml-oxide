@@ -1,14 +1,14 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
+use string_interner::symbol::SymbolU32;
 
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::common::arena;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -53,7 +53,9 @@ impl PartialEq for Tbox {
 //======================================================================
 // Exported constructors
 impl fmt::Display for Tbox {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", arena::resolve(self.text)) }
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", arena::resolve(self.text))
+  }
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }

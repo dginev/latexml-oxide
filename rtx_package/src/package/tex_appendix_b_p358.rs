@@ -1,21 +1,22 @@
 use crate::package::*;
 // Match negations of many operators
 // our %NOTS
-static MATH_CHAR_NEGATIONS : Lazy<HashMap<String, &'static str>> = Lazy::new(||
-    map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
-"\u{2208}" => "\u{2209}",                              //\in=>\notin
-"\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
-"\u{227A}" => "\u{2280}", "\u{227B}" => "\u{2281}",    // prec, succ
-"\u{2AAF}" => "\u{22E0}", "\u{2AB0}" => "\u{22E1}",    // preceq, succeq
-"\u{2282}" => "\u{2284}", "\u{2283}" => "\u{2285}",    // subset, supset
-"\u{2286}" => "\u{2288}", "\u{2287}" => "\u{2289}",    // subseteq, supseteq
-"\u{2291}" => "\u{22E2}", "\u{2290}" => "\u{22E3}",    // sqsubseteq, sqsupseteq
-"\u{2261}" => "\u{2262}",                              // equiv
-"\u{224D}" => "\u{226D}", "\u{2248}" => "\u{2249}",    // asymp, approx
-"\u{22B2}" => "\u{22EA}", "\u{22B3}" => "\u{22EB}",    // lhd, rhd
-"\u{22B4}" => "\u{22EC}", "\u{22B5}" => "\u{22ED}",    // unlhd, unrhd
-"\u{2203}" => "\u{2204}"                              // Exists
-));
+static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
+  map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
+  "\u{2208}" => "\u{2209}",                              //\in=>\notin
+  "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
+  "\u{227A}" => "\u{2280}", "\u{227B}" => "\u{2281}",    // prec, succ
+  "\u{2AAF}" => "\u{22E0}", "\u{2AB0}" => "\u{22E1}",    // preceq, succeq
+  "\u{2282}" => "\u{2284}", "\u{2283}" => "\u{2285}",    // subset, supset
+  "\u{2286}" => "\u{2288}", "\u{2287}" => "\u{2289}",    // subseteq, supseteq
+  "\u{2291}" => "\u{22E2}", "\u{2290}" => "\u{22E3}",    // sqsubseteq, sqsupseteq
+  "\u{2261}" => "\u{2262}",                              // equiv
+  "\u{224D}" => "\u{226D}", "\u{2248}" => "\u{2249}",    // asymp, approx
+  "\u{22B2}" => "\u{22EA}", "\u{22B3}" => "\u{22EB}",    // lhd, rhd
+  "\u{22B4}" => "\u{22EC}", "\u{22B5}" => "\u{22ED}",    // unlhd, unrhd
+  "\u{2203}" => "\u{2204}"                              // Exists
+  )
+});
 
 //======================================================================
 // TeX Book, Appendix B. p. 358

@@ -1,7 +1,7 @@
 use crate::package::*;
 
-static FONT_TOKEN_RE: Lazy<Regex> = Lazy::new(||
-  Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
+static FONT_TOKEN_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
 
 LoadDefinitions!(outer_state, {
   // <font> = <fontdef token> | \font | <family member>

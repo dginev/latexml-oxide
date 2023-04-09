@@ -604,7 +604,7 @@ pub fn name_is_functional_or_id(name: &str) -> bool {
   name.starts_with("ID") || name_is_functional(name)
 }
 
-static _PRAGMATIC_BLOCK_MAP : Lazy<HashMap<char, String>> = Lazy::new(|| {
+static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, String>> = Lazy::new(|| {
   // generally, we can observe that the latin alphabet shares "intent"
   // in blocks of 3 letter in mathematics,
   // as a fast-and-loose rule of thumb. a-e is an exception as
@@ -612,17 +612,40 @@ static _PRAGMATIC_BLOCK_MAP : Lazy<HashMap<char, String>> = Lazy::new(|| {
   let mut map = HashMap::default();
   // |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
   let latin_blocks = [
-    ('a','e'),('f','h'),('i','k'),('l','n'),('o','q'),('r','t'),('u','w'),('x','z')];
+    ('a', 'e'),
+    ('f', 'h'),
+    ('i', 'k'),
+    ('l', 'n'),
+    ('o', 'q'),
+    ('r', 't'),
+    ('u', 'w'),
+    ('x', 'z'),
+  ];
   // |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
   let greek_blocks = [
-    ('α','γ'),('ζ','θ'),('ι','κ'),('λ','ξ'),('ο','ρ'),('σ','υ'),('ϕ','ψ')];
+    ('α', 'γ'),
+    ('ζ', 'θ'),
+    ('ι', 'κ'),
+    ('λ', 'ξ'),
+    ('ο', 'ρ'),
+    ('σ', 'υ'),
+    ('ϕ', 'ψ'),
+  ];
   // | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
-  let up_greek_blocks = [('Α','Γ'),('Ζ','Θ'),('Ι','Κ'),('Λ','Ξ'),('Ο','Ρ'),('Σ','Υ'),('Φ','Ψ')];
-  for (start,end) in latin_blocks.iter() {
+  let up_greek_blocks = [
+    ('Α', 'Γ'),
+    ('Ζ', 'Θ'),
+    ('Ι', 'Κ'),
+    ('Λ', 'Ξ'),
+    ('Ο', 'Ρ'),
+    ('Σ', 'Υ'),
+    ('Φ', 'Ψ'),
+  ];
+  for (start, end) in latin_blocks.iter() {
     let mark = format!("{start}{end}");
     let up_start = start.to_ascii_uppercase();
     let up_end = end.to_ascii_uppercase();
-    for c_u8 in (*start as u8) ..= (*end as u8) {
+    for c_u8 in (*start as u8)..=(*end as u8) {
       map.insert(c_u8.into(), mark.clone());
     }
     let up_mark = format!("{up_start}{up_end}");
@@ -630,9 +653,9 @@ static _PRAGMATIC_BLOCK_MAP : Lazy<HashMap<char, String>> = Lazy::new(|| {
       map.insert(c_u8.into(), up_mark.clone());
     }
   }
-  for (start,end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
+  for (start, end) in greek_blocks.iter().chain(up_greek_blocks.iter()) {
     let mark = format!("{start}{end}");
-    for c_u32 in (*start as u32) ..= (*end as u32) {
+    for c_u32 in (*start as u32)..=(*end as u32) {
       map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
     }
   }

@@ -1,6 +1,6 @@
 use crate::package::*;
-static SCRIPT_NAME_RE: Lazy<Regex> = Lazy::new(||
-  Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap());
+static SCRIPT_NAME_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$").unwrap());
 
 //======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments

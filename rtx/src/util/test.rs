@@ -36,19 +36,20 @@ pub fn rtx_tests_internal(
     let tex_file_string = tex_file.to_str().unwrap();
     let xml_file_str = xml_file.to_str().unwrap();
     if xml_file.exists() {
-      rtx_ok_internal(
-        tex_file_string,
-        xml_file_str,
-        name,
-        dispatcher_opt.clone(),
-      );
+      rtx_ok_internal(tex_file_string, xml_file_str, name, dispatcher_opt.clone());
     } else {
       // Skip, these could be tex fragment files.
     }
   }
 }
 
-pub fn rtx_test_single(tex_file_str:&str, name:&str, dirpath:&str, requires:Option<&phf::Map<&str, &str>>, dispatcher_opt: Option<BindingDispatcher>) {
+pub fn rtx_test_single(
+  tex_file_str: &str,
+  name: &str,
+  dirpath: &str,
+  requires: Option<&phf::Map<&str, &str>>,
+  dispatcher_opt: Option<BindingDispatcher>,
+) {
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -64,7 +65,6 @@ pub fn rtx_test_single(tex_file_str:&str, name:&str, dirpath:&str, requires:Opti
   } else {
     // Skip, these could be tex fragment files.
   }
-
 }
 
 fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>>) -> bool {
@@ -194,17 +194,23 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
 /// The path should be absolute, or relative to the root rtx checkout.
 #[macro_export]
 macro_rules! tex_tests {
-    ($dir:literal) => {tex_tests!($dir,None,None);};
-    ($dir:literal, $requires:expr, $dispatch:expr) => {
-      macro_rules! this_test_requires {
-        () => {$requires}
-      }
-      macro_rules! this_test_dispatch {
-        () => {$dispatch};
-      }
-      use rtx_codegen::GlobTeXTests;
-      #[derive(GlobTeXTests)]
-      #[directory=$dir]
-      struct _TestDirective;
-    };
+  ($dir:literal) => {
+    tex_tests!($dir, None, None);
+  };
+  ($dir:literal, $requires:expr, $dispatch:expr) => {
+    macro_rules! this_test_requires {
+      () => {
+        $requires
+      };
+    }
+    macro_rules! this_test_dispatch {
+      () => {
+        $dispatch
+      };
+    }
+    use rtx_codegen::GlobTeXTests;
+    #[derive(GlobTeXTests)]
+    #[directory=$dir]
+    struct _TestDirective;
+  };
 }

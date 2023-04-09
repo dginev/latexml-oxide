@@ -1,8 +1,8 @@
+use phf::phf_map;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use phf::{phf_map};
 
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
   "ansinew"=> "ansinew.def",
@@ -37,6 +37,4 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 #[test]
 #[ignore]
 // TODO: use tex_tests!() once enabled
-fn can_encode() {
-  rtx_tests("tests/encoding", Some(&REQUIRES), None);
-}
+fn can_encode() { rtx_tests("tests/encoding", Some(&REQUIRES), None); }

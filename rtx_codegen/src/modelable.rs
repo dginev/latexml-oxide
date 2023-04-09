@@ -13,7 +13,8 @@ use rtx_core::common::error::*;
 use rtx_core::util::pathname;
 use rtx_core::{fatal, s};
 
-static TAG_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static TAG_MODEL_LINE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
 static CLASS_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
 static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 

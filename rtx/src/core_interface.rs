@@ -16,7 +16,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, Core, Debug, Explode, CharToken, Token, T_CS, T_SPACE};
+use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
@@ -27,7 +27,6 @@ use rtx_package::{
 static CLS_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.cls$").unwrap());
 static STY_EXT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.sty$").unwrap());
 static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
-
 
 #[derive(Default)]
 pub struct DigestionOptions {

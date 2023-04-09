@@ -1,15 +1,15 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
+use string_interner::symbol::SymbolU32;
 
+use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, PCDATA_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::arena::{self, LTX_P_SYM, PCDATA_SYM, EMPTY_SYM};
 use crate::common::font::Font;
 use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
@@ -38,18 +38,20 @@ static CODE_TEX_EXT: &str = ".code.tex";
 /// regex for *.tex and *.bib
 static TEX_OR_BIB_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.(tex|bib)$").unwrap());
 /// Used in conversion to scaled points
-pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| map!(
-  "pt" => 65536.0,
-  "pc" => 12.0 * 65536.0,
-  "in" => 72.27 * 65536.0,
-  "bp" => 72.27 * 65536.0 / 72.0,
-  "px" => 72.27 * 65536.0 / 72.0,   // Assume px=bp ?
-  "cm" => 72.27 * 65536.0 / 2.54,
-  "mm" => 72.27 * 65536.0 / 2.54 / 10.0,
-  "dd" => 1238.0 * 65536.0 / 1157.0,
-  "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0,
-  "sp" => 1.0
-));
+pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| {
+  map!(
+    "pt" => 65536.0,
+    "pc" => 12.0 * 65536.0,
+    "in" => 72.27 * 65536.0,
+    "bp" => 72.27 * 65536.0 / 72.0,
+    "px" => 72.27 * 65536.0 / 72.0,   // Assume px=bp ?
+    "cm" => 72.27 * 65536.0 / 2.54,
+    "mm" => 72.27 * 65536.0 / 2.54 / 10.0,
+    "dd" => 1238.0 * 65536.0 / 1157.0,
+    "cc" => 12.0 * 1238.0 * 65536.0 / 1157.0,
+    "sp" => 1.0
+  )
+});
 
 /// installation scope in the State tables
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -323,14 +325,18 @@ impl Default for State {
   }
 }
 
-pub static STY_STATE: Lazy<RwLock<State>> = Lazy::new(|| RwLock::new(State::new(StateOptions {
-  catcodes: Some(Catcodes::Style),
-  ..StateOptions::default()
-})));
-pub static STD_STATE: Lazy<RwLock<State>> = Lazy::new(|| RwLock::new(State::new(StateOptions {
-  catcodes: Some(Catcodes::Standard),
-  ..StateOptions::default()
-})));
+pub static STY_STATE: Lazy<RwLock<State>> = Lazy::new(|| {
+  RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Style),
+    ..StateOptions::default()
+  }))
+});
+pub static STD_STATE: Lazy<RwLock<State>> = Lazy::new(|| {
+  RwLock::new(State::new(StateOptions {
+    catcodes: Some(Catcodes::Standard),
+    ..StateOptions::default()
+  }))
+});
 
 /// State fields allowed for customization during construction
 #[derive(Default)]
@@ -1856,7 +1862,9 @@ impl State {
         let desc_kid_keys: Vec<SymbolU32> = desc
           .entry(kid)
           .or_insert_with(HashMap::default)
-          .keys().copied().collect();
+          .keys()
+          .copied()
+          .collect();
         // desc_kid_keys.sort(); // TODO: why sort?
         for start in desc_kid_keys {
           let start_entry = {
@@ -1903,9 +1911,7 @@ impl State {
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<SymbolU32> = self
-      .model
-      .get_sym_tag_contents(&tag);
+    let tag_contents: Vec<SymbolU32> = self.model.get_sym_tag_contents(&tag);
 
     for kid in tag_contents {
       if desc
@@ -1924,11 +1930,7 @@ impl State {
       }
 
       if kid != *PCDATA_SYM && openable.contains(&kid) {
-        let inner = if start != *EMPTY_SYM {
-          start
-        } else {
-          kid
-        };
+        let inner = if start != *EMPTY_SYM { start } else { kid };
 
         self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
       }

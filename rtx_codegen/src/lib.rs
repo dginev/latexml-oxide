@@ -8,8 +8,8 @@ use syn::{parse_macro_input, DeriveInput};
 mod constructable;
 mod modelable;
 mod parametrizeable;
-mod tokenizeable;
 mod testable;
+mod tokenizeable;
 
 #[proc_macro_derive(CompileReplacement, attributes(replacement))]
 pub fn derive_compile_replacement(input: TokenStream) -> TokenStream {

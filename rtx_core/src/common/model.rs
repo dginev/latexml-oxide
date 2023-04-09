@@ -8,10 +8,10 @@ use std::io::BufReader;
 use std::string::ToString;
 use string_interner::symbol::SymbolU32;
 
+use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
-use crate::common::arena::{self, ANY_SYM};
 use crate::common::xml::{XPath, XML_NS};
 use crate::document::Document;
 use crate::util::pathname;
@@ -26,7 +26,8 @@ pub type IndirectModel = HashMap<SymbolU32, HashMap<SymbolU32, SymbolU32>>;
 
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
 static CAPTURE_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(.*?:)?_Capture_$").unwrap());
-static TAG_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static TAG_MODEL_LINE_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
 static CLASS_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:=]+):=(.*?)$").unwrap());
 static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
@@ -615,11 +616,7 @@ impl Model {
       .map(|key| arena::resolve(*key))
       .collect()
   }
-  pub fn get_sym_tags(&self) -> Vec<SymbolU32> {
-    self
-      .tagprop
-      .keys().copied().collect()
-  }
+  pub fn get_sym_tags(&self) -> Vec<SymbolU32> { self.tagprop.keys().copied().collect() }
 
   pub fn get_tag_contents(&self, tag: &str) -> Vec<&str> {
     match self.tagprop.get(&arena::pin(tag)) {
@@ -634,9 +631,7 @@ impl Model {
 
   pub fn get_sym_tag_contents(&self, tag: &SymbolU32) -> Vec<SymbolU32> {
     match self.tagprop.get(tag) {
-      Some(h) => {
-        h.model.iter().copied().collect()
-      },
+      Some(h) => h.model.iter().copied().collect(),
       None => Vec::new(),
     }
   }

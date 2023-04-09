@@ -25,10 +25,8 @@ use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
 
-
 static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
-
 
 const READLINE_PROGRESS_QUANTUM: usize = 25;
 
@@ -57,12 +55,10 @@ impl FoodType {
   }
 }
 
-
 static LASTID: Lazy<Mutex<u32>> = Lazy::new(|| Mutex::new(0));
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
-
 
 #[derive(Debug, Default)]
 pub struct MouthOptions {
@@ -556,7 +552,10 @@ impl Mouth {
     while let Some(token) = self.read_token(state) {
       tokens.push(token);
     }
-    while let Some(Token {code: Catcode::SPACE,..}) = tokens.last()
+    while let Some(Token {
+      code: Catcode::SPACE,
+      ..
+    }) = tokens.last()
     {
       // Remove trailing space
       tokens.pop();
@@ -669,7 +668,7 @@ impl Mouth {
       ACTIVE => Some(T_ACTIVE!(ch)),
       COMMENT => self.handle_comment(state),
       INVALID => Some(CharToken!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
-      _ => None,                                 // IGNORE, others
+      _ => None,                                       // IGNORE, others
     }
   }
 
@@ -795,7 +794,6 @@ impl Mouth {
 
   pub fn at_eof(&self) -> bool { self.at_eof }
 }
-
 
 pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
   // special case! empty input is empty Tokens

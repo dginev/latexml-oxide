@@ -1,13 +1,13 @@
-use once_cell::sync::Lazy;
 use libxml::tree::{Node, NodeType};
+use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::io::Cursor;
 
+use rtx_core::common::arena;
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
-use rtx_core::common::arena;
 use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{fatal, map, s, static_map, Error};
@@ -20,7 +20,8 @@ use marpa::lexer::byte_scanner::*;
 use marpa::parser::*;
 use marpa::tree_builder::TreeBuilder;
 
-static PREFIX_ALIAS : Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| static_map!(
+static PREFIX_ALIAS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+  static_map!(
     "SUPERSCRIPTOP" => "^",
     "SUBSCRIPTOP" => "_",
     "times" => "*",
@@ -33,14 +34,17 @@ static PREFIX_ALIAS : Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| s
     "much-greater-than" => ">>",
     "plus" => "+",
     "minus" => "-",
-    "divide" => "/"));
+    "divide" => "/")
+});
 // Put infix, along with `binding power'
-static IS_INFIX : Lazy<HashMap<String, usize>> = Lazy::new(|| map!(
+static IS_INFIX: Lazy<HashMap<String, usize>> = Lazy::new(|| {
+  map!(
   "METARELOP" => 1,
   "RELOP"         => 2,    "ARROW"       => 2,
   "ADDOP"         => 10,   "MULOP"       => 100, "FRACOP" => 100,
-  "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000));
-static PRE_DIGITS_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
+  "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000)
+});
+static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
 
 pub struct MathParser {
   // grammar: MarpaGrammar,

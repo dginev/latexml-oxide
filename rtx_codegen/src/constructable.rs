@@ -41,25 +41,26 @@ macro_rules! LEAD_RANDOM_TEXT_RE_STR (() => (
 
 // These recognize the beginnings of value expressions, conditionals, ..
 // Attempt to follow XML Spec, Appendix B
-static LEAD_VALUE_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_VALUE_RE_STR!()).unwrap());
-static LEAD_COND_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_COND_RE_STR!()).unwrap());
-static LEAD_QMARK : Lazy<Regex> = Lazy::new(|| Regex::new(r"^[?]").unwrap());
-static LEAD_OPEN_TAG_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_OPEN_TAG_RE_STR!()).unwrap());
-static LEAD_CLOSE_TAG_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_CLOSE_TAG_RE_STR!()).unwrap());
-static LEAD_QUOTED_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_QUOTED_RE_STR!()).unwrap());
-static LEAD_RANDOM_TEXT_RE : Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_RANDOM_TEXT_RE_STR!()).unwrap());
+static LEAD_VALUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_VALUE_RE_STR!()).unwrap());
+static LEAD_COND_RE: Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_COND_RE_STR!()).unwrap());
+static LEAD_QMARK: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[?]").unwrap());
+static LEAD_OPEN_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_OPEN_TAG_RE_STR!()).unwrap());
+static LEAD_CLOSE_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_CLOSE_TAG_RE_STR!()).unwrap());
+static LEAD_QUOTED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(LEAD_QUOTED_RE_STR!()).unwrap());
+static LEAD_RANDOM_TEXT_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(LEAD_RANDOM_TEXT_RE_STR!()).unwrap());
 // QName (element tags, attribute names);  Could this also allow expressions?
-static QNAME_KEY_RE : Lazy<Regex> = Lazy::new(|| Regex::new(QNAME_KEY_RE_STR!()).unwrap());
-static FLOAT_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\^+)\s*").unwrap());
-static PI_RE : Lazy<Regex> = Lazy::new(|| Regex::new(PI_RE_STR!()).unwrap());
-static PI_CLOSE_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*\?>").unwrap());
-static KEY_RE : Lazy<Regex> = Lazy::new(|| Regex::new(KEY_RE_STR!()).unwrap());
-static FN_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^&([\w:]*)\(").unwrap());
-static LEAD_CPAREN_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*\)").unwrap());
-static LEAD_KV_SEP : Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*,\s*").unwrap());
-static ARG_HOLE_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^#(\d+)").unwrap());
-static PROP_HOLE_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"^\#([\w_-]+)").unwrap());
-static ESCAPED_OP : Lazy<Regex> = Lazy::new(|| Regex::new(r"\\[#\?(&,<>\\%]").unwrap());
+static QNAME_KEY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(QNAME_KEY_RE_STR!()).unwrap());
+static FLOAT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\^+)\s*").unwrap());
+static PI_RE: Lazy<Regex> = Lazy::new(|| Regex::new(PI_RE_STR!()).unwrap());
+static PI_CLOSE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*\?>").unwrap());
+static KEY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(KEY_RE_STR!()).unwrap());
+static FN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^&([\w:]*)\(").unwrap());
+static LEAD_CPAREN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*\)").unwrap());
+static LEAD_KV_SEP: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*,\s*").unwrap());
+static ARG_HOLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^#(\d+)").unwrap());
+static PROP_HOLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\#([\w_-]+)").unwrap());
+static ESCAPED_OP: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\[#\?(&,<>\\%]").unwrap());
 
 pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   let replacement: String = match input.attrs[0].parse_meta().unwrap() {
