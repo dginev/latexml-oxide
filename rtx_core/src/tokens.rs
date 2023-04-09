@@ -70,8 +70,9 @@ impl From<Token> for Tokens {
 impl From<&Token> for Tokens {
   fn from(t: &Token) -> Tokens { Tokens::new(vec![t.clone()]) }
 }
-// TODO: Is there a better abstraction that avoids this clone?
-//       I fear it may be using Arc<Tokens> everywhere, which is also too heavy.
+
+// Good news: Cloning `Token` should now be cheap (due to string interning),
+// so cloning `Tokens` should be fine.
 impl From<Arc<Tokens>> for Tokens {
   fn from(t: Arc<Tokens>) -> Tokens { (*t).clone() }
 }

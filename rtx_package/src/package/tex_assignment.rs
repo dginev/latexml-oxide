@@ -114,10 +114,10 @@ LoadDefinitions!(outer_state, {
 
   DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, args, state] {
     if let ArgWrap::RegisterDefinition((defn_token, inner)) = args.remove(0) {
-      if defn_token.to_string() != "missing" {
+      let defn_token_str = defn_token.to_string();
+      if defn_token_str != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
-        let defn_token_rc = Arc::new(defn_token);
-        state.set_current_token(Arc::clone(&defn_token_rc));
+        state.set_current_token(defn_token);
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
           let defn_args : Vec<ArgWrap> = inner.clone();
@@ -125,7 +125,7 @@ LoadDefinitions!(outer_state, {
           defn.set_value(defn_value.add(summand), defn_args, state);
         } else {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition",
-            defn_token_rc);
+          defn_token_str);
           Error!("expected","definition", stomach, state, message);
         }
         state.expire_current_token();

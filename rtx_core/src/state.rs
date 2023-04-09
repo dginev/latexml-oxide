@@ -259,7 +259,7 @@ pub struct State {
   // Local structures
   if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
   smuggle_the: Vec<bool>,
-  current_token: Vec<Arc<Token>>,
+  current_token: Vec<Token>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the main/official rtx bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
@@ -2100,11 +2100,11 @@ impl State {
   /// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn expire_smuggle_the(&mut self) { self.smuggle_the.pop(); }
   /// sets the (localized) current token. see `Stomach::invoke_token`
-  pub fn set_current_token(&mut self, token: Arc<Token>) { self.current_token.push(token); }
+  pub fn set_current_token(&mut self, token: Token) { self.current_token.push(token); }
   /// expires the most recent (localized) current token.
   pub fn expire_current_token(&mut self) { self.current_token.pop(); }
   /// gets the (localized) current token
-  pub fn get_current_token(&self) -> Option<Arc<Token>> {
-    self.current_token.last().map(Arc::clone)
+  pub fn get_current_token(&self) -> Option<&Token> {
+    self.current_token.last()
   }
 }

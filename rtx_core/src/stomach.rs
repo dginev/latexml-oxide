@@ -29,7 +29,7 @@ pub struct Stomach {
   /// owns a Gullet, responsible for obtaining tokens
   pub gullet: Gullet,
   /// currently invoked tokens
-  pub token_stack: Vec<Arc<Token>>,
+  pub token_stack: Vec<Token>,
   /// tracks the tokens of boxing groups(?)
   pub boxing: Vec<Token>,
   /// collects the intermediate boxes resulting from a `digest` call.
@@ -228,10 +228,10 @@ impl<'t> Stomach {
     let mut result: Vec<Digested> = Vec::new();
     // INVOKE:
     while maybe_token.is_some() {
-      let token = Arc::new(maybe_token.take().unwrap().into_owned());
+      let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
-      state.set_current_token(Arc::clone(&token));
-      self.token_stack.push(Arc::clone(&token));
+      state.set_current_token(token.clone());
+      self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
         fatal!(
           Stomach,
@@ -560,11 +560,7 @@ impl<'t> Stomach {
 
   /// Adds a new stack frame for a TeX group.
   pub fn push_stack_frame(&mut self, nobox: bool, state: &mut State) {
-    let current_token = match &state.get_current_token() {
-      Some(t) => Arc::clone(t),
-      _ => unimplemented!(), // should never happen?
-    };
-
+    let current_token = state.get_current_token().unwrap().clone();
     state.push_frame();
     state.assign_value(
       "beforeAfterGroup",
@@ -580,7 +576,7 @@ impl<'t> Stomach {
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value(
       "groupInitiator",
-      (*current_token).clone(),
+      current_token.clone(),
       Some(Scope::Local),
     );
     state.assign_value(
@@ -590,7 +586,7 @@ impl<'t> Stomach {
     );
     if !nobox {
       // For begingroup/endgroup
-      self.boxing.push((*current_token).clone())
+      self.boxing.push(current_token)
     }
   }
   /// Removes the last/current stack frame, ending a TeX group

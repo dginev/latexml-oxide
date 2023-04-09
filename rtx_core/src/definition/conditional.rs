@@ -166,7 +166,7 @@ impl Definition for Conditional {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfFrame {
   /// the token which started the conditional
-  pub token: Arc<Token>,
+  pub token: Token,
   /// source location of the conditional start
   pub start: Locator,
   /// flag: currently parsing the test
@@ -185,7 +185,7 @@ impl Conditional {
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
     let if_frame = Arc::new(RwLock::new(IfFrame {
-      token: Arc::clone(&state.get_current_token().unwrap()),
+      token: state.get_current_token().unwrap().clone(),
       start: gullet.get_locator().unwrap().into_owned(),
       parsing: true,
       elses: false,
