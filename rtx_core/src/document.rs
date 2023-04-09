@@ -2,10 +2,10 @@ pub mod helpers;
 pub mod resource;
 pub mod tag;
 
-use once_cell::sync::Lazy;
 use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use rustc_hash::FxHashMap as HashMap;
@@ -15,10 +15,10 @@ use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
+use crate::common::arena::{self, LTX_STAR_SYM};
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
-use crate::common::arena::{self, LTX_STAR_SYM};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml::{self, XML_NS};
@@ -33,26 +33,46 @@ use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
 use crate::Tbox;
 use crate::{BoxOps, Digested, DigestedData};
 
-
-  static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
-  static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
-  static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
-  static NON_MERGEABLE_ATTRIBUTES : Lazy<HashSet<&'static str>> = Lazy::new(||
-    HashSet::from(["about","aboutlabelref","aboutidref",
-   "resource","resourcelabelref","resourceidref",
-   "property","rel","rev","tyupeof","datatype",
-   "content","data","datamimetype","dataencoding"]));
-  // When merging attributes of two nodes, some attributes should be combined
-  // Merged space separated
-  static MERGE_ATTRIBUTE_SPACEJOIN : Lazy<HashSet<&'static str>> =
-    Lazy::new(|| HashSet::from(["class","lists","inlist","labels"]));
-  // Merged ";" separated
-  static MERGE_ATTRIBUTE_SEMICOLONJOIN : Lazy<HashSet<&'static str>> =
-    Lazy::new(|| HashSet::from(["cssstyle"]));
-  // Summed lengths
-  static MERGE_ATTRIBUTE_SUMLENGTH : Lazy<HashSet<&'static str>> =
-    Lazy::new(|| HashSet::from(["xoffset","yoffset","lpadding","rpadding","xtranslate",
-    "ytranslate"]));
+static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
+static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
+static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
+static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+  HashSet::from([
+    "about",
+    "aboutlabelref",
+    "aboutidref",
+    "resource",
+    "resourcelabelref",
+    "resourceidref",
+    "property",
+    "rel",
+    "rev",
+    "tyupeof",
+    "datatype",
+    "content",
+    "data",
+    "datamimetype",
+    "dataencoding",
+  ])
+});
+// When merging attributes of two nodes, some attributes should be combined
+// Merged space separated
+static MERGE_ATTRIBUTE_SPACEJOIN: Lazy<HashSet<&'static str>> =
+  Lazy::new(|| HashSet::from(["class", "lists", "inlist", "labels"]));
+// Merged ";" separated
+static MERGE_ATTRIBUTE_SEMICOLONJOIN: Lazy<HashSet<&'static str>> =
+  Lazy::new(|| HashSet::from(["cssstyle"]));
+// Summed lengths
+static MERGE_ATTRIBUTE_SUMLENGTH: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+  HashSet::from([
+    "xoffset",
+    "yoffset",
+    "lpadding",
+    "rpadding",
+    "xtranslate",
+    "ytranslate",
+  ])
+});
 
 pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
@@ -283,9 +303,10 @@ impl Document {
           && child.get_attributes().is_empty()
         {
           let grandchildren = child.get_child_nodes();
-          if grandchildren.iter().all(|gchild| {
-            self.can_contain_qname(qname, state.model.get_node_qname(gchild), state)
-          }) {
+          if grandchildren
+            .iter()
+            .all(|gchild| self.can_contain_qname(qname, state.model.get_node_qname(gchild), state))
+          {
             Debug!(
               "will replace {} grandchildren nodes in finalize_rec",
               grandchildren.len()
@@ -870,7 +891,10 @@ impl Document {
         if !node.has_attribute("_noautoclose") {
           if node.has_attribute("_autoclose") {
             true
-          } else if let Some(props) = state.tag_properties.get(&arena::pin(self.get_node_qname(node, state))) {
+          } else if let Some(props) = state
+            .tag_properties
+            .get(&arena::pin(self.get_node_qname(node, state)))
+          {
             props.auto_close.unwrap_or(false)
           } else {
             false
@@ -1316,7 +1340,12 @@ impl Document {
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen'able tags?
   /// And if so, return the tag to open.
-  pub fn can_contain_indirect(&self, tag: &str, child: &str, state: &mut State) -> Option<&'static str> {
+  pub fn can_contain_indirect(
+    &self,
+    tag: &str,
+    child: &str,
+    state: &mut State,
+  ) -> Option<&'static str> {
     // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model->getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -1328,7 +1357,8 @@ impl Document {
     let imodel = state.indirect_model.as_ref().unwrap();
     // returning inner_node
     match imodel.get(&arena::pin(tag)) {
-      Some(sub_m) => sub_m.get(&arena::pin(child))
+      Some(sub_m) => sub_m
+        .get(&arena::pin(child))
         .map(|sym| arena::resolve(*sym)),
       None => None,
     }

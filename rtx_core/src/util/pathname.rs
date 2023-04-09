@@ -20,16 +20,17 @@ pub struct PathnameFindOptions {
 
 static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
-static HOME_PATH : Lazy<String> = Lazy::new(|| match dirs::home_dir() {
+static HOME_PATH: Lazy<String> = Lazy::new(|| match dirs::home_dir() {
   Some(val) => val.to_string_lossy().to_string(),
   _ => s!("~"),
 });
-static PROTOCOL_RE : Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
-static PATHNAME_IS_NASTY_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap());
+static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
+static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"[^\w\-_+=/\\\.~\s:]").unwrap());
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
-static KPSE : Lazy<Arc<Mutex<Kpaths>>> = Lazy::new(|| Arc::new(Mutex::new(Kpaths::new().unwrap())));
+static KPSE: Lazy<Arc<Mutex<Kpaths>>> = Lazy::new(|| Arc::new(Mutex::new(Kpaths::new().unwrap())));
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {
 //       match exe_path.as_path().parent() {
@@ -51,7 +52,6 @@ static KPSE : Lazy<Arc<Mutex<Kpaths>>> = Lazy::new(|| Arc::new(Mutex::new(Kpaths
 // TODO:
 // grep { (-f "$_.pm") && (-d $_) }
 // map { pathname_canonical($_ . $SEP . 'LaTeXML') } @INC;    # [CONSTANT]
-
 
 /// checks if the path is a conforming URL string
 pub fn is_url(path: &str) -> bool { URL_RE.is_match(path) }

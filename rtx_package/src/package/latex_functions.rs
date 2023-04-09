@@ -1,8 +1,8 @@
 use crate::package::*;
 use rustc_hash::FxHashMap as HashMap;
 
-use once_cell::sync::Lazy;
 use libxml::tree::Node;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());

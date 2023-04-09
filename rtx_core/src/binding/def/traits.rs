@@ -5,10 +5,10 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
-use crate::common::arena;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;

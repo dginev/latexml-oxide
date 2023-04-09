@@ -9,9 +9,9 @@ use regex::Regex;
 use crate::binding::content::merge_font;
 use crate::binding::counter::dialect::step_counter_gullet;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
+use crate::common::arena;
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::common::arena;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
@@ -47,28 +47,26 @@ const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "rpadding",
 ];
 
-
 /// regex for the prefix of a conditional command sequence
-pub static CONDITIONAL_CS_RE: Lazy<Regex> = Lazy::new(||
-  Regex::new(r"^\\(?:if(.*)|unless)$").unwrap());
+pub static CONDITIONAL_CS_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^\\(?:if(.*)|unless)$").unwrap());
 /// regex for the prefix of a protocol (such as literal:)
-pub static LEADING_PROTOCOL_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"^\w+:").unwrap());
+pub static LEADING_PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+:").unwrap());
 /// regex for a trailing slash (trivial, but aids replacement of said slash)
-pub static TRAILING_SLASH_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"/$").unwrap());
+pub static TRAILING_SLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"/$").unwrap());
 /// regex for one-or-more spaces
-pub static SPACES_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"\s+").unwrap());
+pub static SPACES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
 /// regex for ${}^{label}$
-pub static DIRTY_ID_IDIOM_RE: Lazy<Regex> = Lazy::new(||
-  Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap());
+pub static DIRTY_ID_IDIOM_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\$\{\}\^\{(?P<label>[^\}]*)\}\$").unwrap());
 /// regex for characters not expected in a usual id attribute
-pub static NON_ID_CHARSET_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"[^\w_\-.]+").unwrap());
+pub static NON_ID_CHARSET_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\w_\-.]+").unwrap());
 /// regex for a strange noisy TeX `\\~{}`
-pub static TILDE_NOISE_RE: Lazy<Regex> = Lazy::new(||  Regex::new(r"\\~\{\}").unwrap());
+pub static TILDE_NOISE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\~\{\}").unwrap());
 /// regex for a TeX argument specifier or any command sequence
-pub static HAS_ARG_OR_CS : Lazy<Regex> = Lazy::new(||  Regex::new(r"#\d|\\.").unwrap());
+pub static HAS_ARG_OR_CS: Lazy<Regex> = Lazy::new(|| Regex::new(r"#\d|\\.").unwrap());
 /// regex for the usual argument placeholders `#1`-`#9`
-pub static ARG_HOLE : Lazy<Regex> = Lazy::new(||  Regex::new(r"#(\d)").unwrap());
-
+pub static ARG_HOLE: Lazy<Regex> = Lazy::new(|| Regex::new(r"#(\d)").unwrap());
 
 /// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 pub fn is_defined(name: &str, state: &State) -> bool {

@@ -1,14 +1,16 @@
 use crate::package::*;
 use once_cell::sync::Lazy;
 
-static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(||
+static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
-    "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " "));
-static DECIMAL_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(||
-  static_map!("en" => ".", "de" => ",", "fr" => ",", "nl" => ",", "pt" => ",", "es" => ","));
-static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(||
-  static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."));
-
+    "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " ")
+});
+static DECIMAL_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
+  || static_map!("en" => ".", "de" => ",", "fr" => ",", "nl" => ",", "pt" => ",", "es" => ","),
+);
+static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
+  || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
+);
 
 LoadDefinitions!(state, {
   //**********************************************************************

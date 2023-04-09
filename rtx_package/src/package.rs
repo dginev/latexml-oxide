@@ -1,7 +1,7 @@
 #![allow(unreachable_code)]
-pub use once_cell::sync::Lazy;
 pub use libxml::tree::{Namespace, Node};
 pub use log;
+pub use once_cell::sync::Lazy;
 pub use regex::Regex;
 pub use rustc_hash::FxHashMap as HashMap;
 pub use std::borrow::Cow;

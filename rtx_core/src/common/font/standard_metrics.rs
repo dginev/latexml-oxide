@@ -37,7 +37,8 @@ impl Default for MetricData {
   }
 }
 
-pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| raw_map!(
+pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
+  raw_map!(
   "amsa" => MetricData {
     quad: 65536.18,
     encoding: "AMSa",
@@ -1231,4 +1232,5 @@ pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| ra
     exheight: 28216.87,
     ..MetricData::default()}
 
-  ));
+  )
+});

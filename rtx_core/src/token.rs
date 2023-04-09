@@ -1,12 +1,12 @@
+use once_cell::sync::Lazy;
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
-use once_cell::sync::Lazy;
 use string_interner::symbol::SymbolU32;
 
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::arena;
 use crate::common::float::Float;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
@@ -312,36 +312,66 @@ impl PartialEq for Token {
 //  (as the arena lookup is a hair slower than copying a u32)
 
 /// constant for an END "}" token
-pub static TOKEN_BEGIN : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("{"),code: Catcode::BEGIN, smuggled: None});
+pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("{"),
+  code: Catcode::BEGIN,
+  smuggled: None,
+});
 /// constant for a BEGIN "{" token
-pub static TOKEN_END : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("}"),code: Catcode::END, smuggled: None});
+pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("}"),
+  code: Catcode::END,
+  smuggled: None,
+});
 /// constant for a MATH "$" token
-pub static TOKEN_MATH : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("$"),code: Catcode::MATH, smuggled: None});
+pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("$"),
+  code: Catcode::MATH,
+  smuggled: None,
+});
 /// constant for an ALIGN "&" token
-pub static TOKEN_ALIGN : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("&"),code: Catcode::ALIGN, smuggled: None});
+pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("&"),
+  code: Catcode::ALIGN,
+  smuggled: None,
+});
 /// constant for a PARAM "#" token
-pub static TOKEN_PARAM : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("#"),code: Catcode::PARAM, smuggled: None});
+pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("#"),
+  code: Catcode::PARAM,
+  smuggled: None,
+});
 /// constant for a SUPER "^" token
-pub static TOKEN_SUPER : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("^"),code: Catcode::SUPER, smuggled: None});
+pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("^"),
+  code: Catcode::SUPER,
+  smuggled: None,
+});
 /// constant for a SUB "_" token
-pub static TOKEN_SUB : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("_"),code: Catcode::SUB, smuggled: None});
+pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("_"),
+  code: Catcode::SUB,
+  smuggled: None,
+});
 /// constant for a SPACE " " token
-pub static TOKEN_SPACE : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin(" "), code: Catcode::SPACE, smuggled: None});
+pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin(" "),
+  code: Catcode::SPACE,
+  smuggled: None,
+});
 /// constant for a CR "\n" token
-pub static TOKEN_CR : Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("\n"),code: Catcode::SPACE, smuggled: None});
+pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("\n"),
+  code: Catcode::SPACE,
+  smuggled: None,
+});
 
 /// constant for T_CS("\relax")
-pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(||
-  Token { text: arena::pin("\\relax"),code: Catcode::CS, smuggled: None});
+pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
+  text: arena::pin("\\relax"),
+  code: Catcode::CS,
+  smuggled: None,
+});
 
 #[macro_export]
 /// macro for a BEGIN "{" token
@@ -487,7 +517,9 @@ macro_rules! T_SMUGGLE_THE {
 /// Token constructor macro (defaults to OTHER code)
 #[macro_export]
 macro_rules! Token {
-  ($text:expr) => { Token!($text, Catcode::OTHER) };
+  ($text:expr) => {
+    Token!($text, Catcode::OTHER)
+  };
   ($text:expr, $cc:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
@@ -500,12 +532,14 @@ macro_rules! Token {
 /// Special case: a character needs swift string conversion, so let's use a dedicated macro
 #[macro_export]
 macro_rules! CharToken {
-  ($c:expr) => {CharToken!($c, Catcode::OTHER)};
+  ($c:expr) => {
+    CharToken!($c, Catcode::OTHER)
+  };
   ($c:expr, $cc:expr) => {{
     let mut tmp = [0u8; 3];
     let s = $c.encode_utf8(&mut tmp);
     Token!(s, $cc)
-  }}
+  }};
 }
 
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
@@ -551,7 +585,7 @@ impl Default for Token {
 /// Accessors.
 impl<'a> Token {
   /// simple Token constructor, wrapping over text and catcode
-  pub fn new<T:AsRef<str>>(text: T, code: Catcode) -> Self {
+  pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
     Token {
       text: arena::pin(text),
       code,
@@ -582,7 +616,10 @@ impl<'a> Token {
   pub fn get_executable_name(&self) -> String {
     let cc = self.code;
     if cc.is_executable() {
-      self.get_primitive_name().unwrap_or(self.get_string()).to_string()
+      self
+        .get_primitive_name()
+        .unwrap_or(self.get_string())
+        .to_string()
     } else {
       String::new()
     }
@@ -600,9 +637,7 @@ impl<'a> Token {
 
   /// Return the the borrowed &str "text" of the token
   /// use `to_string` instead for an owned String
-  pub fn get_string(&self) -> &str {
-    arena::resolve(self.text)
-  }
+  pub fn get_string(&self) -> &str { arena::resolve(self.text) }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
   /// sequence
@@ -757,9 +792,13 @@ impl<'a> Token {
 
   pub fn to_glue(&self) -> Glue { Glue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
 
-  pub fn to_mu_glue(&self) -> MuGlue { MuGlue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_mu_glue(&self) -> MuGlue {
+    MuGlue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+  }
 
-  pub fn to_float(&self) -> Float { Float::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_float(&self) -> Float {
+    Float::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+  }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens::new(vec![self]), state)
@@ -767,7 +806,5 @@ impl<'a> Token {
 }
 
 impl AsRef<str> for Token {
-  fn as_ref(&self) -> &str {
-    self.get_string()
-  }
+  fn as_ref(&self) -> &str { self.get_string() }
 }

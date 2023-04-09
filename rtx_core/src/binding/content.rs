@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::path::Path;
 
-use crate::common::error::*;
 use crate::common::arena;
+use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::object::Object;
 use crate::document::resource::*;

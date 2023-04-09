@@ -3,11 +3,9 @@
 ///**********************************************************************
 use rtx::util::test::*;
 
-use phf::{phf_map};
+use phf::phf_map;
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
-  "ntheorem" => "ntheorem.std" };
+"ntheorem" => "ntheorem.std" };
 #[test]
 #[ignore]
-fn can_theorem() {
-  rtx_tests("tests/theorem", Some(&REQUIRES), None);
-}
+fn can_theorem() { rtx_tests("tests/theorem", Some(&REQUIRES), None); }

@@ -30,4 +30,8 @@ fn digestion_tests_dispatch(
   }
 }
 
-tex_tests!("tests/digestion",None,Some(Arc::new(digestion_tests_dispatch)));
+tex_tests!(
+  "tests/digestion",
+  None,
+  Some(Arc::new(digestion_tests_dispatch))
+);

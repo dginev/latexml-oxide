@@ -10,16 +10,16 @@ mod helpers;
 ///**********************************************************************
 use std::sync::Arc;
 
+use rtx::tex_tests;
 use rtx_core::common::error::Result;
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;
 use rtx_package::package;
-use rtx::tex_tests;
 
-use phf::{phf_map};
+use phf::phf_map;
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
-  "meaning" => "t1enc.def",
-  "ifthen" => "ifthen.sty"};
+"meaning" => "t1enc.def",
+"ifthen" => "ifthen.sty"};
 
 pub fn expansion_tests_dispatch(
   filename: &str,
@@ -36,4 +36,5 @@ pub fn expansion_tests_dispatch(
 tex_tests!(
   "tests/expansion",
   Some(&REQUIRES),
-  Some(Arc::new(expansion_tests_dispatch)));
+  Some(Arc::new(expansion_tests_dispatch))
+);

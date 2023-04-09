@@ -42,7 +42,7 @@ pub const MATH_FONTS: [&str; 6] = ["cmm", "cmsy", "cmex", "amsa", "amsb", "cmr"]
 // static FORCE_SERIES : i8 = 0x2;
 // static FORCE_SHAPE : i8  = 0x4;
 
-pub static FONT_TEXT_DEFAULT :Lazy<Font> = Lazy::new(Font::text_default);
+pub static FONT_TEXT_DEFAULT: Lazy<Font> = Lazy::new(Font::text_default);
 static LATIN_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Latin}&&\pL]$").unwrap());
 static GREEK_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Greek}&&\pL]$").unwrap());
 static UPPER_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Lu}]$").unwrap());
@@ -60,100 +60,124 @@ static FONT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(xylubt|xyluat|xydash|x
 //   family + series + variant + size
 // NOTE: This probably doesn't really belong in here...
 
-static FONT_FAMILY : Lazy<HashMap<&'static str, Font>> = Lazy::new(|| raw_map!(
-  "cmr"  => fontmap!(family => "serif"),      "cmss"  => fontmap!(family => "sansserif"),
-  "cmtt" => fontmap!(family => "typewriter"), "cmvtt" => fontmap!(family => "typewriter"),
-  "cmti" => fontmap!(family => "typewriter", shape => "italic"),
-  "cmfib" => fontmap!(family => "serif"),      "cmfr"  => fontmap!(family => "serif"),
-  "cmdh"  => fontmap!(family => "serif"),      "cm"    => fontmap!(family => "serif"),
-  "ptm"   => fontmap!(family => "serif"),      "ppl"   => fontmap!(family => "serif"),
-  "pnc"   => fontmap!(family => "serif"),      "pbk"   => fontmap!(family => "serif"),
-  "phv"   => fontmap!(family => "sansserif"),  "pag"   => fontmap!(family => "serif"),
-  "pcr"   => fontmap!(family => "typewriter"), "pzc"   => fontmap!(family => "script"),
-  "put"   => fontmap!(family => "serif"),      "bch"   => fontmap!(family => "serif"),
-  "psy"   => fontmap!(family => "symbol"),     "pzd"   => fontmap!(family => "dingbats"),
-  "ccr"   => fontmap!(family => "serif"),      "ccy"   => fontmap!(family => "symbol"),
-  "cmbr"  => fontmap!(family => "sansserif"),  "cmtl"  => fontmap!(family => "typewriter"),
-  "cmbrs" => fontmap!(family => "symbol"),     "ul9"   => fontmap!(family => "typewriter"),
-  "txr"   => fontmap!(family => "serif"),      "txss"  => fontmap!(family => "sansserif"),
-  "txtt"  => fontmap!(family => "typewriter"), "txms"  => fontmap!(family => "symbol"),
-  "txsya" => fontmap!(family => "symbol"),     "txsyb" => fontmap!(family => "symbol"),
-  "pxr"   => fontmap!(family => "serif"),      "pxms"  => fontmap!(family => "symbol"),
-  "pxsya" => fontmap!(family => "symbol"),     "pxsyb" => fontmap!(family => "symbol"),
-  "futs"  => fontmap!(family => "serif"),
-  "uaq"   => fontmap!(family => "serif"),      "ugq"   => fontmap!(family => "sansserif"),
-  "eur"   => fontmap!(family => "serif"),      "eus"   => fontmap!(family => "script"),
-  "euf"   => fontmap!(family => "fraktur"),    "euex"  => fontmap!(family => "symbol"),
-  // The following are actually math fonts.
-  "ms"    => fontmap!(family => "symbol"),
-  "ccm"   => fontmap!(family => "serif", shape => "italic"),
-  "cmm"   => fontmap!(family => "italic", encoding => "OML"),
-  "cmex"  => fontmap!(family => "symbol", encoding => "OMX"),       // Not really symbol, but...
-  "cmsy"  => fontmap!(family => "symbol", encoding => "OMS"),
-  "ccitt" => fontmap!(family => "typewriter", shape => "italic"),
-  "cmbrm" => fontmap!(family => "sansserif", shape => "italic"),
-  "futm"  => fontmap!(family => "serif", shape => "italic"),
-  "futmi" => fontmap!(family => "serif", shape => "italic"),
-  "txmi"  => fontmap!(family => "serif", shape => "italic"),
-  "pxmi"  => fontmap!(family => "serif", shape => "italic"),
-  "bbm"   => fontmap!(family => "blackboard"),
-  "bbold" => fontmap!(family => "blackboard"),
-  "bbmss" => fontmap!(family => "blackboard"),
-  // some ams fonts
-  "cmmib" => fontmap!(family => "italic", series   => "bold"),
-  "cmbsy" => fontmap!(family => "symbol", series   => "bold"),
-  "msa"   => fontmap!(family => "symbol", encoding => "AMSa"),
-  "msb"   => fontmap!(family => "symbol", encoding => "AMSb"),
-  // Are these really the same?
-  "msx" => fontmap!(family => "symbol", encoding => "AMSa"),
-  "msy" => fontmap!(family => "symbol", encoding => "AMSb")
-));
+static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+  raw_map!(
+    "cmr"  => fontmap!(family => "serif"),      "cmss"  => fontmap!(family => "sansserif"),
+    "cmtt" => fontmap!(family => "typewriter"), "cmvtt" => fontmap!(family => "typewriter"),
+    "cmti" => fontmap!(family => "typewriter", shape => "italic"),
+    "cmfib" => fontmap!(family => "serif"),      "cmfr"  => fontmap!(family => "serif"),
+    "cmdh"  => fontmap!(family => "serif"),      "cm"    => fontmap!(family => "serif"),
+    "ptm"   => fontmap!(family => "serif"),      "ppl"   => fontmap!(family => "serif"),
+    "pnc"   => fontmap!(family => "serif"),      "pbk"   => fontmap!(family => "serif"),
+    "phv"   => fontmap!(family => "sansserif"),  "pag"   => fontmap!(family => "serif"),
+    "pcr"   => fontmap!(family => "typewriter"), "pzc"   => fontmap!(family => "script"),
+    "put"   => fontmap!(family => "serif"),      "bch"   => fontmap!(family => "serif"),
+    "psy"   => fontmap!(family => "symbol"),     "pzd"   => fontmap!(family => "dingbats"),
+    "ccr"   => fontmap!(family => "serif"),      "ccy"   => fontmap!(family => "symbol"),
+    "cmbr"  => fontmap!(family => "sansserif"),  "cmtl"  => fontmap!(family => "typewriter"),
+    "cmbrs" => fontmap!(family => "symbol"),     "ul9"   => fontmap!(family => "typewriter"),
+    "txr"   => fontmap!(family => "serif"),      "txss"  => fontmap!(family => "sansserif"),
+    "txtt"  => fontmap!(family => "typewriter"), "txms"  => fontmap!(family => "symbol"),
+    "txsya" => fontmap!(family => "symbol"),     "txsyb" => fontmap!(family => "symbol"),
+    "pxr"   => fontmap!(family => "serif"),      "pxms"  => fontmap!(family => "symbol"),
+    "pxsya" => fontmap!(family => "symbol"),     "pxsyb" => fontmap!(family => "symbol"),
+    "futs"  => fontmap!(family => "serif"),
+    "uaq"   => fontmap!(family => "serif"),      "ugq"   => fontmap!(family => "sansserif"),
+    "eur"   => fontmap!(family => "serif"),      "eus"   => fontmap!(family => "script"),
+    "euf"   => fontmap!(family => "fraktur"),    "euex"  => fontmap!(family => "symbol"),
+    // The following are actually math fonts.
+    "ms"    => fontmap!(family => "symbol"),
+    "ccm"   => fontmap!(family => "serif", shape => "italic"),
+    "cmm"   => fontmap!(family => "italic", encoding => "OML"),
+    "cmex"  => fontmap!(family => "symbol", encoding => "OMX"),       // Not really symbol, but...
+    "cmsy"  => fontmap!(family => "symbol", encoding => "OMS"),
+    "ccitt" => fontmap!(family => "typewriter", shape => "italic"),
+    "cmbrm" => fontmap!(family => "sansserif", shape => "italic"),
+    "futm"  => fontmap!(family => "serif", shape => "italic"),
+    "futmi" => fontmap!(family => "serif", shape => "italic"),
+    "txmi"  => fontmap!(family => "serif", shape => "italic"),
+    "pxmi"  => fontmap!(family => "serif", shape => "italic"),
+    "bbm"   => fontmap!(family => "blackboard"),
+    "bbold" => fontmap!(family => "blackboard"),
+    "bbmss" => fontmap!(family => "blackboard"),
+    // some ams fonts
+    "cmmib" => fontmap!(family => "italic", series   => "bold"),
+    "cmbsy" => fontmap!(family => "symbol", series   => "bold"),
+    "msa"   => fontmap!(family => "symbol", encoding => "AMSa"),
+    "msb"   => fontmap!(family => "symbol", encoding => "AMSb"),
+    // Are these really the same?
+    "msx" => fontmap!(family => "symbol", encoding => "AMSa"),
+    "msy" => fontmap!(family => "symbol", encoding => "AMSb")
+  )
+});
 /// Maps the "series code" to an abstract font series name
-static FONT_SERIES : Lazy<HashMap<&'static str, Font>> = Lazy::new(|| raw_map!(
-  "" => fontmap!(series => "medium"), "m" => fontmap!(series => "medium"), "mc" => fontmap!(series => "medium"),
-  "b"  => fontmap!(series => "bold"),   "bc"  => fontmap!(series => "bold"),   "bx" => fontmap!(series => "bold"),
-  "sb" => fontmap!(series => "bold"),   "sbc" => fontmap!(series => "bold"),   "bm" => fontmap!(series => "bold")
-));
+static FONT_SERIES: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+  raw_map!(
+    "" => fontmap!(series => "medium"), "m" => fontmap!(series => "medium"),
+      "mc" => fontmap!(series => "medium"),
+    "b"  => fontmap!(series => "bold"),   "bc"  => fontmap!(series => "bold"),
+      "bx" => fontmap!(series => "bold"),
+    "sb" => fontmap!(series => "bold"),   "sbc" => fontmap!(series => "bold"),
+      "bm" => fontmap!(series => "bold")
+  )
+});
 
 /// Maps the "shape code" to an abstract font shape name.
-static FONT_SHAPE : Lazy<HashMap<&'static str, Font>> = Lazy::new(|| raw_map!(
-  "" => fontmap!(shape => "upright"), "n" => fontmap!(shape => "upright"),
-    "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"), "sl" => fontmap!(shape => "slanted"),
-    "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
-));
+static FONT_SHAPE: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+  raw_map!(
+    "" => fontmap!(shape => "upright"), "n" => fontmap!(shape => "upright"),
+      "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"),
+      "sl" => fontmap!(shape => "slanted"),
+      "sc" => fontmap!(shape => "smallcaps"), "csc" => fontmap!(shape => "smallcaps")
+  )
+});
 
 /// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
 /// extended logical font sizes, based on nominal document size of 10pts
 /// Possibly should simply use absolute font point sizes, as declared in class...
-static FONT_SIZE : Lazy<HashMap<&'static str, f64>> = Lazy::new(|| raw_map!(
+static FONT_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
+  raw_map!(
 "tiny"   => 0.5,   "SMALL" => 0.7, "Small" => 0.8,  "small" => 0.9,
 "normal" => 1.0,   "large" => 1.2, "Large" => 1.44, "LARGE" => 1.728,
 "huge"   => 2.074, "Huge"  => 2.488,
-"big"    => 1.2,   "Big"   => 1.6, "bigg" => 2.1, "Bigg" => 2.6));
+"big"    => 1.2,   "Big"   => 1.6, "bigg" => 2.1, "Bigg" => 2.6)
+});
 
-static SCRIPT_STYLE_MAP  : Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| raw_map!(
+static SCRIPT_STYLE_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+  raw_map!(
   "display" => "script", "text" => "script",
-  "script" => "scriptscript", "scriptscript" => "scriptscript"));
+  "script" => "scriptscript", "scriptscript" => "scriptscript")
+});
 
-static _FRAC_STYLE_MAP : Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| raw_map!(
+static _FRAC_STYLE_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+  raw_map!(
   "display" => "text", "text" => "script",
-  "script" => "scriptscript", "scriptscript" => "scriptscript"));
+  "script" => "scriptscript", "scriptscript" => "scriptscript")
+});
 
-static STYLE_SIZE  : Lazy<HashMap<&'static str, usize>> = Lazy::new(|| raw_map!(
-  "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5));
+static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
+  raw_map!(
+  "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
+});
 
-static _MATH_STYLE_SIZE : Lazy<HashMap<&'static str, f64>> = Lazy::new(|| raw_map!(
-  "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5));
+static _MATH_STYLE_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
+  raw_map!(
+  "display" => 1.0, "text" => 1.0, "script" => 0.7, "scriptscript" => 0.5)
+});
 
 /// A special form of merge when copying/moving nodes to a new context,
 /// particularly math which become scripts or such.
-static MATH_STYLE_STEP : Lazy<HashMap<&'static str, HashMap<&'static str, i32>>> = Lazy::new(|| raw_map!(
+static MATH_STYLE_STEP: Lazy<HashMap<&'static str, HashMap<&'static str, i32>>> = Lazy::new(|| {
+  raw_map!(
   "display" => raw_map!(
     "display" => 0, "text" => 1, "script" => 2, "scriptscript" => 3),
   "text"=> raw_map!("display" => -1, "text" => 0, "script" => 1, "scriptscript" => 2),
   "script"=> raw_map!("display" => -2, "text" => -1, "script" => 0, "scriptscript" => 1),
-  "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0)));
-static _STEP_MATH_STYLE : Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> = Lazy::new(|| raw_map!(
+  "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0))
+});
+static _STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> =
+  Lazy::new(|| {
+    raw_map!(
 "display" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
   0 => "display", 1 => "text", 2 => "script", 3 => "scriptscript"),
 "text" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
@@ -161,7 +185,8 @@ static _STEP_MATH_STYLE : Lazy<HashMap<&'static str, HashMap<i32, &'static str>>
 "script" => raw_map!(-3 => "display", -2 => "display", -1 => "text",
   0 => "script", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"),
 "scriptscript" => raw_map!(-3 => "display", -2 => "text", -1 => "script",
-  0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript")));
+  0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"))
+  });
 
 /// Global auxiliary for font family lookup
 pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }

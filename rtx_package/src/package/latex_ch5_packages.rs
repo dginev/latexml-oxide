@@ -1,5 +1,5 @@
 use crate::package::*;
-static OPTS_REGEX: Lazy<Regex> = Lazy::new(||Regex::new(r",\s*").unwrap());
+static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r",\s*").unwrap());
 
 LoadDefinitions!(outer_stomach, state, {
   // ======================================================================

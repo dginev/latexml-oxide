@@ -28,8 +28,8 @@ use crate::tokens::Tokens;
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
-static SMUGGLE_THE_COMMANDS: Lazy<HashSet<&'static str>> = Lazy::new(||
-  set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize"));
+static SMUGGLE_THE_COMMANDS: Lazy<HashSet<&'static str>> =
+  Lazy::new(|| set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize"));
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {

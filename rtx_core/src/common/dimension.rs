@@ -13,7 +13,8 @@ use crate::state::{State, STD_STATE};
 use crate::tokens::Tokens;
 use crate::{Digested, RegisterValue};
 
-static SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap());
+static SPEC_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap());
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct Dimension(pub i64);

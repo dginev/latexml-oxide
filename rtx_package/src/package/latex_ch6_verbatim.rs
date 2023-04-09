@@ -1,6 +1,7 @@
 use crate::package::*;
 
-static END_VERBATIM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap());
+static END_VERBATIM_RE: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap());
 static SEMIVERBATIM_CHARS: Lazy<Vec<char>> = Lazy::new(|| vec!['%', '\\', '{', '}']);
 static T_OTHER_STAR: Lazy<Token> = Lazy::new(|| T_OTHER!("*"));
 

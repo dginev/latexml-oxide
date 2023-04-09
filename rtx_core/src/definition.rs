@@ -28,7 +28,7 @@ use crate::mouth;
 use crate::parameter::Parameters;
 use crate::state::State;
 use crate::stomach::Stomach;
-use crate::token::{Token};
+use crate::token::Token;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
 use crate::Digested;
