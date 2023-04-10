@@ -8,6 +8,7 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::hash::BuildHasherDefault;
+use std::sync::Mutex;
 use string_interner::backend::StringBackend;
 use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
@@ -15,8 +16,16 @@ use string_interner::StringInterner;
 static mut T: Lazy<StringInterner<StringBackend, BuildHasherDefault<FxHasher>>> =
   Lazy::new(|| StringInterner::with_capacity_and_hasher(10_000, BuildHasherDefault::<FxHasher>::default()));
 
+// This convention-based lock works, as long as we only ever use arena::pin for assignments.
+static PIN_LOCK : Mutex<()> = Mutex::new(());
+
 /// Assign a string into the arena, returning a unique symbol associated with it
-pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 { unsafe { T.get_or_intern(text) } }
+pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
+  let lock = PIN_LOCK.lock().unwrap();
+  let result = unsafe { T.get_or_intern(text) };
+  drop(lock);
+  result
+}
 
 /// Resolve the data associated with a unique symbol from this arena, asserting it's already present
 pub fn resolve(sym: SymbolU32) -> &'static str {
@@ -41,3 +50,5 @@ pub static EMPTY_SYM: Lazy<SymbolU32> = Lazy::new(|| pin(""));
 pub static LTX_STAR_SYM: Lazy<SymbolU32> = Lazy::new(|| pin("ltx:*"));
 /// the unique symbol for str value "ltx:p"
 pub static LTX_P_SYM: Lazy<SymbolU32> = Lazy::new(|| pin("ltx:p"));
+/// the unique symbol for str value "\globaldefs"
+pub static GLOBAL_DEFS_SYM : Lazy<SymbolU32> = Lazy::new(|| pin("\\globaldefs"));

@@ -369,10 +369,10 @@ LoadDefinitions!(outer_state, {
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   for letter in b'A'..=b'Z' {
     //FYI: 0x20 == 32
-    outer_state.assign_lccode(letter, letter + 32, Scope::Global);
-    outer_state.assign_uccode(letter, letter, Scope::Global);
-    outer_state.assign_lccode(letter + 32, letter + 32, Scope::Global);
-    outer_state.assign_uccode(letter + 32, letter, Scope::Global);
+    outer_state.assign_lccode(letter, letter + 32, Some(Scope::Global));
+    outer_state.assign_uccode(letter, letter, Some(Scope::Global));
+    outer_state.assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
+    outer_state.assign_uccode(letter + 32, letter, Some(Scope::Global));
   }
 
   // Stub definitions ???
