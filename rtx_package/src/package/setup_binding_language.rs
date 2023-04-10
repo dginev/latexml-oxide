@@ -160,7 +160,6 @@ macro_rules! bind_state_mut {
 macro_rules! DefParameterTypeWO {
   ($name:ident, $param:expr) => {
     bind_state_mut!(st);
-    // pub type $name = Tokens;
     st.assign_mapping(
       "PARAMETER_TYPES",
       stringify!($name),
@@ -168,7 +167,6 @@ macro_rules! DefParameterTypeWO {
     )
   };
   ($name:ident, $param:expr, $state_arg:ident) => {
-    // pub type $name = Tokens;
     $state_arg.assign_mapping(
       "PARAMETER_TYPES",
       stringify!($name),

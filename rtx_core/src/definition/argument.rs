@@ -17,6 +17,7 @@ use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::Locator;
+use crate::alignment::AlignmentTemplate;
 
 #[derive(Debug, Clone)]
 pub enum ArgWrap {
@@ -38,6 +39,7 @@ pub enum ArgWrap {
   OptionMuDimension(Option<MuDimension>),
   KV(KeyVals),
   OptionKV(Option<KeyVals>),
+  AlignmentTemplate(AlignmentTemplate),
   // TODO: what do we do with this custom case? feels iffy
   RegisterDefinition((Token, Vec<ArgWrap>)),
 }
@@ -74,6 +76,7 @@ impl Display for ArgWrap {
       ArgWrap::OptionMuDimension(None) => write!(f, "None"),
       ArgWrap::OptionMuDimension(Some(omudim)) => write!(f, "{omudim}"),
       ArgWrap::KV(kv) => write!(f, "{kv}"),
+      ArgWrap::AlignmentTemplate(at) => write!(f, "{at}"),
       ArgWrap::OptionKV(None) => write!(f, "None"),
       ArgWrap::OptionKV(Some(okv)) => write!(f, "{okv}"),
       ArgWrap::RegisterDefinition((t, args)) => write!(f, "({t},{args:?})"),
@@ -86,7 +89,7 @@ impl Object for ArgWrap {
     use ArgWrap::*;
     match self {
       Token(_) | OptionToken(_) | Tokens(_) | OptionTokens(_) | Number(_) | OptionNumber(_)
-      | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) => None,
+      | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) | AlignmentTemplate(_) => None,
       Glue(t) => t.get_locator(),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.get_locator(),
@@ -159,6 +162,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.be_digested(stomach, state),
         None => unimplemented!(),
       },
+      AlignmentTemplate(at) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
     }
   }
@@ -198,6 +202,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.revert(state),
         None => unimplemented!(),
       },
+      AlignmentTemplate(at) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct reversion I think
     }
   }
@@ -219,6 +224,7 @@ impl ArgWrap {
       OptionMuGlue(g_opt) => g_opt.is_none(),
       OptionMuDimension(d_opt) => d_opt.is_none(),
       OptionKV(kv_opt) => kv_opt.is_none(),
+      AlignmentTemplate(_) => false,
       RegisterDefinition(_) => false,
     }
   }
@@ -308,6 +314,7 @@ impl ArgWrap {
         None => None,
         Some(t) => Some(Cow::Owned(t.revert(state)?)),
       },
+      AlignmentTemplate(_) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for such use
     };
     Ok(result)

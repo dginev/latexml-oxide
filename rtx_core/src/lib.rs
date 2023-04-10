@@ -56,6 +56,8 @@ pub mod tbox;
 pub mod util;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
+/// Support for TeX-like Alignments
+pub mod alignment;
 
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
