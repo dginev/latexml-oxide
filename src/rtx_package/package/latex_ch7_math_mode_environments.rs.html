@@ -218,13 +218,11 @@
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>STORED_EQUATION_LABEL: Stored = Stored::String(String::from(<span class="string">&quot;equation&quot;</span>));
-}
+<span class="kw">static </span>STORED_EQUATION_LABEL: Lazy&lt;Stored&gt; = Lazy::new(|| Stored::String(String::from(<span class="string">&quot;equation&quot;</span>)));
+
 <span class="comment">//======================================================================
 // C.7.1 Math Mode Environments
 //======================================================================

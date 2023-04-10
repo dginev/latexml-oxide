@@ -130,11 +130,7 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-</pre><pre class="rust"><code><span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>DNIR_REX: Regex = Regex::new(<span class="string">&quot;^\\\\((?i)[dnir])&quot;</span>).unwrap();
-}
+</pre><pre class="rust"><code><span class="kw">static </span>DNIR_REX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\\\((?i)[dnir])&quot;</span>).unwrap());
 
 <span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="attr">#[rustfmt::skip]

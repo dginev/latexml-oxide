@@ -121,7 +121,7 @@
       <span class="kw">let </span>tag = document.get_node_qname(<span class="kw-2">&amp;</span>node,state);
       <span class="kw">if </span>tag == <span class="string">&quot;ltx:para&quot; </span>{
         node.set_attribute(<span class="string">&quot;class&quot;</span>,<span class="string">&quot;ltx_indent&quot;</span>)<span class="question-mark">?</span>;
-      } <span class="kw">else if </span>document.can_contain_somehow(<span class="kw-2">&amp;</span>tag,<span class="string">&quot;ltx:para&quot;</span>,state) {
+      } <span class="kw">else if </span>document.can_contain_somehow(tag,<span class="string">&quot;ltx:para&quot;</span>,state) {
         <span class="comment">// Used in a position where a paragraph can be started, start
         </span>document.open_element(<span class="string">&quot;ltx:para&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;class&quot;</span>=&gt;<span class="string">&quot;ltx_indent&quot;</span>)), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       }
@@ -133,7 +133,7 @@
       <span class="kw">let </span>tag = document.get_node_qname(<span class="kw-2">&amp;</span>node,state);
       <span class="kw">if </span>tag == <span class="string">&quot;ltx:para&quot; </span>{
         node.set_attribute(<span class="string">&quot;class&quot;</span>,<span class="string">&quot;ltx_noindent&quot;</span>)<span class="question-mark">?</span>;
-      } <span class="kw">else if </span>document.can_contain_somehow(<span class="kw-2">&amp;</span>tag,<span class="string">&quot;ltx:para&quot;</span>,state) {
+      } <span class="kw">else if </span>document.can_contain_somehow(tag,<span class="string">&quot;ltx:para&quot;</span>,state) {
         <span class="comment">// Used in a position where a paragraph can be started, start
         </span>document.open_element(<span class="string">&quot;ltx:para&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;class&quot;</span>=&gt;<span class="string">&quot;ltx_noindent&quot;</span>)), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       }

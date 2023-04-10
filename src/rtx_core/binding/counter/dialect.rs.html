@@ -840,9 +840,7 @@
 <a href="#840" id="840">840</a>
 <a href="#841" id="841">841</a>
 <a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -906,14 +904,14 @@
   <span class="kw">let </span>cunctr = <span class="macro">s!</span>(<span class="string">&quot;\\c@{}&quot;</span>, unctr);
   <span class="kw">let </span>clunctr = <span class="macro">s!</span>(<span class="string">&quot;\\cl@{}&quot;</span>, unctr);
 
-  def_register(<span class="macro">T_CS!</span>(cctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>, state);
+  def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>, state);
   state.assign_value(<span class="kw-2">&amp;</span>cctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
   state.after_assignment(stomach.get_gullet_mut());
   <span class="kw">if </span>state.lookup_value(<span class="kw-2">&amp;</span>clctr).is_none() {
     state.assign_value(<span class="kw-2">&amp;</span>clctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
   }
 
-  def_register(<span class="macro">T_CS!</span>(cunctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>, state);
+  def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cunctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>, state);
   state.assign_value(<span class="kw-2">&amp;</span>cunctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
   <span class="kw">if </span>state.lookup_value(<span class="kw-2">&amp;</span>clunctr).is_none() {
     state.assign_value(<span class="kw-2">&amp;</span>clunctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
@@ -927,7 +925,7 @@
     } <span class="kw">else </span>{
       Vec::new()
     };
-    <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(unctr)];
+    <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>unctr)];
     clwithin_tokens.append(<span class="kw-2">&amp;mut </span>x);
     state.assign_value(
       <span class="kw-2">&amp;</span>clwithin,
@@ -1412,7 +1410,7 @@
   );
 
   <span class="kw">let </span>thectr = <span class="macro">s!</span>(<span class="string">&quot;\\the{ctr}@ID&quot;</span>);
-  def_macro(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currentID&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_CS!</span>(thectr), <span class="prelude-val">None</span>, state);
+  def_macro(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currentID&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>thectr), <span class="prelude-val">None</span>, state);
   <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;id&quot; </span>=&gt;
     clean_id(<span class="kw-2">&amp;</span>digest_literal(<span class="macro">T_CS!</span>(thectr), stomach, state)<span class="question-mark">?</span>.to_string())))
 }
@@ -1616,7 +1614,7 @@
     );
 
     <span class="comment">// AND reset this list&#39;s counter when the outer item is stepped
-    </span><span class="kw">let </span><span class="kw-2">mut </span>cl_toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(listcounter)];
+    </span><span class="kw">let </span><span class="kw-2">mut </span>cl_toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>listcounter)];
     <span class="kw">let </span>cs_name = <span class="macro">s!</span>(<span class="string">&quot;\\cl@{outerusecounter}&quot;</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(tks)) = state.lookup_value(<span class="kw-2">&amp;</span>cs_name) {
       cl_toks.extend(tks.clone().unlist());

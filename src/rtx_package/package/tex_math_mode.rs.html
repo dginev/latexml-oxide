@@ -148,7 +148,7 @@
         <span class="kw">let </span>mode = <span class="macro">LookupString!</span>(<span class="string">&quot;MODE&quot;</span>);
         <span class="macro">Debug!</span>(<span class="string">&quot;T_MATH primitive current mode: {:?}&quot;</span>, mode);
         <span class="kw">if </span>mode == <span class="string">&quot;display_math&quot; </span>{
-          <span class="kw">if </span>gullet.if_next(<span class="macro">T_MATH!</span>(), state)<span class="question-mark">? </span>{
+          <span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span>TOKEN_MATH, state)<span class="question-mark">? </span>{
             gullet.read_token(state);
             op = <span class="string">&quot;\\@@ENDDISPLAYMATH&quot;</span>;
           } <span class="kw">else </span>{
@@ -166,7 +166,7 @@
           }
         } <span class="kw">else if </span>mode == <span class="string">&quot;inline_math&quot; </span>{
           op = <span class="string">&quot;\\@@ENDINLINEMATH&quot;</span>;
-        } <span class="kw">else if </span>gullet.if_next(<span class="macro">T_MATH!</span>(), state)<span class="question-mark">? </span>{
+        } <span class="kw">else if </span>gullet.if_next(<span class="kw-2">&amp;</span>TOKEN_MATH, state)<span class="question-mark">? </span>{
           gullet.read_token(state);
           op = <span class="string">&quot;\\@@BEGINDISPLAYMATH&quot;</span>;
         }

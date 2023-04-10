@@ -642,7 +642,26 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::error::Error;
 
@@ -774,12 +793,12 @@
   <span class="kw">let </span>(base, sep, lexeme) = distill_lexeme(name);
   <span class="kw">let </span>lexeme_pragmatic = <span class="kw">if </span>lexeme.len() == <span class="number">1 </span>{
     <span class="kw">let </span>letter = lexeme.chars().next().unwrap();
-    <span class="kw">match </span>PRAGMATIC_BLOCK_MAP.get(<span class="kw-2">&amp;</span>letter) {
+    <span class="kw">match </span>_PRAGMATIC_BLOCK_MAP.get(<span class="kw-2">&amp;</span>letter) {
       <span class="prelude-val">Some</span>(block) =&gt; block,
       <span class="prelude-val">None </span>=&gt; lexeme,
     }
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(greek_letter) = greek_name_to_letter(lexeme) {
-    <span class="kw">match </span>PRAGMATIC_BLOCK_MAP.get(<span class="kw-2">&amp;</span>greek_letter) {
+    <span class="kw">match </span>_PRAGMATIC_BLOCK_MAP.get(<span class="kw-2">&amp;</span>greek_letter) {
       <span class="prelude-val">Some</span>(block_name) =&gt; block_name,
       <span class="prelude-val">None </span>=&gt; lexeme,
     }
@@ -1248,43 +1267,62 @@
   name.starts_with(<span class="string">&quot;ID&quot;</span>) || name_is_functional(name)
 }
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>PRAGMATIC_BLOCK_MAP : HashMap&lt;char, String&gt; = {
-    <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot;
-    // in blocks of 3 letter in mathematics,
-    // as a fast-and-loose rule of thumb. a-e is an exception as
-    // a rather stable 5 letter block with shared utility.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
-    <span class="comment">// |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
-    </span><span class="kw">let </span>latin_blocks = [
-      (<span class="string">&#39;a&#39;</span>,<span class="string">&#39;e&#39;</span>),(<span class="string">&#39;f&#39;</span>,<span class="string">&#39;h&#39;</span>),(<span class="string">&#39;i&#39;</span>,<span class="string">&#39;k&#39;</span>),(<span class="string">&#39;l&#39;</span>,<span class="string">&#39;n&#39;</span>),(<span class="string">&#39;o&#39;</span>,<span class="string">&#39;q&#39;</span>),(<span class="string">&#39;r&#39;</span>,<span class="string">&#39;t&#39;</span>),(<span class="string">&#39;u&#39;</span>,<span class="string">&#39;w&#39;</span>),(<span class="string">&#39;x&#39;</span>,<span class="string">&#39;z&#39;</span>)];
-    <span class="comment">// |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
-    </span><span class="kw">let </span>greek_blocks = [
-      (<span class="string">&#39;α&#39;</span>,<span class="string">&#39;γ&#39;</span>),(<span class="string">&#39;ζ&#39;</span>,<span class="string">&#39;θ&#39;</span>),(<span class="string">&#39;ι&#39;</span>,<span class="string">&#39;κ&#39;</span>),(<span class="string">&#39;λ&#39;</span>,<span class="string">&#39;ξ&#39;</span>),(<span class="string">&#39;ο&#39;</span>,<span class="string">&#39;ρ&#39;</span>),(<span class="string">&#39;σ&#39;</span>,<span class="string">&#39;υ&#39;</span>),(<span class="string">&#39;ϕ&#39;</span>,<span class="string">&#39;ψ&#39;</span>)];
-    <span class="comment">// | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
-    </span><span class="kw">let </span>up_greek_blocks = [(<span class="string">&#39;Α&#39;</span>,<span class="string">&#39;Γ&#39;</span>),(<span class="string">&#39;Ζ&#39;</span>,<span class="string">&#39;Θ&#39;</span>),(<span class="string">&#39;Ι&#39;</span>,<span class="string">&#39;Κ&#39;</span>),(<span class="string">&#39;Λ&#39;</span>,<span class="string">&#39;Ξ&#39;</span>),(<span class="string">&#39;Ο&#39;</span>,<span class="string">&#39;Ρ&#39;</span>),(<span class="string">&#39;Σ&#39;</span>,<span class="string">&#39;Υ&#39;</span>),(<span class="string">&#39;Φ&#39;</span>,<span class="string">&#39;Ψ&#39;</span>)];
-
-    <span class="kw">for </span>(start,end) <span class="kw">in </span>latin_blocks.iter() {
-      <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
-      <span class="kw">let </span>up_start = start.to_ascii_uppercase();
-      <span class="kw">let </span>up_end = end.to_ascii_uppercase();
-      <span class="kw">for </span>c_u8 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u8) ..= (<span class="kw-2">*</span>end <span class="kw">as </span>u8) {
-        map.insert(c_u8.into(), mark.clone());
-      }
-      <span class="kw">let </span>up_mark = <span class="macro">format!</span>(<span class="string">&quot;{up_start}{up_end}&quot;</span>);
-      <span class="kw">for </span>c_u8 <span class="kw">in </span>(up_start <span class="kw">as </span>u8)..=(up_end <span class="kw">as </span>u8) {
-        map.insert(c_u8.into(), up_mark.clone());
-      }
+<span class="kw">static </span>_PRAGMATIC_BLOCK_MAP: Lazy&lt;HashMap&lt;char, String&gt;&gt; = Lazy::new(|| {
+  <span class="comment">// generally, we can observe that the latin alphabet shares &quot;intent&quot;
+  // in blocks of 3 letter in mathematics,
+  // as a fast-and-loose rule of thumb. a-e is an exception as
+  // a rather stable 5 letter block with shared utility.
+  </span><span class="kw">let </span><span class="kw-2">mut </span>map = HashMap::default();
+  <span class="comment">// |a b c d e | f g h |i j k| |l m n| |o p q| |r s t| |u v w| |x y z|
+  </span><span class="kw">let </span>latin_blocks = [
+    (<span class="string">&#39;a&#39;</span>, <span class="string">&#39;e&#39;</span>),
+    (<span class="string">&#39;f&#39;</span>, <span class="string">&#39;h&#39;</span>),
+    (<span class="string">&#39;i&#39;</span>, <span class="string">&#39;k&#39;</span>),
+    (<span class="string">&#39;l&#39;</span>, <span class="string">&#39;n&#39;</span>),
+    (<span class="string">&#39;o&#39;</span>, <span class="string">&#39;q&#39;</span>),
+    (<span class="string">&#39;r&#39;</span>, <span class="string">&#39;t&#39;</span>),
+    (<span class="string">&#39;u&#39;</span>, <span class="string">&#39;w&#39;</span>),
+    (<span class="string">&#39;x&#39;</span>, <span class="string">&#39;z&#39;</span>),
+  ];
+  <span class="comment">// |α β γ| δ | ϵ | ζ η θ | ι κ | λ μ ν ξ | ο π ρ | σ τ υ | ϕ χ ψ | ω
+  </span><span class="kw">let </span>greek_blocks = [
+    (<span class="string">&#39;α&#39;</span>, <span class="string">&#39;γ&#39;</span>),
+    (<span class="string">&#39;ζ&#39;</span>, <span class="string">&#39;θ&#39;</span>),
+    (<span class="string">&#39;ι&#39;</span>, <span class="string">&#39;κ&#39;</span>),
+    (<span class="string">&#39;λ&#39;</span>, <span class="string">&#39;ξ&#39;</span>),
+    (<span class="string">&#39;ο&#39;</span>, <span class="string">&#39;ρ&#39;</span>),
+    (<span class="string">&#39;σ&#39;</span>, <span class="string">&#39;υ&#39;</span>),
+    (<span class="string">&#39;ϕ&#39;</span>, <span class="string">&#39;ψ&#39;</span>),
+  ];
+  <span class="comment">// | Α Β Γ | Δ | Ε | Ζ Η Θ | Ι Κ | Λ Μ Ν Ξ | Ο Π Ρ | Σ Τ Υ | Φ Χ Ψ | Ω
+  </span><span class="kw">let </span>up_greek_blocks = [
+    (<span class="string">&#39;Α&#39;</span>, <span class="string">&#39;Γ&#39;</span>),
+    (<span class="string">&#39;Ζ&#39;</span>, <span class="string">&#39;Θ&#39;</span>),
+    (<span class="string">&#39;Ι&#39;</span>, <span class="string">&#39;Κ&#39;</span>),
+    (<span class="string">&#39;Λ&#39;</span>, <span class="string">&#39;Ξ&#39;</span>),
+    (<span class="string">&#39;Ο&#39;</span>, <span class="string">&#39;Ρ&#39;</span>),
+    (<span class="string">&#39;Σ&#39;</span>, <span class="string">&#39;Υ&#39;</span>),
+    (<span class="string">&#39;Φ&#39;</span>, <span class="string">&#39;Ψ&#39;</span>),
+  ];
+  <span class="kw">for </span>(start, end) <span class="kw">in </span>latin_blocks.iter() {
+    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
+    <span class="kw">let </span>up_start = start.to_ascii_uppercase();
+    <span class="kw">let </span>up_end = end.to_ascii_uppercase();
+    <span class="kw">for </span>c_u8 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u8)..=(<span class="kw-2">*</span>end <span class="kw">as </span>u8) {
+      map.insert(c_u8.into(), mark.clone());
     }
-
-    <span class="kw">for </span>(start,end) <span class="kw">in </span>greek_blocks.iter().chain(up_greek_blocks.iter()) {
-      <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
-      <span class="kw">for </span>c_u32 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u32) ..= (<span class="kw-2">*</span>end <span class="kw">as </span>u32) {
-        map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
-      }
+    <span class="kw">let </span>up_mark = <span class="macro">format!</span>(<span class="string">&quot;{up_start}{up_end}&quot;</span>);
+    <span class="kw">for </span>c_u8 <span class="kw">in </span>(up_start <span class="kw">as </span>u8)..=(up_end <span class="kw">as </span>u8) {
+      map.insert(c_u8.into(), up_mark.clone());
     }
-    map
-  };
-}
+  }
+  <span class="kw">for </span>(start, end) <span class="kw">in </span>greek_blocks.iter().chain(up_greek_blocks.iter()) {
+    <span class="kw">let </span>mark = <span class="macro">format!</span>(<span class="string">&quot;{start}{end}&quot;</span>);
+    <span class="kw">for </span>c_u32 <span class="kw">in </span>(<span class="kw-2">*</span>start <span class="kw">as </span>u32)..=(<span class="kw-2">*</span>end <span class="kw">as </span>u32) {
+      map.insert(std::char::from_u32(c_u32).unwrap(), mark.clone());
+    }
+  }
+  map
+});
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

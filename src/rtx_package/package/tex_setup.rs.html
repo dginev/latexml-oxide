@@ -2027,7 +2027,7 @@
     gullet: <span class="kw-2">&amp;mut </span>Gullet,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">if </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
+    <span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
       <span class="kw">let </span>kvs: KeyVals = keyvals_aux(
         gullet,
         <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>)),
@@ -2159,7 +2159,7 @@
     <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs, inner_state) {
       <span class="prelude-val">Ok</span>(else_token)
     } <span class="kw">else </span>{
-      inner_state.let_i(<span class="kw-2">&amp;</span>cs,T_RELAX, <span class="prelude-val">None</span>, gullet); <span class="comment">// Yuck, but traditional!
+      inner_state.let_i(<span class="kw-2">&amp;</span>cs,<span class="macro">T_RELAX!</span>(), <span class="prelude-val">None</span>, gullet); <span class="comment">// Yuck, but traditional!
       </span><span class="prelude-val">Ok</span>(if_token)
     }
   });

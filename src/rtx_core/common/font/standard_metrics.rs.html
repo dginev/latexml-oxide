@@ -1234,7 +1234,7 @@
 <a href="#1234" id="1234">1234</a>
 <a href="#1235" id="1235">1235</a>
 <a href="#1236" id="1236">1236</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 
 <span class="kw">pub struct </span>MetricData {
@@ -1273,8 +1273,8 @@
   }
 }
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">pub static </span><span class="kw-2">ref </span>STDMETRICS: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, MetricData&gt; = <span class="macro">raw_map!</span>(
+<span class="kw">pub static </span>STDMETRICS: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, MetricData&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
   <span class="string">&quot;amsa&quot; </span>=&gt; MetricData {
     quad: <span class="number">65536.18</span>,
     encoding: <span class="string">&quot;AMSa&quot;</span>,
@@ -2468,7 +2468,7 @@
     exheight: <span class="number">28216.87</span>,
     ..MetricData::default()}
 
-  );
-}
+  )
+});
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

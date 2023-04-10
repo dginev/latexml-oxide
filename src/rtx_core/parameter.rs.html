@@ -603,11 +603,7 @@
 <a href="#603" id="603">603</a>
 <a href="#604" id="604">604</a>
 <a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
-<a href="#607" id="607">607</a>
-<a href="#608" id="608">608</a>
-<a href="#609" id="609">609</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>proc_macro2::TokenStream; <span class="comment">// use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 </span><span class="kw">use </span>quote::{quote, ToTokens};
 <span class="kw">use </span>regex::Regex;
@@ -647,10 +643,8 @@
 </span><span class="kw">pub type </span>ReversionClosure =
   Arc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>LAST_WCHAR_RE: Regex = Regex::new(<span class="string">r&quot;\w$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>FIRST_WCHAR_RE: Regex = Regex::new(<span class="string">r&quot;^\w&quot;</span>).unwrap();
-}
+<span class="kw">static </span>LAST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\w$&quot;</span>).unwrap());
+<span class="kw">static </span>FIRST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w&quot;</span>).unwrap());
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Parameter {
@@ -727,10 +721,8 @@
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="macro">unimplemented!</span>() }
 }
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>OPTIONAL_REGEX: Regex = Regex::new(<span class="string">r&quot;^Optional(.+)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>SKIP_REGEX: Regex = Regex::new(<span class="string">r&quot;^Skip(.+)$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>OPTIONAL_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Optional(.+)$&quot;</span>).unwrap());
+<span class="kw">static </span>SKIP_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Skip(.+)$&quot;</span>).unwrap());
 
 <span class="kw">impl </span>Parameter {
   <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {

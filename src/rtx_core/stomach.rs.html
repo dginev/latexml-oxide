@@ -788,14 +788,6 @@
 <a href="#788" id="788">788</a>
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
-<a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
@@ -827,7 +819,7 @@
   <span class="doccomment">/// owns a Gullet, responsible for obtaining tokens
   </span><span class="kw">pub </span>gullet: Gullet,
   <span class="doccomment">/// currently invoked tokens
-  </span><span class="kw">pub </span>token_stack: Vec&lt;Arc&lt;Token&gt;&gt;,
+  </span><span class="kw">pub </span>token_stack: Vec&lt;Token&gt;,
   <span class="doccomment">/// tracks the tokens of boxing groups(?)
   </span><span class="kw">pub </span>boxing: Vec&lt;Token&gt;,
   <span class="doccomment">/// collects the intermediate boxes resulting from a `digest` call.
@@ -1026,10 +1018,10 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
     <span class="comment">// INVOKE:
     </span><span class="kw">while </span>maybe_token.is_some() {
-      <span class="kw">let </span>token = Arc::new(maybe_token.take().unwrap().into_owned());
+      <span class="kw">let </span>token = maybe_token.take().unwrap().into_owned();
       <span class="comment">// info!(target:&quot;invoke_token&quot;, &quot;{:?}&quot;, token);
-      </span>state.set_current_token(Arc::clone(<span class="kw-2">&amp;</span>token));
-      <span class="self">self</span>.token_stack.push(Arc::clone(<span class="kw-2">&amp;</span>token));
+      </span>state.set_current_token(token.clone());
+      <span class="self">self</span>.token_stack.push(token.clone());
       <span class="kw">if </span><span class="self">self</span>.token_stack.len() &gt; MAXSTACK {
         <span class="macro">fatal!</span>(
           Stomach,
@@ -1358,11 +1350,7 @@
 
   </span><span class="doccomment">/// Adds a new stack frame for a TeX group.
   </span><span class="kw">pub fn </span>push_stack_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, nobox: bool, state: <span class="kw-2">&amp;mut </span>State) {
-    <span class="kw">let </span>current_token = <span class="kw">match </span><span class="kw-2">&amp;</span>state.get_current_token() {
-      <span class="prelude-val">Some</span>(t) =&gt; Arc::clone(t),
-      <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(), <span class="comment">// should never happen?
-    </span>};
-
+    <span class="kw">let </span>current_token = state.get_current_token().unwrap().clone();
     state.push_frame();
     state.assign_value(
       <span class="string">&quot;beforeAfterGroup&quot;</span>,
@@ -1376,11 +1364,7 @@
     ); <span class="comment">// ALWAYS bind this!
     </span>state.assign_value(<span class="string">&quot;afterAssignment&quot;</span>, Stored::None, <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// ALWAYS bind this!
     </span>state.assign_value(<span class="string">&quot;groupNonBoxing&quot;</span>, nobox, <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// ALWAYS bind this!
-    </span>state.assign_value(
-      <span class="string">&quot;groupInitiator&quot;</span>,
-      (<span class="kw-2">*</span>current_token).clone(),
-      <span class="prelude-val">Some</span>(Scope::Local),
-    );
+    </span>state.assign_value(<span class="string">&quot;groupInitiator&quot;</span>, current_token.clone(), <span class="prelude-val">Some</span>(Scope::Local));
     state.assign_value(
       <span class="string">&quot;groupInitiatorLocator&quot;</span>,
       <span class="self">self</span>.get_locator().unwrap().into_owned(),
@@ -1388,7 +1372,7 @@
     );
     <span class="kw">if </span>!nobox {
       <span class="comment">// For begingroup/endgroup
-      </span><span class="self">self</span>.boxing.push((<span class="kw-2">*</span>current_token).clone())
+      </span><span class="self">self</span>.boxing.push(current_token)
     }
   }
   <span class="doccomment">/// Removes the last/current stack frame, ending a TeX group

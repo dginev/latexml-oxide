@@ -490,7 +490,7 @@
   // output any frontmatter that was accumulated.
 
   </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, _node, state] {
-    <span class="comment">// this happens only once, not a big deal to skip the lazy_static! and keep it in the closure
+    <span class="comment">// this happens only once per conversion, so not a big deal to keep it in the closure
     </span><span class="kw">let </span>frontmatter_elements_set: HashSet&lt;String&gt; = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
     <span class="kw">let </span><span class="kw-2">mut </span>frontmatter = <span class="kw">match </span>state.remove_value(<span class="string">&quot;frontmatter&quot;</span>) {
@@ -641,7 +641,7 @@
   // You&#39;ll typically customize this by defining \the&lt;counter&gt; (and \p@&lt;counter) as in LaTeX.
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@counterfor{}&quot;</span>, sub[gullet, (ctr_type), state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ctr) = <span class="macro">LookupMapping!</span>(<span class="string">&quot;counter_for_type&quot;</span>, <span class="kw-2">&amp;</span>ctr_type.to_string()) {
-      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(ctr))
+      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(ctr.to_string()))
     } <span class="kw">else </span>{
       ctr_type
     }

@@ -3303,14 +3303,45 @@
 <a href="#3303" id="3303">3303</a>
 <a href="#3304" id="3304">3304</a>
 <a href="#3305" id="3305">3305</a>
+<a href="#3306" id="3306">3306</a>
+<a href="#3307" id="3307">3307</a>
+<a href="#3308" id="3308">3308</a>
+<a href="#3309" id="3309">3309</a>
+<a href="#3310" id="3310">3310</a>
+<a href="#3311" id="3311">3311</a>
+<a href="#3312" id="3312">3312</a>
+<a href="#3313" id="3313">3313</a>
+<a href="#3314" id="3314">3314</a>
+<a href="#3315" id="3315">3315</a>
+<a href="#3316" id="3316">3316</a>
+<a href="#3317" id="3317">3317</a>
+<a href="#3318" id="3318">3318</a>
+<a href="#3319" id="3319">3319</a>
+<a href="#3320" id="3320">3320</a>
+<a href="#3321" id="3321">3321</a>
+<a href="#3322" id="3322">3322</a>
+<a href="#3323" id="3323">3323</a>
+<a href="#3324" id="3324">3324</a>
+<a href="#3325" id="3325">3325</a>
+<a href="#3326" id="3326">3326</a>
+<a href="#3327" id="3327">3327</a>
+<a href="#3328" id="3328">3328</a>
+<a href="#3329" id="3329">3329</a>
+<a href="#3330" id="3330">3330</a>
+<a href="#3331" id="3331">3331</a>
+<a href="#3332" id="3332">3332</a>
+<a href="#3333" id="3333">3333</a>
+<a href="#3334" id="3334">3334</a>
+<a href="#3335" id="3335">3335</a>
+<a href="#3336" id="3336">3336</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
 
-<span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>libxml::tree::set_node_rc_guard;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
 <span class="kw">use </span>libxml::tree::{Namespace, Node, NodeType};
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -3320,6 +3351,7 @@
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
 <span class="kw">use </span>std::sync::Arc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, LTX_STAR_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, FONT_TEXT_DEFAULT};
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
@@ -3337,27 +3369,46 @@
 <span class="kw">use </span><span class="kw">crate</span>::Tbox;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData};
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>HAS_NONSPACE_RE: Regex = Regex::new(<span class="string">r&quot;\S&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>ONLY_SPACE_RE: Regex = Regex::new(<span class="string">r&quot;^\s+$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>DASHES_RE: Regex = Regex::new(<span class="string">r&quot;\-\-+&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>NON_MERGEABLE_ATTRIBUTES : HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    HashSet::from([<span class="string">&quot;about&quot;</span>,<span class="string">&quot;aboutlabelref&quot;</span>,<span class="string">&quot;aboutidref&quot;</span>,
-   <span class="string">&quot;resource&quot;</span>,<span class="string">&quot;resourcelabelref&quot;</span>,<span class="string">&quot;resourceidref&quot;</span>,
-   <span class="string">&quot;property&quot;</span>,<span class="string">&quot;rel&quot;</span>,<span class="string">&quot;rev&quot;</span>,<span class="string">&quot;tyupeof&quot;</span>,<span class="string">&quot;datatype&quot;</span>,
-   <span class="string">&quot;content&quot;</span>,<span class="string">&quot;data&quot;</span>,<span class="string">&quot;datamimetype&quot;</span>,<span class="string">&quot;dataencoding&quot;</span>]);
-  <span class="comment">// When merging attributes of two nodes, some attributes should be combined
-  // Merged space separated
-  </span><span class="kw">static </span><span class="kw-2">ref </span>MERGE_ATTRIBUTE_SPACEJOIN : HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    HashSet::from([<span class="string">&quot;class&quot;</span>,<span class="string">&quot;lists&quot;</span>,<span class="string">&quot;inlist&quot;</span>,<span class="string">&quot;labels&quot;</span>]);
-  <span class="comment">// Merged &quot;;&quot; separated
-  </span><span class="kw">static </span><span class="kw-2">ref </span>MERGE_ATTRIBUTE_SEMICOLONJOIN : HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    HashSet::from([<span class="string">&quot;cssstyle&quot;</span>]);
-  <span class="comment">// Summed lengths
-  </span><span class="kw">static </span><span class="kw-2">ref </span>MERGE_ATTRIBUTE_SUMLENGTH : HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    HashSet::from([<span class="string">&quot;xoffset&quot;</span>,<span class="string">&quot;yoffset&quot;</span>,<span class="string">&quot;lpadding&quot;</span>,<span class="string">&quot;rpadding&quot;</span>,<span class="string">&quot;xtranslate&quot;</span>,
-    <span class="string">&quot;ytranslate&quot;</span>]);
-}
+<span class="kw">static </span>HAS_NONSPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\S&quot;</span>).unwrap());
+<span class="kw">static </span>ONLY_SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s+$&quot;</span>).unwrap());
+<span class="kw">static </span>DASHES_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\-\-+&quot;</span>).unwrap());
+<span class="kw">static </span>NON_MERGEABLE_ATTRIBUTES: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  HashSet::from([
+    <span class="string">&quot;about&quot;</span>,
+    <span class="string">&quot;aboutlabelref&quot;</span>,
+    <span class="string">&quot;aboutidref&quot;</span>,
+    <span class="string">&quot;resource&quot;</span>,
+    <span class="string">&quot;resourcelabelref&quot;</span>,
+    <span class="string">&quot;resourceidref&quot;</span>,
+    <span class="string">&quot;property&quot;</span>,
+    <span class="string">&quot;rel&quot;</span>,
+    <span class="string">&quot;rev&quot;</span>,
+    <span class="string">&quot;tyupeof&quot;</span>,
+    <span class="string">&quot;datatype&quot;</span>,
+    <span class="string">&quot;content&quot;</span>,
+    <span class="string">&quot;data&quot;</span>,
+    <span class="string">&quot;datamimetype&quot;</span>,
+    <span class="string">&quot;dataencoding&quot;</span>,
+  ])
+});
+<span class="comment">// When merging attributes of two nodes, some attributes should be combined
+// Merged space separated
+</span><span class="kw">static </span>MERGE_ATTRIBUTE_SPACEJOIN: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
+  Lazy::new(|| HashSet::from([<span class="string">&quot;class&quot;</span>, <span class="string">&quot;lists&quot;</span>, <span class="string">&quot;inlist&quot;</span>, <span class="string">&quot;labels&quot;</span>]));
+<span class="comment">// Merged &quot;;&quot; separated
+</span><span class="kw">static </span>MERGE_ATTRIBUTE_SEMICOLONJOIN: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
+  Lazy::new(|| HashSet::from([<span class="string">&quot;cssstyle&quot;</span>]));
+<span class="comment">// Summed lengths
+</span><span class="kw">static </span>MERGE_ATTRIBUTE_SUMLENGTH: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  HashSet::from([
+    <span class="string">&quot;xoffset&quot;</span>,
+    <span class="string">&quot;yoffset&quot;</span>,
+    <span class="string">&quot;lpadding&quot;</span>,
+    <span class="string">&quot;rpadding&quot;</span>,
+    <span class="string">&quot;xtranslate&quot;</span>,
+    <span class="string">&quot;ytranslate&quot;</span>,
+  ])
+});
 
 <span class="kw">pub static </span>FONT_ELEMENT_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ltx:text&quot;</span>;
 <span class="kw">pub static </span>MATH_TOKEN_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ltx:XMTok&quot;</span>;
@@ -3482,7 +3533,7 @@
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  </span><span class="kw">pub fn </span>get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State) -&gt; String {
+  </span><span class="kw">pub fn </span>get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="kw-2">&amp;</span>str {
     state.model.get_node_qname(node)
   }
 
@@ -3544,7 +3595,7 @@
         &amp;&amp; !pending_declaration.is_empty()
       {
         <span class="kw">for </span>(key, (value, properties)) <span class="kw">in </span><span class="kw-2">&amp;</span>pending_declaration {
-          <span class="kw">if </span>state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, key) {
+          <span class="kw">if </span>state.model.can_have_attribute(qname, key) {
             attrs_to_set.push((key.to_string(), value.to_string()));
             <span class="comment">// Merge to set the font currently in effect
             </span>declared_font = Cow::Owned(declared_font.merge(properties.clone()));
@@ -3571,7 +3622,7 @@
     </span><span class="kw">if </span>qname != <span class="string">&quot;ltx:document&quot;
       </span>&amp;&amp; state.lookup_bool(<span class="string">&quot;GENERATE_IDS&quot;</span>)
       &amp;&amp; !node.has_attribute(<span class="string">&quot;xml:id&quot;</span>)
-      &amp;&amp; <span class="self">self</span>.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;xml:id&quot;</span>, state)
+      &amp;&amp; <span class="self">self</span>.can_have_attribute(qname, <span class="string">&quot;xml:id&quot;</span>, state)
     {
       <span class="self">self</span>.generate_id(node, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
     }
@@ -3588,9 +3639,10 @@
           &amp;&amp; child.get_attributes().is_empty()
         {
           <span class="kw">let </span>grandchildren = child.get_child_nodes();
-          <span class="kw">if </span>grandchildren.iter().all(|gchild| {
-            <span class="self">self</span>.can_contain_qname(<span class="kw-2">&amp;</span>qname, <span class="kw-2">&amp;</span>state.model.get_node_qname(gchild), state)
-          }) {
+          <span class="kw">if </span>grandchildren
+            .iter()
+            .all(|gchild| <span class="self">self</span>.can_contain_qname(qname, state.model.get_node_qname(gchild), state))
+          {
             <span class="macro">Debug!</span>(
               <span class="string">&quot;will replace {} grandchildren nodes in finalize_rec&quot;</span>,
               grandchildren.len()
@@ -3979,7 +4031,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>node_opt = <span class="prelude-val">Some</span>(<span class="self">self</span>.node.clone());
     <span class="kw">while let </span><span class="prelude-val">Some</span>(node) = node_opt {
       <span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>node, state);
-      <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(<span class="kw-2">&amp;</span>node_qname, qname, state) {
+      <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(node_qname, qname, state) {
         <span class="kw">return </span><span class="bool-val">true</span>;
       } <span class="kw">else if </span>!<span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>node, state) {
         <span class="kw">return </span><span class="bool-val">false</span>; <span class="comment">// could close, then check if parent can contain
@@ -4175,7 +4227,10 @@
         <span class="kw">if </span>!node.has_attribute(<span class="string">&quot;_noautoclose&quot;</span>) {
           <span class="kw">if </span>node.has_attribute(<span class="string">&quot;_autoclose&quot;</span>) {
             <span class="bool-val">true
-          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(props) = state.tag_properties.get(<span class="kw-2">&amp;</span><span class="self">self</span>.get_node_qname(node, state)) {
+          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(props) = state
+            .tag_properties
+            .get(<span class="kw-2">&amp;</span>arena::pin(<span class="self">self</span>.get_node_qname(node, state)))
+          {
             props.auto_close.unwrap_or(<span class="bool-val">false</span>)
           } <span class="kw">else </span>{
             <span class="bool-val">false
@@ -4216,14 +4271,14 @@
 
     <span class="kw">let </span>tag_hash = state
       .tag_properties
-      .entry(tag.to_string())
+      .entry(arena::pin(tag))
       .or_insert_with(TagOptions::default)
       .clone();
     <span class="comment">// let ns_hash  = ((defined $p) &amp;&amp; $STATE-&gt;lookupMapping(&#39;TAG_PROPERTIES&#39;, $p .
     // &#39;:*&#39;)) || {};
     </span><span class="kw">let </span>all_hash = state
       .tag_properties
-      .entry(<span class="macro">s!</span>(<span class="string">&quot;ltx:*&quot;</span>))
+      .entry(<span class="kw-2">*</span>LTX_STAR_SYM)
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -4345,7 +4400,7 @@
         } <span class="kw">else </span>{
           <span class="comment">// This is the &quot;Correct&quot; way to determine whether to add indentation
           </span><span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
-          state.model.can_contain(<span class="kw-2">&amp;</span>node_qname, <span class="string">&quot;#PCDATA&quot;</span>)
+          state.model.can_contain(node_qname, <span class="string">&quot;#PCDATA&quot;</span>)
         };
 
         <span class="kw">if </span>!noindent {
@@ -4611,7 +4666,7 @@
 
   <span class="kw">pub fn </span>can_contain(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     <span class="kw">let </span>tag = state.model.get_node_qname(node);
-    state.model.can_contain(<span class="kw-2">&amp;</span>tag, child)
+    state.model.can_contain(tag, child)
   }
 
   <span class="kw">pub fn </span>can_contain_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
@@ -4621,7 +4676,12 @@
   <span class="doccomment">/// Can an element with (qualified name) $tag contain a $childtag element indirectly?
   /// That is, by openning some number of autoOpen&#39;able tags?
   /// And if so, return the tag to open.
-  </span><span class="kw">pub fn </span>can_contain_indirect(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+  </span><span class="kw">pub fn </span>can_contain_indirect(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    tag: <span class="kw-2">&amp;</span>str,
+    child: <span class="kw-2">&amp;</span>str,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -4632,14 +4692,16 @@
 
     <span class="kw">let </span>imodel = state.indirect_model.as_ref().unwrap();
     <span class="comment">// returning inner_node
-    </span><span class="kw">match </span>imodel.get(tag) {
-      <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get(child).map(|node| node.to_string()),
+    </span><span class="kw">match </span>imodel.get(<span class="kw-2">&amp;</span>arena::pin(tag)) {
+      <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m
+        .get(<span class="kw-2">&amp;</span>arena::pin(child))
+        .map(|sym| arena::resolve(<span class="kw-2">*</span>sym)),
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
 
   <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
-    <span class="self">self</span>.can_contain_somehow(<span class="kw-2">&amp;</span>state.model.get_node_qname(tag), child, state)
+    <span class="self">self</span>.can_contain_somehow(state.model.get_node_qname(tag), child, state)
   }
 
   <span class="kw">pub fn </span>can_contain_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
@@ -4649,9 +4711,9 @@
   <span class="kw">pub fn </span>can_node_have_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, attrib: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     state
       .model
-      .can_have_attribute(<span class="kw-2">&amp;</span>state.model.get_node_qname(node), attrib)
+      .can_have_attribute(state.model.get_node_qname(node), attrib)
   }
-  <span class="kw">pub fn </span>can_have_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+  <span class="kw">pub fn </span>can_have_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     state.model.can_have_attribute(tag, attrib)
   }
 
@@ -4713,13 +4775,13 @@
       // &quot;font&quot;) BUT, it isn&quot;t being forced somehow
       </span><span class="kw">if </span>c.len() == <span class="number">1
         </span>&amp;&amp; (state.model.get_node_qname(<span class="kw-2">&amp;</span>c[<span class="number">0</span>]) == FONT_ELEMENT_NAME)
-        &amp;&amp; state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;font&quot;</span>)
+        &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;font&quot;</span>)
         &amp;&amp; c[<span class="number">0</span>]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with(<span class="string">&#39;_&#39;</span>))
           .all(|v| {
-            state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, v)
+            state.model.can_have_attribute(qname, v)
               &amp;&amp; !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
           })
         &amp;&amp; !c[<span class="number">0</span>].has_attribute(<span class="string">&quot;_force_font&quot;</span>)
@@ -5017,21 +5079,21 @@
   </span><span class="kw">pub fn </span>find_insertion_point(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     qname: <span class="kw-2">&amp;</span>str,
-    has_opened_opt: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    has_opened_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
     <span class="self">self</span>.close_text_internal(state)<span class="question-mark">?</span>; <span class="comment">// Close any current text node.
     </span><span class="kw">let </span>cur_qname = state.model.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
     <span class="comment">// If `qname` is allowed at the current point, we&#39;re done.
-    </span><span class="kw">if </span><span class="self">self</span>.can_contain_qname(<span class="kw-2">&amp;</span>cur_qname, qname, state) {
+    </span><span class="kw">if </span><span class="self">self</span>.can_contain_qname(cur_qname, qname, state) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone());
     <span class="comment">// Else, if we can create an intermediate node that accepts $qname, we&#39;ll do
     // that.
-    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(inter) = <span class="self">self</span>.can_contain_indirect(<span class="kw-2">&amp;</span>cur_qname, qname, state) {
+    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(inter) = <span class="self">self</span>.can_contain_indirect(cur_qname, qname, state) {
       <span class="kw">if </span>(inter != qname) &amp;&amp; (inter != cur_qname) {
         <span class="comment">// TODO: can we avoid the clone here? there is a mutability conflict...
         </span><span class="kw">let </span>node_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>.node).clone();
-        <span class="self">self</span>.open_element(<span class="kw-2">&amp;</span>inter, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font), state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.open_element(inter, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font), state)<span class="question-mark">?</span>;
 
         <span class="kw">return </span><span class="self">self</span>.find_insertion_point(qname, <span class="prelude-val">Some</span>(inter), state); <span class="comment">// And retry insertion (should
                                                                      // work now).
@@ -5055,11 +5117,11 @@
       <span class="kw">let </span><span class="kw-2">mut </span>close_to = <span class="prelude-val">None</span>;
       <span class="kw">while </span>(node.get_type() != <span class="prelude-val">Some</span>(NodeType::DocumentNode)) &amp;&amp; <span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>node, state) {
         <span class="kw">let </span>parent_opt = node.get_parent();
-        <span class="kw">let </span>parent = <span class="kw">match </span>parent_opt {
-          <span class="prelude-val">None </span>=&gt; String::new(),
+        <span class="kw">let </span>parent_name = <span class="kw">match </span>parent_opt {
+          <span class="prelude-val">None </span>=&gt; <span class="string">&quot;&quot;</span>,
           <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>p) =&gt; state.model.get_node_qname(p),
         };
-        <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(<span class="kw-2">&amp;</span>parent, qname, state) {
+        <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(parent_name, qname, state) {
           close_to = <span class="prelude-val">Some</span>(node);
           <span class="kw">break</span>;
         }
@@ -5174,7 +5236,7 @@
       // Ignore attributes not allowed by the model,
       // but accept &quot;internal&quot; attributes.
       </span><span class="kw">let </span>qname = state.model.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
-      <span class="kw">if </span>key.starts_with(<span class="string">&#39;_&#39;</span>) || state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, key) {
+      <span class="kw">if </span>key.starts_with(<span class="string">&#39;_&#39;</span>) || state.model.can_have_attribute(qname, key) {
         <span class="self">self</span>.node.set_attribute(key, value)<span class="question-mark">?</span>;
       }
     } <span class="kw">else </span>{
@@ -6016,7 +6078,7 @@
     </span><span class="kw">let </span>savenode = <span class="self">self</span>.node.clone();
     <span class="self">self</span>.set_node(node);
     <span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
-    <span class="kw">for </span>action <span class="kw">in </span><span class="self">self</span>.get_tag_action_list(<span class="kw-2">&amp;</span>node_qname, TagOptionName::AfterOpen, state) {
+    <span class="kw">for </span>action <span class="kw">in </span><span class="self">self</span>.get_tag_action_list(node_qname, TagOptionName::AfterOpen, state) {
       action(<span class="self">self</span>, node, state)<span class="question-mark">?</span>;
     }
     <span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>savenode);
@@ -6027,7 +6089,7 @@
     <span class="comment">// Should we set point to this node? (or to last child, or something ??
     </span><span class="kw">let </span>savenode = <span class="self">self</span>.node.clone();
     <span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
-    <span class="kw">for </span>action <span class="kw">in </span><span class="self">self</span>.get_tag_action_list(<span class="kw-2">&amp;</span>node_qname, TagOptionName::AfterClose, state) {
+    <span class="kw">for </span>action <span class="kw">in </span><span class="self">self</span>.get_tag_action_list(node_qname, TagOptionName::AfterClose, state) {
       action(<span class="self">self</span>, node, state)<span class="question-mark">?</span>;
     }
     <span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>savenode);
@@ -6234,7 +6296,7 @@
     attrib.insert(<span class="macro">s!</span>(<span class="string">&quot;type&quot;</span>), resource.mimetype);
     attrib.insert(<span class="macro">s!</span>(<span class="string">&quot;media&quot;</span>), resource.media);
     <span class="kw">let </span>content_box = Digested::from(Tbox {
-      text: resource.content,
+      text: arena::pin(resource.content),
       ..Tbox::default()
     });
     <span class="self">self</span>.insert_element(<span class="string">&quot;ltx:resource&quot;</span>, <span class="macro">vec!</span>[<span class="kw-2">&amp;</span>content_box], <span class="prelude-val">Some</span>(attrib), state)<span class="question-mark">?</span>;
@@ -6428,7 +6490,7 @@
     </span><span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
     <span class="comment">// but isn&#39;t a _Capture_ node (which ultimately should disappear)
     </span><span class="kw">if </span>!node.has_attribute_ns(<span class="string">&quot;id&quot;</span>, XML_NS)
-      &amp;&amp; <span class="self">self</span>.can_have_attribute(<span class="kw-2">&amp;</span>node_qname, <span class="string">&quot;xml:id&quot;</span>, state)
+      &amp;&amp; <span class="self">self</span>.can_have_attribute(node_qname, <span class="string">&quot;xml:id&quot;</span>, state)
       &amp;&amp; (node_qname != <span class="string">&quot;ltx:_Capture_&quot;</span>)
     {
       <span class="kw">let </span><span class="kw-2">mut </span>ancestor = <span class="self">self
@@ -6501,7 +6563,7 @@
     <span class="kw">for </span>child <span class="kw">in </span>data {
       <span class="kw">match </span>child.get_type() {
         <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-          <span class="kw">let </span>tag = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>child, state);
+          <span class="kw">let </span>tag: <span class="kw-2">&amp;</span>str = arena::as_static(<span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>child, state));
           <span class="kw">let </span>attributes = child.get_attributes().into_iter().collect();
 
           <span class="comment">// map { $_-&gt;nodeType == XML_ATTRIBUTE_NODE ? ($self-&gt;getNodeQName($_) =&gt; $_-&gt;getValue) :
@@ -6513,7 +6575,7 @@
           //           $child-&gt;removeAttribute(&#39;xml:id&#39;);
           //           $self-&gt;unRecordID($id); }
 
-          </span><span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, <span class="kw-2">&amp;</span>tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          </span><span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
           <span class="self">self</span>.append_tree(<span class="kw-2">&amp;mut </span>new, child.get_child_nodes(), state)<span class="question-mark">?</span>;
           <span class="self">self</span>.close_element_at(<span class="kw-2">&amp;mut </span>new, state)<span class="question-mark">?</span>;
         },

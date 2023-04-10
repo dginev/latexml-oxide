@@ -231,7 +231,7 @@
     <span class="kw">let </span>next = gullet.read_non_space(state);
     <span class="comment">// NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we&#39;ve fallen off end?
-    </span><span class="kw">let </span>next_test = next.as_ref().unwrap_or(<span class="kw-2">&amp;</span><span class="macro">T_END!</span>());
+    </span><span class="kw">let </span>next_test = next.as_ref().unwrap_or(<span class="kw-2">&amp;*</span>TOKEN_END);
     <span class="kw">let </span>which = <span class="kw">if </span><span class="macro">XEquals!</span>(<span class="kw-2">&amp;</span>token, next_test) {
       t_if
     } <span class="kw">else </span>{
@@ -284,7 +284,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@xdblarg {}{}&quot;</span>, <span class="string">r&quot;#1[{#2}]{#2}&quot;</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@testopt{}{}&quot;</span>, sub[gullet,(cmd, option),state] {
-    <span class="kw">if </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
+    <span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
       <span class="prelude-val">Ok</span>(cmd)
     } <span class="kw">else </span>{
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(cmd.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), option.unlist(), <span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>)))

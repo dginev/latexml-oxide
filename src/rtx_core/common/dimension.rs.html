@@ -121,11 +121,10 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 
-<span class="kw">use </span>lazy_static::lazy_static;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -137,9 +136,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{Digested, RegisterValue};
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>SPEC_RE: Regex = Regex::new(<span class="string">r&quot;^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>SPEC_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$&quot;</span>).unwrap());
 
 <span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Dimension(<span class="kw">pub </span>i64);

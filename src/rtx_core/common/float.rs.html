@@ -99,9 +99,7 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
@@ -115,9 +113,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>TRAILING_ZEROS: Regex = Regex::new(<span class="string">r&quot;0+$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>TRAILING_ZEROS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;0+$&quot;</span>).unwrap());
 
 <span class="comment">//======================================================================
 // Strictly speaking, Float isn&#39;t part of TeX, but it&#39;s handy.

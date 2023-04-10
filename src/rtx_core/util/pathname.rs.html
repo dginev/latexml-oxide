@@ -343,10 +343,8 @@
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
 </pre><pre class="rust"><code><span class="kw">use </span>kpathsea::Kpaths;
-<span class="kw">use </span>lazy_static::lazy_static;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span>std::env;
@@ -367,42 +365,40 @@
 
 <span class="kw">static </span>LITERAL_PROTOCOL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;literal:&quot;</span>;
 <span class="kw">static </span>HOME_TILDE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;~&quot;</span>;
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>HOME_PATH : String = <span class="kw">match </span>dirs::home_dir() {
-    <span class="prelude-val">Some</span>(val) =&gt; val.to_string_lossy().to_string(),
-    <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;~&quot;</span>),
-  };
-  <span class="kw">static </span><span class="kw-2">ref </span>PROTOCOL_RE : Regex = Regex::new(<span class="string">r&quot;(https|http|ftp):&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PATHNAME_IS_NASTY_RE: Regex = Regex::new(<span class="string">r&quot;[^\w\-_+=/\\\.~\s:]&quot;</span>).unwrap();
-  <span class="comment">// TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
-  </span><span class="kw">static </span><span class="kw-2">ref </span>URL_RE: Regex = Regex::new(<span class="string">r&quot;^\w+://(.+)/([^/]+)$&quot;</span>).unwrap();
+<span class="kw">static </span>HOME_PATH: Lazy&lt;String&gt; = Lazy::new(|| <span class="kw">match </span>dirs::home_dir() {
+  <span class="prelude-val">Some</span>(val) =&gt; val.to_string_lossy().to_string(),
+  <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;~&quot;</span>),
+});
+<span class="kw">static </span>PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(https|http|ftp):&quot;</span>).unwrap());
+<span class="kw">static </span>PATHNAME_IS_NASTY_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;[^\w\-_+=/\\\.~\s:]&quot;</span>).unwrap());
+<span class="comment">// TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
+</span><span class="kw">static </span>URL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w+://(.+)/([^/]+)$&quot;</span>).unwrap());
 
-  <span class="kw">static </span><span class="kw-2">ref </span>KPSE : Arc&lt;Mutex&lt;Kpaths&gt;&gt; = Arc::new(Mutex::new(Kpaths::new().unwrap()));
-  <span class="comment">// static ref INSTALLDIRS : Vec&lt;String&gt; = match env::current_exe() {
-  //     Ok(exe_path) =&gt; {
-  //       match exe_path.as_path().parent() {
-  //         Some(_) =&gt; Vec::new(),
-  //         // Some(p) =&gt; vec![
-  //         //                 p.to_string_lossy().to_string() + &quot;.&quot;,
-  //         //                 p.to_string_lossy().to_string() + &quot;./..&quot;,
-  //         //                 p.to_string_lossy().to_string() + &quot;./../..&quot;,
-  //         //                 p.to_string_lossy().to_string() + &quot;./../../..&quot;,
-  //         //                 p.to_string_lossy().to_string() + &quot;./../../../..&quot;],
+<span class="kw">static </span>KPSE: Lazy&lt;Arc&lt;Mutex&lt;Kpaths&gt;&gt;&gt; = Lazy::new(|| Arc::new(Mutex::new(Kpaths::new().unwrap())));
+<span class="comment">// static ref INSTALLDIRS : Vec&lt;String&gt; = match env::current_exe() {
+//     Ok(exe_path) =&gt; {
+//       match exe_path.as_path().parent() {
+//         Some(_) =&gt; Vec::new(),
+//         // Some(p) =&gt; vec![
+//         //                 p.to_string_lossy().to_string() + &quot;.&quot;,
+//         //                 p.to_string_lossy().to_string() + &quot;./..&quot;,
+//         //                 p.to_string_lossy().to_string() + &quot;./../..&quot;,
+//         //                 p.to_string_lossy().to_string() + &quot;./../../..&quot;,
+//         //                 p.to_string_lossy().to_string() + &quot;./../../../..&quot;],
 
-  // TODO: HACK, see note on INSTALLDIRS further down
-  //         None =&gt; Vec::new()
-  //       }
-  //     },
-  //     _ =&gt; Vec::new()
-  //   };
+// TODO: HACK, see note on INSTALLDIRS further down
+//         None =&gt; Vec::new()
+//       }
+//     },
+//     _ =&gt; Vec::new()
+//   };
 
-  // TODO:
-  // grep { (-f &quot;$_.pm&quot;) &amp;&amp; (-d $_) }
-  // map { pathname_canonical($_ . $SEP . &#39;LaTeXML&#39;) } @INC;    # [CONSTANT]
+// TODO:
+// grep { (-f &quot;$_.pm&quot;) &amp;&amp; (-d $_) }
+// map { pathname_canonical($_ . $SEP . &#39;LaTeXML&#39;) } @INC;    # [CONSTANT]
 
-</span>}
-
-<span class="doccomment">/// checks if the path is a conforming URL string
+</span><span class="doccomment">/// checks if the path is a conforming URL string
 </span><span class="kw">pub fn </span>is_url(path: <span class="kw-2">&amp;</span>str) -&gt; bool { URL_RE.is_match(path) }
 <span class="doccomment">/// checks if the path starts with the &quot;literal:&quot; protocol
 </span><span class="kw">pub fn </span>is_literaldata(data: <span class="kw-2">&amp;</span>str) -&gt; bool { data.starts_with(LITERAL_PROTOCOL) }

@@ -675,16 +675,22 @@
 <a href="#675" id="675">675</a>
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span>lazy_static::lazy_static;
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>NAMED_SPACE_CHARS: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = <span class="macro">static_map!</span>(<span class="string">&quot;negthinspace&quot; </span>=&gt; <span class="string">&quot;&quot;</span>, <span class="string">&quot;thinspace&quot; </span>=&gt; <span class="string">&quot;\u{2009}&quot;</span>,
-      <span class="string">&quot;medspace&quot; </span>=&gt; <span class="string">&quot;\u{2005}&quot;</span>, <span class="string">&quot;thickspace&quot; </span>=&gt; <span class="string">&quot;\u{2004}&quot;</span>, <span class="string">&quot;space&quot; </span>=&gt; <span class="string">&quot; &quot;</span>);
-  <span class="kw">static </span><span class="kw-2">ref </span>DECIMAL_SEP: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    <span class="macro">static_map!</span>(<span class="string">&quot;en&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;de&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;fr&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;nl&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;pt&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;es&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>);
-  <span class="kw">static </span><span class="kw-2">ref </span>THOUSANDS_SEP: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    <span class="macro">static_map!</span>(<span class="string">&quot;en&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;de&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;fr&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;nl&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;pt&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;es&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>);
-}
+<span class="kw">use </span>once_cell::sync::Lazy;
+
+<span class="kw">static </span>NAMED_SPACE_CHARS: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  <span class="macro">static_map!</span>(<span class="string">&quot;negthinspace&quot; </span>=&gt; <span class="string">&quot;&quot;</span>, <span class="string">&quot;thinspace&quot; </span>=&gt; <span class="string">&quot;\u{2009}&quot;</span>,
+    <span class="string">&quot;medspace&quot; </span>=&gt; <span class="string">&quot;\u{2005}&quot;</span>, <span class="string">&quot;thickspace&quot; </span>=&gt; <span class="string">&quot;\u{2004}&quot;</span>, <span class="string">&quot;space&quot; </span>=&gt; <span class="string">&quot; &quot;</span>)
+});
+<span class="kw">static </span>DECIMAL_SEP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(
+  || <span class="macro">static_map!</span>(<span class="string">&quot;en&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;de&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;fr&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;nl&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;pt&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;es&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>),
+);
+<span class="kw">static </span>THOUSANDS_SEP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(
+  || <span class="macro">static_map!</span>(<span class="string">&quot;en&quot; </span>=&gt; <span class="string">&quot;,&quot;</span>, <span class="string">&quot;de&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;fr&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;nl&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;pt&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>, <span class="string">&quot;es&quot; </span>=&gt; <span class="string">&quot;.&quot;</span>),
+);
 
 <span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//**********************************************************************
@@ -990,7 +996,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\alloc@@ {}&quot;</span>, sub[gullet, (atype_tokens), state] {
     <span class="kw">let </span>atype = atype_tokens.to_string();
     <span class="kw">let </span>c = <span class="macro">s!</span>(<span class="string">&quot;allocation @{}&quot;</span>, atype);
-    <span class="kw">let </span>n = <span class="macro">LookupRegisterOrDefault!</span>(c).value_of();
+    <span class="kw">let </span>n = <span class="macro">LookupRegisterOrDefault!</span>(<span class="kw-2">&amp;</span>c).value_of();
     <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span>c                  =&gt; n + <span class="number">1</span>,     <span class="prelude-val">Some</span>(Scope::Global));
     <span class="macro">AssignValue!</span>(<span class="string">&quot;\\allocationnumber&quot; </span>=&gt; <span class="macro">Number!</span>(n), <span class="prelude-val">Some</span>(Scope::Global));
   });
@@ -1163,7 +1169,7 @@
 
   <span class="comment">// Use \r for the newline from TeX!!!
   </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\\r&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_CS!</span>(<span class="string">&quot;\\ &quot;</span>)); <span class="comment">// \&lt;cr&gt; == \&lt;space&gt; Interesting (see latex.ltx)
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot;\r&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>)); <span class="comment">// (or is this just LaTeX?)
+  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39;\r&#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>)); <span class="comment">// (or is this just LaTeX?)
 
   </span><span class="macro">Let!</span>(<span class="string">&quot;\\\t&quot;</span>, <span class="string">&quot;\\\r&quot;</span>); <span class="comment">// \&lt;tab&gt; == \&lt;space&gt;, also
 
@@ -1172,15 +1178,15 @@
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\obeyspaces&quot;</span>, {
     <span class="macro">AssignCatcode!</span>(<span class="string">&#39; &#39;</span>, Catcode::ACTIVE);
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot; &quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39; &#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
   });
   <span class="comment">// Curiously enough, &quot; &quot; (a space) is ALREADY defined to be the same as &quot;\space&quot;
   // EVEN before it is made active. (see p.380)
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot; &quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
+  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39; &#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\obeylines&quot;</span>, {
     <span class="macro">AssignCatcode!</span>(<span class="string">&#39;\r&#39;</span>, Catcode::ACTIVE);
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot;\r&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@break&quot;</span>)); <span class="comment">// More appropriate than \par, I think?
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39;\r&#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@break&quot;</span>)); <span class="comment">// More appropriate than \par, I think?
   </span>});
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@break&quot;</span>, <span class="string">&quot;&lt;ltx:break/&gt;&quot;</span>);

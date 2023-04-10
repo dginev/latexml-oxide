@@ -389,22 +389,22 @@
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">// Match negations of many operators
 // our %NOTS
-</span><span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>MATH_CHAR_NEGATIONS : HashMap&lt;String, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    <span class="macro">map!</span>(<span class="string">&quot;=&quot; </span>=&gt; <span class="string">&quot;\u{2260}&quot;</span>, <span class="string">&quot;&lt;&quot; </span>=&gt; <span class="string">&quot;\u{226E}&quot;</span>, <span class="string">&quot;&gt;&quot; </span>=&gt; <span class="string">&quot;\u{226F}&quot;</span>,
-<span class="string">&quot;\u{2208}&quot; </span>=&gt; <span class="string">&quot;\u{2209}&quot;</span>,                              <span class="comment">//\in=&gt;\notin
-</span><span class="string">&quot;\u{2264}&quot; </span>=&gt; <span class="string">&quot;\u{2270}&quot;</span>, <span class="string">&quot;\u{2265}&quot; </span>=&gt; <span class="string">&quot;\u{2271}&quot;</span>,    <span class="comment">// Less eq, greater eq.
-</span><span class="string">&quot;\u{227A}&quot; </span>=&gt; <span class="string">&quot;\u{2280}&quot;</span>, <span class="string">&quot;\u{227B}&quot; </span>=&gt; <span class="string">&quot;\u{2281}&quot;</span>,    <span class="comment">// prec, succ
-</span><span class="string">&quot;\u{2AAF}&quot; </span>=&gt; <span class="string">&quot;\u{22E0}&quot;</span>, <span class="string">&quot;\u{2AB0}&quot; </span>=&gt; <span class="string">&quot;\u{22E1}&quot;</span>,    <span class="comment">// preceq, succeq
-</span><span class="string">&quot;\u{2282}&quot; </span>=&gt; <span class="string">&quot;\u{2284}&quot;</span>, <span class="string">&quot;\u{2283}&quot; </span>=&gt; <span class="string">&quot;\u{2285}&quot;</span>,    <span class="comment">// subset, supset
-</span><span class="string">&quot;\u{2286}&quot; </span>=&gt; <span class="string">&quot;\u{2288}&quot;</span>, <span class="string">&quot;\u{2287}&quot; </span>=&gt; <span class="string">&quot;\u{2289}&quot;</span>,    <span class="comment">// subseteq, supseteq
-</span><span class="string">&quot;\u{2291}&quot; </span>=&gt; <span class="string">&quot;\u{22E2}&quot;</span>, <span class="string">&quot;\u{2290}&quot; </span>=&gt; <span class="string">&quot;\u{22E3}&quot;</span>,    <span class="comment">// sqsubseteq, sqsupseteq
-</span><span class="string">&quot;\u{2261}&quot; </span>=&gt; <span class="string">&quot;\u{2262}&quot;</span>,                              <span class="comment">// equiv
-</span><span class="string">&quot;\u{224D}&quot; </span>=&gt; <span class="string">&quot;\u{226D}&quot;</span>, <span class="string">&quot;\u{2248}&quot; </span>=&gt; <span class="string">&quot;\u{2249}&quot;</span>,    <span class="comment">// asymp, approx
-</span><span class="string">&quot;\u{22B2}&quot; </span>=&gt; <span class="string">&quot;\u{22EA}&quot;</span>, <span class="string">&quot;\u{22B3}&quot; </span>=&gt; <span class="string">&quot;\u{22EB}&quot;</span>,    <span class="comment">// lhd, rhd
-</span><span class="string">&quot;\u{22B4}&quot; </span>=&gt; <span class="string">&quot;\u{22EC}&quot;</span>, <span class="string">&quot;\u{22B5}&quot; </span>=&gt; <span class="string">&quot;\u{22ED}&quot;</span>,    <span class="comment">// unlhd, unrhd
-</span><span class="string">&quot;\u{2203}&quot; </span>=&gt; <span class="string">&quot;\u{2204}&quot;                              </span><span class="comment">// Exists
-</span>); }
+</span><span class="kw">static </span>MATH_CHAR_NEGATIONS: Lazy&lt;HashMap&lt;String, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  <span class="macro">map!</span>(<span class="string">&quot;=&quot; </span>=&gt; <span class="string">&quot;\u{2260}&quot;</span>, <span class="string">&quot;&lt;&quot; </span>=&gt; <span class="string">&quot;\u{226E}&quot;</span>, <span class="string">&quot;&gt;&quot; </span>=&gt; <span class="string">&quot;\u{226F}&quot;</span>,
+  <span class="string">&quot;\u{2208}&quot; </span>=&gt; <span class="string">&quot;\u{2209}&quot;</span>,                              <span class="comment">//\in=&gt;\notin
+  </span><span class="string">&quot;\u{2264}&quot; </span>=&gt; <span class="string">&quot;\u{2270}&quot;</span>, <span class="string">&quot;\u{2265}&quot; </span>=&gt; <span class="string">&quot;\u{2271}&quot;</span>,    <span class="comment">// Less eq, greater eq.
+  </span><span class="string">&quot;\u{227A}&quot; </span>=&gt; <span class="string">&quot;\u{2280}&quot;</span>, <span class="string">&quot;\u{227B}&quot; </span>=&gt; <span class="string">&quot;\u{2281}&quot;</span>,    <span class="comment">// prec, succ
+  </span><span class="string">&quot;\u{2AAF}&quot; </span>=&gt; <span class="string">&quot;\u{22E0}&quot;</span>, <span class="string">&quot;\u{2AB0}&quot; </span>=&gt; <span class="string">&quot;\u{22E1}&quot;</span>,    <span class="comment">// preceq, succeq
+  </span><span class="string">&quot;\u{2282}&quot; </span>=&gt; <span class="string">&quot;\u{2284}&quot;</span>, <span class="string">&quot;\u{2283}&quot; </span>=&gt; <span class="string">&quot;\u{2285}&quot;</span>,    <span class="comment">// subset, supset
+  </span><span class="string">&quot;\u{2286}&quot; </span>=&gt; <span class="string">&quot;\u{2288}&quot;</span>, <span class="string">&quot;\u{2287}&quot; </span>=&gt; <span class="string">&quot;\u{2289}&quot;</span>,    <span class="comment">// subseteq, supseteq
+  </span><span class="string">&quot;\u{2291}&quot; </span>=&gt; <span class="string">&quot;\u{22E2}&quot;</span>, <span class="string">&quot;\u{2290}&quot; </span>=&gt; <span class="string">&quot;\u{22E3}&quot;</span>,    <span class="comment">// sqsubseteq, sqsupseteq
+  </span><span class="string">&quot;\u{2261}&quot; </span>=&gt; <span class="string">&quot;\u{2262}&quot;</span>,                              <span class="comment">// equiv
+  </span><span class="string">&quot;\u{224D}&quot; </span>=&gt; <span class="string">&quot;\u{226D}&quot;</span>, <span class="string">&quot;\u{2248}&quot; </span>=&gt; <span class="string">&quot;\u{2249}&quot;</span>,    <span class="comment">// asymp, approx
+  </span><span class="string">&quot;\u{22B2}&quot; </span>=&gt; <span class="string">&quot;\u{22EA}&quot;</span>, <span class="string">&quot;\u{22B3}&quot; </span>=&gt; <span class="string">&quot;\u{22EB}&quot;</span>,    <span class="comment">// lhd, rhd
+  </span><span class="string">&quot;\u{22B4}&quot; </span>=&gt; <span class="string">&quot;\u{22EC}&quot;</span>, <span class="string">&quot;\u{22B5}&quot; </span>=&gt; <span class="string">&quot;\u{22ED}&quot;</span>,    <span class="comment">// unlhd, unrhd
+  </span><span class="string">&quot;\u{2203}&quot; </span>=&gt; <span class="string">&quot;\u{2204}&quot;                              </span><span class="comment">// Exists
+  </span>)
+});
 
 <span class="comment">//======================================================================
 // TeX Book, Appendix B. p. 358
@@ -724,7 +724,7 @@
     // should it be another datastructure?
     </span><span class="kw">let </span>thing = nodes.pop().unwrap();
     <span class="kw">let </span>not_node = nodes.pop().unwrap();
-    <span class="kw">let </span>text = <span class="kw">match </span>state.model.get_node_qname(thing).as_str() {
+    <span class="kw">let </span>text = <span class="kw">match </span>state.model.get_node_qname(thing) {
       <span class="string">&quot;ltx:XMTok&quot; </span>=&gt; { thing.get_content() },
       <span class="kw">_ </span>=&gt; String::new()
     };

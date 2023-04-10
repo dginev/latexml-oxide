@@ -666,7 +666,14 @@
 <a href="#666" id="666">666</a>
 <a href="#667" id="667">667</a>
 <a href="#668" id="668">668</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
@@ -674,7 +681,9 @@
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
 <span class="kw">use </span>std::string::ToString;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, ANY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::relaxng::Relaxng;
@@ -688,20 +697,19 @@
 <span class="comment">// use common::font::*;
 
 </span><span class="kw">pub const </span>LTX_NAMESPACE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;http://dlmf.nist.gov/LaTeXML&quot;</span>;
-<span class="kw">pub type </span>IndirectModel = HashMap&lt;String, HashMap&lt;String, String&gt;&gt;;
+<span class="kw">pub type </span>IndirectModel = HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, SymbolU32&gt;&gt;;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>PREFIXED_LOCALNAME_RE: Regex = Regex::new(<span class="string">r&quot;^([^:]+):(.+)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>CAPTURE_TAG_RE: Regex = Regex::new(<span class="string">r&quot;(.*?:)?_Capture_$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>TAG_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^\{]+)\{(.*?)\}\((.*?)\)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>CLASS_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^:=]+):=(.*?)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>NAMESPACE_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^=]+)=(.*?)$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>PREFIXED_LOCALNAME_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^:]+):(.+)$&quot;</span>).unwrap());
+<span class="kw">static </span>CAPTURE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(.*?:)?_Capture_$&quot;</span>).unwrap());
+<span class="kw">static </span>TAG_MODEL_LINE_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^([^\{]+)\{(.*?)\}\((.*?)\)$&quot;</span>).unwrap());
+<span class="kw">static </span>CLASS_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^:=]+):=(.*?)$&quot;</span>).unwrap());
+<span class="kw">static </span>NAMESPACE_MODEL_LINE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^=]+)=(.*?)$&quot;</span>).unwrap());
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>TagFrame {
-  model: HashSet&lt;String&gt;,
-  attributes: HashSet&lt;String&gt;,
+  model: HashSet&lt;SymbolU32&gt;,
+  attributes: HashSet&lt;SymbolU32&gt;,
 }
 
 <span class="attr">#[derive(Default)]
@@ -719,7 +727,7 @@
   <span class="kw">pub </span>no_compiled: bool,
   <span class="kw">pub </span>debug_mode: bool,
   <span class="kw">pub </span>namespace_errors: u8,
-  <span class="kw">pub </span>tagprop: HashMap&lt;String, TagFrame&gt;,
+  <span class="kw">pub </span>tagprop: HashMap&lt;SymbolU32, TagFrame&gt;,
 }
 
 <span class="kw">impl </span>Object <span class="kw">for </span>Model {
@@ -1056,18 +1064,18 @@
   <span class="doccomment">/// Get the node&#39;s qualified name in standard form
   /// Ie. using the registered (code) prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
-  </span><span class="kw">pub fn </span>get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node) -&gt; String {
+  </span><span class="kw">pub fn </span>get_node_qname&lt;<span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Node) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
     <span class="kw">use </span>libxml::tree::NodeType::<span class="kw-2">*</span>;
     <span class="kw">let </span>node_type = node.get_type();
     <span class="kw">if </span>node_type.is_none() {
-      <span class="kw">return </span><span class="macro">s!</span>(<span class="string">&quot;#BrokenNode&quot;</span>);
+      <span class="kw">return </span><span class="string">&quot;#BrokenNode&quot;</span>;
     }
     <span class="kw">match </span>node_type.unwrap() {
-      TextNode =&gt; <span class="macro">s!</span>(<span class="string">&quot;#PCDATA&quot;</span>),
-      DocumentNode =&gt; <span class="macro">s!</span>(<span class="string">&quot;#Document&quot;</span>),
-      CommentNode =&gt; <span class="macro">s!</span>(<span class="string">&quot;#Comment&quot;</span>),
-      PiNode =&gt; <span class="macro">s!</span>(<span class="string">&quot;#ProcessingInstruction&quot;</span>),
-      DTDNode =&gt; <span class="macro">s!</span>(<span class="string">&quot;#DTD&quot;</span>),
+      TextNode =&gt; <span class="string">&quot;#PCDATA&quot;</span>,
+      DocumentNode =&gt; <span class="string">&quot;#Document&quot;</span>,
+      CommentNode =&gt; <span class="string">&quot;#Comment&quot;</span>,
+      PiNode =&gt; <span class="string">&quot;#ProcessingInstruction&quot;</span>,
+      DTDNode =&gt; <span class="string">&quot;#DTD&quot;</span>,
       NamespaceDecl =&gt; {
         <span class="comment">// match node.declared_uri() {
         //   Some(ns) =&gt; match self.get_namespace_prefix(ns, false, true) {
@@ -1076,8 +1084,8 @@
         //   },
         //   None =&gt; s!(&quot;xmlns&quot;)
         // }
-        </span><span class="macro">s!</span>(<span class="string">&quot;xmlns&quot;</span>)
-      },
+        </span><span class="string">&quot;xmlns&quot;
+      </span>},
       ElementNode | AttributeNode =&gt; {
         <span class="comment">// match node.namespace_uri() {
         //   Some(ns) =&gt; match self.get_namespace_prefix(ns, false, true) {
@@ -1087,9 +1095,10 @@
         //   None =&gt; node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        </span><span class="kw">match </span>node.get_name().as_str() {
-          <span class="string">&quot;song&quot; </span>| <span class="string">&quot;verse&quot; </span>| <span class="string">&quot;line&quot; </span>=&gt; node.get_name(),
-          regular =&gt; <span class="macro">s!</span>(<span class="string">&quot;ltx:{}&quot;</span>, regular),
+        </span><span class="kw">let </span>name_str = arena::as_static(node.get_name().as_str());
+        <span class="kw">match </span>name_str {
+          <span class="string">&quot;song&quot; </span>| <span class="string">&quot;verse&quot; </span>| <span class="string">&quot;line&quot; </span>=&gt; name_str,
+          regular =&gt; arena::as_static(<span class="macro">s!</span>(<span class="string">&quot;ltx:{}&quot;</span>, regular)),
         }
       },
       <span class="comment">// Need others?
@@ -1194,10 +1203,10 @@
     <span class="comment">// Else query tag properties.
     </span><span class="kw">let </span>model = <span class="kw-2">&amp;mut </span><span class="self">self
       </span>.tagprop
-      .entry(tag.to_owned())
+      .entry(arena::pin(tag))
       .or_insert_with(TagFrame::default)
       .model;
-    model.contains(<span class="string">&quot;ANY&quot;</span>) || model.contains(child)
+    model.contains(<span class="kw-2">&amp;*</span>ANY_SYM) || model.contains(<span class="kw-2">&amp;</span>arena::pin(child))
   }
 
   <span class="kw">pub fn </span>can_have_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -1219,15 +1228,15 @@
     <span class="comment">// Else query tag properties.
     </span><span class="kw">let </span>attributes = <span class="kw-2">&amp;mut </span><span class="self">self
       </span>.tagprop
-      .entry(tag.to_owned())
+      .entry(arena::pin(tag))
       .or_insert_with(TagFrame::default)
       .attributes;
-    attributes.contains(attrib)
+    attributes.contains(<span class="kw-2">&amp;</span>arena::pin(attrib))
   }
 
   <span class="kw">pub fn </span>is_node_in_schema_class(<span class="kw-2">&amp;</span><span class="self">self</span>, class_name: <span class="kw-2">&amp;</span>str, tag: <span class="kw-2">&amp;</span>Node) -&gt; bool {
     <span class="kw">let </span>tag = <span class="self">self</span>.get_node_qname(tag);
-    <span class="self">self</span>.is_in_schema_class(class_name, <span class="kw-2">&amp;</span>tag)
+    <span class="self">self</span>.is_in_schema_class(class_name, tag)
   }
   <span class="kw">pub fn </span>is_in_schema_class(<span class="kw-2">&amp;</span><span class="self">self</span>, class_name: <span class="kw-2">&amp;</span>str, tag: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(class) = <span class="self">self</span>.schema_class.get(class_name) {
@@ -1245,13 +1254,13 @@
     <span class="kw">let </span>compiled_fh = File::open(path).unwrap();
     <span class="kw">let </span>compiled_reader = BufReader::new(<span class="kw-2">&amp;</span>compiled_fh);
     <span class="kw">for </span>line <span class="kw">in </span>compiled_reader.lines().flatten() {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = TAG_MODEL_LINE.captures(<span class="kw-2">&amp;</span>line) {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = TAG_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
         <span class="kw">let </span>tag = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span>attr = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span>children = caps.get(<span class="number">3</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="self">self</span>.add_tag_attribute(tag, attr.split(<span class="string">&#39;,&#39;</span>).collect());
         <span class="self">self</span>.add_tag_content(tag, children.split(<span class="string">&#39;,&#39;</span>).collect());
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = CLASS_MODEL_LINE.captures(<span class="kw-2">&amp;</span>line) {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = CLASS_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
         <span class="kw">let </span>classname = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span>elements = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span><span class="kw-2">mut </span>class_set = HashSet::default();
@@ -1259,7 +1268,7 @@
           class_set.insert(set_element.to_owned());
         }
         <span class="self">self</span>.set_schema_class(classname, class_set);
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = NAMESPACE_MODEL_LINE.captures(<span class="kw-2">&amp;</span>line) {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = NAMESPACE_MODEL_LINE_RE.captures(<span class="kw-2">&amp;</span>line) {
         <span class="kw">let </span>prefix = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="kw">let </span>namespace = caps.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
         <span class="self">self</span>.register_document_namespace(prefix, <span class="prelude-val">Some</span>(namespace.to_owned()));
@@ -1275,21 +1284,19 @@
   // Accessors
   //**********************************************************************
 
-  </span><span class="kw">pub fn </span>get_tags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;String&gt; = <span class="self">self
+  </span><span class="kw">pub fn </span>get_tags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+    <span class="self">self
       </span>.tagprop
       .keys()
-      .map(String::as_str)
-      .map(str::to_owned)
-      .collect();
-    keys.sort();
-    keys
+      .map(|key| arena::resolve(<span class="kw-2">*</span>key))
+      .collect()
   }
+  <span class="kw">pub fn </span>get_sym_tags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;SymbolU32&gt; { <span class="self">self</span>.tagprop.keys().copied().collect() }
 
   <span class="kw">pub fn </span>get_tag_contents(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
-    <span class="kw">match </span><span class="self">self</span>.tagprop.get(tag) {
+    <span class="kw">match </span><span class="self">self</span>.tagprop.get(<span class="kw-2">&amp;</span>arena::pin(tag)) {
       <span class="prelude-val">Some</span>(h) =&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = h.model.iter().map(String::as_str).collect();
+        <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = h.model.iter().map(|k| arena::resolve(<span class="kw-2">*</span>k)).collect();
         keys.sort_unstable();
         keys
       },
@@ -1297,21 +1304,28 @@
     }
   }
 
+  <span class="kw">pub fn </span>get_sym_tag_contents(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>SymbolU32) -&gt; Vec&lt;SymbolU32&gt; {
+    <span class="kw">match </span><span class="self">self</span>.tagprop.get(tag) {
+      <span class="prelude-val">Some</span>(h) =&gt; h.model.iter().copied().collect(),
+      <span class="prelude-val">None </span>=&gt; Vec::new(),
+    }
+  }
+
   <span class="kw">pub fn </span>add_tag_content(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, elements: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
     <span class="kw">let </span>frame = <span class="self">self
       </span>.tagprop
-      .entry(tag.to_owned())
+      .entry(arena::pin(tag))
       .or_insert_with(TagFrame::default);
 
     <span class="kw">for </span>element <span class="kw">in </span>elements {
-      frame.model.insert(element.to_owned());
+      frame.model.insert(arena::pin(element));
     }
   }
 
   <span class="kw">pub fn </span>get_tag_attributes(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
-    <span class="kw">match </span><span class="self">self</span>.tagprop.get(tag) {
+    <span class="kw">match </span><span class="self">self</span>.tagprop.get(<span class="kw-2">&amp;</span>arena::pin(tag)) {
       <span class="prelude-val">Some</span>(h) =&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = h.attributes.iter().map(String::as_str).collect();
+        <span class="kw">let </span><span class="kw-2">mut </span>keys: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = h.attributes.iter().map(|s| arena::resolve(<span class="kw-2">*</span>s)).collect();
         keys.sort_unstable();
         keys
       },
@@ -1322,11 +1336,11 @@
   <span class="kw">pub fn </span>add_tag_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attributes: Vec&lt;<span class="kw-2">&amp;</span>str&gt;) {
     <span class="kw">let </span>frame = <span class="self">self
       </span>.tagprop
-      .entry(tag.to_owned())
+      .entry(arena::pin(tag))
       .or_insert_with(TagFrame::default);
 
     <span class="kw">for </span>attribute <span class="kw">in </span>attributes {
-      frame.attributes.insert(attribute.to_owned());
+      frame.attributes.insert(arena::pin(attribute));
     }
   }
 

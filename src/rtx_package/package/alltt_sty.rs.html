@@ -26,9 +26,9 @@
      <span class="macro">AssignCatcode!</span>(<span class="kw-2">*</span>c, Catcode::OTHER);
     }
     <span class="macro">AssignCatcode!</span>(<span class="string">&#39; &#39;</span>, Catcode::ACTIVE);
-    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot; &quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
+    <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39; &#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\space&quot;</span>));
     <span class="macro">AssignCatcode!</span>(<span class="string">&#39;\r&#39; </span>=&gt; Catcode::ACTIVE);    <span class="comment">// Variant of \obeylines
-    </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&quot;\r&quot;</span>), <span class="macro">Token!</span>(<span class="string">&quot;\n&quot;</span>,Catcode::SPACE));    <span class="comment">// More appropriate than \par, I think?
+    </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39;\r&#39;</span>), <span class="macro">Token!</span>(<span class="string">&quot;\n&quot;</span>,Catcode::SPACE));    <span class="comment">// More appropriate than \par, I think?
     </span><span class="macro">AssignValue!</span>(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>, <span class="number">1</span>);
     <span class="comment">// \@noligs: This SHOULD inhibit ligature substitution! (eg quotes, dots, etc!!!)
     // \frenchspacing\@vobeyspaces1

@@ -566,11 +566,7 @@
 <a href="#566" id="566">566</a>
 <a href="#567" id="567">567</a>
 <a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 
 <span class="kw">use </span>proc_macro::TokenStream;
@@ -611,32 +607,28 @@
 <span class="macro">macro_rules! </span>LEAD_RANDOM_TEXT_RE_STR (() =&gt; (
   <span class="macro">concat!</span>(<span class="string">r&quot;^((&quot;</span>,<span class="macro">QUOTED_SPECIALS!</span>(),<span class="string">r&quot;|[^&quot;</span>,<span class="macro">SPECIALS!</span>(),<span class="string">r&quot;&lt;])+)&quot;</span>)));
 
-<span class="macro">lazy_static! </span>{
-  <span class="comment">// static ref NARGS : i32 = 0;
-
-  // These recognize the beginnings of value expressions, conditionals, ..
-  // Attempt to follow XML Spec, Appendix B
-  </span><span class="kw">static </span><span class="kw-2">ref </span>LEAD_VALUE_RE : Regex = Regex::new(<span class="macro">LEAD_VALUE_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_COND_RE : Regex = Regex::new(<span class="macro">LEAD_COND_RE_STR!</span>()).unwrap();
-
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_QMARK : Regex = Regex::new(<span class="string">r&quot;^[?]&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_OPEN_TAG_RE : Regex = Regex::new(<span class="macro">LEAD_OPEN_TAG_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_CLOSE_TAG_RE : Regex = Regex::new(<span class="macro">LEAD_CLOSE_TAG_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_QUOTED_RE : Regex = Regex::new(<span class="macro">LEAD_QUOTED_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_RANDOM_TEXT_RE : Regex = Regex::new(<span class="macro">LEAD_RANDOM_TEXT_RE_STR!</span>()).unwrap();
-  <span class="comment">// QName (element tags, attribute names);  Could this also allow expressions?
-  </span><span class="kw">static </span><span class="kw-2">ref </span>QNAME_KEY_RE : Regex = Regex::new(<span class="macro">QNAME_KEY_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>FLOAT_RE : Regex = Regex::new(<span class="string">r&quot;^(\^+)\s*&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PI_RE : Regex = Regex::new(<span class="macro">PI_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PI_CLOSE_RE : Regex = Regex::new(<span class="string">r&quot;^\s*\?&gt;&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>KEY_RE : Regex = Regex::new(<span class="macro">KEY_RE_STR!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>FN_RE : Regex = Regex::new(<span class="string">r&quot;^&amp;([\w:]*)\(&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_CPAREN_RE : Regex = Regex::new(<span class="string">r&quot;^\s*\)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_KV_SEP : Regex = Regex::new(<span class="string">r&quot;^\s*,\s*&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>ARG_HOLE_RE : Regex = Regex::new(<span class="string">r&quot;^#(\d+)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PROP_HOLE_RE : Regex = Regex::new(<span class="string">r&quot;^\#([\w_-]+)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>ESCAPED_OP : Regex = Regex::new(<span class="string">r&quot;\\[#\?(&amp;,&lt;&gt;\\%]&quot;</span>).unwrap();
-}
+<span class="comment">// These recognize the beginnings of value expressions, conditionals, ..
+// Attempt to follow XML Spec, Appendix B
+</span><span class="kw">static </span>LEAD_VALUE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_VALUE_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>LEAD_COND_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_COND_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>LEAD_QMARK: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[?]&quot;</span>).unwrap());
+<span class="kw">static </span>LEAD_OPEN_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_OPEN_TAG_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>LEAD_CLOSE_TAG_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_CLOSE_TAG_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>LEAD_QUOTED_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">LEAD_QUOTED_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>LEAD_RANDOM_TEXT_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="macro">LEAD_RANDOM_TEXT_RE_STR!</span>()).unwrap());
+<span class="comment">// QName (element tags, attribute names);  Could this also allow expressions?
+</span><span class="kw">static </span>QNAME_KEY_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">QNAME_KEY_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>FLOAT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\^+)\s*&quot;</span>).unwrap());
+<span class="kw">static </span>PI_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">PI_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>PI_CLOSE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*\?&gt;&quot;</span>).unwrap());
+<span class="kw">static </span>KEY_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">KEY_RE_STR!</span>()).unwrap());
+<span class="kw">static </span>FN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^&amp;([\w:]*)\(&quot;</span>).unwrap());
+<span class="kw">static </span>LEAD_CPAREN_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*\)&quot;</span>).unwrap());
+<span class="kw">static </span>LEAD_KV_SEP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*,\s*&quot;</span>).unwrap());
+<span class="kw">static </span>ARG_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^#(\d+)&quot;</span>).unwrap());
+<span class="kw">static </span>PROP_HOLE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\#([\w_-]+)&quot;</span>).unwrap());
+<span class="kw">static </span>ESCAPED_OP: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\\[#\?(&amp;,&lt;&gt;\\%]&quot;</span>).unwrap());
 
 <span class="kw">pub fn </span>compile_replacement(input: DeriveInput) -&gt; TokenStream {
   <span class="kw">let </span>replacement: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {

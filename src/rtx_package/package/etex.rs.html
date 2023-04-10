@@ -464,7 +464,7 @@
     <span class="kw">let </span>value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state) {
       <span class="comment">// Skip \relax
-      </span><span class="kw">if </span>!(token == T_RELAX) {
+      </span><span class="kw">if </span>!(token == <span class="kw-2">*</span>TOKEN_RELAX) {
         gullet.unread_one(token);
       }
     }
@@ -500,7 +500,7 @@
 
     <span class="comment">// Now check for a following operator(s) &amp; operand(s) (respecting precedence)
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(next) = gullet.read_x_non_space(state)<span class="question-mark">? </span>{
-      <span class="kw">if </span>next == T_RELAX {
+      <span class="kw">if </span>next == <span class="kw-2">*</span>TOKEN_RELAX {
         gullet.unread_one(next); <span class="comment">// leave the \relax for top-level to strip off.
         </span><span class="kw">break</span>;
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;+&quot;</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{

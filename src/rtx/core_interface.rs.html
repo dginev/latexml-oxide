@@ -388,13 +388,9 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -410,7 +406,7 @@
 <span class="kw">use </span>rtx_core::util::pathname;
 <span class="kw">use </span>rtx_core::util::pathname::PathnameFindOptions;
 <span class="comment">// TODO: Clean up these imports -- what belongs where?
-</span><span class="kw">use </span>rtx_core::{fatal, map, s, Core, Debug, Explode, T_CS, T_OTHER, T_SPACE};
+</span><span class="kw">use </span>rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 
 <span class="kw">use </span>rtx_codegen::LoadModel;
 <span class="kw">use </span>rtx_math_parser::MathParser;
@@ -418,11 +414,9 @@
   input_content, input_definitions, load_model, InputDefinitionOptions, InputOptions,
 };
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>CLS_EXT_REGEX: Regex = Regex::new(<span class="string">r&quot;\.cls$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>STY_EXT_REGEX: Regex = Regex::new(<span class="string">r&quot;\.sty$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LATEX_OPTION_REGEX: Regex = Regex::new(<span class="string">r&quot;^\[([^\]]*)\]&quot;</span>).unwrap();
-}
+<span class="kw">static </span>CLS_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\.cls$&quot;</span>).unwrap());
+<span class="kw">static </span>STY_EXT_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\.sty$&quot;</span>).unwrap());
+<span class="kw">static </span>LATEX_OPTION_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\[([^\]]*)\]&quot;</span>).unwrap());
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>DigestionOptions {

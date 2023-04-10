@@ -505,9 +505,9 @@
     <span class="comment">// TODO:
     // AddToMacro!(T_CS!(&quot;\\cdp@list&quot;), T_CS!(&quot;\\cdp@elt&quot;),
     //   T_BEGIN!(), encoding.unlist(), T_END,
-    //   T_BEGIN!(), T_CS!(&quot;\\default@family&quot;), T_END!(),
-    //   T_BEGIN!(), T_CS!(&quot;\\default@series&quot;), T_END!(),
-    //   T_BEGIN!(), T_CS!(&quot;\\default@shape&quot;),  T_END!());
+    //   T_BEGIN!(), T_CS!(&quot;\\default@family&quot;), *T_END,
+    //   T_BEGIN!(), T_CS!(&quot;\\default@series&quot;), *T_END,
+    //   T_BEGIN!(), T_CS!(&quot;\\default@shape&quot;),  *T_END);
     </span><span class="kw">let </span>gullet = stomach.get_gullet_mut();
     <span class="kw">let </span>e = <span class="macro">Expand!</span>(encoding, gullet, state);
     <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\LastDeclaredEncoding&quot;</span>), <span class="prelude-val">None</span>, e.clone());

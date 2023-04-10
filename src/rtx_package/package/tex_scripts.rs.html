@@ -373,12 +373,10 @@
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>SCRIPT_NAME_RE: Regex =
-    Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
+
 <span class="comment">//======================================================================
 // Scripts are a bit of a strange beast, with respect to when the arguments
 // are processed, and what kind of object should be created.
@@ -735,14 +733,14 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;&#39;&quot;</span>, sub[gullet,_args,state] {
     <span class="kw">let </span><span class="kw-2">mut </span>sup = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>)];
     <span class="comment">// Collect up all &#39;, convering to \prime
-    </span><span class="kw">while </span>gullet.if_next(<span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>), state)<span class="question-mark">? </span>{
+    </span><span class="kw">while </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>), state)<span class="question-mark">? </span>{
       gullet.read_token(state);
       sup.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>));
     }
     <span class="comment">// Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    </span><span class="kw">if </span>gullet.if_next(<span class="macro">T_SUPER!</span>(), state)<span class="question-mark">? </span>{
+    </span><span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span>TOKEN_SUPER, state)<span class="question-mark">? </span>{
       gullet.read_token(state);
       sup.extend(gullet.read_arg(state)<span class="question-mark">?</span>.unlist());
     }

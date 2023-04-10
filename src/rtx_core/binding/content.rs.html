@@ -1273,13 +1273,14 @@
 <a href="#1273" id="1273">1273</a>
 <a href="#1274" id="1274">1274</a>
 <a href="#1275" id="1275">1275</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::path::Path;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, Fontmap};
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
@@ -1298,9 +1299,8 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::def_macro;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>QUOTE_WRAPPED: Regex = Regex::new(<span class="string">&quot;^\&quot;(.+)\&quot;$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>QUOTE_WRAPPED: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\&quot;(.+)\&quot;$&quot;</span>).unwrap());
+
 <span class="doccomment">/// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
 </span><span class="kw">pub struct </span>InputDefinitionOptions {
   <span class="doccomment">/// an optional extension (such as &quot;sty&quot;)
@@ -2002,7 +2002,7 @@
   </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
     state.let_i(
       <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, option)),
-      T_RELAX,
+      <span class="macro">T_RELAX!</span>(),
       <span class="prelude-val">None</span>,
       stomach.get_gullet_mut(),
     );
@@ -2342,7 +2342,7 @@
 </span><span class="kw">pub fn </span>install_tag(tag: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>properties: TagOptions, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span><span class="kw-2">mut </span>options = state
     .tag_properties
-    .entry(tag.to_string())
+    .entry(arena::pin(tag))
     .or_insert_with(TagOptions::default);
   <span class="kw">if </span>properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;

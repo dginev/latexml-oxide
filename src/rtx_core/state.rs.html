@@ -2112,14 +2112,44 @@
 <a href="#2112" id="2112">2112</a>
 <a href="#2113" id="2113">2113</a>
 <a href="#2114" id="2114">2114</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+<a href="#2115" id="2115">2115</a>
+<a href="#2116" id="2116">2116</a>
+<a href="#2117" id="2117">2117</a>
+<a href="#2118" id="2118">2118</a>
+<a href="#2119" id="2119">2119</a>
+<a href="#2120" id="2120">2120</a>
+<a href="#2121" id="2121">2121</a>
+<a href="#2122" id="2122">2122</a>
+<a href="#2123" id="2123">2123</a>
+<a href="#2124" id="2124">2124</a>
+<a href="#2125" id="2125">2125</a>
+<a href="#2126" id="2126">2126</a>
+<a href="#2127" id="2127">2127</a>
+<a href="#2128" id="2128">2128</a>
+<a href="#2129" id="2129">2129</a>
+<a href="#2130" id="2130">2130</a>
+<a href="#2131" id="2131">2131</a>
+<a href="#2132" id="2132">2132</a>
+<a href="#2133" id="2133">2133</a>
+<a href="#2134" id="2134">2134</a>
+<a href="#2135" id="2135">2135</a>
+<a href="#2136" id="2136">2136</a>
+<a href="#2137" id="2137">2137</a>
+<a href="#2138" id="2138">2138</a>
+<a href="#2139" id="2139">2139</a>
+<a href="#2140" id="2140">2140</a>
+<a href="#2141" id="2141">2141</a>
+<a href="#2142" id="2142">2142</a>
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 <span class="kw">use </span>std::sync::{Arc, RwLock};
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, LTX_P_SYM, PCDATA_SYM,GLOBAL_DEFS_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -2147,11 +2177,11 @@
 
 <span class="kw">static </span>CODE_TEX_EXT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;.code.tex&quot;</span>;
 
-<span class="macro">lazy_static! </span>{
-  <span class="doccomment">/// regex for *.tex and *.bib
-  </span><span class="kw">static </span><span class="kw-2">ref </span>TEX_OR_BIB_EXT_RE: Regex = Regex::new(<span class="string">r&quot;\.(tex|bib)$&quot;</span>).unwrap();
-  <span class="doccomment">/// Used in conversion to scaled points
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>UNITS: HashMap&lt;String, f64&gt; = <span class="macro">map!</span>(
+<span class="doccomment">/// regex for *.tex and *.bib
+</span><span class="kw">static </span>TEX_OR_BIB_EXT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\.(tex|bib)$&quot;</span>).unwrap());
+<span class="doccomment">/// Used in conversion to scaled points
+</span><span class="kw">pub static </span>UNITS: Lazy&lt;HashMap&lt;String, f64&gt;&gt; = Lazy::new(|| {
+  <span class="macro">map!</span>(
     <span class="string">&quot;pt&quot; </span>=&gt; <span class="number">65536.0</span>,
     <span class="string">&quot;pc&quot; </span>=&gt; <span class="number">12.0 </span>* <span class="number">65536.0</span>,
     <span class="string">&quot;in&quot; </span>=&gt; <span class="number">72.27 </span>* <span class="number">65536.0</span>,
@@ -2162,8 +2192,8 @@
     <span class="string">&quot;dd&quot; </span>=&gt; <span class="number">1238.0 </span>* <span class="number">65536.0 </span>/ <span class="number">1157.0</span>,
     <span class="string">&quot;cc&quot; </span>=&gt; <span class="number">12.0 </span>* <span class="number">1238.0 </span>* <span class="number">65536.0 </span>/ <span class="number">1157.0</span>,
     <span class="string">&quot;sp&quot; </span>=&gt; <span class="number">1.0
-  </span>);
-}
+  </span>)
+});
 
 <span class="doccomment">/// installation scope in the State tables
 </span><span class="attr">#[derive(Debug, Clone, PartialEq, Eq)]
@@ -2251,9 +2281,9 @@
 }
 
 <span class="doccomment">/// Ledger for stacked assignments
-</span><span class="kw">pub type </span>AssignmentCount = HashMap&lt;String, usize&gt;;
+</span><span class="kw">pub type </span>AssignmentCount = HashMap&lt;SymbolU32, usize&gt;;
 <span class="doccomment">/// The `(table_name, key, value)` contents of a stored table of assignments
-</span><span class="kw">pub type </span>StashTable = Vec&lt;(TableName, String, Stored)&gt;;
+</span><span class="kw">pub type </span>StashTable = Vec&lt;(TableName, SymbolU32, Stored)&gt;;
 <span class="attr">#[derive(Debug, Clone, Default)]
 </span><span class="doccomment">/// For each of several tables (being &quot;value&quot;, &quot;meaning&quot;, &quot;catcode&quot; or other space of names),
 /// each table maintains the bound values, and &quot;undo&quot; defines the stack frames
@@ -2315,7 +2345,7 @@
 ///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash &amp; stash_active: support named scopes
 ///      (see also activateScope &amp; deactivateScope)
-</span><span class="kw">pub type </span>Table = HashMap&lt;String, VecDeque&lt;Stored&gt;&gt;;
+</span><span class="kw">pub type </span>Table = HashMap&lt;SymbolU32, VecDeque&lt;Stored&gt;&gt;;
 
 <span class="doccomment">/// The State efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
@@ -2343,8 +2373,8 @@
   <span class="comment">// Stateful runtime - data structures
   </span><span class="doccomment">/// the schema-derived model used for the current document
   </span><span class="kw">pub </span>model: Model,
-  prefixes: HashMap&lt;String, bool&gt;, <span class="comment">// ?
-  </span><span class="kw">pub </span>tag_properties: HashMap&lt;String, TagOptions&gt;,
+  prefixes: HashMap&lt;SymbolU32, bool&gt;, <span class="comment">// ?
+  </span><span class="kw">pub </span>tag_properties: HashMap&lt;SymbolU32, TagOptions&gt;,
   <span class="doccomment">/// an optional indirect model for long-distance relationships
   </span><span class="kw">pub </span>indirect_model: <span class="prelude-ty">Option</span>&lt;IndirectModel&gt;,
   <span class="doccomment">/// Document-related resources declared during core conversion, pending until XML is finalized
@@ -2371,7 +2401,7 @@
   <span class="comment">// Local structures
   </span>if_frames: Vec&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;RwLock&lt;IfFrame&gt;&gt;&gt;&gt;,
   smuggle_the: Vec&lt;bool&gt;,
-  current_token: Vec&lt;Arc&lt;Token&gt;&gt;,
+  current_token: Vec&lt;Token&gt;,
   <span class="comment">// TODO: We can make this a Vec&lt;BindingDispatcher&gt; if we want to accumulate more definitions
   </span><span class="doccomment">/// A dispatcher routing to the compiled code of the main/official rtx bindings
   </span><span class="kw">pub </span>bindings_dispatch: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
@@ -2436,16 +2466,20 @@
     }
   }
 }
-<span class="macro">lazy_static! </span>{
-  <span class="kw">pub static </span><span class="kw-2">ref </span>STY_STATE: RwLock&lt;State&gt; = RwLock::new(State::new(StateOptions {
+
+<span class="kw">pub static </span>STY_STATE: Lazy&lt;RwLock&lt;State&gt;&gt; = Lazy::new(|| {
+  RwLock::new(State::new(StateOptions {
     catcodes: <span class="prelude-val">Some</span>(Catcodes::Style),
     ..StateOptions::default()
-  }));
-  <span class="kw">pub static </span><span class="kw-2">ref </span>STD_STATE: RwLock&lt;State&gt; = RwLock::new(State::new(StateOptions {
+  }))
+});
+<span class="kw">pub static </span>STD_STATE: Lazy&lt;RwLock&lt;State&gt;&gt; = Lazy::new(|| {
+  RwLock::new(State::new(StateOptions {
     catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
     ..StateOptions::default()
-  }));
-}
+  }))
+});
+
 <span class="doccomment">/// State fields allowed for customization during construction
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>StateOptions {
@@ -2503,13 +2537,15 @@
     <span class="kw">let </span><span class="kw-2">mut </span>value_table = HashMap::default();
     <span class="kw">let </span><span class="kw-2">mut </span>specials_vdq = VecDeque::new();
     specials_vdq.push_front(Stored::VecChar(<span class="macro">vec!</span>[<span class="string">&#39;^&#39;</span>, <span class="string">&#39;_&#39;</span>, <span class="string">&#39;~&#39;</span>, <span class="string">&#39;&amp;&#39;</span>, <span class="string">&#39;$&#39;</span>, <span class="string">&#39;#&#39;</span>, <span class="string">&#39;\&#39;&#39;</span>]));
-    value_table.insert(<span class="macro">s!</span>(<span class="string">&quot;SPECIALS&quot;</span>), specials_vdq);
+    value_table.insert(arena::pin(<span class="string">&quot;SPECIALS&quot;</span>), specials_vdq);
 
     <span class="kw">let </span><span class="kw-2">mut </span>catcodes_typed: Table = HashMap::default();
     <span class="kw">for </span>(k, v) <span class="kw">in </span>catcodes {
       <span class="kw">let </span><span class="kw-2">mut </span>vdq = VecDeque::new();
       vdq.push_front(Stored::Catcode(v));
-      catcodes_typed.insert(k.to_string(), vdq);
+      <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+      <span class="kw">let </span>cat_key = arena::pin(k.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+      catcodes_typed.insert(cat_key, vdq);
     }
 
     <span class="comment">// Basic defaults
@@ -2598,13 +2634,13 @@
   <span class="kw">fn </span>assign_internal(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     table_name: TableName,
-    key: <span class="kw-2">&amp;</span>str,
+    key: SymbolU32,
     value: Stored,
     <span class="kw-2">mut </span>scope_opt: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   ) {
     <span class="comment">// hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(globaldefs) = <span class="self">self</span>.value.get(<span class="string">&quot;\\globaldefs&quot;</span>) {
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(globaldefs) = <span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>GLOBAL_DEFS_SYM) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(global_value) = globaldefs.front() {
         <span class="comment">// magic TeX register override: \globaldefs
         </span><span class="kw">match </span><span class="kw-2">*</span>global_value {
@@ -2629,7 +2665,6 @@
         }
       },
     };
-
     <span class="kw">match </span>scope {
       Scope::Global =&gt; {
         <span class="comment">// We are going to change the model, where we first count the total number of definitions to
@@ -2641,7 +2676,7 @@
         <span class="kw">for </span>frame <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.undo {
           <span class="kw">let </span>is_locked = frame.locked;
           <span class="kw">let </span>frame_table = frame.table_mut(table_name);
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = frame_table.remove(key) {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = frame_table.remove(<span class="kw-2">&amp;</span>key) {
             undo_count += n;
           }
           last_frame = <span class="prelude-val">Some</span>(frame);
@@ -2651,20 +2686,20 @@
         }
         <span class="comment">// whatever is left -- if anything -- should be bindings below the locked frame.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(frame) = last_frame {
-          frame.table_mut(table_name).insert(key.to_string(), <span class="number">1</span>); <span class="comment">// Note that there&#39;s only one
+          frame.table_mut(table_name).insert(key, <span class="number">1</span>); <span class="comment">// Note that there&#39;s only one
                                                                   // value in the stack, now
         </span>}
 
         <span class="comment">// Undo the bindings, if `key` was bound in this frame
         </span><span class="kw">let </span>state_table = <span class="self">self</span>.table_mut(table_name);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(defs) = state_table.get_mut(key) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(defs) = state_table.get_mut(<span class="kw-2">&amp;</span>key) {
           <span class="kw">for _ in </span><span class="number">1</span>..=undo_count {
             defs.pop_front();
           }
         }
 
         <span class="kw">let </span>table_entry = state_table
-          .entry(key.to_string())
+          .entry(key)
           .or_insert_with(VecDeque::new);
         table_entry.push_front(value);
       },
@@ -2675,19 +2710,19 @@
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(current_frame) = <span class="self">self</span>.undo.front_mut() {
           <span class="kw">let </span>current_frame_table = current_frame.table_mut(table_name);
 
-          is_replace = current_frame_table.get(key).unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>) &gt; <span class="kw-2">&amp;</span><span class="number">0</span>;
+          is_replace = current_frame_table.get(<span class="kw-2">&amp;</span>key).unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>) &gt; <span class="kw-2">&amp;</span><span class="number">0</span>;
           <span class="kw">if </span>is_replace { <span class="comment">// If the value was previously assigned in this frame
              // we do this in 2.1, then proceed to 2.2
           </span>} <span class="kw">else </span>{
             <span class="comment">// Otherwise, push new value &amp; set 1 to be undone
-            </span>current_frame_table.insert(key.to_string(), <span class="number">1</span>);
+            </span>current_frame_table.insert(key, <span class="number">1</span>);
             <span class="comment">//  And push new binding in 2.2
           </span>}
         }
         <span class="comment">// 2. State table mutable logic
         </span><span class="kw">let </span>state_table = <span class="self">self</span>.table_mut(table_name);
         <span class="kw">let </span>defs = state_table
-          .entry(key.to_string())
+          .entry(key)
           .or_insert_with(VecDeque::new);
         <span class="kw">if </span>is_replace {
           <span class="comment">// 2.1. Replace the value, i.e. remove existing one
@@ -2697,25 +2732,26 @@
         </span>defs.push_front(value);
       },
       Scope::Named(scope_name) =&gt; {
+        <span class="kw">let </span>scope_sym = arena::pin(scope_name);
         <span class="comment">// initialize stash if empty
-        </span><span class="kw">let </span>needs_init = <span class="kw">match </span><span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_name) {
+        </span><span class="kw">let </span>needs_init = <span class="kw">match </span><span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_sym) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
           <span class="prelude-val">Some</span>(v) =&gt; v.is_empty(),
         };
         <span class="kw">if </span>needs_init {
           <span class="self">self</span>.assign_internal(
             TableName::Stash,
-            <span class="kw-2">&amp;</span>scope_name,
+            scope_sym,
             Stored::Stash(Vec::new()),
             <span class="prelude-val">Some</span>(Scope::Global),
           );
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(<span class="kw-2">ref mut </span>stash)) =
-          <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_name).as_mut().unwrap().get_mut(<span class="number">0</span>)
+          <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_sym).as_mut().unwrap().get_mut(<span class="number">0</span>)
         {
-          stash.push((table_name, key.to_string(), value.clone()));
+          stash.push((table_name, key, value.clone()));
         }
-        <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_name) {
+        <span class="kw">let </span>has_active = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_sym) {
           <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
           <span class="prelude-val">Some</span>(v) =&gt; !v.is_empty(),
         };
@@ -2730,7 +2766,7 @@
   </span><span class="doccomment">/// fetches a Stored value at the given key, from the Value table
   </span><span class="attr">#[inline(always)]
   </span><span class="kw">pub fn </span>lookup_value(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get(key) {
+    <span class="kw">match </span><span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>arena::pin(key)) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front() {
         <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="prelude-val">None</span>,
@@ -2740,7 +2776,7 @@
   }
   <span class="doccomment">/// mutably borrows a Stored value at the given key, from the Value table
   </span><span class="kw">pub fn </span>lookup_value_mut&lt;<span class="lifetime">&#39;lv</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get_mut(key) {
+    <span class="kw">match </span><span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>arena::pin(key)) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front_mut() {
         <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="prelude-val">None</span>,
@@ -2751,13 +2787,14 @@
 
   <span class="doccomment">/// inline lookup_value after which globally assign an empty Tokens() to undo
   </span><span class="kw">pub fn </span>remove_value&lt;<span class="lifetime">&#39;lv</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span><span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;lv </span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get_mut(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">match </span><span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>key_sym) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front() {
         <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::None) =&gt; Option::None,
         <span class="prelude-val">Some</span>(found) =&gt; {
           <span class="kw">let </span>found = found.clone();
-          <span class="self">self</span>.assign_internal(TableName::Value, key, Stored::None, <span class="prelude-val">Some</span>(Scope::Global));
+          <span class="self">self</span>.assign_internal(TableName::Value, key_sym, Stored::None, <span class="prelude-val">Some</span>(Scope::Global));
           <span class="prelude-val">Some</span>(found)
         },
       },
@@ -2766,7 +2803,7 @@
 
   <span class="doccomment">/// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
   </span><span class="kw">pub fn </span>checkout_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get_mut(key) {
+    <span class="kw">match </span><span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>arena::pin(key)) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(vvec) =&gt; vvec
         .front_mut()
@@ -2775,7 +2812,7 @@
   }
   <span class="doccomment">/// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
   </span><span class="kw">pub fn </span>checkin_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: Stored) {
-    <span class="kw">match </span><span class="self">self</span>.value.get_mut(key) {
+    <span class="kw">match </span><span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>arena::pin(key)) {
       <span class="prelude-val">None </span>=&gt; <span class="macro">unimplemented!</span>(),
       <span class="prelude-val">Some</span>(vvec) =&gt; <span class="kw">match </span>vvec.front_mut() {
         <span class="prelude-val">None </span>=&gt; <span class="macro">unimplemented!</span>(),
@@ -2797,21 +2834,23 @@
   ) {
     <span class="kw">let </span>value = value.into();
     <span class="kw">let </span>scope = scope.into();
-    <span class="self">self</span>.assign_internal(TableName::Value, key, value, scope);
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="self">self</span>.assign_internal(TableName::Value, key_sym, value, scope);
   }
 
   <span class="doccomment">/// manage a (global) list of values
   </span><span class="kw">pub fn </span>push_value&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
     <span class="kw">let </span>value = value.into();
-    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(key) {
+    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(<span class="kw-2">&amp;</span>key_sym) {
       <span class="self">self</span>.assign_internal(
         TableName::Value,
-        key,
+        key_sym,
         Stored::VecDequeStored(VecDeque::new()),
         <span class="prelude-val">Some</span>(Scope::Global),
       );
     }
-    <span class="kw">match </span><span class="self">self</span>.value.get_mut(key).unwrap().front_mut() {
+    <span class="kw">match </span><span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut() {
       <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) =&gt; front.push_back(value),
       <span class="comment">// auto-vivify, if None
       </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>field) <span class="kw">if </span><span class="macro">matches!</span>(field, Stored::None) =&gt; {
@@ -2829,16 +2868,17 @@
 
   <span class="doccomment">/// pops the last value in a named `Stored::VecDequeStored` queue, if any
   </span><span class="kw">pub fn </span>pop_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(<span class="kw-2">&amp;</span>key_sym) {
       <span class="self">self</span>.assign_internal(
         TableName::Value,
-        key,
+        key_sym,
         Stored::VecDequeStored(VecDeque::new()),
         <span class="prelude-val">Some</span>(Scope::Global),
       );
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) =
-      <span class="self">self</span>.value.get_mut(key).unwrap().front_mut()
+      <span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut()
     {
       front.pop_back()
     } <span class="kw">else </span>{
@@ -2855,7 +2895,8 @@
 
   <span class="doccomment">/// Check if the Value table contains a given key
   </span><span class="kw">pub fn </span>has_value(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">match </span><span class="self">self</span>.value.get(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">match </span><span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>key_sym) {
       <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
       <span class="prelude-val">Some</span>(list) =&gt; <span class="kw">match </span>list.front() {
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
@@ -3025,9 +3066,9 @@
     <span class="comment">// Basically: a CS or Active token that is either not defined, or is expandable
     // (but not \let to a token)
     </span><span class="kw">if </span>token.get_catcode().is_active_or_cs() {
-      <span class="kw">let </span>lookupname = token.get_string();
-      <span class="kw">if </span>!lookupname.is_empty() {
-        <span class="kw">match </span><span class="self">self</span>.meaning.get(lookupname) {
+      <span class="kw">let </span>lookupname = token.text;
+      <span class="kw">if </span>lookupname == <span class="kw-2">*</span>EMPTY_SYM {
+        <span class="kw">match </span><span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>lookupname) {
           <span class="prelude-val">Some</span>(entry) =&gt; {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(def) = entry.front() {
               <span class="comment">// the expandable variants are allowed
@@ -3057,7 +3098,7 @@
     <span class="kw">let </span>lookupname = token.get_executable_name();
     <span class="kw">if </span>lookupname.is_empty() {
       <span class="prelude-val">None
-    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>lookupname) {
+    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>arena::pin(lookupname)) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Conditional(defn)) = entry.front() {
         <span class="comment">// Can only be a token or definition; we only want defns that have conditional_type
         </span><span class="prelude-val">Some</span>(defn.conditional_type)
@@ -3071,15 +3112,16 @@
 
   <span class="kw">pub fn </span>unshift_value&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, values: Vec&lt;T&gt;) {
     <span class="kw">let </span>values_iter = values.into_iter().map(Into::into);
-    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(<span class="kw-2">&amp;</span>key_sym) {
       <span class="self">self</span>.assign_internal(
         TableName::Value,
-        key,
+        key_sym,
         Stored::VecDequeStored(VecDeque::new()),
         <span class="prelude-val">Some</span>(Scope::Global),
       )
     }
-    <span class="kw">let </span>receiver = <span class="self">self</span>.value.get_mut(key).unwrap().front_mut();
+    <span class="kw">let </span>receiver = <span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) = receiver {
       <span class="kw">for </span>value <span class="kw">in </span>values_iter.rev() {
         <span class="comment">// preserving order unshift, as Perl&#39;s
@@ -3094,16 +3136,17 @@
   }
 
   <span class="kw">pub fn </span>shift_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Stored&gt; {
-    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(<span class="kw-2">&amp;</span>key_sym) {
       <span class="self">self</span>.assign_internal(
         TableName::Value,
-        key,
+        key_sym,
         Stored::VecDequeStored(VecDeque::new()),
         <span class="prelude-val">Some</span>(Scope::Global),
       )
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::VecDequeStored(<span class="kw-2">ref mut </span>front)) =
-      <span class="self">self</span>.value.get_mut(key).unwrap().front_mut()
+      <span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>key_sym).unwrap().front_mut()
     {
       front.pop_front()
     } <span class="kw">else </span>{
@@ -3121,7 +3164,8 @@
   <span class="doccomment">/// manage a (global) hash of values
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_mapping(<span class="kw-2">&amp;</span><span class="self">self</span>, map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get(map) {
+    <span class="kw">let </span>map_sym = arena::pin(map);
+    <span class="kw">match </span><span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>map_sym) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(map_vec) =&gt; <span class="kw">match </span>map_vec.front() {
         <span class="prelude-val">Some</span>(Stored::HashStored(h)) =&gt; h.get(key),
@@ -3131,15 +3175,16 @@
   }
 
   <span class="kw">pub fn </span>assign_mapping&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, map: <span class="kw-2">&amp;</span>str, key: <span class="kw-2">&amp;</span>str, value: <span class="prelude-ty">Option</span>&lt;T&gt;) {
-    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(map) || <span class="self">self</span>.value[map].is_empty() {
+    <span class="kw">let </span>map_sym = arena::pin(map);
+    <span class="kw">if </span>!<span class="self">self</span>.value.contains_key(<span class="kw-2">&amp;</span>map_sym) || <span class="self">self</span>.value[<span class="kw-2">&amp;</span>map_sym].is_empty() {
       <span class="self">self</span>.assign_internal(
         TableName::Value,
-        map,
+        map_sym,
         Stored::HashStored(HashMap::default()),
         <span class="prelude-val">Some</span>(Scope::Global),
       );
     }
-    <span class="kw">let </span>map_store = <span class="self">self</span>.value.get_mut(map).unwrap();
+    <span class="kw">let </span>map_store = <span class="self">self</span>.value.get_mut(<span class="kw-2">&amp;</span>map_sym).unwrap();
     <span class="comment">// TODO: What is the right abstraction here? this is hacky
     </span><span class="kw">let </span><span class="kw-2">mut </span>stub_hash = HashMap::default();
     <span class="kw">let </span>mapping = <span class="kw">match </span><span class="kw-2">*</span>map_store.front_mut().unwrap() {
@@ -3154,7 +3199,8 @@
   }
 
   <span class="kw">pub fn </span>lookup_mapping_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, map: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
-    <span class="kw">match </span><span class="self">self</span>.value.get(map) {
+    <span class="kw">let </span>map_sym = arena::pin(map);
+    <span class="kw">match </span><span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>map_sym) {
       <span class="prelude-val">None </span>=&gt; Vec::new(),
       <span class="prelude-val">Some</span>(map_vec) =&gt; <span class="kw">match </span>map_vec.front() {
         <span class="prelude-val">Some</span>(Stored::HashStored(h)) =&gt; h.keys().map(String::as_str).collect(),
@@ -3164,7 +3210,8 @@
   }
 
   <span class="kw">pub fn </span>lookup_stacked_values(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Stored&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(vdq) = <span class="self">self</span>.value.get(key) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(vdq) = <span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>key_sym) {
       vdq.iter().collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt;()
     } <span class="kw">else </span>{
       Vec::new()
@@ -3175,6 +3222,7 @@
   </span><span class="doccomment">/// Was `name` bound?  If  `frame` is given, check only whether it is bound in
   /// that frame (0 is the topmost).
   </span><span class="kw">pub fn </span>is_value_bound(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, frame_opt: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; bool {
+    <span class="kw">let </span>key_sym = arena::pin(key);
     <span class="kw">match </span>frame_opt {
       <span class="prelude-val">Some</span>(frame) =&gt; <span class="self">self
         </span>.undo
@@ -3182,8 +3230,8 @@
         .as_ref()
         .unwrap()
         .table(TableName::Value)
-        .contains_key(key),
-      <span class="prelude-val">None </span>=&gt; !<span class="self">self</span>.value.get(key).unwrap_or(<span class="kw-2">&amp;</span>VecDeque::new()).is_empty(),
+        .contains_key(<span class="kw-2">&amp;</span>key_sym),
+      <span class="prelude-val">None </span>=&gt; !<span class="self">self</span>.value.get(<span class="kw-2">&amp;</span>key_sym).unwrap_or(<span class="kw-2">&amp;</span>VecDeque::new()).is_empty(),
     }
   }
 
@@ -3194,8 +3242,8 @@
     <span class="comment">// speedup over variant with allocation
     // i.e. &quot;let s = c.to_string();&quot;
     </span><span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
-    <span class="kw">let </span>s = c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp);
-    <span class="kw">match </span><span class="self">self</span>.catcode.get(s) {
+    <span class="kw">let </span>s = arena::pin(c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+    <span class="kw">match </span><span class="self">self</span>.catcode.get(<span class="kw-2">&amp;</span>s) {
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(cvec) =&gt; <span class="kw">match </span>cvec.front() {
         <span class="prelude-val">Some</span>(Stored::Catcode(cc)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>cc),
@@ -3208,9 +3256,11 @@
   <span class="doccomment">/// assigns a Catcode for a given character
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>assign_catcode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: char, value: Catcode, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="self">self</span>.assign_internal(
       TableName::Catcode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Catcode(value),
       scope,
     );
@@ -3218,7 +3268,8 @@
   <span class="doccomment">/// like `lookup_catcode` but targets Mathcode and its table
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_mathcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
-    <span class="kw">match </span><span class="self">self</span>.mathcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
+    <span class="kw">let </span>key_sym = arena::pin(key);
+    <span class="kw">match </span><span class="self">self</span>.mathcode.get(<span class="kw-2">&amp;</span>key_sym) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -3228,17 +3279,18 @@
   }
   <span class="doccomment">/// like `assign_catcode` but targets Mathcode and its table
   </span><span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>assign_mathcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
+  </span><span class="kw">pub fn </span>assign_mathcode&lt;T: Into&lt;u16&gt;&gt;(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    key: C,
+    key: char,
     value: T,
-    scope: S,
+    scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   ) {
-    <span class="kw">let </span>key: char = key.into();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(
       TableName::Mathcode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Charcode(value.into()),
       scope,
     );
@@ -3246,7 +3298,9 @@
   <span class="doccomment">/// like `lookup_catcode` but targets Sfcode and its table
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_sfcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
-    <span class="kw">match </span><span class="self">self</span>.sfcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+    <span class="kw">match </span><span class="self">self</span>.sfcode.get(<span class="kw-2">&amp;</span>s) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -3256,17 +3310,17 @@
   }
   <span class="doccomment">/// like `assign_catcode` but targets Sfcode and its table
   </span><span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>assign_sfcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
+  </span><span class="kw">pub fn </span>assign_sfcode&lt;T: Into&lt;u16&gt;&gt;(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    key: C,
+    key: char,
     value: T,
-    scope: S,
+    scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   ) {
-    <span class="kw">let </span>key: char = key.into();
-    <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="self">self</span>.assign_internal(
       TableName::Sfcode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Charcode(value.into()),
       scope,
     );
@@ -3274,7 +3328,9 @@
   <span class="doccomment">/// like `lookup_catcode` but targets Lccode and its table
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_lccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
-    <span class="kw">match </span><span class="self">self</span>.lccode.get(<span class="kw-2">&amp;</span>key.to_string()) {
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+    <span class="kw">match </span><span class="self">self</span>.lccode.get(<span class="kw-2">&amp;</span>s) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -3284,17 +3340,19 @@
   }
   <span class="doccomment">/// like `assign_catcode` but targets Lccode and its table
   </span><span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
+  </span><span class="kw">pub fn </span>assign_lccode&lt;T: Into&lt;u16&gt;,C: Into&lt;char&gt;&gt;(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     key: C,
     value: T,
-    scope: S,
+    scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
   ) {
-    <span class="kw">let </span>key: char = key.into();
+    <span class="kw">let </span>c : char = key.into();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
     <span class="self">self</span>.assign_internal(
       TableName::Lccode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Charcode(value.into()),
       scope,
     );
@@ -3302,7 +3360,9 @@
   <span class="doccomment">/// like `lookup_catcode` but targets Uccode and its table
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_uccode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
-    <span class="kw">match </span><span class="self">self</span>.uccode.get(<span class="kw-2">&amp;</span>key.to_string()) {
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+    <span class="kw">match </span><span class="self">self</span>.uccode.get(<span class="kw-2">&amp;</span>s) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -3312,17 +3372,18 @@
   }
   <span class="doccomment">/// like `assign_catcode` but targets Uccode and its table
   </span><span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
+  </span><span class="kw">pub fn </span>assign_uccode&lt;T: Into&lt;u16&gt;,C: Into&lt;char&gt;&gt;(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     key: C,
     value: T,
-    scope: S,
+    scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;
   ) {
-    <span class="kw">let </span>key: char = key.into();
-    <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
+    <span class="kw">let </span>c : char = key.into();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(c.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="self">self</span>.assign_internal(
       TableName::Uccode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Charcode(value.into()),
       scope,
     );
@@ -3330,7 +3391,9 @@
   <span class="doccomment">/// like `lookup_catcode` but targets Delcode and its table
   </span><span class="attr">#[inline]
   </span><span class="kw">pub fn </span>lookup_delcode(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) -&gt; <span class="prelude-ty">Option</span>&lt;u16&gt; {
-    <span class="kw">match </span><span class="self">self</span>.delcode.get(<span class="kw-2">&amp;</span>key.to_string()) {
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
+    <span class="kw">match </span><span class="self">self</span>.delcode.get(<span class="kw-2">&amp;</span>s) {
       <span class="prelude-val">Some</span>(c) =&gt; <span class="kw">match </span>c.front() {
         <span class="prelude-val">Some</span>(Stored::Charcode(codeval)) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>codeval),
         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
@@ -3340,17 +3403,17 @@
   }
   <span class="doccomment">/// like `assign_catcode` but targets Delcode and its table
   </span><span class="attr">#[inline]
-  </span><span class="kw">pub fn </span>assign_delcode&lt;T: Into&lt;u16&gt;, C: Into&lt;char&gt;, S: Into&lt;<span class="prelude-ty">Option</span>&lt;Scope&gt;&gt;&gt;(
+  </span><span class="kw">pub fn </span>assign_delcode&lt;T: Into&lt;u16&gt;&gt;(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    key: C,
+    key: char,
     value: T,
-    scope: S,
+    scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;
   ) {
-    <span class="kw">let </span>key: char = key.into();
-    <span class="kw">let </span>scope: <span class="prelude-ty">Option</span>&lt;Scope&gt; = scope.into();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
+    <span class="kw">let </span>s = arena::pin(key.encode_utf8(<span class="kw-2">&amp;mut </span>tmp));
     <span class="self">self</span>.assign_internal(
       TableName::Delcode,
-      <span class="kw-2">&amp;</span>key.to_string(),
+      s,
       Stored::Charcode(value.into()),
       scope,
     );
@@ -3361,9 +3424,9 @@
   </span><span class="kw">pub fn </span>lookup_meaning(<span class="kw-2">&amp;</span><span class="self">self</span>, token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
     <span class="kw">if </span>token.get_catcode().is_active_or_cs()
       &amp;&amp; !token.has_smuggled()
-      &amp;&amp; !token.get_string().is_empty()
+      &amp;&amp; token.text != <span class="kw-2">*</span>EMPTY_SYM
     {
-      <span class="kw">match </span><span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>token.get_string().to_owned()) {
+      <span class="kw">match </span><span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>token.text) {
         <span class="prelude-val">Some</span>(entry) =&gt; <span class="kw">match </span>entry.front() {
           <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="prelude-val">None</span>,
           <span class="prelude-val">Some</span>(other) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(other)),
@@ -3391,7 +3454,7 @@
         <span class="kw">return</span>;
       }
     }
-    <span class="self">self</span>.assign_internal(TableName::Meaning, token.get_cs_name(), meaning, scope);
+    <span class="self">self</span>.assign_internal(TableName::Meaning, arena::pin(token.get_cs_name()), meaning, scope);
   }
 
   <span class="kw">fn </span>lookup_definition_internal&lt;<span class="lifetime">&#39;def</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;def </span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>VecDeque&lt;Stored&gt;&gt; {
@@ -3408,7 +3471,7 @@
     };
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(lname) = lookupname {
-      <span class="self">self</span>.meaning.get(lname)
+      <span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>arena::pin(lname))
     } <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>}
@@ -3508,7 +3571,7 @@
     };
 
     <span class="macro">Debug!</span>(<span class="string">&quot;Looking up digestable {:?}&quot;</span>, lookupname);
-    <span class="kw">let </span>entry_opt = <span class="self">self</span>.meaning.get(lookupname);
+    <span class="kw">let </span>entry_opt = <span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>arena::pin(lookupname));
     <span class="kw">if </span>!lookupname.is_empty() &amp;&amp; entry_opt.is_some() &amp;&amp; !entry_opt.as_ref().unwrap().is_empty() {
       <span class="macro">Debug!</span>(<span class="string">&quot;Found definition for: {:?}&quot;</span>, lookupname);
       <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
@@ -3519,7 +3582,7 @@
             </span>} <span class="kw">else </span>{
               t.get_executable_primitive_name().unwrap()
             };
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(retry_entry) = <span class="self">self</span>.meaning.get(lookupname) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(retry_entry) = <span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>arena::pin(lookupname)) {
               <span class="comment">// special case,
               // If a cs has been let to an executable token, lookup ITS defn.
               </span><span class="kw">return </span>retry_entry.front().cloned();
@@ -3570,7 +3633,7 @@
         <span class="kw">return</span>;
       }
     }
-    <span class="self">self</span>.assign_internal(TableName::Meaning, <span class="kw-2">&amp;</span>cs, definition, scope);
+    <span class="self">self</span>.assign_internal(TableName::Meaning, arena::pin(cs), definition, scope);
   }
 
   <span class="comment">// NOTE: Common usage patterns seem to be to lookup
@@ -3718,11 +3781,11 @@
   // ======================================================================
   </span><span class="doccomment">/// Set one of the definition prefixes global, etc (only global matters!)
   </span><span class="attr">#[inline(always)]
-  </span><span class="kw">pub fn </span>set_prefix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) { <span class="self">self</span>.prefixes.insert(prefix.to_string(), <span class="bool-val">true</span>); }
+  </span><span class="kw">pub fn </span>set_prefix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) { <span class="self">self</span>.prefixes.insert(arena::pin(prefix), <span class="bool-val">true</span>); }
   <span class="doccomment">/// gets the current value of a named prefix
   </span><span class="attr">#[inline(always)]
   </span><span class="kw">pub fn </span>get_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>, prefix: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">match </span><span class="self">self</span>.prefixes.get(prefix) {
+    <span class="kw">match </span><span class="self">self</span>.prefixes.get(<span class="kw-2">&amp;</span>arena::pin(prefix)) {
       <span class="prelude-val">Some</span>(b) =&gt; <span class="kw-2">*</span>b,
       <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
     }
@@ -3735,7 +3798,8 @@
   </span><span class="doccomment">///
   </span><span class="kw">pub fn </span>activate_scope(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scope: <span class="kw-2">&amp;</span>str) {
     <span class="comment">// do not re-activate if already active.
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(stash_active_entry) = <span class="self">self</span>.stash_active.get(scope) {
+    </span><span class="kw">let </span>scope_sym = arena::pin(scope);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(stash_active_entry) = <span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_sym) {
       <span class="kw">if </span>!stash_active_entry.is_empty() {
         <span class="kw">return</span>;
       }
@@ -3743,7 +3807,7 @@
 
     <span class="self">self</span>.assign_internal(
       TableName::StashActive,
-      scope,
+      scope_sym,
       Stored::Bool(<span class="bool-val">true</span>),
       <span class="prelude-val">Some</span>(Scope::Local),
     );
@@ -3756,7 +3820,8 @@
 
     </span><span class="kw">let </span><span class="kw-2">mut </span>actions = Vec::new();
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(Stored::Stash(defns))) = <span class="self">self</span>.stash.get(scope).map(|x| x.iter().next()) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(Stored::Stash(defns))) = <span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_sym)
+    .map(|x| x.iter().next()) {
       <span class="kw">for </span>(table_name, key, value) <span class="kw">in </span>defns {
         <span class="comment">// copy the values out from the stashed defns, so that Rust
         // is calm we are borrowing safely.
@@ -3786,7 +3851,8 @@
   </span><span class="doccomment">/// Removes any definitions that were associated with the named `scope`.
   /// Normally not needed, since a scopes definitions are locally bound anyway.
   </span><span class="kw">pub fn </span>deactivate_scope(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scope: <span class="kw-2">&amp;</span>str) {
-    <span class="kw">let </span>scope_exists = <span class="kw">match </span><span class="self">self</span>.stash_active.get(scope) {
+    <span class="kw">let </span>scope_sym = arena::pin(scope);
+    <span class="kw">let </span>scope_exists = <span class="kw">match </span><span class="self">self</span>.stash_active.get(<span class="kw-2">&amp;</span>scope_sym) {
       <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
       <span class="prelude-val">Some</span>(v) =&gt; !v.is_empty(),
     };
@@ -3796,13 +3862,13 @@
 
     <span class="self">self</span>.assign_internal(
       TableName::StashActive,
-      scope,
+      scope_sym,
       Stored::Bool(<span class="bool-val">false</span>),
       <span class="prelude-val">Some</span>(Scope::Global),
     );
 
     <span class="kw">let </span><span class="kw-2">mut </span>collected = Vec::new();
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(Stored::Stash(defns))) = <span class="self">self</span>.stash.get(scope).map(|x| x.iter().next()) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(Stored::Stash(defns))) = <span class="self">self</span>.stash.get(<span class="kw-2">&amp;</span>scope_sym).map(|x| x.iter().next()) {
       <span class="kw">for </span>(table_name, key, value) <span class="kw">in </span>defns {
         collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
       }
@@ -3826,14 +3892,14 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(frame) = <span class="self">self</span>.undo.front_mut() {
           <span class="kw">let </span>frame_table = frame.table_mut(table_name);
-          <span class="kw">let </span>frame_count = frame_table.entry(key.to_string()).or_default();
+          <span class="kw">let </span>frame_count = frame_table.entry(key).or_default();
           <span class="kw-2">*</span>frame_count -= <span class="number">1</span>;
         }
       } <span class="kw">else </span>{
         <span class="kw">let </span>message = <span class="macro">s!</span>(
           <span class="string">&quot;Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
            is {:?}&quot;</span>,
-          key,
+          arena::resolve(key),
           table_name,
           value,
           table_entry
@@ -3843,19 +3909,21 @@
             .join(<span class="string">&quot;, &quot;</span>)
         );
         <span class="kw">let </span>stomach = <span class="self">self</span>.stomach.read().unwrap();
-        <span class="macro">Warn!</span>(<span class="string">&quot;internal&quot;</span>, key, stomach, <span class="self">self</span>, message);
+        <span class="macro">Warn!</span>(<span class="string">&quot;internal&quot;</span>, arena::resolve(key), stomach, <span class="self">self</span>, message);
       }
     }
   }
   <span class="doccomment">/// return all known named scopes
-  </span><span class="kw">pub fn </span>get_known_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash.keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+  </span><span class="kw">pub fn </span>get_known_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash.keys()
+      .map(|k| arena::resolve(<span class="kw-2">*</span>k)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     scopes.sort();
     scopes
   }
   <span class="doccomment">/// return the currently activated named scopes
-  </span><span class="kw">pub fn </span>get_active_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash_active.keys().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+  </span><span class="kw">pub fn </span>get_active_scopes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>str&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>scopes = <span class="self">self</span>.stash_active.keys()
+      .map(|k| arena::resolve(<span class="kw-2">*</span>k)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     scopes.sort();
     scopes
   }
@@ -3949,42 +4017,41 @@
   </span><span class="kw">pub fn </span>compute_indirect_model(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; IndirectModel {
     <span class="kw">let </span><span class="kw-2">mut </span>imodel: IndirectModel = HashMap::default();
     <span class="comment">// Determine any indirect paths to each descendent via an `autoOpen-able&#39; tag.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>openable: HashSet&lt;String&gt; = HashSet::default();
-    <span class="kw">for </span>tag <span class="kw">in </span><span class="self">self</span>.model.get_tags() {
+    </span><span class="kw">let </span><span class="kw-2">mut </span>openable: HashSet&lt;SymbolU32&gt; = HashSet::default();
+    <span class="kw">for </span>tag <span class="kw">in </span><span class="self">self</span>.model.get_sym_tags() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(x) = <span class="self">self</span>.tag_properties.get(<span class="kw-2">&amp;</span>tag) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = x.auto_open {
-          openable.insert(tag.to_owned());
+          openable.insert(tag);
         }
       }
     }
 
-    <span class="kw">for </span>tag <span class="kw">in </span><span class="self">self</span>.model.get_tags() {
-      <span class="kw">let </span><span class="kw-2">mut </span>desc: HashMap&lt;String, HashMap&lt;String, usize&gt;&gt; = HashMap::default();
+    <span class="kw">for </span>tag <span class="kw">in </span><span class="self">self</span>.model.get_sym_tags() {
+      <span class="kw">let </span><span class="kw-2">mut </span>desc: HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, usize&gt;&gt; = HashMap::default();
       {
-        <span class="self">self</span>.compute_indirect_model_aux(<span class="kw-2">&amp;</span>tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
+        <span class="self">self</span>.compute_indirect_model_aux(tag, <span class="prelude-val">None</span>, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>openable, <span class="kw-2">&amp;mut </span>desc);
       }
 
-      <span class="kw">let </span>desc_keys: Vec&lt;String&gt; = desc.keys().map(ToString::to_string).collect();
-      <span class="comment">// desc_keys.sort(); // TODO: why sort?
-      </span><span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
+      <span class="kw">let </span>desc_keys: Vec&lt;SymbolU32&gt; = desc.keys().copied().collect();
+      <span class="kw">for </span>kid <span class="kw">in </span>desc_keys {
         <span class="kw">let </span><span class="kw-2">mut </span>best = <span class="number">0</span>; <span class="comment">// Find best path to $kid.
-        </span><span class="kw">let </span>desc_kid_keys: Vec&lt;String&gt; = desc
-          .entry(kid.to_owned())
+        </span><span class="kw">let </span>desc_kid_keys: Vec&lt;SymbolU32&gt; = desc
+          .entry(kid)
           .or_insert_with(HashMap::default)
           .keys()
-          .map(ToString::to_string)
+          .copied()
           .collect();
         <span class="comment">// desc_kid_keys.sort(); // TODO: why sort?
         </span><span class="kw">for </span>start <span class="kw">in </span>desc_kid_keys {
           <span class="kw">let </span>start_entry = {
-            <span class="kw">let </span>kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
+            <span class="kw">let </span>kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
             <span class="kw-2">*</span>kid_entry.entry(start.to_owned()).or_insert(<span class="number">0</span>)
           };
           <span class="kw">if </span>start_entry &gt; best {
             imodel
-              .entry(tag.to_owned())
+              .entry(tag)
               .or_insert_with(HashMap::default)
-              .insert(kid.to_owned(), start.to_owned());
+              .insert(kid, start.to_owned());
             {
               best = desc[<span class="kw-2">&amp;</span>kid][<span class="kw-2">&amp;</span>start];
             }
@@ -3996,9 +4063,9 @@
     </span><span class="kw">if </span><span class="self">self</span>.model.permissive {
       <span class="comment">// !!! Alarm!!!
       </span>imodel
-        .entry(<span class="macro">s!</span>(<span class="string">&quot;#Document&quot;</span>))
+        .entry(arena::pin(<span class="string">&quot;#Document&quot;</span>))
         .or_insert_with(HashMap::default)
-        .insert(<span class="macro">s!</span>(<span class="string">&quot;#PCDATA&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;ltx:p&quot;</span>));
+        .insert(<span class="kw-2">*</span>PCDATA_SYM, <span class="kw-2">*</span>LTX_P_SYM);
     }
 
     imodel
@@ -4006,51 +4073,42 @@
 
   <span class="kw">fn </span>compute_indirect_model_aux(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    tag: <span class="kw-2">&amp;</span>str,
-    start_opt: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    tag: SymbolU32,
+    start_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
     desirability: usize,
-    openable: <span class="kw-2">&amp;mut </span>HashSet&lt;String&gt;,
-    desc: <span class="kw-2">&amp;mut </span>HashMap&lt;String, HashMap&lt;String, usize&gt;&gt;,
+    openable: <span class="kw-2">&amp;mut </span>HashSet&lt;SymbolU32&gt;,
+    desc: <span class="kw-2">&amp;mut </span>HashMap&lt;SymbolU32, HashMap&lt;SymbolU32, usize&gt;&gt;,
   ) {
     <span class="kw">let </span>start = <span class="kw">match </span>start_opt {
       <span class="prelude-val">Some</span>(s) =&gt; s,
-      <span class="prelude-val">None </span>=&gt; String::new(),
+      <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>EMPTY_SYM,
     };
 
     <span class="comment">// A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    </span><span class="kw">let </span>tag_contents: Vec&lt;String&gt; = <span class="self">self
-      </span>.model
-      .get_tag_contents(tag)
-      .iter()
-      .map(ToString::to_string)
-      .collect();
+    </span><span class="kw">let </span>tag_contents: Vec&lt;SymbolU32&gt; = <span class="self">self</span>.model.get_sym_tag_contents(<span class="kw-2">&amp;</span>tag);
 
     <span class="kw">for </span>kid <span class="kw">in </span>tag_contents {
       <span class="kw">if </span>desc
-        .entry(kid.clone())
+        .entry(kid)
         .or_insert_with(HashMap::default)
         .contains_key(<span class="kw-2">&amp;</span>start)
       {
         <span class="kw">continue</span>;
       } <span class="comment">// Already solved
 
-      </span><span class="kw">if </span>!start.is_empty() {
+      </span><span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM {
         desc
-          .entry(kid.clone())
+          .entry(kid)
           .or_insert_with(HashMap::default)
-          .insert(start.clone(), desirability);
+          .insert(start, desirability);
       }
 
-      <span class="kw">if </span>kid != <span class="string">&quot;#PCDATA&quot; </span>&amp;&amp; openable.contains(<span class="kw-2">&amp;</span>kid) {
-        <span class="kw">let </span>inner = <span class="kw">if </span>!start.is_empty() {
-          start.clone()
-        } <span class="kw">else </span>{
-          kid.to_string()
-        };
+      <span class="kw">if </span>kid != <span class="kw-2">*</span>PCDATA_SYM &amp;&amp; openable.contains(<span class="kw-2">&amp;</span>kid) {
+        <span class="kw">let </span>inner = <span class="kw">if </span>start != <span class="kw-2">*</span>EMPTY_SYM { start } <span class="kw">else </span>{ kid };
 
-        <span class="self">self</span>.compute_indirect_model_aux(<span class="kw-2">&amp;</span>kid, <span class="prelude-val">Some</span>(inner), desirability, openable, desc);
+        <span class="self">self</span>.compute_indirect_model_aux(kid, <span class="prelude-val">Some</span>(inner), desirability, openable, desc);
       }
     }
   }
@@ -4218,13 +4276,11 @@
   <span class="doccomment">/// expire special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
   </span><span class="kw">pub fn </span>expire_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.smuggle_the.pop(); }
   <span class="doccomment">/// sets the (localized) current token. see `Stomach::invoke_token`
-  </span><span class="kw">pub fn </span>set_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Arc&lt;Token&gt;) { <span class="self">self</span>.current_token.push(token); }
+  </span><span class="kw">pub fn </span>set_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Token) { <span class="self">self</span>.current_token.push(token); }
   <span class="doccomment">/// expires the most recent (localized) current token.
   </span><span class="kw">pub fn </span>expire_current_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.current_token.pop(); }
   <span class="doccomment">/// gets the (localized) current token
-  </span><span class="kw">pub fn </span>get_current_token(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Token&gt;&gt; {
-    <span class="self">self</span>.current_token.last().map(Arc::clone)
-  }
+  </span><span class="kw">pub fn </span>get_current_token(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Token&gt; { <span class="self">self</span>.current_token.last() }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

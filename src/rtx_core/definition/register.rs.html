@@ -815,7 +815,7 @@
 <span class="comment">// TODO: Does this successfully emulate the behavior in latexml?
 //   see example use in gullet::read_tokens_value
 </span><span class="kw">impl </span>From&lt;RegisterValue&gt; <span class="kw">for </span>Tokens {
-  <span class="kw">fn </span>from(v: RegisterValue) -&gt; Tokens { <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(v.value_of())) }
+  <span class="kw">fn </span>from(v: RegisterValue) -&gt; Tokens { <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(v.value_of().to_string())) }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RegisterValue&gt; <span class="kw">for </span>Dimension {

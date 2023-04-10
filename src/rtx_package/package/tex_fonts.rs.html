@@ -478,12 +478,10 @@
 <a href="#478" id="478">478</a>
 <a href="#479" id="479">479</a>
 <a href="#480" id="480">480</a>
-<a href="#481" id="481">481</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>FONT_TOKEN_RE: Regex = Regex::new(<span class="string">r&quot;^\\(?:text|script|scriptscript)font$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>FONT_TOKEN_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^\\(?:text|script|scriptscript)font$&quot;</span>).unwrap());
 
 <span class="macro">LoadDefinitions!</span>(outer_state, {
   <span class="comment">// &lt;font&gt; = &lt;fontdef token&gt; | \font | &lt;family member&gt;
@@ -595,7 +593,7 @@
   // #  &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
   </span><span class="macro">DefParameterType!</span>(FontToken, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
     <span class="kw">let </span>token = gullet.read_token(state).unwrap();
-    <span class="kw">if </span>FONT_TOKEN_RE.is_match(<span class="kw-2">&amp;</span>token.to_string()) {
+    <span class="kw">if </span>FONT_TOKEN_RE.is_match(token.as_ref()) {
       gullet.read_number(state)<span class="question-mark">?</span>;
     }
     token
@@ -867,7 +865,7 @@
   <span class="comment">// Almost like a register, but different...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\chardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>value = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>csname = newcs.get_cs_name().to_owned();
     <span class="kw">let </span>internalcs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
@@ -911,7 +909,7 @@
   <span class="comment">// Almost like a register, but different...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\mathchardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>value  = stomach.get_gullet_mut().read_number(state).unwrap();
     <span class="kw">let </span>csname = newcs.get_cs_name().to_owned();
     <span class="comment">// eprintln!(&quot; ** {} + {}&quot;, value,csname);
@@ -932,10 +930,10 @@
         reversion =&gt;  sub[_whatsit,_args,st] {
           <span class="prelude-val">Ok</span>(Tokens::new(
             <span class="kw">if </span>(glyph_c <span class="kw">as </span>usize) &lt; <span class="number">128 </span>{
-              <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(glyph_c.clone())]
+              <span class="macro">vec!</span>[<span class="macro">CharToken!</span>(glyph_c,Catcode::OTHER)]
             } <span class="kw">else </span>{
-              <span class="kw">let </span>v = value.value_of();
-              <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\mathchar&quot;</span>),<span class="macro">T_OTHER!</span>(v),T_RELAX]
+              <span class="kw">let </span>v = value.value_of().to_string();
+              <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\mathchar&quot;</span>),<span class="macro">T_OTHER!</span>(v),<span class="macro">T_RELAX!</span>()]
             }))
         }
       );

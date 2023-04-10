@@ -106,12 +106,11 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::fs::File;
 <span class="kw">use </span>std::io::BufRead;
 <span class="kw">use </span>std::io::BufReader;
 
-<span class="kw">use </span>lazy_static::lazy_static;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span>proc_macro::TokenStream;
@@ -122,11 +121,10 @@
 <span class="kw">use </span>rtx_core::util::pathname;
 <span class="kw">use </span>rtx_core::{fatal, s};
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>TAG_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^\{]+)\{(.*?)\}\((.*?)\)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>CLASS_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^:=]+):=(.*?)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>NAMESPACE_MODEL_LINE: Regex = Regex::new(<span class="string">r&quot;^([^=]+)=(.*?)$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>TAG_MODEL_LINE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^([^\{]+)\{(.*?)\}\((.*?)\)$&quot;</span>).unwrap());
+<span class="kw">static </span>CLASS_MODEL_LINE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^:=]+):=(.*?)$&quot;</span>).unwrap());
+<span class="kw">static </span>NAMESPACE_MODEL_LINE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^([^=]+)=(.*?)$&quot;</span>).unwrap());
 
 <span class="kw">pub fn </span>load_model(input: DeriveInput) -&gt; <span class="prelude-ty">Result</span>&lt;TokenStream&gt; {
   <span class="kw">let </span>name: String = <span class="kw">match </span>input.attrs[<span class="number">0</span>].parse_meta().unwrap() {

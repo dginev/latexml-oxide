@@ -820,24 +820,6 @@
 <a href="#820" id="820">820</a>
 <a href="#821" id="821">821</a>
 <a href="#822" id="822">822</a>
-<a href="#823" id="823">823</a>
-<a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
-<a href="#828" id="828">828</a>
-<a href="#829" id="829">829</a>
-<a href="#830" id="830">830</a>
-<a href="#831" id="831">831</a>
-<a href="#832" id="832">832</a>
-<a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
-<a href="#835" id="835">835</a>
-<a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
@@ -852,7 +834,7 @@
 <span class="comment">// TODO:
 // use encoding::all::ISO_8859_1;
 // use encoding::{EncoderTrap, Encoding};
-</span><span class="kw">use </span>lazy_static::lazy_static;
+</span><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -862,13 +844,11 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State, STD_STATE, STY_STATE};
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_TOKENS};
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>CS_ENDLINECHAR: Token = <span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>);
-  <span class="kw">static </span><span class="kw-2">ref </span>TRAILING_SPACE_CHARS: Regex = Regex::new(<span class="string">&quot;(?s) +$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>CS_ENDLINECHAR: Lazy&lt;Token&gt; = Lazy::new(|| <span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>));
+<span class="kw">static </span>TRAILING_SPACE_CHARS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;(?s) +$&quot;</span>).unwrap());
 
 <span class="kw">const </span>READLINE_PROGRESS_QUANTUM: usize = <span class="number">25</span>;
 
@@ -897,12 +877,10 @@
   }
 }
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>LASTID: Mutex&lt;u32&gt; = Mutex::new(<span class="number">0</span>);
-  <span class="kw">static </span><span class="kw-2">ref </span>LINEBREAK_REGEX: Regex = Regex::new(<span class="string">r&quot;(?s:\r\n?)|(?s:\n)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>LOWERHEX_REGEX: Regex = Regex::new(<span class="string">r&quot;^[0-9a-f]$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>SANITIZE_LINE_REGEX: Regex = Regex::new(<span class="string">r&quot;((\\ )*)\s*$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>LASTID: Lazy&lt;Mutex&lt;u32&gt;&gt; = Lazy::new(|| Mutex::new(<span class="number">0</span>));
+<span class="kw">static </span>LINEBREAK_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;(?s:\r\n?)|(?s:\n)&quot;</span>).unwrap());
+<span class="kw">static </span>LOWERHEX_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[0-9a-f]$&quot;</span>).unwrap());
+<span class="kw">static </span>_SANITIZE_LINE_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;((\\ )*)\s*$&quot;</span>).unwrap());
 
 <span class="attr">#[derive(Debug, Default)]
 </span><span class="kw">pub struct </span>MouthOptions {
@@ -1300,7 +1278,7 @@
               <span class="kw">if </span>eolcc == Catcode::EOL {
                 <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>))
               } <span class="kw">else </span>{
-                <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(eolch_content, eolcc))
+                <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(eolch_content, eolcc))
               }
             } <span class="kw">else </span>{
               <span class="prelude-val">None
@@ -1460,28 +1438,28 @@
         <span class="kw">if </span>ch == <span class="string">&#39;{&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_BEGIN!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, BEGIN))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, BEGIN))
         }
       },
       END =&gt; {
         <span class="kw">if </span>ch == <span class="string">&#39;}&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_END!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, END))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, END))
         }
       },
       MATH =&gt; {
         <span class="kw">if </span>ch == <span class="string">&#39;$&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_MATH!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, MATH))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, MATH))
         }
       },
       ALIGN =&gt; {
         <span class="kw">if </span>ch == <span class="string">&#39;&amp;&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_ALIGN!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, ALIGN))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, ALIGN))
         }
       },
       EOL =&gt; <span class="self">self</span>.handle_end_of_line(state),
@@ -1489,30 +1467,30 @@
         <span class="kw">if </span>ch == <span class="string">&#39;#&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_PARAM!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, PARAM))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, PARAM))
         }
       }, <span class="comment">// T_PARAM
       </span>SUPER =&gt; {
         <span class="kw">if </span>ch == <span class="string">&#39;^&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_SUPER!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, SUPER))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, SUPER))
         }
       }, <span class="comment">// T_SUPER
       </span>SUB =&gt; {
         <span class="kw">if </span>ch == <span class="string">&#39;_&#39; </span>{
           <span class="prelude-val">Some</span>(<span class="macro">T_SUB!</span>())
         } <span class="kw">else </span>{
-          <span class="prelude-val">Some</span>(<span class="macro">Token!</span>(ch, SUB))
+          <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, SUB))
         }
       }, <span class="comment">// T_SUB
       </span>SPACE =&gt; <span class="self">self</span>.handle_space(state),
-      LETTER =&gt; <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(ch.to_string())),
-      OTHER =&gt; <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(ch.to_string())),
-      ACTIVE =&gt; <span class="prelude-val">Some</span>(<span class="macro">T_ACTIVE!</span>(ch.to_string())),
+      LETTER =&gt; <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, Catcode::LETTER)),
+      OTHER =&gt; <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, Catcode::OTHER)),
+      ACTIVE =&gt; <span class="prelude-val">Some</span>(<span class="macro">T_ACTIVE!</span>(ch)),
       COMMENT =&gt; <span class="self">self</span>.handle_comment(state),
-      INVALID =&gt; <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(ch.to_string())), <span class="comment">// T_INVALID (we could get unicode!)
-      </span><span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,                                 <span class="comment">// IGNORE, others
+      INVALID =&gt; <span class="prelude-val">Some</span>(<span class="macro">CharToken!</span>(ch, Catcode::OTHER)), <span class="comment">// T_INVALID (we could get unicode!)
+      </span><span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,                                       <span class="comment">// IGNORE, others
     </span>}
   }
 
@@ -1639,24 +1617,10 @@
   <span class="kw">pub fn </span>at_eof(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.at_eof }
 }
 
-<span class="comment">// WARNING: These two utilities bind $STATE to simple State objects with known fixed catcodes.
-// The State normally contains ALL the bindings, etc and links to other important objects.
-// We CAN do that here, since we are ONLY tokenizing from a new Mouth, bypassing stomach &amp; gullet.
-// However, be careful with any changes.
-//
-// We also allow for explicitly passing the state in, so that one could memoize state creation
-// using lazy_static doesnt work here as State is too complex an object
-
-// Rust note: 1) can we avoid reinitializing a state for each tokenize call? I am not sure if that
-// is actually slow in practice, but it ought to be at least suboptimal.
-// 2) If we move the $literal argument Tokenize/TokenizeInternal calls into rtx_codegen at
-// compile_time, we can bunch them together as a global object in codegen maybe? Then at least we
-// can optimize the compile pass + avoid runtime tokenization in the literal binding definitions.
-
-</span><span class="kw">pub fn </span>tokenize(text: <span class="kw-2">&amp;</span>str, state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; Tokens {
+<span class="kw">pub fn </span>tokenize(text: <span class="kw-2">&amp;</span>str, state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;) -&gt; Tokens {
   <span class="comment">// special case! empty input is empty Tokens
   </span><span class="kw">if </span>text.is_empty() {
-    <span class="kw">return </span>Tokens::default();
+    <span class="kw">return </span>NO_TOKENS;
   }
   <span class="kw">match </span>state_opt {
     <span class="prelude-val">None </span>=&gt; {
@@ -1671,7 +1635,7 @@
 <span class="kw">pub fn </span>tokenize_internal(text: <span class="kw-2">&amp;</span>str) -&gt; Tokens {
   <span class="comment">// special case! empty input is empty Tokens
   </span><span class="kw">if </span>text.is_empty() {
-    <span class="kw">return </span>Tokens::default();
+    <span class="kw">return </span>NO_TOKENS;
   }
   <span class="kw">let </span><span class="kw-2">mut </span>state = STY_STATE.write().unwrap();
   Mouth::new(text, <span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>state)

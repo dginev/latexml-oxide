@@ -1507,7 +1507,8 @@
 <a href="#1507" id="1507">1507</a>
 <a href="#1508" id="1508">1508</a>
 <a href="#1509" id="1509">1509</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+<a href="#1510" id="1510">1510</a>
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::{Borrow, Cow};
 <span class="kw">use </span>std::sync::Arc;
@@ -1518,6 +1519,7 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::binding::content::merge_font;
 <span class="kw">use </span><span class="kw">crate</span>::binding::counter::dialect::step_counter_gullet;
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::traits::{IntoDigestedResult, IntoOption};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
@@ -1555,26 +1557,26 @@
   <span class="string">&quot;rpadding&quot;</span>,
 ];
 
-<span class="macro">lazy_static! </span>{
-  <span class="doccomment">/// regex for the prefix of a conditional command sequence
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>CONDITIONAL_CS_RE: Regex = Regex::new(<span class="string">r&quot;^\\(?:if(.*)|unless)$&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for the prefix of a protocol (such as literal:)
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>LEADING_PROTOCOL_RE: Regex = Regex::new(<span class="string">r&quot;^\w+:&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for a trailing slash (trivial, but aids replacement of said slash)
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>TRAILING_SLASH_RE: Regex = Regex::new(<span class="string">r&quot;/$&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for one-or-more spaces
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>SPACES_RE: Regex = Regex::new(<span class="string">r&quot;\s+&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for ${}^{label}$
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>DIRTY_ID_IDIOM_RE: Regex = Regex::new(<span class="string">r&quot;\$\{\}\^\{(?P&lt;label&gt;[^\}]*)\}\$&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for characters not expected in a usual id attribute
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>NON_ID_CHARSET_RE: Regex = Regex::new(<span class="string">r&quot;[^\w_\-.]+&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for a strange noisy TeX `\\~{}`
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>TILDE_NOISE_RE: Regex = Regex::new(<span class="string">r&quot;\\~\{\}&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for a TeX argument specifier or any command sequence
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>HAS_ARG_OR_CS : Regex = Regex::new(<span class="string">r&quot;#\d|\\.&quot;</span>).unwrap();
-  <span class="doccomment">/// regex for the usual argument placeholders `#1`-`#9`
-  </span><span class="kw">pub static </span><span class="kw-2">ref </span>ARG_HOLE : Regex = Regex::new(<span class="string">r&quot;#(\d)&quot;</span>).unwrap();
-}
+<span class="doccomment">/// regex for the prefix of a conditional command sequence
+</span><span class="kw">pub static </span>CONDITIONAL_CS_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^\\(?:if(.*)|unless)$&quot;</span>).unwrap());
+<span class="doccomment">/// regex for the prefix of a protocol (such as literal:)
+</span><span class="kw">pub static </span>LEADING_PROTOCOL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w+:&quot;</span>).unwrap());
+<span class="doccomment">/// regex for a trailing slash (trivial, but aids replacement of said slash)
+</span><span class="kw">pub static </span>TRAILING_SLASH_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;/$&quot;</span>).unwrap());
+<span class="doccomment">/// regex for one-or-more spaces
+</span><span class="kw">pub static </span>SPACES_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\s+&quot;</span>).unwrap());
+<span class="doccomment">/// regex for ${}^{label}$
+</span><span class="kw">pub static </span>DIRTY_ID_IDIOM_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;\$\{\}\^\{(?P&lt;label&gt;[^\}]*)\}\$&quot;</span>).unwrap());
+<span class="doccomment">/// regex for characters not expected in a usual id attribute
+</span><span class="kw">pub static </span>NON_ID_CHARSET_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;[^\w_\-.]+&quot;</span>).unwrap());
+<span class="doccomment">/// regex for a strange noisy TeX `\\~{}`
+</span><span class="kw">pub static </span>TILDE_NOISE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\\~\{\}&quot;</span>).unwrap());
+<span class="doccomment">/// regex for a TeX argument specifier or any command sequence
+</span><span class="kw">pub static </span>HAS_ARG_OR_CS: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;#\d|\\.&quot;</span>).unwrap());
+<span class="doccomment">/// regex for the usual argument placeholders `#1`-`#9`
+</span><span class="kw">pub static </span>ARG_HOLE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;#(\d)&quot;</span>).unwrap());
 
 <span class="doccomment">/// Is defined in the `LaTeX`-y sense of also not being let to \relax.
 </span><span class="kw">pub fn </span>is_defined(name: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
@@ -1602,7 +1604,7 @@
   <span class="kw">let </span>meaning = state.lookup_meaning(token);
   <span class="kw">let </span>name = token.get_string();
   (name != <span class="string">&quot;\\relax&quot; </span>&amp;&amp; !name.starts_with(<span class="string">&quot;\\end&quot;</span>))
-    &amp;&amp; (meaning.is_none() || (meaning == state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX)))
+    &amp;&amp; (meaning.is_none() || (meaning == state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX)))
 }
 
 <span class="doccomment">/// unconditionally wraps a CS token around a string
@@ -1825,7 +1827,7 @@
   };
 
   <span class="comment">// Not really right to set the value!
-  </span>state.assign_value(<span class="kw-2">&amp;</span>cs.to_string(), value, <span class="prelude-val">None</span>);
+  </span>state.assign_value(cs.as_ref(), value, <span class="prelude-val">None</span>);
   state.install_definition(
     Register {
       cs,
@@ -2139,7 +2141,7 @@
         });
 
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[Digested::from(Tbox {
-          text: presentation.clone(),
+          text: arena::pin(<span class="kw-2">&amp;</span>presentation),
           tokens: <span class="macro">Tokens!</span>(cs.clone()),
           font,
           properties: properties.to_hash_stored(),

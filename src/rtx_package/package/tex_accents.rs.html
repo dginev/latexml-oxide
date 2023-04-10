@@ -96,14 +96,12 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>unicode_normalization::char::compose;
 <span class="kw">use </span>unicode_normalization::UnicodeNormalization;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>SPACE_RE: Regex = Regex::new(<span class="string">r&quot;\s&quot;</span>).unwrap();
-}
+<span class="kw">static </span>SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\s&quot;</span>).unwrap());
+
 <span class="comment">// Create a box applying an accent to a letter
 // Hopefully, we&#39;ll get a Box from digestion with a plain string.
 // Then we can apply combining accents to it.

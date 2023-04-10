@@ -429,15 +429,11 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>LEAD_W_COLON_RE: Regex = Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>UNTIL_SPEC: Regex = Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Regex =
-    Regex::new(<span class="string">&quot;^\\\\(?:(?:un)?expanded|detokenize)$&quot;</span>).unwrap();
-}
+<span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap());
+<span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap());
+<span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">&quot;^\\\\(?:(?:un)?expanded|detokenize)$&quot;</span>).unwrap());
 <span class="comment">//=======================
 // -- Main Definitions --
 //=======================
@@ -487,7 +483,7 @@
         <span class="comment">// treat as active character, if originally such
         </span>token.without_dont_expand()
       } <span class="kw">else </span>{ <span class="comment">// otherwise, treat as relax for comparisons
-        </span><span class="macro">T_CS!</span>(<span class="string">&quot;\\relax&quot;</span>)
+        </span><span class="macro">T_RELAX!</span>()
       }
     } <span class="kw">else </span>{   <span class="comment">// normal case, treat token as-is
       </span>token
@@ -718,7 +714,7 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\csname CSName&quot;</span>, sub[gullet, (token), state] {
     <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-      state.assign_meaning(<span class="kw-2">&amp;</span>token, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+      state.assign_meaning(<span class="kw-2">&amp;</span>token, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
     }
     token
   });
@@ -730,7 +726,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[gullet, (tok, xtok), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="macro">vec!</span>[tok];
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>) {
-      state.set_current_token(Arc::new(xtok));
+      state.set_current_token(xtok);
       <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
         tokens.append(<span class="kw-2">&amp;mut </span>invoked.unlist()); <span class="comment">// Expand $xtok ONCE ONLY!

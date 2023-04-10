@@ -38,6 +38,11 @@
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
 <a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>proc_macro::TokenStream;
 <span class="kw">use </span>quote::{format_ident, quote};
@@ -60,22 +65,28 @@
     </span>),
   };
   <span class="comment">// TODO: How do we best manage the relative directories changing from compile-time to test-time?
-  </span><span class="kw">let </span>test_functions: Vec&lt;<span class="kw">_</span>&gt; = glob(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;rtx/{directory}/*.tex&quot;</span>)).unwrap().flatten().map(|pb| {
-    <span class="kw">let </span>filebase = pb.file_stem().unwrap().to_string_lossy();
-    <span class="kw">let </span>file = pb.to_string_lossy();
-    <span class="kw">let </span>fn_filename = filebase
-      .replace([<span class="string">&#39;-&#39;</span>, <span class="string">&#39; &#39;</span>, <span class="string">&#39;.&#39;</span>], <span class="string">&quot;_&quot;</span>);
-    <span class="kw">let </span>fn_name = <span class="macro">format_ident!</span>(<span class="string">&quot;{fn_filename}_test&quot;</span>);
-    <span class="macro">quote!</span>(
-      <span class="attr">#[test]
-      </span><span class="kw">fn </span>#fn_name() {
-        rtx::util::test::rtx_test_single(#file, #filebase, #directory, <span class="macro">this_test_requires!</span>(), <span class="macro">this_test_dispatch!</span>())
-      }
-    )
-  }).collect();
+  </span><span class="kw">let </span>test_functions: Vec&lt;<span class="kw">_</span>&gt; = glob(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;rtx/{directory}/*.tex&quot;</span>))
+    .unwrap()
+    .flatten()
+    .map(|pb| {
+      <span class="kw">let </span>filebase = pb.file_stem().unwrap().to_string_lossy();
+      <span class="kw">let </span>file = pb.to_string_lossy();
+      <span class="kw">let </span>fn_filename = filebase.replace([<span class="string">&#39;-&#39;</span>, <span class="string">&#39; &#39;</span>, <span class="string">&#39;.&#39;</span>], <span class="string">&quot;_&quot;</span>);
+      <span class="kw">let </span>fn_name = <span class="macro">format_ident!</span>(<span class="string">&quot;{fn_filename}_test&quot;</span>);
+      <span class="macro">quote!</span>(
+        <span class="attr">#[test]
+        </span><span class="kw">fn </span>#fn_name() {
+          rtx::util::test::rtx_test_single(#file, #filebase, #directory,
+            <span class="macro">this_test_requires!</span>(), <span class="macro">this_test_dispatch!</span>())
+        }
+      )
+    })
+    .collect();
 
   <span class="macro">quote!</span>(
     #(#test_functions)*
-  ).into()
-}</code></pre></div>
+  )
+  .into()
+}
+</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_codegen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

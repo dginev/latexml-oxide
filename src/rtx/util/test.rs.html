@@ -208,6 +208,12 @@
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
@@ -246,19 +252,20 @@
     <span class="kw">let </span>tex_file_string = tex_file.to_str().unwrap();
     <span class="kw">let </span>xml_file_str = xml_file.to_str().unwrap();
     <span class="kw">if </span>xml_file.exists() {
-      rtx_ok_internal(
-        tex_file_string,
-        xml_file_str,
-        name,
-        dispatcher_opt.clone(),
-      );
+      rtx_ok_internal(tex_file_string, xml_file_str, name, dispatcher_opt.clone());
     } <span class="kw">else </span>{
       <span class="comment">// Skip, these could be tex fragment files.
     </span>}
   }
 }
 
-<span class="kw">pub fn </span>rtx_test_single(tex_file_str:<span class="kw-2">&amp;</span>str, name:<span class="kw-2">&amp;</span>str, dirpath:<span class="kw-2">&amp;</span>str, requires:<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;, dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;) {
+<span class="kw">pub fn </span>rtx_test_single(
+  tex_file_str: <span class="kw-2">&amp;</span>str,
+  name: <span class="kw-2">&amp;</span>str,
+  dirpath: <span class="kw-2">&amp;</span>str,
+  requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
+  dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
+) {
   <span class="kw">if </span>!validate_requirements(dirpath, requires) {
     <span class="kw">return</span>; <span class="comment">// test group only if required files are found.
   </span>}
@@ -274,7 +281,6 @@
   } <span class="kw">else </span>{
     <span class="comment">// Skip, these could be tex fragment files.
   </span>}
-
 }
 
 <span class="kw">fn </span>validate_requirements(_dirpath: <span class="kw-2">&amp;</span>str, _requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;) -&gt; bool {
@@ -404,18 +410,25 @@
 /// The path should be absolute, or relative to the root rtx checkout.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>tex_tests {
-    (<span class="macro-nonterminal">$dir</span>:literal) =&gt; {<span class="macro">tex_tests!</span>(<span class="macro-nonterminal">$dir</span>,<span class="prelude-val">None</span>,<span class="prelude-val">None</span>);};
-    (<span class="macro-nonterminal">$dir</span>:literal, <span class="macro-nonterminal">$requires</span>:expr, <span class="macro-nonterminal">$dispatch</span>:expr) =&gt; {
-      <span class="macro">macro_rules! </span>this_test_requires {
-        () =&gt; {<span class="macro-nonterminal">$requires</span>}
-      }
-      <span class="macro">macro_rules! </span>this_test_dispatch {
-        () =&gt; {<span class="macro-nonterminal">$dispatch</span>};
-      }
-      <span class="kw">use </span>rtx_codegen::GlobTeXTests;
-      <span class="attr">#[derive(GlobTeXTests)]
-      #[directory=<span class="macro-nonterminal">$dir</span>]
-      </span><span class="kw">struct </span>_TestDirective;
-    };
-}</code></pre></div>
+  (<span class="macro-nonterminal">$dir</span>:literal) =&gt; {
+    <span class="macro">tex_tests!</span>(<span class="macro-nonterminal">$dir</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+  };
+  (<span class="macro-nonterminal">$dir</span>:literal, <span class="macro-nonterminal">$requires</span>:expr, <span class="macro-nonterminal">$dispatch</span>:expr) =&gt; {
+    <span class="macro">macro_rules! </span>this_test_requires {
+      () =&gt; {
+        <span class="macro-nonterminal">$requires
+      </span>};
+    }
+    <span class="macro">macro_rules! </span>this_test_dispatch {
+      () =&gt; {
+        <span class="macro-nonterminal">$dispatch
+      </span>};
+    }
+    <span class="kw">use </span>rtx_codegen::GlobTeXTests;
+    <span class="attr">#[derive(GlobTeXTests)]
+    #[directory=<span class="macro-nonterminal">$dir</span>]
+    </span><span class="kw">struct </span>_TestDirective;
+  };
+}
+</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -186,7 +186,7 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 
@@ -198,16 +198,16 @@
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>CSNAME_MACRO_RE: Regex = Regex::new(<span class="string">r&quot;^\\csname\s+(.*)\\endcsname&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>CS_RE: Regex = Regex::new(<span class="string">r&quot;^(\\[a-zA-Z@]+)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>SINGLE_CHAR_RE: Regex = Regex::new(<span class="string">r&quot;^(\\.)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>ACTIVE_CHAR_RE: Regex = Regex::new(<span class="string">r&quot;^(.)&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>DEFAULT_CHECK_RE: Regex = Regex::new(<span class="string">r&quot;^Default:(.*)$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>NESTED_CHECK_RE: Regex = Regex::new(<span class="string">r&quot;^(\{([^\}]*)\})\s*&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>OPTIONAL_CHECK_RE: Regex = Regex::new(<span class="string">r&quot;^(\[([^\]]*)\])\s*&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PARAMSPECT_CHECK_RE: Regex = Regex::new(<span class="string">r&quot;^((\w*)(:([^\s\{\[]*))?)\s*&quot;</span>).unwrap();
-}
+<span class="kw">static </span>CSNAME_MACRO_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^\\csname\s+(.*)\\endcsname&quot;</span>).unwrap());
+<span class="kw">static </span>CS_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\\[a-zA-Z@]+)&quot;</span>).unwrap());
+<span class="kw">static </span>SINGLE_CHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\\.)&quot;</span>).unwrap());
+<span class="kw">static </span>ACTIVE_CHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(.)&quot;</span>).unwrap());
+<span class="kw">static </span>DEFAULT_CHECK_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Default:(.*)$&quot;</span>).unwrap());
+<span class="kw">static </span>NESTED_CHECK_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\{([^\}]*)\})\s*&quot;</span>).unwrap());
+<span class="kw">static </span>OPTIONAL_CHECK_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\[([^\]]*)\])\s*&quot;</span>).unwrap());
+<span class="kw">static </span>PARAMSPECT_CHECK_RE: Lazy&lt;Regex&gt; =
+  Lazy::new(|| Regex::new(<span class="string">r&quot;^((\w*)(:([^\s\{\[]*))?)\s*&quot;</span>).unwrap());
 
 <span class="doccomment">/// If calling at compile-time, pass `None` for state, to avoid initialization.
 </span><span class="kw">pub fn </span>parse_prototype(
@@ -227,7 +227,7 @@
     </span>CS_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SINGLE_CHAR_RE.captures(proto) {
     <span class="comment">// Match a single char cs, env name,...
-    </span>cs = <span class="macro">T_CS!</span>(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string());
+    </span>cs = <span class="macro">T_CS!</span>(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()));
     <span class="comment">// also replace in proto
     </span>SINGLE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = ACTIVE_CHAR_RE.captures(proto) {

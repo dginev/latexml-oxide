@@ -523,11 +523,6 @@
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
 </pre><pre class="rust"><code><span class="doccomment">///! Token List constructors.
 </span><span class="kw">use </span><span class="kw">crate</span>::fmt;
 <span class="kw">use </span>proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
@@ -600,8 +595,9 @@
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Token&gt; <span class="kw">for </span>Tokens {
   <span class="kw">fn </span>from(t: <span class="kw-2">&amp;</span>Token) -&gt; Tokens { Tokens::new(<span class="macro">vec!</span>[t.clone()]) }
 }
-<span class="comment">// TODO: Is there a better abstraction that avoids this clone?
-//       I fear it may be using Arc&lt;Tokens&gt; everywhere, which is also too heavy.
+
+<span class="comment">// Good news: Cloning `Token` should now be cheap (due to string interning),
+// so cloning `Tokens` should be fine.
 </span><span class="kw">impl </span>From&lt;Arc&lt;Tokens&gt;&gt; <span class="kw">for </span>Tokens {
   <span class="kw">fn </span>from(t: Arc&lt;Tokens&gt;) -&gt; Tokens { (<span class="kw-2">*</span>t).clone() }
 }
@@ -763,20 +759,14 @@
     <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = toks_iter.next() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = toks_iter.next() {
         kvs.add_value(
-          <span class="kw-2">&amp;</span>key.to_string(),
+          key.as_ref(),
           Stored::Token(value.clone()),
           <span class="bool-val">false</span>,
           <span class="bool-val">false</span>,
           state,
         );
       } <span class="kw">else </span>{
-        kvs.add_value(
-          <span class="kw-2">&amp;</span>key.to_string(),
-          Stored::Tokens(<span class="macro">Tokens!</span>()),
-          <span class="bool-val">false</span>,
-          <span class="bool-val">false</span>,
-          state,
-        );
+        kvs.add_value(key.as_ref(), Stored::Tokens(<span class="macro">Tokens!</span>()), <span class="bool-val">false</span>, <span class="bool-val">false</span>, state);
       }
     }
     kvs
@@ -1051,7 +1041,7 @@
     <span class="kw">let </span>code = <span class="self">self</span>.get_catcode();
     stream.extend(<span class="macro">quote! </span>{
       Token {
-        text: Cow::Borrowed(#text),
+        text: rtx_core::common::arena::pin(#text),
         code: #code,
         smuggled: <span class="prelude-val">None
       </span>}

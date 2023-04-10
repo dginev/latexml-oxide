@@ -207,12 +207,18 @@
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -229,7 +235,7 @@
 </span><span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Tbox {
   <span class="doccomment">/// plain-text content
-  </span><span class="kw">pub </span>text: String,
+  </span><span class="kw">pub </span>text: SymbolU32,
   <span class="doccomment">/// associated font for `text`
   </span><span class="kw">pub </span>font: Arc&lt;Font&gt;,
   <span class="doccomment">/// source location where the box originated
@@ -243,7 +249,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Tbox {
-      text: String::new(),
+      text: arena::pin(<span class="string">&quot;&quot;</span>),
       font: Arc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),
@@ -260,7 +266,9 @@
 <span class="comment">//======================================================================
 // Exported constructors
 </span><span class="kw">impl </span>fmt::Display <span class="kw">for </span>Tbox {
-  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result { <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.text) }
+  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, arena::resolve(<span class="self">self</span>.text))
+  }
 }
 <span class="kw">impl </span>Object <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; { <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.locator)) }
@@ -289,7 +297,7 @@
     </span><span class="kw">let </span>_locator = locator_opt;
 
     <span class="kw">let </span>tokens = <span class="kw">if </span>!text.is_empty() &amp;&amp; tokens_opt.is_empty() {
-      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(text))
+      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;</span>text))
     } <span class="kw">else </span>{
       tokens_opt
     };
@@ -324,7 +332,7 @@
       }
       <span class="kw">let </span>font = Arc::new(font.specialize(<span class="kw-2">&amp;</span>text));
       Tbox {
-        text,
+        text: arena::pin(text),
         font, <span class="comment">// $locator,
         </span>properties,
         tokens,
@@ -332,7 +340,7 @@
       }
     } <span class="kw">else </span>{
       Tbox {
-        text,
+        text: arena::pin(text),
         font, <span class="comment">// $locator,
         </span>properties,
         tokens,
@@ -341,7 +349,7 @@
     }
   }
   <span class="doccomment">/// checks if the text content is empty
-  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.text.is_empty() }
+  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { arena::resolve(<span class="self">self</span>.text).is_empty() }
 }
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Tbox {
@@ -355,11 +363,11 @@
     <span class="self">self</span>.properties.insert(key.to_string(), value.into());
   }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, str&gt;&gt; {
-    <span class="prelude-val">Ok</span>(Cow::Borrowed(<span class="self">self</span>.text.as_str()))
+    <span class="prelude-val">Ok</span>(Cow::Borrowed(arena::resolve(<span class="self">self</span>.text)))
   }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="kw">let </span>text = <span class="kw-2">&amp;</span><span class="self">self</span>.text;
+    <span class="kw">let </span>text = <span class="self">self</span>.get_string(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>font = <span class="kw-2">&amp;</span><span class="self">self</span>.font;
     <span class="kw">let </span>mode = <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">&quot;mode&quot;</span>) {
       <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; s.as_str(),
@@ -369,13 +377,13 @@
     <span class="kw">if </span>!text.is_empty() {
       <span class="kw">if </span>mode == <span class="string">&quot;math&quot; </span>{
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[document.insert_math_token(
-          text,
+          <span class="kw-2">&amp;</span>text,
           Stored::cast_to_string_hash(<span class="kw-2">&amp;</span><span class="self">self</span>.properties),
           <span class="prelude-val">Some</span>(font),
           state,
         )<span class="question-mark">?</span>])
       } <span class="kw">else </span>{
-        <span class="kw">match </span>document.open_text(text, font, state)<span class="question-mark">? </span>{
+        <span class="kw">match </span>document.open_text(<span class="kw-2">&amp;</span>text, font, state)<span class="question-mark">? </span>{
           <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(Vec::new()),
           <span class="prelude-val">Some</span>(node) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node]),
         }

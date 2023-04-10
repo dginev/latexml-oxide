@@ -1453,9 +1453,7 @@
 <a href="#1453" id="1453">1453</a>
 <a href="#1454" id="1454">1454</a>
 <a href="#1455" id="1455">1455</a>
-<a href="#1456" id="1456">1456</a>
-<a href="#1457" id="1457">1457</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1479,16 +1477,14 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
-<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token, MOCK_TOKEN};
+<span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>DIGIT_RE: Regex = Regex::new(<span class="string">r&quot;[0-9]&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>OCT_RE: Regex = Regex::new(<span class="string">r&quot;[0-7]&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>HEX_RE: Regex = Regex::new(<span class="string">r&quot;[0-9A-F]&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>SMUGGLE_THE_COMMANDS: HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-    <span class="macro">set!</span>(<span class="string">&quot;\\the&quot;</span>, <span class="string">&quot;\\showthe&quot;</span>, <span class="string">&quot;\\unexpanded&quot;</span>, <span class="string">&quot;\\detokenize&quot;</span>);
-}
+<span class="kw">static </span>DIGIT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;[0-9]&quot;</span>).unwrap());
+<span class="kw">static </span>OCT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;[0-7]&quot;</span>).unwrap());
+<span class="kw">static </span>HEX_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;[0-9A-F]&quot;</span>).unwrap());
+<span class="kw">static </span>SMUGGLE_THE_COMMANDS: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
+  Lazy::new(|| <span class="macro">set!</span>(<span class="string">&quot;\\the&quot;</span>, <span class="string">&quot;\\showthe&quot;</span>, <span class="string">&quot;\\unexpanded&quot;</span>, <span class="string">&quot;\\detokenize&quot;</span>));
 
 <span class="attr">#[derive(PartialEq, Debug)]
 </span><span class="kw">pub struct </span>MouthRuntime {
@@ -1772,7 +1768,7 @@
               <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
                 <span class="kw">if </span>(toplevel || !(<span class="kw-2">*</span>defn).is_protected()) &amp;&amp; defn.is_expandable() {
                   <span class="comment">// is this the right logic here? don&#39;t expand unless digesting?
-                  </span>state.set_current_token(Arc::new(token));
+                  </span>state.set_current_token(token);
                   <span class="kw">let </span>result =
                     <span class="self">self</span>.invoke_and_read_x_token(defn, <span class="prelude-val">Some</span>(toplevel), commentsok, state);
                   state.expire_current_token();
@@ -1811,7 +1807,7 @@
       // This is *required to be different* from the noexpand flag, as per the B Book
       </span><span class="kw">for </span>item <span class="kw">in </span>expansion.unlist_mut() {
         <span class="kw">if </span>item.get_catcode().can_smuggle_the() {
-          <span class="kw">let </span>taken = mem::replace(item, MOCK_TOKEN);
+          <span class="kw">let </span>taken = mem::replace(item, <span class="macro">T_RELAX!</span>());
           <span class="kw-2">*</span>item = <span class="macro">T_SMUGGLE_THE!</span>(taken);
         }
       }
@@ -2171,10 +2167,10 @@
     }
   }
 
-  <span class="kw">pub fn </span>if_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  <span class="kw">pub fn </span>if_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, token: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>is_next = <span class="bool-val">false</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = <span class="self">self</span>.read_token(state) {
-      is_next = tok == token;
+      is_next = tok == <span class="kw-2">*</span>token;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = <span class="self">self</span>.mouth.as_mut() {
         mouth.pushback.push_front(tok); <span class="comment">// Unread
       </span>} <span class="kw">else </span>{

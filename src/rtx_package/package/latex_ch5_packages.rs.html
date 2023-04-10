@@ -213,12 +213,8 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>OPTS_REGEX: Regex = Regex::new(<span class="string">r&quot;,\s*&quot;</span>).unwrap();
-}
+<span class="kw">static </span>OPTS_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;,\s*&quot;</span>).unwrap());
 
 <span class="macro">LoadDefinitions!</span>(outer_stomach, state, {
   <span class="comment">// ======================================================================

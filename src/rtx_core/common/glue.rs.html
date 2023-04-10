@@ -469,9 +469,7 @@
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-</pre><pre class="rust"><code><span class="kw">use </span>lazy_static::lazy_static;
+</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::cmp::Ordering;
@@ -566,14 +564,12 @@
   <span class="string">r&quot;)?$&quot;
 </span>);
 
-<span class="macro">lazy_static! </span>{
-  <span class="kw">static </span><span class="kw-2">ref </span>NUM_RE: Regex = Regex::new(<span class="macro">num_re_str!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>UNIT_RE: Regex = Regex::new(<span class="macro">unit_re_str!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>FILL_RE: Regex = Regex::new(<span class="macro">fill_re_str!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>PLUS_RE: Regex = Regex::new(<span class="macro">plus_re_str!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>MINUS_RE: Regex = Regex::new(<span class="macro">minus_re_str!</span>()).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>GLUE_RE: Regex = Regex::new(GLUE_RE_STR).unwrap();
-}
+<span class="kw">static </span>_NUM_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">num_re_str!</span>()).unwrap());
+<span class="kw">static </span>UNIT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">unit_re_str!</span>()).unwrap());
+<span class="kw">static </span>_FILL_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">fill_re_str!</span>()).unwrap());
+<span class="kw">static </span>_PLUS_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">plus_re_str!</span>()).unwrap());
+<span class="kw">static </span>_MINUS_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="macro">minus_re_str!</span>()).unwrap());
+<span class="kw">static </span>GLUE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(GLUE_RE_STR).unwrap());
 
 <span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Glue {

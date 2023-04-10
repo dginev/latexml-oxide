@@ -498,10 +498,10 @@
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\advance Variable SkipKeyword:by&quot;</span>, sub[stomach, args, state] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition((defn_token, inner)) = args.remove(<span class="number">0</span>) {
-      <span class="kw">if </span>defn_token.to_string() != <span class="string">&quot;missing&quot; </span>{
+      <span class="kw">let </span>defn_token_str = defn_token.to_string();
+      <span class="kw">if </span>defn_token_str != <span class="string">&quot;missing&quot; </span>{
         <span class="kw">let </span>defn_opt = state.lookup_register_definition(<span class="kw-2">&amp;</span>defn_token);
-        <span class="kw">let </span>defn_token_rc = Arc::new(defn_token);
-        state.set_current_token(Arc::clone(<span class="kw-2">&amp;</span>defn_token_rc));
+        state.set_current_token(defn_token);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = defn_opt {
           <span class="kw">let </span>summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)<span class="question-mark">?</span>;
           <span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
@@ -509,7 +509,7 @@
           defn.set_value(defn_value.add(summand), defn_args, state);
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\advance expected a defined variable for {:?}, found no definition&quot;</span>,
-            defn_token_rc);
+          defn_token_str);
           <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, state, message);
         }
         state.expire_current_token();
@@ -588,7 +588,7 @@
   // instead, here is the same pattern of definition, with different concrete value types.
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\countdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>reg = <span class="macro">s!</span>(<span class="string">&quot;\\count{}&quot;</span>, num.value_of());
     <span class="kw">let </span>setter_count = reg.clone();
@@ -601,7 +601,7 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\dimendef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>dimen = <span class="macro">s!</span>(<span class="string">&quot;\\dimen{}&quot;</span>, num.value_of());
     <span class="kw">let </span>dimen2 = dimen.clone();
@@ -614,7 +614,7 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\skipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>skip = <span class="macro">s!</span>(<span class="string">&quot;\\skip{}&quot;</span>, num.value_of());
     <span class="kw">let </span>skip2 = skip.clone();
@@ -627,7 +627,7 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\muskipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>muglue = <span class="macro">s!</span>(<span class="string">&quot;\\muskip{}&quot;</span>,num.value_of());
     <span class="kw">let </span>muglue_setter = muglue.clone();
@@ -640,7 +640,7 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\toksdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>T_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>toks = <span class="macro">s!</span>(<span class="string">&quot;\\toks{}&quot;</span>, num.value_of() <span class="kw">as </span>usize);
     <span class="kw">let </span>toks_setter = toks.clone();
@@ -753,10 +753,10 @@
   <span class="comment">// Remember, we&#39;re assigning a NUMBER (codepoint) to a CHARACTER!
   </span><span class="kw">for </span>letter <span class="kw">in </span><span class="string">b&#39;A&#39;</span>..=<span class="string">b&#39;Z&#39; </span>{
     <span class="comment">//FYI: 0x20 == 32
-    </span>outer_state.assign_lccode(letter, letter + <span class="number">32</span>, Scope::Global);
-    outer_state.assign_uccode(letter, letter, Scope::Global);
-    outer_state.assign_lccode(letter + <span class="number">32</span>, letter + <span class="number">32</span>, Scope::Global);
-    outer_state.assign_uccode(letter + <span class="number">32</span>, letter, Scope::Global);
+    </span>outer_state.assign_lccode(letter, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    outer_state.assign_uccode(letter, letter, <span class="prelude-val">Some</span>(Scope::Global));
+    outer_state.assign_lccode(letter + <span class="number">32</span>, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    outer_state.assign_uccode(letter + <span class="number">32</span>, letter, <span class="prelude-val">Some</span>(Scope::Global));
   }
 
   <span class="comment">// Stub definitions ???

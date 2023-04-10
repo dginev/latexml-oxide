@@ -1009,10 +1009,6 @@
 <a href="#1009" id="1009">1009</a>
 <a href="#1010" id="1010">1010</a>
 <a href="#1011" id="1011">1011</a>
-<a href="#1012" id="1012">1012</a>
-<a href="#1013" id="1013">1013</a>
-<a href="#1014" id="1014">1014</a>
-<a href="#1015" id="1015">1015</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>rtx_core::keyvals::KeyValsOptions;
@@ -1461,7 +1457,7 @@
       </span>&amp;&amp; state.model.get_node_qname(rows.first().unwrap()) == <span class="string">&quot;ltx:p&quot;
       </span>&amp;&amp; document.can_contain(
         <span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(),
-        <span class="kw-2">&amp;</span>state.model.get_node_qname(<span class="kw-2">&amp;</span>crows[<span class="number">0</span>]),
+        state.model.get_node_qname(<span class="kw-2">&amp;</span>crows[<span class="number">0</span>]),
         state,
       )
     <span class="comment">// TODO: &amp;&amp; (!hasattr || blockattr.keys().any(...
@@ -1476,7 +1472,7 @@
     } <span class="kw">else if </span>rows.len() == <span class="number">1
       </span>&amp;&amp; document.can_contain(
         <span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(),
-        <span class="kw-2">&amp;</span>state.model.get_node_qname(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]),
+        state.model.get_node_qname(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]),
         state,
       )
     <span class="comment">// if allowed.
@@ -1913,11 +1909,7 @@
     result.push(thischar);
   }
   <span class="kw">if </span>result != initial_string {
-    Token {
-      text: Cow::Owned(result),
-      code: token.get_catcode(),
-      smuggled: <span class="prelude-val">None</span>,
-    }
+    Token::new(result, token.get_catcode())
   } <span class="kw">else </span>{
     token
   }
@@ -1975,9 +1967,9 @@
   <span class="kw">if </span>qname == <span class="string">&quot;ltx:tag&quot; </span>{
   }
   <span class="comment">// HACK
-  </span><span class="kw">else if </span>!align.is_empty() &amp;&amp; state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;align&quot;</span>) {
+  </span><span class="kw">else if </span>!align.is_empty() &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;align&quot;</span>) {
     node.set_attribute(<span class="string">&quot;align&quot;</span>, align)<span class="question-mark">?</span>;
-  } <span class="kw">else if </span>!class.is_empty() &amp;&amp; state.model.can_have_attribute(<span class="kw-2">&amp;</span>qname, <span class="string">&quot;class&quot;</span>) {
+  } <span class="kw">else if </span>!class.is_empty() &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;class&quot;</span>) {
     document.add_class(node, class, state)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())

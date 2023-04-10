@@ -1182,6 +1182,30 @@
 <a href="#1182" id="1182">1182</a>
 <a href="#1183" id="1183">1183</a>
 <a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY_F64};
@@ -1189,7 +1213,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>lazy_static::lazy_static;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="doccomment">/// Note that this has evolved way beynond just &quot;font&quot;,
 /// but covers text properties (or even display properties) in general
 /// including basic font information, color &amp; background color
@@ -1225,26 +1249,27 @@
 <span class="comment">// static FORCE_FAMILY : i8 = 0x1;
 // static FORCE_SERIES : i8 = 0x2;
 // static FORCE_SHAPE : i8  = 0x4;
-</span><span class="attr">#[rustfmt::skip]
-</span><span class="macro">lazy_static! </span>{
-  <span class="kw">pub static </span><span class="kw-2">ref </span>FONT_TEXT_DEFAULT : Font = Font::text_default();
-  <span class="kw">static </span><span class="kw-2">ref </span>LATIN_LETTER_RE: Regex = Regex::new(<span class="string">r&quot;^[\p{Latin}&amp;&amp;\pL]$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>GREEK_LETTER_RE: Regex = Regex::new(<span class="string">r&quot;^[\p{Greek}&amp;&amp;\pL]$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>UPPER_LETTER_RE: Regex = Regex::new(<span class="string">r&quot;^[\p{Lu}]$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>DIGIT_LETTER_RE: Regex = Regex::new(<span class="string">r&quot;^[\p{N}]$&quot;</span>).unwrap();
-  <span class="kw">static </span><span class="kw-2">ref </span>FONT_RE: Regex = Regex::new(<span class="string">r&quot;^(xylubt|xyluat|xydash|xycmbt|xycmat|xycirc|xybtip|xybsql|xyatip|ul9|ugq|uaq|txtt|txsyb|txsya|txss|txr|txms|txmi|pzd|pzc|pxsyb|pxsya|pxr|pxms|pxmi|put|ptm|psy|ppl|pnc|phv|pcr|pbk|pag|msy|msx|msb|msa|ms|futs|futmi|futm|eus|eur|euf|euex|cmvtt|cmtt|cmtl|cmti|cmsy|cmss|cmr|cmmib|cmm|cmfr|cmfib|cmex|cmdh|cmbsy|cmbrs|cmbrm|cmbr|cm|ccy|ccr|ccm|ccitt|bch|bbold|bbmss|bbm)(sbc|sb|mc|m|bx|bm|bc|b|)(sl|sc|n|it|i|csc|)(\d*)$&quot;</span>).unwrap();
-  <span class="comment">//======================================================================
-  // Mappings from various forms of names or component names in TeX
-  // Given a font, we&#39;d like to map it to the &quot;logical&quot; names derived from LaTeX,
-  // (w/ loss of fine grained control).
-  // I&#39;d like to use Karl Berry&#39;s font naming scheme
-  // (See http://www.tug.org/fontname/html/)
-  // but it seems to be a one-way mapping, and moreover, doesn&#39;t even fit CM fonts!
-  // We&#39;ll assume a sloppier version:
-  //   family + series + variant + size
-  // NOTE: This probably doesn&#39;t really belong in here...
 
-  </span><span class="kw">static </span><span class="kw-2">ref </span>FONT_FAMILY : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt; = <span class="macro">raw_map!</span>(
+</span><span class="kw">pub static </span>FONT_TEXT_DEFAULT: Lazy&lt;Font&gt; = Lazy::new(Font::text_default);
+<span class="kw">static </span>LATIN_LETTER_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[\p{Latin}&amp;&amp;\pL]$&quot;</span>).unwrap());
+<span class="kw">static </span>GREEK_LETTER_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[\p{Greek}&amp;&amp;\pL]$&quot;</span>).unwrap());
+<span class="kw">static </span>UPPER_LETTER_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[\p{Lu}]$&quot;</span>).unwrap());
+<span class="kw">static </span>DIGIT_LETTER_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^[\p{N}]$&quot;</span>).unwrap());
+<span class="attr">#[rustfmt::skip]
+</span><span class="kw">static </span>FONT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(xylubt|xyluat|xydash|xycmbt|xycmat|xycirc|xybtip|xybsql|xyatip|ul9|ugq|uaq|txtt|txsyb|txsya|txss|txr|txms|txmi|pzd|pzc|pxsyb|pxsya|pxr|pxms|pxmi|put|ptm|psy|ppl|pnc|phv|pcr|pbk|pag|msy|msx|msb|msa|ms|futs|futmi|futm|eus|eur|euf|euex|cmvtt|cmtt|cmtl|cmti|cmsy|cmss|cmr|cmmib|cmm|cmfr|cmfib|cmex|cmdh|cmbsy|cmbrs|cmbrm|cmbr|cm|ccy|ccr|ccm|ccitt|bch|bbold|bbmss|bbm)(sbc|sb|mc|m|bx|bm|bc|b|)(sl|sc|n|it|i|csc|)(\d*)$&quot;</span>).unwrap());
+<span class="comment">//======================================================================
+// Mappings from various forms of names or component names in TeX
+// Given a font, we&#39;d like to map it to the &quot;logical&quot; names derived from LaTeX,
+// (w/ loss of fine grained control).
+// I&#39;d like to use Karl Berry&#39;s font naming scheme
+// (See http://www.tug.org/fontname/html/)
+// but it seems to be a one-way mapping, and moreover, doesn&#39;t even fit CM fonts!
+// We&#39;ll assume a sloppier version:
+//   family + series + variant + size
+// NOTE: This probably doesn&#39;t really belong in here...
+
+</span><span class="kw">static </span>FONT_FAMILY: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
     <span class="string">&quot;cmr&quot;  </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;serif&quot;</span>),      <span class="string">&quot;cmss&quot;  </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;sansserif&quot;</span>),
     <span class="string">&quot;cmtt&quot; </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>), <span class="string">&quot;cmvtt&quot; </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>),
     <span class="string">&quot;cmti&quot; </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>, shape =&gt; <span class="string">&quot;italic&quot;</span>),
@@ -1291,62 +1316,85 @@
     <span class="comment">// Are these really the same?
     </span><span class="string">&quot;msx&quot; </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;symbol&quot;</span>, encoding =&gt; <span class="string">&quot;AMSa&quot;</span>),
     <span class="string">&quot;msy&quot; </span>=&gt; <span class="macro">fontmap!</span>(family =&gt; <span class="string">&quot;symbol&quot;</span>, encoding =&gt; <span class="string">&quot;AMSb&quot;</span>)
-  );
-  <span class="doccomment">/// Maps the &quot;series code&quot; to an abstract font series name
-  </span><span class="kw">static </span><span class="kw-2">ref </span>FONT_SERIES : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>), <span class="string">&quot;m&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>), <span class="string">&quot;mc&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>),
-    <span class="string">&quot;b&quot;  </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;bc&quot;  </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;bx&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),
-    <span class="string">&quot;sb&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;sbc&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;bm&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>)
-  );
+  )
+});
+<span class="doccomment">/// Maps the &quot;series code&quot; to an abstract font series name
+</span><span class="kw">static </span>FONT_SERIES: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+    <span class="string">&quot;&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>), <span class="string">&quot;m&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>),
+      <span class="string">&quot;mc&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;medium&quot;</span>),
+    <span class="string">&quot;b&quot;  </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;bc&quot;  </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),
+      <span class="string">&quot;bx&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),
+    <span class="string">&quot;sb&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),   <span class="string">&quot;sbc&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>),
+      <span class="string">&quot;bm&quot; </span>=&gt; <span class="macro">fontmap!</span>(series =&gt; <span class="string">&quot;bold&quot;</span>)
+  )
+});
 
-  <span class="doccomment">/// Maps the &quot;shape code&quot; to an abstract font shape name.
-  </span><span class="kw">static </span><span class="kw-2">ref </span>FONT_SHAPE : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt; = <span class="macro">raw_map!</span>(
+<span class="doccomment">/// Maps the &quot;shape code&quot; to an abstract font shape name.
+</span><span class="kw">static </span>FONT_SHAPE: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Font&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
     <span class="string">&quot;&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;upright&quot;</span>), <span class="string">&quot;n&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;upright&quot;</span>),
-     <span class="string">&quot;i&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;italic&quot;</span>), <span class="string">&quot;it&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;italic&quot;</span>), <span class="string">&quot;sl&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;slanted&quot;</span>),
-     <span class="string">&quot;sc&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;smallcaps&quot;</span>), <span class="string">&quot;csc&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;smallcaps&quot;</span>)
-  );
+      <span class="string">&quot;i&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;italic&quot;</span>), <span class="string">&quot;it&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;italic&quot;</span>),
+      <span class="string">&quot;sl&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;slanted&quot;</span>),
+      <span class="string">&quot;sc&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;smallcaps&quot;</span>), <span class="string">&quot;csc&quot; </span>=&gt; <span class="macro">fontmap!</span>(shape =&gt; <span class="string">&quot;smallcaps&quot;</span>)
+  )
+});
 
-  <span class="doccomment">/// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
-  /// extended logical font sizes, based on nominal document size of 10pts
-  /// Possibly should simply use absolute font point sizes, as declared in class...
-  </span><span class="kw">static </span><span class="kw-2">ref </span>FONT_SIZE : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64&gt; = <span class="macro">raw_map!</span>(
-  <span class="string">&quot;tiny&quot;   </span>=&gt; <span class="number">0.5</span>,   <span class="string">&quot;SMALL&quot; </span>=&gt; <span class="number">0.7</span>, <span class="string">&quot;Small&quot; </span>=&gt; <span class="number">0.8</span>,  <span class="string">&quot;small&quot; </span>=&gt; <span class="number">0.9</span>,
-  <span class="string">&quot;normal&quot; </span>=&gt; <span class="number">1.0</span>,   <span class="string">&quot;large&quot; </span>=&gt; <span class="number">1.2</span>, <span class="string">&quot;Large&quot; </span>=&gt; <span class="number">1.44</span>, <span class="string">&quot;LARGE&quot; </span>=&gt; <span class="number">1.728</span>,
-  <span class="string">&quot;huge&quot;   </span>=&gt; <span class="number">2.074</span>, <span class="string">&quot;Huge&quot;  </span>=&gt; <span class="number">2.488</span>,
-  <span class="string">&quot;big&quot;    </span>=&gt; <span class="number">1.2</span>,   <span class="string">&quot;Big&quot;   </span>=&gt; <span class="number">1.6</span>, <span class="string">&quot;bigg&quot; </span>=&gt; <span class="number">2.1</span>, <span class="string">&quot;Bigg&quot; </span>=&gt; <span class="number">2.6</span>);
+<span class="doccomment">/// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
+/// extended logical font sizes, based on nominal document size of 10pts
+/// Possibly should simply use absolute font point sizes, as declared in class...
+</span><span class="kw">static </span>FONT_SIZE: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+<span class="string">&quot;tiny&quot;   </span>=&gt; <span class="number">0.5</span>,   <span class="string">&quot;SMALL&quot; </span>=&gt; <span class="number">0.7</span>, <span class="string">&quot;Small&quot; </span>=&gt; <span class="number">0.8</span>,  <span class="string">&quot;small&quot; </span>=&gt; <span class="number">0.9</span>,
+<span class="string">&quot;normal&quot; </span>=&gt; <span class="number">1.0</span>,   <span class="string">&quot;large&quot; </span>=&gt; <span class="number">1.2</span>, <span class="string">&quot;Large&quot; </span>=&gt; <span class="number">1.44</span>, <span class="string">&quot;LARGE&quot; </span>=&gt; <span class="number">1.728</span>,
+<span class="string">&quot;huge&quot;   </span>=&gt; <span class="number">2.074</span>, <span class="string">&quot;Huge&quot;  </span>=&gt; <span class="number">2.488</span>,
+<span class="string">&quot;big&quot;    </span>=&gt; <span class="number">1.2</span>,   <span class="string">&quot;Big&quot;   </span>=&gt; <span class="number">1.6</span>, <span class="string">&quot;bigg&quot; </span>=&gt; <span class="number">2.1</span>, <span class="string">&quot;Bigg&quot; </span>=&gt; <span class="number">2.6</span>)
+});
 
-  <span class="kw">static </span><span class="kw-2">ref </span>SCRIPT_STYLE_MAP  : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;display&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>,
-    <span class="string">&quot;script&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>);
+<span class="kw">static </span>SCRIPT_STYLE_MAP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+  <span class="string">&quot;display&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>,
+  <span class="string">&quot;script&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>)
+});
 
-  <span class="kw">static </span><span class="kw-2">ref </span>FRAC_STYLE_MAP : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;display&quot; </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>,
-    <span class="string">&quot;script&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>);
+<span class="kw">static </span>_FRAC_STYLE_MAP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+  <span class="string">&quot;display&quot; </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="string">&quot;script&quot;</span>,
+  <span class="string">&quot;script&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>)
+});
 
-  <span class="kw">static </span><span class="kw-2">ref </span>STYLE_SIZE  : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, usize&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;display&quot; </span>=&gt; <span class="number">10</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">10</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">7</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">5</span>);
+<span class="kw">static </span>STYLE_SIZE: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, usize&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+  <span class="string">&quot;display&quot; </span>=&gt; <span class="number">10</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">10</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">7</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">5</span>)
+});
 
-  <span class="kw">static </span><span class="kw-2">ref </span>MATH_STYLE_SIZE : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;display&quot; </span>=&gt; <span class="number">1.0</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">1.0</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">0.7</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">0.5</span>);
+<span class="kw">static </span>_MATH_STYLE_SIZE: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, f64&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+  <span class="string">&quot;display&quot; </span>=&gt; <span class="number">1.0</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">1.0</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">0.7</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">0.5</span>)
+});
 
-  <span class="doccomment">/// A special form of merge when copying/moving nodes to a new context,
-  /// particularly math which become scripts or such.
-  </span><span class="kw">static </span><span class="kw-2">ref </span>MATH_STYLE_STEP : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, i32&gt;&gt; = <span class="macro">raw_map!</span>(
-    <span class="string">&quot;display&quot; </span>=&gt; <span class="macro">raw_map!</span>(
-      <span class="string">&quot;display&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">1</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">2</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">3</span>),
-    <span class="string">&quot;text&quot;</span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">1</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">2</span>),
-    <span class="string">&quot;script&quot;</span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">2</span>, <span class="string">&quot;text&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">1</span>),
-    <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">3</span>, <span class="string">&quot;text&quot; </span>=&gt; -<span class="number">2</span>, <span class="string">&quot;script&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">0</span>));
-  <span class="kw">static </span><span class="kw-2">ref </span>STEP_MATH_STYLE : HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, HashMap&lt;i32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = <span class="macro">raw_map!</span>(
-  <span class="string">&quot;display&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;display&quot;</span>,
-    <span class="number">0 </span>=&gt; <span class="string">&quot;display&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
-  <span class="string">&quot;text&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;display&quot;</span>,
-    <span class="number">0 </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
-  <span class="string">&quot;script&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;text&quot;</span>,
-    <span class="number">0 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
-  <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;text&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;script&quot;</span>,
-    <span class="number">0 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>));
-}
+<span class="doccomment">/// A special form of merge when copying/moving nodes to a new context,
+/// particularly math which become scripts or such.
+</span><span class="kw">static </span>MATH_STYLE_STEP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, i32&gt;&gt;&gt; = Lazy::new(|| {
+  <span class="macro">raw_map!</span>(
+  <span class="string">&quot;display&quot; </span>=&gt; <span class="macro">raw_map!</span>(
+    <span class="string">&quot;display&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">1</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">2</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">3</span>),
+  <span class="string">&quot;text&quot;</span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;text&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">1</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">2</span>),
+  <span class="string">&quot;script&quot;</span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">2</span>, <span class="string">&quot;text&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;script&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">1</span>),
+  <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="macro">raw_map!</span>(<span class="string">&quot;display&quot; </span>=&gt; -<span class="number">3</span>, <span class="string">&quot;text&quot; </span>=&gt; -<span class="number">2</span>, <span class="string">&quot;script&quot; </span>=&gt; -<span class="number">1</span>, <span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="number">0</span>))
+});
+<span class="kw">static </span>_STEP_MATH_STYLE: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, HashMap&lt;i32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt;&gt; =
+  Lazy::new(|| {
+    <span class="macro">raw_map!</span>(
+<span class="string">&quot;display&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;display&quot;</span>,
+  <span class="number">0 </span>=&gt; <span class="string">&quot;display&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
+<span class="string">&quot;text&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;display&quot;</span>,
+  <span class="number">0 </span>=&gt; <span class="string">&quot;text&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
+<span class="string">&quot;script&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;text&quot;</span>,
+  <span class="number">0 </span>=&gt; <span class="string">&quot;script&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>),
+<span class="string">&quot;scriptscript&quot; </span>=&gt; <span class="macro">raw_map!</span>(-<span class="number">3 </span>=&gt; <span class="string">&quot;display&quot;</span>, -<span class="number">2 </span>=&gt; <span class="string">&quot;text&quot;</span>, -<span class="number">1 </span>=&gt; <span class="string">&quot;script&quot;</span>,
+  <span class="number">0 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">1 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">2 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>, <span class="number">3 </span>=&gt; <span class="string">&quot;scriptscript&quot;</span>))
+  });
 
 <span class="doccomment">/// Global auxiliary for font family lookup
 </span><span class="kw">pub fn </span>lookup_font_family(code: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Font&gt; { FONT_FAMILY.get(code) }
