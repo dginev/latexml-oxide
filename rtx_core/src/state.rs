@@ -2104,7 +2104,5 @@ impl State {
   /// expires the most recent (localized) current token.
   pub fn expire_current_token(&mut self) { self.current_token.pop(); }
   /// gets the (localized) current token
-  pub fn get_current_token(&self) -> Option<&Token> {
-    self.current_token.last()
-  }
+  pub fn get_current_token(&self) -> Option<&Token> { self.current_token.last() }
 }

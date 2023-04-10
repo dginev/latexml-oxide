@@ -574,11 +574,7 @@ impl<'t> Stomach {
     ); // ALWAYS bind this!
     state.assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
     state.assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-    state.assign_value(
-      "groupInitiator",
-      current_token.clone(),
-      Some(Scope::Local),
-    );
+    state.assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
     state.assign_value(
       "groupInitiatorLocator",
       self.get_locator().unwrap().into_owned(),
