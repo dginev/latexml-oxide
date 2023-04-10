@@ -106,6 +106,17 @@ impl IntoOption<Option<Scope>> for String {
 }
 
 // TODO: Sizers need a lot more work, likely a complete rethink about organization.
+impl IntoOption<Option<SizingClosure>> for i64 {
+  fn into_option(self) -> Option<SizingClosure> {
+    Some(Arc::new(move |_, _| {
+      Ok((
+        Dimension::new(self),
+        Dimension::new(self),
+        Dimension::new(self),
+      ))
+    }))
+  }
+}
 impl IntoOption<Option<SizingClosure>> for &str {
   fn into_option(self) -> Option<SizingClosure> {
     if self.is_empty() {
