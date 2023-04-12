@@ -21,9 +21,6 @@ path = "bin/rtx_math.rs"
 name = "integration_benchmarks"
 harness = false
 
-[dev-dependencies]
-criterion = "0.3.0"
-
 [dependencies]
 log = "0.4"
 libxml = "0.3.2"
