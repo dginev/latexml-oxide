@@ -1,6 +1,6 @@
+//! A variety of traits helpful for auto-casting between the different components of the
+//! conversion toolchain
 use rustc_hash::FxHashMap as HashMap;
-///! A variety of traits helpful for auto-casting between the different components of the
-/// conversion toolchain
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::store::Stored;
+use crate::alignment::AlignmentTemplate;
 use crate::definition::argument::ArgWrap;
 use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
@@ -278,15 +279,7 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
 
 impl IntoResultArgWrap<Result<ArgWrap>> for RegisterValue {
   fn into_result_argwrap(self) -> Result<ArgWrap> {
-    match self {
-      RegisterValue::Number(n) => n.into_result_argwrap(),
-      RegisterValue::Dimension(n) => n.into_result_argwrap(),
-      RegisterValue::Glue(n) => n.into_result_argwrap(),
-      RegisterValue::Token(n) => n.into_result_argwrap(),
-      RegisterValue::Tokens(n) => n.into_result_argwrap(),
-      RegisterValue::MuGlue(n) => n.into_result_argwrap(),
-      RegisterValue::MuDimension(n) => n.into_result_argwrap(),
-    }
+    Ok(self.into())
   }
 }
 
@@ -297,6 +290,17 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
 impl IntoResultArgWrap<Result<ArgWrap>> for () {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
 }
+
+impl IntoResultArgWrap<Result<ArgWrap>> for AlignmentTemplate {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
+}
+impl IntoResultArgWrap<Result<ArgWrap>> for Result<AlignmentTemplate> {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { match self {
+    Ok(v) => Ok(v.into()),
+    Err(e) => Err(e)
+  } }
+}
+
 
 /// Creates `Result<bool>` from some type `T`
 pub trait IntoBoolResult<T>: Sized {

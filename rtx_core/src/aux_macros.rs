@@ -1,4 +1,4 @@
-///! Helper macros for quicker and more idiomatic construction and access to data structures.
+//! Helper macros for quicker and more idiomatic construction and access to data structures.
 
 /// A flexary macro for constructing `HashMap<&'static str, &'static str>` maps
 #[macro_export]

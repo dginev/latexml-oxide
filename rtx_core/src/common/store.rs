@@ -61,9 +61,10 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 /// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
-#[derive(Clone)]
+#[derive(Default,Clone)]
 pub enum Stored {
   /// if we want to keep a key but make it 'undef', set it to None
+  #[default]
   None,
   // Primitives (Copy types, or cheap Clone)
   /// atomic data (Copy)
@@ -223,6 +224,7 @@ impl fmt::Display for Stored {
     }
   }
 }
+
 /// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
 /// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior
 /// mutability Worse: some conditions depend on the Stateful meaning of Token's,

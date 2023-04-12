@@ -648,13 +648,9 @@ impl State {
     let key_sym = arena::pin(key);
     match self.value.get_mut(&key_sym) {
       None => None,
-      Some(vvec) => match vvec.front() {
-        None | Some(&Stored::None) => Option::None,
-        Some(found) => {
-          let found = found.clone();
-          self.assign_internal(TableName::Value, key_sym, Stored::None, Some(Scope::Global));
-          Some(found)
-        },
+      Some(vvec) => match vvec.front_mut() {
+        None | Some(&mut Stored::None) => Option::None,
+        Some(found) => Some(std::mem::take(found))
       },
     }
   }
@@ -665,7 +661,7 @@ impl State {
       None => None,
       Some(vvec) => vvec
         .front_mut()
-        .map(|found| std::mem::replace(found, Stored::None)),
+        .map(std::mem::take),
     }
   }
   /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
@@ -1145,7 +1141,6 @@ impl State {
   ) {
     let mut tmp = [0u8; 3];
     let s = arena::pin(key.encode_utf8(&mut tmp));
-    let scope: Option<Scope> = scope.into();
     self.assign_internal(
       TableName::Mathcode,
       s,
@@ -1207,7 +1202,6 @@ impl State {
     let c : char = key.into();
     let mut tmp = [0u8; 3];
     let s = arena::pin(c.encode_utf8(&mut tmp));
-    let scope: Option<Scope> = scope.into();
     self.assign_internal(
       TableName::Lccode,
       s,
@@ -1692,7 +1686,7 @@ impl State {
     for (table_name, key, value) in actions {
       let frame = &mut self.undo[0];
       let frame_table = frame.table_mut(table_name);
-      let entry = frame_table.entry(key.clone()).or_insert(0);
+      let entry = frame_table.entry(key).or_insert(0);
       *entry += 1; // Note that this many values must be undone
       let key_table = self
         .table_mut(table_name)
@@ -1742,7 +1736,7 @@ impl State {
       } else {
         false
       };
-      let table_entry = self.table_mut(table_name).entry(key.clone()).or_default();
+      let table_entry = self.table_mut(table_name).entry(key).or_default();
       if front_is_value {
         // Here we're popping off the values pushed by activateScope
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.

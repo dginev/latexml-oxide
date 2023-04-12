@@ -1,3 +1,13 @@
+//! # Counters
+//!
+//! This is modelled on LaTeX's counter mechanisms, but since it also
+//! provides support for ID's, even where there is no visible reference number,
+//! it is defined in general.
+//! These id's should be both unique, and parallel the visible reference numbers
+//! (as much as possible).  Also, for consistency, we add id's to unnumbered
+//! document elements (eg from \section*); this requires an additional counter
+//! (eg. UNsection) and  mechanisms to track it.
+
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -18,17 +28,6 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::BoxOps;
-
-///!
-///! # Counters
-///!
-///! This is modelled on LaTeX's counter mechanisms, but since it also
-///! provides support for ID's, even where there is no visible reference number,
-///! it is defined in general.
-///! These id's should be both unique, and parallel the visible reference numbers
-///! (as much as possible).  Also, for consistency, we add id's to unnumbered
-///! document elements (eg from \section*); this requires an additional counter
-///! (eg. UNsection) and  mechanisms to track it.
 
 /// configuration for new_counter
 #[derive(Default)]

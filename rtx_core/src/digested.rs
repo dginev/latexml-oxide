@@ -1,5 +1,5 @@
+//! Interface layer for the full range of digested objects
 use rustc_hash::FxHashMap as HashMap;
-///! Interface layer for the full range of digested objects
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
