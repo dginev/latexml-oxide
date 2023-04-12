@@ -9,11 +9,11 @@ use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::hash::BuildHasherDefault;
 use std::sync::Mutex;
-use string_interner::backend::StringBackend;
+use string_interner::backend::BufferBackend;
 use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
 
-static mut T: Lazy<StringInterner<StringBackend, BuildHasherDefault<FxHasher>>> =
+static mut T: Lazy<StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>> =
   Lazy::new(|| StringInterner::with_capacity_and_hasher(10_000, BuildHasherDefault::<FxHasher>::default()));
 
 // This convention-based lock works, as long as we only ever use arena::pin for assignments.
