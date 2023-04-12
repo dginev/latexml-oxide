@@ -17,10 +17,6 @@ path = "src/main.rs"
 name = "rtxmath"
 path = "bin/rtx_math.rs"
 
-[[bench]]
-name = "integration_benchmarks"
-harness = false
-
 [dependencies]
 log = "0.4"
 libxml = "0.3.2"

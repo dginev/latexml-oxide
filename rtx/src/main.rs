@@ -6,8 +6,12 @@ use rtx_package::package;
 use std::env;
 use std::process;
 use std::sync::Arc;
+use std::fs::File;
+use std::io::prelude::*;
+use std::result::Result;
+use std::error::Error;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
     Error!(
       "rtx",
@@ -33,6 +37,7 @@ fn main() {
       process::exit(1);
     },
   };
+  let target = argv.next();
   // Prepare to convert:
   let opts = Config {
     verbosity: 0,
@@ -58,7 +63,12 @@ fn main() {
   // the right arguments can be passed in so that the response is either captured - and
   // passed, or printed internally by the logger info!("{:?}\n\n", r.log);
   if let Some(xml) = response.result {
-    println!("{xml}");
+    if let Some(target_path) = target {
+      let mut out_fh = File::create(target_path)?;
+      writeln!(out_fh, "{xml}")?;
+    } else {
+      println!("{xml}");
+    }
   }
 
   // Normal exit
