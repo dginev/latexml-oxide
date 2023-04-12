@@ -419,59 +419,6 @@ macro_rules! prop_bool {
   };
 }
 
-/// unpacks a `Vec<ArgWrap>` argument into a flexary number of `String`-typed variables
-/// uses the usual `.to_string()` method from the `Display` trait.
-#[macro_export]
-macro_rules! unpack_to_string {
-  ($args:ident => $var:ident) => (count_unpack_to_string!(0usize, $args => $var));
-  ($args:ident => $($var:ident),*) => (count_unpack_to_string!(0usize, $args => $($var),*));
-}
-
-#[macro_export]
-macro_rules! unpack_to_token {
-  ($args:ident => $var:ident) => (
-    let $var : Token = $args.remove(0).try_to_token()?;
-  );
-  ($args:ident => $var:ident,$($tail:ident),*) => (
-    unpack_to_token!($args => $var);
-    unpack_to_token!($args => $($tail),*)
-  );
-}
-
-#[macro_export]
-macro_rules! unpack_to_number {
-  ($args:ident => $var:ident) => (
-    let $var : Number = $args.remove(0).try_to_number()?;
-  );
-  ($args:ident => $var:ident,$($tail:ident),*) => (
-    unpack_to_number!($args => $var);
-    unpack_to_number!($args => $($tail),*)
-  );
-}
-
-#[macro_export]
-macro_rules! count_unpack_to_string {
-  ($index:expr, $args:ident => $var:ident) => (
-    let $var = match $args[$index].as_ref() {
-      Some(v) => v.to_string(),
-      None => String::new()
-    };
-  );
-  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    count_unpack_to_string!($index,$args => $var);
-    count_unpack_to_string!(1usize+$index, $args => $($tail),*)
-  }
-}
-
-#[macro_export]
-macro_rules! unpack {
-  ($args:ident => $var:ident) => (let $var = $args.remove(0).owned_tokens().unwrap(););
-  ($args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = $args.remove(0).owned_tokens().unwrap();
-    unpack!($args => $($tail),*)
-  }
-}
-
 /// Convenience macro to flexibly unpack a collection of `Vec<ArgWrap>` arguments into individual
 /// `Tokens` variables.
 #[macro_export]
@@ -491,34 +438,44 @@ macro_rules! count_unpack_ref {
   };
 }
 
-/// An alternative to `unpack!(args=>arg1,arg2...)`
-/// which allows for optional arguments.
+/// Try to efficiently unwrap a Vec<T> into a [T;n] for `$arg1`...`$argn`
 #[macro_export]
 macro_rules! unpack_opt {
-  ($args:ident => $var:ident) => (let $var = $args.remove(0););
-  ($args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = $args.remove(0);
-    unpack_opt!($args => $($tail),*)
-  }
+  ($args:ident => $arg1:ident) => {
+    let [$arg1] : [_;1] = $args.try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident) => {
+    let [$arg1,$arg2] : [_;2] = $args.try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident) => {
+    let [$arg1,$arg2,$arg3] : [_;3] = $args.try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident) => {
+    let [$arg1,$arg2,$arg3,$arg4] : [_;4] = $args.try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident,$arg5:ident) => {
+    let [$arg1,$arg2,$arg3,$arg4,$arg5] : [_;5] = $args.try_into().unwrap();
+  };
 }
 
-/// Meant to be used for unpacking &Vec<Option<Digested>> in particular.
+/// Try to efficiently unwrap a &Vec<T> into a &[T;n] for `$arg1`...`$argn`
 #[macro_export]
 macro_rules! unpack_opt_ref {
-  ($args:ident => $var:ident) => (count_unpack_opt!(0usize, $args => $var));
-  ($args:ident => $var:ident,$($tail:ident),*) => (
-    count_unpack_opt!(0usize, $args => $var,$($tail),*));
-}
-
-#[macro_export]
-macro_rules! count_unpack_opt {
-  ($index:expr, $args:ident => $var:ident) => (
-    let $var = $args.get($index);
-  );
-  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
-    let $var = $args.get($index);
-    count_unpack_opt!(1usize+$index, $args => $($tail),*)
-  }
+  ($args:ident => $arg1:ident) => {
+    let [$arg1] : &[_;1] = $args[..1].try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident) => {
+    let [$arg1,$arg2] : &[_;2] = $args[..2].try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident) => {
+    let [$arg1,$arg2,$arg3] : &[_;3] = $args[..3].try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident) => {
+    let [$arg1,$arg2,$arg3,$arg4] : &[_;4] = $args[..4].try_into().unwrap();
+  };
+  ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident,$arg5:ident) => {
+    let [$arg1,$arg2,$arg3,$arg4,$arg5] : &[_;5] = $args[..5].try_into().unwrap();
+  };
 }
 
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token

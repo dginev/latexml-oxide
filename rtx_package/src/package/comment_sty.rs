@@ -5,7 +5,7 @@ LoadDefinitions!(outer_state, {
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = primitiveproc!(_stomach, args, state, {
-    unpack!(args=>name);
+    let name = args.remove(0).owned_tokens().unwrap();
     let begin_mark = s!("\\begin{{{name}}}");
     let end_mark = s!("\\end{{{name}}}");
     DefConstructor!(T_CS!(begin_mark), None, None,

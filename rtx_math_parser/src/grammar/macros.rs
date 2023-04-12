@@ -76,14 +76,6 @@ macro_rules! register {
         $rule.rule(),
         ::std::sync::Arc::new($call))
   };
-  ($rule:ident, $($arg:ident)+ => $body:block) => {
-    actions!().register(
-        $rule.rule(),
-        ::std::sync::Arc::new(|rule_id: i32, mut args: Vec<Option<XM>>| {
-          unpack!(args => $($arg),+);
-          Some($body)
-        }))
-  };
   ($rule:ident, $($arg:ident)+) => { };
 }
 

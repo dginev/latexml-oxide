@@ -18,7 +18,7 @@ use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::Locator;
-use crate::alignment::AlignmentTemplate;
+use crate::alignment::template::Template;
 
 #[derive(Debug, Clone)]
 pub enum ArgWrap {
@@ -40,7 +40,7 @@ pub enum ArgWrap {
   OptionMuDimension(Option<MuDimension>),
   KV(KeyVals),
   OptionKV(Option<KeyVals>),
-  AlignmentTemplate(AlignmentTemplate),
+  AlignmentTemplate(Template),
   // TODO: what do we do with this custom case? feels iffy
   RegisterDefinition((Token, Vec<ArgWrap>)),
 }
@@ -645,8 +645,8 @@ impl From<RegisterValue> for ArgWrap {
     }
   }
 }
-impl From<AlignmentTemplate> for ArgWrap {
-  fn from(t: AlignmentTemplate) -> Self {
+impl From<Template> for ArgWrap {
+  fn from(t: Template) -> Self {
     ArgWrap::AlignmentTemplate(t)
   }
 }
