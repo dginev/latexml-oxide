@@ -4,7 +4,6 @@ use regex::Regex;
 
 use std::env;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use parking_lot::Mutex;
 
 /// configuration for filesystem search
@@ -30,7 +29,7 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
-static KPSE: Lazy<Arc<Mutex<Kpaths>>> = Lazy::new(|| Arc::new(Mutex::new(Kpaths::new().unwrap())));
+static KPSE: Lazy<Mutex<Kpaths>> = Lazy::new(|| Mutex::new(Kpaths::new().unwrap()));
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {
 //       match exe_path.as_path().parent() {
