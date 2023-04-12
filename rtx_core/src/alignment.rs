@@ -22,9 +22,8 @@
 use crate::token::{Catcode,Token};
 use crate::tokens::Tokens;
 use crate::common::error::*;
-use crate::definition::argument::ArgWrap;
+use crate::mouth::Mouth;
 use crate::gullet::Gullet;
-use crate::parameter::Parameters;
 use crate::state::State;
 use crate::document::Document;
 use crate::common::object::Object;
@@ -41,13 +40,19 @@ pub type CloseRowFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 pub type CloseColumnFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 
 pub struct AlignmentConfig {
-  template: Option<AlignmentTemplate>,
-  open_container: Option<OpenContainerFn>,
-  close_container: Option<CloseContainerFn>,
-  open_row: Option<OpenRowFn>,
-  close_row: Option<CloseRowFn>,
-  close_column: Option<CloseColumnFn>,
-  attributes: HashMap<String,String>
+  pub template: Option<AlignmentTemplate>,
+  pub open_container: Option<OpenContainerFn>,
+  pub close_container: Option<CloseContainerFn>,
+  pub open_row: Option<OpenRowFn>,
+  pub close_row: Option<CloseRowFn>,
+  pub close_column: Option<CloseColumnFn>,
+  pub attributes: HashMap<String,String>,
+}
+
+#[derive(Debug,Clone)]
+pub struct AlignmentRepeat {
+  pub before: Option<Tokens>,
+  pub after: Option<Tokens>
 }
 
 pub struct Alignment {}
@@ -69,17 +74,14 @@ impl Alignment {
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Dealing with templates
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone, Default)]
 pub struct AlignmentTemplate {
   columns: Vec<Tokens>,
   tokens: Vec<Token>,
-  reversion: Option<Tokens>
+  repeat: Option<AlignmentRepeat>,
+  reversion: Option<Tokens>,
 }
-impl Default for AlignmentTemplate {
-  fn default() -> Self {
-    AlignmentTemplate { columns: Vec::new(), tokens: Vec::new(), reversion: None }
-  }
-}
+
 impl Display for AlignmentTemplate {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(
@@ -89,6 +91,12 @@ impl Display for AlignmentTemplate {
   }
 }
 impl AlignmentTemplate {
+  fn new(repeat: Option<AlignmentRepeat>) -> Self {
+    AlignmentTemplate {
+      repeat,
+      ..AlignmentTemplate::default()
+    }
+  }
   fn set_reversion(&mut self, tks: Tokens) {
     self.reversion = Some(tks);
   }
@@ -100,7 +108,7 @@ impl AlignmentTemplate {
 //    or "constructor" (or just sub that creates a column)
 
 /// a reader for the AlignmentTemplate parameter type
-pub fn read_alignment_template(gullet: &mut Gullet, inner: Option<&Parameters>, extra: &[Tokens], state: &mut State) -> Result<ArgWrap> {
+pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<AlignmentTemplate> {
   gullet.skip_spaces(state);
   let mut build_template = AlignmentTemplate::default();
   let mut tokens = vec![T_BEGIN!()];
@@ -146,5 +154,19 @@ pub fn read_alignment_template(gullet: &mut Gullet, inner: Option<&Parameters>, 
   }
   tokens.push(T_END!());
   build_template.set_reversion(Tokens::new(tokens));
-  Ok(ArgWrap::AlignmentTemplate(build_template))
+  Ok(build_template)
+}
+
+fn parse_alignment_template(spec: &str, gullet: &mut Gullet, ostate: &mut State) -> Result<AlignmentTemplate> {
+  let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None, ostate)?;
+  gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
+    read_alignment_template(gulletx, state)
+  })
+}
+
+fn matrix_template() -> AlignmentTemplate {
+  AlignmentTemplate::new(Some(AlignmentRepeat {
+    before: Some(Tokens!(T_CS!("\\hfil"))),
+    after: Some(Tokens!(T_CS!("\\hfil")))
+  }))
 }

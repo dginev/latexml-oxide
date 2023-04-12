@@ -1,3 +1,7 @@
+//! Conditionals Control sequence definitions.
+//! These represent the control sequences for conditionals, as well as
+//! `\else`, `\or` and `\fi`.
+
 use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
@@ -18,10 +22,6 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-
-///! Conditionals Control sequence definitions.
-///! These represent the control sequences for conditionals, as well as
-///! `\else`, `\or` and `\fi`.
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip

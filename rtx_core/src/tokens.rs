@@ -1,4 +1,4 @@
-///! Token List constructors.
+//! Token List constructors.
 use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};

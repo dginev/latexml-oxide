@@ -15,7 +15,6 @@ pub mod muglue;
 pub mod number;
 pub mod numeric_ops;
 pub mod object;
-///! extract Model information from a RelaxNG schema
 pub mod relaxng;
 pub mod store;
 pub mod xml;

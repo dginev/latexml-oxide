@@ -10,6 +10,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::definition::register::RegisterValue;
 use crate::definition::Digested;
 use crate::keyvals::KeyVals;
 use crate::state::State;
@@ -162,7 +163,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.be_digested(stomach, state),
         None => unimplemented!(),
       },
-      AlignmentTemplate(at) => unimplemented!(),
+      AlignmentTemplate(_) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
     }
   }
@@ -202,7 +203,7 @@ impl Object for ArgWrap {
         Some(kv) => kv.revert(state),
         None => unimplemented!(),
       },
-      AlignmentTemplate(at) => unimplemented!(),
+      AlignmentTemplate(_) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct reversion I think
     }
   }
@@ -619,6 +620,35 @@ impl From<MuGlue> for ArgWrap {
 }
 impl From<Option<MuGlue>> for ArgWrap {
   fn from(t: Option<MuGlue>) -> Self { ArgWrap::OptionMuGlue(t) }
+}
+
+impl From<Result<ArgWrap>> for ArgWrap {
+  fn from(t: Result<ArgWrap>) -> Self {
+    t.unwrap()
+  }
+}
+impl From<()> for ArgWrap {
+  fn from(_: ()) -> Self {
+    ArgWrap::default()
+  }
+}
+impl From<RegisterValue> for ArgWrap {
+  fn from(t: RegisterValue) -> Self {
+    match t {
+      RegisterValue::Number(n) => n.into(),
+      RegisterValue::Dimension(n) => n.into(),
+      RegisterValue::Glue(n) => n.into(),
+      RegisterValue::Token(n) => n.into(),
+      RegisterValue::Tokens(n) => n.into(),
+      RegisterValue::MuGlue(n) => n.into(),
+      RegisterValue::MuDimension(n) => n.into(),
+    }
+  }
+}
+impl From<AlignmentTemplate> for ArgWrap {
+  fn from(t: AlignmentTemplate) -> Self {
+    ArgWrap::AlignmentTemplate(t)
+  }
 }
 
 impl TryFrom<ArgWrap> for Number {

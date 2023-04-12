@@ -534,6 +534,7 @@ macro_rules! DefPrimitive {
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
     let closure : PrimitiveClosure = Arc::new(
+      #[allow(unused_mut)]
       move |$stomach_arg: &mut Stomach, mut $args: Vec<ArgWrap>, $state_arg: &mut State| {
         WithInnerState!($body, $stomach_arg, $state_arg).into_digested_result()
       });

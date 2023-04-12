@@ -1,4 +1,4 @@
-///! Extract Model information from a RelaxNG schema
+//! Extract Model information from a RelaxNG schema
 use crate::document::Document;
 use rustc_hash::FxHashMap as HashMap;
 /// an internal representation for a RelaxNG schema

@@ -4,8 +4,8 @@ use crate::package::*;
 // Basic alignment support needed by most environments & commands.
 //======================================================================
 LoadDefinitions!(state, {
-  DefParameterType!(AlignmentTemplate, sub[gullet, inner, extra, state] {
-    read_alignment_template(gullet, inner, extra, state)
+  DefParameterType!(AlignmentTemplate, sub[gullet, _inner, _extra, state] {
+    read_alignment_template(gullet, state)
   });
 
   Tag!("ltx:td", after_close => sub[doc, node, _state] { doc.trim_node_whitespace(node)?; });
