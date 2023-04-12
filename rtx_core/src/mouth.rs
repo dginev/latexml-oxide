@@ -6,7 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use core::ops::RangeBounds;
 // TODO:
@@ -759,7 +759,7 @@ impl Mouth {
   }
 
   fn gid() -> String {
-    let mut lastid = LASTID.lock().unwrap();
+    let mut lastid = LASTID.lock();
     *lastid += 1;
     lastid.to_string()
   }

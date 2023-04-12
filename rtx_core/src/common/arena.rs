@@ -8,7 +8,7 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHasher;
 use std::hash::BuildHasherDefault;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use string_interner::backend::BufferBackend;
 use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
@@ -21,7 +21,7 @@ static PIN_LOCK : Mutex<()> = Mutex::new(());
 
 /// Assign a string into the arena, returning a unique symbol associated with it
 pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
-  let lock = PIN_LOCK.lock().unwrap();
+  let lock = PIN_LOCK.lock();
   let result = unsafe { T.get_or_intern(text) };
   drop(lock);
   result

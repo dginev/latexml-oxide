@@ -5,7 +5,7 @@ use regex::Regex;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 /// configuration for filesystem search
 #[derive(Debug, Clone, Default)]
@@ -331,7 +331,7 @@ pub fn extension(pathname: &str) -> String {
 /// returning the first path that is found
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   for candidate in candidates {
-    if let Some(path) = KPSE.lock().unwrap().find_file(candidate) {
+    if let Some(path) = KPSE.lock().find_file(candidate) {
       return Some(path);
     }
   }
