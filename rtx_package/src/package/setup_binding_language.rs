@@ -434,6 +434,12 @@ macro_rules! DefConditional(
   }};
 );
 
+macro_rules! count {
+  () => (0usize);
+  ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+}
+
+
 #[macro_export]
 macro_rules! TypedConditional {
   ($cs:literal, $these_parameters:ident,
@@ -444,8 +450,9 @@ macro_rules! TypedConditional {
     #[allow(unused_mut,unused_variables)]
     let closure : ConditionalClosure =  Arc::new(
     move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+      let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
-          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
+          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
               Error!("expected", "argument", $gullet, None, e);
@@ -593,8 +600,9 @@ macro_rules! TypedPrimitive {
     #[allow(unused_mut,unused_variables)]
     let replacement_closure =  Arc::new(
     move |$stomach_arg: &mut Stomach, mut args: Vec<ArgWrap>, $inner_state: &mut State| {
+      let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
-          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
+          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
               Error!("expected", "argument", $stomach_arg, None, e);
@@ -1629,8 +1637,9 @@ macro_rules! TypedMacro {
     #[allow(unused_mut,unused_variables)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Arc::new(
       move |$gullet: &mut Gullet, mut args: Vec<ArgWrap>, $inner_state:&mut State| {
+        let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
         $(
-          let $var: parameter_rust_type!($ptype) = match args.remove(0).try_into() {
+          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
               Error!("expected", "argument", $gullet, None, e);
