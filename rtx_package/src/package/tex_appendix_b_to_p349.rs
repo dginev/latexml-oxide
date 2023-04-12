@@ -338,8 +338,7 @@ LoadDefinitions!(state, {
   );
 
   // # This implementation is quite wrong
-  DefPrimitive!("\\newinsert Token", sub[_stomach, args, state] {
-    unpack_to_token!(args => t);
+  DefPrimitive!("\\newinsert Token", sub[_stomach, (t), state] {
     DefRegister!(t, None, Number::new(0));
   });
   // # \alloc@, \ch@ck
@@ -359,8 +358,7 @@ LoadDefinitions!(state, {
   // #======================================================================
   // # TeX Book, Appendix B, p. 348
 
-  DefMacro!("\\newif DefToken", sub[gullet, args, state] {
-    unpack_to_token!(args => cs);
+  DefMacro!("\\newif DefToken", sub[gullet, (cs), state] {
     def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state);
   });
 

@@ -112,8 +112,8 @@ LoadDefinitions!(outer_state, {
   //    | \multiply <numeric variable><optional by><number>
   //    | \divide <numeric variable><optional by><number>
 
-  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, args, state] {
-    if let ArgWrap::RegisterDefinition((defn_token, inner)) = args.remove(0) {
+  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, (var), state] {
+    if let ArgWrap::RegisterDefinition((defn_token, inner)) = var {
       let defn_token_str = defn_token.to_string();
       if defn_token_str != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
@@ -133,14 +133,13 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, args, state] {
-    if let ArgWrap::RegisterDefinition((varname, inner)) = args.remove(0) {
-      unpack!(args => scale);
+  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, (var,scale), state] {
+    if let ArgWrap::RegisterDefinition((varname, inner)) = var {
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
-        let scale_value = scale.to_number().value_of();
+        let scale_value = scale.value_of();
         defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } else {
         let message =
@@ -153,14 +152,13 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, args, state] {
-    if let ArgWrap::RegisterDefinition((varname, inner)) = args.remove(0) {
-      unpack!(args => scale);
+  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, (var,scale), state] {
+    if let ArgWrap::RegisterDefinition((varname, inner)) = var {
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
-        let mut denominator = scale.to_number().value_f64();
+        let mut denominator = scale.value_f64();
         if denominator == 0.0 {
           Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;

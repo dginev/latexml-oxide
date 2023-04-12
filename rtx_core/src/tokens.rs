@@ -264,8 +264,6 @@ impl Tokens {
     }
   }
 
-  // stopgap, how do we unpack! gullet-stage arguments without the unwrap?
-  // should we unify the interfaces so that Options are always used? Could be cumbursome...
   /// returns self, for compatibility convenience with `Option`
   pub fn unwrap_or_default(self) -> Tokens { self }
   /// returns self, for compatibility convenience with `Option`

@@ -110,7 +110,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
       unpack_opt_ref!(args => _spec_opt, contents_opt);
-      let contents = contents_opt.unwrap().as_ref().unwrap();
+      let contents = contents_opt.as_ref().unwrap();
       let current_opt = document.get_element();
 
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
@@ -133,7 +133,7 @@ LoadDefinitions!(state, {
       // Note on the clone: Remember that contents is a Digested,
       // i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
       // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
-      document.absorb(contents, None, state)?;
+      document.absorb(&contents, None, state)?;
       if !is_svg {
         while !document.get_element().unwrap().has_attribute("_beginscope") &&
           document.maybe_close_element("svg:g", state)?.is_some() {}

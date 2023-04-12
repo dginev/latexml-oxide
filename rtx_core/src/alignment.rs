@@ -19,7 +19,9 @@
 //! because an Alignment currently doesn't know what CS created it (debugging!);
 //! Also, it would better connect the things being constructed, reversion, etc.
 
-use crate::token::{Catcode,Token};
+pub mod template;
+
+use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::common::error::*;
 use crate::mouth::Mouth;
@@ -27,10 +29,12 @@ use crate::gullet::Gullet;
 use crate::state::State;
 use crate::document::Document;
 use crate::common::object::Object;
+use crate::alignment::template::{Pattern, Template};
 
 use rustc_hash::FxHashMap as HashMap;
 use std::sync::Arc;
-use std::fmt::{self,Display};
+
+use self::template::TemplateConfig;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn = Arc<dyn Fn(&mut Document, HashMap<String,String>, &mut State) -> Result<()>>;
@@ -40,7 +44,7 @@ pub type CloseRowFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 pub type CloseColumnFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 
 pub struct AlignmentConfig {
-  pub template: Option<AlignmentTemplate>,
+  pub template: Option<Template>,
   pub open_container: Option<OpenContainerFn>,
   pub close_container: Option<CloseContainerFn>,
   pub open_row: Option<OpenRowFn>,
@@ -49,13 +53,9 @@ pub struct AlignmentConfig {
   pub attributes: HashMap<String,String>,
 }
 
-#[derive(Debug,Clone)]
-pub struct AlignmentRepeat {
-  pub before: Option<Tokens>,
-  pub after: Option<Tokens>
+pub struct Alignment {
+  template: Template
 }
-
-pub struct Alignment {}
 impl Alignment {
   /// Create a new Alignment.
   /// `config` can contain:
@@ -68,49 +68,25 @@ impl Alignment {
   ///    closeColumn    = closes the column
   ///    attributes = hashref containing extra attributes for the container element.
   pub fn new(config:AlignmentConfig) -> Self {
-    Alignment {}
+    let template = config.template.unwrap_or_default();
+    Alignment {
+      template
+    }
   }
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Dealing with templates
-#[derive(Debug,Clone, Default)]
-pub struct AlignmentTemplate {
-  columns: Vec<Tokens>,
-  tokens: Vec<Token>,
-  repeat: Option<AlignmentRepeat>,
-  reversion: Option<Tokens>,
-}
-
-impl Display for AlignmentTemplate {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-      f,
-      "Alignment[]",
-    )
-  }
-}
-impl AlignmentTemplate {
-  fn new(repeat: Option<AlignmentRepeat>) -> Self {
-    AlignmentTemplate {
-      repeat,
-      ..AlignmentTemplate::default()
-    }
-  }
-  fn set_reversion(&mut self, tks: Tokens) {
-    self.reversion = Some(tks);
-  }
-}
 
 // newcolumntype
 //  defines \NC@rewrite@<char>
 //    As macro
 //    or "constructor" (or just sub that creates a column)
 
-/// a reader for the AlignmentTemplate parameter type
-pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<AlignmentTemplate> {
+/// a reader for the Template parameter type
+pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<Template> {
   gullet.skip_spaces(state);
-  let mut build_template = AlignmentTemplate::default();
+  let mut build_template = Template::default();
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
   while let Some(open) = gullet.read_token(state) {
@@ -157,16 +133,17 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
   Ok(build_template)
 }
 
-fn parse_alignment_template(spec: &str, gullet: &mut Gullet, ostate: &mut State) -> Result<AlignmentTemplate> {
+fn parse_alignment_template(spec: &str, gullet: &mut Gullet, ostate: &mut State) -> Result<Template> {
   let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None, ostate)?;
   gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
     read_alignment_template(gulletx, state)
   })
 }
 
-fn matrix_template() -> AlignmentTemplate {
-  AlignmentTemplate::new(Some(AlignmentRepeat {
-    before: Some(Tokens!(T_CS!("\\hfil"))),
-    after: Some(Tokens!(T_CS!("\\hfil")))
-  }))
+fn matrix_template() -> Template {
+  Template::new(TemplateConfig {
+    repeated: vec![Pattern {
+      before: Some(Tokens!(T_CS!("\\hfil"))),
+      after: Some(Tokens!(T_CS!("\\hfil"))),..Pattern::default()
+    }], .. TemplateConfig::default()})
 }

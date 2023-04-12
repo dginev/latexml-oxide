@@ -96,9 +96,11 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefConstructor!(
     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
     sub[document, args, props, state] {
+      // args:=(stype,inlist,toctitle,title)
+      let stype = args[0].as_ref().unwrap().to_string();
+      let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
-      unpack_to_string!(args => stype, inlist);//, toctitle, title);
       let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
       document.open_element(&s!("ltx:{stype}"),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),

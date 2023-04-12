@@ -14,7 +14,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::store::Stored;
-use crate::alignment::AlignmentTemplate;
+use crate::alignment::template::Template;
 use crate::definition::argument::ArgWrap;
 use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
@@ -291,10 +291,10 @@ impl IntoResultArgWrap<Result<ArgWrap>> for () {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
 }
 
-impl IntoResultArgWrap<Result<ArgWrap>> for AlignmentTemplate {
+impl IntoResultArgWrap<Result<ArgWrap>> for Template {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
 }
-impl IntoResultArgWrap<Result<ArgWrap>> for Result<AlignmentTemplate> {
+impl IntoResultArgWrap<Result<ArgWrap>> for Result<Template> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { match self {
     Ok(v) => Ok(v.into()),
     Err(e) => Err(e)

@@ -68,7 +68,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
     "<ltx:ref labelref='#label' _force_font='true'/>",
     properties => sub[_stomach, args, _state] {
       unpack_opt_ref!(args => _star, label_opt);
-      let label = label_opt.unwrap().as_ref().unwrap().to_string();
+      let label = label_opt.as_ref().unwrap().to_string();
       Ok(map!("label" => Stored::String(clean_label(&label, None).into_owned())))
   });
 
