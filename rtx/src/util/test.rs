@@ -33,7 +33,7 @@ pub fn rtx_tests_internal(
     let name = tex_file.file_stem().unwrap().to_str().unwrap();
     let xml_file = tex_file.with_extension("xml");
 
-    let tex_file_string = dbg!(tex_file.to_str().unwrap());
+    let tex_file_string = tex_file.to_str().unwrap();
     let xml_file_str = xml_file.to_str().unwrap();
     if xml_file.exists() {
       rtx_ok_internal(tex_file_string, xml_file_str, name, dispatcher_opt.clone());

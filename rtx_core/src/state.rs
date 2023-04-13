@@ -921,7 +921,7 @@ impl State {
     // (but not \let to a token)
     if token.get_catcode().is_active_or_cs() {
       let lookupname = token.text;
-      if lookupname == *EMPTY_SYM {
+      if lookupname != *EMPTY_SYM {
         match self.meaning.get(&lookupname) {
           Some(entry) => {
             if let Some(def) = entry.front() {
@@ -2010,7 +2010,7 @@ impl State {
     let def1_opt = self.lookup_meaning(token1); // # token, definition object or None
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
-      (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
+      (Some(def1), Some(def2)) => *def1 == *def2, // If both have defns, must be same defn!
       (None, None) => true,                     // true if both undefined
       (_, _) => false,                          // False, if only one has 'meaning'
     }
