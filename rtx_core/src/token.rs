@@ -773,7 +773,8 @@ impl<'a> Token {
         string = s!("U+{}/{}", c, CONTROLNAME[c as usize]);
       }
     }
-    s!("{}[{}]", self.code.short_name(), string)
+    let smuggled = self.smuggled.as_ref().map(|t| s!("<{}>",t.stringify())).unwrap_or_default();
+    s!("{}[{}]{}", self.code.short_name(), string, smuggled)
   }
 
   pub fn to_register(&self, state: &State) -> Option<Arc<Register>> {
