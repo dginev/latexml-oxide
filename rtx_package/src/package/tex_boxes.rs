@@ -133,7 +133,7 @@ LoadDefinitions!(state, {
       // Note on the clone: Remember that contents is a Digested,
       // i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
       // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
-      document.absorb(&contents, None, state)?;
+      document.absorb(contents, None, state)?;
       if !is_svg {
         while !document.get_element().unwrap().has_attribute("_beginscope") &&
           document.maybe_close_element("svg:g", state)?.is_some() {}

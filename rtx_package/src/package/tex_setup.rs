@@ -731,35 +731,48 @@ LoadDefinitions!(state, {
     ))
   }));
 
-  // Read a digested argument.
-  // The usual parameter (generally written as {}) gets
-  // tokenized and digested in separate stages (like TeX),
-  // and so it is tokenized w/o recognizing any special macros within (eg. \url).
-  // This parameter gets digested until the (required) opening { is balanced.
+  // Read a digested argument, digesting as it is being read.
+  // The usual macro parameter (generally written as {}) gets tokenized and digested
+  // in separate stages, w/o recognizing any special macros or catcode changes within (eg. \url).
+  // Rarely, you need a parameter that gets digested AS IT'S READ until ending }.
+  // Note that this also recognizes args as \bgroup ... \engroup
   // It is useful when the content would usually need to have been \protect'd
   // in order to correctly deal with catcodes.
-  DefParameterType!(Digested, sub[_gullet, _inner, _extra, _state] {
-    //   my ($gullet) = @_;
-    //   $gullet->skipSpaces;
-    //   my $ismath = $STATE->lookupValue('IN_MATH');
-    //   my $token;
-    //   do { $token = $gullet->readXToken(0);
-    //   } while (defined $token && $token->getCatcode == CC_SPACE);
-    //   my @list = ();
-    //   if (!defined $token) { }
-    //   elsif ($token->getCatcode == CC_BEGIN) {
-    //     Digest($token);
-    //     @list = $STATE->getStomach->digestNextBody(); pop(@list); }
-    //   else {
-    //     @list = $STATE->getStomach->invokeToken($token); }
-    //   # In most (all?) cases, we're really looking for a single Whatsit here...
-    //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
-    //   List(@list, mode => ($ismath ? 'math' : 'text')); },
-    // undigested => 1,                                          # since _already_ digested.
-    // reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-    unimplemented!();
-    Ok(Tokens!())
-  });
+  // BEWARE: This is NOT a shorthand for a simple digested {}!
+  DefParameterType!(Digested, reader => reader!(gullet, _inner, _extra, state, {
+      gullet.skip_spaces(state);
+      Ok(Tokens!())
+    }),
+    reader_predigest => reader_predigest!(stomach, _arg, state, {
+      let ismath = state.lookup_bool("IN_MATH");
+      let mut list = Vec::new();
+      let mut next_token = None;
+      let gullet = stomach.get_gullet_mut();
+      while let Some(token) = gullet.read_x_token(Some(false), false ,state)? {
+        let is_last = token.get_catcode() != Catcode::SPACE && token != T_RELAX!();
+        next_token = Some(token);
+        if is_last {
+          break;
+        }
+      }
+
+      if let Some(token) = next_token {
+        if token.get_catcode() == Catcode::BEGIN {
+          stomach.digest(token, state)?;
+          list.extend(stomach.digest_next_body(None, state)?);
+          list.pop();
+        } else {
+          list = stomach.invoke_token(&token, state)?;
+        }
+      }
+
+      list.retain(|tbox| ! matches!(tbox.data(), DigestedData::Comment(_)));
+      let mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
+      List { boxes:list,  mode, ..List::default() }
+    })
+  // undigested => true                                         // since _already_ digested.
+  // reversion  => sub { (T_BEGIN, Revert($_[0]), T_END); });
+  );
 
   // A variation: Digest until we encounter a given token!
   DefParameterType!(DigestUntil, sub[_gullet, _inner, _extra, _state] {
@@ -1048,15 +1061,18 @@ LoadDefinitions!(state, {
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
-  // DefParameterType!(OptionalInScriptStyle, sub[gullet, inner, _extra, state] {
-  //     $_[0]->readOptional; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(scripted => 1); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   optional => 1,
-  //   reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  DefParameterType!(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
+      gullet.read_optional(None, state)
+    },
+    // before_digest => sub [stomach,state] {
+    //   gullet.bgroup(state);
+    //   MergeFont!("scripted" => true);
+    // },
+    // after_digest => sub[stomach,state] {
+    //   stomach.egroup(state); },
+    optional => true
+    // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); }
+  );
   // DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
