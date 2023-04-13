@@ -19,6 +19,9 @@
 //! because an Alignment currently doesn't know what CS created it (debugging!);
 //! Also, it would better connect the things being constructed, reversion, etc.
 
+// keep in until code is completed.
+#[allow(dead_code)]
+
 pub mod template;
 
 use crate::token::Catcode;
@@ -29,9 +32,10 @@ use crate::gullet::Gullet;
 use crate::state::State;
 use crate::document::Document;
 use crate::common::object::Object;
-use crate::alignment::template::{Pattern, Template};
+use crate::alignment::template::{Pattern, Template, Row};
 
 use rustc_hash::FxHashMap as HashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use self::template::TemplateConfig;
@@ -54,7 +58,10 @@ pub struct AlignmentConfig {
 }
 
 pub struct Alignment {
-  template: Template
+  template: Template,
+  current_row: Option<usize>,
+  current_column: usize,
+  rows: VecDeque<Row>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -70,9 +77,49 @@ impl Alignment {
   pub fn new(config:AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
     Alignment {
-      template
+      template,
+      current_row: None,
+      current_column: 0,
+      rows: VecDeque::new()
     }
   }
+
+  pub fn get_template(&self) -> &Template { &self.template }
+
+  pub fn current_row(&self) -> Option<&Row> {
+    match self.current_row {
+      Some(idx) => self.rows.get(idx),
+      None => None
+    } }
+
+  pub fn new_row(&mut self) -> Option<&Row> {
+    let row = self.template.clone();
+    self.current_row    = Some(self.rows.len() + 1);
+    self.rows.push_back(row);
+    self.current_column = 0;
+    self.rows.back()
+  }
+
+  pub fn remove_row(&mut self) -> Option<Row> {
+    self.rows.pop_back()
+  }
+
+  fn prepend_rows(&mut self, new_rows: Vec<Row>) {
+    for new_row in new_rows.into_iter().rev() {
+      self.rows.push_front(new_row)
+    }
+  }
+
+  fn append_rows(&mut self, new_rows: Vec<Row>) {
+    for new_row in new_rows.into_iter() {
+      self.rows.push_back(new_row)
+    }
+  }
+
+  fn rows(&self) -> &VecDeque<Row> {
+    &self.rows
+  }
+
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

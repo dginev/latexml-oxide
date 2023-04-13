@@ -5,6 +5,9 @@ use crate::tokens::Tokens;
 
 use std::fmt::{self,Display};
 
+// ??
+pub type Row = Template;
+
 #[derive(Debug,Clone,Default)]
 pub struct Pattern {
   pub empty: bool,
@@ -77,4 +80,5 @@ impl Template {
   pub fn set_reversion(&mut self, tks: Tokens) {
     self.reversion = Some(tks);
   }
+
 }

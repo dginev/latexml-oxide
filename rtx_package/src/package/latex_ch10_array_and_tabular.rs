@@ -52,7 +52,7 @@ LoadDefinitions!(state, {
   // Typical keys are width, vattach,...
   // DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
-    sub[stomach, template, attributes] {
+    sub[_stomach, _template, _attributes] {
     // my %attr = ($attributes ? $attributes->getPairs : ());
     // if (my $va = $attr{vattach}) {
     //   $attr{vattach} = translateAttachment($va) || ToString($va); }
@@ -78,7 +78,7 @@ LoadDefinitions!(state, {
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     sizer        => "#3",
-    after_digest  => sub[stomach,args,whatsit] {
+    after_digest  => sub[_stomach,_args,_whatsit] {
       // if (my $alignment = LookupValue("Alignment")) {
       //   my $attr = $alignment->getProperty("attributes");
       //   $$attr{vattach} = translateAttachment($whatsit->getArg(1)); }
@@ -105,7 +105,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\cline{}", r"\noalign{\@cline{#1}}");
   DefConstructor!("\\@cline{}", "",
-    after_digest => sub[stomach, whatsit,state] {
+    after_digest => sub[_stomach, _whatsit,_state] {
       // my $cols = ToString($whatsit->getArg(1));
       // my @cols = ();
       // while ($cols =~ s/^,?(\d+)//) {
