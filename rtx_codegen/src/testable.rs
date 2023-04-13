@@ -25,7 +25,7 @@ pub fn compile_tests_at(input: DeriveInput) -> TokenStream {
     .flatten()
     .map(|pb| {
       let filebase = pb.file_stem().unwrap().to_string_lossy();
-      let file = pb.to_string_lossy();
+      let file = pb.strip_prefix("rtx/").unwrap().to_string_lossy();
       let fn_filename = filebase.replace(['-', ' ', '.'], "_");
       let fn_name = format_ident!("{fn_filename}_test");
       quote!(
