@@ -8,10 +8,11 @@ homepage = "https://github.com/dginev/rtx"
 repository = "https://github.com/dginev/rtx"
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in Rust"
+default-run = "rtx"
 
 [[bin]]
 name = "rtx"
-path = "src/main.rs"
+path = "bin/rtx.rs"
 
 [[bin]]
 name = "rtxmath"
