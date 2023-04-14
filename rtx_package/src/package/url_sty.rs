@@ -48,19 +48,19 @@ LoadDefinitions!(state, {
       close = T_OTHER!("}");
       gullet.read_balanced(false, state)?.unwrap_or_default()
     } else {
-      open = T_OTHER!(open.get_string());
+      open = open.as_other();
       close = open.clone();
       gullet.read_until_token(close.clone(), state)?
     };
     state.end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
-      .map(|t| T_OTHER!(t.get_string())).collect();
+      .map(|t| t.as_other()).collect();
 
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());
     url_wrapped.push(T_CS!("\\UrlRight"));
     let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
-        Tokens!(T_OTHER!(cmd)),
+        Tokens!(cmd.as_other()),
         Tokens!(open),
         Tokens!(close),
         Tokens::new(toks),

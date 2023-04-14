@@ -713,7 +713,7 @@ LoadDefinitions!(state, {
   DefParameterType!(BalancedParen, sub[gullet, _inner, _extra, state] {
     let tok_opt = gullet.read_x_token(None,false,state)?;
     let is_paren = match tok_opt {
-      Some(ref t) => t.get_string() == "(",
+      Some(ref t) => t.with_str(|ts| ts == "("),
       _ => false
     };
     if is_paren {

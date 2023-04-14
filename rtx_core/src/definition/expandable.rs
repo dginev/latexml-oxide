@@ -77,10 +77,10 @@ impl Definition for Expandable {
   fn get_parameters(&self) -> Option<&Parameters> { self.paramlist.as_ref() }
   fn get_cs(&self) -> Cow<Token> { Cow::Borrowed(&self.cs) }
   fn get_cs_name(&self) -> Cow<str> {
-    Cow::Borrowed(match self.alias {
-      Some(ref alias) => alias,
-      None => self.cs.get_cs_name(),
-    })
+    match self.alias {
+      Some(ref alias) => Cow::Borrowed(alias),
+      None => Cow::Owned(self.cs.with_cs_name(ToString::to_string)),
+    }
   }
   fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }

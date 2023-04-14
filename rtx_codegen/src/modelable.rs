@@ -79,7 +79,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 
       operations.push(quote!(
         model.set_schema_class(#classname,
-          HashSet::from_iter(vec![#(#elements_vec),*].iter().map(ToString::to_string)));
+          HashSet::from_iter(vec![#(#elements_vec),*].into_iter().map(rtx_core::common::arena::pin_static)));
       ));
     } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
       let prefix = caps.get(1).map_or("", |m| m.as_str()).to_string();

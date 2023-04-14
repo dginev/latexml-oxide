@@ -113,7 +113,7 @@ LoadDefinitions!(outer_state, {
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
   DefParameterType!(FontToken, reader => reader!(gullet, _inner, _extra, state, {
     let token = gullet.read_token(state).unwrap();
-    if FONT_TOKEN_RE.is_match(token.as_ref()) {
+    if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
       gullet.read_number(state)?;
     }
     token
@@ -387,8 +387,8 @@ LoadDefinitions!(outer_state, {
     // Let w/o AfterAssignment
     state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
-    let csname = newcs.get_cs_name().to_owned();
-    let internalcs = T_CS!(s!("\\@chardef@{}", csname));
+    let internalcs = newcs.with_cs_name(|csname|
+      T_CS!(s!("\\@chardef@{}", csname)));
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let decoded = font::decode(value.value_of() as u8, None, false, stomach, i_state)
         .map(|c| c.to_string()).unwrap_or_default();
@@ -431,11 +431,10 @@ LoadDefinitions!(outer_state, {
     // Let w/o AfterAssignment
     state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
-    let csname = newcs.get_cs_name().to_owned();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    let internalcs_opt = glyph.map(|_| T_CS!(s!("\\@mathchardef@{}", csname)));
+    let internalcs_opt = glyph.map(|_| newcs.with_cs_name(|csname| T_CS!(s!("\\@mathchardef@{csname}"))));
     let internalcs_2 = internalcs_opt.clone();
     if let Some(internalcs) = internalcs_opt {
       let mut glyph_props: HashMap<String, Stored> = HashMap::default();

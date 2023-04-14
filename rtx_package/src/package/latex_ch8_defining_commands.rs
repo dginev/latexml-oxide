@@ -72,7 +72,7 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\MakeRobust DefToken", sub[stomach, (cs), state] {
-    let mungedcs = T_CS!(s!("{} ",cs.get_string()));
+    let mungedcs = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
     // only if defined but not yet robust
     if LookupDefinition!(&cs).is_some() &&
        LookupDefinition!(&mungedcs).is_none() {

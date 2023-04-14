@@ -67,23 +67,22 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
   if let Some(boxobj) = box_opt {
     if let DigestedData::Whatsit(ref obj) = boxobj.data() {
       // careful w/alias in getCSName!
-      let name = obj
+      obj
         .read()
         .unwrap()
         .get_definition()
         .get_cs()
-        .get_cs_name()
-        .to_string();
-      SCRIPT_NAME_RE.captures(&name).map(|cap| {
-        (
-          cap.get(1).map_or("", |m| m.as_str()).to_owned(),
-          if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
-            Catcode::SUB
-          } else {
-            Catcode::SUPER
-          },
-        )
-      })
+        .with_cs_name(|name|
+          SCRIPT_NAME_RE.captures(&name).map(|cap| {
+          (
+            cap.get(1).map_or("", |m| m.as_str()).to_owned(),
+            if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
+              Catcode::SUB
+            } else {
+              Catcode::SUPER
+            },
+          )
+        }))
     } else {
       None
     }

@@ -298,7 +298,7 @@ pub fn step_counter(
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        reset_counter(c.get_string(), state);
+        c.with_str(|cstr| reset_counter(cstr, state));
       }
     }
   }
@@ -340,7 +340,7 @@ pub fn step_counter_gullet(
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        reset_counter(c.get_string(), state);
+        c.with_str(|cstr| reset_counter(cstr, state));
       }
     }
   }
@@ -592,7 +592,7 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   // and reset any within counters!
   let nested = state.lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
   for c in nested.unlist() {
-    reset_counter(c.get_string(), state);
+    c.with_str(|cstr| reset_counter(cstr, state));
   }
 }
 

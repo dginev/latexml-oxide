@@ -16,6 +16,7 @@ pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::cleaners::*;
 pub use rtx_core::common::float::{floatformat, Float};
 pub use rtx_core::common::font;
+pub use rtx_core::common::arena;
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::Glue;
 pub use rtx_core::common::locator::Locator;

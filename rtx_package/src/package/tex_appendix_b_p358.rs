@@ -336,10 +336,10 @@ LoadDefinitions!(state, {
     // should it be another datastructure?
     let thing = nodes.pop().unwrap();
     let not_node = nodes.pop().unwrap();
-    let text = match state.model.get_node_qname(thing) {
+    let text = state.model.with_node_qname(thing, |thing_str| match thing_str {
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
-    };
+    });
     if text.len() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
