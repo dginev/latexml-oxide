@@ -334,7 +334,7 @@ pub trait Definition: Object {
   fn stringify_type(&self, deftype: &str) -> String {
     let name = match self.get_alias() {
       Some(alias) => alias.to_string(),
-      None => self.get_cs().get_cs_name().to_string(),
+      None => self.get_cs().with_cs_name(ToString::to_string),
     };
     if let Some(parameters) = self.get_parameters() {
       s!("{}[{} {}]", deftype, name, parameters.stringify())

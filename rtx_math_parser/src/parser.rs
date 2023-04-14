@@ -4,13 +4,14 @@ use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::io::Cursor;
+use string_interner::symbol::SymbolU32;
 
 use rtx_core::common::arena;
 use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use rtx_core::{fatal, map, s, static_map, Error};
+use rtx_core::{fatal, map, raw_map, s, static_map, Error};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -53,13 +54,13 @@ pub struct MathParser {
   engine: Parser,
   pub expert_pragmatics: Vec<ValidationPragmatics>,
   pub student_pragmatics: Vec<ValidationPragmatics>,
-  passed: HashMap<String, usize>,
-  failed: HashMap<String, usize>,
-  unknowns: HashMap<String, usize>,
+  passed: HashMap<SymbolU32, usize>,
+  failed: HashMap<SymbolU32, usize>,
+  unknowns: HashMap<SymbolU32, usize>,
   // punctuation: HashMap<String, usize>,
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
-  maybe_functions: HashMap<String, usize>,
+  maybe_functions: HashMap<SymbolU32, usize>,
   n_parsed: usize,
   // strict: bool,
   // warned: bool,
@@ -181,8 +182,11 @@ impl MathParser {
 
   // ================================================================================
   pub fn clear(&mut self) {
-    self.passed = map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0);
-    self.failed = map!("ltx:XMath" => 0, "ltx:XMArg" => 0, "ltx:XMWrap" => 0 );
+    self.passed = raw_map!(arena::pin_static("ltx:XMath") => 0, arena::pin_static("ltx:XMArg") => 0,
+      arena::pin_static("ltx:XMWrap") => 0);
+    self.failed = raw_map!(arena::pin_static("ltx:XMath") => 0,
+      arena::pin_static("ltx:XMArg") => 0,
+      arena::pin_static("ltx:XMWrap") => 0 );
     self.unknowns = HashMap::default();
     self.maybe_functions = HashMap::default();
     self.n_parsed = 0;
@@ -303,7 +307,7 @@ impl MathParser {
     for nested in document.findnodes("descendant::ltx:XMath", Some(node), state) {
       self.parse(nested, document, state)?;
     }
-    let tag = arena::as_static(document.get_node_qname(node, state));
+    let tag = document.get_node_qname(node, state);
     let rule = if let Some(requested_rule) = node.get_attribute("rule") {
       requested_rule
     } else {
@@ -314,8 +318,8 @@ impl MathParser {
       self.parse_kludge(node, document, state);
       Ok(None)
     } else if let Some(mut result) = self.parse_single(node, document, state, &rule)? {
-      *self.passed.entry(tag.to_string()).or_insert(0) += 1;
-      if tag == "ltx:XMath" {
+      *self.passed.entry(tag).or_insert(0) += 1;
+      if tag == arena::pin_static("ltx:XMath") {
         // Replace the content of XMath with parsed result
         self.n_parsed += 1;
         note_progress(&s!("[{}]", self.n_parsed));
@@ -339,7 +343,7 @@ impl MathParser {
 
         // add to result, even allowing modification of xml node, since we're committed.
         // [Annotate converts node to array which messes up clearing the id!]
-        let rtag = arena::as_static(document.get_node_qname(&result, state));
+        let rtag = document.get_node_qname(&result, state);
         // TODO: Is this needed in a world where `result` is always a `Node` ?
         // // // Make sure font is "Appropriate", if we're creating a new token (yuck)
         // // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
@@ -359,7 +363,7 @@ impl MathParser {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
         for (key, value) in attr {
-          if !(key.starts_with('_') || document.can_have_attribute(rtag, &key, state)) {
+          if !(key.starts_with('_') || arena::with(rtag, |rtag_str| document.can_have_attribute(rtag_str, &key, state))) {
             continue;
           }
           if key == "xml:id" {
@@ -406,19 +410,19 @@ impl MathParser {
   ) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
-      match tag {
+      arena::with(tag, |tag_str| match tag_str {
         "ltx:XMArg" => {
-          self.parse_rec(&mut child, "Anything", document, state)?;
+          self.parse_rec(&mut child, "Anything", document, state)
         },
         "ltx:XMWrap" => {
-          self.parse_rec(&mut child, "Anything", document, state)?;
+          self.parse_rec(&mut child, "Anything", document, state)
         },
         "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
-          self.parse_children(&mut child, document, state)?
+          self.parse_children(&mut child, document, state).map(|_| None)
         },
-        "ltx:XMDual" => self.parse_children(&mut child, document, state)?,
-        _ => {},
-      };
+        "ltx:XMDual" => self.parse_children(&mut child, document, state).map(|_| None),
+        _ => Ok(None),
+      })?;
     }
     Ok(())
   }
@@ -633,7 +637,7 @@ fn textrec(
       None => meaning,
     };
   }
-  match tag {
+  arena::with(tag, |tag_str| match tag_str {
     "ltx:XMApp" => {
       let mut args = element_nodes(&node);
       if args.is_empty() {
@@ -650,7 +654,7 @@ fn textrec(
         }
       }
 
-      let name = if document.get_node_qname(&op, state) == "ltx:XMTok" {
+      let name = if document.with_node_qname(&op, state,|name| name == "ltx:XMTok") {
         get_token_meaning(&op, document, state).unwrap_or_else(|| "unknown".to_owned())
       } else {
         String::new()
@@ -713,7 +717,7 @@ fn textrec(
     },
     "ltx:XMArray" => textrec_array(&node, state),
     _ => s!("[{}]", p_get_value(&node)),
-  }
+  })
 }
 
 fn textrec_apply(
@@ -869,7 +873,7 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State) -> Cow<'a, Node> {
-  if state.model.get_node_qname(node) == "ltx:XMRef" {
+  if state.model.with_node_qname(node, |name| name == "ltx:XMRef") {
     if let Some(idref) = node.get_attribute("idref") {
       // Can it happen that $realnode is, itself, an XMRef?
       // Then we should recurse recurse!

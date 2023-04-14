@@ -355,7 +355,7 @@ macro_rules! DefMathLigature {
       let mut node : Node;
       let mut node_mut = node_opt;
       for c in chars.iter() {
-        if lstate.model.get_node_qname(node_mut) != "ltx:XMTok" ||
+        if lstate.model.with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
            node_mut.get_content() != c.to_string() {
           return Ok(None);
         }

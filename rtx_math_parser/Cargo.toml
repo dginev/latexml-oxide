@@ -16,3 +16,4 @@ marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_for
 once_cell = "1.17.0"
 rustc-hash = "1.1.0"
 rtx_core = { path= "../rtx_core" }
+string-interner = {version = "0.14.0", default-features = false, features = ["std", "backends","inline-more"]}

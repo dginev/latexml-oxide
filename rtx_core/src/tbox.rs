@@ -54,7 +54,8 @@ impl PartialEq for Tbox {
 // Exported constructors
 impl fmt::Display for Tbox {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", arena::resolve(self.text))
+    arena::with(self.text, |text|
+      write!(f, "{}", text))
   }
 }
 impl Object for Tbox {
@@ -136,7 +137,7 @@ impl Tbox {
     }
   }
   /// checks if the text content is empty
-  pub fn is_empty(&self) -> bool { arena::resolve(self.text).is_empty() }
+  pub fn is_empty(&self) -> bool { arena::with(self.text, |text| text.is_empty()) }
 }
 
 impl BoxOps for Tbox {
@@ -150,7 +151,8 @@ impl BoxOps for Tbox {
     self.properties.insert(key.to_string(), value.into());
   }
   fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
-    Ok(Cow::Borrowed(arena::resolve(self.text)))
+    // TODO: Should we switch these to symbols? are they used often?
+    Ok(Cow::Owned(arena::with(self.text, |text| text.to_string())))
   }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {

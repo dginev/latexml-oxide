@@ -98,7 +98,7 @@ LoadDefinitions!(state, {
   let mut current;
   loop {
     let qn = state.model.get_node_qname(node_ref);
-    if qn == "ltx:XMTok" || qn == "ltx:XMWrap" {
+    if qn == arena::pin_static("ltx:XMTok") || qn == arena::pin_static("ltx:XMWrap") {
       let r = node_ref.get_attribute("role").unwrap_or_default();
       let f    = document.get_node_font(node_ref);
       let text = node_ref.get_content();
@@ -124,7 +124,7 @@ LoadDefinitions!(state, {
         break;
       }
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
-    } else if qn == "ltx:XMHint" {
+    } else if qn == arena::pin_static("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
         if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
           combined = s_char.to_string() + &combined;
@@ -197,7 +197,7 @@ LoadDefinitions!(state, {
        let mut n      = 0;
        let mut text = String::new();
        loop {
-         if state.model.get_node_qname(node_mut) != "ltx:XMTok"
+         if state.model.with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || document.get_node_font(node_mut) != font
           || node_mut.has_attribute("name") {
             break;

@@ -112,8 +112,7 @@ LoadDefinitions!(outer_state, {
       }
     }
     if let Some(init_token) = init {
-      let init_str = init_token.get_string();
-      let init_ch = init_str.chars().next().unwrap();
+      let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
       state.assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
       let body = gullet.read_until(&delim, state)?;

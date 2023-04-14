@@ -34,7 +34,7 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
   } else {
     match parse_prototype(&prototype, None) {
       Ok((cs, params_opt)) => {
-        let csname = cs.get_cs_name();
+        let csname = cs.with_cs_name(ToString::to_string);
         let proto_types: Vec<_> = if let Some(ref params) = params_opt {
           // if there is an *inner* parameter, as with {Number}
           // the name we want to pass in is the inner one. Otherwise the main one.

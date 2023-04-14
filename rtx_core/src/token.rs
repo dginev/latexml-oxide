@@ -278,9 +278,12 @@ pub struct Token {
 impl fmt::Debug for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     if self.code == Catcode::ARG {
-      write!(f, "\"#{}\"", self.get_string())
+      self.with_str(|text|
+        write!(f, "\"#{}\"", text))
     } else {
-      write!(f, "{:?}", self.get_string())
+      self.with_str(|text|
+        write!(f, "{:?}", text)
+      )
     }
   }
 }
@@ -290,7 +293,9 @@ impl Display for Token {
     if self.code == Catcode::ARG {
       write!(f, "#")?;
     }
-    write!(f, "{}", self.get_string())
+    self.with_str(|text|
+      write!(f, "{}", text)
+    )
   }
 }
 
@@ -595,11 +600,12 @@ impl<'a> Token {
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
-  pub fn get_cs_name(&'a self) -> &'a str {
+  pub fn with_cs_name<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&str) -> R {
     if self.code.is_primitive() {
-      self.code.name()
+      caller(self.code.name())
     } else {
-      self.get_string()
+      self.with_str(caller)
     }
   }
 
@@ -617,9 +623,8 @@ impl<'a> Token {
     let cc = self.code;
     if cc.is_executable() {
       self
-        .get_primitive_name()
-        .unwrap_or(self.get_string())
-        .to_string()
+        .get_primitive_name().map(ToString::to_string)
+        .unwrap_or_else(|| self.with_str(|text| text.to_string()))
     } else {
       String::new()
     }
@@ -635,19 +640,30 @@ impl<'a> Token {
     }
   }
 
-  /// Return the the borrowed &str "text" of the token
-  /// use `to_string` instead for an owned String
-  pub fn get_string(&self) -> &str { arena::resolve(self.text) }
+  /// Use the ticket representing the interned "text" of the token
+  pub fn get_sym(&self) -> SymbolU32 {
+    self.text
+  }
+  /// Use the interned &str "text" of the token
+  /// use `to_string` instead for an owned String with simpler
+  pub fn with_str<R,FnR>(&self, caller: FnR) -> R
+    where FnR: FnOnce(&str) -> R {
+    arena::with(self.text, caller)
+  }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
   /// sequence
   pub fn get_charcode(&self) -> u32 {
     if self.code == Catcode::CS {
       256
-    } else if let Some(c) = self.get_string().chars().next() {
-      c as u32
     } else {
-      0
+      self.with_str(|text|
+        if let Some(c) = text.chars().next() {
+          c as u32
+        } else {
+          0
+        }
+      )
     }
   }
 
@@ -664,7 +680,8 @@ impl<'a> Token {
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Token {
-    let ch = match self.get_string().chars().next() {
+    let first_c : Option<char> = self.with_str(|text| text.chars().next());
+    let ch = match first_c {
       Some(ch) => ch,
       None => return self,
     };
@@ -690,13 +707,22 @@ impl<'a> Token {
     self
   }
 
+  pub fn as_other(&self) -> Token {
+    Token {
+      text: self.text,
+      code: Catcode::OTHER,
+      smuggled: None
+    }
+  }
+
   pub fn substitute_parameters(self, args: &[&Token]) -> Self {
     if self.code == Catcode::ARG {
-      let arg_idx = self
-        .get_string()
-        .parse::<usize>()
-        .expect("ARG catcode tokens should always contain numeric literals as text");
-      args[arg_idx - 1].clone()
+      self.with_str(|text| {
+        let arg_idx = text
+          .parse::<usize>()
+          .expect("ARG catcode tokens should always contain numeric literals as text");
+        args[arg_idx - 1].clone()
+      })
     } else {
       self
     }
@@ -760,11 +786,9 @@ impl<'a> Token {
   // A Token reverts to itself
   pub fn revert(self) -> Token { self }
 
-  /// borrow the string content of this Token
-  pub fn as_str(&self) -> &str { self.get_string() }
   /// A string form which is primarily used for error-reporting
   pub fn stringify(&self) -> String {
-    let mut string = self.get_string().to_string();
+    let mut string = self.with_str(|text| text.to_string());
     // Make the token's char content more printable, since this is for a visual messages.
     if string.len() == 1 {
       let c = string.chars().next().unwrap() as u16;
@@ -781,31 +805,27 @@ impl<'a> Token {
     state.lookup_register_definition(self)
   }
 
-  pub fn to_number(&self) -> Number { Number::new(self.get_string().parse::<i64>().unwrap_or(0)) }
+  pub fn to_number(&self) -> Number { Number::new(self.with_str(|text| text.parse::<i64>()).unwrap_or(0)) }
 
   pub fn to_dimension(&self) -> Dimension {
-    Dimension::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+    Dimension::new_f64(self.with_str(|text| text.parse::<f64>().unwrap_or(0.0)))
   }
 
   pub fn to_mu_dimension(&self) -> MuDimension {
-    MuDimension::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+    MuDimension::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
-  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0)) }
+  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0)) }
 
   pub fn to_mu_glue(&self) -> MuGlue {
-    MuGlue::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+    MuGlue::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
   pub fn to_float(&self) -> Float {
-    Float::new_f64(self.get_string().parse::<f64>().unwrap_or(0.0))
+    Float::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
   pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
     stomach.digest(Tokens::new(vec![self]), state)
   }
-}
-
-impl AsRef<str> for Token {
-  fn as_ref(&self) -> &str { self.get_string() }
 }

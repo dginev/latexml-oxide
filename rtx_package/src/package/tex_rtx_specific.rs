@@ -308,10 +308,13 @@ LoadDefinitions!(state, {
   // This gets a more natural ordering
   Tag!("ltx:*", after_open_late => sub[document,node,state] {
     if node.has_attribute("_xmkey") {
-      let qname = document.get_node_qname(node, state);
-      if (qname != "ltx:XMRef") && qname.starts_with("ltx:XM") && !node.has_attribute("xml:id") {
-        document.generate_id(node, "", state)?;
-      }
+      let qsym = document.get_node_qname(node, state);
+      let out : Result<_> = arena::with(qsym, |qname| {
+        if (qname != "ltx:XMRef") && qname.starts_with("ltx:XM") && !node.has_attribute("xml:id") {
+          document.generate_id(node, "", state)?;
+        }
+        Ok(())
+      }); out?
     }
   });
 
@@ -320,7 +323,7 @@ LoadDefinitions!(state, {
     let mut refs = Vec::new();
     // Collect all children with _xmkey attribute
     for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node), state) {
-      if (document.get_node_qname(&n, state) == "ltx:XMRef") && !n.has_attribute("idref") {
+      if document.with_node_qname(&n, state, |qname| qname == "ltx:XMRef") && !n.has_attribute("idref") {
         refs.push(n);    // we'll fill these in next
       } else { // generate & record ids for all referenced noces
         let key = n.get_attribute("_xmkey").unwrap();

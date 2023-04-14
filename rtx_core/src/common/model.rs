@@ -19,6 +19,8 @@ use crate::Locator;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
+use super::arena::{H_PCDATA_SYM, H_COMMENT_SYM,EMPTY_SYM,WILD_CARD_SYM,H_PI_SYM,DTD_SYM,H_DOC_SYM};
+
 // use common::font::*;
 
 pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
@@ -37,11 +39,13 @@ pub struct TagFrame {
   attributes: HashSet<SymbolU32>,
 }
 
+static DEFAULT_TAG_FRAME :Lazy<TagFrame> = Lazy::new(|| TagFrame::default());
+
 #[derive(Default)]
 pub struct Model {
   pub schema: Option<Relaxng>,
   pub schema_data: Option<Vec<String>>,
-  pub schema_class: HashMap<String, HashSet<String>>,
+  pub schema_class: HashMap<SymbolU32, HashSet<SymbolU32>>,
   pub code_namespace_prefixes: HashMap<String, String>,
   pub code_namespaces: HashMap<String, String>,
   pub document_namespace_prefixes: HashMap<String, String>,
@@ -389,18 +393,18 @@ impl Model {
   /// Get the node's qualified name in standard form
   /// Ie. using the registered (code) prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-  pub fn get_node_qname<'a>(&'a self, node: &'a Node) -> &'static str {
+  pub fn get_node_qname<'a>(&'a self, node: &'a Node) -> SymbolU32 {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode";
+      return arena::pin("#BrokenNode");
     }
     match node_type.unwrap() {
-      TextNode => "#PCDATA",
-      DocumentNode => "#Document",
-      CommentNode => "#Comment",
-      PiNode => "#ProcessingInstruction",
-      DTDNode => "#DTD",
+      TextNode => arena::pin_static("#PCDATA"),
+      DocumentNode => arena::pin_static("#Document"),
+      CommentNode => arena::pin_static("#Comment"),
+      PiNode => arena::pin_static("#ProcessingInstruction"),
+      DTDNode => arena::pin_static("#DTD"),
       NamespaceDecl => {
         // match node.declared_uri() {
         //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
@@ -409,7 +413,7 @@ impl Model {
         //   },
         //   None => s!("xmlns")
         // }
-        "xmlns"
+        arena::pin_static("xmlns")
       },
       ElementNode | AttributeNode => {
         // match node.namespace_uri() {
@@ -420,10 +424,10 @@ impl Model {
         //   None => node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        let name_str = arena::as_static(node.get_name().as_str());
-        match name_str {
-          "song" | "verse" | "line" => name_str,
-          regular => arena::as_static(s!("ltx:{}", regular)),
+        let name_str = node.get_name();
+        match name_str.as_str() {
+          "song" | "verse" | "line" => arena::pin(name_str),
+          regular => arena::pin(s!("ltx:{}", regular)),
         }
       },
       // Need others?
@@ -431,6 +435,12 @@ impl Model {
         panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
       },
     }
+  }
+
+  pub fn with_node_qname<R,FnR>(&self, node: &Node, caller: FnR) -> R
+  where FnR: FnOnce(&str) -> R  {
+    arena::with(self.get_node_qname(node), |qname_str|
+      caller(qname_str))
   }
 
   /// Same as get_node_qname, but using the Document namespace prefixes
@@ -504,8 +514,44 @@ impl Model {
   // to submodel, in case it can evolve to more precision?
   // However, it would need more context to do that.
 
+  pub fn sym_can_contain(&mut self, tag:SymbolU32, child:SymbolU32) -> bool {
+    // Handle obvious cases explicitly.
+    if H_PCDATA_SYM.with(|sym| tag == *sym) ||
+       H_COMMENT_SYM.with(|sym| tag == *sym) ||
+       EMPTY_SYM.with(|sym| tag == *sym) {
+      return false
+    } else if WILD_CARD_SYM.with(|sym| tag == *sym) {
+      return true
+    };
+    if arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str)) ||
+      arena::with(child, |child_str| CAPTURE_TAG_RE.is_match(child_str)) {
+      // with or without namespace prefix
+      return true;
+    }
+
+    if WILD_CARD_SYM.with(|sym| child == *sym) ||
+      H_COMMENT_SYM.with(|sym| child == *sym) ||
+      H_PI_SYM.with(|sym| child == *sym) ||
+      DTD_SYM.with(|sym| child == *sym) {
+      return true
+    }
+
+    if self.permissive && H_DOC_SYM.with(|sym| tag == *sym) &&
+      H_PCDATA_SYM.with(|sym| child != *sym) {
+      return true; // No DTD? Punt!
+    }
+
+    // Else query tag properties.
+    let model = &mut self
+      .tagprop
+      .entry(tag)
+      .or_insert_with(TagFrame::default)
+      .model;
+    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(&child)
+  }
+
   /// Can an element with (qualified name) `tag` contain a `child` element?
-  pub fn can_contain(&mut self, tag: &str, child: &str) -> bool {
+  pub fn can_contain(&self, tag: &str, child: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
       "#PCDATA" | "#Comment" | "" => return false,
@@ -526,15 +572,15 @@ impl Model {
     }
 
     // Else query tag properties.
-    let model = &mut self
+    let model = &self
       .tagprop
-      .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default)
+      .get(&arena::pin(tag))
+      .unwrap_or(&*DEFAULT_TAG_FRAME)
       .model;
-    model.contains(&*ANY_SYM) || model.contains(&arena::pin(child))
+    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(&arena::pin(child))
   }
 
-  pub fn can_have_attribute(&mut self, tag: &str, attrib: &str) -> bool {
+  pub fn can_have_attribute(&self, tag: &str, attrib: &str) -> bool {
     // Handle obvious cases explicitly.
     match tag {
       "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => return false,
@@ -551,19 +597,19 @@ impl Model {
     }
 
     // Else query tag properties.
-    let attributes = &mut self
+    let attributes = &self
       .tagprop
-      .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default)
+      .get(&arena::pin(tag))
+      .unwrap_or(&*DEFAULT_TAG_FRAME)
       .attributes;
     attributes.contains(&arena::pin(attrib))
   }
 
   pub fn is_node_in_schema_class(&self, class_name: &str, tag: &Node) -> bool {
     let tag = self.get_node_qname(tag);
-    self.is_in_schema_class(class_name, tag)
+    self.is_in_schema_class(&arena::pin(class_name), &tag)
   }
-  pub fn is_in_schema_class(&self, class_name: &str, tag: &str) -> bool {
+  pub fn is_in_schema_class(&self, class_name: &SymbolU32, tag: &SymbolU32) -> bool {
     if let Some(class) = self.schema_class.get(class_name) {
       class.contains(tag)
     } else {
@@ -590,7 +636,7 @@ impl Model {
         let elements = caps.get(2).map_or("", |m| m.as_str());
         let mut class_set = HashSet::default();
         for set_element in elements.split(',').collect::<Vec<&str>>() {
-          class_set.insert(set_element.to_owned());
+          class_set.insert(arena::pin(set_element));
         }
         self.set_schema_class(classname, class_set);
       } else if let Some(caps) = NAMESPACE_MODEL_LINE_RE.captures(&line) {
@@ -609,27 +655,15 @@ impl Model {
   // Accessors
   //**********************************************************************
 
-  pub fn get_tags(&self) -> Vec<&str> {
+  pub fn get_tags(&self) -> Vec<&SymbolU32> {
     self
       .tagprop
       .keys()
-      .map(|key| arena::resolve(*key))
       .collect()
   }
   pub fn get_sym_tags(&self) -> Vec<SymbolU32> { self.tagprop.keys().copied().collect() }
 
-  pub fn get_tag_contents(&self, tag: &str) -> Vec<&str> {
-    match self.tagprop.get(&arena::pin(tag)) {
-      Some(h) => {
-        let mut keys: Vec<&str> = h.model.iter().map(|k| arena::resolve(*k)).collect();
-        keys.sort_unstable();
-        keys
-      },
-      None => Vec::new(),
-    }
-  }
-
-  pub fn get_sym_tag_contents(&self, tag: &SymbolU32) -> Vec<SymbolU32> {
+  pub fn get_tag_contents(&self, tag: &SymbolU32) -> Vec<SymbolU32> {
     match self.tagprop.get(tag) {
       Some(h) => h.model.iter().copied().collect(),
       None => Vec::new(),
@@ -647,16 +681,16 @@ impl Model {
     }
   }
 
-  pub fn get_tag_attributes(&self, tag: &str) -> Vec<&str> {
-    match self.tagprop.get(&arena::pin(tag)) {
-      Some(h) => {
-        let mut keys: Vec<&str> = h.attributes.iter().map(|s| arena::resolve(*s)).collect();
-        keys.sort_unstable();
-        keys
-      },
-      None => Vec::new(),
-    }
-  }
+  // pub fn get_tag_attributes(&self, tag: &str) -> Vec<&str> {
+  //   match self.tagprop.get(&arena::pin(tag)) {
+  //     Some(h) => {
+  //       let mut keys: Vec<&str> = h.attributes.iter().map(|s| arena::resolve(*s)).collect();
+  //       keys.sort_unstable();
+  //       keys
+  //     },
+  //     None => Vec::new(),
+  //   }
+  // }
 
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
     let frame = self
@@ -669,7 +703,7 @@ impl Model {
     }
   }
 
-  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<String>) {
-    self.schema_class.insert(classname.to_owned(), content);
+  pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymbolU32>) {
+    self.schema_class.insert(arena::pin(classname), content);
   }
 }

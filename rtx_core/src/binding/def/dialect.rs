@@ -92,8 +92,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 /// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
-  let name = token.get_string();
-  (name != "\\relax" && !name.starts_with("\\end"))
+  token.with_str(|name|  name != "\\relax" && !name.starts_with("\\end"))
     && (meaning.is_none() || (meaning == state.lookup_meaning(&TOKEN_RELAX)))
 }
 
@@ -121,7 +120,7 @@ pub fn def_conditional(
   gullet: &mut Gullet,
   state: &mut State,
 ) {
-  let cs_name = cs.get_cs_name();
+  arena::with(cs.get_sym(), |cs_name| {
   let locked_key = if let Some(true) = options.locked {
     s!("{}:locked", cs_name)
   } else {
@@ -190,6 +189,7 @@ pub fn def_conditional(
   if let Some(true) = options.locked {
     state.assign_value(&locked_key, true, None);
   }
+  })
 }
 
 /// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
@@ -208,9 +208,9 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let expansion = expansion_opt.unwrap_or_default();
   let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
-  if options.mathactive && cs.get_string().len() == 1 {
+  if options.mathactive && cs.with_str(|s| s.len()) == 1 {
     state.assign_mathcode(
-      cs.get_string().chars().next().unwrap(),
+      cs.with_str(|cstr| cstr.chars().next().unwrap()),
       0x8000u16,
       scope.clone(),
     );
@@ -317,7 +317,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   };
 
   // Not really right to set the value!
-  state.assign_value(cs.as_ref(), value, None);
+  cs.with_str(|key| state.assign_value(key, value, None));
   state.install_definition(
     Register {
       cs,
@@ -350,7 +350,7 @@ pub fn def_primitive(
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
-  let cs_name = cs.get_cs_name().to_owned();
+  let cs_name = cs.with_cs_name(ToString::to_string);
 
   if options.require_math {
     let cs_name_cloned = cs_name.clone();
@@ -434,9 +434,9 @@ pub fn def_math_dual(
   options: MathPrimitiveOptions,
   state: &mut State,
 ) {
-  let csname = cs.get_string();
-  let cont_cs = T_CS!(s!("{csname}@content"));
-  let pres_cs = T_CS!(s!("{csname}@presentation"));
+  let (cont_cs,pres_cs) = cs.with_str(|csname| (
+    T_CS!(s!("{csname}@content")),
+    T_CS!(s!("{csname}@presentation"))));
   let defcs = if options.robust {
     def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
   } else {
@@ -844,7 +844,7 @@ fn infer_sizer(
 }
 
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut State) -> Token {
-  let cs_str = format!("{} ", cs.get_string());
+  let cs_str = cs.with_str(|cstr| format!("{} ", cstr));
   let defcs = T_CS!(cs_str);
   let return_cs = defcs.clone();
   let expansion = Tokens!(T_CS!("\\protect"), defcs);
@@ -877,7 +877,7 @@ pub fn def_constructor(
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
   let is_locked = options.locked;
-  let cs_name = cs.get_cs_name().to_owned();
+  let cs_name = cs.with_cs_name(ToString::to_string);
   let locked_key = if is_locked {
     s!("{}:locked", cs_name)
   } else {
@@ -1347,7 +1347,7 @@ pub fn def_math(
     Some(ref plist) => plist.get_num_args(),
     None => 0,
   };
-  let csname = cs.get_string().to_string();
+  let csname = cs.with_str(ToString::to_string);
   let name_opt = {
     let name = match options.name {
       Some(ref name) => Cow::Owned(name.to_owned()),
@@ -1433,7 +1433,7 @@ fn transfer_common_constructor_options(
   options: MathPrimitiveOptions,
   cons: &mut Constructor,
 ) {
-  let cs_str = cs.get_string();
+  let cs_str = cs.with_str(ToString::to_string);
   let mut properties = options.to_hash_stored();
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.to_owned()));
   if let Some(sizer) = infer_sizer(&options.sizer, &options.reversion) {
