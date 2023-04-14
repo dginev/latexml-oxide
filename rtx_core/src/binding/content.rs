@@ -1171,7 +1171,8 @@ pub fn build_invocation<T: Into<Token>>(
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    Error!("undefined", token.get_cs_name(), gullet, state, message);
+    token.with_cs_name(|csname|
+      Error!("undefined", csname, gullet, state, message));
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });

@@ -71,7 +71,6 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   } else {
     mouth::tokenize(&literal, None)
   };
-
   quote!(
     macro_rules! these_tokens {
       () => {#tokenized}

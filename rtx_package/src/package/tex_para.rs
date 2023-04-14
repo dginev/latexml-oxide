@@ -7,26 +7,32 @@ LoadDefinitions!(state, {
   // thus it needs \par to check whether such indentation has been set.
   DefConstructor!("\\indent", sub[document,whatsit,state] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node,state);
+      let qsym = document.get_node_qname(&node,state);
+      let out : Result<()> = arena::with(qsym, |tag| {
       if tag == "ltx:para" {
         node.set_attribute("class","ltx_indent")?;
       } else if document.can_contain_somehow(tag,"ltx:para",state) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None, state)?;
       }
+      Ok(()) });
       // Otherwise ignore.
+      out?
     }
   });
   DefConstructor!("\\noindent", sub[document,whatsit,state] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node,state);
-      if tag == "ltx:para" {
-        node.set_attribute("class","ltx_noindent")?;
-      } else if document.can_contain_somehow(tag,"ltx:para",state) {
-        // Used in a position where a paragraph can be started, start
-        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None, state)?;
-      }
+      let qsym = document.get_node_qname(&node,state);
+      let out : Result<()> = arena::with(qsym, |tag| {
+        if tag == "ltx:para" {
+          node.set_attribute("class","ltx_noindent")?;
+        } else if document.can_contain_somehow(tag,"ltx:para",state) {
+          // Used in a position where a paragraph can be started, start
+          document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None, state)?;
+        }
+      Ok(())});
       // Otherwise ignore.
+      out?
     }
   });
 
@@ -44,15 +50,18 @@ LoadDefinitions!(state, {
         document.maybe_close_element("ltx:p", state)?;
         let element = document.get_element();
         if let Some(mut node) = element {
-          let qname = document.get_node_qname(&node, state);
-          // Only set on the para about to close, if unknown!
-          if qname == "ltx:para" && node.get_attribute("class").is_none() {
-            let class_str = prop_str!(props,"class");
-            document.set_attribute(&mut node, "class", class_str, state)?;
-          } else if qname == "ltx:figure" {
-            // insert breaks in figures, for vertically separating subfigures
-            document.insert_element("ltx:break",Vec::new(), None, state)?;
-          }
+          let qsym = document.get_node_qname(&node, state);
+          let out : Result<_> = arena::with(qsym, |qname| {
+            // Only set on the para about to close, if unknown!
+            if qname == "ltx:para" && node.get_attribute("class").is_none() {
+              let class_str = prop_str!(props,"class");
+              document.set_attribute(&mut node, "class", class_str, state)?;
+            } else if qname == "ltx:figure" {
+              // insert breaks in figures, for vertically separating subfigures
+              document.insert_element("ltx:break",Vec::new(), None, state)?;
+            }
+            Ok(()) });
+          out?
         }
         document.maybe_close_element("ltx:para", state)?;
       }

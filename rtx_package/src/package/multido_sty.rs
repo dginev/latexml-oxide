@@ -44,7 +44,10 @@ LoadDefinitions!(state, {
       let mut steps = Vec::new();
       gullet.skip_spaces(state);
       while let Some(var) = gullet.read_token(state) {
-        if let Some(cap) = DNIR_REX.captures(var.get_cs_name()) {
+        // TODO: this defeats the point of the performance optimization
+        // but it is so much *simpler* to allocate...
+        let csname = var.with_cs_name(ToString::to_string);
+        if let Some(cap) = DNIR_REX.captures(&csname) {
           let vtype = cap.get(1).map_or(String::new(), |m| m.as_str().to_lowercase());
           if gullet.read_keyword(&["="], state)?.is_none() {
             Error!("expected", "=", gullet, state, "Missing = in multido variables");

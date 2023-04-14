@@ -232,17 +232,18 @@ impl Tokens {
     let mut toks_iter = self.unlist_ref().iter();
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
-      if let Some(value) = toks_iter.next() {
-        kvs.add_value(
-          key.as_ref(),
-          Stored::Token(value.clone()),
-          false,
-          false,
-          state,
-        );
-      } else {
-        kvs.add_value(key.as_ref(), Stored::Tokens(Tokens!()), false, false, state);
-      }
+      key.with_str(|key_str|
+        if let Some(value) = toks_iter.next() {
+          kvs.add_value(
+            key_str,
+            Stored::Token(value.clone()),
+            false,
+            false,
+            state,
+          );
+        } else {
+          kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false, state);
+        });
     }
     kvs
   }
@@ -324,7 +325,7 @@ impl Tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(token.clone());
-      } else if let Some(ref arg) = args[&token.get_string().parse::<usize>().unwrap() - 1] {
+      } else if let Some(ref arg) = args[&token.with_str(|ts| ts.parse::<usize>().unwrap()) - 1] {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
@@ -363,7 +364,8 @@ impl Tokens {
       if cc == Catcode::LETTER {
         // keep "words" together, just for aesthetics
         while !tokens.is_empty() && tokens[0].get_catcode() == Catcode::LETTER {
-          token_string.push_str(tokens.pop_front().unwrap().get_string());
+          tokens.pop_front().unwrap().with_str(|front_str|
+            token_string.push_str(front_str));
         }
       }
 
@@ -437,7 +439,7 @@ impl Tokens {
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
-          rescanned.push(T_ARG!(next_t.unwrap()));
+          rescanned.push(Token { text: next_t.unwrap().get_sym(), code: Catcode::ARG, smuggled: None});
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
         } else {
@@ -510,14 +512,14 @@ impl ToTokens for Catcode {
 
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut TokenStream) {
-    let text = self.get_string();
     let code = self.get_catcode();
-    stream.extend(quote! {
-      Token {
-        text: rtx_core::common::arena::pin(#text),
-        code: #code,
-        smuggled: None
-      }
-    });
+    self.with_str(|text|
+      stream.extend(quote! {
+        Token {
+          text: rtx_core::common::arena::pin(#text),
+          code: #code,
+          smuggled: None
+        }
+      }));
   }
 }

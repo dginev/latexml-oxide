@@ -7,7 +7,7 @@ use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, PCDATA_SYM,GLOBAL_DEFS_SYM};
+use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, H_PCDATA_SYM, GLOBAL_DEFS_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -498,7 +498,7 @@ impl State {
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&GLOBAL_DEFS_SYM) {
+    if let Some(globaldefs) = GLOBAL_DEFS_SYM.with(|sym| self.value.get(sym)) {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
@@ -921,7 +921,7 @@ impl State {
     // (but not \let to a token)
     if token.get_catcode().is_active_or_cs() {
       let lookupname = token.text;
-      if lookupname != *EMPTY_SYM {
+      if lookupname != EMPTY_SYM.with(|sym| *sym) {
         match self.meaning.get(&lookupname) {
           Some(entry) => {
             if let Some(def) = entry.front() {
@@ -1276,7 +1276,7 @@ impl State {
   pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
     if token.get_catcode().is_active_or_cs()
       && !token.has_smuggled()
-      && token.text != *EMPTY_SYM
+      && token.text != EMPTY_SYM.with(|sym| *sym)
     {
       match self.meaning.get(&token.text) {
         Some(entry) => match entry.front() {
@@ -1306,24 +1306,25 @@ impl State {
         return;
       }
     }
-    self.assign_internal(TableName::Meaning, arena::pin(token.get_cs_name()), meaning, scope);
+    token.with_cs_name(|csname|
+      self.assign_internal(TableName::Meaning, arena::pin(csname), meaning, scope));
   }
 
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
     let cc = key.get_catcode();
-    let name = key.get_string();
-    let lookupname: Option<&str> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name.is_empty() {
+    let name = key.get_sym();
+    let lookupname: Option<SymbolU32> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
+      if name == EMPTY_SYM.with(|sym| *sym) {
         None
       } else {
         Some(name)
       }
     } else {
-      key.get_executable_primitive_name()
+      key.get_executable_primitive_name().map(arena::pin)
     };
 
     if let Some(lname) = lookupname {
-      self.meaning.get(&arena::pin(lname))
+      self.meaning.get(&lname)
     } else {
       None
     }
@@ -1346,7 +1347,7 @@ impl State {
         //      Does it have unintended side-effects? Are we missing useful code paths that
         // specifically deal with a Token      in Gullet, etc?
         Some(Stored::Token(entry)) => Some(Arc::new(Expandable {
-          cs: T_CS!(key),
+          cs: key.with_str(|k| T_CS!(k)),
           paramlist: None,
           expansion: entry.clone().into(),
           ..Expandable::default()
@@ -1377,7 +1378,7 @@ impl State {
         Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Arc::clone(entry))),
         Some(Stored::Register(entry)) => Some(Stored::Register(Arc::clone(entry))),
         Some(Stored::Token(entry)) => Some(Stored::Expandable(Arc::new(Expandable {
-          cs: T_CS!(key),
+          cs: key.with_str(|k| T_CS!(k)),
           paramlist: None,
           expansion: entry.clone().into(),
           ..Expandable::default()
@@ -1410,44 +1411,44 @@ impl State {
   /// Used for digestion.
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = token.get_catcode();
-    let name = token.get_string();
     let is_active_or_cs = cc.is_active_or_cs();
-    let lookupname = if is_active_or_cs
-      || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-        && self.lookup_bool("IN_MATH")
-        && (self.lookup_mathcode(name).unwrap_or(0) == 0x8000))
-    {
-      name
-    } else {
-      cc.name()
-    };
-
-    Debug!("Looking up digestable {:?}", lookupname);
-    let entry_opt = self.meaning.get(&arena::pin(lookupname));
-    if !lookupname.is_empty() && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
-      Debug!("Found definition for: {:?}", lookupname);
-      if let Some(entry) = entry_opt {
-        if let Some(front) = entry.front() {
-          if let Stored::Token(ref t) = front {
-            let lookupname = if t.has_smuggled() {
-              "\\relax"
-            } else {
-              t.get_executable_primitive_name().unwrap()
-            };
-            if let Some(retry_entry) = self.meaning.get(&arena::pin(lookupname)) {
-              // special case,
-              // If a cs has been let to an executable token, lookup ITS defn.
-              return retry_entry.front().cloned();
+    token.with_str(|name| {
+      let lookupname = if is_active_or_cs
+        || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
+          && self.lookup_bool("IN_MATH")
+          && (self.lookup_mathcode(name).unwrap_or(0) == 0x8000))
+      {
+        name
+      } else {
+        cc.name()
+      };
+      Debug!("Looking up digestable {:?}", lookupname);
+      let entry_opt = self.meaning.get(&arena::pin(lookupname));
+      if !lookupname.is_empty() && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
+        Debug!("Found definition for: {:?}", lookupname);
+        if let Some(entry) = entry_opt {
+          if let Some(front) = entry.front() {
+            if let Stored::Token(ref t) = front {
+              let lookupname = if t.has_smuggled() {
+                "\\relax"
+              } else {
+                t.get_executable_primitive_name().unwrap()
+              };
+              if let Some(retry_entry) = self.meaning.get(&arena::pin(lookupname)) {
+                // special case,
+                // If a cs has been let to an executable token, lookup ITS defn.
+                return retry_entry.front().cloned();
+              }
             }
+            // if a regular definition, just return.
+            return Some(front.clone());
           }
-          // if a regular definition, just return.
-          return Some(front.clone());
         }
+      } else if is_active_or_cs {
+        return None;
       }
-    } else if is_active_or_cs {
-      return None;
-    }
-    Some(token.into())
+      Some(token.into())
+    })
   }
 
   /// And a shorthand for installing definitions
@@ -1466,7 +1467,7 @@ impl State {
       Stored::Token(ref token) => Cow::Borrowed(token),
       _ => panic!("_wrong_argument_for_install_definition"),
     };
-    let cs = token.get_cs_name().to_owned();
+    let cs = token.with_cs_name(|name| name.to_owned());
     // info!("-- installing definition for: {:?}", token);
 
     let cs_locked = s!("{}:locked", cs);
@@ -1748,10 +1749,10 @@ impl State {
           *frame_count -= 1;
         }
       } else {
-        let message = s!(
+        let message = arena::with(key, |key_str| s!(
           "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
            is {:?}",
-          arena::resolve(key),
+          key_str,
           table_name,
           value,
           table_entry
@@ -1759,25 +1760,21 @@ impl State {
             .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(", ")
-        );
+        ));
         let stomach = self.stomach.read().unwrap();
-        Warn!("internal", arena::resolve(key), stomach, self, message);
+        arena::with(key, |key_str|
+          Warn!("internal", key_str, stomach, self, message));
       }
     }
   }
   /// return all known named scopes
-  pub fn get_known_scopes(&self) -> Vec<&str> {
-    let mut scopes = self.stash.keys()
-      .map(|k| arena::resolve(*k)).collect::<Vec<_>>();
-    scopes.sort();
-    scopes
+  pub fn get_known_scopes(&self) -> Vec<SymbolU32> {
+    self.stash.keys().copied().collect::<Vec<_>>()
   }
   /// return the currently activated named scopes
-  pub fn get_active_scopes(&self) -> Vec<&str> {
-    let mut scopes = self.stash_active.keys()
-      .map(|k| arena::resolve(*k)).collect::<Vec<_>>();
-    scopes.sort();
-    scopes
+  pub fn get_active_scopes(&self) -> Vec<SymbolU32> {
+    self.stash_active.keys()
+      .copied().collect::<Vec<_>>()
   }
 
   //======================================================================
@@ -1917,7 +1914,7 @@ impl State {
       imodel
         .entry(arena::pin("#Document"))
         .or_insert_with(HashMap::default)
-        .insert(*PCDATA_SYM, *LTX_P_SYM);
+        .insert(H_PCDATA_SYM.with(|sym| *sym), LTX_P_SYM.with(|sym| *sym));
     }
 
     imodel
@@ -1933,13 +1930,13 @@ impl State {
   ) {
     let start = match start_opt {
       Some(s) => s,
-      None => *EMPTY_SYM,
+      None => EMPTY_SYM.with(|sym| *sym),
     };
 
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<SymbolU32> = self.model.get_sym_tag_contents(&tag);
+    let tag_contents: Vec<SymbolU32> = self.model.get_tag_contents(&tag);
 
     for kid in tag_contents {
       if desc
@@ -1950,15 +1947,15 @@ impl State {
         continue;
       } // Already solved
 
-      if start != *EMPTY_SYM {
+      if start != EMPTY_SYM.with(|sym| *sym) {
         desc
           .entry(kid)
           .or_insert_with(HashMap::default)
           .insert(start, desirability);
       }
 
-      if kid != *PCDATA_SYM && openable.contains(&kid) {
-        let inner = if start != *EMPTY_SYM { start } else { kid };
+      if kid != H_PCDATA_SYM.with(|sym| *sym) && openable.contains(&kid) {
+        let inner = if start != EMPTY_SYM.with(|sym| *sym) { start } else { kid };
 
         self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
       }
@@ -2019,7 +2016,7 @@ impl State {
   /// Generate a stub definition for an undefined control-sequence,
   /// along with appropriate error messge.
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
-    let cs = token.get_cs_name();
+    token.with_cs_name(|cs| {
     self.note_status("undefined", cs); // TODO: Undefined:cs
                                        // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
@@ -2079,7 +2076,7 @@ impl State {
         //TODO: sizer => "X"),
         Some(Scope::Global),
       );
-    }
+    }});
     Ok(token.clone())
   }
 

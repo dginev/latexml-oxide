@@ -96,7 +96,7 @@ pub fn parse_def_parameters(
         n += 1;
       }
       if n > 0 {
-        let t_num = t.get_string().parse::<i8>().unwrap_or(-1);
+        let t_num = t.with_str(|ts| ts.parse::<i8>()).unwrap_or(-1);
         if t_num != n {
           fatal!(
             ParamSpec,
@@ -401,10 +401,10 @@ pub fn insert_block(
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    if state.model.get_node_qname(&nodes[0]) == "ltx:break" {
-      let break_parent_name = state.model.get_node_qname(&nodes[0].get_parent().unwrap());
+    if state.model.with_node_qname(&nodes[0], |qname| qname == "ltx:break") {
       // ltx:break are superflous, now, unless we're transporting a figure/float
-      if break_parent_name != "ltx:figure" && break_parent_name != "ltx:float" {
+      if state.model.with_node_qname(&nodes[0].get_parent().unwrap(),
+        |bp_name| bp_name != "ltx:figure" && bp_name != "ltx:float") {
         document.remove_node(&mut nodes.pop_front().unwrap());
         continue;
       }
@@ -443,12 +443,12 @@ pub fn insert_block(
       document.remove_node(&mut blocknode); // then remove the new block entirely
     } else if rows.len() == 1
       && crows.len() == 1
-      && state.model.get_node_qname(rows.first().unwrap()) == "ltx:p"
-      && document.can_contain(
-        &blocknode.get_parent().unwrap(),
-        state.model.get_node_qname(&crows[0]),
+      && state.model.with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
+      && arena::with(state.model.get_node_qname(&crows[0]),|qname|
+        document.can_contain(
+        &blocknode.get_parent().unwrap(),qname,
         state,
-      )
+      ))
     // TODO: && (!hasattr || blockattr.keys().any(...
     {
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
@@ -459,11 +459,12 @@ pub fn insert_block(
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
     } else if rows.len() == 1
-      && document.can_contain(
+      && arena::with(state.model.get_node_qname(&rows[0]), |qname|
+        document.can_contain(
         &blocknode.get_parent().unwrap(),
-        state.model.get_node_qname(&rows[0]),
+        qname,
         state,
-      )
+      ))
     // if allowed.
     // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
     {
@@ -608,8 +609,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   } else if children.len() == 1
     && state
       .model
-      .get_node_qname(children.first().as_ref().unwrap())
-      == "ltx:tabular"
+      .with_node_qname(children.first().as_ref().unwrap(), |qname| qname == "ltx:tabular")
   //// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        && !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
@@ -731,7 +731,7 @@ pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> String {
       Catcode::ARG => {
         // B Book, 294. Reduce to param+integer
         wv.push(T_PARAM!());
-        wv.push(T_OTHER!(t.get_string()));
+        wv.push(t.as_other());
       },
       _ => {
         wv.push(t.clone());
@@ -871,18 +871,17 @@ pub fn lowercase_token(token: Token, state: &State) -> Token {
 }
 
 fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
-  let initial_string = token.get_string();
+  let (chars_count, thischar) = token.with_str(|s| (s.chars().count(), s.chars().next()));
   // DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single
   // char-based (for now?)
-  if initial_string.chars().count() != 1 {
+  if chars_count != 1 {
     return token;
   }
   let mut result = String::new();
-  let thischar = initial_string.chars().next().unwrap();
   let cased = if is_upper {
-    state.lookup_uccode(thischar)
+    state.lookup_uccode(thischar.unwrap())
   } else {
-    state.lookup_lccode(thischar)
+    state.lookup_lccode(thischar.unwrap())
   };
   if let Some(code) = cased {
     if code != 0 {
@@ -892,12 +891,12 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
           .collect::<String>(),
       )
     } else {
-      result.push(thischar);
+      result.push(thischar.unwrap());
     }
   } else {
-    result.push(thischar);
+    result.push(thischar.unwrap());
   }
-  if result != initial_string {
+  if token.with_str(|initial_str| initial_str != result) {
     Token::new(result, token.get_catcode())
   } else {
     token
@@ -952,16 +951,16 @@ pub fn set_align_or_class(
   class: &str,
   state: &mut State,
 ) -> Result<()> {
-  let qname = state.model.get_node_qname(node);
-  if qname == "ltx:tag" {
-  }
-  // HACK
-  else if !align.is_empty() && state.model.can_have_attribute(qname, "align") {
-    node.set_attribute("align", align)?;
-  } else if !class.is_empty() && state.model.can_have_attribute(qname, "class") {
-    document.add_class(node, class, state)?;
-  }
-  Ok(())
+  let qsym = state.model.get_node_qname(node);
+  arena::with(qsym, |qname| {
+    if qname == "ltx:tag" { }
+    // HACK
+    else if !align.is_empty() && state.model.can_have_attribute(qname, "align") {
+      node.set_attribute("align", align)?;
+    } else if !class.is_empty() && state.model.can_have_attribute(qname, "class") {
+      document.add_class(node, class, state)?;
+    }
+    Ok(())})
 }
 
 pub fn make_generic_message(

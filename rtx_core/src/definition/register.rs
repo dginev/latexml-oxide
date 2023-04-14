@@ -462,7 +462,7 @@ impl Definition for Register {
   }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
-  fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.get_cs_name().to_owned()) }
+  fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.borrow().cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)
@@ -531,7 +531,7 @@ impl Register {
   /// runs the setter to assign the value for this register
   pub fn set_value(&self, value: RegisterValue, args: Vec<ArgWrap>, state: &mut State) {
     if self.register_type == RegisterType::CharDef {
-      let message = s!("Can't assign to chardef {}", self.cs.get_cs_name());
+      let message = self.cs.with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
       Error!("unexpected", "chardef", None, state, message);
     } else {
       (self.setter)(value, args, state);

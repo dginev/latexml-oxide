@@ -1,11 +1,13 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::mem;
 use std::sync::Arc;
 
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -28,8 +30,9 @@ use crate::tokens::Tokens;
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
-static SMUGGLE_THE_COMMANDS: Lazy<HashSet<&'static str>> =
-  Lazy::new(|| set!("\\the", "\\showthe", "\\unexpanded", "\\detokenize"));
+static SMUGGLE_THE_COMMANDS: Lazy<HashSet<SymbolU32>> = Lazy::new(||
+  set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
+    arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize")));
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
@@ -346,7 +349,7 @@ impl Gullet {
     state: &mut State,
   ) -> Result<Option<Token>> {
     let mut expansion = defn.invoke(self, false, state)?;
-    if SMUGGLE_THE_COMMANDS.contains(defn.get_cs().get_string()) {
+    if SMUGGLE_THE_COMMANDS.contains(&defn.get_cs().get_sym()) {
       // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
       // at the exact time the token leaves the pushback.
       // This is *required to be different* from the noexpand flag, as per the B Book
@@ -517,7 +520,7 @@ impl Gullet {
       let mut matched = Vec::new();
       while !to_match.is_empty() {
         if let Some(tok) = self.read_x_token(Some(false), false, state)? {
-          let cmp_tok = tok.get_string().to_uppercase();
+          let cmp_tok = tok.with_str(|s| s.to_uppercase());
           matched.push(tok);
           if cmp_tok == to_match[0].to_string() {
             to_match.pop_front();
@@ -702,7 +705,7 @@ impl Gullet {
     match self.read_non_space(state) {
       None => Ok(None),
       Some(t) => {
-        if t.get_catcode() == Catcode::OTHER && t.get_string() == "[" {
+        if t.get_catcode() == Catcode::OTHER && t.get_sym() == arena::pin_static("[") {
           Ok(Some(self.read_until(&Tokens!(T_OTHER!("]")), state)?))
         } else {
           self.unread_one(t);
@@ -916,7 +919,7 @@ impl Gullet {
     let s = if is_negative { -1.0 } else { 1.0 };
     let mut string = self.read_digits(&DIGIT_RE, true, state)?;
     let mut token = self.read_x_token(None, false, state)?;
-    if token.is_some() && token.as_ref().unwrap().get_string() == "." {
+    if token.is_some() && token.as_ref().unwrap().get_sym() == arena::pin_static(".") {
       string = s!("{string}.{}", self.read_digits(&DIGIT_RE, true, state)?);
       token = self.read_x_token(None, false, state)?;
     }
@@ -1372,10 +1375,10 @@ impl Gullet {
   fn read_optional_signs(&mut self, state: &mut State) -> Result<bool> {
     let mut sign = false;
     while let Some(t) = self.read_x_token(None, false, state)? {
-      let token_text = t.get_string();
-      if token_text == "-" {
+      let sym = t.get_sym();
+      if sym == arena::pin_static("-") {
         sign = !sign;
-      } else if (token_text != "+") && t.get_catcode() != Catcode::SPACE {
+      } else if (sym != arena::pin_static("+")) && t.get_catcode() != Catcode::SPACE {
         self.unread_one(t); // Unread and end
         break;
       }
@@ -1386,9 +1389,12 @@ impl Gullet {
   fn read_digits(&mut self, range_regex: &Regex, skip: bool, state: &mut State) -> Result<String> {
     let mut result = String::new();
     while let Some(token) = self.read_x_token(None, false, state)? {
-      let digit = token.get_string();
-      if digit.len() == 1 && range_regex.is_match(digit) {
-        result.push_str(digit);
+      let digit_opt = token.with_str(|s|
+        if s.len() == 1 && range_regex.is_match(s) {
+          s.chars().next()
+        } else { None });
+      if let Some(digit) = digit_opt {
+        result.push(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
           self.unread_one(token);
@@ -1406,8 +1412,8 @@ impl Gullet {
     let mut factor = self.read_digits(&DIGIT_RE, false, state)?;
     let mut token_opt = self.read_x_token(None, false, state)?;
     if let Some(ref token) = token_opt {
-      let token_string = token.get_string();
-      if token_string == "." || token_string == "," {
+      let sym = token.get_sym();
+      if sym == arena::pin_static(".") || sym == arena::pin_static(",") {
         factor = s!("{}.{}", factor, self.read_digits(&DIGIT_RE, false, state)?);
         token_opt = self.read_x_token(None, false, state)?;
       }

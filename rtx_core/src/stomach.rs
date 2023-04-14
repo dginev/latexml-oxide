@@ -352,8 +352,8 @@ impl<'t> Stomach {
     token: &'t Token,
     state: &mut State,
   ) -> Result<Vec<Digested>> {
-    let cs = token.get_cs_name();
-    state.note_status("undefined", cs);
+    let cs = token.with_cs_name(|cs| String::from(cs));
+    state.note_status("undefined", &cs);
 
     // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
@@ -373,7 +373,7 @@ impl<'t> Stomach {
         Expandable::new(
           T_CS!(s!("\\{}true", name)),
           None,
-          Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iftrue")),
+          Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iftrue")),
           None,
           state,
         ),
@@ -450,7 +450,7 @@ impl<'t> Stomach {
         Ok(Some(Digested::from(comment)))
       },
       _ => {
-        let text = font::decode_string(meaning.get_string(), None, true, self, state);
+        let text = meaning.with_str(|m_str| font::decode_string(m_str, None, true, self, state));
         Ok(Some(Digested::from(Tbox::new(
           text,
           None,

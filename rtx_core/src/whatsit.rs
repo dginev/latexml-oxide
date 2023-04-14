@@ -167,19 +167,20 @@ impl Whatsit {
         // Non '#'; copy it
         result.push(token);
       } else {
-        let s = token.get_string();
-        let n = s.parse::<usize>().unwrap() - 1;
-        let arg_opt = if n < 10 {
-          args[n].clone()
-        } else {
-          match props.get(s) {
-            Some(Stored::Digested(v)) => Some((*v).clone()),
-            Some(other) => {
-              panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}")
-            },
-            None => None,
+        let arg_opt = token.with_str(|s| {
+          let n = s.parse::<usize>().unwrap() - 1;
+          if n < 10 {
+            args[n].clone()
+          } else {
+            match props.get(s) {
+              Some(Stored::Digested(v)) => Some((*v).clone()),
+              Some(other) => {
+                panic!("unexpected prop in substitute_parameters, needed Digested, got: {other:?}")
+              },
+              None => None,
+            }
           }
-        };
+        });
         if let Some(arg) = arg_opt {
           result.extend(arg.revert(state)?.unlist());
         }
@@ -193,7 +194,7 @@ impl fmt::Debug for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "Whatsit[")?;
     let mut pieces = Vec::new();
-    pieces.push(self.get_definition().get_cs().get_cs_name().to_string());
+    pieces.push(self.get_definition().get_cs().with_cs_name(ToString::to_string));
     for arg_opt in self.get_args() {
       if let Some(arg) = arg_opt {
         pieces.push(arg.stringify());
