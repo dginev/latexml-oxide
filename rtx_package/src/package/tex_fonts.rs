@@ -434,7 +434,7 @@ LoadDefinitions!(outer_state, {
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    let internalcs_opt = glyph.map(|_| newcs.with_cs_name(|csname| T_CS!(s!("\\@mathchardef@{csname}"))));
+    let internalcs_opt = glyph.map(|_| T_CS!(newcs.with_cs_name(|csname| s!("\\@mathchardef@{csname}"))));
     let internalcs_2 = internalcs_opt.clone();
     if let Some(internalcs) = internalcs_opt {
       let mut glyph_props: HashMap<String, Stored> = HashMap::default();

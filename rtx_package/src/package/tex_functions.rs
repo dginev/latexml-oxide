@@ -401,10 +401,11 @@ pub fn insert_block(
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    if state.model.with_node_qname(&nodes[0], |qname| qname == "ltx:break") {
+    let qname = document.get_node_qname(&nodes[0], state);
+    if qname == arena::pin_static("ltx:break") {
       // ltx:break are superflous, now, unless we're transporting a figure/float
-      if state.model.with_node_qname(&nodes[0].get_parent().unwrap(),
-        |bp_name| bp_name != "ltx:figure" && bp_name != "ltx:float") {
+      let bp_name = document.get_node_qname(&nodes[0].get_parent().unwrap(), state);
+      if bp_name != arena::pin_static("ltx:figure") && bp_name != arena::pin_static("ltx:float") {
         document.remove_node(&mut nodes.pop_front().unwrap());
         continue;
       }
@@ -444,11 +445,11 @@ pub fn insert_block(
     } else if rows.len() == 1
       && crows.len() == 1
       && state.model.with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
-      && arena::with(state.model.get_node_qname(&crows[0]),|qname|
-        document.can_contain(
-        &blocknode.get_parent().unwrap(),qname,
+      && document.can_contain_sym(
+        &blocknode.get_parent().unwrap(),
+        state.model.get_node_qname(&crows[0]),
         state,
-      ))
+      )
     // TODO: && (!hasattr || blockattr.keys().any(...
     {
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
@@ -459,12 +460,11 @@ pub fn insert_block(
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
     } else if rows.len() == 1
-      && arena::with(state.model.get_node_qname(&rows[0]), |qname|
-        document.can_contain(
+      && document.can_contain_sym(
         &blocknode.get_parent().unwrap(),
-        qname,
+        state.model.get_node_qname(&rows[0]),
         state,
-      ))
+      )
     // if allowed.
     // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
     {

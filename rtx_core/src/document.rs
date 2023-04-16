@@ -1360,6 +1360,10 @@ impl Document {
     state.model.can_contain(tag, child)
   }
 
+  pub fn can_contain_sym(&self, node: &Node, child: SymbolU32, state: &mut State) -> bool {
+    let tag = state.model.get_node_qname(node);
+    state.model.can_contain_sym(tag, child)
+  }
   pub fn can_contain_qsym(&self, tag: SymbolU32, child: SymbolU32, state: &mut State) -> bool {
     state.model.can_contain_sym(tag, child)
   }
@@ -1796,7 +1800,7 @@ impl Document {
         // TODO: can we avoid the clone here? there is a mutability conflict...
         let node_font = self.get_node_font(&self.node).clone();
         // TODO: avoid this clone?
-        let inter_string = arena::with(inter, ToString::to_string);
+        let inter_string = arena::to_string(inter);
         self.open_element(&inter_string, None, Some(&node_font), state)?;
 
         return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should
@@ -3282,7 +3286,7 @@ impl Document {
 
           let tag_sym = self.get_node_qname(&child, state);
           // TODO: do NOT allocate
-          let tag = arena::with(tag_sym, ToString::to_string);
+          let tag = arena::to_string(tag_sym);
           let mut new = self.open_element_at(node, &tag, Some(attributes), None, state)?;
           self.append_tree(&mut new, child.get_child_nodes(), state)?;
           self.close_element_at(&mut new, state)?;

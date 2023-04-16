@@ -308,13 +308,11 @@ LoadDefinitions!(state, {
   // This gets a more natural ordering
   Tag!("ltx:*", after_open_late => sub[document,node,state] {
     if node.has_attribute("_xmkey") {
-      let qsym = document.get_node_qname(node, state);
-      let out : Result<_> = arena::with(qsym, |qname| {
-        if (qname != "ltx:XMRef") && qname.starts_with("ltx:XM") && !node.has_attribute("xml:id") {
-          document.generate_id(node, "", state)?;
-        }
-        Ok(())
-      }); out?
+      let qname = document.get_node_qname(node, state);
+      if (qname != arena::pin_static("ltx:XMRef")) &&
+        arena::with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
+        document.generate_id(node, "", state)?;
+      }
     }
   });
 

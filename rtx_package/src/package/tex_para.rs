@@ -7,17 +7,15 @@ LoadDefinitions!(state, {
   // thus it needs \par to check whether such indentation has been set.
   DefConstructor!("\\indent", sub[document,whatsit,state] {
     if let Some(mut node) = document.get_element() {
-      let qsym = document.get_node_qname(&node,state);
-      let out : Result<()> = arena::with(qsym, |tag| {
-      if tag == "ltx:para" {
+      let tag = document.get_node_qname(&node,state);
+      let para_tag = arena::pin("ltx:para");
+      if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
-      } else if document.can_contain_somehow(tag,"ltx:para",state) {
+      } else if document.sym_can_contain_somehow(tag,para_tag,state) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None, state)?;
       }
-      Ok(()) });
       // Otherwise ignore.
-      out?
     }
   });
   DefConstructor!("\\noindent", sub[document,whatsit,state] {
