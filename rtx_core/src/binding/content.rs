@@ -1248,7 +1248,8 @@ pub fn load_font_map<'a>(encoding: &'a str, state: &'a State) -> Option<&'a Font
 }
 pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
-  if state.lookup_value(&s!("{encoding}_fontmap")).is_some() {
+  let sym = arena::pin(s!("{encoding}_fontmap"));
+  if state.lookup_value_sym(&sym).is_some() {
     return Ok(());
   }
   let fail_key = s!("{encoding}_fontmap_failed_to_load");

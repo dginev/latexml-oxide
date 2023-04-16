@@ -7,7 +7,7 @@ use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, H_PCDATA_SYM, GLOBAL_DEFS_SYM};
+use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, H_PCDATA_SYM, GLOBAL_DEFS_SYM, FONT_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -632,6 +632,17 @@ impl State {
       },
     }
   }
+  #[inline(always)]
+  pub fn lookup_value_sym(&self, key: &SymbolU32) -> Option<&Stored> {
+    match self.value.get(key) {
+      None => None,
+      Some(vvec) => match vvec.front() {
+        None | Some(Stored::None) => None,
+        Some(other) => Some(other),
+      },
+    }
+  }
+
   /// mutably borrows a Stored value at the given key, from the Value table
   pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
     match self.value.get_mut(&arena::pin(key)) {
@@ -690,6 +701,17 @@ impl State {
     let scope = scope.into();
     let key_sym = arena::pin(key);
     self.assign_internal(TableName::Value, key_sym, value, scope);
+  }
+  /// assigns a `Stored` value at the given (arena ticket!) key and scope
+  pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
+    &mut self,
+    key: SymbolU32,
+    value: T,
+    scope: S,
+  ) {
+    let value = value.into();
+    let scope = scope.into();
+    self.assign_internal(TableName::Value, key, value, scope);
   }
 
   /// manage a (global) list of values
@@ -820,7 +842,7 @@ impl State {
   /// convenience method to lookup the current value at the "font" key
   #[inline(always)]
   pub fn lookup_font(&self) -> Option<Arc<Font>> {
-    match self.lookup_value("font") {
+    match self.lookup_value_sym(&FONT_SYM.with(|sym| *sym)) {
       None | Some(Stored::None) => None,
       Some(f) => f.into(),
     }
@@ -1120,10 +1142,18 @@ impl State {
     );
   }
   /// like `lookup_catcode` but targets Mathcode and its table
-  #[inline]
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
     let key_sym = arena::pin(key);
     match self.mathcode.get(&key_sym) {
+      Some(c) => match c.front() {
+        Some(Stored::Charcode(codeval)) => Some(*codeval),
+        _ => None,
+      },
+      None => None,
+    }
+  }
+  pub fn lookup_mathcode_sym(&self, key_sym: &SymbolU32) -> Option<u16> {
+    match self.mathcode.get(key_sym) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1306,8 +1336,8 @@ impl State {
         return;
       }
     }
-    token.with_cs_name(|csname|
-      self.assign_internal(TableName::Meaning, arena::pin(csname), meaning, scope));
+    let csname_sym = token.pin_cs_name();
+    self.assign_internal(TableName::Meaning, csname_sym, meaning, scope);
   }
 
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
@@ -1347,7 +1377,7 @@ impl State {
         //      Does it have unintended side-effects? Are we missing useful code paths that
         // specifically deal with a Token      in Gullet, etc?
         Some(Stored::Token(entry)) => Some(Arc::new(Expandable {
-          cs: key.with_str(|k| T_CS!(k)),
+          cs: key.as_cs(),
           paramlist: None,
           expansion: entry.clone().into(),
           ..Expandable::default()
@@ -1411,44 +1441,44 @@ impl State {
   /// Used for digestion.
   pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
     let cc = token.get_catcode();
+    let t_sym = token.get_sym();
     let is_active_or_cs = cc.is_active_or_cs();
-    token.with_str(|name| {
-      let lookupname = if is_active_or_cs
-        || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-          && self.lookup_bool("IN_MATH")
-          && (self.lookup_mathcode(name).unwrap_or(0) == 0x8000))
-      {
-        name
-      } else {
-        cc.name()
-      };
-      Debug!("Looking up digestable {:?}", lookupname);
-      let entry_opt = self.meaning.get(&arena::pin(lookupname));
-      if !lookupname.is_empty() && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
-        Debug!("Found definition for: {:?}", lookupname);
-        if let Some(entry) = entry_opt {
-          if let Some(front) = entry.front() {
-            if let Stored::Token(ref t) = front {
-              let lookupname = if t.has_smuggled() {
-                "\\relax"
-              } else {
-                t.get_executable_primitive_name().unwrap()
-              };
-              if let Some(retry_entry) = self.meaning.get(&arena::pin(lookupname)) {
-                // special case,
-                // If a cs has been let to an executable token, lookup ITS defn.
-                return retry_entry.front().cloned();
-              }
+    let lookup_sym = if is_active_or_cs
+      || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
+        && self.lookup_bool("IN_MATH")
+        && (self.lookup_mathcode_sym(&t_sym).unwrap_or(0) == 0x8000))
+    {
+      t_sym
+    } else {
+      arena::pin(cc.name())
+    };
+    // Debug!("Looking up digestable {:?}", lookupname);
+    let entry_opt = self.meaning.get(&lookup_sym);
+    if lookup_sym != EMPTY_SYM.with(|sym| *sym) && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
+      // Debug!("Found definition for: {:?}", lookupname);
+      if let Some(entry) = entry_opt {
+        if let Some(front) = entry.front() {
+          if let Stored::Token(ref t) = front {
+            let lookup_sym = if t.has_smuggled() {
+              arena::pin_static("\\relax")
+            } else {
+              arena::pin(t.get_executable_primitive_name().unwrap())
+            };
+            if let Some(retry_entry) = self.meaning.get(&lookup_sym) {
+              // special case,
+              // If a cs has been let to an executable token, lookup ITS defn.
+              return retry_entry.front().cloned();
             }
-            // if a regular definition, just return.
-            return Some(front.clone());
           }
+          // if a regular definition, just return.
+          return Some(front.clone());
         }
-      } else if is_active_or_cs {
-        return None;
       }
-      Some(token.into())
-    })
+    } else if is_active_or_cs {
+      return None;
+    }
+    Some(token.into())
+
   }
 
   /// And a shorthand for installing definitions
@@ -2016,8 +2046,8 @@ impl State {
   /// Generate a stub definition for an undefined control-sequence,
   /// along with appropriate error messge.
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
-    token.with_cs_name(|cs| {
-    self.note_status("undefined", cs); // TODO: Undefined:cs
+    let cs = token.with_cs_name(ToString::to_string);
+    self.note_status("undefined", &cs); // TODO: Undefined:cs
                                        // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
@@ -2076,7 +2106,7 @@ impl State {
         //TODO: sizer => "X"),
         Some(Scope::Global),
       );
-    }});
+    }
     Ok(token.clone())
   }
 

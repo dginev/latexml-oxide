@@ -73,7 +73,7 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
         .get_definition()
         .get_cs()
         .with_cs_name(|name|
-          SCRIPT_NAME_RE.captures(&name).map(|cap| {
+          SCRIPT_NAME_RE.captures(name).map(|cap| {
           (
             cap.get(1).map_or("", |m| m.as_str()).to_owned(),
             if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {

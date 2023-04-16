@@ -1023,6 +1023,10 @@ macro_rules! RefStepID {
 }
 #[macro_export]
 macro_rules! ResetCounter {
+  ($ctr:literal) => {{
+    bind_state_mut!(st);
+    reset_counter(&T_OTHER!($ctr), st)
+  }};
   ($ctr:expr) => {{
     bind_state_mut!(st);
     reset_counter($ctr, st)
