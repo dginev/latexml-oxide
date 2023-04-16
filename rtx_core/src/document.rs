@@ -16,7 +16,7 @@ use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
-use crate::common::arena::{self, LTX_STAR_SYM, H_PCDATA_SYM, CAPTURE_SYM, EMPTY_SYM};
+use crate::common::arena::{self, LTX_STAR_SYM, H_PCDATA_SYM, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, XML_ID_SYM};
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
@@ -269,7 +269,7 @@ impl Document {
         && !pending_declaration.is_empty()
       {
         for (key, (value, properties)) in &pending_declaration {
-          if arena::with(qname, |qname_str|state.model.can_have_attribute(qname_str, key)) {
+          if state.model.can_have_attribute(qname, arena::pin(key)) {
             let key_sym = arena::pin(key);
             attrs_to_set.push((key_sym, arena::pin(value)));
             // Merge to set the font currently in effect
@@ -1086,7 +1086,7 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
-          state.model.sym_can_contain(node_qname, H_PCDATA_SYM.with(|sym| *sym))
+          state.model.can_contain_sym(node_qname, H_PCDATA_SYM.with(|sym| *sym))
         };
 
         if !noindent {
@@ -1187,9 +1187,9 @@ impl Document {
 
     let is_space = attributes.contains_key("isSpace");
     let qname = if is_space {
-      MATH_HINT_SYM.with(|sym| *sym)
+      MATH_HINT_NAME
     } else {
-      MATH_TOKEN_SYM.with(|sym| *sym)
+      MATH_TOKEN_NAME
     };
     let cur_qname = state.model.get_node_qname(&self.node);
     let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
@@ -1197,13 +1197,13 @@ impl Document {
     } else {
       text
     };
-    if qname == MATH_TOKEN_SYM.with(|sym| *sym) && cur_qname == qname {
+    if qname == MATH_TOKEN_NAME && cur_qname == MATH_TOKEN_SYM.with(|sym| *sym) {
       // Already INSIDE a token!
       if !text.is_empty() {
         self.open_math_text_internal(text, state)?;
       }
     } else {
-      let mut node = arena::with(qname, |qname_str| self.open_element(qname_str, Some(attributes), None, state))?;
+      let mut node = self.open_element(qname, Some(attributes), None, state)?;
       // let tbox  = $attributes{_box} || $LaTeXML::BOX;
       let font = match font_opt {
         Some(f) => f.clone(),
@@ -1353,7 +1353,7 @@ impl Document {
 
   pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
     let tag = state.model.get_node_qname(node);
-    state.model.sym_can_contain(tag, arena::pin(child))
+    state.model.can_contain_sym(tag, arena::pin(child))
   }
 
   pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -1361,7 +1361,7 @@ impl Document {
   }
 
   pub fn can_contain_qsym(&self, tag: SymbolU32, child: SymbolU32, state: &mut State) -> bool {
-    state.model.sym_can_contain(tag, child)
+    state.model.can_contain_sym(tag, child)
   }
 
   /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
@@ -1402,16 +1402,19 @@ impl Document {
   }
 
   pub fn sym_can_contain_somehow(&self, tag: SymbolU32, child: SymbolU32, state: &mut State) -> bool {
-    state.model.sym_can_contain(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
+    state.model.can_contain_sym(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
   }
 
   pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
-    state.model.with_node_qname(node, |qname|
+    let qname = state.model.get_node_qname(node);
     state
       .model
-      .can_have_attribute(qname, attrib))
+      .can_have_attribute(qname, arena::pin(attrib))
   }
   pub fn can_have_attribute(&self, tag: &str, attrib: &str, state: &mut State) -> bool {
+    state.model.can_have_attribute(arena::pin(tag), arena::pin(attrib))
+  }
+  pub fn sym_can_have_attribute(&self, tag: SymbolU32, attrib: SymbolU32, state: &mut State) -> bool {
     state.model.can_have_attribute(tag, attrib)
   }
 
@@ -1473,15 +1476,15 @@ impl Document {
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_SYM.with(|sym| *sym))
-        && arena::with(qname, |qname_str| state.model.can_have_attribute(qname_str, "font")
+        && state.model.can_have_attribute(qname, FONT_SYM.with(|sym| *sym))
         && c[0]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
           .all(|v| {
-            state.model.can_have_attribute(qname_str, v)
+            state.model.can_have_attribute(qname, arena::pin(v))
               && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
-          }))
+          })
         && !c[0].has_attribute("_force_font")
       {
         let mut c_first = c.pop().unwrap();
@@ -1792,8 +1795,9 @@ impl Document {
       if (inter != qsym) && (inter != cur_qname) {
         // TODO: can we avoid the clone here? there is a mutability conflict...
         let node_font = self.get_node_font(&self.node).clone();
-        arena::with(inter, |inter_str|
-          self.open_element(inter_str, None, Some(&node_font), state))?;
+        // TODO: avoid this clone?
+        let inter_string = arena::with(inter, ToString::to_string);
+        self.open_element(&inter_string, None, Some(&node_font), state)?;
 
         return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should
                                                                      // work now).
@@ -1936,8 +1940,8 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      if state.model.with_node_qname(&self.node, |qname|
-        key.starts_with('_') || state.model.can_have_attribute(qname, key)) {
+      let qname = state.model.get_node_qname(&self.node);
+      if key.starts_with('_') || state.model.can_have_attribute(qname, arena::pin(key)) {
           self.node.set_attribute(key, value)?
         };
     } else {
@@ -3190,10 +3194,10 @@ impl Document {
     // If node doesn't already have an id, and can
     // but isn't a _Capture_ node (which ultimately should disappear)
     let model = &state.model;
+    let qname = model.get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model.with_node_qname(node, |node_qname|
-        model.can_have_attribute(node_qname, "xml:id")
-        && (node_qname != "ltx:_Capture_"))
+      && model.can_have_attribute(qname, XML_ID_SYM.with(|sym| *sym))
+        && (qname != CAPTURE_SYM.with(|sym| *sym))
     {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node), state)
@@ -3277,8 +3281,9 @@ impl Document {
           //           $self->unRecordID($id); }
 
           let tag_sym = self.get_node_qname(&child, state);
-          let mut new = arena::with(tag_sym, |tag|
-            self.open_element_at(node, tag, Some(attributes), None, state))?;
+          // TODO: do NOT allocate
+          let tag = arena::with(tag_sym, ToString::to_string);
+          let mut new = self.open_element_at(node, &tag, Some(attributes), None, state)?;
           self.append_tree(&mut new, child.get_child_nodes(), state)?;
           self.close_element_at(&mut new, state)?;
         },

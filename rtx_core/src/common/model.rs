@@ -39,7 +39,7 @@ pub struct TagFrame {
   attributes: HashSet<SymbolU32>,
 }
 
-static DEFAULT_TAG_FRAME :Lazy<TagFrame> = Lazy::new(|| TagFrame::default());
+static DEFAULT_TAG_FRAME :Lazy<TagFrame> = Lazy::new(TagFrame::default);
 
 #[derive(Default)]
 pub struct Model {
@@ -514,7 +514,7 @@ impl Model {
   // to submodel, in case it can evolve to more precision?
   // However, it would need more context to do that.
 
-  pub fn sym_can_contain(&mut self, tag:SymbolU32, child:SymbolU32) -> bool {
+  pub fn can_contain_sym(&mut self, tag:SymbolU32, child:SymbolU32) -> bool {
     // Handle obvious cases explicitly.
     if H_PCDATA_SYM.with(|sym| tag == *sym) ||
        H_COMMENT_SYM.with(|sym| tag == *sym) ||
@@ -580,18 +580,16 @@ impl Model {
     ANY_SYM.with(|sym| model.contains(sym)) || model.contains(&arena::pin(child))
   }
 
-  pub fn can_have_attribute(&self, tag: &str, attrib: &str) -> bool {
+  pub fn can_have_attribute(&self, tag: SymbolU32, attrib: SymbolU32) -> bool {
     // Handle obvious cases explicitly.
-    match tag {
-      "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => return false,
-      "_WildCard_" => return true,
-      _ => {},
+    if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
+      "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => Some(false),
+      "_WildCard_" => Some(true),
+      other if CAPTURE_TAG_RE.is_match(other) => Some(true),
+      _ => None
+    }) {
+      return early_choice
     };
-
-    if CAPTURE_TAG_RE.is_match(tag) {
-      return true;
-    }
-
     if self.permissive {
       return true;
     }
@@ -599,10 +597,10 @@ impl Model {
     // Else query tag properties.
     let attributes = &self
       .tagprop
-      .get(&arena::pin(tag))
+      .get(&tag)
       .unwrap_or(&*DEFAULT_TAG_FRAME)
       .attributes;
-    attributes.contains(&arena::pin(attrib))
+    attributes.contains(&attrib)
   }
 
   pub fn is_node_in_schema_class(&self, class_name: &str, tag: &Node) -> bool {

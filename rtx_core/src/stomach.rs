@@ -404,13 +404,12 @@ impl<'t> Stomach {
         &message,
         "Defining it now as <ltx:ERROR/>"
       );
-      let closure_cs = cs.to_owned();
       state.install_definition(
         Constructor {
           cs: token.clone(),
           paramlist: None,
           replacement: Some(Arc::new(move |document, _args, _props, state| {
-            document.make_error("undefined", &closure_cs, state)
+            document.make_error("undefined", &cs, state)
           })),
           ..Constructor::default()
         },
@@ -450,7 +449,7 @@ impl<'t> Stomach {
         Ok(Some(Digested::from(comment)))
       },
       _ => {
-        let text = meaning.with_str(|m_str| font::decode_string(m_str, None, true, self, state));
+        let text = font::decode_sym(meaning.get_sym(), None, true, self, state);
         Ok(Some(Digested::from(Tbox::new(
           text,
           None,

@@ -951,16 +951,15 @@ pub fn set_align_or_class(
   class: &str,
   state: &mut State,
 ) -> Result<()> {
-  let qsym = state.model.get_node_qname(node);
-  arena::with(qsym, |qname| {
-    if qname == "ltx:tag" { }
-    // HACK
-    else if !align.is_empty() && state.model.can_have_attribute(qname, "align") {
-      node.set_attribute("align", align)?;
-    } else if !class.is_empty() && state.model.can_have_attribute(qname, "class") {
-      document.add_class(node, class, state)?;
-    }
-    Ok(())})
+  let qname = state.model.get_node_qname(node);
+  if qname == arena::pin_static("ltx:tag") { }
+  // HACK
+  else if !align.is_empty() && state.model.can_have_attribute(qname, arena::pin_static("align")) {
+    node.set_attribute("align", align)?;
+  } else if !class.is_empty() && state.model.can_have_attribute(qname, arena::pin_static("class")) {
+    document.add_class(node, class, state)?;
+  }
+  Ok(())
 }
 
 pub fn make_generic_message(

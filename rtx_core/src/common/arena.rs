@@ -6,7 +6,7 @@
 //! does multiple conversions, and a different implementation if one needs a thread-local arena.
 
 use std::thread_local;
-use std::sync::RwLock;
+use std::cell::RefCell;
 // use std::borrow::Cow;
 use rustc_hash::FxHasher;
 use std::hash::BuildHasherDefault;
@@ -15,8 +15,8 @@ use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
 
 thread_local! {
-  static T: RwLock<StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>> =
-    RwLock::new(StringInterner::with_capacity_and_hasher(10_000, BuildHasherDefault::<FxHasher>::default()));
+  static T: RefCell<StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>> =
+    RefCell::new(StringInterner::with_capacity_and_hasher(32_768, BuildHasherDefault::<FxHasher>::default()));
   /// the unique symbol for str value "ANY"
   pub static ANY_SYM: SymbolU32 = pin_static("ANY");
   /// the unique symbol for str value "#PCDATA"
@@ -43,41 +43,25 @@ thread_local! {
   pub static CAPTURE_SYM : SymbolU32 = pin_static("ltx:_Capture_");
   /// the unique symbol for str value "font"
   pub static FONT_SYM : SymbolU32 = pin_static("font");
+  /// the unique symbol for str value "xml:id"
+  pub static XML_ID_SYM : SymbolU32 = pin_static("xml:id");
 }
 
 /// Assign a static str into the arena, returning a unique symbol associated with it
 pub fn pin_static(text: &'static str) -> SymbolU32 {
-  T.with(|arena| arena.write().unwrap().get_or_intern_static(text) )
+  T.with(|arena| arena.borrow_mut().get_or_intern_static(text) )
 }
 
 /// Assign a string into the arena, returning a unique symbol associated with it
 pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
-  T.with(|arena| arena.write().unwrap().get_or_intern(text) )
+  T.with(|arena| arena.borrow_mut().get_or_intern(text) )
 }
 
 pub fn with<R, FnR>(sym: SymbolU32, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
-  T.with(|arena|
-    caller(arena.read().unwrap().resolve(sym)
-    .expect("arena.resolve should only be called when the string is guaranteed to be allocated.")))
+  T.with(|arena| {
+    let arena_lock = arena.borrow();
+    let symv = arena_lock.resolve(sym)
+      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.");
+    caller(symv) })
 }
-
-/// Attempt to resolve a string associated with a unique symbol from this arena, None if missing
-pub fn try_with<R, FnR>(sym: SymbolU32, caller: FnR) -> R
-where FnR: FnOnce(Option<&str>) -> R {
-  T.with(|arena|
-    caller(arena.read().unwrap().resolve(sym)
-    ))
-}
-
-// pub fn cowned(sym: SymbolU32) -> Cow<'static, str> {
-//   T.with(|arena|
-//     Cow::Owned(String::from(arena.resolve(sym).expect("arena.resolve should only be called when the string is guaranteed to be allocated.")))
-//   )
-// }
-
-// pub fn owned(sym: SymbolU32) -> String {
-//   T.with(|arena|
-//     String::from(arena.resolve(sym).expect("arena.resolve should only be called when the string is guaranteed to be allocated."))
-//   )
-// }

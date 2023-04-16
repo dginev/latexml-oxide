@@ -2,6 +2,7 @@ use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
+use crate::common::arena;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::{BoxOps, Digested, DigestedData, Result};
@@ -14,6 +15,7 @@ use once_cell::sync::Lazy;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::fmt;
@@ -1127,6 +1129,16 @@ pub fn decode(
   } else {
     None
   }
+}
+
+pub fn decode_sym(sym: SymbolU32,
+  encoding_opt: Option<&str>,
+  implicit: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> String {
+  let oof = arena::with(sym, ToString::to_string);
+  decode_string(&oof, encoding_opt, implicit, stomach, state)
 }
 
 pub fn decode_string(

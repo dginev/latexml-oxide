@@ -255,10 +255,10 @@ LoadDefinitions!(outer_state, {
 
   DefParameterType!(CSName, reader => reader!(gullet, _inner, _extra, state, {
     let mut cs = escapechar(state);
-    let E_SYM = arena::pin_static("\\endcsname");
+    let e_sym = arena::pin_static("\\endcsname");
     // keep newlines from having \n inside!
     while let Some(token) = gullet.read_x_token(Some(true), true, state)? {
-      if token.get_sym() == E_SYM {
+      if token.get_sym() == e_sym {
         break;
       }
       let cc = token.get_catcode();

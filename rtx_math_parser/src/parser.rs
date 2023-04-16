@@ -363,7 +363,7 @@ impl MathParser {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
         for (key, value) in attr {
-          if !(key.starts_with('_') || arena::with(rtag, |rtag_str| document.can_have_attribute(rtag_str, &key, state))) {
+          if !(key.starts_with('_') || document.sym_can_have_attribute(rtag, arena::pin(&key), state)) {
             continue;
           }
           if key == "xml:id" {
@@ -410,19 +410,16 @@ impl MathParser {
   ) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
-      arena::with(tag, |tag_str| match tag_str {
-        "ltx:XMArg" => {
-          self.parse_rec(&mut child, "Anything", document, state)
-        },
-        "ltx:XMWrap" => {
-          self.parse_rec(&mut child, "Anything", document, state)
-        },
-        "ltx:XMApp" | "ltx:XMArray" | "ltx:XMRow" | "ltx:XMCell" => {
-          self.parse_children(&mut child, document, state).map(|_| None)
-        },
-        "ltx:XMDual" => self.parse_children(&mut child, document, state).map(|_| None),
-        _ => Ok(None),
-      })?;
+      if tag == arena::pin_static("ltx:XMArg") ||
+         tag == arena::pin_static("ltx:XMWrap") {
+        self.parse_rec(&mut child, "Anything", document, state)?;
+      } else if tag == arena::pin_static("ltx:XMApp") ||
+        tag == arena::pin_static("ltx:XMArray") ||
+        tag == arena::pin_static("ltx:XMRow") ||
+        tag == arena::pin_static("ltx:XMCell") ||
+        tag == arena::pin_static("ltx:XMDual") {
+        self.parse_children(&mut child, document, state)?;
+      }
     }
     Ok(())
   }
@@ -637,87 +634,83 @@ fn textrec(
       None => meaning,
     };
   }
-  arena::with(tag, |tag_str| match tag_str {
-    "ltx:XMApp" => {
-      let mut args = element_nodes(&node);
-      if args.is_empty() {
-        // Error!("expected","arguments" ...);
-        unimplemented!();
+  if tag  == arena::pin_static("ltx:XMApp") {
+    let mut args = element_nodes(&node);
+    if args.is_empty() {
+      // Error!("expected","arguments" ...);
+      unimplemented!();
+    }
+    let arg_node = args.remove(0);
+    let op = realize_xmnode(&arg_node, document, state);
+    if let Some(app_role) = node.get_attribute("role") {
+      if app_role == "FLOATSUBSCRIPT" {
+        return String::from("_") + &textrec(&op, None, None, document, state);
+      } else if app_role == "FLOATSUPERSCRIPT" {
+        return String::from("^") + &textrec(&op, None, None, document, state);
       }
-      let arg_node = args.remove(0);
-      let op = realize_xmnode(&arg_node, document, state);
-      if let Some(app_role) = node.get_attribute("role") {
-        if app_role == "FLOATSUBSCRIPT" {
-          return String::from("_") + &textrec(&op, None, None, document, state);
-        } else if app_role == "FLOATSUPERSCRIPT" {
-          return String::from("^") + &textrec(&op, None, None, document, state);
-        }
-      }
+    }
 
-      let name = if document.with_node_qname(&op, state,|name| name == "ltx:XMTok") {
-        get_token_meaning(&op, document, state).unwrap_or_else(|| "unknown".to_owned())
-      } else {
-        String::new()
-      };
-      let (bp, string) = textrec_apply(&name, &op, args, document, state);
-      if (bp < outer_bp) || ((bp == outer_bp) && (name != outer_name)) {
-        format!("({string})")
-      } else {
-        string
-      }
-    },
-    "ltx:XMDual" => {
-      let children = element_nodes(&node);
-      let content = children
-        .first()
-        .expect("XMDual should always have 2 child elements.");
-      textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out the
-                                                                          // semantic form
-                                                                          // Fall back to
-                                                                          // presentation, if
-                                                                          // content has poor
-                                                                          // semantics (eg. from
-                                                                          // replacement patterns)
-                                                                          // TODO
-                                                                          // return ($text =~
-                                                                          // /^\(*Unknown/ ?
-                                                                          // textrec($presentation,
-                                                                          // $outer_bp, $outer_name)
-                                                                          // : $text); }
-    },
-    "ltx:XMTok" => {
-      let name = match get_token_meaning(&node, document, state) {
-        Some(meaning) => meaning,
-        None => s!("Unknown"),
-      };
-      match PREFIX_ALIAS.get(name.as_str()) {
-        Some(v) => v.to_string(),
-        None => name,
-      }
-    },
-    "ltx:XMWrap" | "ltx:XMCell" => {
-      // ??
-      element_nodes(&node)
-        .into_iter()
-        .map(|child| textrec(&child, None, None, document, state))
-        .collect::<Vec<_>>()
-        .join("@")
-    },
-    "ltx:XMArg" => {
-      let args = element_nodes(&node);
-      if args.is_empty() {
-        // Error!("expected","arguments" ...);
-        unimplemented!();
-      }
-      args
-        .iter()
-        .map(|arg| textrec(arg, None, None, document, state))
-        .collect::<Vec<_>>()
-        .join("")
-    },
-    "ltx:XMArray" => textrec_array(&node, state),
-    _ => s!("[{}]", p_get_value(&node)),
-  })
+    let name = if document.with_node_qname(&op, state,|name| name == "ltx:XMTok") {
+      get_token_meaning(&op, document, state).unwrap_or_else(|| "unknown".to_owned())
+    } else {
+      String::new()
+    };
+    let (bp, string) = textrec_apply(&name, &op, args, document, state);
+    if (bp < outer_bp) || ((bp == outer_bp) && (name != outer_name)) {
+      format!("({string})")
+    } else {
+      string
+    }
+  } else if tag  == arena::pin_static("ltx:XMDual") {
+    let children = element_nodes(&node);
+    let content = children
+      .first()
+      .expect("XMDual should always have 2 child elements.");
+    textrec(content, Some(outer_bp), Some(outer_name), document, state) // Just send out the
+                                                                        // semantic form
+                                                                        // Fall back to
+                                                                        // presentation, if
+                                                                        // content has poor
+                                                                        // semantics (eg. from
+                                                                        // replacement patterns)
+                                                                        // TODO
+                                                                        // return ($text =~
+                                                                        // /^\(*Unknown/ ?
+                                                                        // textrec($presentation,
+                                                                        // $outer_bp, $outer_name)
+                                                                        // : $text); }
+  } else if tag  == arena::pin_static("ltx:XMTok") {
+    let name = match get_token_meaning(&node, document, state) {
+      Some(meaning) => meaning,
+      None => s!("Unknown"),
+    };
+    match PREFIX_ALIAS.get(name.as_str()) {
+      Some(v) => v.to_string(),
+      None => name,
+    }
+  } else if tag  == arena::pin_static("ltx:XMWrap") || tag == arena::pin_static("ltx:XMCell") {
+    // ??
+    element_nodes(&node)
+      .into_iter()
+      .map(|child| textrec(&child, None, None, document, state))
+      .collect::<Vec<_>>()
+      .join("@")
+  } else if tag == arena::pin_static("ltx:XMArg") {
+    let args = element_nodes(&node);
+    if args.is_empty() {
+      // Error!("expected","arguments" ...);
+      unimplemented!();
+    }
+    args
+      .iter()
+      .map(|arg| textrec(arg, None, None, document, state))
+      .collect::<Vec<_>>()
+      .join("")
+  } else if tag == arena::pin_static("ltx:XMArray") {
+    textrec_array(&node, state)
+  } else {
+    s!("[{}]", p_get_value(&node))
+  }
 }
 
 fn textrec_apply(
