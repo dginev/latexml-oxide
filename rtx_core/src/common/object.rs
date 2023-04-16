@@ -13,8 +13,6 @@ use std::fmt::Debug;
 /// Base object for all LaTeXML Objects.
 ///
 /// Defines basic default methods for comparison, printing
-// TODO: Reconsider if this is still the right organization
-//       since Rust provides more benefit to decoupling e.g. PartialEq from Display
 pub trait Object {
   fn stringify(&self) -> String {
     // TODO: remove this and make sure all structs implement

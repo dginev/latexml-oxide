@@ -294,10 +294,12 @@ impl Mouth {
   fn split_lines(lines: &str) -> VecDeque<String> {
     let mut lines: VecDeque<String> = LINEBREAK_REGEX
       .split(lines)
-      .map(ToString::to_string)
+      .map(str::to_owned)
       .collect(); // And split.
-    if lines.iter().last() == Some(&String::new()) {
-      lines.pop_back();
+    if let Some(last_line) = lines.back() {
+      if last_line.is_empty() {
+        lines.pop_back();
+      }
     }
     lines
   }

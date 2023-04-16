@@ -60,8 +60,16 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
 pub fn with<R, FnR>(sym: SymbolU32, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   T.with(|arena| {
-    let arena_lock = arena.borrow();
-    let symv = arena_lock.resolve(sym)
-      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.");
-    caller(symv) })
+    caller(
+      arena.borrow().resolve(sym)
+      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.")
+    ) })
+}
+
+pub fn to_string(sym: SymbolU32) -> String {
+  T.with(|arena| {
+    arena.borrow().resolve(sym)
+      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.")
+      .to_owned()
+    })
 }
