@@ -120,76 +120,76 @@ pub fn def_conditional(
   gullet: &mut Gullet,
   state: &mut State,
 ) {
-  arena::with(cs.get_sym(), |cs_name| {
   let locked_key = if let Some(true) = options.locked {
-    s!("{}:locked", cs_name)
+    arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked"))
   } else {
     String::new()
   };
-  match cs_name {
-    "\\fi" | "\\else" | "\\or" => state.install_definition(
+  if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or")) {
+    state.install_definition(
       Conditional {
         cs: cs.clone(),
         paramlist: None,
         test: None,
-        conditional_type: ConditionalType::from(cs_name),
+        conditional_type: cs.with_str(|cs_name| ConditionalType::from(cs_name)),
         skipper: options.skipper,
       },
       options.scope,
-    ),
-    custom => {
-      if let Some(captures) = CONDITIONAL_CS_RE.captures(custom) {
-        let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
-        if !name.is_empty() && name != "case" && test.is_none() {
-          // user-defined conditional, like with \newif
-          // Note: setting up these macros is compile-time expensive, maybe there is some way to
-          // avoid...
-          // Note: the double clones are technically correct Rust if annoying to write and read.
-          //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
-          // second, each invocation of the conditional macro needs to create new tokens to
-          // return,       hence a clone is required on each call.
-          def_macro(
-            T_CS!(s!("\\{}true", name)),
-            None,
-            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")),
-            None,
-            state,
-          );
-          def_macro(
-            T_CS!(s!("\\{}false", name)),
-            None,
-            Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
-            None,
-            state,
-          );
-          state.let_i(&cs, T_CS!("\\iffalse"), None, gullet);
-        } else {
-          //  For \ifcase, the parameter list better be a single Number !!
-          state.install_definition(
-            Conditional {
-              cs,
-              paramlist,
-              test,
-              conditional_type: ConditionalType::If,
-              skipper: options.skipper,
-            },
-            options.scope,
-          );
-        }
-      } else {
-        let message = s!(
-          "The conditional {} is being defined but doesn't start with \\if",
-          cs
+    )
+  } else {
+    let name_opt = cs.with_str(|custom|
+      CONDITIONAL_CS_RE.captures(custom).map(|captures|
+        captures.get(1).map_or("", |m| m.as_str()).to_string()));
+    if let Some(name) = name_opt {
+      if !name.is_empty() && name != "case" && test.is_none() {
+        // user-defined conditional, like with \newif
+        // Note: setting up these macros is compile-time expensive, maybe there is some way to
+        // avoid...
+        // Note: the double clones are technically correct Rust if annoying to write and read.
+        //       first, we want to capture a cloned value of cs, to be able to keep using cs here.
+        // second, each invocation of the conditional macro needs to create new tokens to
+        // return,       hence a clone is required on each call.
+        def_macro(
+          T_CS!(s!("\\{}true", name)),
+          None,
+          Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")),
+          None,
+          state,
         );
-        Error!("misdefined", cs, None, state, message);
+        def_macro(
+          T_CS!(s!("\\{}false", name)),
+          None,
+          Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
+          None,
+          state,
+        );
+        state.let_i(&cs, T_CS!("\\iffalse"), None, gullet);
+      } else {
+        //  For \ifcase, the parameter list better be a single Number !!
+        state.install_definition(
+          Conditional {
+            cs: cs.clone(),
+            paramlist,
+            test,
+            conditional_type: ConditionalType::If,
+            skipper: options.skipper,
+          },
+          options.scope,
+        );
       }
-    },
+    } else {
+      let message = s!(
+        "The conditional {} is being defined but doesn't start with \\if",
+        cs
+      );
+      Error!("misdefined", cs, None, state, message);
+    }
   }
 
   if let Some(true) = options.locked {
     state.assign_value(&locked_key, true, None);
   }
-  })
+
 }
 
 /// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
@@ -317,7 +317,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   };
 
   // Not really right to set the value!
-  cs.with_str(|key| state.assign_value(key, value, None));
+  state.assign_value_sym(cs.get_sym(), value, None);
   state.install_definition(
     Register {
       cs,
@@ -434,9 +434,11 @@ pub fn def_math_dual(
   options: MathPrimitiveOptions,
   state: &mut State,
 ) {
-  let (cont_cs,pres_cs) = cs.with_str(|csname| (
-    T_CS!(s!("{csname}@content")),
-    T_CS!(s!("{csname}@presentation"))));
+  let (cont_cs_str,pres_cs_str) = cs.with_str(|csname| (
+    s!("{csname}@content"),
+    s!("{csname}@presentation")));
+  let cont_cs = T_CS!(cont_cs_str);
+  let pres_cs = T_CS!(pres_cs_str);
   let defcs = if options.robust {
     def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
   } else {
@@ -1445,10 +1447,9 @@ fn transfer_common_constructor_options(
   //
   // before_digest
   //
-  let cs_string = cs_str.to_owned();
   let mut before_digest_closures: Vec<BeforeDigestClosure> =
     vec![before_digest_simple!(_stomach, state, {
-      requireMath!(cs_string, state);
+      requireMath!(cs_str, state);
     })];
   if !options.nogroup {
     before_digest_closures.push(before_digest_simple!(stomach, state, {

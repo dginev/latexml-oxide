@@ -387,8 +387,8 @@ LoadDefinitions!(outer_state, {
     // Let w/o AfterAssignment
     state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
-    let internalcs = newcs.with_cs_name(|csname|
-      T_CS!(s!("\\@chardef@{}", csname)));
+    let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
+    let internalcs = T_CS!(internalcs_str);
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let decoded = font::decode(value.value_of() as u8, None, false, stomach, i_state)
         .map(|c| c.to_string()).unwrap_or_default();

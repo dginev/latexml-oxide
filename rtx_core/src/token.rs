@@ -411,6 +411,13 @@ macro_rules! T_CR(() => { (*$crate::token::TOKEN_CR).clone() });
 /// macro for a LETTER token
 #[macro_export]
 macro_rules! T_LETTER {
+  ($text:literal) => {
+    Token {
+      text: $crate::common::arena::pin_static($text),
+      code: Catcode::LETTER,
+      smuggled: None,
+    }
+  };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
@@ -422,6 +429,13 @@ macro_rules! T_LETTER {
 /// macro for an OTHER code token
 #[macro_export]
 macro_rules! T_OTHER {
+  ($text:literal) => {
+    Token {
+      text: $crate::common::arena::pin_static($text),
+      code: Catcode::OTHER,
+      smuggled: None,
+    }
+  };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
@@ -448,7 +462,7 @@ macro_rules! T_ACTIVE {
 macro_rules! T_COMMENT {
   ($text:expr) => {
     Token {
-      text: $crate::common::arena::pin($text.to_string()),
+      text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
       smuggled: None,
     }
@@ -457,6 +471,13 @@ macro_rules! T_COMMENT {
 /// macro for a command sequence token
 #[macro_export]
 macro_rules! T_CS {
+  ($text:literal) => {
+    $crate::token::Token {
+      text: $crate::common::arena::pin_static($text),
+      code: $crate::token::Catcode::CS,
+      smuggled: None,
+    }
+  };
   ($text:expr) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
@@ -588,7 +609,7 @@ impl Default for Token {
 
 ///======================================================================
 /// Accessors.
-impl<'a> Token {
+impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
     Token {
@@ -608,6 +629,16 @@ impl<'a> Token {
       self.with_str(caller)
     }
   }
+
+  /// artificial, but avoids the data race
+  pub fn pin_cs_name(&self) -> SymbolU32 {
+    if self.code.is_primitive() {
+      arena::pin_static(self.code.name())
+    } else {
+      self.get_sym()
+    }
+  }
+
 
   /// Get the fixed name of a primitive catcode, or empty string otherwise
   pub fn get_primitive_name(&self) -> Option<&'static str> {
@@ -711,6 +742,13 @@ impl<'a> Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
+      smuggled: None
+    }
+  }
+  pub fn as_cs(&self) -> Token {
+    Token {
+      text: self.text,
+      code: Catcode::CS,
       smuggled: None
     }
   }

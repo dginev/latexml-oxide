@@ -298,7 +298,7 @@ pub fn step_counter(
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        c.with_str(|cstr| reset_counter(cstr, state));
+        reset_counter(&c, state);
       }
     }
   }
@@ -340,7 +340,7 @@ pub fn step_counter_gullet(
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        c.with_str(|cstr| reset_counter(cstr, state));
+        reset_counter(&c, state);
       }
     }
   }
@@ -573,11 +573,12 @@ pub fn ref_step_id(
 }
 
 /// Resets the counter `ctr` to zero.
-pub fn reset_counter(ctr: &str, state: &mut State) {
-  state.assign_value(&s!("\\c@{ctr}"), Number::new(0), Some(Scope::Global));
-  state.assign_value(&s!("\\c@UN{ctr}"), Number::new(0), Some(Scope::Global));
+pub fn reset_counter(ctr: &Token, state: &mut State) {
+  let (c_ctr, c_un_ctr, ctr_id) = ctr.with_str(|ctr| (s!("\\c@{ctr}"),s!("\\c@UN{ctr}"),s!("\\@{}@ID", ctr)));
+  state.assign_value(&c_ctr, Number::new(0), Some(Scope::Global));
+  state.assign_value(&c_un_ctr, Number::new(0), Some(Scope::Global));
   def_macro(
-    T_CS!(s!("\\@{}@ID", ctr)),
+    T_CS!(ctr_id),
     None,
     Tokens!(Explode!(state
       .lookup_number(&s!("\\c@{ctr}"))
@@ -592,7 +593,7 @@ pub fn reset_counter(ctr: &str, state: &mut State) {
   // and reset any within counters!
   let nested = state.lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
   for c in nested.unlist() {
-    c.with_str(|cstr| reset_counter(cstr, state));
+    reset_counter(&c, state);
   }
 }
 
@@ -807,7 +808,7 @@ pub fn begin_itemize(
       //   state);
     }
   } else {
-    reset_counter(&usecounter, state);
+    reset_counter(&T_OTHER!(&usecounter), state);
   }
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false, stomach, state)?;
