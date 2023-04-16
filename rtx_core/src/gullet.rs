@@ -30,9 +30,11 @@ use crate::tokens::Tokens;
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
-static SMUGGLE_THE_COMMANDS: Lazy<HashSet<SymbolU32>> = Lazy::new(||
-  set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
-    arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize")));
+thread_local! {
+  static SMUGGLE_THE_COMMANDS: HashSet<SymbolU32> =
+    set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
+      arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize"));
+}
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
@@ -349,7 +351,7 @@ impl Gullet {
     state: &mut State,
   ) -> Result<Option<Token>> {
     let mut expansion = defn.invoke(self, false, state)?;
-    if SMUGGLE_THE_COMMANDS.contains(&defn.get_cs().get_sym()) {
+    if SMUGGLE_THE_COMMANDS.with(|set| set.contains(&defn.get_cs().get_sym())) {
       // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
       // at the exact time the token leaves the pushback.
       // This is *required to be different* from the noexpand flag, as per the B Book

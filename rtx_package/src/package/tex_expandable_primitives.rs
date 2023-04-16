@@ -248,7 +248,7 @@ LoadDefinitions!(outer_state, {
         }
       }
     }
-    Explode!(meaning)
+    ExplodeChars!(meaning)
   });
 
   //======================================================================

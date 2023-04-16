@@ -571,7 +571,17 @@ macro_rules! CharToken {
 /// Explode a string into a list of tokens, all w/catcode OTHER (except space).
 #[macro_export]
 macro_rules! Explode(($text:expr) => (
-  $text.to_string().as_str().chars().map(|c|
+  $text.to_string().chars().map(|c|
+    if c==' ' { T_SPACE!() }
+    else {
+      CharToken!(c)
+    }
+  ).collect::<Vec<Token>>()
+));
+
+#[macro_export]
+macro_rules! ExplodeChars(($text:expr) => (
+  $text.as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else {
       CharToken!(c)
@@ -584,7 +594,7 @@ macro_rules! Explode(($text:expr) => (
 #[macro_export]
 macro_rules! ExplodeText(($text:expr) => ({
   use $crate::token::{Catcode,Token};
-  $text.to_string().as_str().chars().map(|c|
+  $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else {
       let mut tmp = [0u8; 3];
