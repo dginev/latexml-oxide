@@ -109,7 +109,7 @@ LoadDefinitions!(stomach, state, {
   DeclareOption!(None, sub[stomach, state] {
     let gullet = stomach.get_gullet_mut();
     let current_option = Expand!(T_CS!("\\CurrentOption"), gullet).to_string();
-    UnshiftValue!("font_encodings", vec![Stored::String(current_option)]);
+    UnshiftValue!("font_encodings", vec![Stored::String(arena::pin(current_option))]);
   });
 
   // WELL... Actually, some "encodings" map the normal 7bit (or 8)
@@ -123,12 +123,13 @@ LoadDefinitions!(stomach, state, {
     if !font_encodings.is_empty() {
       setup_cyrillic(stomach, state)?;
       for encoding_stored in font_encodings.into_iter() {
-        if let Stored::String(encoding) = encoding_stored {
+        if let Stored::String(enc_sym) = encoding_stored {
+          let encoding = arena::to_string(enc_sym);
           DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)), scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
           if LoadFontMap!(&encoding).is_some() {
-            MergeFont!(encoding => encoding.to_string());
+            MergeFont!(encoding => encoding);
           }
         } else {
           let message = s!(

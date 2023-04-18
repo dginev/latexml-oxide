@@ -97,7 +97,7 @@ pub fn input_definitions(
     if let Some(vdq) = state.lookup_vecdeque("@masquerading@as@class") {
       if vdq.iter().any(|x| {
         if let Stored::String(ref v) = x {
-          v == &prevname
+          arena::with(*v, |str| str == prevname)
         } else {
           false
         }
@@ -127,9 +127,9 @@ pub fn input_definitions(
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) =
-      state.lookup_value(&s!("{}_loaded_with_options", filename))
+      state.lookup_value(&s!("{filename}_loaded_with_options"))
     {
-      if &current_options != prevoptions {
+      if arena::with(*prevoptions, |prev_str| current_options != prev_str) {
         let message = s!(
           "Option clash for file {} with options {:?}, previously loaded with {:?}",
           filename,
@@ -347,7 +347,7 @@ fn before_input_handle_options(
         for op in with_options_to_pass.into_iter() {
           if declared_options.iter().any(|x| {
             if let Stored::String(val) = x {
-              val == &op
+              arena::with(*val, |str| str == op)
             } else {
               false
             }
@@ -382,14 +382,20 @@ fn before_input_handle_options(
 
   // Note which packages are pretending to be classes.
   if options.as_class {
-    state.push_value("@masquerading@as@class", name);
+    state.push_value("@masquerading@as@class", arena::pin(name));
   }
   let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
-    Some(vdq) => vdq
-      .iter()
-      .map(|x| if let Stored::String(val) = x { val } else { "" })
-      .collect::<Vec<&str>>()
-      .join(","), // this is so painful, why can't we .join on a VecDeque?
+    Some(vdq) => {
+      let mut pieces = String::new();
+      for x in vdq.iter() {
+        if let Stored::String(val) = x {
+          arena::with(*val, |str| pieces.push_str(str));
+        }
+        pieces.push(',');
+      }
+      pieces.pop();
+      pieces
+    },
     None => String::new(),
   };
   def_macro(
@@ -675,7 +681,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in current_options.iter() {
     match option {
       Stored::String(content) => {
-        requested_options.insert(content.to_string());
+        requested_options.insert(arena::to_string(*content));
       },
       Stored::VecString(contents) => {
         for content in contents.iter() {
@@ -688,7 +694,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in class_options.iter() {
     match option {
       Stored::String(content) => {
-        requested_options.insert(content.to_string());
+        requested_options.insert(arena::to_string(*content));
       },
       Stored::VecString(contents) => {
         for content in contents.iter() {
@@ -703,10 +709,11 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     match option {
       Stored::String(content) => {
-        if requested_options.contains(content) {
-          requested_options.remove(content); // Remove it, since it's been handled.
-          execute_option_internal(content, stomach, state)?;
-        }
+        arena::with(*content, |c_str|
+        if requested_options.contains(c_str) {
+          requested_options.remove(c_str); // Remove it, since it's been handled.
+          execute_option_internal(c_str, stomach, state)
+        } else { Ok(true) })?;
       },
       Stored::VecString(contents) => {
         for content in contents.iter() {
@@ -751,7 +758,7 @@ fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut Stat
         .into_iter()
         .filter(|item| {
           if let Stored::String(content) = item {
-            content != option
+            *content != arena::pin(option)
           } else {
             false
           }

@@ -448,9 +448,10 @@ LoadDefinitions!(state, {
     };
 
     let counter = LookupMapping!("counter_for_type",&type_s);
-    let stored_type_s = Stored::String(type_s);
-    let counter = counter.unwrap_or(&stored_type_s);
-    let counter_str = counter.to_string();
+    let counter_str = match counter {
+      Some(c) => c.to_string(),
+      None => type_s
+    };
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
     if state.lookup_definition(&pcounter).is_some() {

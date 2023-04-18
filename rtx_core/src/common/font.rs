@@ -952,8 +952,8 @@ impl Font {
     let (mut wd, mut ht, mut dp) = (0.0, 0, 0);
     let (_minwd, _minht, _mindp) = (0.0, 0.0, 0.0);
     let _vattach = match options.get("vattach") {
-      Some(Stored::String(vattach)) => vattach,
-      _ => "baseline",
+      Some(Stored::String(vattach)) => *vattach,
+      _ => arena::pin_static("baseline"),
     };
     // Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
     let filtered_boxes = boxes

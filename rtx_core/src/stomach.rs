@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
@@ -714,7 +715,7 @@ impl<'t> Stomach {
   pub fn set_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     let prevmode = state.lookup_string("MODE");
     let ismath = mode.ends_with("math");
-    state.assign_value("MODE", mode, Some(Scope::Local));
+    state.assign_value("MODE", arena::pin(mode), Some(Scope::Local));
     state.assign_value("IN_MATH", ismath, Some(Scope::Local));
     let curfont = state.lookup_font().unwrap();
     if mode == prevmode {

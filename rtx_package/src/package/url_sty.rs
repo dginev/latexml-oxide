@@ -82,9 +82,9 @@ LoadDefinitions!(state, {
       unref!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
-        "href" => Stored::String(compose_url(&state.lookup_string("BASE_URL"), &url.to_string(), None)),
+        "href" => compose_url(&state.lookup_string("BASE_URL"), &url.to_string(), None).into(),
         // TODO: why was class a sub {}??
-        "class"=> Stored::String(ltx_cmd)
+        "class"=> ltx_cmd.into()
       ))
     },
     sizer     => "#5",
