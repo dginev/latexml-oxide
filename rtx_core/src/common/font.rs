@@ -2,7 +2,7 @@ use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
-use crate::common::arena;
+use crate::common::arena::{self, EMPTY_SYM};
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::{BoxOps, Digested, DigestedData, Result};
@@ -202,21 +202,21 @@ pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
 pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>) -> Option<Font> {
   if let Some(cap) = FONT_RE.captures(name) {
     let mut props = Font::default();
-    let fam = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
-    let ser = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-    let shp = cap.get(3).map_or(String::new(), |m| m.as_str().to_string());
-    let size_str = cap.get(4).map_or(String::new(), |m| m.as_str().to_string());
+    let fam = cap.get(1).map_or("", |m| m.as_str());
+    let ser = cap.get(2).map_or("", |m| m.as_str());
+    let shp = cap.get(3).map_or("", |m| m.as_str());
+    let size_str = cap.get(4).map_or("", |m| m.as_str());
     // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property
     // whitelist as in Perl? but the merge is convenient, especially if we can state "only the
     // values different from the default Font" which may already work courtesy of "None"? Need
     // to think it through...
-    if let Some(ffam) = lookup_font_family(&fam) {
+    if let Some(ffam) = lookup_font_family(fam) {
       props = props.merge(ffam.clone());
     }
-    if let Some(fser) = lookup_font_series(&ser) {
+    if let Some(fser) = lookup_font_series(ser) {
       props = props.merge(fser.clone());
     }
-    if let Some(fsh) = lookup_font_shape(&shp) {
+    if let Some(fsh) = lookup_font_shape(shp) {
       props = props.merge(fsh.clone());
     }
     let mut size = if let Some(at) = at_opt {
@@ -1078,16 +1078,16 @@ pub fn decode(
 ) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
-    Some(enc) => enc,
+    Some(enc) => Cow::Owned(enc),
     None => {
       font = state.lookup_font();
       if let Some(ref font) = font {
         match font.get_encoding() {
-          None => String::new(),
-          Some(encoding) => encoding.clone().into_owned(),
+          None => Cow::Borrowed(""),
+          Some(encoding) => encoding.clone(),
         }
       } else {
-        String::new()
+        Cow::Borrowed("")
       }
     },
   };
@@ -1098,7 +1098,7 @@ pub fn decode(
     if let Some(encmap) = load_font_map(&encoding, state) {
       // OK got some map.
       map = Some(encmap);
-      if let Some(font) = font {
+      if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
           if let Some(fmap) = state.lookup_value(&s!("{encoding}_{family}_fontmap")) {
             map = fmap.into(); // Use the family specific map, if any.
@@ -1131,25 +1131,16 @@ pub fn decode(
   }
 }
 
-pub fn decode_sym(sym: SymbolU32,
-  encoding_opt: Option<&str>,
-  implicit: bool,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> String {
-  let oof = arena::with(sym, ToString::to_string);
-  decode_string(&oof, encoding_opt, implicit, stomach, state)
-}
-
 pub fn decode_string(
-  string: &str,
+  string: SymbolU32,
   encoding_opt: Option<&str>,
   implicit: bool,
   stomach: &mut Stomach,
   state: &mut State,
-) -> String {
-  if string.is_empty() {
-    return String::new();
+) -> SymbolU32 {
+  let empty_sym = EMPTY_SYM.with(|sym| *sym);
+  if string == empty_sym {
+    return empty_sym;
   }
   let mut font = None;
   let encoding = match encoding_opt {
@@ -1181,7 +1172,8 @@ pub fn decode_string(
   }
 
   let mut result_string: String = String::new();
-  for c in string.chars() {
+  arena::with(string, |str| {
+  for c in str.chars() {
     if implicit {
       if let Some(map) = map {
         let code = c as u16; // u16, so that Unicode chars get cast correctly
@@ -1201,8 +1193,8 @@ pub fn decode_string(
         result_string.push(*mapc_val);
       }
     }
-  }
-  result_string
+  }});
+  arena::pin(result_string)
 }
 
 /// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64

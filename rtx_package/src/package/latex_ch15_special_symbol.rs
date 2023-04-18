@@ -60,9 +60,9 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\mathparagraph", "\u{00B6}");
   DefPrimitive!("\\mathsection", "\u{00A7}");
-  DefPrimitive!("\\mathdollar", '$');
+  DefPrimitive!("\\mathdollar", "$");
   DefPrimitive!("\\mathsterling", "\u{00A3}");
-  DefPrimitive!("\\mathunderscore", '_');
+  DefPrimitive!("\\mathunderscore", "_");
   DefPrimitive!("\\mathellipsis", "\u{2026}");
 
   // Are these glyph "pieces" or use alone?

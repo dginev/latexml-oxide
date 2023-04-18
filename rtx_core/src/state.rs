@@ -325,18 +325,16 @@ impl Default for State {
   }
 }
 
-pub static STY_STATE: Lazy<RwLock<State>> = Lazy::new(|| {
-  RwLock::new(State::new(StateOptions {
+thread_local! {
+  pub static STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
-  }))
-});
-pub static STD_STATE: Lazy<RwLock<State>> = Lazy::new(|| {
-  RwLock::new(State::new(StateOptions {
+  }));
+  pub static STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
-  }))
-});
+  }));
+}
 
 /// State fields allowed for customization during construction
 #[derive(Default)]
@@ -401,9 +399,7 @@ impl State {
     for (k, v) in catcodes {
       let mut vdq = VecDeque::new();
       vdq.push_front(Stored::Catcode(v));
-      let mut tmp = [0u8; 3];
-      let cat_key = arena::pin(k.encode_utf8(&mut tmp));
-      catcodes_typed.insert(cat_key, vdq);
+      catcodes_typed.insert(arena::pin_char(k), vdq);
     }
 
     // Basic defaults
@@ -1117,8 +1113,7 @@ impl State {
   pub fn lookup_catcode(&self, c: char) -> Option<Catcode> {
     // speedup over variant with allocation
     // i.e. "let s = c.to_string();"
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
+    let s = arena::pin_char(c);
     match self.catcode.get(&s) {
       None => None,
       Some(cvec) => match cvec.front() {
@@ -1132,8 +1127,7 @@ impl State {
   /// assigns a Catcode for a given character
   #[inline]
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
+    let s = arena::pin_char(key);
     self.assign_internal(
       TableName::Catcode,
       s,
@@ -1169,11 +1163,9 @@ impl State {
     value: T,
     scope: Option<Scope>,
   ) {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
     self.assign_internal(
       TableName::Mathcode,
-      s,
+      arena::pin_char(key),
       Stored::Charcode(value.into()),
       scope,
     );
@@ -1181,9 +1173,7 @@ impl State {
   /// like `lookup_catcode` but targets Sfcode and its table
   #[inline]
   pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.sfcode.get(&s) {
+    match self.sfcode.get(&arena::pin_char(key)) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1199,11 +1189,9 @@ impl State {
     value: T,
     scope: Option<Scope>,
   ) {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
     self.assign_internal(
       TableName::Sfcode,
-      s,
+      arena::pin_char(key),
       Stored::Charcode(value.into()),
       scope,
     );
@@ -1211,9 +1199,7 @@ impl State {
   /// like `lookup_catcode` but targets Lccode and its table
   #[inline]
   pub fn lookup_lccode(&self, key: char) -> Option<u16> {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.lccode.get(&s) {
+    match self.lccode.get(&arena::pin_char(key)) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1230,11 +1216,9 @@ impl State {
     scope: Option<Scope>,
   ) {
     let c : char = key.into();
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
     self.assign_internal(
       TableName::Lccode,
-      s,
+      arena::pin_char(c),
       Stored::Charcode(value.into()),
       scope,
     );
@@ -2094,12 +2078,11 @@ impl State {
           token.stringify()
         )
       );
-      let owned_cs = cs.to_owned();
       self.install_definition(
         Constructor {
           cs: token.clone(),
           replacement: Some(Arc::new(move |document, _args, _props, i_state| {
-            document.make_error("undefined", &owned_cs, i_state)
+            document.make_error("undefined", &cs, i_state)
           })),
           ..Constructor::default()
         },

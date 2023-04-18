@@ -5,7 +5,7 @@ use std::fmt;
 use std::sync::Arc;
 use string_interner::symbol::SymbolU32;
 
-use crate::common::arena;
+use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -70,7 +70,7 @@ impl Tbox {
   /// be empty, which contributes nothing to the generated document,
   /// but does record the TeX code (in the tokens).
   pub fn new(
-    text: String,
+    text: SymbolU32,
     font_opt: Option<Arc<Font>>,
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,
@@ -83,9 +83,9 @@ impl Tbox {
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
-
-    let tokens = if !text.is_empty() && tokens_opt.is_empty() {
-      Tokens!(T_OTHER!(&text))
+    let empty_sym = EMPTY_SYM.with(|sym| *sym);
+    let tokens = if text != empty_sym && tokens_opt.is_empty() {
+      Tokens!(Token {text, code: Catcode::OTHER, smuggled: None})
     } else {
       tokens_opt
     };
@@ -107,9 +107,9 @@ impl Tbox {
     }
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
-      if !text.is_empty() {
+      if text != empty_sym {
         if let Some(Stored::HashString(attr)) =
-          state.lookup_value(&s!("math_token_attributes_{}", text))
+          state.lookup_value(&arena::with(text, |text_str| s!("math_token_attributes_{}", text_str)))
         {
           for (key, value) in attr.iter() {
             properties
@@ -118,9 +118,9 @@ impl Tbox {
           }
         }
       }
-      let font = Arc::new(font.specialize(&text));
+      let font = Arc::new(arena::with(text, |text_str| font.specialize(text_str)));
       Tbox {
-        text: arena::pin(text),
+        text,
         font, // $locator,
         properties,
         tokens,
@@ -128,7 +128,7 @@ impl Tbox {
       }
     } else {
       Tbox {
-        text: arena::pin(text),
+        text,
         font, // $locator,
         properties,
         tokens,

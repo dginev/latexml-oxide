@@ -139,7 +139,7 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
 
   DefPrimitive!("\\;", sub[stomach, (), state] {
-    Tbox::new("\u{2004}".to_string(), None, None, Tokens!(T_CS!("\\;")),
+    Tbox::new(arena::pin_static("\u{2004}"), None, None, Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
       "width" => state.lookup_value("\\thickmuskip")), state)
   });

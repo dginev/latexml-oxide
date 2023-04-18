@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use std::fmt;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -316,98 +315,99 @@ impl PartialEq for Token {
 //  a known token than it is to build a new one
 //  (as the arena lookup is a hair slower than copying a u32)
 
-/// constant for an END "}" token
-pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("{"),
-  code: Catcode::BEGIN,
-  smuggled: None,
-});
-/// constant for a BEGIN "{" token
-pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("}"),
-  code: Catcode::END,
-  smuggled: None,
-});
-/// constant for a MATH "$" token
-pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("$"),
-  code: Catcode::MATH,
-  smuggled: None,
-});
-/// constant for an ALIGN "&" token
-pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("&"),
-  code: Catcode::ALIGN,
-  smuggled: None,
-});
-/// constant for a PARAM "#" token
-pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("#"),
-  code: Catcode::PARAM,
-  smuggled: None,
-});
-/// constant for a SUPER "^" token
-pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("^"),
-  code: Catcode::SUPER,
-  smuggled: None,
-});
-/// constant for a SUB "_" token
-pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("_"),
-  code: Catcode::SUB,
-  smuggled: None,
-});
-/// constant for a SPACE " " token
-pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin(" "),
-  code: Catcode::SPACE,
-  smuggled: None,
-});
-/// constant for a CR "\n" token
-pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("\n"),
-  code: Catcode::SPACE,
-  smuggled: None,
-});
-
-/// constant for T_CS("\relax")
-pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
-  text: arena::pin("\\relax"),
-  code: Catcode::CS,
-  smuggled: None,
-});
+thread_local! {
+  /// constant for an END "}" token
+  pub static TOKEN_BEGIN: Token = Token {
+    text: arena::pin("{"),
+    code: Catcode::BEGIN,
+    smuggled: None,
+  };
+  /// constant for a BEGIN "{" token
+  pub static TOKEN_END: Token = Token {
+    text: arena::pin("}"),
+    code: Catcode::END,
+    smuggled: None,
+  };
+  /// constant for a MATH "$" token
+  pub static TOKEN_MATH: Token = Token {
+    text: arena::pin("$"),
+    code: Catcode::MATH,
+    smuggled: None,
+  };
+  /// constant for an ALIGN "&" token
+  pub static TOKEN_ALIGN: Token = Token {
+    text: arena::pin("&"),
+    code: Catcode::ALIGN,
+    smuggled: None,
+  };
+  /// constant for a PARAM "#" token
+  pub static TOKEN_PARAM: Token = Token {
+    text: arena::pin("#"),
+    code: Catcode::PARAM,
+    smuggled: None,
+  };
+  /// constant for a SUPER "^" token
+  pub static TOKEN_SUPER: Token = Token {
+    text: arena::pin("^"),
+    code: Catcode::SUPER,
+    smuggled: None,
+  };
+  /// constant for a SUB "_" token
+  pub static TOKEN_SUB: Token = Token {
+    text: arena::pin("_"),
+    code: Catcode::SUB,
+    smuggled: None,
+  };
+  /// constant for a SPACE " " token
+  pub static TOKEN_SPACE: Token = Token {
+    text: arena::pin(" "),
+    code: Catcode::SPACE,
+    smuggled: None,
+  };
+  /// constant for a CR "\n" token
+  pub static TOKEN_CR: Token = Token {
+    text: arena::pin("\n"),
+    code: Catcode::SPACE,
+    smuggled: None,
+  };
+  /// constant for T_CS("\relax")
+  pub static TOKEN_RELAX: Token = Token {
+    text: arena::pin("\\relax"),
+    code: Catcode::CS,
+    smuggled: None,
+  };
+}
 
 #[macro_export]
 /// macro for a BEGIN "{" token
-macro_rules! T_BEGIN(() => { (*$crate::token::TOKEN_BEGIN).clone() });
+macro_rules! T_BEGIN(() => { $crate::token::TOKEN_BEGIN.with(|t| t.clone()) });
 #[macro_export]
 /// macro for a new END "{" token
-macro_rules! T_END(() => { (*$crate::token::TOKEN_END).clone() });
+macro_rules! T_END(() => { $crate::token::TOKEN_END.with(|t| t.clone()) });
 /// macro for a MATH "$" token
 #[macro_export]
-macro_rules! T_MATH(() => { (*$crate::token::TOKEN_MATH).clone() });
+macro_rules! T_MATH(() => { $crate::token::TOKEN_MATH.with(|t| t.clone()) });
 /// macro for an ALIGN "&" token
 #[macro_export]
-macro_rules! T_ALIGN(() => { (*$crate::token::TOKEN_ALIGN).clone() });
+macro_rules! T_ALIGN(() => { $crate::token::TOKEN_ALIGN.with(|t| t.clone()) });
 /// macro for a PARAM "#" token
 #[macro_export]
-macro_rules! T_PARAM(() => { (*$crate::token::TOKEN_PARAM).clone() });
+macro_rules! T_PARAM(() => { $crate::token::TOKEN_PARAM.with(|t| t.clone()) });
 /// macro for a SUPER "^" token
 #[macro_export]
-macro_rules! T_SUPER(() => { (*$crate::token::TOKEN_SUPER).clone() });
+macro_rules! T_SUPER(() => { $crate::token::TOKEN_SUPER.with(|t| t.clone()) });
 /// macro for a SUB "_" token
 #[macro_export]
-macro_rules! T_SUB(() => { (*$crate::token::TOKEN_SUB).clone() });
+macro_rules! T_SUB(() => { $crate::token::TOKEN_SUB.with(|t| t.clone()) });
 /// macro for a SPACE token (default " ")
 #[macro_export]
-macro_rules! T_SPACE(() => { (*$crate::token::TOKEN_SPACE).clone() };
+macro_rules! T_SPACE(() => { $crate::token::TOKEN_SPACE.with(|t| t.clone()) };
 ($text:literal) => {
   Token { text: $crate::common::arena::pin($text), code: Catcode::SPACE, smuggled: None}
 });
 /// macro for a CR "\n" token
 #[macro_export]
-macro_rules! T_CR(() => { (*$crate::token::TOKEN_CR).clone() });
+macro_rules! T_CR(() => { $crate::token::TOKEN_CR.with(|t| t.clone()) });
 /// macro for a LETTER token
 #[macro_export]
 macro_rules! T_LETTER {
@@ -489,7 +489,7 @@ macro_rules! T_CS {
 
 /// macro for T_CS("\\relax")
 #[macro_export]
-macro_rules! T_RELAX(() => { (*$crate::token::TOKEN_RELAX).clone() });
+macro_rules! T_RELAX(() => { $crate::token::TOKEN_RELAX.with(|t| t.clone()) });
 
 /// macro for a tracing MARKER token
 #[macro_export]

@@ -131,7 +131,7 @@ LoadDefinitions!(state, {
         // Dubious, but assures that frontmatter appears in text mode...
         // TODO:
         //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
-        document.set_box_to_absorb(Tbox::new(String::new(), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default(), state).into());
+        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default(), state).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
                                                            //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));

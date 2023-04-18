@@ -186,7 +186,7 @@ LoadDefinitions!(outer_state, {
     let value = etex_readexpr_i(gullet, rtype, 0, state)?;
     if let Some(token) = gullet.read_token(state) {
       // Skip \relax
-      if !(token == *TOKEN_RELAX) {
+      if ! TOKEN_RELAX.with(|tr| token == *tr) {
         gullet.unread_one(token);
       }
     }
@@ -222,7 +222,7 @@ LoadDefinitions!(outer_state, {
 
     // Now check for a following operator(s) & operand(s) (respecting precedence)
     while let Some(next) = gullet.read_x_non_space(state)? {
-      if next == *TOKEN_RELAX {
+      if TOKEN_RELAX.with(|tr| next == *tr) {
         gullet.unread_one(next); // leave the \relax for top-level to strip off.
         break;
       } else if next == T_OTHER!("+") && prec < 1 {

@@ -4,7 +4,7 @@ use regex::Regex;
 
 use std::env;
 use std::path::{Path, PathBuf};
-use parking_lot::Mutex;
+use std::sync::Mutex;
 
 /// configuration for filesystem search
 #[derive(Debug, Clone, Default)]
@@ -30,6 +30,7 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 
 static KPSE: Lazy<Mutex<Kpaths>> = Lazy::new(|| Mutex::new(Kpaths::new().unwrap()));
+
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {
 //       match exe_path.as_path().parent() {
@@ -330,7 +331,7 @@ pub fn extension(pathname: &str) -> String {
 /// returning the first path that is found
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   for candidate in candidates {
-    if let Some(path) = KPSE.lock().find_file(candidate) {
+    if let Some(path) = KPSE.lock().unwrap().find_file(candidate) {
       return Some(path);
     }
   }

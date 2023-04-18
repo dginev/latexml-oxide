@@ -16,6 +16,7 @@ log = "0.4"
 libxml = "0.3.2"
 chrono = "0.4"
 unicode-normalization = "0.1.7"
+string-interner = {version = "0.14.0", default-features = false, features = ["std", "backends","inline-more"]}
 rustc-hash="1.1.0"
 rtx_codegen = {path = "../rtx_codegen"}
 rtx_core = {path = "../rtx_core"}
