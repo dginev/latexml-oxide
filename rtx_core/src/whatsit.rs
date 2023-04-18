@@ -214,8 +214,9 @@ impl fmt::Debug for Whatsit {
 
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let state = STD_STATE.read().unwrap(); // TODO: is this really the way?
-    write!(f, "{}", self.revert(&state).unwrap()) // What else??
+    STD_STATE.with(|state_rw| {
+      let state = state_rw.read().unwrap(); // TODO: is this really the way?
+      write!(f, "{}", self.revert(&state).unwrap())}) // What else??
   }
 }
 

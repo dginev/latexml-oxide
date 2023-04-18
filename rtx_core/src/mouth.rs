@@ -6,7 +6,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use parking_lot::Mutex;
+use std::sync::Mutex;
 
 use core::ops::RangeBounds;
 // TODO:
@@ -55,7 +55,9 @@ impl FoodType {
   }
 }
 
-static LASTID: Lazy<Mutex<u32>> = Lazy::new(|| Mutex::new(0));
+thread_local! {
+  static LASTID: Mutex<u32> = Mutex::new(0);
+}
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
@@ -761,9 +763,11 @@ impl Mouth {
   }
 
   fn gid() -> String {
-    let mut lastid = LASTID.lock();
-    *lastid += 1;
-    lastid.to_string()
+    LASTID.with(|lid| {
+      let mut lastid = lid.lock().unwrap();
+      *lastid += 1;
+      lastid.to_string()
+    })
   }
 
   // Be Careful!
@@ -803,12 +807,11 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
     return NO_TOKENS;
   }
   match state_opt {
-    None => {
-      let mut state = STD_STATE.write().unwrap();
+    None => STD_STATE.with(|state_rw| {
+      let mut state = state_rw.write().unwrap();
       Mouth::new(text, None, &mut state)
         .unwrap()
-        .read_tokens(&mut state)
-    },
+        .read_tokens(&mut state) }),
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }
@@ -817,8 +820,10 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   if text.is_empty() {
     return NO_TOKENS;
   }
-  let mut state = STY_STATE.write().unwrap();
-  Mouth::new(text, None, &mut state)
-    .unwrap()
-    .read_tokens(&mut state)
+  STY_STATE.with(|state_rw| {
+    let mut state = state_rw.write().unwrap();
+    Mouth::new(text, None, &mut state)
+      .unwrap()
+      .read_tokens(&mut state)
+  })
 }

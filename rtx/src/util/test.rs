@@ -2,6 +2,7 @@ use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
+use std::sync::Once;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -25,7 +26,6 @@ pub fn rtx_tests_internal(
   requires: Option<&phf::Map<&str, &str>>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
-  rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -43,6 +43,19 @@ pub fn rtx_tests_internal(
   }
 }
 
+
+static INIT_LOGGER : Once = Once::new();
+pub fn init_logger() {
+  INIT_LOGGER.call_once(|| {
+    rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
+    // Initializing the libxml parser ONCE is a recommendation for thread-safety,
+    // which should hopefully avoid any hangs in a threaded "cargo test"
+    // this may also be needed in web servers running parallel rtx conversion jobs
+    // See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/libxml2-2.4.24/doc/threads.html
+    unsafe { libxml::bindings::xmlInitParser(); }
+  });
+}
+
 pub fn rtx_test_single(
   tex_file_str: &str,
   name: &str,
@@ -50,6 +63,7 @@ pub fn rtx_test_single(
   requires: Option<&phf::Map<&str, &str>>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
+  init_logger();
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -124,11 +138,11 @@ fn process_texfile(
   if extra_bindings_dispatcher.is_some() {
     latexml.get_state_mut().extra_bindings_dispatch = extra_bindings_dispatcher;
   }
-
-  match latexml.convert_file(tex_path.to_owned()) {
+  let res = match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
     Ok(doc) => process_ltx_doc(doc, name, latexml.get_state_mut()),
-  }
+  };
+  res
 }
 
 /// Loads and serialized the resulting XML for a test file target,

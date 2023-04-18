@@ -595,7 +595,7 @@ LoadDefinitions!(state, {
   );
 
   DefPrimitive!("\\text@nobreakspace", sub[stomach, (), state] {
-    Tbox::new(String::from("\u{00A0}"), None, None,
+    Tbox::new(arena::pin_static("\u{00A0}"), None, None,
       Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
   });
 

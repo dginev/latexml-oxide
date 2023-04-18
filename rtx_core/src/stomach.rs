@@ -430,7 +430,7 @@ impl<'t> Stomach {
           Ok(None)
         } else {
           Ok(Some(Digested::from(Tbox::new(
-            meaning.to_string(),
+            meaning.get_sym(),
             font,
             self.gullet.get_locator().map(|l| l.into_owned()),
             Tokens!(meaning),
@@ -449,7 +449,7 @@ impl<'t> Stomach {
         Ok(Some(Digested::from(comment)))
       },
       _ => {
-        let text = font::decode_sym(meaning.get_sym(), None, true, self, state);
+        let text = font::decode_string(meaning.get_sym(), None, true, self, state);
         Ok(Some(Digested::from(Tbox::new(
           text,
           None,

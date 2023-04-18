@@ -23,7 +23,7 @@ LoadDefinitions!(state, {
   // remain in the constructed tree.
   DefPrimitive!("{", sub[stomach, (), state] {
     stomach.bgroup(state);
-    let open = Tbox::new(String::new(), None, None, Tokens!(T_BEGIN!()), HashMap::default(), state);
+    let open = Tbox::new(arena::pin_static(""), None, None, Tokens!(T_BEGIN!()), HashMap::default(), state);
     let mode = if state.lookup_bool("IN_MATH") {
       Some(TexMode::Math)
     } else {
@@ -53,7 +53,7 @@ LoadDefinitions!(state, {
     sub[stomach, (), state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
-      Tbox::new(String::new(), f, None, Tokens!(T_END!()), HashMap::default(), state)
+      Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), HashMap::default(), state)
     }
   );
 
