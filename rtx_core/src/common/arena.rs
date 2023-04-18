@@ -5,7 +5,6 @@
 //! where memory starvation will not be an issue. It would need a hard reset if the same process
 //! does multiple conversions, and a different implementation if one needs a thread-local arena.
 
-use std::thread_local;
 use std::cell::RefCell;
 // use std::borrow::Cow;
 use rustc_hash::FxHasher;
@@ -55,6 +54,12 @@ pub fn pin_static(text: &'static str) -> SymbolU32 {
 /// Assign a string into the arena, returning a unique symbol associated with it
 pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
   T.with(|arena| arena.borrow_mut().get_or_intern(text) )
+}
+
+pub fn pin_char(c: char) -> SymbolU32 {
+  let mut tmp = [0u8; 3];
+  let s = c.encode_utf8(&mut tmp);
+  pin(s)
 }
 
 pub fn with<R, FnR>(sym: SymbolU32, caller: FnR) -> R

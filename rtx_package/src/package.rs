@@ -7,7 +7,7 @@ pub use rustc_hash::FxHashMap as HashMap;
 pub use std::borrow::Cow;
 pub use std::collections::VecDeque;
 pub use std::sync::{Arc, RwLock};
-
+pub use string_interner::symbol::SymbolU32;
 pub use rtx_core::common::dimension::Dimension;
 pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::*;
@@ -16,7 +16,7 @@ pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::cleaners::*;
 pub use rtx_core::common::float::{floatformat, Float};
 pub use rtx_core::common::font;
-pub use rtx_core::common::arena;
+pub use rtx_core::common::arena::{self, EMPTY_SYM};
 pub use rtx_core::common::font::Font;
 pub use rtx_core::common::glue::Glue;
 pub use rtx_core::common::locator::Locator;

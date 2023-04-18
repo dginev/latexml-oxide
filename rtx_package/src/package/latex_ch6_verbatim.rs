@@ -51,39 +51,43 @@ LoadDefinitions!(outer_state, {
       // makes you wonder if the `get_font` API should be working with Arc<Font> in the first place...
       let font : Option<Arc<Font>> = whatsit.get_font(state)?.map(|ft| Arc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
-      let mut lines : Vec<String> = Vec::new();
+      let mut lines : Vec<SymbolU32> = Vec::new();
       while let Some(line) = stomach.get_gullet_mut().read_raw_line(state) {
         // The raw chars will still have to be decoded (but not space!!)
-        let decoded_line : String = line.chars()
-          .map(|c| if c == ' ' {" ".to_string() } else {
-             font::decode_string(&c.to_string(), Some("OT1_typewriter"), true, stomach, state) })
-          .collect::<Vec<String>>().join("");
+        let mut decoded_line : String = String::new();
+        for c in line.chars() {
+          if c == ' ' { decoded_line.push(' '); }
+          else {
+            let decoded_c = font::decode_string(arena::pin_char(c), Some("OT1_typewriter"), true, stomach, state);
+            arena::with(decoded_c, |c_str| decoded_line.push_str(c_str));
+          }
+        }
         if let Some(caps) = END_VERBATIM_RE.captures(&decoded_line) {
           let pre = s!("{}\n", caps.get(1).map_or("", |m| m.as_str()));
           let post = caps.get(2).map_or("", |m| m.as_str());
-          lines.push(pre);
+          lines.push(arena::pin(pre));
           let mut post_tokens = Tokenize!(post).unlist();
           post_tokens.push(T_CR!());
           stomach.get_gullet_mut().unread(Tokens::new(post_tokens));
           break;
         } else {
-          lines.push(s!("{}\n", line));
+          lines.push(arena::pin(s!("{}\n", line)));
         }
       }
       if let Some(last_line) = lines.last() {
-        if last_line == "\n" {
+        if *last_line == arena::pin_static("\n") {
           lines.pop();
         }
       }
       // Note last line ends up as Whatsit's "trailer"
       if let Some(b) = state.lookup_tokens("@environment@verbatim@atend") {
-        lines.push(stomach.digest(b, state)?.to_string());
+        lines.push(arena::pin(stomach.digest(b, state)?.to_string()));
       }
       stomach.egroup(state)?;
-      lines.push("\\end{verbatim}".to_string());
+      lines.push(arena::pin_static("\\end{verbatim}"));
       let boxes = lines.into_iter().map(|line|
-        Tbox::new(line.clone(), font.clone(), loc.clone()
-          .map(|l| l.into_owned()), T_OTHER!(line).into(), HashMap::default(), state).into()
+        Tbox::new(line, font.clone(), loc.clone()
+          .map(|l| l.into_owned()), Token{text: line, code:Catcode::OTHER, smuggled:None}.into(), HashMap::default(), state).into()
       ).collect();
       whatsit.set_body(boxes, state);
     },

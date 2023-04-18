@@ -36,7 +36,7 @@ pub fn apply_accent(
     combined_str.nfc().collect::<String>()
   };
   Ok(Tbox::new(
-    text,
+    arena::pin(text),
     font,
     locator.map(|l| l.into_owned()),
     reversion.unwrap_or(Tokens!()),

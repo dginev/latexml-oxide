@@ -91,7 +91,7 @@ LoadDefinitions!(state, {
       let length_tokens = length.revert(state)?;
       let mut gullet = stomach.get_gullet_mut();
       let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens], gullet)?;
-      Tbox::new(s.into(), None, None, tokens,
+      Tbox::new(arena::pin(&s), None, None, tokens,
         stored_map!("width" => length, "isSpace" => true), state);
     }
   });

@@ -8,8 +8,11 @@ LoadDefinitions!(outer_stomach, state, {
     let next = gullet.read_non_space(state);
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
-    let next_test = next.as_ref().unwrap_or(&*TOKEN_END);
-    let which = if XEquals!(&token, next_test) {
+    let next_test = match next {
+      Some(ref n) => XEquals!(&token, n),
+      None => TOKEN_END.with(|te| XEquals!(&token, te))
+    };
+    let which = if next_test {
       t_if
     } else {
       t_else

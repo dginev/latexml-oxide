@@ -524,7 +524,7 @@ macro_rules! DefPrimitive {
     let (cs, params) = parse_prototype!($proto);
     let closure : PrimitiveClosure = Arc::new(
       |_stomach: &mut Stomach, _args: Vec<ArgWrap>, inner_state: &mut State| {
-      Tbox::new($replacement.to_string(), None, None, Tokens!(), HashMap::default(), inner_state)
+      Tbox::new(arena::pin_static($replacement), None, None, Tokens!(), HashMap::default(), inner_state)
         .into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);

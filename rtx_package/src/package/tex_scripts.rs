@@ -246,7 +246,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       T_SUB!()
     };
     Ok(vec![Digested::from(Tbox::new(
-      c.to_string(),
+      arena::pin_char(c),
       None,
       None,
       Tokens!(placeholder),
@@ -364,7 +364,7 @@ LoadDefinitions!(state, {
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&TOKEN_SUPER, state)? {
+    if TOKEN_SUPER.with(|ts| gullet.if_next(ts, state))? {
       gullet.read_token(state);
       sup.extend(gullet.read_arg(state)?.unlist());
     }
