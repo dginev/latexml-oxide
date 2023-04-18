@@ -9,7 +9,6 @@ use regex::Regex;
 use crate::binding::content::merge_font;
 use crate::binding::counter::dialect::step_counter_gullet;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
-use crate::common::arena;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::definition::argument::ArgWrap;
@@ -631,7 +630,7 @@ pub fn def_math_primitive(
         });
 
         Ok(vec![Digested::from(Tbox {
-          text: arena::pin(&presentation),
+          text: Cow::Owned(presentation.clone()),
           tokens: Tokens!(cs.clone()),
           font,
           properties: properties.to_hash_stored(),

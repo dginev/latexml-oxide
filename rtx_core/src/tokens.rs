@@ -437,7 +437,7 @@ impl Tokens {
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
-          rescanned.push(T_ARG!(next_t.unwrap()));
+          rescanned.push(T_ARG!(next_t.unwrap().get_string()));
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
         } else {
@@ -514,7 +514,7 @@ impl ToTokens for Token {
     let code = self.get_catcode();
     stream.extend(quote! {
       Token {
-        text: rtx_core::common::arena::pin(#text),
+        text: Cow::Borrowed(#text),
         code: #code,
         smuggled: None
       }

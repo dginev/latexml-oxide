@@ -336,7 +336,7 @@ LoadDefinitions!(state, {
     // should it be another datastructure?
     let thing = nodes.pop().unwrap();
     let not_node = nodes.pop().unwrap();
-    let text = match state.model.get_node_qname(thing) {
+    let text = match state.model.get_node_qname(thing).as_ref() {
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     };

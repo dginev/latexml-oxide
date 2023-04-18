@@ -1995,7 +1995,11 @@ macro_rules! Today {
 macro_rules! SetPrefix {
   ($prefix:literal) => {{
     bind_state_mut!(st);
-    st.set_prefix($prefix);
+    st.set_prefix(Cow::Borrowed($prefix));
+  }};
+  ($prefix:expr) => {{
+    bind_state_mut!(st);
+    st.set_prefix(Cow::Owned(String::from($prefix)));
   }};
 }
 

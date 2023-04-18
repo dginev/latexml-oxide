@@ -456,7 +456,7 @@ impl Mouth {
               if eolcc == Catcode::EOL {
                 Some(T_CS!("\\par"))
               } else {
-                Some(CharToken!(eolch_content, eolcc))
+                Some(Token!(eolch_content, eolcc))
               }
             } else {
               None
@@ -616,28 +616,28 @@ impl Mouth {
         if ch == '{' {
           Some(T_BEGIN!())
         } else {
-          Some(CharToken!(ch, BEGIN))
+          Some(Token!(ch, BEGIN))
         }
       },
       END => {
         if ch == '}' {
           Some(T_END!())
         } else {
-          Some(CharToken!(ch, END))
+          Some(Token!(ch, END))
         }
       },
       MATH => {
         if ch == '$' {
           Some(T_MATH!())
         } else {
-          Some(CharToken!(ch, MATH))
+          Some(Token!(ch, MATH))
         }
       },
       ALIGN => {
         if ch == '&' {
           Some(T_ALIGN!())
         } else {
-          Some(CharToken!(ch, ALIGN))
+          Some(Token!(ch, ALIGN))
         }
       },
       EOL => self.handle_end_of_line(state),
@@ -645,29 +645,29 @@ impl Mouth {
         if ch == '#' {
           Some(T_PARAM!())
         } else {
-          Some(CharToken!(ch, PARAM))
+          Some(Token!(ch, PARAM))
         }
       }, // T_PARAM
       SUPER => {
         if ch == '^' {
           Some(T_SUPER!())
         } else {
-          Some(CharToken!(ch, SUPER))
+          Some(Token!(ch, SUPER))
         }
       }, // T_SUPER
       SUB => {
         if ch == '_' {
           Some(T_SUB!())
         } else {
-          Some(CharToken!(ch, SUB))
+          Some(Token!(ch, SUB))
         }
       }, // T_SUB
       SPACE => self.handle_space(state),
-      LETTER => Some(CharToken!(ch, Catcode::LETTER)),
-      OTHER => Some(CharToken!(ch, Catcode::OTHER)),
+      LETTER => Some(Token!(ch, Catcode::LETTER)),
+      OTHER => Some(Token!(ch, Catcode::OTHER)),
       ACTIVE => Some(T_ACTIVE!(ch)),
       COMMENT => self.handle_comment(state),
-      INVALID => Some(CharToken!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
+      INVALID => Some(Token!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
       _ => None,                                       // IGNORE, others
     }
   }

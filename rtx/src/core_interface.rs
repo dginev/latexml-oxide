@@ -16,7 +16,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
+use rtx_core::{fatal, map, s, Core, Debug, Explode, T_OTHER, T_CS, T_SPACE};
 
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
@@ -129,12 +129,11 @@ impl DigestionAPI for Core {
 
     // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
-    let name_copy = name;
     self.get_state_mut().install_definition(
       Stored::Expandable(Arc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
-        expansion: Tokens::new(Explode!(name_copy)).into(),
+        expansion: Tokens::new(Explode!(name)).into(),
         ..Expandable::default()
       })),
       None,
@@ -180,7 +179,7 @@ impl DigestionAPI for Core {
         .collect::<Vec<&str>>();
       let default_model_load = match state.model.schema_data {
         None => true,
-        Some(ref v) => v.last() == Some(&String::from("LaTeXML")),
+        Some(ref v) => v.last().map(String::as_str) == Some("LaTeXML"),
       };
       if default_model_load {
         // Compile-time load of model AND indirect model

@@ -5,9 +5,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
-use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, PCDATA_SYM,GLOBAL_DEFS_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -139,9 +137,9 @@ pub enum Catcodes {
 }
 
 /// Ledger for stacked assignments
-pub type AssignmentCount = HashMap<SymbolU32, usize>;
+pub type AssignmentCount = HashMap<String, usize>;
 /// The `(table_name, key, value)` contents of a stored table of assignments
-pub type StashTable = Vec<(TableName, SymbolU32, Stored)>;
+pub type StashTable = Vec<(TableName, String, Stored)>;
 #[derive(Debug, Clone, Default)]
 /// For each of several tables (being "value", "meaning", "catcode" or other space of names),
 /// each table maintains the bound values, and "undo" defines the stack frames
@@ -203,7 +201,7 @@ impl UndoFrame {
 ///  meaning: The definition assocated with `key`, usually a control-sequence.
 ///  stash & stash_active: support named scopes
 ///      (see also activateScope & deactivateScope)
-pub type Table = HashMap<SymbolU32, VecDeque<Stored>>;
+pub type Table = HashMap<String, VecDeque<Stored>>;
 
 /// The State efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
@@ -231,8 +229,8 @@ pub struct State {
   // Stateful runtime - data structures
   /// the schema-derived model used for the current document
   pub model: Model,
-  prefixes: HashMap<SymbolU32, bool>, // ?
-  pub tag_properties: HashMap<SymbolU32, TagOptions>,
+  prefixes: HashMap<Cow<'static,str>, bool>, // ?
+  pub tag_properties: HashMap<String, TagOptions>,
   /// an optional indirect model for long-distance relationships
   pub indirect_model: Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
@@ -395,15 +393,13 @@ impl State {
     let mut value_table = HashMap::default();
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '~', '&', '$', '#', '\'']));
-    value_table.insert(arena::pin("SPECIALS"), specials_vdq);
+    value_table.insert(String::from("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::default();
     for (k, v) in catcodes {
       let mut vdq = VecDeque::new();
       vdq.push_front(Stored::Catcode(v));
-      let mut tmp = [0u8; 3];
-      let cat_key = arena::pin(k.encode_utf8(&mut tmp));
-      catcodes_typed.insert(cat_key, vdq);
+      catcodes_typed.insert(k.to_string(), vdq);
     }
 
     // Basic defaults
@@ -492,13 +488,13 @@ impl State {
   fn assign_internal(
     &mut self,
     table_name: TableName,
-    key: SymbolU32,
+    key: &str,
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = self.value.get(&GLOBAL_DEFS_SYM) {
+    if let Some(globaldefs) = self.value.get("\\globaldefs") {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
@@ -534,7 +530,7 @@ impl State {
         for frame in &mut self.undo {
           let is_locked = frame.locked;
           let frame_table = frame.table_mut(table_name);
-          if let Some(n) = frame_table.remove(&key) {
+          if let Some(n) = frame_table.remove(key) {
             undo_count += n;
           }
           last_frame = Some(frame);
@@ -544,20 +540,20 @@ impl State {
         }
         // whatever is left -- if anything -- should be bindings below the locked frame.
         if let Some(frame) = last_frame {
-          frame.table_mut(table_name).insert(key, 1); // Note that there's only one
+          frame.table_mut(table_name).insert(key.to_owned(), 1); // Note that there's only one
                                                                   // value in the stack, now
         }
 
         // Undo the bindings, if `key` was bound in this frame
         let state_table = self.table_mut(table_name);
-        if let Some(defs) = state_table.get_mut(&key) {
+        if let Some(defs) = state_table.get_mut(key) {
           for _ in 1..=undo_count {
             defs.pop_front();
           }
         }
 
         let table_entry = state_table
-          .entry(key)
+          .entry(key.to_owned())
           .or_insert_with(VecDeque::new);
         table_entry.push_front(value);
       },
@@ -568,19 +564,19 @@ impl State {
         if let Some(current_frame) = self.undo.front_mut() {
           let current_frame_table = current_frame.table_mut(table_name);
 
-          is_replace = current_frame_table.get(&key).unwrap_or(&0) > &0;
+          is_replace = current_frame_table.get(key).unwrap_or(&0) > &0;
           if is_replace { // If the value was previously assigned in this frame
              // we do this in 2.1, then proceed to 2.2
           } else {
             // Otherwise, push new value & set 1 to be undone
-            current_frame_table.insert(key, 1);
+            current_frame_table.insert(key.to_owned(), 1);
             //  And push new binding in 2.2
           }
         }
         // 2. State table mutable logic
         let state_table = self.table_mut(table_name);
         let defs = state_table
-          .entry(key)
+          .entry(key.to_owned())
           .or_insert_with(VecDeque::new);
         if is_replace {
           // 2.1. Replace the value, i.e. remove existing one
@@ -590,26 +586,25 @@ impl State {
         defs.push_front(value);
       },
       Scope::Named(scope_name) => {
-        let scope_sym = arena::pin(scope_name);
         // initialize stash if empty
-        let needs_init = match self.stash.get(&scope_sym) {
+        let needs_init = match self.stash.get(&scope_name) {
           None => true,
           Some(v) => v.is_empty(),
         };
         if needs_init {
           self.assign_internal(
             TableName::Stash,
-            scope_sym,
+            &scope_name,
             Stored::Stash(Vec::new()),
             Some(Scope::Global),
           );
         }
         if let Some(Stored::Stash(ref mut stash)) =
-          self.stash.get_mut(&scope_sym).as_mut().unwrap().get_mut(0)
+          self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0)
         {
-          stash.push((table_name, key, value.clone()));
+          stash.push((table_name, key.to_owned(), value.clone()));
         }
-        let has_active = match self.stash_active.get(&scope_sym) {
+        let has_active = match self.stash_active.get(&scope_name) {
           None => false,
           Some(v) => !v.is_empty(),
         };
@@ -624,7 +619,7 @@ impl State {
   /// fetches a Stored value at the given key, from the Value table
   #[inline(always)]
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
-    match self.value.get(&arena::pin(key)) {
+    match self.value.get(key) {
       None => None,
       Some(vvec) => match vvec.front() {
         None | Some(Stored::None) => None,
@@ -634,7 +629,7 @@ impl State {
   }
   /// mutably borrows a Stored value at the given key, from the Value table
   pub fn lookup_value_mut<'lv>(&'lv mut self, key: &'lv str) -> Option<&mut Stored> {
-    match self.value.get_mut(&arena::pin(key)) {
+    match self.value.get_mut(key) {
       None => None,
       Some(vvec) => match vvec.front_mut() {
         None | Some(Stored::None) => None,
@@ -644,9 +639,8 @@ impl State {
   }
 
   /// inline lookup_value after which globally assign an empty Tokens() to undo
-  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<Stored> {
-    let key_sym = arena::pin(key);
-    match self.value.get_mut(&key_sym) {
+  pub fn remove_value(&mut self, key: &str) -> Option<Stored> {
+    match self.value.get_mut(key) {
       None => None,
       Some(vvec) => match vvec.front_mut() {
         None | Some(&mut Stored::None) => Option::None,
@@ -657,7 +651,7 @@ impl State {
 
   /// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
   pub fn checkout_value(&mut self, key: &str) -> Option<Stored> {
-    match self.value.get_mut(&arena::pin(key)) {
+    match self.value.get_mut(key) {
       None => None,
       Some(vvec) => vvec
         .front_mut()
@@ -666,7 +660,7 @@ impl State {
   }
   /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
   pub fn checkin_value(&mut self, key: &str, value: Stored) {
-    match self.value.get_mut(&arena::pin(key)) {
+    match self.value.get_mut(key) {
       None => unimplemented!(),
       Some(vvec) => match vvec.front_mut() {
         None => unimplemented!(),
@@ -688,23 +682,21 @@ impl State {
   ) {
     let value = value.into();
     let scope = scope.into();
-    let key_sym = arena::pin(key);
-    self.assign_internal(TableName::Value, key_sym, value, scope);
+    self.assign_internal(TableName::Value, key, value, scope);
   }
 
   /// manage a (global) list of values
   pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    let key_sym = arena::pin(key);
     let value = value.into();
-    if !self.value.contains_key(&key_sym) {
+    if !self.value.contains_key(key) {
       self.assign_internal(
         TableName::Value,
-        key_sym,
+        key,
         Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       );
     }
-    match self.value.get_mut(&key_sym).unwrap().front_mut() {
+    match self.value.get_mut(key).unwrap().front_mut() {
       Some(&mut Stored::VecDequeStored(ref mut front)) => front.push_back(value),
       // auto-vivify, if None
       Some(ref mut field) if matches!(field, Stored::None) => {
@@ -722,17 +714,16 @@ impl State {
 
   /// pops the last value in a named `Stored::VecDequeStored` queue, if any
   pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
+    if !self.value.contains_key(key) {
       self.assign_internal(
         TableName::Value,
-        key_sym,
+        key,
         Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       );
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(&key_sym).unwrap().front_mut()
+      self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_back()
     } else {
@@ -749,8 +740,7 @@ impl State {
 
   /// Check if the Value table contains a given key
   pub fn has_value(&self, key: &str) -> bool {
-    let key_sym = arena::pin(key);
-    match self.value.get(&key_sym) {
+    match self.value.get(key) {
       None => false,
       Some(list) => match list.front() {
         None => false,
@@ -920,9 +910,9 @@ impl State {
     // Basically: a CS or Active token that is either not defined, or is expandable
     // (but not \let to a token)
     if token.get_catcode().is_active_or_cs() {
-      let lookupname = token.text;
-      if lookupname != *EMPTY_SYM {
-        match self.meaning.get(&lookupname) {
+      let lookupname = token.get_string();
+      if !lookupname.is_empty() {
+        match self.meaning.get(lookupname) {
           Some(entry) => {
             if let Some(def) = entry.front() {
               // the expandable variants are allowed
@@ -952,7 +942,7 @@ impl State {
     let lookupname = token.get_executable_name();
     if lookupname.is_empty() {
       None
-    } else if let Some(entry) = self.meaning.get(&arena::pin(lookupname)) {
+    } else if let Some(entry) = self.meaning.get(lookupname) {
       if let Some(Stored::Conditional(defn)) = entry.front() {
         // Can only be a token or definition; we only want defns that have conditional_type
         Some(defn.conditional_type)
@@ -966,16 +956,15 @@ impl State {
 
   pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
     let values_iter = values.into_iter().map(Into::into);
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
+    if !self.value.contains_key(key) {
       self.assign_internal(
         TableName::Value,
-        key_sym,
+        key,
         Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       )
     }
-    let receiver = self.value.get_mut(&key_sym).unwrap().front_mut();
+    let receiver = self.value.get_mut(key).unwrap().front_mut();
     if let Some(&mut Stored::VecDequeStored(ref mut front)) = receiver {
       for value in values_iter.rev() {
         // preserving order unshift, as Perl's
@@ -990,17 +979,16 @@ impl State {
   }
 
   pub fn shift_value(&mut self, key: &str) -> Option<Stored> {
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
+    if !self.value.contains_key(key) {
       self.assign_internal(
         TableName::Value,
-        key_sym,
+        key,
         Stored::VecDequeStored(VecDeque::new()),
         Some(Scope::Global),
       )
     }
     if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(&key_sym).unwrap().front_mut()
+      self.value.get_mut(key).unwrap().front_mut()
     {
       front.pop_front()
     } else {
@@ -1018,8 +1006,7 @@ impl State {
   /// manage a (global) hash of values
   #[inline]
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
-    let map_sym = arena::pin(map);
-    match self.value.get(&map_sym) {
+    match self.value.get(map) {
       None => None,
       Some(map_vec) => match map_vec.front() {
         Some(Stored::HashStored(h)) => h.get(key),
@@ -1029,16 +1016,15 @@ impl State {
   }
 
   pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
-    let map_sym = arena::pin(map);
-    if !self.value.contains_key(&map_sym) || self.value[&map_sym].is_empty() {
+    if !self.value.contains_key(map) || self.value[map].is_empty() {
       self.assign_internal(
         TableName::Value,
-        map_sym,
+        map,
         Stored::HashStored(HashMap::default()),
         Some(Scope::Global),
       );
     }
-    let map_store = self.value.get_mut(&map_sym).unwrap();
+    let map_store = self.value.get_mut(map).unwrap();
     // TODO: What is the right abstraction here? this is hacky
     let mut stub_hash = HashMap::default();
     let mapping = match *map_store.front_mut().unwrap() {
@@ -1053,8 +1039,7 @@ impl State {
   }
 
   pub fn lookup_mapping_keys(&self, map: &str) -> Vec<&str> {
-    let map_sym = arena::pin(map);
-    match self.value.get(&map_sym) {
+    match self.value.get(map) {
       None => Vec::new(),
       Some(map_vec) => match map_vec.front() {
         Some(Stored::HashStored(h)) => h.keys().map(String::as_str).collect(),
@@ -1064,8 +1049,7 @@ impl State {
   }
 
   pub fn lookup_stacked_values(&self, key: &str) -> Vec<&Stored> {
-    let key_sym = arena::pin(key);
-    if let Some(vdq) = self.value.get(&key_sym) {
+    if let Some(vdq) = self.value.get(key) {
       vdq.iter().collect::<Vec<&Stored>>()
     } else {
       Vec::new()
@@ -1076,7 +1060,6 @@ impl State {
   /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
   /// that frame (0 is the topmost).
   pub fn is_value_bound(&self, key: &str, frame_opt: Option<usize>) -> bool {
-    let key_sym = arena::pin(key);
     match frame_opt {
       Some(frame) => self
         .undo
@@ -1084,8 +1067,8 @@ impl State {
         .as_ref()
         .unwrap()
         .table(TableName::Value)
-        .contains_key(&key_sym),
-      None => !self.value.get(&key_sym).unwrap_or(&VecDeque::new()).is_empty(),
+        .contains_key(key),
+      None => !self.value.get(key).unwrap_or(&VecDeque::new()).is_empty(),
     }
   }
 
@@ -1096,8 +1079,8 @@ impl State {
     // speedup over variant with allocation
     // i.e. "let s = c.to_string();"
     let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
-    match self.catcode.get(&s) {
+    let s = c.encode_utf8(&mut tmp);
+    match self.catcode.get(s) {
       None => None,
       Some(cvec) => match cvec.front() {
         Some(Stored::Catcode(cc)) => Some(*cc),
@@ -1111,7 +1094,7 @@ impl State {
   #[inline]
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
+    let s = key.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Catcode,
       s,
@@ -1122,8 +1105,7 @@ impl State {
   /// like `lookup_catcode` but targets Mathcode and its table
   #[inline]
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
-    let key_sym = arena::pin(key);
-    match self.mathcode.get(&key_sym) {
+    match self.mathcode.get(key) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1140,7 +1122,7 @@ impl State {
     scope: Option<Scope>,
   ) {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
+    let s = key.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Mathcode,
       s,
@@ -1152,8 +1134,8 @@ impl State {
   #[inline]
   pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.sfcode.get(&s) {
+    let s = key.encode_utf8(&mut tmp);
+    match self.sfcode.get(s) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1170,7 +1152,7 @@ impl State {
     scope: Option<Scope>,
   ) {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
+    let s = key.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Sfcode,
       s,
@@ -1182,8 +1164,8 @@ impl State {
   #[inline]
   pub fn lookup_lccode(&self, key: char) -> Option<u16> {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.lccode.get(&s) {
+    let s = key.encode_utf8(&mut tmp);
+    match self.lccode.get(s) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1201,7 +1183,7 @@ impl State {
   ) {
     let c : char = key.into();
     let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
+    let s = c.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Lccode,
       s,
@@ -1213,8 +1195,8 @@ impl State {
   #[inline]
   pub fn lookup_uccode(&self, key: char) -> Option<u16> {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.uccode.get(&s) {
+    let s = key.encode_utf8(&mut tmp);
+    match self.uccode.get(s) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1232,7 +1214,7 @@ impl State {
   ) {
     let c : char = key.into();
     let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
+    let s = c.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Uccode,
       s,
@@ -1244,8 +1226,8 @@ impl State {
   #[inline]
   pub fn lookup_delcode(&self, key: char) -> Option<u16> {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.delcode.get(&s) {
+    let s = key.encode_utf8(&mut tmp);
+    match self.delcode.get(s) {
       Some(c) => match c.front() {
         Some(Stored::Charcode(codeval)) => Some(*codeval),
         _ => None,
@@ -1262,7 +1244,7 @@ impl State {
     scope: Option<Scope>
   ) {
     let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
+    let s = key.encode_utf8(&mut tmp);
     self.assign_internal(
       TableName::Delcode,
       s,
@@ -1276,9 +1258,9 @@ impl State {
   pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
     if token.get_catcode().is_active_or_cs()
       && !token.has_smuggled()
-      && token.text != *EMPTY_SYM
+      && !token.get_string().is_empty()
     {
-      match self.meaning.get(&token.text) {
+      match self.meaning.get(token.get_string()) {
         Some(entry) => match entry.front() {
           None | Some(Stored::None) => None,
           Some(other) => Some(Cow::Borrowed(other)),
@@ -1306,7 +1288,7 @@ impl State {
         return;
       }
     }
-    self.assign_internal(TableName::Meaning, arena::pin(token.get_cs_name()), meaning, scope);
+    self.assign_internal(TableName::Meaning, token.get_cs_name(), meaning, scope);
   }
 
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
@@ -1323,7 +1305,7 @@ impl State {
     };
 
     if let Some(lname) = lookupname {
-      self.meaning.get(&arena::pin(lname))
+      self.meaning.get(lname)
     } else {
       None
     }
@@ -1423,7 +1405,7 @@ impl State {
     };
 
     Debug!("Looking up digestable {:?}", lookupname);
-    let entry_opt = self.meaning.get(&arena::pin(lookupname));
+    let entry_opt = self.meaning.get(lookupname);
     if !lookupname.is_empty() && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
       Debug!("Found definition for: {:?}", lookupname);
       if let Some(entry) = entry_opt {
@@ -1434,7 +1416,7 @@ impl State {
             } else {
               t.get_executable_primitive_name().unwrap()
             };
-            if let Some(retry_entry) = self.meaning.get(&arena::pin(lookupname)) {
+            if let Some(retry_entry) = self.meaning.get(lookupname) {
               // special case,
               // If a cs has been let to an executable token, lookup ITS defn.
               return retry_entry.front().cloned();
@@ -1470,7 +1452,6 @@ impl State {
     // info!("-- installing definition for: {:?}", token);
 
     let cs_locked = s!("{}:locked", cs);
-    // TODO, .is_none() should be a real false check
     let is_cs_locked = self.lookup_bool(&cs_locked);
     let is_state_unlocked = self.lookup_bool("UNLOCKED");
 
@@ -1480,12 +1461,12 @@ impl State {
         if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s))
           && (!s.ends_with(CODE_TEX_EXT))
         {
-          //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
+          // Info!("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
         }
         return;
       }
     }
-    self.assign_internal(TableName::Meaning, arena::pin(cs), definition, scope);
+    self.assign_internal(TableName::Meaning, &cs, definition, scope);
   }
 
   // NOTE: Common usage patterns seem to be to lookup
@@ -1633,11 +1614,11 @@ impl State {
   // ======================================================================
   /// Set one of the definition prefixes global, etc (only global matters!)
   #[inline(always)]
-  pub fn set_prefix(&mut self, prefix: &str) { self.prefixes.insert(arena::pin(prefix), true); }
+  pub fn set_prefix(&mut self, prefix: Cow<'static,str>) { self.prefixes.insert(prefix, true);}
   /// gets the current value of a named prefix
   #[inline(always)]
   pub fn get_prefix(&self, prefix: &str) -> bool {
-    match self.prefixes.get(&arena::pin(prefix)) {
+    match self.prefixes.get(prefix){
       Some(b) => *b,
       _ => false,
     }
@@ -1650,16 +1631,14 @@ impl State {
   ///
   pub fn activate_scope(&mut self, scope: &str) {
     // do not re-activate if already active.
-    let scope_sym = arena::pin(scope);
-    if let Some(stash_active_entry) = self.stash_active.get(&scope_sym) {
+    if let Some(stash_active_entry) = self.stash_active.get(scope) {
       if !stash_active_entry.is_empty() {
         return;
       }
     }
-
     self.assign_internal(
       TableName::StashActive,
-      scope_sym,
+      scope,
       Stored::Bool(true),
       Some(Scope::Local),
     );
@@ -1672,7 +1651,7 @@ impl State {
 
     let mut actions = Vec::new();
 
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope_sym)
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(scope)
     .map(|x| x.iter().next()) {
       for (table_name, key, value) in defns {
         // copy the values out from the stashed defns, so that Rust
@@ -1686,7 +1665,7 @@ impl State {
     for (table_name, key, value) in actions {
       let frame = &mut self.undo[0];
       let frame_table = frame.table_mut(table_name);
-      let entry = frame_table.entry(key).or_insert(0);
+      let entry = frame_table.entry(key.to_owned()).or_insert(0);
       *entry += 1; // Note that this many values must be undone
       let key_table = self
         .table_mut(table_name)
@@ -1703,8 +1682,7 @@ impl State {
   /// Removes any definitions that were associated with the named `scope`.
   /// Normally not needed, since a scopes definitions are locally bound anyway.
   pub fn deactivate_scope(&mut self, scope: &str) {
-    let scope_sym = arena::pin(scope);
-    let scope_exists = match self.stash_active.get(&scope_sym) {
+    let scope_exists = match self.stash_active.get(scope) {
       None => false,
       Some(v) => !v.is_empty(),
     };
@@ -1714,13 +1692,13 @@ impl State {
 
     self.assign_internal(
       TableName::StashActive,
-      scope_sym,
+      scope,
       Stored::Bool(false),
       Some(Scope::Global),
     );
 
     let mut collected = Vec::new();
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope_sym).map(|x| x.iter().next()) {
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(scope).map(|x| x.iter().next()) {
       for (table_name, key, value) in defns {
         collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
       }
@@ -1736,7 +1714,7 @@ impl State {
       } else {
         false
       };
-      let table_entry = self.table_mut(table_name).entry(key).or_default();
+      let table_entry = self.table_mut(table_name).entry(key.to_owned()).or_default();
       if front_is_value {
         // Here we're popping off the values pushed by activateScope
         // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
@@ -1751,7 +1729,7 @@ impl State {
         let message = s!(
           "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
            is {:?}",
-          arena::resolve(key),
+          key,
           table_name,
           value,
           table_entry
@@ -1761,21 +1739,20 @@ impl State {
             .join(", ")
         );
         let stomach = self.stomach.read().unwrap();
-        Warn!("internal", arena::resolve(key), stomach, self, message);
+        Warn!("internal", key, stomach, self, message);
       }
     }
   }
   /// return all known named scopes
   pub fn get_known_scopes(&self) -> Vec<&str> {
-    let mut scopes = self.stash.keys()
-      .map(|k| arena::resolve(*k)).collect::<Vec<_>>();
+    let mut scopes = self.stash.keys().map(String::as_str).collect::<Vec<_>>();
     scopes.sort();
     scopes
   }
   /// return the currently activated named scopes
   pub fn get_active_scopes(&self) -> Vec<&str> {
     let mut scopes = self.stash_active.keys()
-      .map(|k| arena::resolve(*k)).collect::<Vec<_>>();
+      .map(String::as_str).collect::<Vec<_>>();
     scopes.sort();
     scopes
   }
@@ -1869,8 +1846,8 @@ impl State {
   pub fn compute_indirect_model(&mut self) -> IndirectModel {
     let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-    let mut openable: HashSet<SymbolU32> = HashSet::default();
-    for tag in self.model.get_sym_tags() {
+    let mut openable: HashSet<String> = HashSet::default();
+    for tag in self.model.get_tags() {
       if let Some(x) = self.tag_properties.get(&tag) {
         if let Some(true) = x.auto_open {
           openable.insert(tag);
@@ -1878,32 +1855,32 @@ impl State {
       }
     }
 
-    for tag in self.model.get_sym_tags() {
-      let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
+    for tag in self.model.get_tags() {
+      let mut desc: HashMap<String, HashMap<String, usize>> = HashMap::default();
       {
-        self.compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
+        self.compute_indirect_model_aux(&tag, None, 1, &mut openable, &mut desc);
       }
 
-      let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
+      let desc_keys: Vec<String> = desc.keys().map(String::to_owned).collect();
       for kid in desc_keys {
         let mut best = 0; // Find best path to $kid.
-        let desc_kid_keys: Vec<SymbolU32> = desc
-          .entry(kid)
+        let desc_kid_keys: Vec<String> = desc
+          .entry(kid.to_owned())
           .or_insert_with(HashMap::default)
           .keys()
-          .copied()
+          .map(String::to_owned)
           .collect();
         // desc_kid_keys.sort(); // TODO: why sort?
         for start in desc_kid_keys {
           let start_entry = {
-            let kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
+            let kid_entry = desc.entry(kid.to_owned()).or_insert_with(HashMap::default);
             *kid_entry.entry(start.to_owned()).or_insert(0)
           };
           if start_entry > best {
             imodel
-              .entry(tag)
+              .entry(tag.to_owned())
               .or_insert_with(HashMap::default)
-              .insert(kid, start.to_owned());
+              .insert(kid.to_owned(), start.to_owned());
             {
               best = desc[&kid][&start];
             }
@@ -1915,9 +1892,9 @@ impl State {
     if self.model.permissive {
       // !!! Alarm!!!
       imodel
-        .entry(arena::pin("#Document"))
+        .entry(String::from("#Document"))
         .or_insert_with(HashMap::default)
-        .insert(*PCDATA_SYM, *LTX_P_SYM);
+        .insert(String::from("#PCDATA"), String::from("ltx:p"));
     }
 
     imodel
@@ -1925,42 +1902,41 @@ impl State {
 
   fn compute_indirect_model_aux(
     &mut self,
-    tag: SymbolU32,
-    start_opt: Option<SymbolU32>,
+    tag: &str,
+    start_opt: Option<String>,
     desirability: usize,
-    openable: &mut HashSet<SymbolU32>,
-    desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
+    openable: &mut HashSet<String>,
+    desc: &mut HashMap<String, HashMap<String, usize>>,
   ) {
     let start = match start_opt {
       Some(s) => s,
-      None => *EMPTY_SYM,
+      None => String::new(),
     };
 
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<SymbolU32> = self.model.get_sym_tag_contents(&tag);
+    let tag_contents: Vec<String> = self.model.get_tag_contents(tag).into_iter().map(str::to_owned).collect();
 
     for kid in tag_contents {
       if desc
-        .entry(kid)
+        .entry(kid.to_owned())
         .or_insert_with(HashMap::default)
         .contains_key(&start)
       {
         continue;
       } // Already solved
 
-      if start != *EMPTY_SYM {
+      if !start.is_empty() {
         desc
-          .entry(kid)
+          .entry(kid.to_owned())
           .or_insert_with(HashMap::default)
-          .insert(start, desirability);
+          .insert(start.to_owned(), desirability);
       }
 
-      if kid != *PCDATA_SYM && openable.contains(&kid) {
-        let inner = if start != *EMPTY_SYM { start } else { kid };
-
-        self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
+      if kid != "#PCDATA" && openable.contains(&kid) {
+        let inner = if !start.is_empty() { start.to_owned() } else { kid.to_owned() };
+        self.compute_indirect_model_aux(&kid, Some(inner), desirability, openable, desc);
       }
     }
   }

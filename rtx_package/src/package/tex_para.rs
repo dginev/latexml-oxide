@@ -10,7 +10,7 @@ LoadDefinitions!(state, {
       let tag = document.get_node_qname(&node,state);
       if tag == "ltx:para" {
         node.set_attribute("class","ltx_indent")?;
-      } else if document.can_contain_somehow(tag,"ltx:para",state) {
+      } else if document.can_contain_somehow(&tag,"ltx:para",state) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None, state)?;
       }
@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
       let tag = document.get_node_qname(&node,state);
       if tag == "ltx:para" {
         node.set_attribute("class","ltx_noindent")?;
-      } else if document.can_contain_somehow(tag,"ltx:para",state) {
+      } else if document.can_contain_somehow(&tag,"ltx:para",state) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None, state)?;
       }

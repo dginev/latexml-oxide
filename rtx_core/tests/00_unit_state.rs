@@ -3,7 +3,7 @@ use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
-use rtx_core::{s, CharToken, Explode, Token, T_CS, T_SPACE};
+use rtx_core::{s, Explode, T_OTHER, T_CS, T_SPACE};
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 

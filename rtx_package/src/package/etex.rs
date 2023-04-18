@@ -11,7 +11,7 @@ LoadDefinitions!(outer_state, {
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
   DefPrimitive!("\\protected", sub[_stomach, _args, state] {
-    state.set_prefix("protected");
+    state.set_prefix(Cow::Borrowed("protected"));
   },
   is_prefix => true);
 

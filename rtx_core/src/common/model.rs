@@ -6,9 +6,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::string::ToString;
-use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
@@ -22,7 +20,7 @@ use libxml::tree::Node;
 // use common::font::*;
 
 pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
-pub type IndirectModel = HashMap<SymbolU32, HashMap<SymbolU32, SymbolU32>>;
+pub type IndirectModel = HashMap<String, HashMap<String, String>>;
 
 static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
 static CAPTURE_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(.*?:)?_Capture_$").unwrap());
@@ -33,8 +31,8 @@ static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)
 
 #[derive(Default)]
 pub struct TagFrame {
-  model: HashSet<SymbolU32>,
-  attributes: HashSet<SymbolU32>,
+  model: HashSet<String>,
+  attributes: HashSet<String>,
 }
 
 #[derive(Default)]
@@ -52,7 +50,7 @@ pub struct Model {
   pub no_compiled: bool,
   pub debug_mode: bool,
   pub namespace_errors: u8,
-  pub tagprop: HashMap<SymbolU32, TagFrame>,
+  pub tagprop: HashMap<String, TagFrame>,
 }
 
 impl Object for Model {
@@ -389,18 +387,18 @@ impl Model {
   /// Get the node's qualified name in standard form
   /// Ie. using the registered (code) prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-  pub fn get_node_qname<'a>(&'a self, node: &'a Node) -> &'static str {
+  pub fn get_node_qname<'a>(&'a self, node: &'a Node) -> Cow<'static, str> {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return "#BrokenNode";
+      return Cow::Borrowed("#BrokenNode");
     }
     match node_type.unwrap() {
-      TextNode => "#PCDATA",
-      DocumentNode => "#Document",
-      CommentNode => "#Comment",
-      PiNode => "#ProcessingInstruction",
-      DTDNode => "#DTD",
+      TextNode => Cow::Borrowed("#PCDATA"),
+      DocumentNode => Cow::Borrowed("#Document"),
+      CommentNode => Cow::Borrowed("#Comment"),
+      PiNode => Cow::Borrowed("#ProcessingInstruction"),
+      DTDNode => Cow::Borrowed("#DTD"),
       NamespaceDecl => {
         // match node.declared_uri() {
         //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
@@ -409,7 +407,7 @@ impl Model {
         //   },
         //   None => s!("xmlns")
         // }
-        "xmlns"
+        Cow::Borrowed("xmlns")
       },
       ElementNode | AttributeNode => {
         // match node.namespace_uri() {
@@ -420,10 +418,10 @@ impl Model {
         //   None => node.get_name()
         // }
         // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        let name_str = arena::as_static(node.get_name().as_str());
-        match name_str {
-          "song" | "verse" | "line" => name_str,
-          regular => arena::as_static(s!("ltx:{}", regular)),
+        let name_str = node.get_name();
+        match name_str.as_str() {
+          "song" | "verse" | "line" => Cow::Owned(name_str),
+          regular => Cow::Owned(s!("ltx:{}", regular)),
         }
       },
       // Need others?
@@ -528,10 +526,10 @@ impl Model {
     // Else query tag properties.
     let model = &mut self
       .tagprop
-      .entry(arena::pin(tag))
+      .entry(tag.to_owned())
       .or_insert_with(TagFrame::default)
       .model;
-    model.contains(&*ANY_SYM) || model.contains(&arena::pin(child))
+    model.contains("ANY") || model.contains(child)
   }
 
   pub fn can_have_attribute(&mut self, tag: &str, attrib: &str) -> bool {
@@ -553,15 +551,15 @@ impl Model {
     // Else query tag properties.
     let attributes = &mut self
       .tagprop
-      .entry(arena::pin(tag))
+      .entry(tag.to_owned())
       .or_insert_with(TagFrame::default)
       .attributes;
-    attributes.contains(&arena::pin(attrib))
+    attributes.contains(attrib)
   }
 
   pub fn is_node_in_schema_class(&self, class_name: &str, tag: &Node) -> bool {
     let tag = self.get_node_qname(tag);
-    self.is_in_schema_class(class_name, tag)
+    self.is_in_schema_class(class_name, &tag)
   }
   pub fn is_in_schema_class(&self, class_name: &str, tag: &str) -> bool {
     if let Some(class) = self.schema_class.get(class_name) {
@@ -609,19 +607,18 @@ impl Model {
   // Accessors
   //**********************************************************************
 
-  pub fn get_tags(&self) -> Vec<&str> {
+  pub fn get_tags(&self) -> Vec<String> {
     self
       .tagprop
       .keys()
-      .map(|key| arena::resolve(*key))
+      .map(String::to_owned)
       .collect()
   }
-  pub fn get_sym_tags(&self) -> Vec<SymbolU32> { self.tagprop.keys().copied().collect() }
 
   pub fn get_tag_contents(&self, tag: &str) -> Vec<&str> {
-    match self.tagprop.get(&arena::pin(tag)) {
+    match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys: Vec<&str> = h.model.iter().map(|k| arena::resolve(*k)).collect();
+        let mut keys: Vec<&str> = h.model.iter().map(String::as_str).collect();
         keys.sort_unstable();
         keys
       },
@@ -629,28 +626,21 @@ impl Model {
     }
   }
 
-  pub fn get_sym_tag_contents(&self, tag: &SymbolU32) -> Vec<SymbolU32> {
-    match self.tagprop.get(tag) {
-      Some(h) => h.model.iter().copied().collect(),
-      None => Vec::new(),
-    }
-  }
-
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
     let frame = self
       .tagprop
-      .entry(arena::pin(tag))
+      .entry(tag.to_owned())
       .or_insert_with(TagFrame::default);
 
     for element in elements {
-      frame.model.insert(arena::pin(element));
+      frame.model.insert(element.to_owned());
     }
   }
 
   pub fn get_tag_attributes(&self, tag: &str) -> Vec<&str> {
-    match self.tagprop.get(&arena::pin(tag)) {
+    match self.tagprop.get(tag) {
       Some(h) => {
-        let mut keys: Vec<&str> = h.attributes.iter().map(|s| arena::resolve(*s)).collect();
+        let mut keys: Vec<&str> = h.attributes.iter().map(String::as_str).collect();
         keys.sort_unstable();
         keys
       },
@@ -661,11 +651,11 @@ impl Model {
   pub fn add_tag_attribute(&mut self, tag: &str, attributes: Vec<&str>) {
     let frame = self
       .tagprop
-      .entry(arena::pin(tag))
+      .entry(tag.to_owned())
       .or_insert_with(TagFrame::default);
 
     for attribute in attributes {
-      frame.attributes.insert(arena::pin(attribute));
+      frame.attributes.insert(attribute.to_owned());
     }
   }
 

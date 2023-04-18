@@ -450,7 +450,7 @@ LoadDefinitions!(outer_state, {
         reversion =>  sub[_whatsit,_args,st] {
           Ok(Tokens::new(
             if (glyph_c as usize) < 128 {
-              vec![CharToken!(glyph_c,Catcode::OTHER)]
+              vec![T_OTHER!(glyph_c)]
             } else {
               let v = value.value_of().to_string();
               vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]

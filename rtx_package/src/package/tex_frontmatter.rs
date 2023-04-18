@@ -76,9 +76,9 @@ LoadDefinitions!(state, {
     AssignValue!("inPreamble", inpreamble);
   });
 
-  // // Append a piece of data to an existing frontmatter item that is contained in <$tag>
-  // // If $label is given, look for an item which has label=>$label,
-  // // otherwise, just append to the last item in $tag.
+  // Append a piece of data to an existing frontmatter item that is contained in <$tag>
+  // If $label is given, look for an item which has label=>$label,
+  // otherwise, just append to the last item in $tag.
 
   // // \@add@to@frontmatter{tag}[label]{content}
   // DefPrimitive('\@add@to@frontmatter {} [] {}', sub {

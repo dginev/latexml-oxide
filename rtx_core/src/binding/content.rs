@@ -5,7 +5,6 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::path::Path;
 
-use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
 use crate::common::object::Object;
@@ -1067,7 +1066,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Op
 pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
   let mut options = state
     .tag_properties
-    .entry(arena::pin(tag))
+    .entry(tag.to_owned())
     .or_insert_with(TagOptions::default);
   if properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;

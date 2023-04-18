@@ -5,7 +5,6 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -151,7 +150,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         };
         font.compute_boxes_size(
           &[Digested::from(Tbox {
-            text: arena::pin(&sized_data),
+            text: Cow::Owned(sized_data.to_owned()),
             ..Tbox::default()
           })],
           HashMap::default(),

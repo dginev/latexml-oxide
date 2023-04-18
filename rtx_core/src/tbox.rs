@@ -3,9 +3,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
 use std::sync::Arc;
-use string_interner::symbol::SymbolU32;
 
-use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -22,7 +20,7 @@ use crate::{BoxOps, Digested};
 #[derive(Debug, Clone)]
 pub struct Tbox {
   /// plain-text content
-  pub text: SymbolU32,
+  pub text: Cow<'static, str>,
   /// associated font for `text`
   pub font: Arc<Font>,
   /// source location where the box originated
@@ -36,7 +34,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text: arena::pin(""),
+      text: Cow::Borrowed(""),
       font: Arc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),
@@ -54,7 +52,7 @@ impl PartialEq for Tbox {
 // Exported constructors
 impl fmt::Display for Tbox {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", arena::resolve(self.text))
+    write!(f, "{}", self.text)
   }
 }
 impl Object for Tbox {
@@ -119,7 +117,7 @@ impl Tbox {
       }
       let font = Arc::new(font.specialize(&text));
       Tbox {
-        text: arena::pin(text),
+        text: Cow::Owned(text),
         font, // $locator,
         properties,
         tokens,
@@ -127,7 +125,7 @@ impl Tbox {
       }
     } else {
       Tbox {
-        text: arena::pin(text),
+        text: Cow::Owned(text),
         font, // $locator,
         properties,
         tokens,
@@ -136,7 +134,7 @@ impl Tbox {
     }
   }
   /// checks if the text content is empty
-  pub fn is_empty(&self) -> bool { arena::resolve(self.text).is_empty() }
+  pub fn is_empty(&self) -> bool { self.text.is_empty() }
 }
 
 impl BoxOps for Tbox {
@@ -150,7 +148,7 @@ impl BoxOps for Tbox {
     self.properties.insert(key.to_string(), value.into());
   }
   fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
-    Ok(Cow::Borrowed(arena::resolve(self.text)))
+    Ok(Cow::Borrowed(&self.text))
   }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
