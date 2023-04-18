@@ -24,11 +24,13 @@ LoadDefinitions!(state, {
     let id = prop_str!(props,"id");
     // Already (auto) created?
     if let Some(mut docel) = document.findnode("/ltx:document", None, state) {
-      if !id.is_empty() {
-        document.set_attribute(&mut docel, "xml:id", id, state)?;
+      if id != EMPTY_SYM.with(|sym| *sym) {
+        arena::with(id, |id_str|
+          document.set_attribute(&mut docel, "xml:id", id_str, state))?;
       }
     } else {
-      document.open_element("ltx:document", Some(string_map!("xml:id" => id)), None, state)?;
+      let props = arena::with(id, |id_str| string_map!("xml:id" => id_str));
+      document.open_element("ltx:document", Some(props), None, state)?;
     }
   },
   after_digest => sub[stomach, whatsit, state] {

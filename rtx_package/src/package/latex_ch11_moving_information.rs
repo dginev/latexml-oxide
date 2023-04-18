@@ -46,7 +46,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
       state.unshift_value(&ctr_key, vec![scope.clone()]);
-      state.activate_scope(&scope);
+      state.activate_scope(arena::pin(scope));
       stomach.begin_mode("text", state)?;
       let current_label = stomach.digest(Tokens!(T_CS!("\\@currentlabel")), state)?;
       state.assign_value(&label_key, current_label, Some(Scope::Global));
@@ -69,7 +69,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
     properties => sub[_stomach, args, _state] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(map!("label" => Stored::String(clean_label(&label, None).into_owned())))
+      Ok(map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
 
   // DefConstructor('\pageref OptionalMatch:* Semiverbatim', "<ltx:ref labelref='#label'

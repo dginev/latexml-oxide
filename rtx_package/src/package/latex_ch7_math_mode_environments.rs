@@ -1,8 +1,6 @@
 use crate::package::*;
 use std::sync::Arc;
 
-static STORED_EQUATION_LABEL: Lazy<Stored> = Lazy::new(|| Stored::String(String::from("equation")));
-
 //======================================================================
 // C.7.1 Math Mode Environments
 //======================================================================
@@ -31,7 +29,7 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
     is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
     has_preset = numbering.contains_key("preset");
     match numbering.get("counter") {
-      Some(Stored::String(v)) => v.to_owned(),
+      Some(Stored::String(v)) => arena::to_string(*v),
       Some(other) => panic!("eq counter should be stored as string, was instead: {other:?}"),
       _ => String::from("equation"),
     }
@@ -79,8 +77,9 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
       ctr = Some(
         tags
           .get("counter")
-          .unwrap_or_else(|| numbering.get("counter").unwrap_or(&STORED_EQUATION_LABEL))
-          .to_string(),
+          .map_or_else(|| numbering.get("counter"),Some)
+          .map(ToString::to_string)
+          .unwrap_or_else(|| String::from("equation"))
       );
 
       if !matches!(tags.get("noretract"), Some(&Stored::Bool(true)))

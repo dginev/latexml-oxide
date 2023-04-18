@@ -16,6 +16,7 @@ use crate::binding::content::{build_invocation, digest_if, digest_literal, diges
 use crate::binding::def::dialect::{def_macro, def_register, is_defined};
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
+use crate::common::arena;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::expandable::ExpandableOptions;
@@ -360,7 +361,7 @@ pub fn ref_step_counter(
   state: &mut State,
 ) -> Result<HashMap<String, Stored>> {
   let ctr = match state.lookup_mapping("counter_for_type", ctype) {
-    Some(Stored::String(ctr)) => ctr.to_string(),
+    Some(Stored::String(ctr)) => arena::to_string(*ctr),
     _ => ctype.to_string(),
   };
   step_counter(&ctr, noreset, stomach, state)?;
@@ -428,19 +429,19 @@ pub fn ref_step_counter(
   // And install the scope (if any) for this reference number.
   state.assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
-  let scope = s!("{ctr}:{refnum}");
+  let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();
-  receiver.push_front(Stored::String(scope.clone()));
+  receiver.push_front(Stored::String(scope));
   state.assign_value(
     &s!("scopes_for_counter:{ctr}"),
     receiver,
     Some(Scope::Local),
   );
-  state.activate_scope(&scope);
+  state.activate_scope(scope);
 
   Ok(map!(
     "tags" => Stored::Digested(tags),
-    "id" => Stored::String(id)
+    "id" => Stored::String(arena::pin(id))
   ))
 }
 
@@ -507,7 +508,7 @@ pub fn maybe_note_label(label: &str, state: &mut State) {
       state.remove_value("PROCESSED_LABEL");
       state.assign_value(
         "PEEKED_LABEL",
-        Stored::String(label.into_owned()),
+        Stored::String(arena::pin(label)),
         Some(Scope::Global),
       );
     }
@@ -521,7 +522,7 @@ fn deactivate_counter_scope(ctr: &str, state: &mut State) {
   {
     for scope_stored in stored_scopes.clone() {
       if let Stored::String(scope) = scope_stored {
-        state.deactivate_scope(&scope);
+        state.deactivate_scope(scope);
       } else {
         panic!("assignmenet scopes should be stored as strings, got: {scope_stored:?}");
       }
@@ -752,7 +753,7 @@ pub fn begin_itemize(
   );
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
-  state.assign_value("itemcounter", Stored::String(usecounter.clone()), None);
+  state.assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
   let listcounter = s!("@itemize{listpostfix}");
   if state.lookup_value(&s!("\\c@{listcounter}")).is_none() {
     //Create new list counters as needed
@@ -812,8 +813,8 @@ pub fn begin_itemize(
   }
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false, stomach, state)?;
-  rsc.insert("counter".to_string(), Stored::String(usecounter));
-  rsc.insert("series".to_string(), Stored::String(series));
+  rsc.insert("counter".to_string(), Stored::String(arena::pin(usecounter)));
+  rsc.insert("series".to_string(), Stored::String(arena::pin(series)));
   Ok(rsc)
 }
 

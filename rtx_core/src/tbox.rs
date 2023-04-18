@@ -114,7 +114,7 @@ impl Tbox {
           for (key, value) in attr.iter() {
             properties
               .entry(key.to_string())
-              .or_insert_with(|| Stored::String(value.to_owned()));
+              .or_insert_with(|| Stored::String(arena::pin(value)));
           }
         }
       }
@@ -159,12 +159,12 @@ impl BoxOps for Tbox {
     let text = self.get_string(state)?;
     let font = &self.font;
     let mode = match self.properties.get("mode") {
-      Some(Stored::String(s)) => s.as_str(),
-      _ => "text",
+      Some(Stored::String(s)) => *s,
+      _ => arena::pin_static("text"),
     };
 
     if !text.is_empty() {
-      if mode == "math" {
+      if mode == arena::pin_static("math") {
         Ok(vec![document.insert_math_token(
           &text,
           Stored::cast_to_string_hash(&self.properties),

@@ -631,6 +631,17 @@ impl Token {
 
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
+  pub fn get_cs_name(&self) -> SymbolU32 {
+    if self.code.is_primitive() {
+      arena::pin(self.code.name())
+    } else {
+      self.get_sym()
+    }
+  }
+
+  /// Execute a closure using the CS Name of the token.
+  /// This is the name that definitions will be stored under;
+  /// It's the same for various `different' BEGIN tokens, eg.
   pub fn with_cs_name<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&str) -> R {
     if self.code.is_primitive() {
