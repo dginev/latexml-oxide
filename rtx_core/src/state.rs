@@ -796,6 +796,17 @@ impl State {
     }
   }
 
+  /// like `lookup_value`, but casts the entry into a SymbolU32 from the string interner
+  ///  (`EMPTY_SYM` if None)
+  #[inline]
+  pub fn lookup_string_sym(&self, key: &str) -> SymbolU32 {
+    match self.lookup_value(key) {
+      None => EMPTY_SYM.with(|sym| *sym),
+      Some(Stored::String(v)) => *v,
+      Some(other) => arena::pin(other.to_string())
+    }
+  }
+
   /// like `lookup_value`, but casts the entry into a String (empty if None)
   #[inline]
   pub fn lookup_string(&self, key: &str) -> String {
@@ -1481,10 +1492,11 @@ impl State {
       Stored::Token(ref token) => Cow::Borrowed(token),
       _ => panic!("_wrong_argument_for_install_definition"),
     };
-    let cs = token.with_cs_name(|name| name.to_owned());
+    let cs_sym = token.get_cs_name();
+    let cs_locked = token.with_cs_name(|cs| s!("{cs}:locked"));
     // info!("-- installing definition for: {:?}", token);
 
-    let cs_locked = s!("{}:locked", cs);
+
     // TODO, .is_none() should be a real false check
     let is_cs_locked = self.lookup_bool(&cs_locked);
     let is_state_unlocked = self.lookup_bool("UNLOCKED");
@@ -1492,15 +1504,15 @@ impl State {
     if is_cs_locked && !is_state_unlocked {
       if let Some(Stored::String(s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
-        if ((s == "Anonymous String") || TEX_OR_BIB_EXT_RE.is_match(s))
-          && (!s.ends_with(CODE_TEX_EXT))
+        if arena::with(*s, |txt| txt == "Anonymous String" ||
+          TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT))
         {
           //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
         }
         return;
       }
     }
-    self.assign_internal(TableName::Meaning, arena::pin(cs), definition, scope);
+    self.assign_internal(TableName::Meaning, cs_sym, definition, scope);
   }
 
   // NOTE: Common usage patterns seem to be to lookup
@@ -1559,7 +1571,7 @@ impl State {
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
-    self.assign_value("MODE", Stored::String(s!("text")), None);
+    self.assign_value("MODE", Stored::String(arena::pin_static("text")), None);
     self.assign_value("IN_MATH", false, None);
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
@@ -1663,10 +1675,9 @@ impl State {
 
   // #======================================================================
   ///
-  pub fn activate_scope(&mut self, scope: &str) {
+  pub fn activate_scope(&mut self, scope: SymbolU32) {
     // do not re-activate if already active.
-    let scope_sym = arena::pin(scope);
-    if let Some(stash_active_entry) = self.stash_active.get(&scope_sym) {
+    if let Some(stash_active_entry) = self.stash_active.get(&scope) {
       if !stash_active_entry.is_empty() {
         return;
       }
@@ -1674,7 +1685,7 @@ impl State {
 
     self.assign_internal(
       TableName::StashActive,
-      scope_sym,
+      scope,
       Stored::Bool(true),
       Some(Scope::Local),
     );
@@ -1687,7 +1698,7 @@ impl State {
 
     let mut actions = Vec::new();
 
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope_sym)
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope)
     .map(|x| x.iter().next()) {
       for (table_name, key, value) in defns {
         // copy the values out from the stashed defns, so that Rust
@@ -1717,9 +1728,8 @@ impl State {
 
   /// Removes any definitions that were associated with the named `scope`.
   /// Normally not needed, since a scopes definitions are locally bound anyway.
-  pub fn deactivate_scope(&mut self, scope: &str) {
-    let scope_sym = arena::pin(scope);
-    let scope_exists = match self.stash_active.get(&scope_sym) {
+  pub fn deactivate_scope(&mut self, scope: SymbolU32) {
+    let scope_exists = match self.stash_active.get(&scope) {
       None => false,
       Some(v) => !v.is_empty(),
     };
@@ -1729,13 +1739,13 @@ impl State {
 
     self.assign_internal(
       TableName::StashActive,
-      scope_sym,
+      scope,
       Stored::Bool(false),
       Some(Scope::Global),
     );
 
     let mut collected = Vec::new();
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope_sym).map(|x| x.iter().next()) {
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope).map(|x| x.iter().next()) {
       for (table_name, key, value) in defns {
         collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
       }

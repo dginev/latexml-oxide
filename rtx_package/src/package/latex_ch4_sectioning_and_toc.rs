@@ -101,7 +101,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
-      let clean_id = prop_str!(props,"id"); // TODO: CleanID($id);
+      let clean_id = prop_string!(props,"id"); // TODO: CleanID($id);
       document.open_element(&s!("ltx:{stype}"),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,

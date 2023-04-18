@@ -46,18 +46,16 @@ LoadDefinitions!(state, {
         document.maybe_close_element("ltx:p", state)?;
         let element = document.get_element();
         if let Some(mut node) = element {
-          let qsym = document.get_node_qname(&node, state);
-          let out : Result<_> = arena::with(qsym, |qname| {
-            // Only set on the para about to close, if unknown!
-            if qname == "ltx:para" && node.get_attribute("class").is_none() {
-              let class_str = prop_str!(props,"class");
-              document.set_attribute(&mut node, "class", class_str, state)?;
-            } else if qname == "ltx:figure" {
-              // insert breaks in figures, for vertically separating subfigures
-              document.insert_element("ltx:break",Vec::new(), None, state)?;
-            }
-            Ok(()) });
-          out?
+          let qname = document.get_node_qname(&node, state);
+          // Only set on the para about to close, if unknown!
+          if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
+            let class_sym = prop_str!(props,"class");
+            arena::with(class_sym, |class_str|
+              document.set_attribute(&mut node, "class", class_str, state))?;
+          } else if qname == arena::pin_static("ltx:figure") {
+            // insert breaks in figures, for vertically separating subfigures
+            document.insert_element("ltx:break",Vec::new(), None, state)?;
+          }
         }
         document.maybe_close_element("ltx:para", state)?;
       }

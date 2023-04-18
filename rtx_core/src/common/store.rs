@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, RwLock};
+use string_interner::symbol::SymbolU32;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -14,6 +15,7 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
+use crate::common::arena;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -70,7 +72,7 @@ pub enum Stored {
   /// atomic data (Copy)
   Bool(bool),
   /// atomic data (Clone)
-  String(String),
+  String(SymbolU32),
   /// atomic data (Copy)
   Charcode(u16),
   /// atomic data (Copy)
@@ -157,7 +159,7 @@ impl fmt::Debug for Stored {
     use crate::Stored::*;
     match *self {
       None => write!(f, "None"),
-      String(ref s) => write!(f, "{s}"),
+      String(ref s) => arena::with(*s, |str| write!(f, "{str}")),
       Int(ref num) => write!(f, "Stored::Int[{num:?}]"),
       Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{vs:?}]"),
@@ -211,7 +213,7 @@ impl fmt::Display for Stored {
       MuGlue(ref v) => write!(f, "{v}"),
       MuDimension(ref v) => write!(f, "{v}"),
       Font(ref font) => write!(f, "{font}"),
-      String(ref s) => write!(f, "{s}"),
+      String(ref s) => arena::with(*s,|str| write!(f, "{str}")),
       Int(ref s) => write!(f, "{s}"),
       Bool(ref s) => write!(f, "{s}"),
       Tokens(ref s) => write!(f, "{s}"),
@@ -573,19 +575,22 @@ impl<'a> From<bool> for &'a Stored {
 }
 
 impl From<String> for Stored {
-  fn from(value: String) -> Self { Stored::String(value) }
+  fn from(value: String) -> Self { Stored::String(arena::pin(value)) }
+}
+impl From<SymbolU32> for Stored {
+  fn from(value: SymbolU32) -> Self { Stored::String(value) }
 }
 
 impl From<char> for Stored {
-  fn from(value: char) -> Self { Stored::String(value.to_string()) }
+  fn from(value: char) -> Self { Stored::String(arena::pin_char(value)) }
 }
 
 impl<'a> From<&'a String> for Stored {
-  fn from(value: &'a String) -> Self { Stored::String(value.clone()) }
+  fn from(value: &'a String) -> Self { Stored::String(arena::pin(value)) }
 }
 
-impl<'a> From<&'a str> for Stored {
-  fn from(value: &'a str) -> Self { value.to_owned().into() }
+impl From<&'static str> for Stored {
+  fn from(value: &'static str) -> Self { Stored::String(arena::pin_static(value)) }
 }
 
 impl From<usize> for Stored {
@@ -832,7 +837,7 @@ impl<'a> From<&'a Stored> for bool {
 impl<'a> From<&'a Stored> for String {
   fn from(value: &Stored) -> String {
     match value {
-      Stored::String(v) => v.to_owned(),
+      Stored::String(v) => arena::to_string(*v),
       v => s!("{v:?}"),
     }
   }
@@ -901,7 +906,7 @@ impl<'a> From<&'a Stored> for Option<Glue> {
 impl<'a> From<&'a Stored> for Option<Tokens> {
   fn from(value: &'a Stored) -> Option<Tokens> {
     match value {
-      Stored::String(ref text) => Some(mouth::tokenize_internal(text)),
+      Stored::String(ref sym) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
       Stored::Token(ref ts) => Some(Tokens::new(vec![ts.clone()])),
       Stored::Tokens(ref ts) => Some(ts.clone()),
       Stored::VecDequeStored(vdq) => {
@@ -990,7 +995,7 @@ impl<'a> From<&'a Stored> for Option<crate::Digested> {
   fn from(value: &'a Stored) -> Option<crate::Digested> {
     match value {
       Stored::Digested(digested) => Some((*digested).clone()),
-      Stored::String(text) => Some(text.into()),
+      Stored::String(text) => Some((*text).into()),
       Stored::Int(text) => Some(text.to_string().into()),
       _ => None,
     }
@@ -1006,7 +1011,7 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => (*t).clone(),
-      Stored::String(t) => T_CS!(t),
+      Stored::String(text) => Token{text: *text, code:Catcode::CS, smuggled:None},
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
         Warn!("Stored", "cast", None, None, message);

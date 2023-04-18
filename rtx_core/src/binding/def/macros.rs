@@ -382,8 +382,8 @@ macro_rules! prop_digested {
 macro_rules! prop_str {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(&Stored::String(ref id)) => id,
-      _ => "",
+      Some(&Stored::String(ref id)) => *id,
+      _ => arena::pin_static(""),
     }
   };
 }
@@ -392,7 +392,7 @@ macro_rules! prop_str {
 macro_rules! prop_string {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      Some(&Stored::String(ref id)) => id.to_string(),
+      Some(&Stored::String(id)) => arena::to_string(id),
       _ => String::new(),
     }
   };

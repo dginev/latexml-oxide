@@ -587,19 +587,15 @@ impl Document {
   ) -> Result<()> {
     let mut attr_data = Vec::new();
     if let Some(attributes) = attributes_opt {
-      let mut keys = vec![
-        String::from("class"),
-        String::from("package"),
-        String::from("options"),
-      ];
+      let mut keys = vec!["class","package","options"];
       let other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
-        .map(ToString::to_string)
-        .collect::<Vec<String>>();
+        .map(String::as_str)
+        .collect::<Vec<_>>();
       keys.extend(other_keys);
       for key in keys {
-        if let Some(value) = attributes.get(&key) {
+        if let Some(value) = attributes.get(key) {
           attr_data.push(s!("{}=\"{}\"", key, value));
         }
       }
@@ -677,7 +673,7 @@ impl Document {
       // Didn't find $qname at all!!
       let qname_msg: String = match qname {
         "#PCDATA" => qname.to_owned(),
-        _ => s!("</{}>", qname),
+        _ => s!("</{qname}>"),
       };
       let message = s!(
         "Attempt to close {}, which isn't open. Currently in {}",
@@ -769,7 +765,7 @@ impl Document {
 
   // Close $qname, if it is closeable.
   pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    if let Some(node) = self.is_closeable(qname.to_string(), state) {
+    if let Some(node) = self.is_closeable(qname, state) {
       self.close_node_internal(&node, state)?;
       Ok(Some(node))
     } else {
@@ -1168,7 +1164,7 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes(&mut self, _prefixes: Option<&str>) {}
+  fn set_rdfa_prefixes(&mut self, _prefixes: Option<&SymbolU32>) {}
 
   pub fn insert_math_token(
     &mut self,
@@ -2659,9 +2655,9 @@ impl Document {
     }
 
     if let Some(attrs) = attributes {
-      let mut sorted_keys = attrs.keys().map(ToString::to_string).collect::<Vec<_>>();
+      let mut sorted_keys = attrs.keys().map(String::as_str).collect::<Vec<_>>();
       sorted_keys.sort();
-      for key in &sorted_keys {
+      for key in sorted_keys {
         if key == "font" || key == "locator" {
           continue;
         }
