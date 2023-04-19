@@ -1,5 +1,5 @@
-use rtx_core::common::locator::Locator;
 use rtx_core::common::arena;
+use rtx_core::common::locator::Locator;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
@@ -37,8 +37,9 @@ fn assign_lookup_value() {
   state.assign_value("STRICT", strict_value, None);
   match state.lookup_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value after assignment"),
-    Some(&Stored::String(ref received_value)) =>
-      assert_eq!(arena::to_string(*received_value), strict_value),
+    Some(&Stored::String(ref received_value)) => {
+      assert_eq!(arena::to_string(*received_value), strict_value)
+    },
     Some(_) => panic!("Looked up value of STRICT didn't match assigned value"),
   };
 
@@ -59,8 +60,9 @@ fn assign_lookup_value() {
 
   match state.remove_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value on removal"),
-    Some(Stored::String(received_value)) =>
-      arena::with(received_value, |str| assert_eq!(str, strict_value)),
+    Some(Stored::String(received_value)) => {
+      arena::with(received_value, |str| assert_eq!(str, strict_value))
+    },
     Some(_) => panic!("Looked up value of STRICT didn't match removed value"),
   };
 
@@ -77,9 +79,9 @@ fn scoped_assign_lookup_value() {
   state.assign_value("foo", s!("bar"), Some(Scope::Global));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr|
+    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
       assert_eq!(rstr, "bar", "global assignment should have value bar")
-    ),
+    }),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
@@ -88,18 +90,21 @@ fn scoped_assign_lookup_value() {
   state.assign_value("foo", s!("baz"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr|
-      assert_eq!(rstr, "baz","local assignment should have value baz")
-    ),
+    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
+      assert_eq!(rstr, "baz", "local assignment should have value baz")
+    }),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
   state.assign_value("foo", s!("overwrite"), Some(Scope::Local));
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => arena::with(*received_value,|rstr|
-      assert_eq!(rstr, "overwrite", "second local assignment should have value overwrite")
-    ),
+    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
+      assert_eq!(
+        rstr, "overwrite",
+        "second local assignment should have value overwrite"
+      )
+    }),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
@@ -107,8 +112,9 @@ fn scoped_assign_lookup_value() {
 
   match state.lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
-    Some(&Stored::String(ref received_value)) => arena::with(*received_value,|rstr|
-    assert_eq!(rstr, "bar","global assignment should have value bar")),
+    Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
+      assert_eq!(rstr, "bar", "global assignment should have value bar")
+    }),
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 }
@@ -134,11 +140,15 @@ fn assign_lookup_arrays() {
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
-  state.unshift_value("empty_key", vec![Stored::String(arena::pin_static("mydir"))]);
+  state.unshift_value(
+    "empty_key",
+    vec![Stored::String(arena::pin_static("mydir"))],
+  );
   let shifted = state.shift_value("empty_key");
   if let Some(Stored::String(shifted)) = shifted {
-    arena::with(shifted,|shifted_str|
-      assert_eq!(shifted_str, "mydir", "shift/unshift new key"));
+    arena::with(shifted, |shifted_str| {
+      assert_eq!(shifted_str, "mydir", "shift/unshift new key")
+    });
   } else {
     panic!("state.shift_value returned wrong/no Stored")
   }

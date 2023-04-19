@@ -294,10 +294,7 @@ impl Mouth {
   /// into "lines" ending with CRLF, CR or LF (DOS, Mac or Unix).
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
-    let mut lines: VecDeque<String> = LINEBREAK_REGEX
-      .split(lines)
-      .map(str::to_owned)
-      .collect(); // And split.
+    let mut lines: VecDeque<String> = LINEBREAK_REGEX.split(lines).map(str::to_owned).collect();
     if let Some(last_line) = lines.back() {
       if last_line.is_empty() {
         lines.pop_back();
@@ -811,7 +808,8 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
       let mut state = state_rw.write().unwrap();
       Mouth::new(text, None, &mut state)
         .unwrap()
-        .read_tokens(&mut state) }),
+        .read_tokens(&mut state)
+    }),
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }

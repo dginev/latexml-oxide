@@ -77,9 +77,9 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit, state: &mut Stat
       ctr = Some(
         tags
           .get("counter")
-          .map_or_else(|| numbering.get("counter"),Some)
+          .map_or_else(|| numbering.get("counter"), Some)
           .map(ToString::to_string)
-          .unwrap_or_else(|| String::from("equation"))
+          .unwrap_or_else(|| String::from("equation")),
       );
 
       if !matches!(tags.get("noretract"), Some(&Stored::Bool(true)))

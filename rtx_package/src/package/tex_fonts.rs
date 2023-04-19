@@ -385,7 +385,8 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr| state.lookup_meaning(tr)).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
@@ -429,12 +430,14 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr| state.lookup_meaning(tr)).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    let internalcs_opt = glyph.map(|_| T_CS!(newcs.with_cs_name(|csname| s!("\\@mathchardef@{csname}"))));
+    let internalcs_opt = glyph.map(|_|
+      T_CS!(newcs.with_cs_name(|csname| s!("\\@mathchardef@{csname}"))));
     let internalcs_2 = internalcs_opt.clone();
     if let Some(internalcs) = internalcs_opt {
       let mut glyph_props: HashMap<String, Stored> = HashMap::default();

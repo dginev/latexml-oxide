@@ -14,8 +14,8 @@ use string_interner::symbol::SymbolU32;
 use string_interner::StringInterner;
 
 thread_local! {
-  static T: RefCell<StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>> =
-    RefCell::new(StringInterner::with_capacity_and_hasher(32_768, BuildHasherDefault::<FxHasher>::default()));
+  static T: RefCell<StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>> = RefCell::new(
+    StringInterner::with_capacity_and_hasher(32_768, BuildHasherDefault::<FxHasher>::default()));
   /// the unique symbol for str value "ANY"
   pub static ANY_SYM: SymbolU32 = pin_static("ANY");
   /// the unique symbol for str value "#PCDATA"
@@ -54,12 +54,12 @@ thread_local! {
 
 /// Assign a static str into the arena, returning a unique symbol associated with it
 pub fn pin_static(text: &'static str) -> SymbolU32 {
-  T.with(|arena| arena.borrow_mut().get_or_intern_static(text) )
+  T.with(|arena| arena.borrow_mut().get_or_intern_static(text))
 }
 
 /// Assign a string into the arena, returning a unique symbol associated with it
 pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
-  T.with(|arena| arena.borrow_mut().get_or_intern(text) )
+  T.with(|arena| arena.borrow_mut().get_or_intern(text))
 }
 
 pub fn pin_char(c: char) -> SymbolU32 {
@@ -72,24 +72,34 @@ pub fn with<R, FnR>(sym: SymbolU32, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   T.with(|arena| {
     caller(
-      arena.borrow().resolve(sym)
-      .expect("arena::with should only be called when the string is guaranteed to be allocated.")
-    ) })
+      arena
+        .borrow()
+        .resolve(sym)
+        .expect("arena::with should only be called when the string is guaranteed to be allocated."),
+    )
+  })
 }
 
 pub fn to_string(sym: SymbolU32) -> String {
   T.with(|arena| {
-    arena.borrow().resolve(sym)
-      .expect("arena::to_string should only be called when the string is guaranteed to be allocated.")
+    arena
+      .borrow()
+      .resolve(sym)
+      .expect(
+        "arena::to_string should only be called when the string is guaranteed to be allocated.",
+      )
       .to_owned()
-    })
+  })
 }
 
 // TODO: Is this needed? The tighter call would guarantee the T lock is released early.
 pub fn chars(sym: SymbolU32) -> Vec<char> {
   T.with(|arena| {
-    arena.borrow().resolve(sym)
-    .expect("arena::chars should only be called when the string is guaranteed to be allocated.")
-    .chars().collect()
+    arena
+      .borrow()
+      .resolve(sym)
+      .expect("arena::chars should only be called when the string is guaranteed to be allocated.")
+      .chars()
+      .collect()
   })
 }

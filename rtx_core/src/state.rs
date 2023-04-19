@@ -7,7 +7,7 @@ use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, EMPTY_SYM, LTX_P_SYM, H_PCDATA_SYM, GLOBAL_DEFS_SYM, FONT_SYM};
+use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -541,7 +541,7 @@ impl State {
         // whatever is left -- if anything -- should be bindings below the locked frame.
         if let Some(frame) = last_frame {
           frame.table_mut(table_name).insert(key, 1); // Note that there's only one
-                                                                  // value in the stack, now
+                                                      // value in the stack, now
         }
 
         // Undo the bindings, if `key` was bound in this frame
@@ -552,9 +552,7 @@ impl State {
           }
         }
 
-        let table_entry = state_table
-          .entry(key)
-          .or_insert_with(VecDeque::new);
+        let table_entry = state_table.entry(key).or_insert_with(VecDeque::new);
         table_entry.push_front(value);
       },
       Scope::Local => {
@@ -575,9 +573,7 @@ impl State {
         }
         // 2. State table mutable logic
         let state_table = self.table_mut(table_name);
-        let defs = state_table
-          .entry(key)
-          .or_insert_with(VecDeque::new);
+        let defs = state_table.entry(key).or_insert_with(VecDeque::new);
         if is_replace {
           // 2.1. Replace the value, i.e. remove existing one
           defs.pop_front();
@@ -657,7 +653,7 @@ impl State {
       None => None,
       Some(vvec) => match vvec.front_mut() {
         None | Some(&mut Stored::None) => Option::None,
-        Some(found) => Some(std::mem::take(found))
+        Some(found) => Some(std::mem::take(found)),
       },
     }
   }
@@ -666,9 +662,7 @@ impl State {
   pub fn checkout_value(&mut self, key: &str) -> Option<Stored> {
     match self.value.get_mut(&arena::pin(key)) {
       None => None,
-      Some(vvec) => vvec
-        .front_mut()
-        .map(std::mem::take),
+      Some(vvec) => vvec.front_mut().map(std::mem::take),
     }
   }
   /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
@@ -803,7 +797,7 @@ impl State {
     match self.lookup_value(key) {
       None => EMPTY_SYM.with(|sym| *sym),
       Some(Stored::String(v)) => *v,
-      Some(other) => arena::pin(other.to_string())
+      Some(other) => arena::pin(other.to_string()),
     }
   }
 
@@ -1114,7 +1108,11 @@ impl State {
         .unwrap()
         .table(TableName::Value)
         .contains_key(&key_sym),
-      None => !self.value.get(&key_sym).unwrap_or(&VecDeque::new()).is_empty(),
+      None => !self
+        .value
+        .get(&key_sym)
+        .unwrap_or(&VecDeque::new())
+        .is_empty(),
     }
   }
 
@@ -1139,12 +1137,7 @@ impl State {
   #[inline]
   pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
     let s = arena::pin_char(key);
-    self.assign_internal(
-      TableName::Catcode,
-      s,
-      Stored::Catcode(value),
-      scope,
-    );
+    self.assign_internal(TableName::Catcode, s, Stored::Catcode(value), scope);
   }
   /// like `lookup_catcode` but targets Mathcode and its table
   pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
@@ -1168,12 +1161,7 @@ impl State {
   }
   /// like `assign_catcode` but targets Mathcode and its table
   #[inline]
-  pub fn assign_mathcode<T: Into<u16>>(
-    &mut self,
-    key: char,
-    value: T,
-    scope: Option<Scope>,
-  ) {
+  pub fn assign_mathcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
     self.assign_internal(
       TableName::Mathcode,
       arena::pin_char(key),
@@ -1194,12 +1182,7 @@ impl State {
   }
   /// like `assign_catcode` but targets Sfcode and its table
   #[inline]
-  pub fn assign_sfcode<T: Into<u16>>(
-    &mut self,
-    key: char,
-    value: T,
-    scope: Option<Scope>,
-  ) {
+  pub fn assign_sfcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
     self.assign_internal(
       TableName::Sfcode,
       arena::pin_char(key),
@@ -1220,13 +1203,13 @@ impl State {
   }
   /// like `assign_catcode` but targets Lccode and its table
   #[inline]
-  pub fn assign_lccode<T: Into<u16>,C: Into<char>>(
+  pub fn assign_lccode<T: Into<u16>, C: Into<char>>(
     &mut self,
     key: C,
     value: T,
     scope: Option<Scope>,
   ) {
-    let c : char = key.into();
+    let c: char = key.into();
     self.assign_internal(
       TableName::Lccode,
       arena::pin_char(c),
@@ -1249,21 +1232,16 @@ impl State {
   }
   /// like `assign_catcode` but targets Uccode and its table
   #[inline]
-  pub fn assign_uccode<T: Into<u16>,C: Into<char>>(
+  pub fn assign_uccode<T: Into<u16>, C: Into<char>>(
     &mut self,
     key: C,
     value: T,
-    scope: Option<Scope>
+    scope: Option<Scope>,
   ) {
-    let c : char = key.into();
+    let c: char = key.into();
     let mut tmp = [0u8; 3];
     let s = arena::pin(c.encode_utf8(&mut tmp));
-    self.assign_internal(
-      TableName::Uccode,
-      s,
-      Stored::Charcode(value.into()),
-      scope,
-    );
+    self.assign_internal(TableName::Uccode, s, Stored::Charcode(value.into()), scope);
   }
   /// like `lookup_catcode` but targets Delcode and its table
   #[inline]
@@ -1280,20 +1258,10 @@ impl State {
   }
   /// like `assign_catcode` but targets Delcode and its table
   #[inline]
-  pub fn assign_delcode<T: Into<u16>>(
-    &mut self,
-    key: char,
-    value: T,
-    scope: Option<Scope>
-  ) {
+  pub fn assign_delcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
     let mut tmp = [0u8; 3];
     let s = arena::pin(key.encode_utf8(&mut tmp));
-    self.assign_internal(
-      TableName::Delcode,
-      s,
-      Stored::Charcode(value.into()),
-      scope,
-    );
+    self.assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
   }
   /// Get the `Meaning' of a token.  For active control sequence's
   /// this may give the definition object (if defined) or another token (if \let) or undef
@@ -1449,7 +1417,10 @@ impl State {
     };
     // Debug!("Looking up digestable {:?}", lookupname);
     let entry_opt = self.meaning.get(&lookup_sym);
-    if lookup_sym != EMPTY_SYM.with(|sym| *sym) && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
+    if lookup_sym != EMPTY_SYM.with(|sym| *sym)
+      && entry_opt.is_some()
+      && !entry_opt.as_ref().unwrap().is_empty()
+    {
       // Debug!("Found definition for: {:?}", lookupname);
       if let Some(entry) = entry_opt {
         if let Some(front) = entry.front() {
@@ -1473,7 +1444,6 @@ impl State {
       return None;
     }
     Some(token.into())
-
   }
 
   /// And a shorthand for installing definitions
@@ -1496,7 +1466,6 @@ impl State {
     let cs_locked = token.with_cs_name(|cs| s!("{cs}:locked"));
     // info!("-- installing definition for: {:?}", token);
 
-
     // TODO, .is_none() should be a real false check
     let is_cs_locked = self.lookup_bool(&cs_locked);
     let is_state_unlocked = self.lookup_bool("UNLOCKED");
@@ -1504,9 +1473,10 @@ impl State {
     if is_cs_locked && !is_state_unlocked {
       if let Some(Stored::String(s)) = self.lookup_value("SOURCEFILE") {
         // report if the redefinition seems to come from document source
-        if arena::with(*s, |txt| txt == "Anonymous String" ||
-          TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT))
-        {
+        if arena::with(*s, |txt| {
+          txt == "Anonymous String"
+            || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
+        }) {
           //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
         }
         return;
@@ -1698,8 +1668,7 @@ impl State {
 
     let mut actions = Vec::new();
 
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope)
-    .map(|x| x.iter().next()) {
+    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope).map(|x| x.iter().next()) {
       for (table_name, key, value) in defns {
         // copy the values out from the stashed defns, so that Rust
         // is calm we are borrowing safely.
@@ -1773,7 +1742,8 @@ impl State {
           *frame_count -= 1;
         }
       } else {
-        let message = arena::with(key, |key_str| s!(
+        let message = arena::with(key, |key_str| {
+          s!(
           "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
            is {:?}",
           key_str,
@@ -1784,10 +1754,12 @@ impl State {
             .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(", ")
-        ));
+        )
+        });
         let stomach = self.stomach.read().unwrap();
-        arena::with(key, |key_str|
-          Warn!("internal", key_str, stomach, self, message));
+        arena::with(key, |key_str| {
+          Warn!("internal", key_str, stomach, self, message)
+        });
       }
     }
   }
@@ -1797,8 +1769,7 @@ impl State {
   }
   /// return the currently activated named scopes
   pub fn get_active_scopes(&self) -> Vec<SymbolU32> {
-    self.stash_active.keys()
-      .copied().collect::<Vec<_>>()
+    self.stash_active.keys().copied().collect::<Vec<_>>()
   }
 
   //======================================================================
@@ -1979,7 +1950,11 @@ impl State {
       }
 
       if kid != H_PCDATA_SYM.with(|sym| *sym) && openable.contains(&kid) {
-        let inner = if start != EMPTY_SYM.with(|sym| *sym) { start } else { kid };
+        let inner = if start != EMPTY_SYM.with(|sym| *sym) {
+          start
+        } else {
+          kid
+        };
 
         self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
       }
@@ -2032,8 +2007,8 @@ impl State {
     let def2_opt = self.lookup_meaning(token2); // ditto
     match (def1_opt, def2_opt) {
       (Some(def1), Some(def2)) => *def1 == *def2, // If both have defns, must be same defn!
-      (None, None) => true,                     // true if both undefined
-      (_, _) => false,                          // False, if only one has 'meaning'
+      (None, None) => true,                       // true if both undefined
+      (_, _) => false,                            // False, if only one has 'meaning'
     }
   }
 
@@ -2042,7 +2017,7 @@ impl State {
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
     let cs = token.with_cs_name(ToString::to_string);
     self.note_status("undefined", &cs); // TODO: Undefined:cs
-                                       // To minimize chatter, go ahead and define it...
+                                        // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
       let name = cs.replace("\\if", "");

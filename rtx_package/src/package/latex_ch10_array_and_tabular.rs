@@ -24,8 +24,8 @@ use crate::package::*;
 //     if ($str != 1) {
 //       $properties{attributes}{rowsep} = Dimension(($str - 1) . 'em'); } }
 //   if (!defined $properties{strut}) {
-//     $properties{strut} = LookupRegister('\baselineskip')->multiply(1.5); }    # Account for html space
-//   alignmentBindings($template, 'text', %properties);
+//     $properties{strut} = LookupRegister('\baselineskip')->multiply(1.5); }    # Account for html
+// space   alignmentBindings($template, 'text', %properties);
 //   Let("\\\\",            '\@tabularcr');
 //   Let('\tabularnewline', "\\\\");
 //   # NOTE: Fit this back in!!!!!!!
@@ -38,14 +38,13 @@ use crate::package::*;
 //   return; }
 
 LoadDefinitions!(state, {
-
-  DefRegister!("\\lx@arstrut",           Dimension!("0pt"));
+  DefRegister!("\\lx@arstrut", Dimension!("0pt"));
   DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
-  DefRegister!("\\tabcolsep",            Dimension!("6pt"));
+  DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
   Let!("\\@tabularcr", "\\@alignment@newline");
   if LookupValue!("GUESS_TABULAR_HEADERS").is_none() {
-    AssignValue!("GUESS_TABULAR_HEADERS" => true);    // Defaults to yes
+    AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }
 
   // Keyvals are for attributes for the alignment.
@@ -59,12 +58,12 @@ LoadDefinitions!(state, {
     // tabularBindings($template, attributes => {%attr});
   });
 
-  DefMacro!("\\@tabular@before",        None);
-  DefMacro!("\\@tabular@after",         None);
-  DefMacro!("\\@tabular@row@before",    None);
-  DefMacro!("\\@tabular@row@after",     None);
+  DefMacro!("\\@tabular@before", None);
+  DefMacro!("\\@tabular@after", None);
+  DefMacro!("\\@tabular@row@before", None);
+  DefMacro!("\\@tabular@row@after", None);
   DefMacro!("\\@tabular@column@before", None);
-  DefMacro!("\\@tabular@column@after",  None);
+  DefMacro!("\\@tabular@column@after", None);
 
   // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
   DefMacro!("\\tabular[]{}",
@@ -124,33 +123,34 @@ LoadDefinitions!(state, {
     sizer      => 0,
   );
   DefRegister!("\\lx@default@arraycolsep", Dimension!("5pt"));
-  DefRegister!("\\arraycolsep",            Dimension!("5pt"));
-  DefRegister!("\\arrayrulewidth",         Dimension!("0.4pt"));
-  DefRegister!("\\doublerulesep",          Dimension!("2pt"));
+  DefRegister!("\\arraycolsep", Dimension!("5pt"));
+  DefRegister!("\\arrayrulewidth", Dimension!("0.4pt"));
+  DefRegister!("\\doublerulesep", Dimension!("2pt"));
   DefMacro!("\\extracolsep{}", None);
 
   // Array and similar environments
 
   // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[stomach, (pos,template), state] {
-      // my $attr = { vattach => translateAttachment($pos),
-      //   role => 'ARRAY' };
-      // # Determine column and row separations, if non default
-      // my $colsep = LookupDimension('\arraycolsep');
-      // if ($colsep && ($colsep->valueOf != LookupDimension('\lx@default@arraycolsep')->valueOf)) {
-      //   $$attr{colsep} = $colsep; }
-      // my $str = ToString(Expand(T_CS('\arraystretch')));
-      // if ($str != 1) {
-      //   $$attr{rowsep} = Dimension(($str - 1) . 'em'); }
-      // alignmentBindings($template, 'math', attributes => $attr);
-      // MergeFont(mathstyle => 'text');
-      // Let("\\\\", '\@alignment@newline');
+  // my $attr = { vattach => translateAttachment($pos),
+  //   role => 'ARRAY' };
+  // # Determine column and row separations, if non default
+  // my $colsep = LookupDimension('\arraycolsep');
+  // if ($colsep && ($colsep->valueOf != LookupDimension('\lx@default@arraycolsep')->valueOf)) {
+  //   $$attr{colsep} = $colsep; }
+  // my $str = ToString(Expand(T_CS('\arraystretch')));
+  // if ($str != 1) {
+  //   $$attr{rowsep} = Dimension(($str - 1) . 'em'); }
+  // alignmentBindings($template, 'math', attributes => $attr);
+  // MergeFont(mathstyle => 'text');
+  // Let("\\\\", '\@alignment@newline');
 
   // });
 
-  DefMacro!("\\array[]{}",
-    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment");
-  DefMacro!("\\endarray", None,
-    r"\@finish@alignment\@end@array");
+  DefMacro!(
+    "\\array[]{}",
+    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
+  );
+  DefMacro!("\\endarray", None, r"\@finish@alignment\@end@array");
   DefPrimitive!("\\@end@array", sub[stomach,_args,state] { stomach.egroup(state)?; });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",

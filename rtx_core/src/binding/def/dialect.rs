@@ -92,7 +92,7 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 /// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
-  token.with_str(|name|  name != "\\relax" && !name.starts_with("\\end"))
+  token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
     && (meaning.is_none() || (meaning == TOKEN_RELAX.with(|tr| state.lookup_meaning(tr))))
 }
 
@@ -137,9 +137,11 @@ pub fn def_conditional(
       options.scope,
     )
   } else {
-    let name_opt = cs.with_str(|custom|
-      CONDITIONAL_CS_RE.captures(custom).map(|captures|
-        captures.get(1).map_or("", |m| m.as_str()).to_string()));
+    let name_opt = cs.with_str(|custom| {
+      CONDITIONAL_CS_RE
+        .captures(custom)
+        .map(|captures| captures.get(1).map_or("", |m| m.as_str()).to_string())
+    });
     if let Some(name) = name_opt {
       if !name.is_empty() && name != "case" && test.is_none() {
         // user-defined conditional, like with \newif
@@ -189,7 +191,6 @@ pub fn def_conditional(
   if let Some(true) = options.locked {
     state.assign_value(&locked_key, true, None);
   }
-
 }
 
 /// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
@@ -434,9 +435,8 @@ pub fn def_math_dual(
   options: MathPrimitiveOptions,
   state: &mut State,
 ) {
-  let (cont_cs_str,pres_cs_str) = cs.with_str(|csname| (
-    s!("{csname}@content"),
-    s!("{csname}@presentation")));
+  let (cont_cs_str, pres_cs_str) =
+    cs.with_str(|csname| (s!("{csname}@content"), s!("{csname}@presentation")));
   let cont_cs = T_CS!(cont_cs_str);
   let pres_cs = T_CS!(pres_cs_str);
   let defcs = if options.robust {

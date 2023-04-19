@@ -54,8 +54,7 @@ impl PartialEq for Tbox {
 // Exported constructors
 impl fmt::Display for Tbox {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    arena::with(self.text, |text|
-      write!(f, "{}", text))
+    arena::with(self.text, |text| write!(f, "{}", text))
   }
 }
 impl Object for Tbox {
@@ -85,7 +84,11 @@ impl Tbox {
     let _locator = locator_opt;
     let empty_sym = EMPTY_SYM.with(|sym| *sym);
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
-      Tokens!(Token {text, code: Catcode::OTHER, smuggled: None})
+      Tokens!(Token {
+        text,
+        code: Catcode::OTHER,
+        smuggled: None
+      })
     } else {
       tokens_opt
     };
@@ -108,9 +111,9 @@ impl Tbox {
     if state.lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), String::from("math").into());
       if text != empty_sym {
-        if let Some(Stored::HashString(attr)) =
-          state.lookup_value(&arena::with(text, |text_str| s!("math_token_attributes_{}", text_str)))
-        {
+        if let Some(Stored::HashString(attr)) = state.lookup_value(&arena::with(text, |text_str| {
+          s!("math_token_attributes_{}", text_str)
+        })) {
           for (key, value) in attr.iter() {
             properties
               .entry(key.to_string())

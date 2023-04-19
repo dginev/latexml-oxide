@@ -2,6 +2,7 @@
 use crate::document::Document;
 use rustc_hash::FxHashMap as HashMap;
 /// an internal representation for a RelaxNG schema
+#[derive(Debug)]
 pub struct Relaxng {
   /// the schema name
   pub name: String,

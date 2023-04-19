@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::{self, Display};
 
+use crate::alignment::template::Template;
 use crate::common::dimension::Dimension;
 use crate::common::error::Result;
 use crate::common::float::Float;
@@ -18,7 +19,6 @@ use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::Locator;
-use crate::alignment::template::Template;
 
 #[derive(Debug, Clone)]
 pub enum ArgWrap {
@@ -90,7 +90,9 @@ impl Object for ArgWrap {
     use ArgWrap::*;
     match self {
       Token(_) | OptionToken(_) | Tokens(_) | OptionTokens(_) | Number(_) | OptionNumber(_)
-      | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) | AlignmentTemplate(_) => None,
+      | Float(_) | OptionFloat(_) | Dimension(_) | OptionDimension(_) | AlignmentTemplate(_) => {
+        None
+      },
       Glue(t) => t.get_locator(),
       OptionGlue(g_opt) => match g_opt {
         Some(g) => g.get_locator(),
@@ -623,14 +625,10 @@ impl From<Option<MuGlue>> for ArgWrap {
 }
 
 impl From<Result<ArgWrap>> for ArgWrap {
-  fn from(t: Result<ArgWrap>) -> Self {
-    t.unwrap()
-  }
+  fn from(t: Result<ArgWrap>) -> Self { t.unwrap() }
 }
 impl From<()> for ArgWrap {
-  fn from(_: ()) -> Self {
-    ArgWrap::default()
-  }
+  fn from(_: ()) -> Self { ArgWrap::default() }
 }
 impl From<RegisterValue> for ArgWrap {
   fn from(t: RegisterValue) -> Self {
@@ -646,9 +644,7 @@ impl From<RegisterValue> for ArgWrap {
   }
 }
 impl From<Template> for ArgWrap {
-  fn from(t: Template) -> Self {
-    ArgWrap::AlignmentTemplate(t)
-  }
+  fn from(t: Template) -> Self { ArgWrap::AlignmentTemplate(t) }
 }
 
 impl TryFrom<ArgWrap> for Number {

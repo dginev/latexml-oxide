@@ -18,6 +18,8 @@ pub mod tokens;
 /// The programmable API foundation for creating bindings of LaTeX sty/cls libraries
 #[macro_use]
 pub mod binding;
+/// Support for TeX-like Alignments
+pub mod alignment;
 /// TeX comments as standalone objects
 pub mod comment;
 /// All possible definitions for TeX-native commands (expandable, primitive, constructor,...)
@@ -56,8 +58,6 @@ pub mod tbox;
 pub mod util;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
-/// Support for TeX-like Alignments
-pub mod alignment;
 
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;

@@ -8,6 +8,7 @@ use libxml::tree::Node;
 use string_interner::symbol::SymbolU32;
 
 use crate::comment::Comment;
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -15,7 +16,6 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::arena;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -153,8 +153,8 @@ impl From<SymbolU32> for Digested {
   fn from(sym: SymbolU32) -> Digested {
     let allocated = arena::to_string(sym);
     Digested(Arc::new(DigestedData::Postponed(Tokens::new(
-      ExplodeText!(allocated)),
-    )))
+      ExplodeText!(allocated),
+    ))))
   }
 }
 

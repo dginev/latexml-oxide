@@ -2,9 +2,9 @@ use glob::glob;
 use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
-use std::sync::Once;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Once;
 
 use crate::core_interface::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
@@ -43,8 +43,7 @@ pub fn rtx_tests_internal(
   }
 }
 
-
-static INIT_LOGGER : Once = Once::new();
+static INIT_LOGGER: Once = Once::new();
 pub fn init_logger() {
   INIT_LOGGER.call_once(|| {
     rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
@@ -52,7 +51,9 @@ pub fn init_logger() {
     // which should hopefully avoid any hangs in a threaded "cargo test"
     // this may also be needed in web servers running parallel rtx conversion jobs
     // See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/libxml2-2.4.24/doc/threads.html
-    unsafe { libxml::bindings::xmlInitParser(); }
+    unsafe {
+      libxml::bindings::xmlInitParser();
+    }
   });
 }
 

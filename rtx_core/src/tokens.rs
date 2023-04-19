@@ -232,18 +232,13 @@ impl Tokens {
     let mut toks_iter = self.unlist_ref().iter();
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
-      key.with_str(|key_str|
+      key.with_str(|key_str| {
         if let Some(value) = toks_iter.next() {
-          kvs.add_value(
-            key_str,
-            Stored::Token(value.clone()),
-            false,
-            false,
-            state,
-          );
+          kvs.add_value(key_str, Stored::Token(value.clone()), false, false, state);
         } else {
           kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false, state);
-        });
+        }
+      });
     }
     kvs
   }
@@ -364,8 +359,10 @@ impl Tokens {
       if cc == Catcode::LETTER {
         // keep "words" together, just for aesthetics
         while !tokens.is_empty() && tokens[0].get_catcode() == Catcode::LETTER {
-          tokens.pop_front().unwrap().with_str(|front_str|
-            token_string.push_str(front_str));
+          tokens
+            .pop_front()
+            .unwrap()
+            .with_str(|front_str| token_string.push_str(front_str));
         }
       }
 
@@ -439,7 +436,11 @@ impl Tokens {
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
           // only group clear match token cases
-          rescanned.push(Token { text: next_t.unwrap().get_sym(), code: Catcode::ARG, smuggled: None});
+          rescanned.push(Token {
+            text: next_t.unwrap().get_sym(),
+            code: Catcode::ARG,
+            smuggled: None,
+          });
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
         } else {
@@ -513,13 +514,14 @@ impl ToTokens for Catcode {
 impl ToTokens for Token {
   fn to_tokens(&self, stream: &mut TokenStream) {
     let code = self.get_catcode();
-    self.with_str(|text|
+    self.with_str(|text| {
       stream.extend(quote! {
         Token {
           text: rtx_core::common::arena::pin(#text),
           code: #code,
           smuggled: None
         }
-      }));
+      })
+    });
   }
 }

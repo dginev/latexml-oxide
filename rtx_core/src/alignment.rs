@@ -21,18 +21,17 @@
 
 // keep in until code is completed.
 #[allow(dead_code)]
-
 pub mod template;
 
+use crate::alignment::template::{Pattern, Row, Template};
+use crate::common::error::*;
+use crate::common::object::Object;
+use crate::document::Document;
+use crate::gullet::Gullet;
+use crate::mouth::Mouth;
+use crate::state::State;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::common::error::*;
-use crate::mouth::Mouth;
-use crate::gullet::Gullet;
-use crate::state::State;
-use crate::document::Document;
-use crate::common::object::Object;
-use crate::alignment::template::{Pattern, Template, Row};
 
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
@@ -41,9 +40,10 @@ use std::sync::Arc;
 use self::template::TemplateConfig;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
-pub type OpenContainerFn = Arc<dyn Fn(&mut Document, HashMap<String,String>, &mut State) -> Result<()>>;
+pub type OpenContainerFn =
+  Arc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
 pub type CloseContainerFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
-pub type OpenRowFn = Arc<dyn Fn(&mut Document, HashMap<String,String>, &mut State) -> Result<()>>;
+pub type OpenRowFn = Arc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
 pub type CloseRowFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 pub type CloseColumnFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 
@@ -54,7 +54,7 @@ pub struct AlignmentConfig {
   pub open_row: Option<OpenRowFn>,
   pub close_row: Option<CloseRowFn>,
   pub close_column: Option<CloseColumnFn>,
-  pub attributes: HashMap<String,String>,
+  pub attributes: HashMap<String, String>,
 }
 
 pub struct Alignment {
@@ -74,13 +74,13 @@ impl Alignment {
   ///    openColumn     = sub($doc,%attrib); creates the column element with given attributes
   ///    closeColumn    = closes the column
   ///    attributes = hashref containing extra attributes for the container element.
-  pub fn new(config:AlignmentConfig) -> Self {
+  pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
     Alignment {
       template,
       current_row: None,
       current_column: 0,
-      rows: VecDeque::new()
+      rows: VecDeque::new(),
     }
   }
 
@@ -89,20 +89,19 @@ impl Alignment {
   pub fn current_row(&self) -> Option<&Row> {
     match self.current_row {
       Some(idx) => self.rows.get(idx),
-      None => None
-    } }
+      None => None,
+    }
+  }
 
   pub fn new_row(&mut self) -> Option<&Row> {
     let row = self.template.clone();
-    self.current_row    = Some(self.rows.len() + 1);
+    self.current_row = Some(self.rows.len() + 1);
     self.rows.push_back(row);
     self.current_column = 0;
     self.rows.back()
   }
 
-  pub fn remove_row(&mut self) -> Option<Row> {
-    self.rows.pop_back()
-  }
+  pub fn remove_row(&mut self) -> Option<Row> { self.rows.pop_back() }
 
   fn prepend_rows(&mut self, new_rows: Vec<Row>) {
     for new_row in new_rows.into_iter().rev() {
@@ -116,10 +115,7 @@ impl Alignment {
     }
   }
 
-  fn rows(&self) -> &VecDeque<Row> {
-    &self.rows
-  }
-
+  fn rows(&self) -> &VecDeque<Row> { &self.rows }
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,7 +134,7 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
   let mut nopens = 0;
   while let Some(open) = gullet.read_token(state) {
     if open.get_catcode() == Catcode::BEGIN {
-      nopens +=1;
+      nopens += 1;
     } else {
       gullet.unread_one(open);
       break;
@@ -146,10 +142,10 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
   }
   while let Some(op) = gullet.read_token(state) {
     let cc = op.get_catcode();
-    if cc == Catcode::SPACE {}
-    else if cc == Catcode::END {
+    if cc == Catcode::SPACE {
+    } else if cc == Catcode::END {
       let mut last_op = op;
-      nopens -=1;
+      nopens -= 1;
       while nopens > 0 {
         if let Some(next_op) = gullet.read_token(state) {
           last_op = next_op;
@@ -159,11 +155,13 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         } else {
           break;
         }
-        nopens -=1;
+        nopens -= 1;
       }
-      if nopens <= 0 { break; }
+      if nopens <= 0 {
+        break;
+      }
       gullet.unread_one(last_op);
-    } else if let Some(defn) = state.lookup_expandable(&T_CS!("\\NC@rewrite@{op}"),true) {
+    } else if let Some(defn) = state.lookup_expandable(&T_CS!("\\NC@rewrite@{op}"), true) {
       let invoked = defn.invoke(gullet, true, state)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {
@@ -171,16 +169,28 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         gullet.unread(balanced_tks);
       }
     } else {
-      Warn!("unexpected", op, gullet, state, "Unrecognized tabular template {op:?}");
+      Warn!(
+        "unexpected",
+        op,
+        gullet,
+        state,
+        "Unrecognized tabular template {op:?}"
+      );
     }
-    if nopens <= 0 { break; }
+    if nopens <= 0 {
+      break;
+    }
   }
   tokens.push(T_END!());
   build_template.set_reversion(Tokens::new(tokens));
   Ok(build_template)
 }
 
-fn parse_alignment_template(spec: &str, gullet: &mut Gullet, ostate: &mut State) -> Result<Template> {
+fn parse_alignment_template(
+  spec: &str,
+  gullet: &mut Gullet,
+  ostate: &mut State,
+) -> Result<Template> {
   let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None, ostate)?;
   gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
     read_alignment_template(gulletx, state)
@@ -191,6 +201,9 @@ fn matrix_template() -> Template {
   Template::new(TemplateConfig {
     repeated: vec![Pattern {
       before: Some(Tokens!(T_CS!("\\hfil"))),
-      after: Some(Tokens!(T_CS!("\\hfil"))),..Pattern::default()
-    }], .. TemplateConfig::default()})
+      after: Some(Tokens!(T_CS!("\\hfil"))),
+      ..Pattern::default()
+    }],
+    ..TemplateConfig::default()
+  })
 }

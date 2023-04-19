@@ -4,9 +4,9 @@ use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+use rtx_core::common::arena;
 use rtx_core::common::error::{note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
-use rtx_core::common::arena;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;

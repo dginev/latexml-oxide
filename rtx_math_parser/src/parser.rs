@@ -363,7 +363,9 @@ impl MathParser {
           attr.insert(String::from("xml:id"), nid.to_owned());
         }
         for (key, value) in attr {
-          if !(key.starts_with('_') || document.sym_can_have_attribute(rtag, arena::pin(&key), state)) {
+          if !(key.starts_with('_')
+            || document.sym_can_have_attribute(rtag, arena::pin(&key), state))
+          {
             continue;
           }
           if key == "xml:id" {
@@ -410,14 +412,14 @@ impl MathParser {
   ) -> Result<()> {
     for mut child in element_nodes(node) {
       let tag = document.get_node_qname(&child, state);
-      if tag == arena::pin_static("ltx:XMArg") ||
-         tag == arena::pin_static("ltx:XMWrap") {
+      if tag == arena::pin_static("ltx:XMArg") || tag == arena::pin_static("ltx:XMWrap") {
         self.parse_rec(&mut child, "Anything", document, state)?;
-      } else if tag == arena::pin_static("ltx:XMApp") ||
-        tag == arena::pin_static("ltx:XMArray") ||
-        tag == arena::pin_static("ltx:XMRow") ||
-        tag == arena::pin_static("ltx:XMCell") ||
-        tag == arena::pin_static("ltx:XMDual") {
+      } else if tag == arena::pin_static("ltx:XMApp")
+        || tag == arena::pin_static("ltx:XMArray")
+        || tag == arena::pin_static("ltx:XMRow")
+        || tag == arena::pin_static("ltx:XMCell")
+        || tag == arena::pin_static("ltx:XMDual")
+      {
         self.parse_children(&mut child, document, state)?;
       }
     }
@@ -634,7 +636,7 @@ fn textrec(
       None => meaning,
     };
   }
-  if tag  == arena::pin_static("ltx:XMApp") {
+  if tag == arena::pin_static("ltx:XMApp") {
     let mut args = element_nodes(&node);
     if args.is_empty() {
       // Error!("expected","arguments" ...);
@@ -650,7 +652,7 @@ fn textrec(
       }
     }
 
-    let name = if document.with_node_qname(&op, state,|name| name == "ltx:XMTok") {
+    let name = if document.with_node_qname(&op, state, |name| name == "ltx:XMTok") {
       get_token_meaning(&op, document, state).unwrap_or_else(|| "unknown".to_owned())
     } else {
       String::new()
@@ -661,7 +663,7 @@ fn textrec(
     } else {
       string
     }
-  } else if tag  == arena::pin_static("ltx:XMDual") {
+  } else if tag == arena::pin_static("ltx:XMDual") {
     let children = element_nodes(&node);
     let content = children
       .first()
@@ -679,7 +681,7 @@ fn textrec(
                                                                         // textrec($presentation,
                                                                         // $outer_bp, $outer_name)
                                                                         // : $text); }
-  } else if tag  == arena::pin_static("ltx:XMTok") {
+  } else if tag == arena::pin_static("ltx:XMTok") {
     let name = match get_token_meaning(&node, document, state) {
       Some(meaning) => meaning,
       None => s!("Unknown"),
@@ -688,7 +690,7 @@ fn textrec(
       Some(v) => v.to_string(),
       None => name,
     }
-  } else if tag  == arena::pin_static("ltx:XMWrap") || tag == arena::pin_static("ltx:XMCell") {
+  } else if tag == arena::pin_static("ltx:XMWrap") || tag == arena::pin_static("ltx:XMCell") {
     // ??
     element_nodes(&node)
       .into_iter()
@@ -866,7 +868,10 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State) -> Cow<'a, Node> {
-  if state.model.with_node_qname(node, |name| name == "ltx:XMRef") {
+  if state
+    .model
+    .with_node_qname(node, |name| name == "ltx:XMRef")
+  {
     if let Some(idref) = node.get_attribute("idref") {
       // Can it happen that $realnode is, itself, an XMRef?
       // Then we should recurse recurse!
