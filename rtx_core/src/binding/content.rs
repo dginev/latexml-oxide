@@ -1096,7 +1096,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
 
 /// Selects the RelaxNG schema defining the XML output language
 pub fn select_relaxng_schema(
-  schema: String,
+  schema: &str,
   namespaces: Option<HashMap<String, String>>,
   state: &mut State,
 ) {
@@ -1105,7 +1105,7 @@ pub fn select_relaxng_schema(
   model.set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
     for (prefix, value) in namespaces {
-      model.register_document_namespace(&prefix, Some(value));
+      model.register_document_namespace(&prefix, Some(&value));
     }
   }
 }
