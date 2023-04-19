@@ -99,7 +99,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     // );
 
     quote!(
-    Some(Arc::new(
+    Some(Rc::new(
     |document: &mut Document, args: &Vec<Option<Digested>>,
       props: &HashMap<String, Stored>, state: &mut State| {
       #[allow(unused_assignments)]

@@ -23,7 +23,7 @@ use crate::common::error::*;
 use crate::fmt;
 use crate::state::State;
 use crate::stomach::Stomach;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub enum InputFormat {
@@ -76,7 +76,7 @@ impl DigestionMode {
   }
 }
 
-pub type BindingDispatcher = Arc<dyn Fn(&str, &mut Stomach, &mut State) -> Option<Result<()>>>;
+pub type BindingDispatcher = Rc<dyn Fn(&str, &mut Stomach, &mut State) -> Option<Result<()>>>;
 
 #[derive(Clone)]
 pub struct Config {

@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 use std::result::Result;
-use std::sync::Arc;
+use std::rc::Rc;
 
 fn main() -> Result<(), Box<dyn Error>> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
@@ -47,8 +47,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     preamble: None,
     postamble: None,
     mode: None,
-    bindings_dispatch: Some(Arc::new(package::dispatch)),
-    extra_bindings_dispatch: Some(Arc::new(rtx_contrib::dispatch)),
+    bindings_dispatch: Some(Rc::new(package::dispatch)),
+    extra_bindings_dispatch: Some(Rc::new(rtx_contrib::dispatch)),
   };
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {

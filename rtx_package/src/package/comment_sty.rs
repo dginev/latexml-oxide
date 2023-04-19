@@ -66,7 +66,7 @@ LoadDefinitions!(outer_state, {
     outer_state,
   )?;
 
-  DefPrimitive!("\\includecomment{}", Some(Arc::clone(&define_included)));
+  DefPrimitive!("\\includecomment{}", Some( Rc::clone(&define_included)));
   DefPrimitive!("\\excludecomment{}", Some(define_excluded));
   DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
   DefPrimitive!("\\processcomment{}{}{}{}", None);

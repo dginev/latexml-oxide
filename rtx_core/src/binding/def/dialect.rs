@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::{Borrow, Cow};
-use std::sync::Arc;
+use std::rc::Rc;
 
 use regex::Regex;
 
@@ -273,7 +273,7 @@ pub fn def_register<T: Into<RegisterValue>>(
     Some(getter) => getter.clone(),
     None => {
       let name_clone = name.clone();
-      Arc::new(
+      Rc::new(
         move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
           let args_string: String = args
             .iter()
@@ -294,12 +294,12 @@ pub fn def_register<T: Into<RegisterValue>>(
     Some(setter) => setter.clone(),
     None => {
       if readonly {
-        Arc::new(move |_value, _args, state| {
+        Rc::new(move |_value, _args, state| {
           let message = s!("Can't assign to register {}", setter_name);
           Warn!("unexpected", setter_name, None, state, message);
         })
       } else {
-        Arc::new(move |value, args, state| {
+        Rc::new(move |value, args, state| {
           let args_string: String = args
             .into_iter()
             .map(|a| {
@@ -456,7 +456,7 @@ pub fn def_math_dual(
     Expandable::new(
       defcs,
       paramlist.clone(),
-      ExpansionBody::Closure(Arc::new(move |gullet, args, state| {
+      ExpansionBody::Closure(Rc::new(move |gullet, args, state| {
         let args_opt_tks = args
           .into_iter()
           .map(|arg| arg.into())
@@ -539,7 +539,7 @@ pub fn def_math_dual(
     .map(|pl| pl.get_parameters().len())
     .unwrap_or(0);
   let content_closure: ReplacementClosure = if nargs == 0 {
-    Arc::new(|document, _args, props, state| {
+    Rc::new(|document, _args, props, state| {
       let mut attrs = HashMap::default();
       for key in ["role", "scriptpos", "stretchy"] {
         if let Some(v) = props.get(key) {
@@ -555,7 +555,7 @@ pub fn def_math_dual(
       Ok(())
     })
   } else {
-    Arc::new(|document, args, props, state| {
+    Rc::new(|document, args, props, state| {
       let mut app_attrs = HashMap::default();
       for key in ["role", "scriptpos"] {
         if let Some(v) = props.get(key) {
@@ -618,12 +618,12 @@ pub fn def_math_primitive(
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
-      replacement: Some(Arc::new(move |stomach, _args, state| {
+      replacement: Some(Rc::new(move |stomach, _args, state| {
         let locator = stomach.get_locator().unwrap().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = state.lookup_font().unwrap();
-        let font = Arc::new(if let Some(ref reqfont) = reqfont_opt {
+        let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None, state)?;
           state_font
             .merge((*this_reqfont).clone())
@@ -691,7 +691,7 @@ pub fn def_math_constructor(
   let mathstyle_for_font = options.mathstyle.clone();
   let presentation_for_font = presentation.clone();
   options.font = Some(FontDirective::Closure(if is_mathstyle {
-    Arc::new(move |_whatsit, state| {
+    Rc::new(move |_whatsit, state| {
       Ok(
         state
           .lookup_font()
@@ -706,7 +706,7 @@ pub fn def_math_constructor(
       )
     })
   } else {
-    Arc::new(move |_whatsit, state| {
+    Rc::new(move |_whatsit, state| {
       Ok(
         state
           .lookup_font()
@@ -717,7 +717,7 @@ pub fn def_math_constructor(
   }));
   let compiled_replacement: Option<ReplacementClosure> = Some(if nargs == 0 {
     // If trivial presentation, allow it in Text
-    Arc::new(
+    Rc::new(
       move |document: &mut Document, _, props: &HashMap<String, Stored>, state: &mut State| {
         let mut attrs = HashMap::default();
         for key in ["role", "scriptpos", "stretchy"] {
@@ -750,7 +750,7 @@ pub fn def_math_constructor(
       },
     )
   } else {
-    Arc::new(
+    Rc::new(
       move |document: &mut Document,
             args: &Vec<Option<Digested>>,
             props: &HashMap<String, Stored>,
@@ -811,7 +811,7 @@ pub fn def_math_constructor(
       },
     )
   });
-  let sizer: Option<SizingClosure> = Some(Arc::new(move |_, state| {
+  let sizer: Option<SizingClosure> = Some(Rc::new(move |_, state| {
     Ok(Font::math_default().compute_string_size(&presentation_for_sizer, HashMap::default(), state))
   }));
 
@@ -837,7 +837,7 @@ fn infer_sizer(
   reversion: &Option<Reversion>,
 ) -> Option<SizingClosure> {
   match sizer {
-    Some(ref closure) => Some(Arc::clone(closure)),
+    Some(ref closure) => Some(Rc::clone(closure)),
     None => match reversion {
       Some(Reversion::Tokens(tks)) => (*tks).to_string().as_str().into_option(),
       _ => None,
@@ -1052,7 +1052,7 @@ pub fn def_environment(
   }
   before_digest_env.extend(options.before_digest);
 
-  let push_frame_closure = Arc::new(
+  let push_frame_closure = Rc::new(
     |_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
       state.push_frame();
       Ok(())
@@ -1063,7 +1063,7 @@ pub fn def_environment(
 
   let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
 
-  let pop_frame_closure = Arc::new(
+  let pop_frame_closure = Rc::new(
     |_document: &mut Document, _whatsit: &Whatsit, state: &mut State| {
       state.pop_frame()?;
       Ok(())
@@ -1071,7 +1071,7 @@ pub fn def_environment(
   );
   after_construct_with_frame.push(pop_frame_closure);
 
-  let begin_name_constructor = Arc::new(Constructor {
+  let begin_name_constructor = Rc::new(Constructor {
     cs: T_CS!(begin_name),
     paramlist: paramlist.clone(),
     replacement: compiled_replacement.clone(),
@@ -1125,7 +1125,7 @@ pub fn def_environment(
   match options.mode {
     Some(mode) => {
       let emode = mode;
-      let emode_closure = Arc::new(
+      let emode_closure = Rc::new(
         move |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
           stomach.end_mode(&emode, state)?;
           Ok(Vec::new())
@@ -1134,7 +1134,7 @@ pub fn def_environment(
       after_digest_env.push(emode_closure);
     },
     None => {
-      let egroup_closure = Arc::new(
+      let egroup_closure = Rc::new(
         |stomach: &mut Stomach, _whatsit: &mut Whatsit, state: &mut State| {
           stomach.egroup(state)?;
           Ok(Vec::new())
@@ -1155,7 +1155,7 @@ pub fn def_environment(
   });
   before_digest_for_endenv.push(atend_hook_closure);
 
-  let end_envname_constructor = Arc::new(Constructor {
+  let end_envname_constructor = Rc::new(Constructor {
     cs: T_CS!(end_name),
     replacement: None,
     paramlist: None,
@@ -1166,7 +1166,7 @@ pub fn def_environment(
   state.install_definition(end_envname_constructor, options.scope.clone());
 
   // For the uncommon case opened by \csname env\endcsname
-  let name_constructor = Arc::new(Constructor {
+  let name_constructor = Rc::new(Constructor {
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,
@@ -1205,7 +1205,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   };
-  state.install_definition(Arc::new(end_name_constructor), options.scope);
+  state.install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
     state.assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
@@ -1482,7 +1482,7 @@ fn transfer_common_constructor_options(
     String::from("font"),
     Stored::FontDirective(FontDirective::Closure(
       if let Some(mathstyle) = options.mathstyle {
-        Arc::new(move |_whatsit, state| {
+        Rc::new(move |_whatsit, state| {
           Ok(
             state
               .lookup_font()
@@ -1495,7 +1495,7 @@ fn transfer_common_constructor_options(
           )
         })
       } else {
-        Arc::new(move |_whatsit, state| {
+        Rc::new(move |_whatsit, state| {
           Ok(
             state
               .lookup_font()
@@ -1507,5 +1507,5 @@ fn transfer_common_constructor_options(
     )),
   );
 
-  cons.properties = Arc::new(move |_stomach, _args, _state| Ok(properties.clone()));
+  cons.properties = Rc::new(move |_stomach, _args, _state| Ok(properties.clone()));
 }

@@ -7,8 +7,7 @@ use rtx_core::list::List;
 use rtx_core::state::State;
 use rtx_core::{generate_message, s, Core, CoreOptions, Error, Info};
 use rtx_package::package;
-use std::sync::Arc;
-// use std::sync::RwLockWriteGuard;
+use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
 
@@ -46,7 +45,7 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Add default package bindings
-    self.state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
+    self.state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       self.state_mut().extra_bindings_dispatch = Some(closure.clone())
@@ -57,7 +56,6 @@ impl Converter {
     Ok(())
   }
 
-  // pub fn state_mut(&mut self) -> RwLockWriteGuard<'_, State> { self.core.get_state_mut() }
   pub fn state_mut(&mut self) -> &mut State { self.core.get_state_mut() }
   pub fn bind_log(&mut self) {
     // TODO

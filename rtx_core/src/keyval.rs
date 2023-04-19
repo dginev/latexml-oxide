@@ -1,7 +1,7 @@
 // use std::borrow::Cow;
 // use rustc_hash::{FxHashMap as HashMap};
 // use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 // use crate::common::error::*;
 // use crate::common::font::Font;
@@ -56,9 +56,9 @@ impl KeyVal {
   pub fn get_default(&self, state: &State) -> Option<Stored> {
     self.get_prop("default", state).map(|v| (*v).clone())
   }
-  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Arc<Parameter>> {
+  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Rc<Parameter>> {
     match self.get_prop("type", state) {
-      Some(Stored::Parameter(p)) => Some(Arc::clone(p)),
+      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
       _ => None,
     }
   }

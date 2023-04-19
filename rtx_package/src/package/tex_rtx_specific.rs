@@ -212,7 +212,7 @@ LoadDefinitions!(state, {
       None => String::from("content")
     };    // ?????
     if whatsit.get_property("reversion").is_none() {
-      let reversion_closure = Reversion::Closure(Arc::new(move |wself, args, state| {
+      let reversion_closure = Reversion::Closure(Rc::new(move |wself, args, state| {
         // TODO: The data manamgement here is far from final.
         // Can we avoid clones? Can we consolidate the reversion variants?
         let kvs = &args[0];

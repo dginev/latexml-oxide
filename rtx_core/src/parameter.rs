@@ -1,10 +1,10 @@
 use once_cell::sync::Lazy;
-use proc_macro2::TokenStream; // use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc; // TokenStreamExt
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -24,8 +24,8 @@ use crate::{Digested, Locator};
 pub type ReaderFn =
   dyn Fn(&mut Gullet, Option<&Parameters>, &[Tokens], &mut State) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
-pub type ReaderPredigestClosure = Arc<ReaderPredigestFn>;
-pub type ReaderClosure = Arc<ReaderFn>;
+pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
+pub type ReaderClosure = Rc<ReaderFn>;
 
 // Rust Note:
 // the reversion functions initially had "&mut Gullet" as a parameter.
@@ -36,7 +36,7 @@ pub type ReaderClosure = Arc<ReaderFn>;
 // let mut gullet = stomach.get_gullet_mut();
 //
 pub type ReversionClosure =
-  Arc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
+  Rc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
 
 static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
 static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
@@ -68,7 +68,7 @@ impl Default for Parameter {
       spec: Cow::Borrowed(""),
       extra: Vec::new(),
       inner: None,
-      reader: Arc::new(|_gullet, _args, _extra, _state| {
+      reader: Rc::new(|_gullet, _args, _extra, _state| {
         Warn!(
           "Parameter",
           "mock_reader",
@@ -133,21 +133,21 @@ impl Parameter {
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
     let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let descriptor: Option<Arc<Parameter>>;
+    let descriptor: Option<Rc<Parameter>>;
     if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
-      descriptor = Some(Arc::clone(d_lookup));
+      descriptor = Some(Rc::clone(d_lookup));
     } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
       let basetype = captures.get(1).map_or("", |m| m.as_str());
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-          Some(reader) => Some(Arc::new(Parameter {
+          Some(reader) => Some(Rc::new(Parameter {
             reader,
             optional: true,
             ..Parameter::default()
           })),
           None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
-            Some(reader) => Some(Arc::new(Parameter {
+            Some(reader) => Some(Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
@@ -167,14 +167,14 @@ impl Parameter {
       descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
         Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
         _ => match Parameter::check_reader_function(&self.name, state) {
-          Some(reader) => Some(Arc::new(Parameter {
+          Some(reader) => Some(Rc::new(Parameter {
             reader,
             optional: true,
             novalue: true,
             ..Parameter::default()
           })),
           None => Parameter::check_reader_function(&s!("Read{}", basetype), state).map(|reader| {
-            Arc::new(Parameter {
+            Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
@@ -190,7 +190,7 @@ impl Parameter {
     } else {
       descriptor =
         Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
-          Arc::new(Parameter {
+          Rc::new(Parameter {
             reader,
             ..Parameter::default()
           })

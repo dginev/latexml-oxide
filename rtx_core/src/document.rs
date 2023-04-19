@@ -14,7 +14,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt::Write as _;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::arena::{
   self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
@@ -99,7 +99,7 @@ pub struct Document {
   constructed_nodes: Vec<Node>,
   localized_boxes: Vec<Option<Digested>>,
   box_to_absorb: Option<Digested>, // local $LaTeXML::BOX;
-  localized_fonts: Vec<Arc<Font>>,
+  localized_fonts: Vec<Rc<Font>>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -227,7 +227,7 @@ impl Document {
   pub fn finalize(&mut self, state: &mut State) -> Result<()> {
     self.prune_xmduals(state)?;
     if let Some(mut root) = self.document.get_root_element() {
-      self.set_local_font(Arc::new(Font::text_default()));
+      self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root, state)?;
       if let Some(Stored::String(prefixes)) = state.lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes));
@@ -308,7 +308,7 @@ impl Document {
     {
       self.generate_id(node, "", state)?;
     }
-    self.set_local_font(Arc::new(declared_font.into_owned()));
+    self.set_local_font(Rc::new(declared_font.into_owned()));
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
@@ -420,7 +420,7 @@ impl Document {
         Whatsit(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.read().unwrap().be_absorbed(self, state)?;
+          digested.borrow().be_absorbed(self, state)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {
@@ -436,12 +436,12 @@ impl Document {
         Postponed(ref tokens) => {
           if !matches!(props.get("isMath"), Some(&Stored::Bool(true))) {
             let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
-              Some(Arc::clone(prop_font))
+              Some(Rc::clone(prop_font))
             } else {
               match self.box_to_absorb {
                 Some(ref thisbox) => thisbox
                   .get_font(state)?
-                  .map(|thisfont| Arc::new(thisfont.into_owned())),
+                  .map(|thisfont| Rc::new(thisfont.into_owned())),
                 None => None,
               }
             };
@@ -1305,9 +1305,9 @@ impl Document {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal(state)?; // Close text node, if any.
       let mut bestdiff = 99;
-      let rc_node = Arc::new(node);
-      let mut closeto: Arc<Node> = Arc::clone(&rc_node);
-      let mut n: Arc<Node> = Arc::clone(&rc_node);
+      let rc_node = Rc::new(node);
+      let mut closeto: Rc<Node> = Rc::clone(&rc_node);
+      let mut n: Rc<Node> = Rc::clone(&rc_node);
       while n.get_type() != Some(NodeType::DocumentNode) {
         let node_font = self.get_node_font(&n);
         let d = font.distance(node_font);
@@ -1322,7 +1322,7 @@ impl Document {
           break;
         }
         match n.get_parent() {
-          Some(p) => n = Arc::new(p),
+          Some(p) => n = Rc::new(p),
           None => break,
         }
       }
@@ -3196,8 +3196,8 @@ impl Document {
     }
   }
 
-  fn set_local_font(&mut self, arg: Arc<Font>) { self.localized_fonts.push(arg); }
-  fn get_local_font(&self) -> Option<Arc<Font>> { self.localized_fonts.last().cloned() }
+  fn set_local_font(&mut self, arg: Rc<Font>) { self.localized_fonts.push(arg); }
+  fn get_local_font(&self) -> Option<Rc<Font>> { self.localized_fonts.last().cloned() }
   fn expire_local_font(&mut self) { self.localized_fonts.pop(); }
 
   //**********************************************************************

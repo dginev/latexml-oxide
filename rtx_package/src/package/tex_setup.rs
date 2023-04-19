@@ -691,7 +691,7 @@ LoadDefinitions!(state, {
       let tbox = stuff.remove(0);
       let csname = match tbox.data() {
         DigestedData::Whatsit(ref w) =>
-          w.read().unwrap().definition.get_cs_name().to_string(),
+          w.borrow().definition.get_cs_name().to_string(),
         _ => tbox.to_string()
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {

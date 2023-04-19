@@ -62,7 +62,7 @@ impl Dimension {
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
       let converted_unit = match state_opt {
         Some(state) => state.convert_unit(&unit),
-        None => STD_STATE.with(|state_rw| state_rw.read().unwrap().convert_unit(&unit)),
+        None => STD_STATE.with(|state_rw| state_rw.borrow().convert_unit(&unit)),
       };
       Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {

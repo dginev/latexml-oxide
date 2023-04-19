@@ -33,9 +33,9 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, (port, token), state] {
     let file_key = format!("input_file:{port}");
     let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&file_key) {
-      Some(Arc::clone(mouth)) } else { None };
+      Some(Rc::clone(mouth)) } else { None };
     if let Some(mouth) = mouth_opt {
-      let mut raw_line = mouth.write().unwrap().read_raw_line(false, state).unwrap_or_default();
+      let mut raw_line = mouth.borrow_mut().read_raw_line(false, state).unwrap_or_default();
       // DG: Can't we do this \endlinechar check in readRawLine ?!
       // DG:  and can't we make it *faster* ?
       if let Some(eol) = state.lookup_definition(&T_CS!("\\endlinechar")) {

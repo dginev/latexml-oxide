@@ -3,7 +3,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::alignment::template::Template;
 use crate::common::arena;
@@ -25,8 +25,8 @@ use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
+use crate::Digested;
 use crate::*;
-use crate::{BoxOps, Digested};
 
 /// A trait for auto-wrapping a generic type T into Option<Y>,
 /// where Y can be inferred from context.
@@ -109,7 +109,7 @@ impl IntoOption<Option<Scope>> for String {
 // TODO: Sizers need a lot more work, likely a complete rethink about organization.
 impl IntoOption<Option<SizingClosure>> for i64 {
   fn into_option(self) -> Option<SizingClosure> {
-    Some(Arc::new(move |_, _| {
+    Some(Rc::new(move |_, _| {
       Ok((
         Dimension::new(self),
         Dimension::new(self),
@@ -124,7 +124,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
       None
     } else if let Some(stripped) = self.strip_prefix('#') {
       let arg = stripped.parse::<usize>().unwrap_or(1);
-      Some(Arc::new(move |w, state| match w.get_arg(arg) {
+      Some(Rc::new(move |w, state| match w.get_arg(arg) {
         Some(arg) => arg.compute_size(HashMap::default(), state),
         None => Ok((
           Dimension::default(),
@@ -133,7 +133,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         )),
       }))
     } else if self.is_empty() || self == "0" {
-      Some(Arc::new(|_, _| {
+      Some(Rc::new(|_, _| {
         Ok((
           Dimension::default(),
           Dimension::default(),
@@ -143,7 +143,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
     } else {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
-      Some(Arc::new(move |w, state| {
+      Some(Rc::new(move |w, state| {
         let font = if let Stored::Font(ref font) = *w.get_property("font").unwrap() {
           font.clone()
         } else {

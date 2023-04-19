@@ -14,7 +14,7 @@ macro_rules! Font {
 #[macro_export]
 macro_rules! FontDirective {
   ($($key:ident => $value:expr),*) => (
-    Some(FontDirective::Asset(Arc::new(
+    Some(FontDirective::Asset(Rc::new(
       Font { $($key: $value.into_font_field(),)* .. Font::default() }
     ))))
 }
@@ -62,7 +62,7 @@ macro_rules! transfer_opt_default {
 /// create a PrimitiveClosure from the pieces, with a forced empty return value
 #[macro_export]
 macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (Arc::new(
+  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (Rc::new(
     |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>, $inner_state:&mut State| {
       BindInnerState!($stomach, $inner_state);
       $body
@@ -85,7 +85,7 @@ macro_rules! before_digest {
 #[macro_export]
 macro_rules! before_digest_single {
   ($stomach:ident, $state:ident, $body:block) => {
-    Arc::new(move |$stomach: &mut Stomach, $state: &mut State| {
+    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       BindInnerState!($stomach, $state);
       let macro_out = $body;
       end_state_frame!();
@@ -97,7 +97,7 @@ macro_rules! before_digest_single {
 #[macro_export]
 macro_rules! before_digest_simple {
   ($stomach:ident, $state:ident, $body:block) => {
-    Arc::new(move |$stomach: &mut Stomach, $state: &mut State| {
+    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
       let macro_out = $body;
       macro_out.into_digested_result()
     })
@@ -107,7 +107,7 @@ macro_rules! before_digest_simple {
 #[macro_export]
 macro_rules! tagsub {
   ($document:ident, $node:ident, $state:ident, $body:block) => {
-    vec![Arc::new(
+    vec![Rc::new(
       |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
         BindInnerState!($state);
         $body
@@ -121,7 +121,7 @@ macro_rules! tagsub {
 #[macro_export]
 macro_rules! sizersub {
   ($whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(
+    Rc::new(
       |$whatsit: &Whatsit, $state: &mut State| -> Result<(Dimension, Dimension, Dimension)> {
         BindInnerState!($state);
         let macro_out = $body;
@@ -135,7 +135,7 @@ macro_rules! sizersub {
 #[macro_export]
 macro_rules! rewrite_replace_sub {
   ($document:ident, $nodes:ident, $state:ident, $body:block) => {
-  Some(Arc::new(
+  Some(Rc::new(
     |$document: &mut Document, mut $nodes: Vec<&mut Node>, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
@@ -168,7 +168,7 @@ macro_rules! replacement {
 #[macro_export]
 macro_rules! construct {
   ($doc:ident, $whatsit:ident, $state:ident, $body:block) => {
-  vec![Arc::new(
+  vec![Rc::new(
     move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
       BindInnerState!($state);
       $body
@@ -184,7 +184,7 @@ macro_rules! properties {
     properties!($stomach, $args, $inner_state, $body)
   };
   ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
-    Arc::new(
+    Rc::new(
       move |$stomach: &mut Stomach,
             mut $args: &Vec<Option<Digested>>,
             $inner_state: &mut State|
@@ -194,7 +194,7 @@ macro_rules! properties {
     )
   };
   ($(sub)? $body:block) => {
-    Arc::new(
+    Rc::new(
       move |stomach: &mut Stomach,
             args: &Vec<Option<Digested>>,
             state: &mut State|
@@ -204,7 +204,7 @@ macro_rules! properties {
     )
   };
   ($value:expr) => {
-    Arc::new(
+    Rc::new(
       move |_stomach: &mut Stomach,
             _args: &Vec<Option<Digested>>,
             _state: &mut State|
@@ -226,7 +226,7 @@ macro_rules! after_digest {
 #[macro_export]
 macro_rules! after_digest_single {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(
+    Rc::new(
       move |$stomach: &mut Stomach,
             $whatsit: &mut Whatsit,
             $state: &mut State|
@@ -239,7 +239,7 @@ macro_rules! after_digest_single {
 #[macro_export]
 macro_rules! after_digest_simple {
   ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    Arc::new(
+    Rc::new(
       move |$stomach: &mut Stomach,
             $whatsit: &mut Whatsit,
             $state: &mut State|
@@ -251,7 +251,7 @@ macro_rules! after_digest_simple {
 #[macro_export]
 macro_rules! reader {
   ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
-    Arc::new(
+    Rc::new(
       |$gullet: &mut Gullet,
        $inner: Option<&Parameters>,
        $extra: &[Tokens],
@@ -264,7 +264,7 @@ macro_rules! reader {
 #[macro_export]
 macro_rules! reader_predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
-    Some(Arc::new(
+    Some(Rc::new(
       |$stomach: &mut Stomach, $arg: ArgWrap, $state: &mut State| -> Result<Option<Digested>> {
         WithInnerState!($body, $stomach, $state).into_digested_option_result()
       },
@@ -276,7 +276,7 @@ macro_rules! reader_predigest {
 #[macro_export]
 macro_rules! getter {
   ($args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(
+    Some(Rc::new(
       move |mut $args: Vec<ArgWrap>, $state: &mut State| -> Option<RegisterValue> {
         WithInnerState!($body, $state).into_register_value_option()
       },
@@ -287,7 +287,7 @@ macro_rules! getter {
 #[macro_export]
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
-    Some(Arc::new(
+    Some(Rc::new(
       move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
         WithInnerState!($body, $state)
       },
@@ -298,7 +298,7 @@ macro_rules! setter {
 #[macro_export]
 macro_rules! undigested {
   () => {
-    Some(Arc::new(
+    Some(Rc::new(
       |stomach: &mut Stomach, arg: ArgWrap, state: &mut State| -> Result<Option<Digested>> {
         if arg.is_none() {
           Ok(None)
@@ -313,7 +313,7 @@ macro_rules! undigested {
 #[macro_export]
 macro_rules! reversion {
   ($gullet:ident, $arg:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
-    Some(Arc::new(
+    Some(Rc::new(
       |mut $arg: Vec<Token>,
        $inner: Option<&Parameters>,
        $extra: &[Tokens],
@@ -331,7 +331,7 @@ macro_rules! reversion {
 #[macro_export]
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
-    Some(Reversion::Closure(Arc::new(
+    Some(Reversion::Closure(Rc::new(
       move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &State| -> Result<Tokens> {
         BindInnerState!($state);
         let macro_out = $body;
@@ -402,9 +402,9 @@ macro_rules! prop_string {
 macro_rules! prop_whatsit {
   ($props:ident, $key:expr) => {
     match $props.get($key) {
-      // TODO: Cloning here ought to be terribly inefficient and should be avoided. How?
+      // Cloning here is OK now, as there is an Rc<> guard over the DigestedData
       Some(&Stored::Digested(ref rc)) => (**rc).clone(),
-      _ => Digested::Whatsit(Arc::new(RwLock::new(Whatsit::default()))),
+      _ => Digested::Whatsit(Rc::new(RefCell::new(Whatsit::default()))),
     }
   };
 }

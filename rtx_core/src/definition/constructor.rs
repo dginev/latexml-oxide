@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -84,7 +84,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
+      properties: Rc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -156,7 +156,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Arc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
+      properties: Rc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,
@@ -223,8 +223,8 @@ impl Definition for Constructor {
     properties
       .entry(s!("font"))
       .or_insert_with(|| match state_font {
-        Some(f) => Stored::Font(Arc::clone(&f)),
-        None => Stored::Font(Arc::new(Font::text_default())), // should never happen?
+        Some(f) => Stored::Font(Rc::clone(&f)),
+        None => Stored::Font(Rc::new(Font::text_default())), // should never happen?
       });
     // $properties{locator} = $stomach->getGullet->getMouth->getLocator unless defined
     // $properties{locator};
@@ -235,7 +235,7 @@ impl Definition for Constructor {
 
     // Now create the Whatsit, itself.
     let mut whatsit = Whatsit {
-      definition: Arc::new(self.clone()),
+      definition: Rc::new(self.clone()),
       args,
       properties,
       ..Whatsit::default()

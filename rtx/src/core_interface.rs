@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use rtx_core::common::arena;
 use rtx_core::common::error::{note_begin, note_end, Result};
@@ -58,12 +58,11 @@ pub trait DigestionAPI {
 
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
-    // let mut state = self.state.write().unwrap();
     let state = &mut self.state;
     state.initialize_stomach();
     // let paths = state.search_paths;
     state.assign_value("InitialPreloads", true, Some(Scope::Global));
-    let mut stomach = self.stomach.write().unwrap();
+    let mut stomach = self.stomach.borrow_mut();
     for preload in preloads {
       input_definitions(
         &preload,
@@ -132,7 +131,7 @@ impl DigestionAPI for Core {
 
     let name_copy = name;
     self.get_state_mut().install_definition(
-      Stored::Expandable(Arc::new(Expandable {
+      Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
         expansion: Tokens::new(Explode!(name_copy)).into(),
@@ -145,7 +144,7 @@ impl DigestionAPI for Core {
     input_content(
       &request,
       InputOptions::default(),
-      &mut self.stomach.write().unwrap(),
+      &mut self.stomach.borrow_mut(),
       &mut self.state,
     )?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
@@ -270,7 +269,7 @@ impl DigestionAPI for Core {
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let mut stomach = self.stomach.write().unwrap();
+    let mut stomach = self.stomach.borrow_mut();
     while stomach.get_gullet_mut().has_more_input() {
       let next_bodies: Vec<Digested> = stomach.digest_next_body(None, &mut self.state)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
@@ -348,7 +347,7 @@ impl DigestionAPI for Core {
       state.graphics_paths.push_front(dir);
 
       state.install_definition(
-        Stored::Expandable(Arc::new(Expandable {
+        Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!("\\jobname"),
           paramlist: None,
           expansion: Tokens::new(Explode!(name)).into(),
@@ -365,7 +364,7 @@ impl DigestionAPI for Core {
 
     {
       // Make sure the stomach trick is used very *tightly*, always with a surrounding scope.
-      let mut stomach = self.stomach.write().unwrap();
+      let mut stomach = self.stomach.borrow_mut();
       input_content(
         &request,
         InputOptions::default(),

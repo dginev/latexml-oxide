@@ -5,10 +5,10 @@ use crate::tokens::Tokens;
 use libxml::tree::Node;
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 pub type RewriteReplaceClosure =
-  Arc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
+  Rc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
 
 // ======================================================================
 // Defining Rewrite rules that act on the DOM
