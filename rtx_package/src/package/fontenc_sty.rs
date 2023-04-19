@@ -125,7 +125,8 @@ LoadDefinitions!(stomach, state, {
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(enc_sym) = encoding_stored {
           let encoding = arena::to_string(enc_sym);
-          DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)), scope => Some(Scope::Global));
+          DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)),
+            scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
           if LoadFontMap!(&encoding).is_some() {

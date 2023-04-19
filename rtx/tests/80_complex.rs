@@ -12,7 +12,7 @@ use rtx::util::test::*;
 use rtx_core::common::error::*;
 use rtx_core::state::State;
 use rtx_core::stomach::Stomach;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[test]
 fn can_complex() {
@@ -20,7 +20,7 @@ fn can_complex() {
   rtx_tests_internal(
     "tests/complex",
     requires,
-    Some(Arc::new(complex_tests_dispatch)),
+    Some(Rc::new(complex_tests_dispatch)),
   );
 }
 

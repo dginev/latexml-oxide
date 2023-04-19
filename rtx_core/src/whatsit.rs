@@ -4,7 +4,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -31,7 +31,7 @@ pub struct Whatsit {
   /// additional properties, such as font information or sizing
   pub properties: HashMap<String, Stored>,
   /// the definition responsible for creating this object
-  pub definition: Arc<dyn Definition>,
+  pub definition: Rc<dyn Definition>,
   /// cached tokens for reverting back
   ///  (note that the "reversion" _property_ is currently also used)
   pub reversion: Option<Tokens>,
@@ -46,7 +46,7 @@ impl Default for Whatsit {
     Whatsit {
       args: Vec::new(),
       properties: HashMap::default(),
-      definition: Arc::new(Expandable::default()),
+      definition: Rc::new(Expandable::default()),
       reversion: None,
       dual_reversion: None,
       locator: Locator::default(),
@@ -88,7 +88,7 @@ impl Whatsit {
     }
   }
   /// accessor for the definition which built this Whatsit
-  pub fn get_definition(&self) -> Arc<dyn Definition> { Arc::clone(&self.definition) }
+  pub fn get_definition(&self) -> Rc<dyn Definition> { Rc::clone(&self.definition) }
   /// accessor for the argument at index `n` (starting from 1)
   pub fn get_arg(&self, n: usize) -> Option<&Digested> {
     match self.args.get(n - 1) {
@@ -136,7 +136,7 @@ impl Whatsit {
     if let Some(digested) = trailer_opt {
       if let DigestedData::Whatsit(ref trailer) = digested.data() {
         // And copy any otherwise undefined properties from the trailer
-        let trailer_val = trailer.read().unwrap();
+        let trailer_val = trailer.borrow();
         let props = trailer_val.get_properties();
         for (prop, value) in props {
           self
@@ -220,7 +220,7 @@ impl fmt::Debug for Whatsit {
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     STD_STATE.with(|state_rw| {
-      let state = state_rw.read().unwrap(); // TODO: is this really the way?
+      let state = state_rw.borrow(); // TODO: is this really the way?
       write!(f, "{}", self.revert(&state).unwrap())
     }) // What else??
   }
@@ -373,7 +373,7 @@ impl BoxOps for Whatsit {
     }
   }
 
-  fn set_font(&mut self, font: Arc<Font>) {
+  fn set_font(&mut self, font: Rc<Font>) {
     self
       .properties
       .insert("font".to_string(), Stored::Font(font));

@@ -294,9 +294,9 @@ fn _load_binding(
   //|| state.lookup_bool(&s!("{name}_loaded")) || state.lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = if internal {
-    state.bindings_dispatch.as_ref().map(Arc::clone)
+    state.bindings_dispatch.as_ref().map(Rc::clone)
   } else {
-    state.extra_bindings_dispatch.as_ref().map(Arc::clone)
+    state.extra_bindings_dispatch.as_ref().map(Rc::clone)
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
@@ -1115,7 +1115,7 @@ pub fn select_relaxng_schema(
 
 pub fn merge_font(font: Font, state: &mut State) {
   let new_font = state.lookup_font().unwrap().merge(font);
-  state.assign_font(Arc::new(new_font), Some(Scope::Local));
+  state.assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
 pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
@@ -1137,7 +1137,7 @@ pub fn digest_literal<T: Into<Tokens>>(
 
   let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
   state.assign_font(
-    Arc::new(font.merge(fontmap!(encoding => "ASCII"))),
+    Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 

@@ -2,7 +2,7 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::util::test::*;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[test]
 fn can_contrib() {
@@ -11,6 +11,6 @@ fn can_contrib() {
   rtx_tests_internal(
     "tests/contrib",
     requires,
-    Some(Arc::new(rtx_contrib::dispatch)),
+    Some(Rc::new(rtx_contrib::dispatch)),
   );
 }

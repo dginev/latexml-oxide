@@ -1,15 +1,15 @@
 use libxml::tree::Node;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::error::Result;
 use crate::common::font::Font;
 use crate::document::Document;
 use crate::state::State;
 
-pub type LigatureClosure = Arc<dyn Fn(&str) -> String>;
-pub type FontTestClosure = Arc<dyn Fn(&Font) -> bool>;
-pub type LigatureMatcher = Arc<
+pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
+pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;
+pub type LigatureMatcher = Rc<
   dyn Fn(&mut Document, &mut Node, &State) -> Result<Option<(usize, String, MathLigatureOptions)>>,
 >;
 

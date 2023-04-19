@@ -4,7 +4,7 @@ use rustc_hash::FxHashSet as HashSet;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::mem;
-use std::sync::Arc;
+use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
 use crate::common::arena;
@@ -345,7 +345,7 @@ impl Gullet {
   //       reborrow gullet mutably.
   fn invoke_and_read_x_token(
     &mut self,
-    defn: Arc<dyn Definition>,
+    defn: Rc<dyn Definition>,
     toplevel: Option<bool>,
     commentsok: bool,
     state: &mut State,

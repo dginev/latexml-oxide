@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use std::sync::Arc;
+use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
 use crate::common::arena;
@@ -857,7 +857,7 @@ impl Token {
     s!("{}[{}]{}", self.code.short_name(), string, smuggled)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Arc<Register>> {
+  pub fn to_register(&self, state: &State) -> Option<Rc<Register>> {
     state.lookup_register_definition(self)
   }
 

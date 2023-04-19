@@ -221,7 +221,7 @@ pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match d.data() {
       DigestedData::Whatsit(ref w)
-        if w.read().unwrap().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() =>
+        if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() =>
       {
         "vbox"
       },

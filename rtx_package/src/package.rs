@@ -9,7 +9,8 @@ pub use rtx_core::*;
 pub use rustc_hash::FxHashMap as HashMap;
 pub use std::borrow::Cow;
 pub use std::collections::VecDeque;
-pub use std::sync::{Arc, RwLock};
+pub use std::rc::Rc;
+pub use std::sync::{Arc};
 pub use string_interner::symbol::SymbolU32;
 
 pub use rtx_core::aux_macros::*;

@@ -5,7 +5,8 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -184,19 +185,19 @@ impl Conditional {
     let mut ifid = state.lookup_int("if_count");
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
-    let if_frame = Arc::new(RwLock::new(IfFrame {
+    let if_frame = Rc::new(RefCell::new(IfFrame {
       token: state.get_current_token().unwrap().clone(),
       start: gullet.get_locator().unwrap().into_owned(),
       parsing: true,
       elses: false,
       ifid,
     }));
-    state.set_ifframe(Some(Arc::clone(&if_frame)));
-    state.unshift_value("if_stack", vec![Arc::clone(&if_frame)]);
+    state.set_ifframe(Some(Rc::clone(&if_frame)));
+    state.unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
 
     let args = self.read_arguments(gullet, state)?;
 
-    if_frame.write().unwrap().parsing = false;
+    if_frame.borrow_mut().parsing = false;
     let tracing = state.lookup_bool("TRACINGCOMMANDS");
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
@@ -267,7 +268,7 @@ impl Conditional {
           // Found a \fi
           if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
             if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-              if *stack_frame.read().unwrap() != *local_frame.as_ref().unwrap().read().unwrap() {
+              if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
                 // But is it for a condition nested in the test clause?
                 // then DO pop that conditional's frame; it's DONE!
               } else {
@@ -296,9 +297,9 @@ impl Conditional {
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             if let Some(Stored::VecDequeStored(stack)) = state.lookup_value("if_stack") {
               if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
-                if *stack_frame.read().unwrap() == *local_frame.as_ref().unwrap().read().unwrap() {
+                if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
                   // No need to actually call elseHandler, but note that we've seen an \else!
-                  stack_frame.write().unwrap().elses = true;
+                  stack_frame.borrow_mut().elses = true;
                   return t;
                 }
               }
@@ -321,7 +322,7 @@ impl Conditional {
     let stack_frame_opt =
       if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
         if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-          Some(Arc::clone(stack_frame))
+          Some(Rc::clone(stack_frame))
         } else {
           None
         }
@@ -330,23 +331,23 @@ impl Conditional {
       };
     let local_token = state.get_current_token().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
-      if stack_frame.read().unwrap().parsing {
+      if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
         Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
-      } else if stack_frame.read().unwrap().elses {
+      } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
         let message = s!(
           "Extra {} already saw \\else for {:?} [{:?}] at {:?}",
           local_token.stringify(),
-          stack_frame.read().unwrap().token,
-          stack_frame.read().unwrap().ifid,
-          stack_frame.read().unwrap().start
+          stack_frame.borrow().token,
+          stack_frame.borrow().ifid,
+          stack_frame.borrow().start
         );
         let local_token_str = local_token.to_string();
         Error!("unexpected", local_token_str, gullet, state, message);
         Ok(Tokens!())
       } else {
-        state.set_ifframe(Some(Arc::clone(&stack_frame)));
+        state.set_ifframe(Some(Rc::clone(&stack_frame)));
         let _t = self.skip_conditional_body(0, gullet, state);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
@@ -368,10 +369,10 @@ impl Conditional {
   }
 
   fn invoke_fi(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-    let stack_frame_opt: Option<Arc<RwLock<IfFrame>>> =
+    let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> =
       if let Some(Stored::VecDequeStored(ref stack)) = state.lookup_value("if_stack") {
         if let Some(Stored::IfFrame(frame)) = stack.front() {
-          Some(Arc::clone(frame))
+          Some(Rc::clone(frame))
         } else {
           None
         }
@@ -379,7 +380,7 @@ impl Conditional {
         None
       };
     if let Some(stack_frame) = stack_frame_opt {
-      if stack_frame.read().unwrap().parsing {
+      if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
         let local_token = state.get_current_token().unwrap();
         Ok(Tokens!(T_RELAX!(), (*local_token).clone()))

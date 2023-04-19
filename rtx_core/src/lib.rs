@@ -62,8 +62,8 @@ pub mod whatsit;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
-                              //use once_cell::sync::Lazy;
+use std::cell::RefCell;
+use std::rc::Rc;
 use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
@@ -87,7 +87,7 @@ pub struct Core {
   /// the singleton State which bookkeeps all TeX-related state
   pub state: State,
   /// the singleton stomach executing the digestion
-  pub stomach: Arc<RwLock<Stomach>>,
+  pub stomach: Rc<RefCell<Stomach>>,
   /// a list of library names to be preloaded before the main conversion begins
   pub preload: Vec<String>,
 }
@@ -145,12 +145,12 @@ impl Core {
       nomathparse: options.nomathparse,
       ..StateOptions::default()
     };
-    let stomach = Arc::new(RwLock::new(Stomach::default()));
+    let stomach = Rc::new(RefCell::new(Stomach::default()));
     let mut state = State::new(state_options);
-    state.stomach = Arc::clone(&stomach);
+    state.stomach = Rc::clone(&stomach);
 
     // *STATE.write().unwrap() = istate;
-    // Core { state: Arc::clone(&STATE), stomach, preload }
+    // Core { state: Rc::clone(&STATE), stomach, preload }
     Core {
       state,
       stomach,
@@ -217,7 +217,7 @@ pub trait BoxOps: Object {
   /// gets the associated font, if any
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;
   /// sets an associated font
-  fn set_font(&mut self, _font: Arc<Font>) { unimplemented!() }
+  fn set_font(&mut self, _font: Rc<Font>) { unimplemented!() }
   /// sets a "width" property, for sizing
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 

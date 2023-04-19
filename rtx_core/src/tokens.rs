@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 use std::convert::AsRef;
 use std::fmt::Display;
 use std::string::ToString;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -73,11 +73,11 @@ impl From<&Token> for Tokens {
 
 // Good news: Cloning `Token` should now be cheap (due to string interning),
 // so cloning `Tokens` should be fine.
-impl From<Arc<Tokens>> for Tokens {
-  fn from(t: Arc<Tokens>) -> Tokens { (*t).clone() }
+impl From<Rc<Tokens>> for Tokens {
+  fn from(t: Rc<Tokens>) -> Tokens { (*t).clone() }
 }
-impl From<&Arc<Tokens>> for Tokens {
-  fn from(t: &Arc<Tokens>) -> Tokens { (**t).clone() }
+impl From<&Rc<Tokens>> for Tokens {
+  fn from(t: &Rc<Tokens>) -> Tokens { (**t).clone() }
 }
 
 impl From<Tokens> for Result<Tokens> {

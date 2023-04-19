@@ -3,7 +3,7 @@ use libxml::parser::Parser;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Node, SaveOptions};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::rc::Rc;
 use std::sync::Once;
 
 use crate::core_interface::DigestionAPI;
@@ -131,7 +131,7 @@ fn process_texfile(
     ..CoreOptions::default()
   });
   // Add the package bindings
-  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
+  latexml.get_state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to
@@ -188,7 +188,7 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  latexml.get_state_mut().bindings_dispatch = Some(Arc::new(package::dispatch));
+  latexml.get_state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok(), "{:?}", xml_result.err());
   let doc = xml_result.unwrap();

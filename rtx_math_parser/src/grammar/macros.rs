@@ -72,7 +72,7 @@ macro_rules! default_registry {
 #[macro_export]
 macro_rules! register {
   ($rule:ident, $($arg:ident)+ => $call:ident) => {
-    actions!().register($rule.rule(), ::std::sync::Arc::new($call))
+    actions!().register($rule.rule(), ::std::rc::Rc::new($call))
   };
   ($rule:ident, $($arg:ident)+) => {};
 }

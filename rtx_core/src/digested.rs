@@ -2,8 +2,8 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::{Arc, RwLock}; //,RwLockReadGuard,RwLockWriteGuard};
-                              //use once_cell::sync::Lazy;
+use std::cell::RefCell;
+use std::rc::Rc;
 use libxml::tree::Node;
 use string_interner::symbol::SymbolU32;
 
@@ -37,14 +37,14 @@ use crate::BoxOps;
 // A strict OO-hierarchy of object ownership (with no auxiliary state metadata)
 // would allow a Rust-like redesign. But it could be too hard to achieve in practice.
 #[derive(Clone)]
-pub struct Digested(Arc<DigestedData>);
+pub struct Digested(Rc<DigestedData>);
 /// These are all kinds of data which we consider officially supported
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 pub enum DigestedData {
   /// A TeX Box
   TBox(Tbox),
   /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
-  Whatsit(RwLock<Whatsit>),
+  Whatsit(RefCell<Whatsit>),
   /// A list of Digested data
   List(List),
   /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
@@ -89,7 +89,7 @@ impl PartialEq for Digested {
       },
       Whatsit(ref tb) => {
         if let Whatsit(ref tb2) = *other.0 {
-          *tb.read().unwrap() == *tb2.read().unwrap()
+          *tb.borrow() == *tb2.borrow()
         } else {
           false
         }
@@ -137,14 +137,14 @@ impl PartialEq for Digested {
 // we have the most current font information
 impl<'a> From<&'a String> for Digested {
   fn from(value: &'a String) -> Digested {
-    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
       ExplodeText!(value),
     ))))
   }
 }
 impl From<String> for Digested {
   fn from(value: String) -> Digested {
-    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
       ExplodeText!(value),
     ))))
   }
@@ -152,32 +152,32 @@ impl From<String> for Digested {
 impl From<SymbolU32> for Digested {
   fn from(sym: SymbolU32) -> Digested {
     let allocated = arena::to_string(sym);
-    Digested(Arc::new(DigestedData::Postponed(Tokens::new(
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
       ExplodeText!(allocated),
     ))))
   }
 }
 
 impl From<Tokens> for Digested {
-  fn from(value: Tokens) -> Digested { Digested(Arc::new(DigestedData::Postponed(value))) }
+  fn from(value: Tokens) -> Digested { Digested(Rc::new(DigestedData::Postponed(value))) }
 }
 impl From<Tbox> for Digested {
-  fn from(value: Tbox) -> Digested { Digested(Arc::new(DigestedData::TBox(value))) }
+  fn from(value: Tbox) -> Digested { Digested(Rc::new(DigestedData::TBox(value))) }
 }
 impl From<List> for Digested {
-  fn from(value: List) -> Digested { Digested(Arc::new(DigestedData::List(value))) }
+  fn from(value: List) -> Digested { Digested(Rc::new(DigestedData::List(value))) }
 }
 impl From<Whatsit> for Digested {
   fn from(value: Whatsit) -> Digested {
-    Digested(Arc::new(DigestedData::Whatsit(RwLock::new(value))))
+    Digested(Rc::new(DigestedData::Whatsit(RefCell::new(value))))
   }
 }
 impl From<KeyVals> for Digested {
-  fn from(value: KeyVals) -> Digested { Digested(Arc::new(DigestedData::KeyVals(value))) }
+  fn from(value: KeyVals) -> Digested { Digested(Rc::new(DigestedData::KeyVals(value))) }
 }
 impl From<RegisterValue> for Digested {
   fn from(value: RegisterValue) -> Digested {
-    Digested(Arc::new(DigestedData::RegisterValue(value)))
+    Digested(Rc::new(DigestedData::RegisterValue(value)))
   }
 }
 
@@ -202,7 +202,7 @@ impl From<Digested> for Result<Option<Digested>> {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested(Arc::new(DigestedData::TBox(Tbox::default()))) }
+  fn default() -> Self { Digested(Rc::new(DigestedData::TBox(Tbox::default()))) }
 }
 
 impl fmt::Display for Digested {
@@ -211,7 +211,7 @@ impl fmt::Display for Digested {
     match *self.0 {
       TBox(ref b) => write!(f, "{b}"),
       List(ref l) => write!(f, "{l}"),
-      Whatsit(ref w) => write!(f, "{}", w.read().unwrap()),
+      Whatsit(ref w) => write!(f, "{}", w.borrow()),
       Postponed(ref t) => write!(f, "{t}"),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Comment(ref c) => write!(f, "{c}"),
@@ -225,7 +225,7 @@ impl Object for Digested {
     match *self.0 {
       TBox(ref b) => b.stringify(),
       List(ref l) => l.stringify(),
-      Whatsit(ref w) => w.read().unwrap().stringify(),
+      Whatsit(ref w) => w.borrow().stringify(),
       Postponed(ref t) => (*t).stringify(),
       KeyVals(ref kvs) => kvs.stringify(),
       Comment(ref c) => c.stringify(),
@@ -239,8 +239,7 @@ impl Object for Digested {
       List(ref l) => l.get_locator(),
       Comment(ref c) => c.get_locator(),
       Whatsit(ref w) => w
-        .read()
-        .unwrap()
+        .borrow()
         .get_locator()
         .map(|l| Cow::Owned(l.into_owned())),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
@@ -253,7 +252,7 @@ impl Object for Digested {
     match *self.0 {
       TBox(ref b) => b.revert(state),
       List(ref l) => l.revert(state),
-      Whatsit(ref w) => w.read().unwrap().revert(state),
+      Whatsit(ref w) => w.borrow().revert(state),
       Postponed(ref t) => Ok(t.clone()),
       KeyVals(ref kvs) => kvs.revert(state),
       Comment(ref c) => c.revert(state),
@@ -279,7 +278,7 @@ impl BoxOps for Digested {
       TBox(b) => b.be_absorbed(document, state),
       List(l) => l.be_absorbed(document, state),
       Comment(c) => c.be_absorbed(document, state),
-      Whatsit(w) => w.read().unwrap().be_absorbed(document, state),
+      Whatsit(w) => w.borrow().be_absorbed(document, state),
       KeyVals(kvs) => kvs.be_absorbed(document, state),
       Postponed(_) => unimplemented!(),
       RegisterValue(ref _rv) => unimplemented!(),
@@ -292,7 +291,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_properties(),
       List(ref l) => l.get_properties(),
       KeyVals(ref kvs) => kvs.get_properties(),
-      Whatsit(ref _w) => unimplemented!(), // Oooof; w.read().unwrap().get_properties(),
+      Whatsit(ref _w) => unimplemented!(), // Oooof; w.borrow().get_properties(),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -300,11 +299,11 @@ impl BoxOps for Digested {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self.0 {
       // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
-      // i.e. Arc<RwLock<Tbox>>, Arc<RwLock<List>>, etc.
+      // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
       //
       // Digested::TBox(ref b) => b.set_property(key, value),
       // Digested::List(ref l) => l.set_property(key, value),
-      DigestedData::Whatsit(ref w) => w.write().unwrap().set_property(key, value),
+      DigestedData::Whatsit(ref w) => w.borrow_mut().set_property(key, value),
       DigestedData::List(ref _l) => Debug!(
         "ignore",
         "set_property",
@@ -322,8 +321,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_property(key),
       List(ref l) => l.get_property(key),
       Whatsit(ref w) => w
-        .read()
-        .unwrap()
+        .borrow()
         .get_property(key)
         .map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
@@ -334,7 +332,7 @@ impl BoxOps for Digested {
     match *self.0 {
       TBox(ref b) => b.get_string(state),
       List(ref l) => l.get_string(state),
-      Whatsit(ref w) => match w.read().unwrap().get_string(state) {
+      Whatsit(ref w) => match w.borrow().get_string(state) {
         Ok(v) => Ok(Cow::Owned(v.into_owned())),
         Err(e) => Err(format!("failed Whatsit get_string: {e}").into()),
       },
@@ -346,7 +344,7 @@ impl BoxOps for Digested {
     match *self.0 {
       TBox(ref b) => b.has_property(key),
       List(ref l) => l.has_property(key),
-      Whatsit(ref w) => w.read().unwrap().has_property(key),
+      Whatsit(ref w) => w.borrow().has_property(key),
       _ => unimplemented!(),
     }
   }
@@ -373,7 +371,7 @@ impl BoxOps for Digested {
         );
         None
       },
-      Whatsit(ref w) => w.read().unwrap().get_body(),
+      Whatsit(ref w) => w.borrow().get_body(),
       _ => unimplemented!(),
     }
   }
@@ -382,7 +380,7 @@ impl BoxOps for Digested {
     match *self.0 {
       TBox(ref b) => b.get_property_bool(key),
       List(ref l) => l.get_property_bool(key),
-      Whatsit(ref w) => w.read().unwrap().get_property_bool(key),
+      Whatsit(ref w) => w.borrow().get_property_bool(key),
       _ => unimplemented!(),
     }
   }
@@ -392,8 +390,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_font(state),
       List(ref l) => l.get_font(state),
       Whatsit(ref w) => Ok(
-        w.read()
-          .unwrap()
+        w.borrow()
           .get_font(state)?
           .map(|t| Cow::Owned(t.into_owned())),
       ),
@@ -412,7 +409,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.compute_size(options, state),
       List(ref l) => l.compute_size(options, state),
       KeyVals(ref kvs) => kvs.compute_size(options, state),
-      Whatsit(ref w) => w.read().unwrap().compute_size(options, state),
+      Whatsit(ref w) => w.borrow().compute_size(options, state),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -464,7 +461,7 @@ impl Digested {
     match *self.0 {
       TBox(ref b) => b.is_empty(),
       List(ref l) => l.is_empty(),
-      Whatsit(ref w) => w.read().unwrap().is_empty(),
+      Whatsit(ref w) => w.borrow().is_empty(),
       Postponed(ref tks) => tks.is_empty(),
       _ => unimplemented!(),
     }

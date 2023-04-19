@@ -11,7 +11,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -33,24 +33,24 @@ use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
 use crate::Digested;
 
-pub type ExpansionClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<Tokens>>;
-pub type ConditionalClosure = Arc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<bool>>;
+pub type ExpansionClosure = Rc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<Tokens>>;
+pub type ConditionalClosure = Rc<dyn Fn(&mut Gullet, Vec<ArgWrap>, &mut State) -> Result<bool>>;
 pub type PrimitiveFn = dyn Fn(&mut Stomach, Vec<ArgWrap>, &mut State) -> Result<Vec<Digested>>;
-pub type PrimitiveClosure = Arc<PrimitiveFn>;
-pub type BeforeDigestClosure = Arc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
+pub type PrimitiveClosure = Rc<PrimitiveFn>;
+pub type BeforeDigestClosure = Rc<dyn Fn(&mut Stomach, &mut State) -> Result<Vec<Digested>>>;
 pub type PropertiesClosure =
-  Arc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
+  Rc<dyn Fn(&mut Stomach, &Vec<Option<Digested>>, &mut State) -> Result<HashMap<String, Stored>>>;
 pub type DigestionClosure =
-  Arc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
-pub type ReplacementClosure = Arc<
+  Rc<dyn Fn(&mut Stomach, &mut Whatsit, &mut State) -> Result<Vec<Digested>>>;
+pub type ReplacementClosure = Rc<
   dyn Fn(&mut Document, &Vec<Option<Digested>>, &HashMap<String, Stored>, &mut State) -> Result<()>,
 >;
-pub type ConstructionClosure = Arc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
+pub type ConstructionClosure = Rc<dyn Fn(&mut Document, &Whatsit, &mut State) -> Result<()>>;
 pub type DigestedReversionClosure =
-  Arc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
+  Rc<dyn Fn(&Whatsit, &Vec<Option<Digested>>, &State) -> Result<Tokens>>;
 pub type SizingClosure =
-  Arc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
-pub type FontClosure = Arc<dyn Fn(Option<&Whatsit>, &mut State) -> Result<Font>>;
+  Rc<dyn Fn(&Whatsit, &mut State) -> Result<(Dimension, Dimension, Dimension)>>;
+pub type FontClosure = Rc<dyn Fn(Option<&Whatsit>, &mut State) -> Result<Font>>;
 
 #[derive(Clone)]
 pub enum ExpansionBody {
@@ -61,7 +61,7 @@ pub enum ExpansionBody {
 impl std::fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Arc::as_ptr(code)),
+      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code)),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -76,18 +76,18 @@ impl PartialEq for ExpansionBody {
   fn eq(&self, other: &ExpansionBody) -> bool {
     match self {
       ExpansionBody::Closure(self_closure) => match other {
-        ExpansionBody::Closure(other_closure) => Arc::ptr_eq(self_closure, other_closure),
+        ExpansionBody::Closure(other_closure) => Rc::ptr_eq(self_closure, other_closure),
         ExpansionBody::Tokens(other_tokens) => {
           // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint
           // appearing as Tokens and as the original Closure. if we do this carefully, we
           // can get the two .to_string() variants to match...
-          format!("CODE({:p})", Arc::as_ptr(self_closure)) == other_tokens.to_string()
+          format!("CODE({:p})", Rc::as_ptr(self_closure)) == other_tokens.to_string()
         },
       },
       ExpansionBody::Tokens(self_tks) => match other {
         ExpansionBody::Tokens(other_tks) => self_tks == other_tks,
         ExpansionBody::Closure(other_closure) => {
-          format!("CODE({:p})", Arc::as_ptr(other_closure)) == self_tks.to_string()
+          format!("CODE({:p})", Rc::as_ptr(other_closure)) == self_tks.to_string()
         },
       },
     }
@@ -167,25 +167,25 @@ impl From<ArgWrap> for Option<ExpansionBody> {
 #[derive(Clone)]
 pub enum FontDirective {
   Closure(FontClosure),
-  Asset(Arc<Font>),
+  Asset(Rc<Font>),
 }
 
 impl From<Font> for FontDirective {
-  fn from(f: Font) -> Self { FontDirective::Asset(Arc::new(f)) }
+  fn from(f: Font) -> Self { FontDirective::Asset(Rc::new(f)) }
 }
 impl From<FontClosure> for FontDirective {
   fn from(fc: FontClosure) -> Self { FontDirective::Closure(fc) }
 }
 impl FontDirective {
-  pub fn get_font(&self, whatsit: Option<&Whatsit>, state: &mut State) -> Result<Arc<Font>> {
+  pub fn get_font(&self, whatsit: Option<&Whatsit>, state: &mut State) -> Result<Rc<Font>> {
     match self {
-      FontDirective::Closure(fc) => Ok(Arc::new((fc)(whatsit, state)?)),
-      FontDirective::Asset(ref font) => Ok(Arc::clone(font)),
+      FontDirective::Closure(fc) => Ok(Rc::new((fc)(whatsit, state)?)),
+      FontDirective::Asset(ref font) => Ok(Rc::clone(font)),
     }
   }
-  pub fn get_asset(&self) -> Option<Arc<Font>> {
+  pub fn get_asset(&self) -> Option<Rc<Font>> {
     if let FontDirective::Asset(font) = self {
-      Some(Arc::clone(font))
+      Some(Rc::clone(font))
     } else {
       None
     }
@@ -345,8 +345,8 @@ pub trait Definition: Object {
 }
 
 // We need to compare definitions for the internal TeX logic to make sense, but we don't have Perl's
-// level of meta-programming, since cloning an `Arc<Definition>` for storage makes it impossible to
-// compare with the old `Arc<Definition>`. Hence, we need our own meta-programming "hack", via the
+// level of meta-programming, since cloning an `Rc<Definition>` for storage makes it impossible to
+// compare with the old `Rc<Definition>`. Hence, we need our own meta-programming "hack", via the
 // `stringify` method that is different for each `definition` implementation
 // (`Primitive`/`Constructor`/etc) and each control sequence
 //
@@ -371,7 +371,7 @@ impl fmt::Display for ExpansionBody {
     match self {
       ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
       ExpansionBody::Closure(ref code) => {
-        write!(f, "ExpansionBody::Closure({:p})", Arc::as_ptr(code))
+        write!(f, "ExpansionBody::Closure({:p})", Rc::as_ptr(code))
       }, // what is the right way to serialize this, e.g. for the \meaning macro
     }
   }

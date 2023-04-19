@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -382,9 +382,9 @@ pub enum RegisterType {
 // caching optimization, which requires writing new properties while they are stored in the State
 // table if we decide that isn't needed, we can go back to immutable.
 /// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
-pub type RegisterGetterClosure = Arc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
+pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
 /// sets a register value in the State frame
-pub type RegisterSetterClosure = Arc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
+pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
 
 /// A struct representing a TeX register
 #[derive(Clone)]
@@ -416,10 +416,10 @@ impl Default for Register {
       name: String::from("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Arc::new(|_: Vec<ArgWrap>, _: &mut State| {
+      getter: Rc::new(|_: Vec<ArgWrap>, _: &mut State| {
         Some(RegisterValue::Number(Number::new(0)))
       }),
-      setter: Arc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
+      setter: Rc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
       value: None,

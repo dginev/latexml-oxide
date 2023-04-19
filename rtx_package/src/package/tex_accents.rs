@@ -17,7 +17,7 @@ pub fn apply_accent(
 ) -> Result<Tbox> {
   let letter_box = stomach.digest(TokenizeInternal!(letter), state)?;
   let locator = letter_box.get_locator();
-  let font = letter_box.get_font(state)?.map(|f| Arc::new((*f).clone()));
+  let font = letter_box.get_font(state)?.map(|f| Rc::new((*f).clone()));
 
   let mut string: String = letter_box.to_string();
   string = string.replace('\u{0131}', "i").replace('\u{0237}', "j");
