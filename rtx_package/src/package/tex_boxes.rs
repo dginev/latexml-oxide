@@ -131,7 +131,7 @@ LoadDefinitions!(state, {
       let node = document.open_element(newtag,
         Some(string_map!("_noautoclose" => "true", "width" => width)), None, state)?;
       // Note on the clone: Remember that contents is a Digested,
-      // i.e. we are cloning an Arc<> wrapper, which is relatively cheap.
+      // i.e. we are cloning an Rc<> wrapper, which is relatively cheap.
       // see the documentation on `Digested` on why we don't have a neater way of dealing with this.
       document.absorb(contents, None, state)?;
       if !is_svg {

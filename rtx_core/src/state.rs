@@ -4,7 +4,8 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
-use std::sync::{Arc, RwLock};
+use std::rc::Rc;
+use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
@@ -257,7 +258,7 @@ pub struct State {
   /// TODO: marker for alignment
   pub reading_alignment: bool,
   // Local structures
-  if_frames: Vec<Option<Arc<RwLock<IfFrame>>>>,
+  if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
   smuggle_the: Vec<bool>,
   current_token: Vec<Token>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
@@ -267,10 +268,11 @@ pub struct State {
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
   /// Circular dependency and global $STATE in Perl requires a bad
   /// style use of interior mutability...
-  pub stomach: Arc<RwLock<Stomach>>,
+  pub stomach: Rc<RefCell<Stomach>>,
 }
 unsafe impl Send for State {}
-unsafe impl Sync for State {}
+// state is NOT Sync!
+// each core conversion job must be localized in ONE thread.
 
 impl Default for State {
   fn default() -> Self {
@@ -320,17 +322,17 @@ impl Default for State {
       bindings_dispatch: None,
       extra_bindings_dispatch: None,
       // interiorly mutable
-      stomach: Arc::new(RwLock::new(Stomach::default())),
+      stomach: Rc::new(RefCell::new(Stomach::default())),
     }
   }
 }
 
 thread_local! {
-  pub static STY_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
+  pub static STY_STATE: RefCell<State> = RefCell::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
   }));
-  pub static STD_STATE: RwLock<State> = RwLock::new(State::new(StateOptions {
+  pub static STD_STATE: RefCell<State> = RefCell::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   }));
@@ -842,7 +844,7 @@ impl State {
   }
   /// convenience method to lookup the current value at the "font" key
   #[inline(always)]
-  pub fn lookup_font(&self) -> Option<Arc<Font>> {
+  pub fn lookup_font(&self) -> Option<Rc<Font>> {
     match self.lookup_value_sym(&FONT_SYM.with(|sym| *sym)) {
       None | Some(Stored::None) => None,
       Some(f) => f.into(),
@@ -850,7 +852,7 @@ impl State {
   }
   /// convenience method to lookup the current value at the "mathfont" key
   #[inline]
-  pub fn lookup_mathfont(&self) -> Option<Arc<Font>> {
+  pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
     match self.lookup_value("mathfont") {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
@@ -859,7 +861,7 @@ impl State {
 
   /// a convenience method to globally asign a `Font` to the "font" key
   #[inline(always)]
-  pub fn assign_font(&mut self, font: Arc<Font>, scope: Option<Scope>) {
+  pub fn assign_font(&mut self, font: Rc<Font>, scope: Option<Scope>) {
     self.assign_value("font", Stored::Font(font), scope);
   }
 
@@ -930,7 +932,7 @@ impl State {
     }
   }
   #[inline]
-  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Arc<dyn Definition>> {
+  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
     self
@@ -1327,7 +1329,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Arc<dyn Definition>> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<dyn Definition>> {
     if let Some(defs) = self.lookup_definition_internal(key) {
       match defs.front() {
         Some(Stored::Conditional(entry)) => Some(entry.clone()),
@@ -1339,7 +1341,7 @@ impl State {
         // TODO: Is this take on reframing a Token definition as an Expandable acceptable?
         //      Does it have unintended side-effects? Are we missing useful code paths that
         // specifically deal with a Token      in Gullet, etc?
-        Some(Stored::Token(entry)) => Some(Arc::new(Expandable {
+        Some(Stored::Token(entry)) => Some(Rc::new(Expandable {
           cs: key.as_cs(),
           paramlist: None,
           expansion: entry.clone().into(),
@@ -1364,13 +1366,13 @@ impl State {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         // Still, good time to handle the Token case and catch weird storage errors
-        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Arc::clone(entry))),
-        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Arc::clone(entry))),
-        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Arc::clone(entry))),
-        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Arc::clone(entry))),
-        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Arc::clone(entry))),
-        Some(Stored::Register(entry)) => Some(Stored::Register(Arc::clone(entry))),
-        Some(Stored::Token(entry)) => Some(Stored::Expandable(Arc::new(Expandable {
+        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
+        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Rc::clone(entry))),
+        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Rc::clone(entry))),
+        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Rc::clone(entry))),
+        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Rc::clone(entry))),
+        Some(Stored::Register(entry)) => Some(Stored::Register(Rc::clone(entry))),
+        Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
           cs: key.with_str(|k| T_CS!(k)),
           paramlist: None,
           expansion: entry.clone().into(),
@@ -1389,10 +1391,10 @@ impl State {
 
   /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
   /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
-  pub fn lookup_register_definition(&self, key: &Token) -> Option<Arc<Register>> {
+  pub fn lookup_register_definition(&self, key: &Token) -> Option<Rc<Register>> {
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
-        Some(Stored::Register(entry)) => Some(Arc::clone(entry)),
+        Some(Stored::Register(entry)) => Some(Rc::clone(entry)),
         _ => None,
       },
       _ => None,
@@ -1563,7 +1565,7 @@ impl State {
     // try to stay as ASCII as possible
     if let Some(ref current_font) = self.lookup_font() {
       let local_font = current_font.merge(fontmap!(encoding => "ASCII"));
-      self.assign_font(Arc::new(local_font), Some(Scope::Local));
+      self.assign_font(Rc::new(local_font), Some(Scope::Local));
     }
   }
   /// end by just calling `pop_frame`
@@ -1756,7 +1758,7 @@ impl State {
             .join(", ")
         )
         });
-        let stomach = self.stomach.read().unwrap();
+        let stomach = self.stomach.borrow();
         arena::with(key, |key_str| {
           Warn!("internal", key_str, stomach, self, message)
         });
@@ -2066,7 +2068,7 @@ impl State {
       self.install_definition(
         Constructor {
           cs: token.clone(),
-          replacement: Some(Arc::new(move |document, _args, _props, i_state| {
+          replacement: Some(Rc::new(move |document, _args, _props, i_state| {
             document.make_error("undefined", &cs, i_state)
           })),
           ..Constructor::default()
@@ -2098,14 +2100,14 @@ impl State {
   // Ported from Perl's "local" declarations
 
   /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
-  pub fn set_ifframe(&mut self, if_frame: Option<Arc<RwLock<IfFrame>>>) {
+  pub fn set_ifframe(&mut self, if_frame: Option<Rc<RefCell<IfFrame>>>) {
     self.if_frames.push(if_frame);
   }
 
   /// retrieves the most recent (originally Perl-local) `IfFrame`
-  pub fn get_ifframe(&self) -> Option<Arc<RwLock<IfFrame>>> {
+  pub fn get_ifframe(&self) -> Option<Rc<RefCell<IfFrame>>> {
     match self.if_frames.last() {
-      Some(Some(frame)) => Some(Arc::clone(frame)),
+      Some(Some(frame)) => Some(Rc::clone(frame)),
       _ => None,
     }
   }

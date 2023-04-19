@@ -10,7 +10,7 @@
 
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
 use crate::binding::def::dialect::{def_macro, def_register, is_defined};
@@ -121,7 +121,7 @@ pub fn new_counter(
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Arc::new(
+    Some(ExpansionBody::Closure(Rc::new(
       move |_gullet, _args, inner_state| {
         let counter_value = counter_value(&ctr_string, inner_state).value_of();
         Ok(Tokens::new(ExplodeText!(counter_value)))
@@ -184,7 +184,7 @@ pub fn new_counter(
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(
+        Some(ExpansionBody::Closure(Rc::new(
           move |_gullet, _args, _inner_state| {
             Ok(mouth::tokenize_internal(&s!(
               "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
@@ -206,7 +206,7 @@ pub fn new_counter(
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Arc::new(
+        Some(ExpansionBody::Closure(Rc::new(
           move |_gullet, _args, _inner_state| {
             Ok(mouth::tokenize_internal(&s!(
               "{}\\csname @{}@ID\\endcsname",

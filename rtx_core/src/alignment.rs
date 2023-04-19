@@ -35,17 +35,17 @@ use crate::tokens::Tokens;
 
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use self::template::TemplateConfig;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
-  Arc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
-pub type CloseContainerFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
-pub type OpenRowFn = Arc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
-pub type CloseRowFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
-pub type CloseColumnFn = Arc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
+  Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
+pub type CloseContainerFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
+pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
+pub type CloseRowFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
+pub type CloseColumnFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 
 pub struct AlignmentConfig {
   pub template: Option<Template>,

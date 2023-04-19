@@ -206,13 +206,13 @@ LoadDefinitions!(state, {
     // Clone the Rc<> for mouth out of state, since we'll be mutating.
     let file_key = s!("input_file:{}", port);
     let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&file_key) {
-      Some(Arc::clone(mouth))
+      Some(Rc::clone(mouth))
     } else {
       None
     };
     //   close the mouth (if any) and clear the variable
     if let Some(mouth) = mouth_opt {
-      mouth.write().unwrap().finish(state);
+      mouth.borrow_mut().finish(state);
       AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
     }
   });
@@ -220,13 +220,13 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
     sub[stomach, (port, token), state] {
     if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&format!("input_file:{port}")) {
-      let mouth_obj = Arc::clone(mouth_stored);
+      let mouth_obj = Rc::clone(mouth_stored);
       stomach.bgroup(state);
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
       AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
       let mut level = 0;
-      let mut mouth = mouth_obj.write().unwrap();
+      let mut mouth = mouth_obj.borrow_mut();
       while let Some(t) = mouth.read_token(state) {
         let cc = t.get_catcode();
         if cc != Catcode::MARKER {
@@ -248,7 +248,7 @@ LoadDefinitions!(state, {
 
   DefConditional!("\\ifeof Number", sub[gullet, (port), state] {
     if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
-      mouth.read().unwrap().at_eof()
+      mouth.borrow().at_eof()
     } else {
       true
     }

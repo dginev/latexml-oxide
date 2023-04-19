@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::error::Error;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use libxml::tree::Node as XMLNode;
 use marpa::lexer::token::Token;
@@ -37,7 +37,7 @@ pub struct ActionContext<'a> {
   /// The `Core` state, for a variety of lookups - especially ones needing a `Model`
   pub state: &'a mut State,
 }
-pub type ActionClosure = Arc<
+pub type ActionClosure = Rc<
   dyn Fn(
     i32,
     Vec<Option<XM>>,

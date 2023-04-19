@@ -8,7 +8,7 @@ mod helpers;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use std::sync::Arc;
+use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
@@ -36,5 +36,5 @@ pub fn expansion_tests_dispatch(
 tex_tests!(
   "tests/expansion",
   Some(&REQUIRES),
-  Some(Arc::new(expansion_tests_dispatch))
+  Some(Rc::new(expansion_tests_dispatch))
 );

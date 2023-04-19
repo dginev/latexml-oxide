@@ -2,10 +2,10 @@
 /// Test cases for rtx
 ///**********************************************************************
 use rtx::tex_tests;
-use std::sync::Arc;
+use std::rc::Rc;
 
 tex_tests!(
   "tests/grouping",
   None,
-  Some(Arc::new(rtx_contrib::dispatch))
+  Some(Rc::new(rtx_contrib::dispatch))
 );

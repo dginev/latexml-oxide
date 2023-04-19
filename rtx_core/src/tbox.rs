@@ -2,7 +2,7 @@ use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::{self, EMPTY_SYM};
@@ -24,7 +24,7 @@ pub struct Tbox {
   /// plain-text content
   pub text: SymbolU32,
   /// associated font for `text`
-  pub font: Arc<Font>,
+  pub font: Rc<Font>,
   /// source location where the box originated
   pub locator: Locator,
   /// misc properties, such as sizing information
@@ -37,7 +37,7 @@ impl Default for Tbox {
   fn default() -> Self {
     Tbox {
       text: arena::pin(""),
-      font: Arc::new(Font::text_default()),
+      font: Rc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),
       tokens: Tokens!(),
@@ -70,7 +70,7 @@ impl Tbox {
   /// but does record the TeX code (in the tokens).
   pub fn new(
     text: SymbolU32,
-    font_opt: Option<Arc<Font>>,
+    font_opt: Option<Rc<Font>>,
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
@@ -121,7 +121,7 @@ impl Tbox {
           }
         }
       }
-      let font = Arc::new(arena::with(text, |text_str| font.specialize(text_str)));
+      let font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
       Tbox {
         text,
         font, // $locator,

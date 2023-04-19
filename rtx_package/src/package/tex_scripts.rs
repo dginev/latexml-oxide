@@ -44,7 +44,7 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
       },
       List(list) => list.boxes.iter().all(|b| is_empty(b, state)),
       Whatsit(ws_arc) => {
-        let ws = ws_arc.read().unwrap();
+        let ws = ws_arc.borrow();
         *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
           && ws
             .get_body()
@@ -68,8 +68,7 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
     if let DigestedData::Whatsit(ref obj) = boxobj.data() {
       // careful w/alias in getCSName!
       obj
-        .read()
-        .unwrap()
+        .borrow()
         .get_definition()
         .get_cs()
         .with_cs_name(|name| {
@@ -287,7 +286,7 @@ LoadDefinitions!(state, {
   def_primitive(
     T_SUPER!(),
     None,
-    Some(Arc::new(
+    Some(Rc::new(
       |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
         script_handler(stomach, Catcode::SUPER, state)
       },
@@ -298,7 +297,7 @@ LoadDefinitions!(state, {
   def_primitive(
     T_SUB!(),
     None,
-    Some(Arc::new(
+    Some(Rc::new(
       |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
         script_handler(stomach, Catcode::SUB, state)
       },

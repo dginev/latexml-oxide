@@ -1,5 +1,4 @@
 use crate::package::*;
-use std::sync::Arc;
 
 //======================================================================
 // C.7.1 Math Mode Environments

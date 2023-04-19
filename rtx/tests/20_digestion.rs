@@ -11,7 +11,7 @@ mod helpers;
 ///**********************************************************************
 /// Test cases for rtx
 ///**********************************************************************
-use std::sync::Arc;
+use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
@@ -33,5 +33,5 @@ fn digestion_tests_dispatch(
 tex_tests!(
   "tests/digestion",
   None,
-  Some(Arc::new(digestion_tests_dispatch))
+  Some(Rc::new(digestion_tests_dispatch))
 );

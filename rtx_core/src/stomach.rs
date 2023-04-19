@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::common::arena;
 use crate::common::error::*;
@@ -409,7 +409,7 @@ impl<'t> Stomach {
         Constructor {
           cs: token.clone(),
           paramlist: None,
-          replacement: Some(Arc::new(move |document, _args, _props, state| {
+          replacement: Some(Rc::new(move |document, _args, _props, state| {
             document.make_error("undefined", &cs, state)
           })),
           ..Constructor::default()
@@ -737,13 +737,13 @@ impl<'t> Stomach {
         },
         ..Font::default()
       });
-      state.assign_font(Arc::new(new_font), Some(Scope::Local));
+      state.assign_font(Rc::new(new_font), Some(Scope::Local));
     } else {
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
         state.assign_font(
-          Arc::new(saved_font.merge(Font {
+          Rc::new(saved_font.merge(Font {
             color: curfont.color.clone(),
             bg: curfont.bg.clone(),
             size: curfont.size,
