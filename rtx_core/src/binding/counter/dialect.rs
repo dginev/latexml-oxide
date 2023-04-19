@@ -14,9 +14,9 @@ use std::sync::Arc;
 
 use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
 use crate::binding::def::dialect::{def_macro, def_register, is_defined};
+use crate::common::arena;
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
-use crate::common::arena;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::expandable::ExpandableOptions;
@@ -575,7 +575,8 @@ pub fn ref_step_id(
 
 /// Resets the counter `ctr` to zero.
 pub fn reset_counter(ctr: &Token, state: &mut State) {
-  let (c_ctr, c_un_ctr, ctr_id) = ctr.with_str(|ctr| (s!("\\c@{ctr}"),s!("\\c@UN{ctr}"),s!("\\@{}@ID", ctr)));
+  let (c_ctr, c_un_ctr, ctr_id) =
+    ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{}@ID", ctr)));
   state.assign_value(&c_ctr, Number::new(0), Some(Scope::Global));
   state.assign_value(&c_un_ctr, Number::new(0), Some(Scope::Global));
   def_macro(
@@ -813,7 +814,10 @@ pub fn begin_itemize(
   }
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false, stomach, state)?;
-  rsc.insert("counter".to_string(), Stored::String(arena::pin(usecounter)));
+  rsc.insert(
+    "counter".to_string(),
+    Stored::String(arena::pin(usecounter)),
+  );
   rsc.insert("series".to_string(), Stored::String(arena::pin(series)));
   Ok(rsc)
 }

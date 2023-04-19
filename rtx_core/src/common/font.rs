@@ -1,8 +1,8 @@
 use crate::binding::content::{load_font_map, preload_font_map};
+use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
-use crate::common::arena::{self, EMPTY_SYM};
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::{BoxOps, Digested, DigestedData, Result};
@@ -15,11 +15,11 @@ use once_cell::sync::Lazy;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::fmt;
 use std::hash::{BuildHasher, Hash, Hasher};
+use string_interner::symbol::SymbolU32;
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
@@ -1173,27 +1173,28 @@ pub fn decode_string(
 
   let mut result_string: String = String::new();
   arena::with(string, |str| {
-  for c in str.chars() {
-    if implicit {
-      if let Some(map) = map {
-        let code = c as u16; // u16, so that Unicode chars get cast correctly
-        if code < 128 {
-          if let Some(Some(mapc_val)) = map.get(code as usize) {
-            result_string.push(*mapc_val);
+    for c in str.chars() {
+      if implicit {
+        if let Some(map) = map {
+          let code = c as u16; // u16, so that Unicode chars get cast correctly
+          if code < 128 {
+            if let Some(Some(mapc_val)) = map.get(code as usize) {
+              result_string.push(*mapc_val);
+            }
+          } else {
+            result_string.push(c);
           }
         } else {
-          result_string.push(c);
+          result_string.push(c)
         }
-      } else {
-        result_string.push(c)
-      }
-    } else if let Some(map) = map {
-      let code = c as u8;
-      if let Some(Some(mapc_val)) = map.get(code as usize) {
-        result_string.push(*mapc_val);
+      } else if let Some(map) = map {
+        let code = c as u8;
+        if let Some(Some(mapc_val)) = map.get(code as usize) {
+          result_string.push(*mapc_val);
+        }
       }
     }
-  }});
+  });
   arena::pin(result_string)
 }
 

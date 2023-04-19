@@ -1,5 +1,5 @@
-use rtx_core::alignment::read_alignment_template;
 use crate::package::*;
+use rtx_core::alignment::read_alignment_template;
 //======================================================================
 // Basic alignment support needed by most environments & commands.
 //======================================================================

@@ -277,12 +277,9 @@ pub struct Token {
 impl fmt::Debug for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     if self.code == Catcode::ARG {
-      self.with_str(|text|
-        write!(f, "\"#{}\"", text))
+      self.with_str(|text| write!(f, "\"#{}\"", text))
     } else {
-      self.with_str(|text|
-        write!(f, "{:?}", text)
-      )
+      self.with_str(|text| write!(f, "{:?}", text))
     }
   }
 }
@@ -292,9 +289,7 @@ impl Display for Token {
     if self.code == Catcode::ARG {
       write!(f, "#")?;
     }
-    self.with_str(|text|
-      write!(f, "{}", text)
-    )
+    self.with_str(|text| write!(f, "{}", text))
   }
 }
 
@@ -660,7 +655,6 @@ impl Token {
     }
   }
 
-
   /// Get the fixed name of a primitive catcode, or empty string otherwise
   pub fn get_primitive_name(&self) -> Option<&'static str> {
     if self.code.is_primitive() {
@@ -675,7 +669,8 @@ impl Token {
     let cc = self.code;
     if cc.is_executable() {
       self
-        .get_primitive_name().map(ToString::to_string)
+        .get_primitive_name()
+        .map(ToString::to_string)
         .unwrap_or_else(|| self.with_str(|text| text.to_string()))
     } else {
       String::new()
@@ -693,13 +688,11 @@ impl Token {
   }
 
   /// Use the ticket representing the interned "text" of the token
-  pub fn get_sym(&self) -> SymbolU32 {
-    self.text
-  }
+  pub fn get_sym(&self) -> SymbolU32 { self.text }
   /// Use the interned &str "text" of the token
   /// use `to_string` instead for an owned String with simpler
-  pub fn with_str<R,FnR>(&self, caller: FnR) -> R
-    where FnR: FnOnce(&str) -> R {
+  pub fn with_str<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&str) -> R {
     arena::with(self.text, caller)
   }
 
@@ -709,13 +702,13 @@ impl Token {
     if self.code == Catcode::CS {
       256
     } else {
-      self.with_str(|text|
+      self.with_str(|text| {
         if let Some(c) = text.chars().next() {
           c as u32
         } else {
           0
         }
-      )
+      })
     }
   }
 
@@ -732,7 +725,7 @@ impl Token {
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   pub fn neutralize(self, extraspecials: &[char], state: &State) -> Token {
-    let first_c : Option<char> = self.with_str(|text| text.chars().next());
+    let first_c: Option<char> = self.with_str(|text| text.chars().next());
     let ch = match first_c {
       Some(ch) => ch,
       None => return self,
@@ -763,14 +756,14 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
-      smuggled: None
+      smuggled: None,
     }
   }
   pub fn as_cs(&self) -> Token {
     Token {
       text: self.text,
       code: Catcode::CS,
-      smuggled: None
+      smuggled: None,
     }
   }
 
@@ -856,7 +849,11 @@ impl Token {
         string = s!("U+{}/{}", c, CONTROLNAME[c as usize]);
       }
     }
-    let smuggled = self.smuggled.as_ref().map(|t| s!("<{}>",t.stringify())).unwrap_or_default();
+    let smuggled = self
+      .smuggled
+      .as_ref()
+      .map(|t| s!("<{}>", t.stringify()))
+      .unwrap_or_default();
     s!("{}[{}]{}", self.code.short_name(), string, smuggled)
   }
 
@@ -864,7 +861,9 @@ impl Token {
     state.lookup_register_definition(self)
   }
 
-  pub fn to_number(&self) -> Number { Number::new(self.with_str(|text| text.parse::<i64>()).unwrap_or(0)) }
+  pub fn to_number(&self) -> Number {
+    Number::new(self.with_str(|text| text.parse::<i64>()).unwrap_or(0))
+  }
 
   pub fn to_dimension(&self) -> Dimension {
     Dimension::new_f64(self.with_str(|text| text.parse::<f64>().unwrap_or(0.0)))
@@ -874,7 +873,9 @@ impl Token {
     MuDimension::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
-  pub fn to_glue(&self) -> Glue { Glue::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0)) }
+  pub fn to_glue(&self) -> Glue {
+    Glue::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
+  }
 
   pub fn to_mu_glue(&self) -> MuGlue {
     MuGlue::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))

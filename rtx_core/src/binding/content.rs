@@ -709,11 +709,14 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     match option {
       Stored::String(content) => {
-        arena::with(*content, |c_str|
-        if requested_options.contains(c_str) {
-          requested_options.remove(c_str); // Remove it, since it's been handled.
-          execute_option_internal(c_str, stomach, state)
-        } else { Ok(true) })?;
+        arena::with(*content, |c_str| {
+          if requested_options.contains(c_str) {
+            requested_options.remove(c_str); // Remove it, since it's been handled.
+            execute_option_internal(c_str, stomach, state)
+          } else {
+            Ok(true)
+          }
+        })?;
       },
       Stored::VecString(contents) => {
         for content in contents.iter() {
@@ -1178,8 +1181,7 @@ pub fn build_invocation<T: Into<Token>>(
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    token.with_cs_name(|csname|
-      Error!("undefined", csname, gullet, state, message));
+    token.with_cs_name(|csname| Error!("undefined", csname, gullet, state, message));
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });

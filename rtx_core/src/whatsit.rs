@@ -194,7 +194,12 @@ impl fmt::Debug for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "Whatsit[")?;
     let mut pieces = Vec::new();
-    pieces.push(self.get_definition().get_cs().with_cs_name(ToString::to_string));
+    pieces.push(
+      self
+        .get_definition()
+        .get_cs()
+        .with_cs_name(ToString::to_string),
+    );
     for arg_opt in self.get_args() {
       if let Some(arg) = arg_opt {
         pieces.push(arg.stringify());
@@ -216,7 +221,8 @@ impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     STD_STATE.with(|state_rw| {
       let state = state_rw.read().unwrap(); // TODO: is this really the way?
-      write!(f, "{}", self.revert(&state).unwrap())}) // What else??
+      write!(f, "{}", self.revert(&state).unwrap())
+    }) // What else??
   }
 }
 

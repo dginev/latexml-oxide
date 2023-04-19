@@ -4,12 +4,12 @@ use rtx::converter::Converter;
 use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_package::package;
 use std::env;
-use std::process;
-use std::sync::Arc;
+use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
+use std::process;
 use std::result::Result;
-use std::error::Error;
+use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn Error>> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {

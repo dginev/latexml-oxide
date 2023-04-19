@@ -1,11 +1,11 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
-use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::mem;
 use std::sync::Arc;
+use string_interner::symbol::SymbolU32;
 
 use crate::common::arena;
 use crate::common::dimension::Dimension;
@@ -1391,10 +1391,13 @@ impl Gullet {
   fn read_digits(&mut self, range_regex: &Regex, skip: bool, state: &mut State) -> Result<String> {
     let mut result = String::new();
     while let Some(token) = self.read_x_token(None, false, state)? {
-      let digit_opt = token.with_str(|s|
+      let digit_opt = token.with_str(|s| {
         if s.len() == 1 && range_regex.is_match(s) {
           s.chars().next()
-        } else { None });
+        } else {
+          None
+        }
+      });
       if let Some(digit) = digit_opt {
         result.push(digit);
       } else {

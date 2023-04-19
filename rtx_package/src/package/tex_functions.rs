@@ -444,7 +444,9 @@ pub fn insert_block(
       document.remove_node(&mut blocknode); // then remove the new block entirely
     } else if rows.len() == 1
       && crows.len() == 1
-      && state.model.with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
+      && state
+        .model
+        .with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
       && document.can_contain_sym(
         &blocknode.get_parent().unwrap(),
         state.model.get_node_qname(&crows[0]),
@@ -609,7 +611,9 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   } else if children.len() == 1
     && state
       .model
-      .with_node_qname(children.first().as_ref().unwrap(), |qname| qname == "ltx:tabular")
+      .with_node_qname(children.first().as_ref().unwrap(), |qname| {
+        qname == "ltx:tabular"
+      })
   //// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        && !document.findnodes('ltx:tabular/ltx:tr/ltx:td/text()'
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()'
@@ -952,11 +956,20 @@ pub fn set_align_or_class(
   state: &mut State,
 ) -> Result<()> {
   let qname = state.model.get_node_qname(node);
-  if qname == arena::pin_static("ltx:tag") { }
+  if qname == arena::pin_static("ltx:tag") {
+  }
   // HACK
-  else if !align.is_empty() && state.model.can_have_attribute(qname, arena::pin_static("align")) {
+  else if !align.is_empty()
+    && state
+      .model
+      .can_have_attribute(qname, arena::pin_static("align"))
+  {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty() && state.model.can_have_attribute(qname, arena::pin_static("class")) {
+  } else if !class.is_empty()
+    && state
+      .model
+      .can_have_attribute(qname, arena::pin_static("class"))
+  {
     document.add_class(node, class, state)?;
   }
   Ok(())

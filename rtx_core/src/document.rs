@@ -16,7 +16,9 @@ use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
-use crate::common::arena::{self, LTX_STAR_SYM, H_PCDATA_SYM, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, XML_ID_SYM};
+use crate::common::arena::{
+  self, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
+};
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
@@ -206,9 +208,9 @@ impl Document {
   pub fn get_node_qname(&self, node: &Node, state: &State) -> SymbolU32 {
     state.model.get_node_qname(node)
   }
-  pub fn with_node_qname<R,FnR>(&self, node: &Node, state: &State, caller: FnR) -> R
+  pub fn with_node_qname<R, FnR>(&self, node: &Node, state: &State, caller: FnR) -> R
   where FnR: FnOnce(&str) -> R {
-    state.model.with_node_qname(node,caller)
+    state.model.with_node_qname(node, caller)
   }
 
   pub fn get_node(&self) -> &Node { &self.node }
@@ -282,20 +284,17 @@ impl Document {
           if key == arena::pin_static("class") {
             // Generalize?
             if let Some(ovalue) = node.get_attribute("class") {
-              value = arena::with(value, |value_str|
-                arena::pin(s!("{value_str} {ovalue}"))
-              )
+              value = arena::with(value, |value_str| arena::pin(s!("{value_str} {ovalue}")))
             }
           }
-          arena::with(key, |key_str|
-            arena::with(value, |value_str|
+          arena::with(key, |key_str| {
+            arena::with(value, |value_str| {
               self.set_attribute(node, key_str, value_str, state)
-            )
-          )?;
+            })
+          })?;
         }
         for key in keys_to_remove {
-          arena::with(key, |key_str|
-            pending_declaration.remove(key_str));
+          arena::with(key, |key_str| pending_declaration.remove(key_str));
         }
       }
     }
@@ -303,7 +302,9 @@ impl Document {
     if qname != arena::pin_static("ltx:document")
       && state.lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
-      && arena::with(qname, |qname_str| self.can_have_attribute(qname_str, "xml:id", state))
+      && arena::with(qname, |qname_str| {
+        self.can_have_attribute(qname_str, "xml:id", state)
+      })
     {
       self.generate_id(node, "", state)?;
     }
@@ -587,7 +588,7 @@ impl Document {
   ) -> Result<()> {
     let mut attr_data = Vec::new();
     if let Some(attributes) = attributes_opt {
-      let mut keys = vec!["class","package","options"];
+      let mut keys = vec!["class", "package", "options"];
       let other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
@@ -660,7 +661,9 @@ impl Document {
       let t = state.model.get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
-      if t == qsym && !(t == arena::pin_static(FONT_ELEMENT_NAME) && node.has_attribute("_fontswitch")) {
+      if t == qsym
+        && !(t == arena::pin_static(FONT_ELEMENT_NAME) && node.has_attribute("_fontswitch"))
+      {
         break;
       }
       if !self.can_auto_close(&node, state) {
@@ -795,14 +798,9 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str|
-      Error!(
-        "malformed",
-        qname_str,
-        self,
-        state,
-        message
-      ));
+      arena::with(state.model.get_node_qname(node), |qname_str| {
+        Error!("malformed", qname_str, self, state, message)
+      });
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
     } else {
       // Found node.
@@ -818,8 +816,9 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        arena::with(qname, |qname_str|
-          Error!("malformed", qname_str, self, state, message));
+        arena::with(qname, |qname_str| {
+          Error!("malformed", qname_str, self, state, message)
+        });
       }
       if let Some(lastopen_node) = lastopen {
         self.close_node_internal(&lastopen_node, state)?;
@@ -861,11 +860,12 @@ impl Document {
         let qname = state.model.get_node_qname(node);
         arena::with(qname, |qname_str| {
           let message = s!(
-          "Attempt to close {}, which isn't open. Currently in {:?}",
-          qname_str,
-          self.get_insertion_context(None, state)
-        );
-        Error!("malformed", qname_str, self, state, message)});
+            "Attempt to close {}, which isn't open. Currently in {:?}",
+            qname_str,
+            self.get_insertion_context(None, state)
+          );
+          Error!("malformed", qname_str, self, state, message)
+        });
       }
     } else {
       // Found node.
@@ -909,10 +909,7 @@ impl Document {
         if !node.has_attribute("_noautoclose") {
           if node.has_attribute("_autoclose") {
             true
-          } else if let Some(props) = state
-            .tag_properties
-            .get(&self.get_node_qname(node, state))
-          {
+          } else if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
             props.auto_close.unwrap_or(false)
           } else {
             false
@@ -958,9 +955,8 @@ impl Document {
       .clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
-    let all_hash = LTX_STAR_SYM.with(|sym| state
-      .tag_properties
-      .entry(*sym))
+    let all_hash = LTX_STAR_SYM
+      .with(|sym| state.tag_properties.entry(*sym))
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -1065,8 +1061,10 @@ impl Document {
             .model
             .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
-          arena::with(key_sym, |key_str|
-            write!(open_tag, " {key_str}=\"{val_serialized}\"")).ok();
+          arena::with(key_sym, |key_str| {
+            write!(open_tag, " {key_str}=\"{val_serialized}\"")
+          })
+          .ok();
         }
         // HACK for xml:id for now, assuming last element
         if anodes.contains_key("id") {
@@ -1083,7 +1081,9 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = self.get_node_qname(node, state);
-          state.model.can_contain_sym(node_qname, H_PCDATA_SYM.with(|sym| *sym))
+          state
+            .model
+            .can_contain_sym(node_qname, H_PCDATA_SYM.with(|sym| *sym))
         };
 
         if !noindent {
@@ -1385,8 +1385,7 @@ impl Document {
     let imodel = state.indirect_model.as_ref().unwrap();
     // returning inner_node
     match imodel.get(&tag) {
-      Some(sub_m) => sub_m
-        .get(&child).copied(),
+      Some(sub_m) => sub_m.get(&child).copied(),
       None => None,
     }
   }
@@ -1402,20 +1401,31 @@ impl Document {
     self.sym_can_contain_somehow(tag_sym, child_sym, state)
   }
 
-  pub fn sym_can_contain_somehow(&self, tag: SymbolU32, child: SymbolU32, state: &mut State) -> bool {
-    state.model.can_contain_sym(tag, child) || self.can_contain_indirect(tag, child, state).is_some()
+  pub fn sym_can_contain_somehow(
+    &self,
+    tag: SymbolU32,
+    child: SymbolU32,
+    state: &mut State,
+  ) -> bool {
+    state.model.can_contain_sym(tag, child)
+      || self.can_contain_indirect(tag, child, state).is_some()
   }
 
   pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
     let qname = state.model.get_node_qname(node);
-    state
-      .model
-      .can_have_attribute(qname, arena::pin(attrib))
+    state.model.can_have_attribute(qname, arena::pin(attrib))
   }
   pub fn can_have_attribute(&self, tag: &str, attrib: &str, state: &mut State) -> bool {
-    state.model.can_have_attribute(arena::pin(tag), arena::pin(attrib))
+    state
+      .model
+      .can_have_attribute(arena::pin(tag), arena::pin(attrib))
   }
-  pub fn sym_can_have_attribute(&self, tag: SymbolU32, attrib: SymbolU32, state: &mut State) -> bool {
+  pub fn sym_can_have_attribute(
+    &self,
+    tag: SymbolU32,
+    attrib: SymbolU32,
+    state: &mut State,
+  ) -> bool {
     state.model.can_have_attribute(tag, attrib)
   }
 
@@ -1477,7 +1487,9 @@ impl Document {
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_SYM.with(|sym| *sym))
-        && state.model.can_have_attribute(qname, FONT_SYM.with(|sym| *sym))
+        && state
+          .model
+          .can_have_attribute(qname, FONT_SYM.with(|sym| *sym))
         && c[0]
           .get_attributes()
           .keys()
@@ -1807,13 +1819,16 @@ impl Document {
 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
-      let message = arena::with(has_opened, |has_opened_str|
-        arena::with(cur_qname, |cur_qname_str| s!(
-        "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
-        has_opened_str,
-        cur_qname_str,
-        self.get_insertion_context(None, state)
-      )));
+      let message = arena::with(has_opened, |has_opened_str| {
+        arena::with(cur_qname, |cur_qname_str| {
+          s!(
+            "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
+            has_opened_str,
+            cur_qname_str,
+            self.get_insertion_context(None, state)
+          )
+        })
+      });
       Error!("malformed", qname, self, state, message);
       Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
@@ -1841,7 +1856,9 @@ impl Document {
         self.find_insertion_point(qname, None, state) // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
-        let message = arena::with(cur_qname, |cur_qname_str| s!("{:?} isn't allowed in <{}>", qname, cur_qname_str));
+        let message = arena::with(cur_qname, |cur_qname_str| {
+          s!("{:?} isn't allowed in <{}>", qname, cur_qname_str)
+        });
         //"Currently in " self.getInsertionContext());
         Error!("malformed", qname, self, state, message);
 
@@ -1943,8 +1960,8 @@ impl Document {
       // but accept "internal" attributes.
       let qname = state.model.get_node_qname(&self.node);
       if key.starts_with('_') || state.model.can_have_attribute(qname, arena::pin(key)) {
-          self.node.set_attribute(key, value)?
-        };
+        self.node.set_attribute(key, value)?
+      };
     } else {
       // Accept any namespaced attributes
       unimplemented!();
@@ -2638,8 +2655,10 @@ impl Document {
         let attprefix_opt = state.model.get_document_namespace_prefix(&ns, true, true);
         if prefix_opt.is_none() {
           if let Some(attprefix_sym) = attprefix_opt {
-            let attr_ns_node = arena::with(attprefix_sym, |attprefix|
-              Namespace::new(attprefix, &ns, &mut newnode)).unwrap();
+            let attr_ns_node = arena::with(attprefix_sym, |attprefix| {
+              Namespace::new(attprefix, &ns, &mut newnode)
+            })
+            .unwrap();
             newnode.set_namespace(&attr_ns_node)?;
           }
         }
@@ -2720,8 +2739,9 @@ impl Document {
             {
               if prefix != EMPTY_SYM.with(|sym| *sym) {
                 let mut root = self.document.get_root_element().unwrap();
-                match arena::with(prefix, |prefix_str|
-                    Namespace::new(prefix_str, &ns_uri, &mut root)) {
+                match arena::with(prefix, |prefix_str| {
+                  Namespace::new(prefix_str, &ns_uri, &mut root)
+                }) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
                     let message = s!("failed to create namespace: {:?}", prefix);
@@ -3200,7 +3220,7 @@ impl Document {
     let qname = model.get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
       && model.can_have_attribute(qname, XML_ID_SYM.with(|sym| *sym))
-        && (qname != CAPTURE_SYM.with(|sym| *sym))
+      && (qname != CAPTURE_SYM.with(|sym| *sym))
     {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node), state)

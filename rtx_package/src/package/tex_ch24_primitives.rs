@@ -23,7 +23,8 @@ LoadDefinitions!(state, {
   // remain in the constructed tree.
   DefPrimitive!("{", sub[stomach, (), state] {
     stomach.bgroup(state);
-    let open = Tbox::new(arena::pin_static(""), None, None, Tokens!(T_BEGIN!()), HashMap::default(), state);
+    let open = Tbox::new(arena::pin_static(""), None, None,
+        Tokens!(T_BEGIN!()), HashMap::default(), state);
     let mode = if state.lookup_bool("IN_MATH") {
       Some(TexMode::Math)
     } else {
