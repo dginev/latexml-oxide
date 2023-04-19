@@ -6,6 +6,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 use string_interner::symbol::SymbolU32;
 
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -15,7 +16,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
-use crate::common::arena;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -63,7 +63,7 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 /// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
-#[derive(Default,Clone)]
+#[derive(Default, Clone)]
 pub enum Stored {
   /// if we want to keep a key but make it 'undef', set it to None
   #[default]
@@ -213,7 +213,7 @@ impl fmt::Display for Stored {
       MuGlue(ref v) => write!(f, "{v}"),
       MuDimension(ref v) => write!(f, "{v}"),
       Font(ref font) => write!(f, "{font}"),
-      String(ref s) => arena::with(*s,|str| write!(f, "{str}")),
+      String(ref s) => arena::with(*s, |str| write!(f, "{str}")),
       Int(ref s) => write!(f, "{s}"),
       Bool(ref s) => write!(f, "{s}"),
       Tokens(ref s) => write!(f, "{s}"),
@@ -1011,7 +1011,11 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => (*t).clone(),
-      Stored::String(text) => Token{text: *text, code:Catcode::CS, smuggled:None},
+      Stored::String(text) => Token {
+        text: *text,
+        code: Catcode::CS,
+        smuggled: None,
+      },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
         Warn!("Stored", "cast", None, None, message);

@@ -5,6 +5,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+use crate::alignment::template::Template;
 use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -14,7 +15,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::store::Stored;
-use crate::alignment::template::Template;
 use crate::definition::argument::ArgWrap;
 use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
@@ -278,9 +278,7 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
 }
 
 impl IntoResultArgWrap<Result<ArgWrap>> for RegisterValue {
-  fn into_result_argwrap(self) -> Result<ArgWrap> {
-    Ok(self.into())
-  }
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
 }
 
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
@@ -295,12 +293,13 @@ impl IntoResultArgWrap<Result<ArgWrap>> for Template {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
 }
 impl IntoResultArgWrap<Result<ArgWrap>> for Result<Template> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { match self {
-    Ok(v) => Ok(v.into()),
-    Err(e) => Err(e)
-  } }
+  fn into_result_argwrap(self) -> Result<ArgWrap> {
+    match self {
+      Ok(v) => Ok(v.into()),
+      Err(e) => Err(e),
+    }
+  }
 }
-
 
 /// Creates `Result<bool>` from some type `T`
 pub trait IntoBoolResult<T>: Sized {

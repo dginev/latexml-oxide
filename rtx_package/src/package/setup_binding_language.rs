@@ -439,7 +439,6 @@ macro_rules! count {
   ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
 }
 
-
 #[macro_export]
 macro_rules! TypedConditional {
   ($cs:literal, $these_parameters:ident,
@@ -524,7 +523,8 @@ macro_rules! DefPrimitive {
     let (cs, params) = parse_prototype!($proto);
     let closure : PrimitiveClosure = Arc::new(
       |_stomach: &mut Stomach, _args: Vec<ArgWrap>, inner_state: &mut State| {
-      Tbox::new(arena::pin_static($replacement), None, None, Tokens!(), HashMap::default(), inner_state)
+      Tbox::new(arena::pin_static($replacement), None, None,
+        Tokens!(), HashMap::default(), inner_state)
         .into_digested_result()
     });
     defi_primitive!(cs, params, Some(closure), options);
@@ -1976,11 +1976,7 @@ macro_rules! DocType {
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{
     let mut model = &mut $state_arg.model;
-    model.set_doc_type(
-      $rootelement,
-      $pubid,
-      $sysid,
-    );
+    model.set_doc_type($rootelement, $pubid, $sysid);
     for (prefix, value) in $namespaces.iter() {
       model.register_document_namespace(prefix, Some(value));
     }

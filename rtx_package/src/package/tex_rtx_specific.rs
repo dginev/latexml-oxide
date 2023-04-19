@@ -321,7 +321,8 @@ LoadDefinitions!(state, {
     let mut refs = Vec::new();
     // Collect all children with _xmkey attribute
     for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node), state) {
-      if document.with_node_qname(&n, state, |qname| qname == "ltx:XMRef") && !n.has_attribute("idref") {
+      if document.with_node_qname(&n, state, |qname| qname == "ltx:XMRef")
+         && !n.has_attribute("idref") {
         refs.push(n);    // we'll fill these in next
       } else { // generate & record ids for all referenced noces
         let key = n.get_attribute("_xmkey").unwrap();

@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 
-use crate::common::arena::{EMPTY_SYM};
+use crate::common::arena::EMPTY_SYM;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::locator::Locator;
@@ -649,7 +649,11 @@ impl KeyVals {
           tks.push(T_OTHER!(exp_str));
         },
         Stored::Token(vtk) => tks.push(vtk),
-        Stored::String(vstr) => tks.push(Token{text:vstr, code:Catcode::OTHER,smuggled:None}),
+        Stored::String(vstr) => tks.push(Token {
+          text: vstr,
+          code: Catcode::OTHER,
+          smuggled: None,
+        }),
         _ => unimplemented!(),
       }
     }

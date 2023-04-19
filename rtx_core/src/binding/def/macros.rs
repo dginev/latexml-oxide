@@ -442,19 +442,19 @@ macro_rules! count_unpack_ref {
 #[macro_export]
 macro_rules! unpack_opt {
   ($args:ident => $arg1:ident) => {
-    let [$arg1] : [_;1] = $args.try_into().unwrap();
+    let [$arg1]: [_; 1] = $args.try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident) => {
-    let [$arg1,$arg2] : [_;2] = $args.try_into().unwrap();
+    let [$arg1, $arg2]: [_; 2] = $args.try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident) => {
-    let [$arg1,$arg2,$arg3] : [_;3] = $args.try_into().unwrap();
+    let [$arg1, $arg2, $arg3]: [_; 3] = $args.try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident) => {
-    let [$arg1,$arg2,$arg3,$arg4] : [_;4] = $args.try_into().unwrap();
+    let [$arg1, $arg2, $arg3, $arg4]: [_; 4] = $args.try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident,$arg5:ident) => {
-    let [$arg1,$arg2,$arg3,$arg4,$arg5] : [_;5] = $args.try_into().unwrap();
+    let [$arg1, $arg2, $arg3, $arg4, $arg5]: [_; 5] = $args.try_into().unwrap();
   };
 }
 
@@ -462,19 +462,19 @@ macro_rules! unpack_opt {
 #[macro_export]
 macro_rules! unpack_opt_ref {
   ($args:ident => $arg1:ident) => {
-    let [$arg1] : &[_;1] = $args[..1].try_into().unwrap();
+    let [$arg1]: &[_; 1] = $args[..1].try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident) => {
-    let [$arg1,$arg2] : &[_;2] = $args[..2].try_into().unwrap();
+    let [$arg1, $arg2]: &[_; 2] = $args[..2].try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident) => {
-    let [$arg1,$arg2,$arg3] : &[_;3] = $args[..3].try_into().unwrap();
+    let [$arg1, $arg2, $arg3]: &[_; 3] = $args[..3].try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident) => {
-    let [$arg1,$arg2,$arg3,$arg4] : &[_;4] = $args[..4].try_into().unwrap();
+    let [$arg1, $arg2, $arg3, $arg4]: &[_; 4] = $args[..4].try_into().unwrap();
   };
   ($args:ident => $arg1:ident,$arg2:ident,$arg3:ident,$arg4:ident,$arg5:ident) => {
-    let [$arg1,$arg2,$arg3,$arg4,$arg5] : &[_;5] = $args[..5].try_into().unwrap();
+    let [$arg1, $arg2, $arg3, $arg4, $arg5]: &[_; 5] = $args[..5].try_into().unwrap();
   };
 }
 

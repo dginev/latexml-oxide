@@ -186,7 +186,7 @@ LoadDefinitions!(outer_state, {
     let value = etex_readexpr_i(gullet, rtype, 0, state)?;
     if let Some(token) = gullet.read_token(state) {
       // Skip \relax
-      if ! TOKEN_RELAX.with(|tr| token == *tr) {
+      if !TOKEN_RELAX.with(|tr| token == *tr) {
         gullet.unread_one(token);
       }
     }
