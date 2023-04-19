@@ -875,7 +875,7 @@ macro_rules! RelaxNGSchema {
     RelaxNGSchema!($name, st)
   }};
   ($name:expr,$state_arg:ident) => {
-    select_relaxng_schema($name.to_string(), None, $state_arg)
+    select_relaxng_schema($name, None, $state_arg)
   };
 }
 
@@ -886,7 +886,7 @@ macro_rules! RegisterNamespace(
     RegisterNamespace!($prefix, $namespace, st)
   }};
   ($prefix:expr, $namespace:expr,$state_arg:ident) =>
-    ($state_arg.model.register_namespace($prefix, Some($namespace.to_string())))
+    ($state_arg.model.register_namespace($prefix, Some($namespace)))
 );
 #[macro_export]
 macro_rules! RegisterDocumentNamespace(
@@ -895,7 +895,7 @@ macro_rules! RegisterDocumentNamespace(
     RegisterDocumentNamespace!($prefix, $namespace, st)
   }};
   ($prefix:expr, $namespace:expr,$state_arg:ident) =>
-    ($state_arg.model.register_document_namespace($prefix, Some($namespace.to_string())))
+    ($state_arg.model.register_document_namespace($prefix, Some($namespace)))
 );
 #[macro_export]
 macro_rules! RequireResource(
@@ -1977,12 +1977,12 @@ macro_rules! DocType {
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr, $state_arg:ident) => {{
     let mut model = &mut $state_arg.model;
     model.set_doc_type(
-      $rootelement.to_string(),
-      $pubid.to_string(),
-      $sysid.to_string(),
+      $rootelement,
+      $pubid,
+      $sysid,
     );
     for (prefix, value) in $namespaces.iter() {
-      model.register_document_namespace(prefix, Some(value.to_string()));
+      model.register_document_namespace(prefix, Some(value));
     }
   }};
 }

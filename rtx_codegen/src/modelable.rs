@@ -49,7 +49,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   // NOTE: Do something automatic about this too!?!
   // We'll need to generate namespace prefixes for all namespaces found in the doc!
   operations.push(quote!(
-    model.register_document_namespace("", Some(s!("http://dlmf.nist.gov/LaTeXML")));
+    model.register_document_namespace("", Some("http://dlmf.nist.gov/LaTeXML"));
     model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 
@@ -82,10 +82,10 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
           HashSet::from_iter(vec![#(#elements_vec),*].into_iter().map(rtx_core::common::arena::pin_static)));
       ));
     } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {
-      let prefix = caps.get(1).map_or("", |m| m.as_str()).to_string();
-      let namespace = caps.get(2).map_or("", |m| m.as_str()).to_string();
+      let prefix = caps.get(1).map_or("", |m| m.as_str());
+      let namespace = caps.get(2).map_or("", |m| m.as_str());
       operations.push(quote!(
-        model.register_document_namespace(#prefix, Some(#namespace.to_owned()));
+        model.register_document_namespace(#prefix, Some(#namespace));
       ));
     } else {
       fatal!(

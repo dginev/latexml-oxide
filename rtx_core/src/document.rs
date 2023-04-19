@@ -1061,11 +1061,12 @@ impl Document {
           if key == "id" {
             continue;
           } // HACK for xml:id
-          let key_serialized = state
+          let key_sym = state
             .model
             .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
-          write!(open_tag, " {key_serialized}=\"{val_serialized}\"").ok();
+          arena::with(key_sym, |key_str|
+            write!(open_tag, " {key_str}=\"{val_serialized}\"")).ok();
         }
         // HACK for xml:id for now, assuming last element
         if anodes.contains_key("id") {
@@ -2636,8 +2637,9 @@ impl Document {
         let prefix_opt = state.model.get_document_namespace_prefix(&ns, false, false);
         let attprefix_opt = state.model.get_document_namespace_prefix(&ns, true, true);
         if prefix_opt.is_none() {
-          if let Some(ref attprefix) = attprefix_opt {
-            let attr_ns_node = Namespace::new(attprefix, &ns, &mut newnode).unwrap();
+          if let Some(attprefix_sym) = attprefix_opt {
+            let attr_ns_node = arena::with(attprefix_sym, |attprefix|
+              Namespace::new(attprefix, &ns, &mut newnode)).unwrap();
             newnode.set_namespace(&attr_ns_node)?;
           }
         }
@@ -2716,9 +2718,10 @@ impl Document {
               .model
               .get_document_namespace_prefix(&ns_uri, false, false)
             {
-              if !prefix.is_empty() {
+              if prefix != EMPTY_SYM.with(|sym| *sym) {
                 let mut root = self.document.get_root_element().unwrap();
-                match Namespace::new(&prefix, &ns_uri, &mut root) {
+                match arena::with(prefix, |prefix_str|
+                    Namespace::new(prefix_str, &ns_uri, &mut root)) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
                     let message = s!("failed to create namespace: {:?}", prefix);

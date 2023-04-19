@@ -19,7 +19,7 @@ use crate::Locator;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
-use super::arena::{H_PCDATA_SYM, H_COMMENT_SYM,EMPTY_SYM,WILD_CARD_SYM,H_PI_SYM,DTD_SYM,H_DOC_SYM};
+use super::arena::{H_PCDATA_SYM, H_COMMENT_SYM,EMPTY_SYM,WILD_CARD_SYM,H_PI_SYM,DTD_SYM,H_DTD_SYM,H_DOC_SYM,RELAXNG_SYM,H_DEFAULT_SYM};
 
 // use common::font::*;
 
@@ -44,13 +44,13 @@ static DEFAULT_TAG_FRAME :Lazy<TagFrame> = Lazy::new(TagFrame::default);
 #[derive(Default)]
 pub struct Model {
   pub schema: Option<Relaxng>,
-  pub schema_data: Option<Vec<String>>,
+  pub schema_data: Option<Vec<SymbolU32>>,
   pub schema_class: HashMap<SymbolU32, HashSet<SymbolU32>>,
-  pub code_namespace_prefixes: HashMap<String, String>,
-  pub code_namespaces: HashMap<String, String>,
-  pub document_namespace_prefixes: HashMap<String, String>,
-  pub document_namespaces: HashMap<String, String>,
-  // doctype_namespaces: HashMap<String, String>,
+  pub code_namespace_prefixes: HashMap<SymbolU32, SymbolU32>,
+  pub code_namespaces: HashMap<SymbolU32, SymbolU32>,
+  pub document_namespace_prefixes: HashMap<SymbolU32, SymbolU32>,
+  pub document_namespaces: HashMap<SymbolU32, SymbolU32>,
+  // doctype_namespaces: HashMap<SymbolU32, SymbolU32>,
   // namespace_errors: usize,
   pub permissive: bool,
   pub no_compiled: bool,
@@ -66,17 +66,21 @@ impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
     // model.xpath.register_function("match-font", |x, y| {font::match_font(x,y)})
-    model.register_namespace("xml", Some(XML_NS.to_string()));
-    model.register_document_namespace("xml", Some(XML_NS.to_string()));
+    model.register_namespace("xml", Some(XML_NS));
+    model.register_document_namespace("xml", Some(XML_NS));
     model
   }
 
-  pub fn set_doc_type(&mut self, roottag: String, publicid: String, systemid: String) {
-    self.schema_data = Some(vec![s!("DTD"), roottag, publicid, systemid]);
+  pub fn set_doc_type(&mut self, roottag: &str, publicid: &str, systemid: &str) {
+    self.schema_data = Some(vec![
+      DTD_SYM.with(|sym| *sym),
+      arena::pin(roottag),
+      arena::pin(publicid),
+      arena::pin(systemid)]);
   }
 
-  pub fn set_relaxng_schema(&mut self, schema: String) {
-    self.schema_data = Some(vec![s!("RelaxNG"), schema]);
+  pub fn set_relaxng_schema(&mut self, schema: &str) {
+    self.schema_data = Some(vec![RELAXNG_SYM.with(|sym| *sym), arena::pin(schema)]);
   }
   pub fn add_schema_declaration(&self, document: &mut Document) {
     if let Some(ref schema) = self.schema {
@@ -96,44 +100,40 @@ impl Model {
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
 
-      self.register_document_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
-      self.set_relaxng_schema(s!("LaTeXML"));
-      self.register_namespace("ltx", Some(LTX_NAMESPACE.to_string()));
-      self.register_namespace("svg", Some(s!("http://www.w3.org/2000/svg")));
-      self.register_namespace("xlink", Some(s!("http://www.w3.org/1999/xlink"))); // Needed for SVG
-      self.register_namespace("m", Some(s!("http://www.w3.org/1998/Math/MathML")));
-      self.register_namespace("xhtml", Some(s!("http://www.w3.org/1999/xhtml")));
+      self.register_document_namespace("ltx", Some(LTX_NAMESPACE));
+      self.set_relaxng_schema("LaTeXML");
+      self.register_namespace("ltx", Some(LTX_NAMESPACE));
+      self.register_namespace("svg", Some("http://www.w3.org/2000/svg"));
+      self.register_namespace("xlink", Some("http://www.w3.org/1999/xlink")); // Needed for SVG
+      self.register_namespace("m", Some("http://www.w3.org/1998/Math/MathML"));
+      self.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml"));
       self.permissive = true;
     } // Actually, they could have declared all sorts of Tags....
-    let mut schema_type = String::new();
+    let mut schema_type = EMPTY_SYM.with(|sym| *sym);
     match self.schema_data {
       None => {},
       Some(ref data) => {
-        schema_type = data[0].clone();
-        match schema_type.as_ref() {
-          "DTD" => {
+        schema_type = data[0];
+        if schema_type == DTD_SYM.with(|sym| *sym) {
             // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
             // ($roottag, $publicid, $systemid) = @data;
-            name = data.last().unwrap().replace(".dtd", "");
+            name = arena::with(*data.last().unwrap(), |data_str| data_str.replace(".dtd", ""));
             self.schema = Some(Relaxng {
               name: "DTD".to_string(), // HACK, phase out DTD support!
               ..Relaxng::default()
             });
             // $systemid);
-          },
-          "RelaxNG" => {
-            name = data[1].to_string();
-            self.schema = Some(Relaxng {
-              name: name.clone(),
-              ..Relaxng::default()
-            });
-          },
-          e => {
-            let message = s!("Can't load a schema of type {:?}", e);
-            Error!("unknown", "schematype", self, None, message)
-          },
-        };
-      },
+        } else if schema_type == RELAXNG_SYM.with(|sym| *sym) {
+          name = arena::to_string(data[1]);
+          self.schema = Some(Relaxng {
+            name: name.clone(),
+            ..Relaxng::default()
+          });
+        } else {
+          let message = arena::with(schema_type, |schema_type_str| s!("Can't load a schema of type {schema_type_str:?}"));
+          Error!("unknown", "schematype", self, None, message)
+        }
+      }
     };
 
     if !self.no_compiled {
@@ -147,7 +147,8 @@ impl Model {
         pathname::PathnameFindOptions {
           paths,
           extensions: Some(vec![s!("model")]),
-          installation_subdir: Some(s!("resources/{}", schema_type)),
+          installation_subdir: Some(arena::with(schema_type, |str|
+            s!("resources/{str}"))),
         },
       );
 
@@ -170,7 +171,9 @@ impl Model {
     for (prefix, ns) in &self.code_namespaces {
       // TODO: Is this too slow? We may need to store an active context in the State as an
       // alternative
-      context.register_namespace(prefix, ns);
+      arena::with(*prefix, |p_str|
+        arena::with(*ns, |ns_str|
+          context.register_namespace(p_str, ns_str)));
     }
     context
   }
@@ -188,59 +191,65 @@ impl Model {
   ///   set of prefixes used in the generated output.
   ///   This mapping may also use a prefix of "#default" which is for
   ///   the unprefixed form of elements (not used for attributes!)
-  pub fn register_namespace(&mut self, codeprefix: &str, namespace_opt: Option<String>) {
+  pub fn register_namespace(&mut self, codeprefix: &str, namespace_opt: Option<&str>) {
+    self.register_namespace_sym(arena::pin(codeprefix), namespace_opt.map(arena::pin))
+  }
+  pub fn register_namespace_sym(&mut self, codeprefix: SymbolU32, namespace_opt: Option<SymbolU32>) {
     // double-check empty strings are None
-    let namespace_opt_checked = namespace_opt.filter(|val| !val.is_empty());
-
+    let namespace_opt_checked = namespace_opt.filter(|val| *val != EMPTY_SYM.with(|sym| *sym));
     match namespace_opt_checked {
       Some(namespace) => {
         self
           .code_namespace_prefixes
-          .insert(namespace.clone(), codeprefix.to_string());
+          .insert(namespace, codeprefix);
         self
           .code_namespaces
-          .insert(codeprefix.to_string(), namespace);
+          .insert(codeprefix, namespace);
       },
       None => {
-        match self.code_namespaces.get(codeprefix) {
+        match self.code_namespaces.get(&codeprefix) {
           Some(prev) => self.code_namespace_prefixes.remove(prev),
           None => None,
         };
-        self.code_namespaces.remove(codeprefix);
+        self.code_namespaces.remove(&codeprefix);
       },
     };
   }
 
   pub fn register_document_namespace(
     &mut self,
-    mut docprefix: &str,
-    namespace_opt: Option<String>,
+    docprefix: &str,
+    namespace_opt: Option<&str>,
   ) {
-    if docprefix.is_empty() {
-      docprefix = "#default";
-    }
+    let default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    let docprefix_sym = if docprefix.is_empty() {
+      default_sym
+    } else {
+      arena::pin(docprefix)
+    };
 
     match namespace_opt {
       Some(namespace) => {
         // Since the default namespace url can still ALSO have a prefix associated,
         // we prepend "DEFAULT#url" when using as a hash key in the prefixes table.
-        let regnamespace = if docprefix == "#default" {
-          s!("DEFAULT#{}", &namespace)
+        let ns_sym = arena::pin(namespace);
+        let regnamespace = if docprefix_sym == default_sym {
+          arena::pin(s!("DEFAULT#{namespace}"))
         } else {
-          namespace.to_string()
+          ns_sym
         };
         self
           .document_namespace_prefixes
-          .insert(regnamespace, docprefix.to_string());
+          .insert(regnamespace, docprefix_sym);
         self
           .document_namespaces
-          .insert(docprefix.to_string(), namespace);
+          .insert(docprefix_sym, ns_sym);
       },
       None => {
-        if let Some(prev) = self.document_namespaces.get(docprefix) {
+        if let Some(prev) = self.document_namespaces.get(&docprefix_sym) {
           self.document_namespace_prefixes.remove(prev);
         };
-        self.document_namespaces.remove(docprefix);
+        self.document_namespaces.remove(&docprefix_sym);
       },
     };
   }
@@ -250,31 +259,31 @@ impl Model {
     namespace: &str,
     forattribute: bool,
     probe: bool,
-  ) -> Option<String> {
+  ) -> Option<SymbolU32> {
     // Get the prefix associated with the namespace url, noting that for elements, it might by
     // "#default", but for attributes would never be.
     // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
     let mut docprefix = if !forattribute {
-      self
-        .document_namespace_prefixes
-        .get(&s!("DEFAULT#{}", namespace))
-        .map(|prefix| prefix.to_string())
+      self.document_namespace_prefixes
+        .get(&arena::pin(s!("DEFAULT#{namespace}")))
+        .copied()
     } else {
       None
     };
+    let ns_sym = arena::pin(namespace);
     if docprefix.is_none() {
-      docprefix = self
-        .document_namespace_prefixes
-        .get(namespace)
-        .map(|prefix| prefix.to_string());
+      docprefix = self.document_namespace_prefixes
+        .get(&ns_sym)
+        .copied();
     }
 
     if docprefix.is_none() && !probe {
       self.namespace_errors += 1;
-      docprefix = Some(s!("namespace{}", &self.namespace_errors.to_string()));
-      self.register_document_namespace(docprefix.as_ref().unwrap(), Some(namespace.to_string()));
-      let message2 = if let Some(ref dp) = docprefix {
-        s!("Using '{}' instead", dp)
+      let ns_err = s!("namespace{}", &self.namespace_errors.to_string());
+      docprefix = Some(arena::pin(&ns_err));
+      self.register_document_namespace(&ns_err, Some(namespace));
+      let message2 = if let Some(dp) = docprefix {
+        arena::with(dp, |dp_str| s!("Using '{dp_str}' instead"))
       } else {
         String::from("No prefix to fall back on.")
       };
@@ -287,36 +296,39 @@ impl Model {
         message2
       );
     }
-    docprefix.filter(|p| p != "#default")
+    let default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    docprefix.filter(|p| p != &default_sym)
   }
 
-  pub fn get_document_namespace(&mut self, mut docprefix: &str, probe: bool) -> Option<String> {
-    if docprefix.is_empty() {
-      docprefix = "#default";
-    }
-    let ns_str = match self.document_namespaces.get(docprefix) {
+  pub fn get_document_namespace(&mut self, docprefix: &str, probe: bool) -> Option<String> {
+    let h_default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    let docprefix_sym = if docprefix.is_empty() {
+      h_default_sym
+    } else {
+      arena::pin(docprefix)
+    };
+    let ns_str = match self.document_namespaces.get(&docprefix_sym) {
       None => String::new(),
-      Some(s) => {
+      Some(sym) => {
+        arena::with(*sym, |s|
         if s.starts_with("DEFAULT#") {
           s.replacen("DEFAULT#", "", 1)
         } else {
           s.to_string()
-        }
+        })
       },
     };
 
-    if docprefix != "#default" && ns_str.is_empty() && !probe {
+    if docprefix_sym != h_default_sym && ns_str.is_empty() && !probe {
       self.namespace_errors += 1;
       let ns_error = s!(
         "http://example.com/namespace{}",
         &self.namespace_errors.to_string()
       );
-      self.register_document_namespace(docprefix, Some(ns_error));
-      let msg1 = s!(
-        "No namespace has been registered for prefix '{}' (in document)",
-        docprefix
-      );
-      let msg2 = s!("Using '{}' instead", ns_str);
+      self.register_document_namespace(docprefix, Some(&ns_error));
+      let msg1 = arena::with(docprefix_sym, |dp_str| s!(
+        "No namespace has been registered for prefix '{dp_str}' (in document)"));
+      let msg2 = s!("Using '{ns_str}' instead");
       Error!("malformed", docprefix, self, None, msg1, msg2);
     }
     if ns_str.is_empty() {
@@ -336,27 +348,27 @@ impl Model {
     namespace: &str,
     _forattribute: bool,
     probe: bool,
-  ) -> Option<String> {
-    let mut codeprefix: Option<String> = None;
-
+  ) -> Option<SymbolU32> {
+    let mut codeprefix: Option<SymbolU32> = None;
+    let ns_sym = arena::pin(namespace);
     if !namespace.is_empty() {
-      codeprefix = self.code_namespace_prefixes.get(namespace).cloned();
+      codeprefix = self.code_namespace_prefixes.get(&ns_sym).copied();
 
       if codeprefix.is_some() && !probe {
         {
-          let docprefix = self.document_namespace_prefixes.get(namespace);
+          let docprefix = self.document_namespace_prefixes.get(&ns_sym);
           // if there's a doc prefix and it's NOT already used in code namespace mapping
           if docprefix.is_some() && !self.code_namespaces.contains_key(docprefix.unwrap()) {
-            codeprefix = docprefix.map(ToString::to_string);
+            codeprefix = docprefix.copied();
           }
         }
       } else {
         // Else synthesize one
         self.namespace_errors += 1;
-        let auto_prefix = s!("namespace{}", &self.namespace_errors.to_string());
+        let auto_prefix = arena::pin(s!("namespace{}", &self.namespace_errors.to_string()));
         codeprefix = Some(auto_prefix);
       }
-      self.register_namespace(codeprefix.as_ref().unwrap(), Some(namespace.to_string()));
+      self.register_namespace_sym(codeprefix.unwrap(), Some(arena::pin(namespace)));
       // Warn!('malformed', $namespace, undef,
       //   "No prefix has been registered for namespace '$namespace' (in code)",
       //   "Using '$codeprefix' instead"); }
@@ -365,19 +377,19 @@ impl Model {
     codeprefix
   }
 
-  pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<String> {
-    let mut ns: Option<String> = self
+  pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<SymbolU32> {
+    let mut ns: Option<SymbolU32> = self
       .code_namespaces
-      .get(codeprefix)
-      .map(|ns| ns.to_string());
+      .get(&arena::pin(codeprefix))
+      .copied();
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
       let example_namespace = s!(
         "http://example.com/namespace{}",
         &self.namespace_errors.to_string()
       );
-      ns = Some(example_namespace.clone());
-      self.register_namespace(codeprefix, Some(example_namespace));
+      ns = Some(arena::pin(&example_namespace));
+      self.register_namespace(codeprefix, Some(&example_namespace));
       Error!(
         "malformed",
         codeprefix,
@@ -444,41 +456,43 @@ impl Model {
   }
 
   /// Same as get_node_qname, but using the Document namespace prefixes
-  pub fn get_node_document_qname(&mut self, node: &Node) -> String {
+  pub fn get_node_document_qname(&mut self, node: &Node) -> SymbolU32 {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return s!("#BrokenNode");
+      return arena::pin_static("#BrokenNode");
     }
 
     match node_type.unwrap() {
-      TextNode => s!("#PCDATA"),
-      DocumentNode => s!("#Document"),
-      CommentNode => s!("#Comment"),
-      PiNode => s!("#ProcessingInstruction"),
-      DTDNode => s!("#DTD"),
+      TextNode => arena::pin_static("#PCDATA"),
+      DocumentNode => arena::pin_static("#Document"),
+      CommentNode => arena::pin_static("#Comment"),
+      PiNode => arena::pin_static("#ProcessingInstruction"),
+      DTDNode => arena::pin_static("#DTD"),
 
       // TODO
       // elsif ($type == XML_NAMESPACE_DECL) {
       //   my $ns = $node->declaredURI;
       //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
       //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
-      NamespaceDecl => s!("xmlns"),
+      NamespaceDecl => arena::pin_static("xmlns"),
 
       ElementNode | AttributeNode => {
-        let mut prefix = String::new();
+        let empty_sym = EMPTY_SYM.with(|sym| *sym);
+        let mut prefix = empty_sym;
         if let Some(ns) = node.get_namespace() {
           let href = ns.get_href();
           if !href.is_empty() {
             prefix = self
               .get_document_namespace_prefix(&href, false, true)
-              .unwrap_or_default();
+              .unwrap_or(empty_sym);
           }
         }
-        if prefix.is_empty() {
-          node.get_name()
+        if prefix == empty_sym {
+          arena::pin(node.get_name())
         } else {
-          s!("{}:{}", prefix, node.get_name())
+          arena::pin(arena::with(prefix, |prefix_str|
+            s!("{}:{}", prefix_str, node.get_name())))
         }
       },
       // Need others?
@@ -500,7 +514,9 @@ impl Model {
         if prefix == "xml" {
           (None, codetag.to_string())
         } else {
-          (self.get_namespace(prefix, false), localname.to_string())
+          (self.get_namespace(prefix, false)
+            .map(arena::to_string),
+          localname.to_string())
         }
       },
       None => (None, codetag.to_string()),
@@ -532,7 +548,7 @@ impl Model {
     if WILD_CARD_SYM.with(|sym| child == *sym) ||
       H_COMMENT_SYM.with(|sym| child == *sym) ||
       H_PI_SYM.with(|sym| child == *sym) ||
-      DTD_SYM.with(|sym| child == *sym) {
+      H_DTD_SYM.with(|sym| child == *sym) {
       return true
     }
 
@@ -640,7 +656,7 @@ impl Model {
       } else if let Some(caps) = NAMESPACE_MODEL_LINE_RE.captures(&line) {
         let prefix = caps.get(1).map_or("", |m| m.as_str());
         let namespace = caps.get(2).map_or("", |m| m.as_str());
-        self.register_document_namespace(prefix, Some(namespace.to_owned()));
+        self.register_document_namespace(prefix, Some(namespace));
       } else {
         panic!("Fatal:internal:{path} Compiled model '{path}' is malformatted at \"{line}\"");
       }

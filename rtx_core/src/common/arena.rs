@@ -35,15 +35,21 @@ thread_local! {
   /// the unique symbol for str value "#ProcessingInstruction"
   pub static H_PI_SYM : SymbolU32 = pin_static("#ProcessingInstruction");
   /// the unique symbol for str value "#DTD"
-  pub static DTD_SYM : SymbolU32 = pin_static("#DTD");
+  pub static H_DTD_SYM : SymbolU32 = pin_static("#DTD");
   /// the unique symbol for str value "#Document"
   pub static H_DOC_SYM : SymbolU32 = pin_static("#Document");
+  /// the unique symbol for str value "#default"
+  pub static H_DEFAULT_SYM : SymbolU32 = pin_static("#default");
   /// the unique symbol for str value "ltx:_Capture_"
   pub static CAPTURE_SYM : SymbolU32 = pin_static("ltx:_Capture_");
   /// the unique symbol for str value "font"
   pub static FONT_SYM : SymbolU32 = pin_static("font");
   /// the unique symbol for str value "xml:id"
   pub static XML_ID_SYM : SymbolU32 = pin_static("xml:id");
+  /// the unique symbol for str value "DTD"
+  pub static DTD_SYM : SymbolU32 = pin_static("DTD");
+  /// the unique symbol for str value "RelaxNG"
+  pub static RELAXNG_SYM : SymbolU32 = pin_static("RelaxNG");
 }
 
 /// Assign a static str into the arena, returning a unique symbol associated with it
@@ -67,14 +73,23 @@ where FnR: FnOnce(&str) -> R {
   T.with(|arena| {
     caller(
       arena.borrow().resolve(sym)
-      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.")
+      .expect("arena::with should only be called when the string is guaranteed to be allocated.")
     ) })
 }
 
 pub fn to_string(sym: SymbolU32) -> String {
   T.with(|arena| {
     arena.borrow().resolve(sym)
-      .expect("arena.resolve should only be called when the string is guaranteed to be allocated.")
+      .expect("arena::to_string should only be called when the string is guaranteed to be allocated.")
       .to_owned()
     })
+}
+
+// TODO: Is this needed? The tighter call would guarantee the T lock is released early.
+pub fn chars(sym: SymbolU32) -> Vec<char> {
+  T.with(|arena| {
+    arena.borrow().resolve(sym)
+    .expect("arena::chars should only be called when the string is guaranteed to be allocated.")
+    .chars().collect()
+  })
 }
