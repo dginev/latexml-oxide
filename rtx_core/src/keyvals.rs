@@ -10,7 +10,6 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::definition::argument::ArgWrap;
 use crate::gullet::Gullet;
 use crate::stomach::Stomach;
 // use crate::definition::expandable::Expandable;
@@ -113,7 +112,7 @@ impl Object for KeyVals {
         keydef
           .digest(
             stomach,
-            ArgWrap::OptionTokens(value_tokens_opt),
+            value_tokens_opt.into(),
             None,
             state,
           )?

@@ -5,11 +5,9 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::alignment::template::Template;
 use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
-use crate::common::float::Float;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
@@ -207,98 +205,20 @@ pub trait IntoResultArgWrap<T>: Sized {
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
 
-impl IntoResultArgWrap<Result<ArgWrap>> for Token {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Token(self)) }
+impl<T> IntoResultArgWrap<Result<ArgWrap>> for Result<T>
+where T: Into<ArgWrap>+Sized {
+  fn into_result_argwrap(self) -> Result<ArgWrap> {
+    self.map(|v| v.into())
+  }
 }
 
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Token> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionToken(self)) }
+impl<T> IntoResultArgWrap<Result<ArgWrap>> for T
+where T: Into<ArgWrap>+Sized {
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
 }
 
 impl IntoResultArgWrap<Result<ArgWrap>> for Vec<Token> {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(Tokens::new(self))) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Tokens {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Tokens(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Result<Tokens> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::Tokens) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Tokens> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Result<Option<Tokens>> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(ArgWrap::OptionTokens) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Number {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Number(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Number> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionNumber(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Float {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Float(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Float> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionFloat(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Dimension {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Dimension(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Dimension> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionDimension(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for MuDimension {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::MuDimension(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuDimension> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuDimension(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Glue {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::Glue(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<Glue> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionGlue(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for MuGlue {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::MuGlue(self)) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Option<MuGlue> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionMuGlue(self)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for RegisterValue {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Result<ArgWrap> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { self }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for () {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(ArgWrap::OptionTokens(None)) }
-}
-
-impl IntoResultArgWrap<Result<ArgWrap>> for Template {
-  fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
-}
-impl IntoResultArgWrap<Result<ArgWrap>> for Result<Template> {
-  fn into_result_argwrap(self) -> Result<ArgWrap> {
-    match self {
-      Ok(v) => Ok(v.into()),
-      Err(e) => Err(e),
-    }
-  }
 }
 
 /// Creates `Result<bool>` from some type `T`

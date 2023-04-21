@@ -76,7 +76,7 @@ impl Default for Parameter {
           None,
           "Please define a real reader, this is a mock fallback!"
         );
-        Ok(ArgWrap::OptionTokens(None))
+        Ok(ArgWrap::None)
       }),
       reader_predigest: None,
       reversion: None,
@@ -275,7 +275,7 @@ impl Parameter {
     let closure = &self.reader;
     let value_from_reader: ArgWrap = closure(gullet, self.inner.as_ref(), &self.extra, state)?;
     let value_arg = if value_from_reader.is_tokens() {
-      let wants_option = self.optional || value_from_reader.is_option();
+      let wants_option = self.optional || value_from_reader.is_none();
       match value_from_reader.owned_tokens() {
         Some(mut value) => {
           if let Some(ref semi_chars) = self.semiverbatim {
@@ -286,9 +286,9 @@ impl Parameter {
           }
           if wants_option {
             if value.is_empty() {
-              ArgWrap::OptionTokens(None)
+              ArgWrap::None
             } else {
-              ArgWrap::OptionTokens(Some(value))
+              ArgWrap::Tokens(value)
             }
           } else {
             ArgWrap::Tokens(value)
@@ -296,7 +296,7 @@ impl Parameter {
         },
         None => {
           if wants_option {
-            ArgWrap::OptionTokens(None)
+            ArgWrap::None
           } else {
             ArgWrap::Tokens(Tokens!())
           }

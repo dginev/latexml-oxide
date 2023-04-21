@@ -30,6 +30,7 @@ pub const UNTEX_LINELENGTH: usize = 78;
 /// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return
 /// value
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
+pub const NO_BORROWED_TOKENS : &Tokens = &NO_TOKENS;
 /// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
