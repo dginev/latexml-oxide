@@ -135,16 +135,16 @@ LoadDefinitions!(state, {
   DefParameterType!(Optional, sub[gullet, inner, default, state] {
       let value = gullet.read_optional(None, state)?;
       let value_2 = if value.is_none() && !default.is_empty() {
-        ArgWrap::OptionTokens(Some(default[0].clone()))
+        ArgWrap::Tokens(default[0].clone())
       } else if let Some(inner_ps) = inner {
-        let mut reparsed = inner_ps.reparse_argument(gullet, ArgWrap::OptionTokens(value), state)?;
+        let mut reparsed = inner_ps.reparse_argument(gullet, value.into(), state)?;
         if !reparsed.is_empty() {
           reparsed.remove(0)
         } else {
-          ArgWrap::OptionTokens(None)
+          ArgWrap::None
         }
       } else {
-        ArgWrap::OptionTokens(value)
+        value.into()
       };
       Ok(value_2)
     },
