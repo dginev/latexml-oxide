@@ -1,3 +1,4 @@
+//! # Representation of aligned structures
 //! An "Alignment" is an array/tabular construct as:
 //!   <tabular><tr><td>...
 //! or, for math mode
@@ -23,21 +24,19 @@
 #[allow(dead_code)]
 pub mod template;
 
-use crate::alignment::template::{Pattern, Row, Template};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth::Mouth;
 use crate::state::State;
-use crate::token::Catcode;
+use crate::token::{Token,Catcode};
 use crate::tokens::Tokens;
+use self::template::{Column, Row, Template, TemplateConfig};
 
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
-
-use self::template::TemplateConfig;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
@@ -103,20 +102,139 @@ impl Alignment {
 
   pub fn remove_row(&mut self) -> Option<Row> { self.rows.pop_back() }
 
-  fn prepend_rows(&mut self, new_rows: Vec<Row>) {
+  pub fn prepend_rows(&mut self, new_rows: Vec<Row>) {
     for new_row in new_rows.into_iter().rev() {
       self.rows.push_front(new_row)
     }
   }
 
-  fn append_rows(&mut self, new_rows: Vec<Row>) {
+  pub fn append_rows(&mut self, new_rows: Vec<Row>) {
     for new_row in new_rows.into_iter() {
       self.rows.push_back(new_row)
     }
   }
 
-  fn rows(&self) -> &VecDeque<Row> { &self.rows }
+  pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
+
+  pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
+    if let Some(row_idx) = self.current_row {
+      let row = self.rows.get_mut(row_idx).unwrap();
+      self.current_column = 1;
+      if !cols.is_empty() {
+        for c in cols {
+          let colspec = row.get_column_mut(c).unwrap();
+          colspec.border.push_str(border);
+        }
+      } else {
+        for colspec in row.get_columns_mut() {
+          colspec.border.push_str(border)
+        }
+      }
+    }
+  }
+
+  pub fn next_column(&mut self) -> Option<&mut Column> {
+    self.current_row?;
+    self.current_column +=1 ;
+    let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
+    Some(current_row.force_column_mut(self.current_column))
+  }
+  pub fn last_column(&mut self) -> Option<&mut Column> {
+    if let Some(row_idx) = self.current_row {
+      if let Some(row) = self.rows.get_mut(row_idx) {
+        self.current_column = row.get_columns().len();
+        row.get_column_mut(self.current_column)
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  pub fn current_column_number(&self) -> usize {
+    self.current_column
+  }
+
+  pub fn current_row_number(&self) -> usize {
+    let mut n = 0;
+    for row in &self.rows {
+      if !row.is_pseudo() {
+        n+=1;
+      }
+    }
+    n
+  }
+
+  pub fn current_column(&mut self) -> Option<&mut Column> {
+    self.current_row.and_then(|cw| self.rows.get_mut(cw).unwrap()
+      .get_column_mut(self.current_column))
+  }
+
+  pub fn get_column_mut(&mut self, n:usize) -> Option<&mut Column> {
+    self.current_row.and_then(|cw|
+      self.rows.get_mut(cw).unwrap().get_column_mut(n)) }
+
+  // Ugh... these take boxes; adding before/after columns takes tokens!
+  pub fn add_before_row(&mut self, boxes:Vec<Token>) {
+    if let Some(cw) = self.current_row {
+      let current_row = self.rows.get_mut(cw).unwrap();
+      current_row.before.extend(boxes);
+    }
+  }
+
+  pub fn add_after_row(&mut self, boxes:Vec<Token>) {
+    if let Some(cw) = self.current_row {
+      let current_row = self.rows.get_mut(cw).unwrap();
+      current_row.after.extend(boxes);
+    }
+  }
+
+  pub fn omit_column(&mut self) {
+    if let Some(column) = self.current_column() {
+      column.omitted = true;
+    }
+  }
+
+  pub fn omit_next_column(&mut self) {
+    if let Some(cw) = self.current_row {
+      if let Some(column) = self.rows.get_mut(cw).unwrap().get_column_mut(cw + 1) {
+        column.omitted = true;
+      }
+    }
+  }
+
+  pub fn get_column_before(&mut self) -> Tokens {
+    if let Some(column) = self.current_column() {
+      if !column.omitted {
+        Tokens!(T_CS!("\\@column@before"), column.before.clone().unwrap_or_default().unlist())
+      } else {
+        Tokens!()
+      }
+    } else {
+      Tokens!()
+    }
+  }
+
+  pub fn get_column_after(&mut self) -> Tokens {
+    if let Some(column) = self.current_column() {
+      if !column.omitted {
+        // Possible \@@eat@space ??? (if LaTeX style???)
+        Tokens!(column.after.clone().unwrap_or_default().unlist(), T_CS!("\\@column@after"))
+      } else {
+        Tokens!()
+      }
+    } else {
+      Tokens!()
+    }
+  }
+
 }
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Support for building an alignment's Rows & Columns
+
+// TODO: Continue...
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Dealing with templates
@@ -186,7 +304,7 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
   Ok(build_template)
 }
 
-fn parse_alignment_template(
+pub fn parse_alignment_template(
   spec: &str,
   gullet: &mut Gullet,
   ostate: &mut State,
@@ -197,12 +315,12 @@ fn parse_alignment_template(
   })
 }
 
-fn matrix_template() -> Template {
+pub fn matrix_template() -> Template {
   Template::new(TemplateConfig {
-    repeated: vec![Pattern {
+    repeated: vec![Column {
       before: Some(Tokens!(T_CS!("\\hfil"))),
       after: Some(Tokens!(T_CS!("\\hfil"))),
-      ..Pattern::default()
+      ..Column::default()
     }],
     ..TemplateConfig::default()
   })

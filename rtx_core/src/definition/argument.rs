@@ -343,8 +343,8 @@ impl ArgWrap {
   pub fn is_empty(&self) -> bool {
     use ArgWrap::*;
     match self {
-      Tokens(tks) => tks.is_empty(),
       None => true,
+      Tokens(tks) => tks.is_empty(),
       _ => false
     }
   }
