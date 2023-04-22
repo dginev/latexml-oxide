@@ -120,11 +120,11 @@ pub enum Stored {
   /// latexml object
   MuDimension(MuDimension),
   /// metadata object
-  Locator(Locator),
+  Locator(Box<Locator>),
   /// latexml object
-  Rewrite(Rewrite),
+  Rewrite(Box<Rewrite>),
   /// latexml object
-  Ligature(Ligature),
+  Ligature(Box<Ligature>),
   /// latexml object
   Reversion(Reversion),
   // LaTeXML objects (Rc-wrapped)
@@ -625,7 +625,7 @@ impl From<Tokens> for Stored {
 }
 
 impl From<Locator> for Stored {
-  fn from(value: Locator) -> Self { Stored::Locator(value) }
+  fn from(value: Locator) -> Self { Stored::Locator(Box::new(value)) }
 }
 
 impl From<Mouth> for Stored {
@@ -717,7 +717,7 @@ impl From<Register> for Stored {
 }
 
 impl From<Rewrite> for Stored {
-  fn from(value: Rewrite) -> Self { Stored::Rewrite(value) }
+  fn from(value: Rewrite) -> Self { Stored::Rewrite(Box::new(value)) }
 }
 
 impl From<Font> for Stored {
@@ -808,7 +808,7 @@ impl From<Rc<RefCell<IfFrame>>> for Stored {
 }
 
 impl From<Ligature> for Stored {
-  fn from(lig: Ligature) -> Stored { Stored::Ligature(lig) }
+  fn from(lig: Ligature) -> Stored { Stored::Ligature(Box::new(lig)) }
 }
 
 impl From<Reversion> for Stored {
