@@ -552,7 +552,7 @@ LoadDefinitions!(state, {
           // How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
-          Ok(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
+          Ok(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))
         } else {
           let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
           Error!("expected","<variable>", gullet, state, message);
@@ -589,7 +589,7 @@ LoadDefinitions!(state, {
     match defn {
       Some(register) => {
         let args = register.read_arguments(gullet, state)?;
-        return Ok(ArgWrap::RegisterDefinition((token.unwrap(), args)));
+        return Ok(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))));
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);

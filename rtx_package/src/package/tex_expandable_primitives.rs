@@ -370,7 +370,8 @@ LoadDefinitions!(outer_state, {
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[gullet, args, state] {
-    if let ArgWrap::RegisterDefinition((rtoken, inner)) = args.remove(0) {
+    if let ArgWrap::RegisterDefinition(dbox) = args.remove(0) {
+      let (rtoken, inner) = *dbox;
       // let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn->getCS);
