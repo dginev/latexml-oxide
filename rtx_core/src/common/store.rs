@@ -41,27 +41,18 @@ use crate::tokens::Tokens;
 const STORED_TRUE: Stored = Stored::Bool(true);
 const STORED_FALSE: Stored = Stored::Bool(false);
 
-// TODO: Some design decisions need to be finalzed w.r.t Stored
-// 1. which types are allowed,
-// 2. should the store be made generic? e.g. T:Clone ? I would lean towards no, since it is very
-// easy to mistakenly insert the wrongly wrapped data e.g. Stored(Primitive(x)) vs
-// Stored(Rc(Primitive(x))) ... best to enforce explicitly 3. consistent type principles - should
-// we always demand an Rc<T> for a complex struct T? do we ever want to mutate the values in
-// place? if so, would also need to consider a RefCell<> if not (which is what I lean to), a
-// simple Box<> may suffice, HOWEVER, there are cases where definitions need to be passed on
-// and shared, and especially so for Font      in which case an Rc<()> may make more sense.
-// 4. API ergonomics - we need From/Into implementations for ALL enum variants, to avoid explicitly
-//    writing a wrapper every time. if there is a primitive p, it should be accepted as an argument,
-//    rather than requiring writing Stored::Primitive(Rc::new(p)) each time
-//    and equally importantly for unwrapping.
-
 // Basic principles:
 // 1. If the type is `Copy`, store directly
 // 2. If the type is intended as State-exclusive, store in a Box
-//      (or directly if any already Boxed datatype such as Vec, VecDeque)
-// 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
+//      (or directly if any already Boxed datatype such as Vec, VecDeque, HashMap)
+// 3. If the struct is intended for reuse in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
-
+// 4. In the very unfortunate cases where we have to mutate items while they are stored,
+//    we may consider a RefCell<> wrapper for interior mutability.
+//      BUT it is often possible to take the value out to mutate, and re-insert.
+//      State::checkout_value(key) + mutate + State::checkin_value(key,val)
+//      The only cases where this isn't straightforward is for deep recursive callchains,
+//      as in the ones where we rely on Stomach or a Mouth being in State.
 /// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
 #[derive(Default, Clone)]
