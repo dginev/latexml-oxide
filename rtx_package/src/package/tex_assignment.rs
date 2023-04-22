@@ -113,7 +113,8 @@ LoadDefinitions!(outer_state, {
   //    | \divide <numeric variable><optional by><number>
 
   DefPrimitive!("\\advance Variable SkipKeyword:by", sub[stomach, (var), state] {
-    if let ArgWrap::RegisterDefinition((defn_token, inner)) = var {
+    if let ArgWrap::RegisterDefinition(dbox) = var {
+      let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if defn_token_str != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
@@ -134,7 +135,8 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[stomach, (var,scale), state] {
-    if let ArgWrap::RegisterDefinition((varname, inner)) = var {
+    if let ArgWrap::RegisterDefinition(dbox) = var {
+      let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
@@ -153,7 +155,8 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[stomach, (var,scale), state] {
-    if let ArgWrap::RegisterDefinition((varname, inner)) = var {
+    if let ArgWrap::RegisterDefinition(dbox) = var {
+      let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {

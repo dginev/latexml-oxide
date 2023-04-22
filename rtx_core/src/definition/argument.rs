@@ -30,10 +30,10 @@ pub enum ArgWrap {
   Glue(Glue),
   MuGlue(MuGlue),
   MuDimension(MuDimension),
-  KV(KeyVals),
-  AlignmentTemplate(Template),
+  KV(Box<KeyVals>),
+  AlignmentTemplate(Box<Template>),
   // TODO: what do we do with this custom case? feels iffy
-  RegisterDefinition((Token, Vec<ArgWrap>)),
+  RegisterDefinition(Box<(Token, Vec<ArgWrap>)>),
   #[default]
   None
 }
@@ -51,7 +51,7 @@ impl Display for ArgWrap {
       ArgWrap::MuDimension(mudim) => write!(f, "{mudim}"),
       ArgWrap::KV(kv) => write!(f, "{kv}"),
       ArgWrap::AlignmentTemplate(at) => write!(f, "{at}"),
-      ArgWrap::RegisterDefinition((t, args)) => write!(f, "({t},{args:?})"),
+      ArgWrap::RegisterDefinition(dbox) => write!(f, "({},{:?})",dbox.0,dbox.1),
       ArgWrap::None => write!(f, "None")
     }
   }
@@ -303,7 +303,7 @@ impl ArgWrap {
   pub fn try_to_keyvals(self, state: &mut State) -> Result<KeyVals> {
     use ArgWrap::*;
     match self {
-      KV(v) => Ok(v),
+      KV(v) => Ok(*v),
       Tokens(tks) => Ok(tks.to_keyvals(state)),
       None => Ok(KeyVals::default()),
       _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}", self),
@@ -422,7 +422,7 @@ impl From<RegisterValue> for ArgWrap {
   }
 }
 impl From<Template> for ArgWrap {
-  fn from(t: Template) -> Self { ArgWrap::AlignmentTemplate(t) }
+  fn from(t: Template) -> Self { ArgWrap::AlignmentTemplate(Box::new(t)) }
 }
 
 impl TryFrom<ArgWrap> for Number {
