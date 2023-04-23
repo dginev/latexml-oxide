@@ -1,6 +1,6 @@
 use crate::package::*;
 use libxml::tree::{Node, NodeType};
-use rtx_core::keyvals::KeyValsOptions;
+use rtx_core::keyvals::KeyvalsConfig;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 use std::collections::VecDeque;
 
@@ -848,7 +848,7 @@ pub fn keyvals_aux(
 
   // create a new set of Key-Value arguments
   let mut keyvals = KeyVals::new(
-    KeyValsOptions {
+    KeyvalsConfig {
       prefix: spec.prefix,
       // keysets: spec.keysets, // TODO!
       keysets: Vec::new(),

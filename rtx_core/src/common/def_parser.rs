@@ -27,60 +27,60 @@ pub fn parse_prototype(
   state_opt: Option<&mut State>,
 ) -> Result<(Token, Option<Parameters>)> {
   let cs;
-  let final_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
+  let normalized_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = T_CS!(s!("\\{}", captures.get(1).map_or("", |m| m.as_str())));
     // also replace in proto
-    CSNAME_MACRO_RE.replace(proto, "").to_string()
+    CSNAME_MACRO_RE.replace(proto, "")
   } else if let Some(captures) = CS_RE.captures(proto) {
     // Match a cs
     let csname = captures.get(1).map_or("", |m| m.as_str()).to_string();
     cs = T_CS!(csname);
     // also replace in proto
-    CS_RE.replace(proto, "").to_string()
+    CS_RE.replace(proto, "")
   } else if let Some(captures) = SINGLE_CHAR_RE.captures(proto) {
     // Match a single char cs, env name,...
     cs = T_CS!(captures.get(1).map_or("", |m| m.as_str()));
     // also replace in proto
-    SINGLE_CHAR_RE.replace(proto, "").to_string()
+    SINGLE_CHAR_RE.replace(proto, "")
   } else if let Some(captures) = ACTIVE_CHAR_RE.captures(proto) {
     // Match an active char
     cs = mouth::tokenize_internal(captures.get(1).map_or("", |m| m.as_str()))
       .unlist()
       .remove(0);
     // also replace in proto
-    ACTIVE_CHAR_RE.replace(proto, "").to_string()
+    ACTIVE_CHAR_RE.replace(proto, "")
   } else {
     let message = s!(
       "Definition prototype doesn't have proper control sequence: \"{}\"",
       proto
     );
     fatal!(Prototype, Misdefined, None, state, message);
-  }
-  .trim()
-  .to_string();
+  };
+  let final_proto = normalized_proto.trim();
   let paramlist = parse_parameters(final_proto, &cs, state_opt)?;
   Ok((cs, paramlist))
 }
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_parameters(
-  mut prototype: String,
+  outer_prototype: &str,
   cs: &Token,
   mut state_opt: Option<&mut State>,
 ) -> Result<Option<Parameters>> {
+  let mut prototype = Cow::Borrowed(outer_prototype);
   let mut parameters = Vec::new();
   while !prototype.is_empty() {
-    let next_proto: String;
+    let next_proto: Cow<str>;
     // Handle possibly nested cases, such as {Number}
     if NESTED_CHECK_RE.is_match(&prototype) {
       let captures = NESTED_CHECK_RE.captures(&prototype).unwrap();
-      next_proto = NESTED_CHECK_RE.replace(&prototype, "").to_string();
+      next_proto = NESTED_CHECK_RE.replace(&prototype, "");
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
-        parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?
+        parse_parameters(inner_spec, cs, state_opt.as_deref_mut())?
       };
       let mut p = Parameter {
         name: Cow::Borrowed("Plain"),
@@ -100,7 +100,7 @@ pub fn parse_parameters(
       // Ditto for Optional
       let spec = captures.get(1).map_or("", |m| m.as_str());
       let inner_spec = captures.get(2).map_or("", |m| m.as_str());
-      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "").to_string();
+      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "");
       if let Some(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         // TODO: Add the defaults !
         let mut p = Parameter {
@@ -125,7 +125,7 @@ pub fn parse_parameters(
           } else {
             Cow::Owned(spec.to_string())
           },
-          inner: parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())?
+          inner: parse_parameters(inner_spec, cs, state_opt.as_deref_mut())?
             .map(|ps| ps.into())
             .unwrap_or_default(),
           ..Parameter::default()
@@ -149,7 +149,7 @@ pub fn parse_parameters(
       let spec = captures.get(1).map_or("", |m| m.as_str()).to_string();
       let name = captures.get(2).map_or("", |m| m.as_str()).to_string();
       let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
-      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "").to_string();
+      next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "");
       let extra: Vec<Tokens> = if extra_str.is_empty() {
         Vec::new()
       } else {
@@ -178,7 +178,7 @@ pub fn parse_parameters(
         )
       );
     }
-    prototype = next_proto.to_string();
+    prototype = Cow::Owned(next_proto.to_string());
   }
   if parameters.is_empty() {
     Ok(None)

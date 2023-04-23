@@ -49,10 +49,10 @@ LoadDefinitions!(state, {
 
   // Keyvals are for attributes for the alignment.
   // Typical keys are width, vattach,...
-  // DefKeyVal!("tabular", "width", "Dimension");
+  DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
-    sub[_stomach, _template, _attributes] {
-    // my %attr = ($attributes ? $attributes->getPairs : ());
+    sub[_stomach, (template, attributes), state] {
+    // let attr = attributes.map(|kv| kv.get_pairs());
     // if (my $va = $attr{vattach}) {
     //   $attr{vattach} = translateAttachment($va) || ToString($va); }
     // tabularBindings($template, attributes => {%attr});

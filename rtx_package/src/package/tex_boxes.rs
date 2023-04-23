@@ -74,7 +74,7 @@ LoadDefinitions!(state, {
     reader_predigest => reader_predigest!(stomach, key, state, {
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(
-          KeyValsOptions{skip_missing: true, ..KeyValsOptions::default()}, state);
+          KeyvalsConfig{skip_missing: true, ..KeyvalsConfig::default()}, state);
         let dim = stomach.get_gullet_mut().read_dimension(state)?;
         keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false, state);
         keyvals.into()
