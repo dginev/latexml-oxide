@@ -170,7 +170,7 @@ impl BoxOps for KeyVals {
 }
 
 #[derive(Default)]
-pub struct KeyValsOptions {
+pub struct KeyvalsConfig {
   pub prefix: Option<String>,
   pub keysets: Vec<String>,
   pub set_all: bool,
@@ -188,7 +188,7 @@ impl KeyVals {
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  pub fn new(options: KeyValsOptions, _state: &State) -> Self {
+  pub fn new(options: KeyvalsConfig, _state: &State) -> Self {
     // parse all the arguments
     let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
     // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless

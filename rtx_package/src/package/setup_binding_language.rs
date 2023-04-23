@@ -1858,6 +1858,22 @@ macro_rules! GetKeyVals {
     }
   };
 }
+/// Defines a new key-value pair
+#[macro_export]
+macro_rules! DefKeyVal {
+  ($keyset:expr, $key:expr, $vtype:expr) => {
+    let prefix = "KV";
+    bind_state_mut!(st);
+    ::rtx_core::keyval::define(prefix, $keyset, $key, $vtype, None, KeyvalConfig::default(), st)?;
+  };
+  ($keyset:expr, $key:expr, $vtype:expr, $default:expr) =>{
+      // extract the prefix
+      // my $prefix = $options{prefix} || 'KV';
+      let prefix = "KV";
+      bind_state_mut!(st);
+      ::rtx_core::keyval::define(prefix, $keyset, $key, $vtype, Some($default), KeyvalConfig::default(), st)?;
+  };
+}
 
 #[macro_export]
 macro_rules! Digest {
