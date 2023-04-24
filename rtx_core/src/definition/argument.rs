@@ -447,3 +447,21 @@ impl TryFrom<ArgWrap> for Token {
 //   type Error = crate::common::error::Error;
 //   fn try_from(aw: ArgWrap) -> Result<KeyVals> { aw.try_to_keyvals() }
 // }
+
+impl From<ArgWrap> for Option<KeyVals> {
+  fn from(aw: ArgWrap) -> Option<KeyVals> {
+    match aw {
+      ArgWrap::KV(kv) => Some(*kv),
+      _ => None
+    }
+  }
+}
+
+impl From<ArgWrap> for Template {
+  fn from(aw: ArgWrap) -> Template {
+    match aw {
+      ArgWrap::AlignmentTemplate(t) => *t,
+      other => panic!("illegal auto-cast to alignment::Template on {other:?}")
+    }
+  }
+}

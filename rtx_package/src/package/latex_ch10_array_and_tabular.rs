@@ -51,11 +51,13 @@ LoadDefinitions!(state, {
   // Typical keys are width, vattach,...
   DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
-    sub[_stomach, (template, attributes), state] {
-    // let attr = attributes.map(|kv| kv.get_pairs());
-    // if (my $va = $attr{vattach}) {
-    //   $attr{vattach} = translateAttachment($va) || ToString($va); }
-    // tabularBindings($template, attributes => {%attr});
+    sub[stomach, (template, attributes_opt), state] {
+    let attrs = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    // if let Some(key,val) = attributes.get_pairs().find(|(k,v)| k == "vattach") {
+    //   attr{vattach} = translateAttachment($va) || ToString($va);
+    // }
+    let gullet = stomach.get_gullet_mut();
+    tabular_bindings(template, attrs, gullet, state)?;
   });
 
   DefMacro!("\\@tabular@before", None);

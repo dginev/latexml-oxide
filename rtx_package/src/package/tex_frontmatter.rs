@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   // //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-    sub[stomach, (keys_tks,tag,attrs_tks,tokens), state] {
+    sub[stomach, (keys_tks,tag,attrs_opt,tokens), state] {
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
@@ -49,16 +49,14 @@ LoadDefinitions!(state, {
     // So, we append this entry before digesting
 
     // TODO: Port over keys handling from TeX.pool
-    let attrs_digested = if attrs_tks.is_empty() {
-      None
-    } else {
-      // WAS: $$entry[1] = { $attr->beDigested($stomach)->getHash };
-      let attr_kvs = attrs_tks.to_keyvals(state);
+    let attrs_digested = if let Some(attr_kvs) = attrs_opt {
       if let DigestedData::KeyVals(digested) = attr_kvs.be_digested(stomach, state)?.data() {
         Some(digested.get_hash())
       } else {
         None
       }
+    } else {
+      None
     };
     // WAS:  $$entry[2] = Digest(Tokens(T_BEGIN, $tokens, T_END));
     let mut wrapped_tokens = vec![T_BEGIN!()];

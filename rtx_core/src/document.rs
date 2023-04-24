@@ -11,7 +11,7 @@ use string_interner::symbol::SymbolU32;
 
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::rc::Rc;
@@ -40,7 +40,7 @@ static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
 static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
 static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
 static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
-  HashSet::from([
+  HashSet::from_iter([
     "about",
     "aboutlabelref",
     "aboutidref",
@@ -61,13 +61,13 @@ static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 // When merging attributes of two nodes, some attributes should be combined
 // Merged space separated
 static MERGE_ATTRIBUTE_SPACEJOIN: Lazy<HashSet<&'static str>> =
-  Lazy::new(|| HashSet::from(["class", "lists", "inlist", "labels"]));
+  Lazy::new(|| HashSet::from_iter(["class", "lists", "inlist", "labels"]));
 // Merged ";" separated
 static MERGE_ATTRIBUTE_SEMICOLONJOIN: Lazy<HashSet<&'static str>> =
-  Lazy::new(|| HashSet::from(["cssstyle"]));
+  Lazy::new(|| HashSet::from_iter(["cssstyle"]));
 // Summed lengths
 static MERGE_ATTRIBUTE_SUMLENGTH: Lazy<HashSet<&'static str>> = Lazy::new(|| {
-  HashSet::from([
+  HashSet::from_iter([
     "xoffset",
     "yoffset",
     "lpadding",

@@ -1,5 +1,6 @@
 use crate::package::*;
 use rtx_core::alignment::read_alignment_template;
+use rtx_core::alignment::template::Template;
 //======================================================================
 // Basic alignment support needed by most environments & commands.
 //======================================================================
@@ -661,4 +662,32 @@ LoadDefinitions!(state, {
   //   '#1',
   //   reversion    => '\ooalign{#1}', bounded => 1, mode => 'text',
   //   beforeDigest => sub { alignmentBindings('l'); });
+
 });
+
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// And the general alignment processing.
+// If the Template is appropriately constructed, either by \halign or various \begin{tabular}
+// the body of the alignment is processed the same way.
+
+pub fn alignment_bindings(template: Template, mode: &str, properties: HashMap<String,Stored>) {
+  // mode = LookupValue('MODE') unless $mode;
+  // my $ismath    = $mode =~ /math$/;
+  // my $container = ($ismath ? 'ltx:XMArray' : 'ltx:tabular');
+  // my $rowtype   = ($ismath ? 'ltx:XMRow'   : 'ltx:tr');
+  // my $coltype   = ($ismath ? 'ltx:XMCell'  : 'ltx:td');
+  // my $alignment = LaTeXML::Core::Alignment->new(
+  //   template       => $template,
+  //   openContainer  => sub { $_[0]->openElement($container, @_[1 .. $#_]); },
+  //   closeContainer => sub { $_[0]->closeElement($container); },
+  //   openRow        => sub { $_[0]->openElement($rowtype, @_[1 .. $#_]); },
+  //   closeRow       => sub { $_[0]->closeElement($rowtype); },
+  //   openColumn     => sub { $_[0]->openElement($coltype, @_[1 .. $#_]); },
+  //   closeColumn    => sub { $_[0]->closeElement($coltype); },
+  //   isMath         => $ismath,
+  //   properties     => {%properties});
+  // AssignValue(Alignment => $alignment);
+  // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
+  // Let(T_MATH, ($ismath ? '\@dollar@in@mathmode' : '\@dollar@in@textmode'));
+}
