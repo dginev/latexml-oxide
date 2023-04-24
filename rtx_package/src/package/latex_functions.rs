@@ -1,9 +1,11 @@
-use crate::package::*;
 use rustc_hash::FxHashMap as HashMap;
-
 use libxml::tree::Node;
 use once_cell::sync::Lazy;
 use regex::Regex;
+
+use rtx_core::alignment::template::Template;
+use crate::package::*;
+use crate::package::tex_alignment::alignment_bindings;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
@@ -159,4 +161,45 @@ pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
       "The current command '{cs}' can only appear in the preamble"
     );
   }
+}
+
+pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored>, gullet:&mut Gullet, state:&mut State) -> Result<()> {
+  if !properties.contains_key("guess_headers") {
+    if let Some(v) = state.lookup_value("GUESS_TABULAR_HEADERS") {
+      properties.insert(String::from("guess_headers"), v.clone());
+    }
+  }
+  let attributes_entry = properties.entry(String::from("attributes")).or_insert_with(|| Stored::HashStored(HashMap::default()));
+  if let Stored::HashStored(ref mut attributes) = attributes_entry {
+    if ! attributes.contains_key("colsep") {
+      let sep = state.lookup_dimension("\\tabcolsep");
+      if sep.is_some() && (sep.unwrap().value_of() != state.lookup_dimension("\\lx@default@tabcolsep").unwrap().value_of()) {
+        attributes.insert(String::from("colsep"), sep.into());
+      }
+    }
+    if ! attributes.contains_key("rowsep") {
+      let astr = gullet.do_expand(T_CS!("\\arraystretch"), state)?.to_string();
+      if astr != "1" {
+        let astr_int = astr.parse::<i64>()?;
+        attributes.insert(String::from("rowsep"), s!("{}em",Dimension::new(astr_int - 1)).into());
+      }
+    }
+  }
+  if !properties.contains_key("strut") {
+    properties.insert(String::from("strut"), state.lookup_register("\\baselineskip", Vec::new())
+      .unwrap().multiply(Float::new_f64(1.5)).into());
+  }    // Account for html space
+  alignment_bindings(template, "text", properties);
+  state.let_i(&T_CS!("\\\\"),            T_CS!("\\@tabularcr"), None, gullet);
+  state.let_i(&T_CS!("\\tabularnewline"), T_CS!("\\\\"), None, gullet);
+  // NOTE: Fit this back in!!!!!!!
+  // # Do like AddToMacro, but NOT global!
+  for name in ["@row@before", "@row@after", "@column@before", "@column@after"] {
+    let cs = T_CS!(s!("\\{name}"));
+    let cs_def = state.lookup_definition(&cs).unwrap();
+    let mut expansion = cs_def.get_expansion().unwrap().clone();
+    expansion.push(T_CS!(s!("\\@tabular{name}")));
+    def_macro(cs, None, expansion, None, state);
+  }
+  Ok(())
 }

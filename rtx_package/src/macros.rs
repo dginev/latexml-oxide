@@ -143,7 +143,7 @@ macro_rules! parameter_rust_type {
   (Semiverbatim) => {Tokens};
   (UntilBrace) => {Tokens};
   (TeXFileName) => {Tokens};
-  (AlignmentTemplate) => {Tokens};
+  (AlignmentTemplate) => {Template};
   (DefPlain) => {Tokens};
   (DefExpanded) => {Tokens};
   (Expanded) => {Token};
@@ -157,7 +157,7 @@ macro_rules! parameter_rust_type {
   (Variable) => {ArgWrap};
   // For now return the raw Tokens for KeyVals, until we figure out how to
   // do TryInto with access to the current "State" object.
-  (OptionalKeyVals) => {Tokens};
+  (OptionalKeyVals) => {Option<KeyVals>};
   (KeyVals) => {KeyVals};
   ($other:ident) => {$other};
 }

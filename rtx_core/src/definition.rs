@@ -58,6 +58,19 @@ pub enum ExpansionBody {
   Tokens(Tokens),
 }
 
+impl ExpansionBody {
+  /// A convenience method that pushes a token into the internal tokens of
+  /// an existing `ExpansionBody::Tokens`, re-wrapping the outer structs
+  pub fn push(&mut self, t: Token) {
+    match self {
+      ExpansionBody::Tokens(tks) => tks.unlist_mut().push(t),
+      ExpansionBody::Closure(_) => {
+        unimplemented!()
+      }
+    }
+  }
+}
+
 impl std::fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {

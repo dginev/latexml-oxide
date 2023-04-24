@@ -675,11 +675,12 @@ impl From<&crate::Digested> for Stored {
   fn from(value: &crate::Digested) -> Self { crate::Stored::Digested(value.clone()) }
 }
 
-impl From<Option<&crate::Digested>> for Stored {
-  fn from(value_opt: Option<&crate::Digested>) -> Self {
+impl<T> From<Option<T>> for Stored where
+  T: Into<Stored> + Sized {
+  fn from(value_opt: Option<T>) -> Self {
     match value_opt {
-      Some(v) => v.into(),
       None => Stored::None,
+      Some(v) => v.into()
     }
   }
 }

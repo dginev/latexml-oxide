@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
+use core::slice::Iter;
 
 use crate::common::arena::EMPTY_SYM;
 use crate::common::error::*;
@@ -315,6 +316,54 @@ impl KeyVals {
     }
   }
 
+
+  /// return a list of values for a given key
+  pub fn get_values(&self, key: &str) -> Option<&Vec<Stored>> {
+    self.cached_hash.get(key)
+  }
+
+
+  /// return the set of key-value pairs
+  pub fn get_pairs(&self) -> Iter<'_, (String, Stored)> {
+    self.cached_pairs.iter()
+  }
+  /// consume KeyVals and return a flat HashMap
+  pub fn as_flat_hash(self) -> HashMap<String,Stored> {
+    let mut flat_hash = HashMap::default();
+    for (k,mut v) in self.cached_hash {
+      flat_hash.insert(k, v.pop().unwrap());
+    }
+    flat_hash
+  }
+  /// consume KeyVals and return the cached HashMap
+  pub fn as_hash(self) -> HashMap<String,Vec<Stored>> {
+    self.cached_hash
+  }
+  /// returns a key => ToString(value)
+  pub fn get_hash(&self) -> HashMap<String, String> {
+    let mut hashed = HashMap::default();
+    for (k, v) in &self.cached_hash {
+      hashed.insert(
+        k.to_string(),
+        v.iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(""),
+      );
+    }
+    hashed
+  }
+
+  // return a hash of key-value pairs
+  pub fn get_keyvals(&self) -> &HashMap<String, Vec<Stored>> {
+    &self.cached_hash
+  }
+
+  // checks if the value for a given key exists
+  pub fn has_key(&self, key:&str) -> bool {
+    self.cached_hash.contains_key(key)
+  }
+
   //======================================================================
   // Value Related Reversion
   //======================================================================
@@ -610,21 +659,6 @@ impl KeyVals {
     //   $$self{skip_missing} = $skip_missing;
     //   $$self{hookMissing} = $hookMissing; }
     Ok(())
-  }
-
-  // returns a key => ToString(value)
-  pub fn get_hash(&self) -> HashMap<String, String> {
-    let mut hashed = HashMap::default();
-    for (k, v) in &self.cached_hash {
-      hashed.insert(
-        k.to_string(),
-        v.iter()
-          .map(ToString::to_string)
-          .collect::<Vec<String>>()
-          .join(""),
-      );
-    }
-    hashed
   }
 
   /// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected
