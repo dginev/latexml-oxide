@@ -216,7 +216,7 @@ impl Gullet {
 
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref _nextt) = next_token {
-        if (state.align_group_count > 0) && state.reading_alignment
+        if (state.align_group_count() > 0) && state.has_reading_alignment()
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
         {
           //&& (($atoken, $atype, $ahidden) = $self->isColumnEnd($token))) {

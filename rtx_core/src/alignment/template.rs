@@ -7,7 +7,7 @@ use std::fmt::{self, Display};
 
 // ??
 pub type Row = Template;
-#[derive(Debug,Copy,Clone,Default)]
+#[derive(Debug,Copy,Clone,Default, PartialEq)]
 pub enum Align {
   #[default]
   Left,
@@ -16,7 +16,7 @@ pub enum Align {
   Justified
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Column {
   pub empty: bool,
   pub omitted: bool,
@@ -38,7 +38,7 @@ pub struct TemplateConfig {
   pub save_between: Option<VecDeque<Token>>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Template {
   repeating: bool,
   pseudorow: bool,

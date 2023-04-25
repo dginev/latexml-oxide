@@ -21,8 +21,6 @@ use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
 
-const DUAL_BRANCH: bool = false; // TODO: what is this about?
-
 /// Represents a digested object that can generate arbitrary elements in the XML Document.
 #[derive(Clone)]
 pub struct Whatsit {
@@ -236,7 +234,7 @@ impl Object for Whatsit {
     // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
     //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if DUAL_BRANCH {
+    let saved_opt = if state.get_dual_branch().is_some() {
       // TODO, also alignment case
       unimplemented!()
       // self.dual_reversion.get(DUAL_BRANCH)

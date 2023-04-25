@@ -52,10 +52,10 @@ LoadDefinitions!(state, {
   DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
     sub[stomach, (template, attributes_opt), state] {
-    let attrs = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
-    // if let Some(key,val) = attributes.get_pairs().find(|(k,v)| k == "vattach") {
-    //   attr{vattach} = translateAttachment($va) || ToString($va);
-    // }
+    let mut attrs = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    if let Some(va) = attrs.get("vattach") {
+      attrs.insert(String::from("vattach"), Stored::String(arena::pin_static(translate_attachment(va))));
+    }
     let gullet = stomach.get_gullet_mut();
     tabular_bindings(template, attrs, gullet, state)?;
   });
@@ -79,11 +79,13 @@ LoadDefinitions!(state, {
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     sizer        => "#3",
-    after_digest  => sub[_stomach,_args,_whatsit] {
-      // if (my $alignment = LookupValue("Alignment")) {
-      //   my $attr = $alignment->getProperty("attributes");
-      //   $$attr{vattach} = translateAttachment($whatsit->getArg(1)); }
-    },
+    //TODO: What value is stored in "Alignment" ??
+    // after_digest  => sub[_stomach,whatsit,state] {
+    //   if let Some(Stored::AlignmentTemplate(alignment)) = state.lookup_value("Alignment") {
+    //     let attr = alignment.get_property("attributes");
+    //     attr.insert(String::from("vattach"), Stored::String(arena::pin_static(translate_attachment(whatsit.get_arg(1)))));
+    //   }
+    // },
     locked => true,
     mode   => "text");
 
