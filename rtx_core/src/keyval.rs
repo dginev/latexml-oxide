@@ -93,14 +93,20 @@ pub(crate) fn keyval_set(qname:&str, prop:&str, value:Stored, state:&mut State) 
 // Key Definition
 //======================================================================
 #[derive(Debug, Default, Clone)]
+/// Configuration fields for declaring a new KeyVal pattern
 pub struct KeyvalConfig<'a> {
-  kind: Option<&'a str>,
-  code: Option<ExpansionBody>,
-  macroprefix: Option<&'a str>,
-  mismatch: Option<ExpansionBody>,
-  normalize:Option<bool>,
-  choices : Vec<&'static str>,
-  bin: Option<Tokens>,
+  pub prefix: &'a str,
+  pub keyset: &'a str,
+  pub key: &'a str,
+  pub vtype: &'a str,
+  pub default: Option<&'a str>,
+  pub kind: Option<&'a str>,
+  pub code: Option<ExpansionBody>,
+  pub macroprefix: Option<&'a str>,
+  pub mismatch: Option<ExpansionBody>,
+  pub normalize:Option<bool>,
+  pub bin: Option<Tokens>,
+  pub choices : Vec<&'static str>,
 }
 
 /// (Re-)defines this Key of kind 'kind'.
@@ -139,7 +145,12 @@ pub struct KeyvalConfig<'a> {
 ///
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
-pub fn define(prefix: &str, keyset:&str, key:&str, vtype:&str, default_opt:Option<&str>, options: KeyvalConfig, gullet: &mut Gullet, state:&mut State) -> Result<()> {
+pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state:&mut State) -> Result<()> {
+  let prefix = options.prefix;
+  let keyset = options.keyset;
+  let key = options.key;
+  let vtype = options.vtype;
+  let default_opt = options.default;
   let qname = keyval_qname(prefix, keyset, key);
 
   // define that the key exists and is not disabled

@@ -330,8 +330,10 @@ impl KeyVals {
   /// consume KeyVals and return a flat HashMap
   pub fn as_flat_hash(self) -> HashMap<String,Stored> {
     let mut flat_hash = HashMap::default();
-    for (k,mut v) in self.cached_hash {
-      flat_hash.insert(k, v.pop().unwrap());
+    for (k,mut vec) in self.cached_hash {
+      if let Some(v) = vec.pop() {
+        flat_hash.insert(k, v);
+      }
     }
     flat_hash
   }

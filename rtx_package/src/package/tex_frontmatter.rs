@@ -39,7 +39,7 @@ LoadDefinitions!(state, {
   // //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-    sub[stomach, (keys_tks,tag,attrs_opt,tokens), state] {
+    sub[stomach, (_keys_tks,tag,attrs_opt,tokens), state] {
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
