@@ -1868,7 +1868,9 @@ macro_rules! DefKeyVal {
     let prefix = "KV";
     bind_state_mut!(stomach,st);
     let gullet = stomach.get_gullet_mut();
-    ::rtx_core::keyval::define(prefix, $keyset, $key, $vtype, None, KeyvalConfig::default(), gullet, st)?;
+    ::rtx_core::keyval::define(KeyvalConfig{
+      prefix, keyset:$keyset, key:$key, vtype:$vtype, default:None,
+      ..KeyvalConfig::default()}, gullet, st)?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr) =>{{
       // extract the prefix
@@ -1876,7 +1878,9 @@ macro_rules! DefKeyVal {
       let prefix = "KV";
       bind_state_mut!(stomach,st);
       let gullet = stomach.get_gullet_mut();
-      ::rtx_core::keyval::define(prefix, $keyset, $key, $vtype, Some($default), KeyvalConfig::default(), st)?;
+      ::rtx_core::keyval::define(KeyvalConfig{
+        prefix, keyset:$keyset, key:$key, vtype:$vtype, default:Some($default),
+        ..KeyvalConfig::default()}, st)?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) =>{
     // TODO: explicit $options with prefix logic

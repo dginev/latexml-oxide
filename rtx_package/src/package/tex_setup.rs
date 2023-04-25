@@ -956,7 +956,7 @@ LoadDefinitions!(state, {
     keysets: Option<&Parameters>,
     gullet: &mut Gullet,
     state: &mut State,
-  ) -> Result<Tokens> {
+  ) -> Result<Option<KeyVals>> {
     if gullet.if_next(&T_OTHER!("["), state)? {
       let kvs: KeyVals = keyvals_aux(
         gullet,
@@ -969,47 +969,27 @@ LoadDefinitions!(state, {
         },
         state,
       )?;
-      kvs.into_tokens(gullet, state)
+      Ok(Some(kvs))
     } else {
-      Ok(Tokens!())
+      Ok(None)
     }
   }
 
   DefParameterType!(OptionalKeyVals, sub[gullet, inner, _extra, state] {
-      optional_key_vals(false, false, inner, gullet, state)
-    },
-    reader_predigest => reader_predigest!(_stomach, arg, state, {
-      if !arg.is_empty() {
-        Some(arg.expected_keyvals(state))
-      } else {
-        None
-      }
-    }),
-   optional=>true);
+    optional_key_vals(false, false, inner, gullet, state)
+  }, optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!(OptionalKeyValsStar, sub[gullet, inner, _extra, state] {
-      optional_key_vals(true, false, inner, gullet, state)
-    },
-    reader_predigest => reader_predigest!(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=>true);
+    optional_key_vals(true, false, inner, gullet, state)
+  }, optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!(OptionalKeyValsPlus, sub[gullet, inner, _extra, state] {
-      optional_key_vals(false, true, inner, gullet, state)
-    },
-    reader_predigest => reader_predigest!(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=>true);
+    optional_key_vals(false, true, inner, gullet, state)
+  }, optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
   DefParameterType!(OptionalKeyValsPlusStar, sub[gullet, inner, _extra, state] {
-      optional_key_vals(true, true, inner, gullet, state)
-    },
-    reader_predigest => reader_predigest!(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=>true);
+    optional_key_vals(true, true, inner, gullet, state)
+  }, optional=>true);
   // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
 
   // # Not sure that this is the most elegant solution, but...

@@ -381,6 +381,10 @@ impl From<Tokens> for ArgWrap {
   fn from(t: Tokens) -> Self { ArgWrap::Tokens(t) }
 }
 
+impl From<KeyVals> for ArgWrap {
+  fn from(kv: KeyVals) -> Self { ArgWrap::KV(Box::new(kv)) }
+}
+
 impl From<Number> for ArgWrap {
   fn from(t: Number) -> Self { ArgWrap::Number(t) }
 }
