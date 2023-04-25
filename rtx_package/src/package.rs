@@ -14,6 +14,7 @@ pub use rtx_core::common::dimension::Dimension;
 pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::*;
 pub use rtx_core::aux_macros::*;
+pub use rtx_core::alignment::Alignment;
 pub use rtx_core::alignment::template::Template;
 pub use rtx_core::common::arena::{self, EMPTY_SYM};
 pub use rtx_core::common::cleaners::*;

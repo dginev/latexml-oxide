@@ -32,6 +32,7 @@ use crate::mouth::Mouth;
 use crate::state::State;
 use crate::token::{Token,Catcode};
 use crate::tokens::Tokens;
+use crate::Digested;
 use self::template::{Column, Row, Template, TemplateConfig};
 
 use rustc_hash::FxHashMap as HashMap;
@@ -56,6 +57,7 @@ pub struct AlignmentConfig {
   pub attributes: HashMap<String, String>,
 }
 
+#[derive(Debug,Clone,Default, PartialEq)]
 pub struct Alignment {
   template: Template,
   current_row: Option<usize>,
@@ -229,6 +231,13 @@ impl Alignment {
     }
   }
 
+  pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
+    // TODO: Organization? In Perl, the Alignment inherits Whatsit
+    //       here, we need to factor out the methods of Whatsit that we can share,
+    //       maybe a "Whatstrait"? so that we avoid cargo-culting all the code for set_body
+    unimplemented!()
+  }
+  pub fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens!()) }
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

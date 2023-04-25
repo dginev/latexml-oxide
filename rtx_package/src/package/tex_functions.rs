@@ -334,6 +334,23 @@ pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str, _state: &mut State) -
   unimplemented!()
 }
 
+pub fn p_revert<T>(arg:T, state: &mut State) -> Result<Tokens>
+where T: Sized+Object {
+  state.set_dual_branch("presentation");
+  let result = arg.revert(state);
+  state.expire_dual_branch();
+  result
+}
+
+pub fn c_revert<T>(arg:T, state: &mut State) -> Result<Tokens>
+where T: Sized+Object {
+  state.set_dual_branch("content");
+  let result = arg.revert(state);
+  state.expire_dual_branch();
+  result
+}
+
+
 /// This attempts to be a generalize vbox construction;
 /// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
 /// and attempts to figure out whether sequences of the inserted content
@@ -1019,4 +1036,17 @@ pub fn make_generic_message(
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };
   Ok(())
+}
+
+/// Utility, not really TeX, but used by LaTeX, AmSTeX...
+/// Convert a vertical positioning, optional argument.
+///  t = "top", b = "bottom"; default is "middle".
+/// Note that the default for vattach attribute is "baseline".
+pub fn translate_attachment(pos: &Stored) -> &'static str {
+  let pos_str = pos.to_string();
+  match pos_str.as_str() {
+   "t" => "top",
+   "b" => "bottom",
+   _ => "middle"
+  } // undef meaning 'baseline'
 }

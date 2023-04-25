@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
+use crate::alignment::Alignment;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -206,6 +207,19 @@ impl UndoFrame {
 ///      (see also activateScope & deactivateScope)
 pub type Table = HashMap<SymbolU32, VecDeque<Stored>>;
 
+/// These are fields realized via Perl's "local" mechanism in LaTeXML,
+/// but (for now) require explicit "expire" calls in Rust.
+/// Ideally their ergonomics gets improved, or we gradually phase them out.
+#[derive(Debug, Default)]
+pub struct Localized {
+  pub dual_branch: Vec<&'static str>,
+  pub if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
+  pub smuggle_the: Vec<bool>,
+  pub current_token: Vec<Token>,
+  pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
+  pub reading_alignment: Vec<Rc<RefCell<Alignment>>>,
+}
+
 /// The State efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
@@ -242,7 +256,6 @@ pub struct State {
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
-  pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
   pub status_code: usize,
   pub unlocked: bool,
   pub input_encoding: Option<String>,
@@ -255,12 +268,8 @@ pub struct State {
   // include_styles: bool,
   /// flag to disable math parsing
   pub nomathparse: bool,
-  /// TODO: marker for alignment
-  pub reading_alignment: bool,
-  // Local structures
-  if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
-  smuggle_the: Vec<bool>,
-  current_token: Vec<Token>,
+  /// Localized as in Perl's "local" dynamic variables
+  localized: Localized,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the main/official rtx bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
@@ -306,10 +315,7 @@ impl Default for State {
       // Stateful runtime - simple fields
       verbosity: 0,
       status_code: 0,
-      align_group_count: 0,
       unlocked: true,
-      current_token: Vec::new(),
-      if_frames: Vec::new(),
       input_encoding: None,
       // strict: false,
       // include_comments: true,
@@ -317,8 +323,7 @@ impl Default for State {
       graphics_paths: VecDeque::new(),
       // include_styles: false,
       nomathparse: false,
-      smuggle_the: Vec::new(),
-      reading_alignment: false,
+      localized: Localized::default(),
       bindings_dispatch: None,
       extra_bindings_dispatch: None,
       // interiorly mutable
@@ -2064,33 +2069,66 @@ impl State {
 
   /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
   pub fn set_ifframe(&mut self, if_frame: Option<Rc<RefCell<IfFrame>>>) {
-    self.if_frames.push(if_frame);
+    self.localized.if_frames.push(if_frame);
   }
 
   /// retrieves the most recent (originally Perl-local) `IfFrame`
   pub fn get_ifframe(&self) -> Option<Rc<RefCell<IfFrame>>> {
-    match self.if_frames.last() {
+    match self.localized.if_frames.last() {
       Some(Some(frame)) => Some(Rc::clone(frame)),
       _ => None,
     }
   }
   /// expires the most recent (originally Perl-local) `IfFrame`
-  pub fn expire_ifframe(&mut self) { self.if_frames.pop(); }
+  pub fn expire_ifframe(&mut self) { self.localized.if_frames.pop(); }
   /// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-  pub fn set_smuggle_the(&mut self, smuggle_the: bool) { self.smuggle_the.push(smuggle_the); }
+  pub fn set_smuggle_the(&mut self, smuggle_the: bool) {
+    self.localized.smuggle_the.push(smuggle_the); }
   /// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn get_smuggle_the(&self) -> bool {
-    match self.smuggle_the.last() {
+    match self.localized.smuggle_the.last() {
       Some(v) => *v,
       _ => false,
     }
   }
   /// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-  pub fn expire_smuggle_the(&mut self) { self.smuggle_the.pop(); }
+  pub fn expire_smuggle_the(&mut self) { self.localized.smuggle_the.pop(); }
   /// sets the (localized) current token. see `Stomach::invoke_token`
-  pub fn set_current_token(&mut self, token: Token) { self.current_token.push(token); }
+  pub fn set_current_token(&mut self, token: Token) { self.localized.current_token.push(token); }
   /// expires the most recent (localized) current token.
-  pub fn expire_current_token(&mut self) { self.current_token.pop(); }
+  pub fn expire_current_token(&mut self) { self.localized.current_token.pop(); }
   /// gets the (localized) current token
-  pub fn get_current_token(&self) -> Option<&Token> { self.current_token.last() }
+  pub fn get_current_token(&self) -> Option<&Token> { self.localized.current_token.last() }
+
+  /// sets the (localized) flag for "dual branch"
+  pub fn set_dual_branch(&mut self, mode: &'static str) { self.localized.dual_branch.push(mode); }
+  /// expire (localized) flag for "dual branch"
+  pub fn expire_dual_branch(&mut self) { self.localized.dual_branch.pop(); }
+  /// get the current value for "dual branch"
+  pub fn get_dual_branch(&self) -> Option<&'static str> { self.localized.dual_branch.last().cloned() }
+
+  pub fn increment_align_group(&mut self) {
+    self.localized.align_group_count += 1;
+  }
+  pub fn decrement_align_group(&mut self) {
+    self.localized.align_group_count -= 1;
+  }
+  pub fn align_group_count(&self) -> i32 {
+    self.localized.align_group_count
+  }
+  pub fn set_align_group(&mut self, v: i32) {
+    self.localized.align_group_count = v;
+  }
+  pub fn get_reading_alignment(&self) -> Option<Rc<RefCell<Alignment>>> {
+    self.localized.reading_alignment.last().map(Rc::clone)
+  }
+  pub fn has_reading_alignment(&self) -> bool {
+    !self.localized.reading_alignment.is_empty()
+  }
+  pub fn set_reading_alignment(&mut self, alignment: &Rc<RefCell<Alignment>>) {
+    self.localized.reading_alignment.push(Rc::clone(alignment));
+  }
+  pub fn expire_reading_alignment(&mut self) -> Option<Rc<RefCell<Alignment>>> {
+    self.localized.reading_alignment.pop()
+  }
 }
