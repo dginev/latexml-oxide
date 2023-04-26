@@ -193,11 +193,11 @@ pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored
   state.let_i(&T_CS!("\\\\"),            T_CS!("\\@tabularcr"), None, gullet);
   state.let_i(&T_CS!("\\tabularnewline"), T_CS!("\\\\"), None, gullet);
   // NOTE: Fit this back in!!!!!!!
-  // # Do like AddToMacro, but NOT global!
+  // Do like AddToMacro, but NOT global!
   for name in ["@row@before", "@row@after", "@column@before", "@column@after"] {
     let cs = T_CS!(s!("\\{name}"));
     let cs_def = state.lookup_definition(&cs).unwrap();
-    let mut expansion = cs_def.get_expansion().unwrap().clone();
+    let mut expansion = cs_def.get_expansion().cloned().unwrap_or_default();
     expansion.push(T_CS!(s!("\\@tabular{name}")));
     def_macro(cs, None, expansion, None, state);
   }

@@ -11,32 +11,6 @@ use crate::package::*;
 // attributes to all cells.  For HTML, CSS will be necessary to display them.
 // [We'll ignore HTML's frame, rules and colgroup mechanisms.]
 
-// sub tabularBindings {
-//   my ($template, %properties) = @_;
-//   $properties{guess_headers} = LookupValue('GUESS_TABULAR_HEADERS')
-//     unless defined $properties{guess_headers};
-//   if (!defined $properties{attributes}{colsep}) {
-//     my $sep = LookupDimension('\tabcolsep');
-//     if ($sep && ($sep->valueOf != LookupDimension('\lx@default@tabcolsep')->valueOf)) {
-//       $properties{attributes}{colsep} = $sep; } }
-//   if (!defined $properties{attributes}{rowsep}) {
-//     my $str = ToString(Expand(T_CS('\arraystretch')));
-//     if ($str != 1) {
-//       $properties{attributes}{rowsep} = Dimension(($str - 1) . 'em'); } }
-//   if (!defined $properties{strut}) {
-//     $properties{strut} = LookupRegister('\baselineskip')->multiply(1.5); }    # Account for html
-// space   alignmentBindings($template, 'text', %properties);
-//   Let("\\\\",            '\@tabularcr');
-//   Let('\tabularnewline', "\\\\");
-//   # NOTE: Fit this back in!!!!!!!
-//   # # Do like AddToMacro, but NOT global!
-//   foreach my $name ('@row@before', '@row@after', '@column@before', '@column@after') {
-//     my $cs = '\\' . $name;
-//     DefMacroI($cs, undef,
-//       Tokens(LookupDefinition(T_CS($cs))->getExpansion->unlist,
-//         T_CS('\@tabular' . $name))); }
-//   return; }
-
 LoadDefinitions!(state, {
   DefRegister!("\\lx@arstrut", Dimension!("0pt"));
   DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
@@ -79,10 +53,10 @@ LoadDefinitions!(state, {
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     sizer        => "#3",
-    //TODO: What value is stored in "Alignment" ??
-    // after_digest  => sub[_stomach,whatsit,state] {
-    //   if let Some(Stored::AlignmentTemplate(alignment)) = state.lookup_value("Alignment") {
-    //     let attr = alignment.get_property("attributes");
+    // TODO: vattach
+    // after_digest  => sub[stomach,whatsit,state] {
+    //   if let Some(Stored::Alignment(alignment)) = state.lookup_value("Alignment") {
+    //     let attr = alignment.borrow_mut().get_property_mut("attributes");
     //     attr.insert(String::from("vattach"), Stored::String(arena::pin_static(translate_attachment(whatsit.get_arg(1)))));
     //   }
     // },
@@ -108,15 +82,17 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\cline{}", r"\noalign{\@cline{#1}}");
   DefConstructor!("\\@cline{}", "",
-    after_digest => sub[_stomach, _whatsit,_state] {
-      // my $cols = ToString($whatsit->getArg(1));
-      // my @cols = ();
+    after_digest => sub[_stomach, whatsit,state] {
+      let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+      let mut cols = Vec::new();
+      // TODO
       // while ($cols =~ s/^,?(\d+)//) {
       //   my $n = $1;
       //   push(@cols, ($cols =~ s/^-(\d+)// ? ($n .. $1) : ($n))); }
-      // my $alignment = LookupValue('Alignment');
-      // $alignment->addLine('t', @cols) if $alignment;
-      // return;
+      if let Some(Stored::Alignment(ref alignment)) = state.lookup_value("Alignment") {
+        alignment.borrow_mut().add_line("t", cols);
+      }
+      ()
     },
     sizer      => 0, alias => "\\cline",
     // properties => { "isHorizontalRule" => true }

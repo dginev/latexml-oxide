@@ -660,7 +660,7 @@ impl<'t> Stomach {
     // to find all the places to manage it.
     // So, let's try this for now...
     // was $LaTeXML::ALIGN_STATE
-    state.increment_align_group();
+    state.increment_align_group_count();
   }
   /// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there, and also
@@ -679,7 +679,7 @@ impl<'t> Stomach {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;
     }
-    state.decrement_align_group();
+    state.decrement_align_group_count();
     Ok(())
   }
   /// Begin a new level of binding by pushing a new stack frame.
