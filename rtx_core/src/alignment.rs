@@ -301,7 +301,7 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         op,
         gullet,
         state,
-        "Unrecognized tabular template {op:?}"
+        s!("Unrecognized tabular template {op:?}")
       );
     }
     if nopens <= 0 {

@@ -268,7 +268,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 
     // Substitutable value: argument, property...
     if LEAD_VALUE_RE.is_match(&replacement) {
-      let to_absorb = translate_value("", &mut replacement);
+      let to_absorb = translate_value("", false, &mut replacement);
       operations.push(quote!(
         if let Some(ref stored_digested) = #to_absorb {
           let digested_opt : Option<Digested> = stored_digested.into();
@@ -327,8 +327,8 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
       if LEAD_COND_RE.is_match(text) {
         // inline conditional; branches should be values
         let (bool_branch, mut if_branch, mut else_branch) = parse_conditional(text);
-        let if_branch_translated = translate_value("", &mut if_branch);
-        let else_branch_translated = translate_value("", &mut else_branch);
+        let if_branch_translated = translate_value("", false, &mut if_branch);
+        let else_branch_translated = translate_value("", false, &mut else_branch);
         let op = quote!(
           if #bool_branch {
             #if_branch_translated
@@ -338,7 +338,7 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
         );
         values.push(op);
       } else if LEAD_VALUE_RE.is_match(text) {
-        values.push(translate_value(&quote.to_string(), text));
+        values.push(translate_value(&quote.to_string(), false, text));
       } else {
         let mut is_quoted_match = false;
         let mut quoted_match = String::new();
@@ -434,7 +434,7 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
 /// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &function(args,...)
 /// Note: signals an error if no recognizable value was found!
-fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::TokenStream {
+fn translate_value(exclude_chars: &str, for_test: bool, text: &mut String) -> proc_macro2::TokenStream {
   let mut val = quote!("");
   let mut is_match = false;
   let mut fcn = String::new();
@@ -455,7 +455,7 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
       let arg = if quoted_follows {
         translate_string(text)
       } else {
-        translate_value(",)", text)
+        translate_value(",)", for_test, text)
       };
       args.push(arg);
       let mut intermediate_kv = false;
@@ -490,8 +490,15 @@ fn translate_value(exclude_chars: &str, text: &mut String) -> proc_macro2::Token
           //|| (n_int > *NARGS) {
           panic!("Illegal argument number {n_int:?} at '{text:?}'\n");
         } else {
+          let n_lit_usize = n_int as usize;
           let n_usize: usize = (n_int - 1) as usize; // index starts at 0
-          val = quote!(args[#n_usize])
+          // if we need the argument for a test such as `?#1(yes)(no)`
+          // make sure we yield an Option<T> instead of T.
+          val = if for_test {
+            quote!(if args.len() < #n_lit_usize { &None } else { &args[#n_usize] })
+          } else {
+            quote!(args[#n_usize])
+          }
         }
         String::new()
       })
@@ -537,7 +544,7 @@ fn parse_conditional(text: &mut String) -> (proc_macro2::TokenStream, String, St
   *text = LEAD_QMARK
     .replace(text, |_: &Captures| String::new())
     .to_string();
-  let translated_bool = translate_value("(", text);
+  let translated_bool = translate_value("(", true, text);
   // Note/TODO: This is a direct redo of latexml's "ToString(v) ? () : ()" approach
   //   for testing the boolean branch
   //   we could make it more performant by defining a simple trait `.to_bool`

@@ -216,7 +216,7 @@ pub struct Localized {
   pub if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
   pub smuggle_the: Vec<bool>,
   pub current_token: Vec<Token>,
-  pub align_group_count: i32, // was $LaTeXML::ALIGN_STATE
+  pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Rc<RefCell<Alignment>>>,
 }
 
@@ -2107,18 +2107,28 @@ impl State {
   /// get the current value for "dual branch"
   pub fn get_dual_branch(&self) -> Option<&'static str> { self.localized.dual_branch.last().cloned() }
 
-  pub fn increment_align_group(&mut self) {
-    self.localized.align_group_count += 1;
+  pub fn increment_align_group_count(&mut self) {
+    match self.localized.align_group_count.last_mut() {
+      Some(v) => {*v += 1},
+      None => { self.localized.align_group_count.push(1); }
+    }
   }
-  pub fn decrement_align_group(&mut self) {
-    self.localized.align_group_count -= 1;
+  pub fn decrement_align_group_count(&mut self) {
+    match self.localized.align_group_count.last_mut() {
+      Some(v) => {*v -= 1},
+      None => { self.localized.align_group_count.push(-1); }
+    }
   }
   pub fn align_group_count(&self) -> i32 {
-    self.localized.align_group_count
+    self.localized.align_group_count.last().copied().unwrap_or_default()
   }
-  pub fn set_align_group(&mut self, v: i32) {
-    self.localized.align_group_count = v;
+  pub fn set_align_group_count(&mut self, v: i32) {
+    self.localized.align_group_count.push(v);
   }
+  pub fn expire_align_group_count(&mut self) -> Option<i32> {
+    self.localized.align_group_count.pop()
+  }
+
   pub fn get_reading_alignment(&self) -> Option<Rc<RefCell<Alignment>>> {
     self.localized.reading_alignment.last().map(Rc::clone)
   }

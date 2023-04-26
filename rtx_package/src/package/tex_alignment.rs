@@ -104,6 +104,10 @@ LoadDefinitions!(state, {
     stomach.invoke_token(&mathcs, state)
   });
 
+  DefMacro!("\\@row@before", None);
+  DefMacro!("\\@row@after", None);
+  DefMacro!("\\@column@before", None);
+  DefMacro!("\\@column@after", None);
 
 });
 
@@ -136,14 +140,6 @@ pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<
 }
 
 pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state:&mut State) -> Result<()> {
-  // First take out an Rc clone over the current Alignment, to avoid double-borrowing State.
-  let alignment = if let Some(Stored::Alignment(alignment)) = state.lookup_value("Alignment") {
-    Rc::clone(alignment)
-  } else {
-    return Ok(());
-  };
-  let gullet = stomach.get_gullet_mut();
-  state.set_align_group(0);
   // Now read & digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
@@ -153,6 +149,8 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state
     Error!("missing", "alignment", stomach, state, "There is no open alignment structure here");
     return Ok(());
   };
+  let gullet = stomach.get_gullet_mut();
+  state.set_align_group_count(0);
   state.set_reading_alignment(&alignment);
   whatsit.set_property("alignment", Stored::Alignment(Rc::clone(&alignment)));
   // THIS IS NOT ENCOURAGED! AVOID THE TECHNIQUE.
@@ -214,6 +212,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state
 //   $alignment->setContentReversion(Tokens(@creversion));
 //   Debug("Halign $alignment: BODY DONE!\n"
 //       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
+  state.expire_align_group_count();
   state.expire_reading_alignment();
   Ok(())
 }

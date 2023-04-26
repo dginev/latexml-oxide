@@ -129,14 +129,13 @@ LoadDefinitions!(state, {
   //   properties   => { layout => 'vertical' },
   //   beforeDigest => sub { DefMacroI('\@captype', undef, 'figure'); },
   //   afterDigest  => sub { RescueCaptionCounters('figure', $_[1]); });
-  // DefEnvironment('{table}[]',
-  //   "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
-  //     . "#tags"
-  //     . "#body"
-  //     . "</ltx:table>",
-  //   properties   => { layout => 'vertical' },
-  //   beforeDigest => sub { DefMacroI('\@captype', undef, 'table'); },
-  //   afterDigest  => sub { RescueCaptionCounters('table', $_[1]); });
+  DefEnvironment!("{table}[]",
+    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
+    // TODO:
+    // properties   => { layout => 'vertical' },
+    before_digest => sub[_stomach,istate] {
+      DefMacro!("\\@captype", "table"); },
+    after_digest  => sub[stomach,whatsit,state] { rescue_caption_counters("table", whatsit, stomach, state); });
   // DefEnvironment('{table*}[]',
   //   "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
   //     . "#tags"
