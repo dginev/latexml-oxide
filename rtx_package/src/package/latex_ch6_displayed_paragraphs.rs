@@ -51,10 +51,13 @@ LoadDefinitions!(state, {
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },
   //   beforeDigest => sub { UnshiftValue(beforeAfterGroup => T_CS('\@add@raggedleft')); });
 
-  // DefConstructorI('\@add@centering', undef,
-  //   sub { if (my $node = LookupValue('ALIGNING_NODE')) {
-  //       map { setAlignOrClass($_[0], $_, 'center', 'ltx_centering') }
-  //         $_[0]->getChildElements($node); } });
+  DefConstructor!("\\@add@centering", sub[document,args,state] {
+    if let Some(Stored::Node(node)) = state.lookup_value("ALIGNING_NODE") {
+      for mut child in node.get_child_elements() {
+        set_align_or_class(document, &mut child, "center", "ltx_centering", state)?;
+      }
+    }
+  });
   // # Note that \raggedright is essentially align left
   // DefConstructorI('\@add@raggedright', undef,
   //   sub { if (my $node = LookupValue('ALIGNING_NODE')) {

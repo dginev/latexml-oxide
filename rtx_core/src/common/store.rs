@@ -742,6 +742,10 @@ impl<'a> From<&'a Token> for Stored {
   fn from(value: &'a Token) -> Self { Stored::Token(value.clone()) }
 }
 
+impl From<Alignment> for Stored {
+  fn from(a: Alignment) -> Self { Stored::Alignment(Rc::new(RefCell::new(a))) }
+}
+
 impl From<Vec<char>> for Stored {
   fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
 }

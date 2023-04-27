@@ -45,16 +45,20 @@ pub type OpenContainerFn =
 pub type CloseContainerFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
 pub type CloseRowFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
+pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<()>>;
 
+#[derive(Default)]
 pub struct AlignmentConfig {
   pub template: Option<Template>,
   pub open_container: Option<OpenContainerFn>,
   pub close_container: Option<CloseContainerFn>,
   pub open_row: Option<OpenRowFn>,
   pub close_row: Option<CloseRowFn>,
+  pub open_column: Option<OpenColumnFn>,
   pub close_column: Option<CloseColumnFn>,
   pub attributes: HashMap<String, String>,
+  pub is_math: bool,
 }
 
 #[derive(Debug,Clone,Default, PartialEq)]
@@ -256,7 +260,7 @@ impl Alignment {
 /// a reader for the Template parameter type
 pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<Template> {
   gullet.skip_spaces(state);
-  let mut build_template = Template::default();
+  state.set_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
   while let Some(open) = gullet.read_token(state) {
@@ -288,7 +292,7 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         break;
       }
       gullet.unread_one(last_op);
-    } else if let Some(defn) = state.lookup_expandable(&T_CS!("\\NC@rewrite@{op}"), true) {
+    } else if let Some(defn) = state.lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true) {
       let invoked = defn.invoke(gullet, true, state)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {
@@ -309,8 +313,8 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
     }
   }
   tokens.push(T_END!());
-  build_template.set_reversion(Tokens::new(tokens));
-  Ok(build_template)
+  state.current_build_template().unwrap().set_reversion(Tokens::new(tokens));
+  Ok(state.take_build_template().unwrap())
 }
 
 pub fn parse_alignment_template(

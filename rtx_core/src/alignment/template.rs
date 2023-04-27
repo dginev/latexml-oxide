@@ -1,6 +1,7 @@
 //! Support for tabular/array environments
 use crate::token::Token;
 use crate::tokens::Tokens;
+use crate::common::dimension::Dimension;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
@@ -13,7 +14,7 @@ pub enum Align {
   Left,
   Center,
   Right,
-  Justified
+  Justify
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -24,6 +25,7 @@ pub struct Column {
   pub after: Option<Tokens>,
   pub border: String,
   pub align: Option<Align>,
+  pub width: Option<Dimension>,
 }
 #[derive(Debug, Clone, Default)]
 pub struct TemplateConfig {

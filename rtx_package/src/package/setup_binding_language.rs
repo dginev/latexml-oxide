@@ -1823,6 +1823,32 @@ macro_rules! DefParameterType {
       name => Cow::Borrowed($name),  $($key=>$value),*), $state_arg));
 }
 
+#[macro_export]
+macro_rules! DefColumnType {
+  ($proto:literal, sub[ $gullet:ident,$args:ident,$inner_state:ident ] $body:block) => {
+    #[allow(unused_mut)]
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |$gullet, mut $args, $inner_state|
+      WithInnerState!($body, $inner_state).into_tokens_result()
+    )));
+    DefColumnType!($proto, expansion_closure)
+  };
+  ($proto:literal, $expansion_closure:ident) => {
+    let mut c_chars = $proto.chars();
+    if let Some(first_c) = c_chars.next() {
+      let mut c_chars_peek = c_chars.peekable();
+      while c_chars_peek.peek() == Some(&' ') {
+        c_chars_peek.next();
+      }
+      bind_state_mut!(st);
+      let proto = parse_parameters(&c_chars_peek.collect::<String>(), &T_RELAX!(), Some(st))?;
+      def_macro(T_CS!(s!("\\NC@rewrite@{first_c}")), proto, $expansion_closure, None, st);
+    } else {
+      Warn!("expected", "character", None, None, "Expected Column specifier");
+    }
+  }
+}
+
 // Reverts an object into TeX code, as a Tokens list, that would create it.
 // Note that this is not necessarily the original TeX.
 #[macro_export]
