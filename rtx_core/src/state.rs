@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
 use crate::alignment::Alignment;
+use crate::alignment::template::Template;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -218,6 +219,7 @@ pub struct Localized {
   pub current_token: Vec<Token>,
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Rc<RefCell<Alignment>>>,
+  pub build_template: Option<Template>
 }
 
 /// The State efficiently maintain the bindings in a TeX-like fashion.
@@ -2140,5 +2142,15 @@ impl State {
   }
   pub fn expire_reading_alignment(&mut self) -> Option<Rc<RefCell<Alignment>>> {
     self.localized.reading_alignment.pop()
+  }
+
+  pub fn set_build_template(&mut self, template: Template) {
+    self.localized.build_template = Some(template);
+  }
+  pub fn current_build_template(&mut self) -> Option<&mut Template> {
+    self.localized.build_template.as_mut()
+  }
+  pub fn take_build_template(&mut self) -> Option<Template> {
+    self.localized.build_template.take()
   }
 }

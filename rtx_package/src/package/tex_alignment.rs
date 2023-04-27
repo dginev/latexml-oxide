@@ -6,7 +6,7 @@ use std::cell::RefCell;
 //======================================================================
 // Basic alignment support needed by most environments & commands.
 //======================================================================
-LoadDefinitions!(state, {
+LoadDefinitions!(outer_state, {
   DefParameterType!(AlignmentTemplate, sub[gullet, _inner, _extra, state] {
     read_alignment_template(gullet, state)
   });
@@ -16,45 +16,49 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
-  // DefColumnType('|', sub {
-  //     $LaTeXML::BUILD_TEMPLATE->addBetweenColumn(T_CS('\vrule'), T_CS('\relax')); return; });
-  // DefColumnType('l', sub {
-  //     $LaTeXML::BUILD_TEMPLATE->addColumn(after => Tokens(T_CS('\hfil'))); return; });
-  // DefColumnType('c', sub {
-  //     $LaTeXML::BUILD_TEMPLATE->addColumn(before => Tokens(T_CS('\hfil')),
-  //       after => Tokens(T_CS('\hfil'))); return; });
-  // DefColumnType('r', sub {
-  //     $LaTeXML::BUILD_TEMPLATE->addColumn(before => Tokens(T_CS('\hfil'))); return; });
+  DefColumnType!("|", sub[_gullet,_args,state] {
+    state.current_build_template().unwrap().
+      add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")]);
+  });
+  DefColumnType!("l", sub[_gullet,_args,state] {
+    state.current_build_template().unwrap().add_column(Column {
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Column::default()});
+  });
+  DefColumnType!("c", sub[_gullet,_args,state] {
+    state.current_build_template().unwrap().add_column(Column {
+      before: Some(Tokens!(T_CS!("\\hfil"))),
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Column::default()});
+  });
+  DefColumnType!("r", sub[_gullet,_args,state] {
+    state.current_build_template().unwrap().add_column(Column {
+      before: Some(Tokens!(T_CS!("\\hfil"))),
+      ..Column::default()});
+  });
 
-  // This collects paragraph text, like \hbox, but for use within alignment cells;
-  // no ltx:text wrapper is needed, since it is within a cell.
-  // and it handles $ and & appropriately
-  // DefConstructor('\tabularcell@hbox HBoxContents',
-  //   "#1",
-  //   mode => 'text', bounded => 1,
-  //   Workaround for $ in alignment; an explicit \hbox gives us a normal $.
-  //   And also things like \centerline that will end up bumping up to block level!
-  //   beforeDigest => sub {
-  //     ## reenterTextMode();  # BUT NOT \\\\ !!!!!!
-  //     Let(T_MATH,        '\@dollar@in@textmode');
-  //     Let('\centerline', '\relax'); },
-  //   afterConstruct => sub {    # Override nowrap on right,left,center cells
-  //     my $cell = $_[0]->getElement;
-  //     $_[0]->addClass($cell, 'ltx_wrap') unless ($cell->getAttribute('align') || "") eq
-  // 'justify'; });
+  DefColumnType!("p{Dimension}", sub[_gullet,args,state] {
+    let width = args.remove(0).expect_dimension();
+    state.current_build_template().unwrap().add_column(Column {
+      before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
+      after: Some(Tokens!(T_END!(), T_END!())),
+      align: Some(Align::Justify),
+      width: Some(width),
+      ..Column::default()});
+  });
 
-  // DefColumnType('p{Dimension}', sub {
-  //     $LaTeXML::BUILD_TEMPLATE->addColumn(before => Tokens(T_CS('\tabularcell@hbox'), T_BEGIN),
-  //       after => Tokens(T_END),
-  //       align => 'justify', width => $_[1]); return; });
+  DefColumnType!("*{Number}{}", sub[_gullet,args,_state] {
+    let n = args.remove(0).expect_number();
+    let pattern = args.remove(0).owned_tokens().unwrap();
+    let mut tks = Vec::new();
+    for _ in 1 ..= n.value_of() {
+      tks.extend(pattern.clone().unlist());
+    }
+    tks
+  });
 
-  // DefColumnType('*{Number}{}', sub {
-  //     my ($gullet, $n, $pattern) = @_;
-  //     map { $pattern->unlist } 1 .. $n->valueOf; });
-
-  // DefColumnType('@{}', sub {
-  //     my ($gullet, $filler) = @_;
-  //     $LaTeXML::BUILD_TEMPLATE->addBetweenColumn($filler->unlist); return; });
+  DefColumnType!("@{}", sub[_gullet,args,state] {
+    let filler = args.remove(0).owned_tokens().unwrap();
+    state.current_build_template().unwrap().add_between_column(filler.unlist());
+  });
 
   // ----------------------------------------------------------------------
   //  This is where ALL(?) alignments start & finish
@@ -117,26 +121,35 @@ LoadDefinitions!(state, {
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
-pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, state: &mut State) {
+pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, gullet: &mut Gullet, state: &mut State) {
   let mode = if mode.is_empty() { state.lookup_string("MODE") } else { mode };
-  // my $ismath    = $mode =~ /math$/;
-  // my $container = ($ismath ? 'ltx:XMArray' : 'ltx:tabular');
-  // my $rowtype   = ($ismath ? 'ltx:XMRow'   : 'ltx:tr');
-  // my $coltype   = ($ismath ? 'ltx:XMCell'  : 'ltx:td');
-  // let alignment = Alignment {
-  //   template       => $template,
-  //   openContainer  => sub { $_[0]->openElement($container, @_[1 .. $#_]); },
-  //   closeContainer => sub { $_[0]->closeElement($container); },
-  //   openRow        => sub { $_[0]->openElement($rowtype, @_[1 .. $#_]); },
-  //   closeRow       => sub { $_[0]->closeElement($rowtype); },
-  //   openColumn     => sub { $_[0]->openElement($coltype, @_[1 .. $#_]); },
-  //   closeColumn    => sub { $_[0]->closeElement($coltype); },
-  //   isMath         => $ismath,
-  //   properties     => {%properties}
-  // };
-  // state.assign_value("Alignment", alignment, None);
+  let ismath    = mode.ends_with("math");
+  let (container,rowtype,coltype) = if ismath {
+    ("ltx:XMArray","ltx:XMRow","ltx:XMCell")
+  }  else {
+    ("ltx:tabular","ltx:tr","ltx:td")
+  };
+  let alignment = Alignment::new(AlignmentConfig {
+    template: Some(template),
+    open_container: Some(Rc::new(
+      |document,props,state| document.open_element(container, Some(props), None, state).and(Ok(())))),
+    close_container: Some(Rc::new(
+      |document,state| document.close_element(container, state).and(Ok(())) )),
+    open_row       : Some(Rc::new(
+      |document,props,state| document.open_element(rowtype, Some(props), None, state).and(Ok(())))),
+    close_row      : Some(Rc::new(
+      |document,state| document.close_element(rowtype, state).and(Ok(())) )),
+    open_column    : Some(Rc::new(
+      |document,props,state| document.open_element(coltype, Some(props), None, state).and(Ok(())))),
+    close_column   : Some(Rc::new(
+      |document,state| document.close_element(coltype, state).and(Ok(())))),
+    is_math        : ismath,
+    // properties
+    ..AlignmentConfig::default()
+  });
+  state.assign_value("Alignment", alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
-  // Let(T_MATH, ($ismath ? '\@dollar@in@mathmode' : '\@dollar@in@textmode'));
+  state.let_i(&T_MATH!(), if ismath { T_CS!("\\@dollar@in@mathmode") } else {T_CS!("\\@dollar@in@textmode")}, None, gullet);
 }
 
 pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state:&mut State) -> Result<()> {
