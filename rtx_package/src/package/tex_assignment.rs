@@ -84,7 +84,7 @@ LoadDefinitions!(outer_state, {
       // Info!("unexpected", name, gullet, state, message);
       None
     };
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)?;
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
     }

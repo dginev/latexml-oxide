@@ -358,14 +358,14 @@ LoadDefinitions!(state, {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     while gullet.if_next(&T_OTHER!("'"), state)? {
-      gullet.read_token(state);
+      gullet.read_token(state)?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
     if TOKEN_SUPER.with(|ts| gullet.if_next(ts, state))? {
-      gullet.read_token(state);
+      gullet.read_token(state)?;
       sup.extend(gullet.read_arg(state)?.unlist());
     }
     Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())

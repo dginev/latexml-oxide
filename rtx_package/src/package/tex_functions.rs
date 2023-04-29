@@ -292,7 +292,7 @@ pub fn read_box_contents(
   everybox_opt: Option<Tokens>,
   state: &mut State,
 ) -> Result<Tokens> {
-  while let Some(t) = gullet.read_token(state) {
+  while let Some(t) = gullet.read_token(state)? {
     if t.get_catcode() == Catcode::BEGIN {
       break;
     } // Skip till { or \bgroup

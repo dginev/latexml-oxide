@@ -5,7 +5,7 @@ use crate::package::*;
 
 LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, (token, t_if, t_else), state] {
-    let next = gullet.read_non_space(state);
+    let next = gullet.read_non_space(state)?;
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
     let next_test = match next {
@@ -30,7 +30,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!(r"\@ifnext@n {}{}{}", sub[gullet,(tokens,if_toks,else_toks),state] {
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
-    while let Some(t) = gullet.read_token(state) {
+    while let Some(t) = gullet.read_token(state)? {
       if t == toks[0] {
         toks.pop_front();
         read.push(t);
@@ -49,7 +49,7 @@ LoadDefinitions!(outer_stomach, state, {
   });
 
   DefMacro!("\\@ifstar {}{}", sub[gullet,(if_toks,else_toks),state] {
-  let next_opt = gullet.read_non_space(state);
+  let next_opt = gullet.read_non_space(state)?;
   if next_opt == Some(T_OTHER!("*")) {
     Ok(if_toks)
   } else {

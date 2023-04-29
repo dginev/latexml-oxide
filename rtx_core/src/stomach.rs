@@ -33,6 +33,8 @@ pub struct Stomach {
   pub token_stack: Vec<Token>,
   /// tracks the tokens of boxing groups(?)
   pub boxing: Vec<Token>,
+  /// localized box lists for stacked digestion calls
+  localized_box_list: Vec<Vec<Digested>>,
   /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list: Vec<Digested>,
 }
@@ -471,14 +473,14 @@ impl<'t> Stomach {
   /// Stomach. the need comes from techniques that use a *Stomach* inside the inner reader
   /// function, as is done by `Stomach::raw_tex`. ideally `reading_from_mouth` should be used with
   /// a Gullet, and this variation should be removed.
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> R
-  where FnR: FnOnce(&mut Stomach, &mut State) -> R {
+  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> Result<R>
+  where FnR: FnOnce(&mut Stomach, &mut State) -> Result<R> {
     let mouth_source = mouth.get_source().to_string();
     {
       let gullet = self.get_gullet_mut();
       gullet.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
     }
-    let results: R = reader(self, state);
+    let results: R = reader(self, state)?;
     let gullet = self.get_gullet_mut();
     // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
     loop {
@@ -500,7 +502,7 @@ impl<'t> Stomach {
         }
       }
       if is_mouth {
-        gullet.close_mouth(true, state);
+        gullet.close_mouth(true, state)?;
         break;
       } else if gullet.mouthstack.is_empty() {
         Error!(
@@ -538,15 +540,15 @@ impl<'t> Stomach {
               runtime.mouth.finish(state);
             }
           }
-          gullet.close_mouth(true, state);
+          gullet.close_mouth(true, state)?;
         }
         // ?? if we continue?
         else {
-          gullet.close_mouth(false, state);
+          gullet.close_mouth(false, state)?;
         }
       }
     }
-    results
+    Ok(results)
   }
 
   //**********************************************************************
@@ -784,6 +786,17 @@ impl<'t> Stomach {
       self.pop_stack_frame(false, state)?;
     } // Effectively egroup.
     Ok(())
+  }
+
+  pub fn new_local_box_list(&mut self) {
+    let mut buffer = Vec::new();
+    std::mem::swap(&mut self.box_list, &mut buffer);
+    self.localized_box_list.push(buffer);
+  }
+  pub fn expire_local_box_list(&mut self) -> Vec<Digested> {
+    let mut buffer = self.localized_box_list.pop().unwrap_or_default();
+    std::mem::swap(&mut self.box_list, &mut buffer);
+    buffer
   }
 
   //**********************************************************************

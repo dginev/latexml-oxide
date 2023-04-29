@@ -42,8 +42,8 @@ LoadDefinitions!(state, {
       gullet.unread(variables);
       let mut inits : Vec<Token> = Vec::new();
       let mut steps = Vec::new();
-      gullet.skip_spaces(state);
-      while let Some(var) = gullet.read_token(state) {
+      gullet.skip_spaces(state)?;
+      while let Some(var) = gullet.read_token(state)? {
         // TODO: this defeats the point of the performance optimization
         // but it is so much *simpler* to allocate...
         let csname = var.with_cs_name(ToString::to_string);
@@ -103,7 +103,7 @@ LoadDefinitions!(state, {
           Error!("unexpected", var, gullet, state,
             format!("Wrong format for multido variable {var:?}"));
         }
-        gullet.skip_spaces(state);
+        gullet.skip_spaces(state)?;
       }
       DefMacro!(T_CS!("\\multido@stepvar"), None, Tokens::new(steps), state);
       // Return the tokens to initialize the vars

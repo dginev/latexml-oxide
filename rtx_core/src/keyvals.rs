@@ -274,7 +274,7 @@ impl KeyVals {
     let mut tokens = Vec::new();
 
     // we do not want any spaces
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)?;
 
     // read tokens one-by-one
     let mut last_token = None;
@@ -612,7 +612,7 @@ impl KeyVals {
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
-            if let Some(tok) = gullet.read_token(state) {
+            if let Some(tok) = gullet.read_token(state)? {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
