@@ -24,15 +24,16 @@
 #[allow(dead_code)]
 pub mod template;
 
+use crate::common::store::Stored;
 use crate::common::error::*;
 use crate::common::object::Object;
+use crate::stomach::Stomach;
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth::Mouth;
 use crate::state::State;
 use crate::token::{Token,Catcode};
 use crate::tokens::Tokens;
-use crate::Digested;
 use self::template::{Column, Row, Template, TemplateConfig};
 
 use rustc_hash::FxHashMap as HashMap;
@@ -57,7 +58,7 @@ pub struct AlignmentConfig {
   pub close_row: Option<CloseRowFn>,
   pub open_column: Option<OpenColumnFn>,
   pub close_column: Option<CloseColumnFn>,
-  pub attributes: HashMap<String, String>,
+  pub attributes: HashMap<String, Stored>,
   pub is_math: bool,
 }
 
@@ -67,6 +68,9 @@ pub struct Alignment {
   current_row: Option<usize>,
   current_column: usize,
   rows: VecDeque<Row>,
+  in_column: bool,
+  in_row: bool,
+  in_tabular_head: bool,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -85,6 +89,9 @@ impl Alignment {
       template,
       current_row: None,
       current_column: 0,
+      in_row:false,
+      in_column:false,
+      in_tabular_head: false,
       rows: VecDeque::new(),
     }
   }
@@ -97,10 +104,16 @@ impl Alignment {
       None => None,
     }
   }
+  pub fn current_row_mut(&mut self) -> Option<&mut Row> {
+    match self.current_row {
+      Some(idx) => self.rows.get_mut(idx),
+      None => None,
+    }
+  }
 
   pub fn new_row(&mut self) -> Option<&Row> {
     let row = self.template.clone();
-    self.current_row = Some(self.rows.len() + 1);
+    self.current_row = Some(self.rows.len());
     self.rows.push_back(row);
     self.current_column = 0;
     self.rows.back()
@@ -143,8 +156,16 @@ impl Alignment {
     self.current_row?;
     self.current_column +=1 ;
     let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
-    Some(current_row.force_column_mut(self.current_column))
+    if let Some(colspec) = current_row.get_column_mut(self.current_column) {
+      Some(colspec)
+    } else {
+      Error!("unexpected", "&", None, None, "Extra alignment tab '&'");
+      // current_row.add_column(Column{align: Some(Align::Center),..Column::default()});
+      // let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
+      None
+    }
   }
+
   pub fn last_column(&mut self) -> Option<&mut Column> {
     if let Some(row_idx) = self.current_row {
       if let Some(row) = self.rows.get_mut(row_idx) {
@@ -175,6 +196,11 @@ impl Alignment {
   pub fn current_column(&mut self) -> Option<&mut Column> {
     self.current_row.and_then(|cw| self.rows.get_mut(cw).unwrap()
       .get_column_mut(self.current_column))
+  }
+
+  pub fn get_column(&mut self, n:usize) -> Option<&mut Column> {
+    // TODO: do we need an immutable variant? For now alias the mutable one
+    self.get_column_mut(n)
   }
 
   pub fn get_column_mut(&mut self, n:usize) -> Option<&mut Column> {
@@ -235,19 +261,73 @@ impl Alignment {
     }
   }
 
-  pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
-    // TODO: Organization? In Perl, the Alignment inherits Whatsit
-    //       here, we need to factor out the methods of Whatsit that we can share,
-    //       maybe a "Whatstrait"? so that we avoid cargo-culting all the code for set_body
-    unimplemented!()
-  }
   pub fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens!()) }
+  pub fn set_reversion(&mut self, rev: Tokens) {unimplemented!()}
+  pub fn set_content_reversion(&mut self, rev: Tokens) {unimplemented!()}
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // Support for building an alignment's Rows & Columns
+  pub fn is_in_row(&self) -> bool { self.in_row }
+  pub fn is_in_column(&self) -> bool { self.in_column }
+  pub fn start_row(&mut self,pseudorow:bool,stomach:&mut Stomach, state:&mut State) -> Result<()> {
+    self.new_row();
+    stomach.bgroup(state);    // Grouping around ROW!
+    if pseudorow {
+      self.current_row_mut().unwrap().set_pseudo()
+    } else {
+      let row_before = stomach.digest(T_CS!("\\@row@before"), state)?;
+      stomach.box_list.push( row_before );
+    }
+    self.in_row = true;
+    state.assign_value("alignmentStartColumn", 0, None);    // ???
+    Ok(())
+  }
+
+  pub fn end_row(&mut self, stomach: &mut Stomach, state:&mut State) -> Result<()> {
+    if self.in_row {
+      if self.in_column {
+        self.end_column(stomach, state)?;
+      }
+      stomach.egroup(state)?;                        // Grouping around ROW!
+      self.in_row = false;
+    }
+    Ok(())    //  Digest(T_CS('\@row@after'));
+  }
+
+  pub fn start_column(&mut self, pseudorow:bool, stomach:&mut Stomach, state:&mut State) -> Result<()> {
+    if !self.in_row {
+      self.start_row(pseudorow, stomach, state)?;
+    } else if pseudorow {
+      self.current_row_mut().unwrap().set_pseudo();
+    }
+    stomach.bgroup(state);    // Grouping around CELL!
+                              // Note: a VERY round-about way of tracking the column spanning!
+    state.assign_value("alignmentStartColumn", self.current_column_number(), None);
+    let _colspec = self.next_column();
+    state.set_align_group_count(1000000);
+    self.in_column = true;
+    Ok(())
+  }
+
+  pub fn end_column(&mut self, stomach: &mut Stomach, state:&mut State) -> Result<()> {
+    if self.in_column {
+      stomach.egroup(state)?; // Grouping around CELL!
+      self.in_column = false;
+    }
+    Ok(())
+  }
+
+  pub fn set_in_tabular_head(&mut self) {
+    self.in_tabular_head = true;
+  }
+  pub fn unset_in_tabular_head(&mut self) {
+    self.in_tabular_head = false;
+  }
+  pub fn is_in_tabular_head(&self) -> bool {
+    self.in_tabular_head
+  }
+
 }
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// Support for building an alignment's Rows & Columns
-
-// TODO: Continue...
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Dealing with templates
@@ -259,11 +339,11 @@ impl Alignment {
 
 /// a reader for the Template parameter type
 pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<Template> {
-  gullet.skip_spaces(state);
+  gullet.skip_spaces(state)?;
   state.set_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
-  while let Some(open) = gullet.read_token(state) {
+  while let Some(open) = gullet.read_token(state)? {
     if open.get_catcode() == Catcode::BEGIN {
       nopens += 1;
     } else {
@@ -271,14 +351,14 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
       break;
     }
   }
-  while let Some(op) = gullet.read_token(state) {
+  while let Some(op) = gullet.read_token(state)? {
     let cc = op.get_catcode();
     if cc == Catcode::SPACE {
     } else if cc == Catcode::END {
       let mut last_op = op;
       nopens -= 1;
       while nopens > 0 {
-        if let Some(next_op) = gullet.read_token(state) {
+        if let Some(next_op) = gullet.read_token(state)? {
           last_op = next_op;
           if last_op.get_catcode() != Catcode::END {
             break;

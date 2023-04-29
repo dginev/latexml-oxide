@@ -112,7 +112,7 @@ LoadDefinitions!(outer_state, {
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
   DefParameterType!(FontToken, reader => reader!(gullet, _inner, _extra, state, {
-    let token = gullet.read_token(state).unwrap();
+    let token = gullet.read_token(state)?.unwrap();
     if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
       gullet.read_number(state)?;
     }

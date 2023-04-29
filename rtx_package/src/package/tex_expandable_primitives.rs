@@ -317,7 +317,7 @@ LoadDefinitions!(outer_state, {
 
   // Replace the next token with it's not-expanded variant
   DefMacro!(T_CS!("\\noexpand"), None, sub[gullet, _args, state] {
-    if let Some(token) = gullet.read_token(state) {
+    if let Some(token) = gullet.read_token(state)? {
       vec![token.with_dont_expand(state)?]
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed

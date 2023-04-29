@@ -1,6 +1,7 @@
 //! Support for tabular/array environments
 use crate::token::Token;
 use crate::tokens::Tokens;
+use crate::Digested;
 use crate::common::dimension::Dimension;
 
 use std::collections::VecDeque;
@@ -26,6 +27,8 @@ pub struct Column {
   pub border: String,
   pub align: Option<Align>,
   pub width: Option<Dimension>,
+  pub colspan: Option<usize>,
+  pub boxes: Option<Digested>
 }
 #[derive(Debug, Clone, Default)]
 pub struct TemplateConfig {
@@ -156,7 +159,7 @@ impl Template {
     }
   }
 
-  fn _get_column_mut(&mut self, n: usize, force:bool) -> Option<&mut Column> {
+  pub fn get_column_mut(&mut self, n: usize) -> Option<&mut Column> {
     let all_columns = self.columns.len();
     if (n > all_columns) && self.repeating {
       let rep = &self.repeated;
@@ -169,23 +172,15 @@ impl Template {
       }
     }
     if n > 0 {
-      Some(&mut self.columns[n - 1])
-    } else if force {
-      // Error!("unexpected", "&", state.get_stomach().get_gullet(), "Extra alignment tab '&'");
-      self.add_column(Column{align: Some(Align::Center),..Column::default()});
-      self._get_column_mut(n,true)
+      self.columns.get_mut(n - 1)
     } else {
       None
     }
   }
-  pub fn get_column_mut(&mut self, n:usize) -> Option<&mut Column> {
-    self._get_column_mut(n,false)
-  }
-  pub fn force_column_mut(&mut self, n: usize) -> &mut Column {
-    self._get_column_mut(n, true).unwrap()
-  }
 
   pub fn get_columns(&self) -> &[Column] { &self.columns }
   pub fn get_columns_mut(&mut self) -> &mut[Column] { &mut self.columns }
+  pub fn set_pseudo(&mut self) { self.pseudorow = true; }
+  pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }
 }

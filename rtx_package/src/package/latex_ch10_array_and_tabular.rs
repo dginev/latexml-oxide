@@ -84,13 +84,44 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@cline{}", "",
     after_digest => sub[_stomach, whatsit,state] {
       let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
-      let mut cols = Vec::new();
-      // TODO
-      // while ($cols =~ s/^,?(\d+)//) {
-      //   my $n = $1;
-      //   push(@cols, ($cols =~ s/^-(\d+)// ? ($n .. $1) : ($n))); }
+      let mut cols_vec = Vec::new();
+      let cols_chars = cols.chars();
+      let mut from : Option<usize> = None;
+      let mut num = String::new();
+      for c_next in cols_chars {
+        match c_next {
+          ',' => if !num.is_empty() {
+            let this_num = num.parse::<usize>().unwrap();
+            if let Some(from_num) = from {
+              for num_in_range in from_num..=this_num {
+                cols_vec.push(num_in_range);
+              }
+            } else {
+              cols_vec.push(this_num);
+            }
+            from = None;
+            num = String::new();
+          },
+          '-' => {
+            from = Some(num.parse::<usize>().unwrap());
+            num = String::new();
+          }
+          c if c.is_ascii_digit() => num.push(c_next),
+          _ => break
+        }
+      }
+      if !num.is_empty() {
+        let this_num = num.parse::<usize>().unwrap();
+        if let Some(from_num) = from {
+          for num_in_range in from_num..=this_num {
+            cols_vec.push(num_in_range);
+          }
+        } else {
+          cols_vec.push(this_num);
+        }
+      }
       if let Some(Stored::Alignment(ref alignment)) = state.lookup_value("Alignment") {
-        alignment.borrow_mut().add_line("t", cols);
+        alignment.borrow_mut().add_line("t", cols_vec);
       }
       ()
     },

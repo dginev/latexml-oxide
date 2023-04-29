@@ -33,12 +33,15 @@ LoadDefinitions!(state, {
   //     DimensionToSpaces($length); },
   //   alias => '\mskip');
 
-  // DefPrimitiveI('\hss', undef, undef);
-  // DefConstructor('\hfil', undef, "?#isMath(<ltx:XMHint name='hfil'/>)( )",
-  //   properties => { isSpace => 1, isFill => 1 });
-  // DefConstructor('\hfill', undef, "?#isMath(<ltx:XMHint name='hfill'/>)( )",
-  //   properties => { isSpace => 1, isFill => 1 });
-  // DefPrimitiveI('\hfilneg', undef, undef);
+  DefPrimitive!("\\hss", None);
+  DefPrimitive!("\\hfilneg", None);
+  DefPrimitive!("\\hfil", sub[_s,_a,state] {
+    Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfil")),
+    stored_map!("isSpace" => true, "isFill" => true), state)});
+  DefPrimitive!("\\hfill", sub[_s,_a,state] {
+    Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfill")),
+    stored_map!("isSpace" => true, "isFill" => true), state) });
+
 
   // \lower <dimen> <box>
   // \raise <dimen> <box>

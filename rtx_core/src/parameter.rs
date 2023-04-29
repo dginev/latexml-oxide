@@ -546,7 +546,7 @@ impl Parameters {
     gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
       gulletx.unread(value_tokens); // but put back tokens to be read
       let values = self.read_arguments(gulletx, None, state)?;
-      gulletx.skip_spaces(state);
+      gulletx.skip_spaces(state)?;
       Ok(values)
     })
   }

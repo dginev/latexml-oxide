@@ -236,7 +236,7 @@ impl Object for Whatsit {
     // (2) caching the reversion (which is a big performance boost)
     let saved_opt = if state.get_dual_branch().is_some() {
       // TODO, also alignment case
-      unimplemented!()
+      Some(Tokens!(T_OTHER!("ALIGNMENT REVERSION TODO")))
       // self.dual_reversion.get(DUAL_BRANCH)
     } else {
       self.reversion.clone()

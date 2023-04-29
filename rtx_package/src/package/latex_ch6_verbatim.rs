@@ -107,12 +107,12 @@ LoadDefinitions!(outer_state, {
     state.begin_semiverbatim(Some(active_chars));
     // Do NOT (necessarily) skip spaces after \verb!!!
     state.assign_catcode(' ', Catcode::ACTIVE, None);
-    let mut init = gullet.read_token(state);
+    let mut init = gullet.read_token(state)?;
     let mut starred = false;
     if let Some(ref init_token) = init {
       if init_token == &(*T_OTHER_STAR) {
         starred = true;
-        init = gullet.read_token(state);
+        init = gullet.read_token(state)?;
       }
     }
     if let Some(init_token) = init {

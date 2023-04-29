@@ -200,16 +200,16 @@ LoadDefinitions!(state, {
 
   // Skip any spaces, but don't contribute an argument.
   DefParameterType!(SkipSpaces, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)?;
   }, novalue => true);
 
   DefParameterType!(Skip1Space, sub[gullet, _inner, _extra, state] {
-    gullet.skip_one_space(state);
+    gullet.skip_one_space(state)?;
   }, novalue => true);
 
   // Read the next token
   DefParameterType!(Token, sub[gullet, _inner, _extra, state] {
-    match gullet.read_token(state) {
+    match gullet.read_token(state)? {
       Some(t) => Ok(Tokens!(t)),
       None => {
         Error!("expected", "Token", gullet, state, "Paramater <Token> found None.");
@@ -264,7 +264,7 @@ LoadDefinitions!(state, {
 
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!(RequireBrace, sub[gullet, _inner, _extra, state] {
-    if let Some(tok) = gullet.read_token(state) {
+    if let Some(tok) = gullet.read_token(state)? {
       let cc = tok.get_catcode();
       gullet.unread_one(tok.clone());
       if cc != Catcode::BEGIN {
@@ -513,7 +513,7 @@ LoadDefinitions!(state, {
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!(DefToken, sub[gullet, _inner, _extra, state] {
-    let mut token = gullet.read_token(state);
+    let mut token = gullet.read_token(state)?;
     let space_token = T_SPACE!();
 
     while token.is_some() && token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
@@ -678,7 +678,7 @@ LoadDefinitions!(state, {
   // Hopefully there are no issues with the box being digested
   // as part of the reader???
   DefParameterType!(MoveableBox, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)?;
     if let Some(xtoken) = gullet.read_x_token(None, false, state)? {
       Tokens!(xtoken)
     } else {
@@ -740,7 +740,7 @@ LoadDefinitions!(state, {
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
   DefParameterType!(Digested, reader => reader!(gullet, _inner, _extra, state, {
-      gullet.skip_spaces(state);
+      gullet.skip_spaces(state)?;
       Ok(Tokens!())
     }),
     reader_predigest => reader_predigest!(stomach, _arg, state, {

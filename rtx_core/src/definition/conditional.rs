@@ -248,7 +248,7 @@ impl Conditional {
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to "XY junk", since A==A
   // # Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(&self, nskips: i64, gullet: &mut Gullet, state: &mut State) -> Tokens {
+  fn skip_conditional_body(&self, nskips: i64, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     let mut level = 1;
     let mut n_ors = 0;
     let _start = gullet.get_locator();
@@ -257,7 +257,7 @@ impl Conditional {
 
     let local_frame = state.get_ifframe();
     loop {
-      let (t, cond_type) = match gullet.read_next_conditional(state) {
+      let (t, cond_type) = match gullet.read_next_conditional(state)? {
         Some((tok, typ)) => (Tokens!(tok), Some(typ)),
         None => (Tokens!(), None),
       };
@@ -276,7 +276,7 @@ impl Conditional {
                 if level == 0 {
                   // otherwise, if no more nesting, we're done.
                   // Done with this frame, keep it removed
-                  return t; // AND Return the finishing token.
+                  return Ok(t); // AND Return the finishing token.
                 } else {
                   stack.push_front(stack_frame.into());
                 }
@@ -290,7 +290,7 @@ impl Conditional {
           } else if other_type == ConditionalType::Or {
             n_ors += 1;
             if n_ors == nskips {
-              return t;
+              return Ok(t);
             }
           } else if other_type == ConditionalType::Else && nskips != 0 {
             // Found \else and we're looking for one?
@@ -300,7 +300,7 @@ impl Conditional {
                 if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
                   // No need to actually call elseHandler, but note that we've seen an \else!
                   stack_frame.borrow_mut().elses = true;
-                  return t;
+                  return Ok(t);
                 }
               }
             }
@@ -315,7 +315,7 @@ impl Conditional {
       state,
       "Missing \\fi or \\else, conditional fell off end"
     );
-    Tokens!()
+    Ok(Tokens!())
   }
 
   fn invoke_else(&self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {

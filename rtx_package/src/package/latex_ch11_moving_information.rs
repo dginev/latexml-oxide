@@ -157,7 +157,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       let gullet = stomach.get_gullet_mut();
-      gullet.skip_spaces(state);
+      gullet.skip_spaces(state)?;
       if TOKEN_BEGIN.with(|tb| gullet.if_next(tb, state))? {
         gullet.read_arg(state)?;
       }
@@ -176,8 +176,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
   Tag!("ltx:bibliography", auto_close => true);
 
   DefMacro!("\\par@in@bibliography", sub[gullet, _args, state] {
-      gullet.skip_spaces(state);
-      if let Some(tok) = gullet.read_token(state) {
+      gullet.skip_spaces(state)?;
+      if let Some(tok) = gullet.read_token(state)? {
         // If next token is another \par, or a REAL \bibitem,
         // then this \par expands into what followed
         // Else, put it back, and start a bibitem.

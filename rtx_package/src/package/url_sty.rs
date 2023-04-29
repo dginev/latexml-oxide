@@ -41,7 +41,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\@Url Token", sub[gullet, (cmd), state] {
     let perc = vec!['%'];
     state.begin_semiverbatim(Some(&perc));
-    let mut open = gullet.read_token(state).unwrap();
+    let mut open = gullet.read_token(state)?.unwrap();
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
