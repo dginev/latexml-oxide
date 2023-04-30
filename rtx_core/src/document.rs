@@ -430,6 +430,19 @@ impl Document {
           }
           self.expire_box_to_absorb();
         },
+        Alignment(ref alignment) => {
+          self.set_box_to_absorb(Some((*front_box).clone()));
+          self.init_constructed_nodes();
+          alignment.borrow().be_absorbed(self, state)?;
+          // record these for OUTER caller!
+          // but return only the most recent set
+          {
+            for n in self.drain_constructed_nodes() {
+              self.record_constructed_node(&n);
+            }
+          }
+          self.expire_box_to_absorb();
+        },
         Comment(ref comment) => {
           comment.be_absorbed(self, state)?;
         },

@@ -5,9 +5,10 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::mem;
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{RefMut};
 use string_interner::symbol::SymbolU32;
 
+use crate::DigestedData;
 use crate::common::arena;
 use crate::common::store::Stored;
 use crate::alignment::Alignment;
@@ -185,7 +186,7 @@ impl Gullet {
   /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
   ///
 
-  fn handle_template(&mut self, alignment:Rc<RefCell<Alignment>>, token: Token, vtype: &str, hidden: bool, state: &mut State) -> Result<()> {
+  fn handle_template(&mut self, mut alignment: RefMut<Alignment>, token: Token, vtype: &str, hidden: bool, state: &mut State) -> Result<()> {
     // Debug("Halign $alignment: ALIGNMENT Column ended at " . Stringify($token)
     //     . " type $type [" . Stringify($STATE->lookupMeaning($token)) . "]"
     //     . "@ " . ToString($self->getLocator))
@@ -193,7 +194,7 @@ impl Gullet {
 
     //  Append expansion to end!?!?!?!
     state.set_current_token(token.clone());
-    let post = alignment.borrow_mut().get_column_after();
+    let post = alignment.get_column_after();
     state.set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
     let arg_opt = if (vtype == "cr") && hidden {    // \hidden@cr gets an argument as payload!!!!!
@@ -203,7 +204,7 @@ impl Gullet {
     };
     // Debug("Halign $alignment: column after " . ToString($post)) if $LaTeXML::DEBUG{halign};
     if (vtype == "cr" || vtype == "crcr") &&
-       alignment.borrow().is_in_row() && ! alignment.borrow().current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
+       alignment.is_in_row() && ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
         self.unread_one(T_CS!("\\@row@after"));
       }
     if let Some(arg) = arg_opt {
@@ -268,7 +269,11 @@ impl Gullet {
         if (state.align_group_count() > 0) && state.has_reading_alignment() {
           if let Some((atoken, atype, ahidden)) = is_column_end(nextt,state) {
             let reading_alignment = state.get_reading_alignment().unwrap();
-            self.handle_template(reading_alignment, atoken, atype, ahidden, state)?;
+            if let DigestedData::Alignment(data) = reading_alignment.data() {
+              self.handle_template(data.borrow_mut(), atoken, atype, ahidden, state)?;
+            } else {
+              return Err("reading_alignment should always contain DigestedData::Alignment".into());
+            }
 
           } else {
             break;
@@ -522,6 +527,7 @@ impl Gullet {
   pub fn read_balanced(&mut self, expanded: bool, state: &mut State) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
+    state.local_align_group_count(1000000);
     // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
     while let Some(t) = if expanded {
       self.read_x_token(Some(false), true, state)?
@@ -557,6 +563,7 @@ impl Gullet {
         "Gullet->readBalanced ran out of input in an unbalanced state."
       );
     }
+    state.expire_align_group_count();
     if tokens.is_empty() {
       Ok(None)
     } else {

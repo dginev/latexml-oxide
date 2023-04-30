@@ -24,6 +24,8 @@
 #[allow(dead_code)]
 pub mod template;
 
+use crate::common::dimension::Dimension;
+use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::common::error::*;
 use crate::common::object::Object;
@@ -36,9 +38,11 @@ use crate::token::{Token,Catcode};
 use crate::tokens::Tokens;
 use self::template::{Column, Row, Template, TemplateConfig};
 
+use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
+use std::fmt::{self,Display};
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
@@ -64,13 +68,15 @@ pub struct AlignmentConfig {
 
 #[derive(Debug,Clone,Default, PartialEq)]
 pub struct Alignment {
-  template: Template,
-  current_row: Option<usize>,
-  current_column: usize,
-  rows: VecDeque<Row>,
   in_column: bool,
   in_row: bool,
   in_tabular_head: bool,
+  current_column: usize,
+  current_row: Option<usize>,
+  reversion: Option<Tokens>,
+  content_reversion: Option<Tokens>,
+  rows: VecDeque<Row>,
+  template: Template,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -88,6 +94,8 @@ impl Alignment {
     Alignment {
       template,
       current_row: None,
+      reversion: None,
+      content_reversion: None,
       current_column: 0,
       in_row:false,
       in_column:false,
@@ -261,9 +269,14 @@ impl Alignment {
     }
   }
 
-  pub fn revert(&self, state: &State) -> Result<Tokens> { Ok(Tokens!()) }
-  pub fn set_reversion(&mut self, rev: Tokens) {unimplemented!()}
-  pub fn set_content_reversion(&mut self, rev: Tokens) {unimplemented!()}
+  pub fn revert(&self, _state: &State) -> Result<Tokens> { Ok(self.reversion.clone().unwrap_or_default()) }
+
+  pub fn set_reversion(&mut self, rev: Tokens) {
+    self.reversion = Some(rev);
+  }
+  pub fn set_content_reversion(&mut self, rev: Tokens) {
+    self.content_reversion = Some(rev);
+  }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for building an alignment's Rows & Columns
@@ -326,8 +339,34 @@ impl Alignment {
   pub fn is_in_tabular_head(&self) -> bool {
     self.in_tabular_head
   }
-
+  pub fn be_absorbed(&self, document:&mut Document, state: &mut State) -> Result<Vec<Node>> {
+    unimplemented!();
+  }
+  pub fn compute_size(
+    &self,
+    options: HashMap<String, Stored>,
+    state: &mut State,
+  ) -> Result<(Dimension, Dimension, Dimension)> {
+    Ok((Dimension::new(0),Dimension::new(0),Dimension::new(0)))
+  }
 }
+
+//======================================================================
+// Constructing the XML for the alignment.
+
+impl Object for Alignment {
+  fn get_locator(&self) -> Option<std::borrow::Cow<crate::common::locator::Locator>> {
+      None
+  }
+}
+
+
+impl Display for Alignment {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{self:?}")
+  }
+}
+
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Dealing with templates

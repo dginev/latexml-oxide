@@ -142,8 +142,6 @@ pub enum Stored {
   /// a stored FontDirective (Font or closure building a Font)
   FontDirective(FontDirective),
   /// WALL OF SHAME (interior mutability) -- can we dispense with these?
-  Alignment(Rc<RefCell<Alignment>>),
-  /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   Mouth(Rc<RefCell<Mouth>>),
   /// WALL OF SHAME (interior mutability) -- can we dispense with these?
   IfFrame(Rc<RefCell<IfFrame>>),
@@ -166,7 +164,6 @@ impl fmt::Debug for Stored {
       Tokens(ref t) => write!(f, "Stored::Tokens[{t:?}]"),
       Locator(ref t) => write!(f, "Stored::Locator[{t:?}]"),
       Reversion(ref _t) => write!(f, "Stored::Reversion[TODO]"),
-      Alignment(ref al) => write!(f, "Stored::Alignment[{al:?}]"),
       Catcode(ref cc) => write!(f, "Stored::Catcode[{cc:?}]"),
       Charcode(ref cc) => write!(f, "Stored::Charcode[{cc:?}]"),
       IfFrame(ref fr) => write!(f, "Stored::IfFrame[{fr:?}]"),
@@ -310,13 +307,6 @@ impl PartialEq for Stored {
           false
         }
       },
-      Alignment(ref al1) => {
-        if let Alignment(al2) = other {
-          *al1 == *al2
-        } else {
-          false
-        }
-      }
       Catcode(ref cc) => {
         if let Catcode(cc2) = other {
           *cc == *cc2
@@ -743,7 +733,7 @@ impl<'a> From<&'a Token> for Stored {
 }
 
 impl From<Alignment> for Stored {
-  fn from(a: Alignment) -> Self { Stored::Alignment(Rc::new(RefCell::new(a))) }
+  fn from(a: Alignment) -> Self { Stored::Digested(crate::Digested::from(a)) }
 }
 
 impl From<Vec<char>> for Stored {

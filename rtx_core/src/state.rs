@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
-use crate::alignment::Alignment;
+use crate::{Digested,DigestedData};
 use crate::alignment::template::Template;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
@@ -218,7 +218,7 @@ pub struct Localized {
   pub smuggle_the: Vec<bool>,
   pub current_token: Vec<Token>,
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
-  pub reading_alignment: Vec<Rc<RefCell<Alignment>>>,
+  pub reading_alignment: Vec<Digested>,
   pub build_template: Option<Template>
 }
 
@@ -904,6 +904,23 @@ impl State {
       _ => None,
     }
   }
+
+  pub fn lookup_alignment(&self, key: &str) -> Option<Digested> {
+    // Can only be a token or definition; we want defns!
+    // is this the right logic here? don't expand unless digesting?
+    self
+      .lookup_value(key)
+      .and_then(|v| if let Stored::Digested(d) = v {
+        if matches!(d.data(), DigestedData::Alignment(_)) {
+          // for now clone the Digested object (approx. an Rc<_> clone)
+          // instead of returning &Digested, to simplify lifetime checks
+          Some(d.clone())
+        } else {
+          None
+        }
+      } else { None })
+  }
+
   pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs) {
@@ -920,6 +937,7 @@ impl State {
       None
     }
   }
+
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
@@ -2125,22 +2143,29 @@ impl State {
     self.localized.align_group_count.last().copied().unwrap_or_default()
   }
   pub fn set_align_group_count(&mut self, v: i32) {
+    if let Some(gc) = self.localized.align_group_count.last_mut() {
+      *gc = v;
+    } else {
+      self.localized.align_group_count.push(v);
+    }
+  }
+  pub fn local_align_group_count(&mut self, v: i32) {
     self.localized.align_group_count.push(v);
   }
   pub fn expire_align_group_count(&mut self) -> Option<i32> {
     self.localized.align_group_count.pop()
   }
 
-  pub fn get_reading_alignment(&self) -> Option<Rc<RefCell<Alignment>>> {
-    self.localized.reading_alignment.last().map(Rc::clone)
+  pub fn get_reading_alignment(&self) -> Option<Digested> {
+    self.localized.reading_alignment.last().map(Clone::clone)
   }
   pub fn has_reading_alignment(&self) -> bool {
     !self.localized.reading_alignment.is_empty()
   }
-  pub fn set_reading_alignment(&mut self, alignment: &Rc<RefCell<Alignment>>) {
-    self.localized.reading_alignment.push(Rc::clone(alignment));
+  pub fn set_reading_alignment(&mut self, alignment: &Digested) {
+    self.localized.reading_alignment.push(alignment.clone());
   }
-  pub fn expire_reading_alignment(&mut self) -> Option<Rc<RefCell<Alignment>>> {
+  pub fn expire_reading_alignment(&mut self) -> Option<Digested> {
     self.localized.reading_alignment.pop()
   }
 
