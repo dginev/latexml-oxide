@@ -16,6 +16,7 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::alignment::Alignment;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -45,6 +46,8 @@ pub enum DigestedData {
   TBox(Tbox),
   /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   Whatsit(RefCell<Whatsit>),
+  /// A TeX Alignment
+  Alignment(RefCell<Alignment>),
   /// A list of Digested data
   List(List),
   /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
@@ -67,6 +70,7 @@ impl fmt::Debug for DigestedData {
     match self {
       TBox(v) => write!(f, "{v:?}"),
       Whatsit(v) => write!(f, "{v:?}"),
+      Alignment(a) => write!(f, "{a:?}"),
       List(v) => write!(f, "{v:?}"),
       Postponed(v) => write!(f, "{v:?}"),
       KeyVals(v) => write!(f, "{v:?}"),
@@ -89,6 +93,13 @@ impl PartialEq for Digested {
       },
       Whatsit(ref tb) => {
         if let Whatsit(ref tb2) = *other.0 {
+          *tb.borrow() == *tb2.borrow()
+        } else {
+          false
+        }
+      },
+      Alignment(ref tb) => {
+        if let Alignment(ref tb2) = *other.0 {
           *tb.borrow() == *tb2.borrow()
         } else {
           false
@@ -172,6 +183,11 @@ impl From<Whatsit> for Digested {
     Digested(Rc::new(DigestedData::Whatsit(RefCell::new(value))))
   }
 }
+impl From<Alignment> for Digested {
+  fn from(value: Alignment) -> Digested {
+    Digested(Rc::new(DigestedData::Alignment(RefCell::new(value))))
+  }
+}
 impl From<KeyVals> for Digested {
   fn from(value: KeyVals) -> Digested { Digested(Rc::new(DigestedData::KeyVals(value))) }
 }
@@ -212,6 +228,7 @@ impl fmt::Display for Digested {
       TBox(ref b) => write!(f, "{b}"),
       List(ref l) => write!(f, "{l}"),
       Whatsit(ref w) => write!(f, "{}", w.borrow()),
+      Alignment(ref a) => write!(f, "{}", a.borrow()),
       Postponed(ref t) => write!(f, "{t}"),
       KeyVals(ref kvs) => write!(f, "{kvs}"),
       Comment(ref c) => write!(f, "{c}"),
@@ -226,6 +243,7 @@ impl Object for Digested {
       TBox(ref b) => b.stringify(),
       List(ref l) => l.stringify(),
       Whatsit(ref w) => w.borrow().stringify(),
+      Alignment(ref w) => w.borrow().stringify(),
       Postponed(ref t) => (*t).stringify(),
       KeyVals(ref kvs) => kvs.stringify(),
       Comment(ref c) => c.stringify(),
@@ -242,6 +260,10 @@ impl Object for Digested {
         .borrow()
         .get_locator()
         .map(|l| Cow::Owned(l.into_owned())),
+      Alignment(ref w) => w
+        .borrow()
+        .get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
       Postponed(ref _t) => None, // Tokens locator?
@@ -253,6 +275,7 @@ impl Object for Digested {
       TBox(ref b) => b.revert(state),
       List(ref l) => l.revert(state),
       Whatsit(ref w) => w.borrow().revert(state),
+      Alignment(ref w) => w.borrow().revert(state),
       Postponed(ref t) => Ok(t.clone()),
       KeyVals(ref kvs) => kvs.revert(state),
       Comment(ref c) => c.revert(state),
@@ -265,7 +288,7 @@ impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     use DigestedData::*;
     match *self.0 {
-      TBox(_) | Whatsit(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
+      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
         vec![self.clone()]
       },
       List(ref l) => l.unlist(),
@@ -279,6 +302,7 @@ impl BoxOps for Digested {
       List(l) => l.be_absorbed(document, state),
       Comment(c) => c.be_absorbed(document, state),
       Whatsit(w) => w.borrow().be_absorbed(document, state),
+      Alignment(w) => w.borrow().be_absorbed(document, state),
       KeyVals(kvs) => kvs.be_absorbed(document, state),
       Postponed(_) => unimplemented!(),
       RegisterValue(ref _rv) => unimplemented!(),
@@ -292,6 +316,7 @@ impl BoxOps for Digested {
       List(ref l) => l.get_properties(),
       KeyVals(ref kvs) => kvs.get_properties(),
       Whatsit(ref _w) => unimplemented!(), // Oooof; w.borrow().get_properties(),
+      Alignment(ref _w) => unimplemented!(), // Oooof; w.borrow().get_properties(),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -410,6 +435,7 @@ impl BoxOps for Digested {
       List(ref l) => l.compute_size(options, state),
       KeyVals(ref kvs) => kvs.compute_size(options, state),
       Whatsit(ref w) => w.borrow().compute_size(options, state),
+      Alignment(ref w) => w.borrow().compute_size(options, state),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -438,7 +464,7 @@ impl Digested {
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
     match &*self.0 {
-      TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
       List(l) => l.boxes.iter().any(check),
     }
@@ -449,7 +475,7 @@ impl Digested {
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
     match &*self.0 {
-      TBox(_) | Whatsit(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
       List(l) => l.boxes.iter().all(check),
     }
@@ -487,4 +513,12 @@ impl Digested {
   /// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
   /// content
   pub fn untex(&self, state: &mut State) -> Result<String> { Ok(self.revert(state)?.untex()) }
+
+  pub fn alignment_cell(&self) -> Option<&RefCell<Alignment>> {
+    if let DigestedData::Alignment(ref alignment) = *self.0 {
+      Some(alignment)
+    } else {
+      None
+    }
+  }
 }

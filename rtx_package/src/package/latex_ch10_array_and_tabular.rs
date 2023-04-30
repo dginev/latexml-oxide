@@ -120,8 +120,9 @@ LoadDefinitions!(state, {
           cols_vec.push(this_num);
         }
       }
-      if let Some(Stored::Alignment(ref alignment)) = state.lookup_value("Alignment") {
-        alignment.borrow_mut().add_line("t", cols_vec);
+      if let Some(alignment_stored) = state.lookup_alignment("Alignment") {
+        alignment_stored.alignment_cell().unwrap().borrow_mut()
+          .add_line("t", cols_vec);
       }
       ()
     },

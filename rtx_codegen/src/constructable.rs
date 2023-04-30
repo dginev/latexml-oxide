@@ -269,6 +269,18 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
     // Substitutable value: argument, property...
     if LEAD_VALUE_RE.is_match(&replacement) {
       let to_absorb = translate_value("", false, &mut replacement);
+      // TODO: What is the cleanest interface for dealing with Alignment?
+      // when Stored, we wrap with Rc<RefCell<_>> which we can't unwrap without cloning
+      // for the Digested variant.
+      // (which is Digested(Rc<DigestedData<RefCell<Alignment>>>))
+      // We could *either* use the Stored::Digested form *always*, or instead
+      // try to store a RefCell without "Rc" and use it without ever cloning out...
+      // for now, handle as a special case:
+
+      // CONTINUE: Actually yes
+      // let us switch to using Digested() consistently. Then check using:
+      // if let Some(alignment) = some_stored.as_alignment() { ... }
+      //
       operations.push(quote!(
         if let Some(ref stored_digested) = #to_absorb {
           let digested_opt : Option<Digested> = stored_digested.into();
