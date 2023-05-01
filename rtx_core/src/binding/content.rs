@@ -1075,7 +1075,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Op
 //======================================================================
 
 pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
-  let mut options = state
+  let options = state
     .tag_properties
     .entry(arena::pin(tag))
     .or_insert_with(TagOptions::default);

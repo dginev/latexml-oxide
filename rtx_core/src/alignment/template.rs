@@ -6,6 +6,7 @@ use crate::common::dimension::Dimension;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
+use libxml::tree::Node;
 
 // ??
 pub type Row = Template;
@@ -17,19 +18,58 @@ pub enum Align {
   Right,
   Justify
 }
+impl Align {
+  fn char_code(&self) -> char {
+    match self {
+      Align::Right => 'r',
+      Align::Left => 'l',
+      Align::Center => 'c',
+      Align::Justify => 'p'
+    }
+  }
+}
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Column {
   pub empty: bool,
   pub omitted: bool,
+  pub skipped: bool,
   pub before: Option<Tokens>,
   pub after: Option<Tokens>,
-  pub border: String,
   pub align: Option<Align>,
   pub width: Option<Dimension>,
   pub colspan: Option<usize>,
-  pub boxes: Option<Digested>
+  pub boxes: Option<Digested>,
+  pub cell_type: Option<char>,
+  pub content_class: Option<ColumnSpec>,
+  pub content_length: Option<usize>,
+  pub border: String,
+  pub border_left: Option<usize>,
+  pub border_right: Option<usize>,
+  pub border_top: Option<usize>,
+  pub border_bottom: Option<usize>,
+  pub cell: Option<Node>
 }
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ColumnSpec {
+  Integer, // 'i'
+  Empty, // '_'
+  Unknown, // '?'
+  Text, // 't'
+  Math, // 'm'
+  /// Math *and* Text, alternating
+  MathAltText, // 'mx'
+  D, // 'd'
+  Graphics, // 'g'
+}
+pub enum BorderSpec {
+  Top,
+  Bottom,
+  Left,
+  Right
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TemplateConfig {
   pub repeating: Option<bool>,
@@ -53,8 +93,9 @@ pub struct Template {
   columns: Vec<Column>,
   current_column: Option<Column>,
   tokens: Vec<Token>,
-  pub before: VecDeque<Token>,
-  pub after: VecDeque<Token>,
+  padding: Option<Dimension>,
+  pub before: VecDeque<Digested>,
+  pub after: VecDeque<Digested>,
   save_before: VecDeque<Token>,
   save_between: VecDeque<Token>,
 }
@@ -71,10 +112,10 @@ impl Template {
     let non_repeating = columns.len();
     let save_before = config.save_before.unwrap_or_default();
     let save_between = config.save_between.unwrap_or_default(); // `between` comes before `before`!
-    for mut column in columns.iter_mut() {
+    for column in columns.iter_mut() {
       column.empty = true;
     }
-    for mut v in repeated.iter_mut() {
+    for v in repeated.iter_mut() {
       v.empty = true;
     }
 
@@ -89,25 +130,27 @@ impl Template {
       before: VecDeque::new(),
       after: VecDeque::new(),
       current_column: None,
+      padding: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
     }
   }
   pub fn set_reversion(&mut self, tks: Tokens) { self.reversion = Some(tks); }
   pub fn set_repeating(&mut self) { self.repeating = true; }
+  pub fn set_padding(&mut self, d: Dimension) { self.padding = Some(d); }
+  pub fn get_padding(&self) -> Option<&Dimension> { self.padding.as_ref() }
   // These add material before & after the current column
-  pub fn add_before_column(&mut self, mut tokens: VecDeque<Token>) {
+  pub fn add_before_column(&mut self, mut new: VecDeque<Token>) {
     let current_sb = self.save_before.drain(..);
-    tokens.extend(current_sb);
-    self.save_before = tokens; // NOTE: goes all the way to front!
+    new.extend(current_sb);
+    self.save_before = new; // NOTE: goes all the way to front!
   }
   // NOTE: \@@eat@space should ONLY be added to LaTeX tabular style templates!!!!
   // NOT \halign style templates!
-  pub fn add_after_column(&mut self, tokens: Vec<Token>) {
+  pub fn add_after_column(&mut self, new: Vec<Token>) {
     if let Some(current_column) = &mut self.current_column {
       let current_after = current_column.after.take().unwrap_or_default().unlist();
-      current_column.after = Some(Tokens!(T_CS!("\\@@eat@space"),
-        tokens, current_after));
+      current_column.after = Some(Tokens!(T_CS!("\\@@eat@space"), new, current_after));
     }
   }
 
