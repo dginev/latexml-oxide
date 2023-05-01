@@ -302,7 +302,7 @@ impl BoxOps for Digested {
       List(l) => l.be_absorbed(document, state),
       Comment(c) => c.be_absorbed(document, state),
       Whatsit(w) => w.borrow().be_absorbed(document, state),
-      Alignment(w) => w.borrow().be_absorbed(document, state),
+      Alignment(w) => w.borrow_mut().be_absorbed(document, state),
       KeyVals(kvs) => kvs.be_absorbed(document, state),
       Postponed(_) => unimplemented!(),
       RegisterValue(ref _rv) => unimplemented!(),

@@ -433,7 +433,7 @@ impl Document {
         Alignment(ref alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          alignment.borrow().be_absorbed(self, state)?;
+          alignment.borrow_mut().be_absorbed(self, state)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {

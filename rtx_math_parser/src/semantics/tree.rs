@@ -131,7 +131,7 @@ impl Operator {
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
     // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
-    let mut meta = self.0.get_meta_mut();
+    let meta = self.0.get_meta_mut();
     meta.curry_level = None;
     meta.curry_constraints.drain().collect()
   }
@@ -480,7 +480,7 @@ impl XM {
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
     // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
-    let mut meta = self.get_meta_mut();
+    let meta = self.get_meta_mut();
     meta.curry_level = None;
     meta.curry_constraints.drain().collect()
   }

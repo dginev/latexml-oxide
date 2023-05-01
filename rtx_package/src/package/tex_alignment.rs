@@ -188,13 +188,19 @@ LoadDefinitions!(outer_state, {
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
-  DefMacro!("\\@alignment@newline@noskip", sub[gullet,_a,state] { unimplemented!(); ()});
-  //     my ($star, $optional) = readNewlineArgs($gullet);
-  //     return (T_CS('\hidden@cr'), T_BEGIN,
-  //       ($optional
-  //         ? (T_CS('\@alignment@newline@markertall'), T_BEGIN, $optional, T_END)
-  //         : T_CS('\@alignment@newline@marker')),
-  //       T_END); });
+  DefMacro!("\\@alignment@newline@noskip", sub[gullet,_a,state] {
+    let (star, optional) = read_newline_args(gullet, false, state)?;
+    let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
+    if let Some(opt_tks) = optional {
+      tokens.push(T_CS!("\\@alignment@newline@markertall"));
+      tokens.push(T_BEGIN!());
+      tokens.extend(opt_tks.unlist().into_iter());
+      tokens.push(T_END!());
+    } else {
+      tokens.push(T_CS!("\\@alignment@newline@marker"));
+      tokens.push(T_END!());
+    }
+  });
 
   // These are the markers that produce \\ in the reversion,
   // and (eventually will) add vertical space to the row!
@@ -202,12 +208,21 @@ LoadDefinitions!(outer_state, {
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()));
   // AND add the spacing to the alignment!!!
   DefConstructor!("\\@alignment@newline@markertall {Dimension}", "",
-    after_digest => sub[stomach,whatsit,state] { unimplemented!(); ()});
-  //     if (my $alignment = LookupValue('Alignment')) {
-  //       $alignment->currentRow->{padding} = $_[1]->getArg(1); }
-  //     return; },
-  //   reversion => sub {
-  //     Tokens(T_CS("\\\\"), T_OTHER('['), Revert($_[1]), T_OTHER(']'), T_CR); });
+    after_digest => sub[_stomach,whatsit,state] {
+    if let Some(alignment) = state.lookup_alignment("Alignment") {
+      let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
+      let current_row = alignment_mut.current_row_mut().unwrap();
+      let padding = if let Some(arg) = whatsit.get_arg(1) {
+        if let DigestedData::RegisterValue(RegisterValue::Dimension(v)) = arg.data() {
+          *v
+        } else { Dimension::new(0) }
+      }  else { Dimension::new(0) };
+      current_row.set_padding(padding);
+    }},
+    reversion => sub[whatsit,_args,state] {
+      let reverted = whatsit.revert(state)?;
+      Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
+    });
 
   DefMacro!("\\tabularnewline", "\\cr"); // ???
 
@@ -280,32 +295,32 @@ LoadDefinitions!(outer_state, {
 
 pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, gullet: &mut Gullet, state: &mut State) {
   let mode = if mode.is_empty() { state.lookup_string("MODE") } else { mode };
-  let ismath    = mode.ends_with("math");
-  let (container,rowtype,coltype) = if ismath {
+  let is_math    = mode.ends_with("math");
+  let (container,rowtype,coltype) = if is_math {
     ("ltx:XMArray","ltx:XMRow","ltx:XMCell")
   }  else {
     ("ltx:tabular","ltx:tr","ltx:td")
   };
-  let alignment = Alignment::new(AlignmentConfig {
+let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
-    open_container: Some(Rc::new(
-      |document,props,state| document.open_element(container, Some(props), None, state).and(Ok(())))),
-    close_container: Some(Rc::new(
-      |document,state| document.close_element(container, state).and(Ok(())) )),
-    open_row       : Some(Rc::new(
-      |document,props,state| document.open_element(rowtype, Some(props), None, state).and(Ok(())))),
-    close_row      : Some(Rc::new(
-      |document,state| document.close_element(rowtype, state).and(Ok(())) )),
-    open_column    : Some(Rc::new(
-      |document,props,state| document.open_element(coltype, Some(props), None, state).and(Ok(())))),
-    close_column   : Some(Rc::new(
-      |document,state| document.close_element(coltype, state).and(Ok(())))),
-    is_math        : ismath,
-    attributes: properties
+    open_container: Rc::new(
+      |document,props,state| document.open_element(container, Some(props), None, state).and(Ok(()))),
+    close_container: Rc::new(
+      |document,state| document.close_element(container, state) ),
+    open_row       : Rc::new(
+      |document,props,state| document.open_element(rowtype, Some(props), None, state).and(Ok(()))),
+    close_row      : Rc::new(
+      |document,state| document.close_element(rowtype, state) ),
+    open_column    : Rc::new(
+      |document,props,state| document.open_element(coltype, Some(props), None, state).and(Ok(()))),
+    close_column   : Rc::new(
+      |document,state| document.close_element(coltype, state)),
+    is_math,
+    properties
   });
   state.assign_value("Alignment", alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
-  state.let_i(&T_MATH!(), if ismath { T_CS!("\\@dollar@in@mathmode") } else {T_CS!("\\@dollar@in@textmode")}, None, gullet);
+  state.let_i(&T_MATH!(), if is_math { T_CS!("\\@dollar@in@mathmode") } else {T_CS!("\\@dollar@in@textmode")}, None, gullet);
 }
 
 pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state:&mut State) -> Result<()> {
@@ -534,7 +549,7 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0      = state.lookup_int("alignmentStartColumn") as usize + 1;
   let n1      = alignment.current_column_number();
-  let mut colspec = alignment.get_column(n0).unwrap();
+  let colspec = alignment.get_column(n0).unwrap();
   let mut align   = colspec.align.unwrap_or(Align::Left);
   let mut border  = String::new();
   // Peel off any boxes from both sides until we get the "meat" of the column.
