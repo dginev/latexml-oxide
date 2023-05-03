@@ -3,7 +3,7 @@ use crate::fmt;
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::convert::AsRef;
 use std::fmt::Display;
@@ -92,7 +92,18 @@ impl From<Token> for Vec<Token> {
 }
 
 impl From<Tokens> for Token {
-  fn from(ts: Tokens) -> Token { ts.borrow().into() }
+  fn from(mut ts: Tokens) -> Token {
+    if ts.0.is_empty() {
+      unimplemented!();
+    } else if ts.0.len() == 1 {
+      ts.0.remove(0)
+    } else {
+      panic!("Dangerous cast! Tokens->Token for {ts:?}");
+      //let code = ts.0.first().unwrap().get_catcode();
+      // Warn!("expected","token","multiple Tokens {:?} cast into a single Token: {:?}", ts,
+      // single); Token::new(Cow::Owned(ts.to_string()), code)
+    }
+  }
 }
 
 impl<'a> From<&'a Tokens> for Token {

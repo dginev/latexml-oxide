@@ -902,12 +902,12 @@ impl<'a> From<&'a Stored> for Option<Glue> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<Tokens> {
-  fn from(value: &'a Stored) -> Option<Tokens> {
+impl From<Stored> for Option<Tokens> {
+  fn from(value: Stored) -> Option<Tokens> {
     match value {
-      Stored::String(ref sym) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
-      Stored::Token(ref ts) => Some(Tokens::new(vec![ts.clone()])),
-      Stored::Tokens(ref ts) => Some(ts.clone()),
+      Stored::String(sym) => Some(mouth::tokenize_internal(&arena::to_string(sym))),
+      Stored::Token(ts) => Some(Tokens::new(vec![ts])),
+      Stored::Tokens(ts) => Some(ts),
       Stored::VecDequeStored(vdq) => {
         // Each item in the queue can be unlisted into a Vec<Token>
         // and then the result can be re-cast as a single Tokens

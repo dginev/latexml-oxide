@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::rc::Rc;
 
 use regex::Regex;
@@ -264,7 +264,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   let options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
   let name = options.name.unwrap_or_else(|| cs.to_string());
-  let register_type: RegisterType = value.borrow().into();
+  let register_type: RegisterType = (&value).into();
   // Prepare clones to move into closures
   let getter_value = value.clone();
   let setter_name = name.clone();

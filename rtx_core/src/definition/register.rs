@@ -80,9 +80,6 @@ impl<'a> From<&'a RegisterValue> for RegisterType {
     }
   }
 }
-impl From<RegisterValue> for RegisterType {
-  fn from(v: RegisterValue) -> RegisterType { v.borrow().into() }
-}
 
 impl Default for RegisterValue {
   fn default() -> Self { RegisterValue::Number(Number::new(0)) }
@@ -229,16 +226,16 @@ impl<'a> From<&'a RegisterValue> for Number {
   }
 }
 impl From<RegisterValue> for Number {
-  fn from(v: RegisterValue) -> Number { v.borrow().into() }
+  fn from(v: RegisterValue) -> Number { (&v).into() }
 }
 impl From<RegisterValue> for Dimension {
-  fn from(v: RegisterValue) -> Dimension { v.borrow().into() }
+  fn from(v: RegisterValue) -> Dimension { (&v).into() }
 }
 impl From<RegisterValue> for Glue {
-  fn from(v: RegisterValue) -> Glue { v.borrow().into() }
+  fn from(v: RegisterValue) -> Glue { (&v).into() }
 }
 impl From<RegisterValue> for MuGlue {
-  fn from(v: RegisterValue) -> MuGlue { v.borrow().into() }
+  fn from(v: RegisterValue) -> MuGlue { (&v).into() }
 }
 impl From<RegisterValue> for f64 {
   fn from(v: RegisterValue) -> f64 { v.value_of() as f64 }
@@ -455,23 +452,23 @@ impl Object for Register {
 impl Definition for Register {
   fn is_register(&self) -> bool { true }
   fn is_prefix(&self) -> bool { false }
-  fn is_readonly(&self) -> bool { self.borrow().readonly }
+  fn is_readonly(&self) -> bool { self.readonly }
   // not implemented for primitives
   fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
     unimplemented!()
   }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
-  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.borrow().cs.clone()) }
+  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> {
-    Cow::Owned(self.borrow().cs.with_cs_name(ToString::to_string))
+    Cow::Owned(self.cs.with_cs_name(ToString::to_string))
   }
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)
   fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
     // CharDef case
-    if self.borrow().register_type == RegisterType::CharDef {
-      let internalcs = &self.borrow().internalcs;
+    if self.register_type == RegisterType::CharDef {
+      let internalcs = &self.internalcs;
       return match internalcs {
         // Tracing ?
         None => Ok(Vec::new()),
@@ -498,7 +495,7 @@ impl Definition for Register {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
-    let params = &self.borrow().parameters;
+    let params = &self.parameters;
     match params {
       None => Ok(Vec::new()),
       Some(ref params) => params.read_arguments(gullet, Some(self), state),
@@ -518,13 +515,13 @@ impl Definition for Register {
     );
   }
   fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {
-    if self.borrow().register_type == RegisterType::CharDef {
-      self.borrow().value.clone()
+    if self.register_type == RegisterType::CharDef {
+      self.value.clone()
     } else {
-      (self.borrow().getter)(args, state)
+      (self.getter)(args, state)
     }
   }
-  fn register_type(&self) -> Option<RegisterType> { Some(self.borrow().register_type) }
+  fn register_type(&self) -> Option<RegisterType> { Some(self.register_type) }
 }
 
 impl Register {
