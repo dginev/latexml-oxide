@@ -740,7 +740,7 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
   let reversed = false;
   // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
-  classify_alignment_rows(document, table, alignment, state);
+  classify_alignment_rows(document, alignment, state);
   // Flip the rows around to produce a column view.
   {
     let mut cols = collect_alignment_columns(alignment);
@@ -772,7 +772,7 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
   if n_d == 1 { // Or any other heuristic?
     n_h = 0;
     for r in rows {
-      for mut c in r {
+      for c in r {
         c.cell_type = Some('d');
         if let Some(ref mut cell) = c.cell {
           cell.remove_attribute("thead")?;
@@ -820,7 +820,7 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut Sta
     }
   }
   if maxreach > heads.len() { // rowspan crossed over thead boundary!
-    rows.extend(heads.drain(..));
+    rows.append(&mut heads);
   }
   // scan trailing rows as potential tfoot
   let mut foots = VecDeque::new();
@@ -846,7 +846,7 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut Sta
 
 //======================================================================
 /// Setup a View of the alignment, with characterized cells, for analysis -- modifying it in place.
-fn classify_alignment_rows<'a>(document: &mut Document, table: &Node, alignment: &'a mut Alignment, state: &mut State) {
+fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, state: &mut State) {
   let nrows = alignment.rows.len();
   let mut ncols = 0;
   for arow in &mut alignment.rows {
@@ -969,7 +969,7 @@ fn classify_alignment_rows<'a>(document: &mut Document, table: &Node, alignment:
 }
 
 fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Column>> {
-  alignment.rows.iter_mut().map(|x| x.get_columns_mut().into_iter().map(|x| x)
+  alignment.rows.iter_mut().map(|x| x.get_columns_mut().iter_mut()
     .collect()).collect()
 }
 

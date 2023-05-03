@@ -32,6 +32,7 @@ use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet::Gullet;
 use crate::stomach::Stomach;
+use crate::mouth;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
@@ -894,7 +895,11 @@ impl State {
   pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
-      Some(v) => v.into(),
+      Some(Stored::Tokens(v)) => Some(v.clone()),
+      Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
+      Some(Stored::String(sym)) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
+      Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
+      _ => None
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Token`
