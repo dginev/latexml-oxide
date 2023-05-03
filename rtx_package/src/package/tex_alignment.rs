@@ -304,7 +304,7 @@ pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<
 let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
     open_container: Rc::new(
-      |document,props,state| document.open_element(container, Some(props), None, state).and(Ok(()))),
+      |document,props,state| document.open_element(container, Some(props), None, state).map(Option::Some)),
     close_container: Rc::new(
       |document,state| document.close_element(container, state) ),
     open_row       : Rc::new(
@@ -312,7 +312,7 @@ let alignment = Alignment::new(AlignmentConfig {
     close_row      : Rc::new(
       |document,state| document.close_element(rowtype, state) ),
     open_column    : Rc::new(
-      |document,props,state| document.open_element(coltype, Some(props), None, state).and(Ok(()))),
+      |document,props,state| document.open_element(coltype, Some(props), None, state).map(Option::Some)),
     close_column   : Rc::new(
       |document,state| document.close_element(coltype, state)),
     is_math,
@@ -577,7 +577,11 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
                         || matches!(item,DigestedData::Comment(_))
                         || front_box.is_empty() => {
               saveleft.push_front(front_box) }
-      _ => break
+      _ => {
+        // put the box back, and terminate left side loop.
+        boxes.push_front(front_box);
+        break;
+      }
     }
   }
   while let Some(last_box) = boxes.pop_back() {
@@ -601,7 +605,11 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
                         || last_box.is_empty() => {
         saveright.push_front(last_box);
       },
-      _ => break
+      _ => {
+        // put the box back, and terminate right side loop.
+        boxes.push_back(last_box);
+        break;
+      }
     }
   }
   if align != Align::Justify {

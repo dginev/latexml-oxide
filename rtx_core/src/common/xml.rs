@@ -36,8 +36,8 @@ impl XPath {
       Err(e) => {
         let message = s!("{:?}", e);
         Error!("xpath", "findnodes", None, None, message);
-        Vec::new()
-      },
+        panic!("this is an external libxml2 error; unwinding...");
+     },
     }
   }
 

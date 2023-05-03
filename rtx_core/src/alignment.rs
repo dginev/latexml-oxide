@@ -38,23 +38,24 @@ use crate::state::State;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::digested::Digested;
-use self::template::{Column, Row, Template, Align, TemplateConfig, ColumnSpec};
+use self::template::{Column, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
 
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::fmt::{self,Display, Debug};
+use std::borrow::Cow;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
-  Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
+  Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<Option<Node>>>;
 pub type CloseContainerFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
 pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
 pub type CloseRowFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
-pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
+pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<Option<Node>>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
 
 static SINGLE_PUNCT : Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[\.,;]\s*$").unwrap());
@@ -426,7 +427,7 @@ impl Alignment {
         }
         let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
         let open_column_fn = &self.open_column;
-        let cell_attrs = HashMap::default();
+        let mut cell_attrs = HashMap::default();
         // TODO: add to cell_attrs
         //       align   => $$cell{align}, width => $$cell{width},
         //       vattach => $$cell{vattach},
@@ -434,12 +435,25 @@ impl Alignment {
         //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
         //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
         //       ($border                     ? (border   => $border)                                 : ()),
-        //       ($$cell{thead}               ? (thead    => join(" ", sort keys %{ $$cell{thead} })) : ()),
+        if cell.thead_in_column || cell.thead_in_row {
+          let mut thead = String::new();
+          if cell.thead_in_column {
+            thead.push_str(Axis::Column.name());
+            if cell.thead_in_row {
+              thead.push(' ');
+            }
+          }
+          if cell.thead_in_row {
+            thead.push_str(Axis::Row.name());
+          }
+          if !thead.is_empty() {
+            cell_attrs.insert(String::from("thead"), thead);
+          }
+        }
         //       # Which properties do we expose to the constructor?
         //       x      => $$cell{x}, y => $$cell{y},
         //       cwidth => $$cell{cwidth}, cheight => $$cell{cheight}, cdepth => $$cell{cdepth})
-        // ? cell.cell =
-          open_column_fn(document, cell_attrs, state)?;
+        cell.cell = open_column_fn(document, cell_attrs, state)?;
         if !empty {
           let box_ref = cell.boxes.as_ref().unwrap();
           // local $LaTeXML::BOX
@@ -464,25 +478,29 @@ impl Alignment {
       close_row_fn(document, state)?;
     }
     let close_container_fn = &self.close_container;
-    let node = close_container_fn(document, state)?;
+    let node_opt = close_container_fn(document, state)?;
 
     // If we're not nested inside another tabular
     // [This should be an afterConstruct somewhere?]
     // If requested to guess headers & we're not nested inside another tabular
-    if document.findnodes("ancestor::ltx:tabular", node.as_ref(), state).is_empty() {
-      let hashead = !document.findnodes("descendant::ltx:td[@thead]", node.as_ref(), state).is_empty();
-      // If requested && no cells are already marked as being thead, apply heuristic
-      if dbg!(&self.properties).contains_key("guess_headers") && !hashead {
-        guess_alignment_headers(document, node.unwrap(), self, state)?;
+    if let Some(mut node) = node_opt {
+      if document.findnodes("ancestor::ltx:tabular", Some(&node), state).is_empty() {
+        let hashead = !document.findnodes("descendant::ltx:td[@thead]", Some(&node), state).is_empty();
+        // If requested && no cells are already marked as being thead, apply heuristic
+        if self.properties.contains_key("guess_headers") && !hashead {
+          guess_alignment_headers(document, &mut node, self, state)?;
+        }
+        // Otherwise, if not a math array, group thead & tbody rows
+        // TODO: Re-design asking the outer Whatsit about "!body->isMath"
+        else if hashead && !ismath { // in case already marked w/thead|tbody
+          alignment_regroup_rows(document, &node, state)?;
+        }
       }
-      // Otherwise, if not a math array, group thead & tbody rows
-      // TODO: Re-design asking the outer Whatsit about "!body->isMath"
-      else if hashead && !ismath { // in case already marked w/thead|tbody
-        alignment_regroup_rows(document, node.unwrap(), state)?;
-      }
+      Ok(vec![node])
+    } else {
+      Ok(Vec::new())
     }
-    // return node
-    Ok(Vec::new())
+
   }
 
   ///======================================================================
@@ -526,16 +544,19 @@ impl Alignment {
     for row in &mut self.rows {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
-        if let Some(boxes) = &cell.boxes {
+        if let Some(_boxes) = &cell.boxes {
+          // TODO
           // let (w, h, d, cw, ch, cd)
           //   = boxes.get_size(align => cell.align, width => cell.width,
           //     vattach => cell.vattach);
+
           // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width vattach))
           //     . ") size " . showSize($w,  $h,  $d)
           //     . " csize " . showSize($cw, $ch, $cd)
           //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
-          // TODO:
+
           let empty = false;
+          // TODO:
           // let empty =
           //   ((!cw || cw.value_of() < 1)
           //     || (((!ch) || ch->valueOf < 1)
@@ -556,8 +577,13 @@ impl Alignment {
     }
     Ok(())
   }
+  /// Mark any cells that are covered by rowspan or colspan
   pub fn normalize_mark_spans(&mut self) -> Result<()> {Ok(())}
+  /// Scan for and remove empty rows
+  /// but copying borders and adjusting rowspan's & colspan's appropriately.
   pub fn normalize_prune_rows(&mut self) -> Result<()> {Ok(())}
+  /// Scan for and remove empty columns
+  /// but copying borders and adjusting rowspan's & colspan's appropriately.
   pub fn normalize_prune_columns(&mut self) -> Result<()> {Ok(())}
   pub fn normalize_sum_sizes(&mut self) -> Result<()> {Ok(())}
 
@@ -575,7 +601,7 @@ impl Alignment {
 // Constructing the XML for the alignment.
 
 impl Object for Alignment {
-  fn get_locator(&self) -> Option<std::borrow::Cow<crate::common::locator::Locator>> {
+  fn get_locator(&self) -> Option<Cow<crate::common::locator::Locator>> {
       None
   }
 }
@@ -698,56 +724,70 @@ pub fn matrix_template() -> Template {
 // and also that the data lines will have similar structure,  we'll attempt to
 // recognize groups of header lines and groups data lines, possibly alternating.
 
-fn guess_alignment_headers(document: &mut Document, table: Node, alignment: &mut Alignment, state: &mut State) -> Result<()> {
+fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment: &mut Alignment, state: &mut State) -> Result<()> {
   // Assume that headers don't make sense for nested tables.
   // OR Maybe we should only do this within table environments???
-  if !document.findnodes("ancestor::ltx:tabular", Some(&table), state).is_empty() {
+  if !document.findnodes("ancestor::ltx:tabular", Some(table), state).is_empty() {
     return Ok(())
   }
-  let tag = document.get_node_qname(&table, state);
+  let tag = document.get_node_qname(table, state);
   // TODO
   //   Debug(('=' x 50) . "\nGuessing alignment headers for "
   //       . (($x = $document->findnode('ancestor-or-self::*[@xml:id]', $table)) ? $x->getAttribute('xml:id') : $tag))
   //     if $LaTeXML::DEBUG{alignment};
 
   let ismath = tag == arena::pin_static("ltx:XMArray");
-//   local $LaTeXML::TR = ($ismath ? 'ltx:XMRow'  : 'ltx:tr');
-//   local $LaTeXML::TD = ($ismath ? 'ltx:XMCell' : 'ltx:td');
-  let reversed = 0;
+  let reversed = false;
+  // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
-  let rows = collect_alignment_rows(document, table, alignment, state);
+  classify_alignment_rows(document, table, alignment, state);
+  // Flip the rows around to produce a column view.
+  {
+    let mut cols = collect_alignment_columns(alignment);
+    // This usually does something unpleasant
+    alignment_characterize_lines(document, Axis::Column, false,  cols.as_mut_slice(), state)?;
+  }
+
+  let mut rows = collect_alignment_rows(alignment);
   if rows.is_empty() {
     return Ok(());
   }
-  // Flip the rows around to produce a column view.
-  // let mut cols = Vec::new();
-  // for c in 0 .. rows[0].len() {
-  //   cols.push(
-  //     rows.iter().map(|row| row.get(c)).collect::<Vec<_>>());
-  // }
+  alignment_characterize_lines(document, Axis::Row, false, rows.as_mut_slice(), state)?;
 
-//   # Attempt to recognize header lines.
-//   if (alignment_characterize_lines($document, 0, 0, @rows)) { }
-//   # This usually does something unpleasant
-//   alignment_characterize_lines($document, 1, 0, @cols);
-//   # Did we go overboard?
-//   my %n = (h => 0, d => 0);
-//   foreach my $r (@rows) {
-//     foreach my $c (@$r) {
-//       $n{ $$c{cell_type} }++; } }
+  // Did we go overboard?
+  let mut n_h = 0;
+  let mut n_d = 0;
+  for r in rows.iter() {
+    for c in r {
+      match c.cell_type {
+        Some('h') => n_h += 1,
+        Some('d') => n_d += 1,
+        Some(other) => panic!("unexpected cell_type {}", other),
+        None => {}
+      }
+    }
+  }
+
 //   Debug("$n{h} header, $n{d} data cells") if $LaTeXML::DEBUG{alignment};
-//   if ($n{d} == 1) {    # Or any other heuristic?
-//     $n{h} = 0;
-//     foreach my $r (@rows) {
-//       foreach my $c (@$r) {
-//         $$c{cell_type} = 'd';
-//         $$c{cell}->removeAttribute('thead') if $$c{cell}; } } }
-//   # Regroup the rows into thead & tbody elements.
-//   # But not if it's a math array, or if reversed (since browsers get confused?)
-//   if (!$ismath && !$reversed) {
-//     alignment_regroup_rows($document, $table); }
-//   if ($n{h}) {    # Found some headers?
-//     $document->addClass($table, 'ltx_guessed_headers'); }
+  if n_d == 1 { // Or any other heuristic?
+    n_h = 0;
+    for r in rows {
+      for mut c in r {
+        c.cell_type = Some('d');
+        if let Some(ref mut cell) = c.cell {
+          cell.remove_attribute("thead")?;
+        }
+      }
+    }
+  }
+  // Regroup the rows into thead & tbody elements.
+  // But not if it's a math array, or if reversed (since browsers get confused?)
+  if !ismath && !reversed {
+    alignment_regroup_rows(document, table, state)?;
+  }
+  if n_h > 0 { // Found some headers?
+    document.add_class(table, "ltx_guessed_headers", state)?;
+  }
 
 //   # Debugging report!
 //   summarize_alignment([@rows], [@cols]) if $LaTeXML::DEBUG{alignment};
@@ -759,37 +799,54 @@ fn guess_alignment_headers(document: &mut Document, table: Node, alignment: &mut
 // Any leading rows, all of whose cells have attribute thead should be in thead.
 // UNLESS any of them have a rowspan that extends PAST the end of the thead!!!!
 // trailing rows marked as thead go into tfoot.
-fn alignment_regroup_rows (document: &mut Document, table: Node, state: &mut State) -> Result<()> {
-  // my @rows     = $document->findnodes("ltx:tr", $table);
-  // my @heads    = ();
-  // my $maxreach = 0;
-  // # Scan initial rows as potential thead
-  // while (@rows) {
-  //   my @cells = $document->findnodes('ltx:td', $rows[0]);
-  //   # Non header cells, done.
-  //   last if scalar(grep { (!$_->getAttribute('thead')) } @cells);
-  //   my $line = scalar(@heads);
-  //   push(@heads, shift(@rows));
-  //   $maxreach = max($maxreach, map { ($_->getAttribute('rowspan') || 0) + $line } @cells); }
-  // if ($maxreach > scalar(@heads)) {    # rowspan crossed over thead boundary!
-  //   unshift(@rows, @heads); @heads = (); }
-  // # scan trailing rows as potential tfoot
-  // my @foots = ();
-  // while (@rows) {
-  //   my @cells = $document->findnodes('ltx:td', $rows[-1]);
-  //   # Non header cells, done.
-  //   last if scalar(grep { (!$_->getAttribute('thead')) } @cells);
-  //   unshift(@foots, pop(@rows)); }
-  // $document->wrapNodes('ltx:thead', @heads) if @heads;
-  // $document->wrapNodes('ltx:tbody', @rows)  if @rows;
-  // $document->wrapNodes('ltx:tfoot', @foots) if @foots;
+fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut State) -> Result<()> {
+  let mut rows     = document.findnodes("ltx:tr", Some(table), state);
+  let mut heads    = Vec::new();
+  let mut maxreach = 0;
+  // Scan initial rows as potential thead
+  while !rows.is_empty() {
+    let cells = document.findnodes("ltx:td", Some(&rows[0]),state);
+    // Non header cells, done.
+    if cells.iter().any(|cell| cell.get_attribute("thead").is_none()) {
+      break;
+    }
+    let line = heads.len();
+    heads.push(rows.remove(0));
+    for cell in cells {
+      let this_rowspan = cell.get_attribute("rowspan").map(|v| v.parse::<usize>().expect("rowspan should be a usize")).unwrap_or(0) + line;
+      if this_rowspan > maxreach {
+        maxreach = this_rowspan;
+      }
+    }
+  }
+  if maxreach > heads.len() { // rowspan crossed over thead boundary!
+    rows.extend(heads.drain(..));
+  }
+  // scan trailing rows as potential tfoot
+  let mut foots = VecDeque::new();
+  while !rows.is_empty() {
+    let cells = document.findnodes("ltx:td", Some(rows.last().unwrap()), state);
+    // Non header cells, done.
+    if cells.iter().any(|cell| cell.get_attribute("thead").is_none()) {
+      break;
+    }
+    foots.push_front(rows.pop().unwrap())
+  }
+  if !heads.is_empty() {
+    document.wrap_nodes("ltx:thead", heads, state)?;
+  }
+  if !rows.is_empty() {
+    document.wrap_nodes("ltx:tbody", rows, state)?;
+  }
+  if !foots.is_empty() {
+    document.wrap_nodes("ltx:tfoot", foots.into_iter().collect(), state)?;
+  }
   Ok(())
 }
 
 //======================================================================
-// Build a View of the alignment, with characterized cells, for analysis.
-
-fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut Alignment, state: &mut State) -> Vec<Vec<Column>> {
+/// Setup a View of the alignment, with characterized cells, for analysis -- modifying it in place.
+fn classify_alignment_rows<'a>(document: &mut Document, table: &Node, alignment: &'a mut Alignment, state: &mut State) {
   let nrows = alignment.rows.len();
   let mut ncols = 0;
   for arow in &mut alignment.rows {
@@ -798,11 +855,10 @@ fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut 
       ncols = n;
     }
   }
-  let mut rows = Vec::new();
   for arow in &mut alignment.rows {
-    let mut this_row = Vec::new();
     let cols = arow.get_columns_mut();
-    for col in cols {
+    let this_row_len = cols.len();
+    for col in cols.iter_mut() {
       col.cell_type = Some('d');
       col.content_class = Some( // Assume mixed content for any justified cell???
         if col.align == Some(Align::Justify) {
@@ -838,13 +894,9 @@ fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut 
       if border_right > 0 {
         col.border_right = Some(border_right);
       }
-      this_row.push(col.clone());
     }
-    // DG: Performance note. If we port the code in the same organization as in Perl, we are padding rows with empty columns after we have collected a mutable references to the existing columns. Which is not allowed by the compiler. So either we need to pad *first*, OR we need to give up on mutable references and clone the Columns.
-    // Probably first padding is better, but for now just clone and move forward.
-
     // pad the columns out.
-    let to_pad = ncols - this_row.len();
+    let to_pad = ncols - this_row_len;
     if to_pad > 0 {
       for _ in 0..to_pad {
         let col = Column {
@@ -854,10 +906,9 @@ fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut 
           content_length: Some(0),
           .. Column::default()
         };
-        this_row.push(col);
+        cols.push(col);
       }
     }
-    rows.push(this_row);
   }
   // # copy the characterizations to spanned cells
   // for (my $r = 0 ; $r < $nrows ; $r++) {
@@ -902,6 +953,7 @@ fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut 
   //     $rows[$r][$c]{b} = $rows[$r + 1][$c]{t} if $rows[$r + 1][$c]{t};
   //     $rows[$r][$c]{l} = $rows[$r][$c - 1]{r} if $rows[$r][$c - 1]{r};
   //     $rows[$r][$c]{r} = $rows[$r][$c + 1]{l} if $rows[$r][$c + 1]{l}; } }
+  //
   // if ($LaTeXML::DEBUG{alignment}) {
   //   Debug("Cell characterizations:");
   //   for (my $r = 0 ; $r < $nrows ; $r++) {
@@ -914,7 +966,24 @@ fn collect_alignment_rows(document: &mut Document, table: Node, alignment: &mut 
   //           . ' ' . $$col{border} . "=>" . join('', grep { $$col{$_} } qw(t r b l))
   //           . (($$col{rowspan} || 1) > 1 ? " rowspan=" . $$col{rowspan} : '')
   //           . (($$col{colspan} || 1) > 1 ? " colspan=" . $$col{colspan} : '')); } } }
-  rows
+}
+
+fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Column>> {
+  alignment.rows.iter_mut().map(|x| x.get_columns_mut().into_iter().map(|x| x)
+    .collect()).collect()
+}
+
+fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Column>> {
+  let mut columns = Vec::new();
+  let mut row_cells : Vec<_> = alignment.rows.iter_mut().map(|r| r.get_columns_mut().iter_mut()).collect();
+  for _ in 0..row_cells[0].len() {
+    let mut column = Vec::new();
+    for row_iter in row_cells.iter_mut() {
+      column.push(row_iter.next().unwrap());
+    }
+    columns.push(column);
+  }
+  columns
 }
 
 /// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or '_' (empty) (or some combination)
@@ -952,7 +1021,7 @@ fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut St
             },
             "ltx:XMArg" => {
               let mut children = ch.get_child_nodes();
-              children.extend(nodes.drain(..));
+              children.append(&mut nodes);
               nodes = children;
             },
             other if other.starts_with("ltx:XM") => {
@@ -1007,4 +1076,254 @@ fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut St
     // TODO: What do we do for multi-class detection?
     ColumnSpec::Unknown
   }
+}
+
+
+
+//======================================================================
+// Scan pairs of rows/columns attempting to recognize differences that
+// might indicate which are headers and which are data.
+// Warning: This section is full of "magic numbers"
+// guessed by sampling various test cases.
+
+const MIN_ALIGNMENT_DATA_LINES   : usize = 1; //  (or 2?) [CONSTANT]
+const MAX_ALIGNMENT_HEADER_LINES : usize = 4; // [CONSTANT]
+
+// We expect to find header lines at the beginning, noticably different from the eventual data lines.
+// Both header lines and data lines can consist of several neighboring lines.
+// Check that header lines are `similar' to each other.  So, the strategy is to look
+// for a `hump' in the line differences and consider blocks containing these lines to be potential headers.
+
+fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool, lines: &mut [Vec<&mut Column>], state:&State) -> Result<()> {
+  let n = lines.len();
+  if n<2 {
+    return Ok(());
+  }
+  // Debug("Characterizing $n " . ($axis ? "columns" : "rows"))
+  //   if $LaTeXML::DEBUG{alignment};
+
+  // Establish a scale of differences for the table.
+  let (mut max_diff, mut min_diff, mut avg_diff) = (0.0, 99999999.0, 0.0);
+  for l in 0..n-1 {
+    let d = alignment_compare(axis, true, reversed, l, l + 1, lines);
+    avg_diff += d;
+    if d > max_diff {
+      max_diff = d;
+    }
+    if d < min_diff {
+      min_diff = d;
+    }
+  }
+  let avg_diff = avg_diff / (n - 1) as f64;
+  if max_diff < 0.05 { // virtually no differences.
+  //   Debug("Lines are almost identical => Fail") if $LaTeXML::DEBUG{alignment};
+    return Ok(());
+  }
+  if (n > 2) && ((max_diff - min_diff) < max_diff * 0.5) { // differences too similar to establish pattern
+  //   Debug("Differences between lines are almost identical => Fail")
+  //     if $LaTeXML::DEBUG{alignment};
+    return Ok(());
+  }
+  let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
+  // local $::TAB_AXIS = $axis;
+
+  // Debug("Differences $min_diff -- $max_diff => threshold = $::tab_threshold")
+  //   if $LaTeXML::DEBUG{alignment};
+  // Find the first hump in differences. These are candidates for header lines.
+  // Debug("Scanning for headers") if $LaTeXML::DEBUG{alignment};
+  let (mut minh, mut maxh) = (1, 1);
+  let mut diff;
+  loop {
+    diff = alignment_compare(axis, true, reversed, maxh - 1, maxh, lines);
+    if diff >= tab_threshold {break;}
+    maxh+=1;
+  }
+  if maxh > MAX_ALIGNMENT_HEADER_LINES {// too many before even finding diffs? give up!
+    return Ok(()); }
+  while alignment_compare(axis, true, reversed, maxh, maxh + 1, lines) > tab_threshold {
+    maxh+=1;
+  }
+  if maxh > MAX_ALIGNMENT_HEADER_LINES {
+    maxh = MAX_ALIGNMENT_HEADER_LINES;
+  }
+  // Debug("Found from $minh--$maxh potential headers") if $LaTeXML::DEBUG{alignment};
+
+  let nn = lines[0].len() - 1;
+  // The sets of lines 1--$minh, .. 1--$maxh are potential headers.
+  for nh in (minh..=maxh).rev() {
+    // Check whether the set 1..$nh is plausable.
+    let heads = alignment_test_headers(nh, lines);
+    if !heads.is_empty()  {
+      // Now, change all cells marked as header from td => th.
+      for h in heads {
+        for (i, cell) in lines[h].iter_mut().enumerate() {
+          cell.cell_type = Some('h');
+          if let Some(ref mut xcell) = cell.cell {
+            if (cell.content_class == Some(ColumnSpec::Empty)) // But NOT empty cells on outer edges.
+              && ((i == 0 && (if axis == Axis::Row {
+                  cell.border_left.is_none()} else {cell.border_top.is_none()}) )
+               || (i == nn && (if axis == Axis::Row {
+                  cell.border_right.is_none()} else {cell.border_bottom.is_none()}))) { }
+            else {
+              document.add_ss_values(xcell, "thead", axis.marker_name(), state)?;
+            }
+          }
+        }
+      }
+      return Ok(());
+    }
+  }
+  Ok(())
+}
+
+/// Test whether `nhead` lines makes a good fit for the headers
+fn alignment_test_headers(nhead:usize, lines:&mut [Vec<&mut Column>]) -> Vec<usize> {
+  // Debug("Testing $nhead headers") if $LaTeXML::DEBUG{alignment};
+  let (mut head_length, mut data_length) = (0, 0);
+  let heads : Vec<usize> = (0 .. nhead).collect(); // The indices of heading lines.
+  let head_length = alignment_max_content_length(head_length, 0, nhead - 1, lines);
+  let next_line = nhead; // Start from the end of the proposed headings.
+
+  // Watch out for the assumed header being really data that is a repeated pattern.
+  let nrep = lines.len() / nhead;
+  if nhead > 1 {
+  //   Debug("Check for apparent header repeated $nrep times") if $LaTeXML::DEBUG{alignment};
+  //   my $matched = 1;
+  //   for (my $r = 1 ; $r < $nrep ; $r++) {
+  //     $matched &&= alignment_match_head(0, $r * $nhead, $nhead); }
+  //   Debug("Repeated headers: " . ($matched ? "Matched=> Fail" : "Nomatch => Succeed"))
+  //     if $LaTeXML::DEBUG{alignment};
+  //   return if $matched;
+  }
+
+  // # And find a following grouping of data lines.
+  // my $ndata = alignment_skip_data($nextline);
+  // return if $ndata < $nhead;                     # ???? Well, maybe if _really_ convincing???
+  // return if ($ndata < $nhead) && ($ndata < 2);
+  // # Check that the content of the headers isn't dramatically larger than the content in the data
+  // $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $ndata - 1);
+  // $nextline += $ndata;
+
+  // my $nd;
+  // # If there are more lines, they should match either the previous data block, or the head/data pattern.
+  // while ($nextline < lines.len()) {
+  //   # First try to match a repeat of the 1st data block;
+  //   # This would be the case when groups of data have borders around them.
+  //   # Could want to match a variable number of datalines, but they should be similar!!!??!?!?
+  //   if (($ndata > 1) && ($nd = alignment_match_data($nhead, $nextline, $ndata))) {
+  //     $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $nd - 1);
+  //     $nextline += $nd; }
+  //   # Else, try to match the first header block; less common.
+  //   elsif (alignment_match_head(0, $nextline, $nhead)) {
+  //     push(@heads, $nextline .. $nextline + $nhead - 1);
+  //     $head_length = alignment_max_content_length($head_length, $nextline, $nextline + $nhead - 1);
+  //     $nextline += $nhead;
+  //     # Then attempt to match a new data block.
+  //     #      my $d = alignment_skip_data($nextline);
+  //     #      return unless ($d >= $nhead) || ($d >= 2);
+  //     #      $nextline += $d; }
+  //     # No, better be the same data block?
+  //     return unless ($nd = alignment_match_data($nhead, $nextline, $ndata));
+  //     $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $nd - 1);
+  //     $nextline += $nd; }
+  //   else { return; } }
+  // // Header content seems too large relative to data?
+  // Debug("header content = $head_length; data content = $data_length")
+  //   if $LaTeXML::DEBUG{alignment};
+  // if (($head_length > 10) && (0.25 * $head_length > $data_length)) {
+  //   Debug("header content too much longer than data content")
+  //     if $LaTeXML::DEBUG{alignment};
+  //   return; }
+  // // Or if a header cell has "large" content?
+  // if ($head_length >= 1000) {    # Or if a header cell has "large" content?
+  //   Debug("header content too large")
+  //     if $LaTeXML::DEBUG{alignment};
+  //   return; }
+
+  // Debug("Succeeded with $nhead headers") if $LaTeXML::DEBUG{alignment};
+  heads
+}
+
+/// Return the maximum "content length" for lines from $from to $to.
+fn alignment_max_content_length(mut length: usize, from:usize, to:usize, tablines: &mut [Vec<&mut Column>]) -> usize {
+  for item in tablines.iter().take(to + 1).skip(from) {
+    let mut l = 0;
+    for cell in item.iter() {
+      l += cell.content_length.unwrap_or(0);
+    }
+    if l > length {
+      length = l;
+    }
+  }
+  length
+}
+
+
+//======================================================================
+
+/// Compare two lines along `Axis` (0=row,1=column), returning a measure of the difference.
+/// The borders are compared differently if
+///  `for_adjacency`: we adjacent lines that might belong to the same block,
+///  otherwise    : comparing two lines that ought to have identical patterns (eg. in a repeated block)
+fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2:usize, lines: &mut [Vec<&mut Column>]) -> f64 {
+  let line1 = &lines[p1];
+  let line2 = &lines[p2];
+  if line1.is_empty() && line2.is_empty() {
+    return 0.0;
+  } else if line1.is_empty() || line2.is_empty() {
+    return 999999.0;
+  }
+  let ncells = line1.len();
+  let mut diff   = 0.0;
+
+  for (cell1,cell2) in line1.iter().zip(line2.iter()) {
+    // Annoying test avoids warnings if cells inconsistent; likely due to incorrect row/col spans
+    if cell1.content_class.is_none() || cell2.content_class.is_none() {
+      continue;
+    }
+    //   next if grep { !defined $$cell1{$_} } qw(content_class r l t b);
+    //   next if grep { !defined $$cell2{$_} } qw(content_class r l t b);
+    if cell1.align != cell2.align && cell1.content_class != Some(ColumnSpec::Empty)
+      && cell2.content_class != Some(ColumnSpec::Empty) {
+      diff += 0.75;
+    }
+    let d = cell1.content_class.as_ref().unwrap()
+      .difference_heuristic(cell2.content_class.as_ref().unwrap());
+    if d > 0.0 {
+      diff += d;
+    }
+    // compare certain edges
+    if for_adjacency { // Compare edges for adjacent rows of potentially different purpose
+      let mut inner_diffs = 0.0;
+      if axis == Axis::Row {
+        if cell1.border_right != cell2.border_right { inner_diffs += 1.0; }
+        if cell1.border_left != cell2.border_left { inner_diffs += 1.0; }
+      } else {
+        if cell1.border_top != cell2.border_top { inner_diffs += 1.0; }
+        if cell1.border_bottom != cell2.border_bottom { inner_diffs += 1.0; }
+      };
+      diff += 0.3 * inner_diffs;
+      // Penalty for apparent divider between.
+      let pedge = if axis == Axis::Row {
+        if reversed { BorderSpec::Top }else{ BorderSpec::Bottom}
+        } else if reversed { BorderSpec::Left }else{BorderSpec::Right};
+      let border1_pedge = cell1.border_at(pedge);
+      let border2_pedge = cell2.border_at(pedge);
+      if let Some(b1p) = border1_pedge {
+        if border1_pedge != border2_pedge {
+          diff += (b1p as i64 - border2_pedge.unwrap_or(0)as i64).abs() as f64;
+        }
+      }
+    } else { // Compare edges for rows from diff places for potential similarity
+      let mut inner_diffs = 0.0;
+      if cell1.border_right != cell2.border_right { inner_diffs += 1.0; }
+      if cell1.border_left != cell2.border_left { inner_diffs += 1.0; }
+      if cell1.border_top != cell2.border_top { inner_diffs += 1.0; }
+      if cell1.border_bottom != cell2.border_bottom { inner_diffs += 1.0; }
+      diff += 0.3 * inner_diffs;
+    }
+  }
+  diff /= ncells as f64;
+  // Debug("$p1-$p2 => $diff; ") if $LaTeXML::DEBUG{alignment};
+  diff
 }

@@ -8,10 +8,10 @@ use libxml::tree::{Namespace, Node, NodeType};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use string_interner::symbol::SymbolU32;
-
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
 use rustc_hash::FxHashSet as HashSet;
+
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::rc::Rc;
@@ -24,7 +24,8 @@ use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::xml::{self, XML_NS};
+use crate::common::model::Model;
+use crate::common::xml::{self, XML_NS,XPath};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
@@ -88,6 +89,7 @@ thread_local! {
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
+  context: Option<XPath>,
   pub node: Node,
   pub node_boxes: HashMap<usize, Digested>, // used to be _box attribute
   pub node_fonts: HashMap<u64, Font>,       // used to be _font attribute
@@ -132,6 +134,7 @@ impl Document {
       localized_constructed_nodes: Vec::new(),
       constructed_nodes: Vec::new(),
       box_to_absorb: None,
+      context: None,
       localized_boxes: Vec::new(),
       localized_fonts: Vec::new(),
     }
@@ -152,28 +155,41 @@ impl Document {
     }
   }
 
-  /// Find the nodes according to the given $xpath expression,
+  /// Find the nodes according to the given `xpath` expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
-    if let Some(root) = self.document.get_root_element() {
-      match node_opt {
-        Some(node) => state
-          .model
-          .get_xpath(&self.document)
-          .findnodes(xpath, Some(node)),
-        None => state
-          .model
-          .get_xpath(&self.document)
-          .findnodes(xpath, Some(&root)),
+  pub fn findnodes(&mut self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
+    let node = match node_opt {
+      Some(node) => Cow::Borrowed(node),
+      None => match self.document.get_root_element() {
+        Some(root) => Cow::Owned(root),
+        None => {return Vec::new()}
       }
+    };
+    self.get_xpath(&state.model)
+      .findnodes(xpath, Some(&node))
+  }
+
+  /// Get an XPath context that knows about our namespace mappings.
+  pub fn get_xpath(&mut self, model: &Model) -> &mut XPath {
+    if let Some(ref mut ctxt) = self.context {
+      ctxt
     } else {
-      vec![]
+      let mut context = XPath::new(&self.document, HashMap::default());
+      for (prefix, ns) in &model.code_namespaces {
+        // TODO: Is this too slow? We may need to store an active context in the State as an
+        // alternative
+        arena::with(*prefix, |p_str| {
+          arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
+        });
+      }
+      self.context = Some(context);
+      self.context.as_mut().unwrap()
     }
   }
 
   /// Like findnodes, but only returns the first matched node
-  pub fn findnode(&self, xpath: &str, node: Option<&Node>, state: &mut State) -> Option<Node> {
-    let mut nodes = state.model.get_xpath(&self.document).findnodes(xpath, node);
+  pub fn findnode(&mut self, xpath: &str, node: Option<&Node>, state: &mut State) -> Option<Node> {
+    let mut nodes = self.get_xpath(&state.model).findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {
@@ -182,17 +198,15 @@ impl Document {
   }
 
   /// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
-  pub fn findvalues(&self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<String> {
+  pub fn findvalues(&mut self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<String> {
     match node_opt {
-      Some(node) => state
-        .model
-        .get_xpath(&self.document)
+      Some(node) => self.get_xpath(&state
+        .model)
         .findvalues(xpath, Some(node)),
       None => {
         if let Some(root) = self.document.get_root_element() {
-          state
-            .model
-            .get_xpath(&self.document)
+          self
+            .get_xpath(&state.model)
             .findvalues(xpath, Some(&root))
         } else {
           Vec::new()
@@ -2079,7 +2093,7 @@ impl Document {
     Ok(())
   }
 
-  fn add_ss_values(
+  pub fn add_ss_values(
     &mut self,
     node: &mut Node,
     key: &str,
@@ -2937,26 +2951,26 @@ impl Document {
   pub fn wrap_nodes(
     &mut self,
     qname: &str,
-    mut nodes: Vec<Node>,
+    nodes: Vec<Node>,
     state: &mut State,
   ) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
     }
-    let first_node = nodes.remove(0);
+    let first_node = &nodes[0];
     let mut parent = first_node.get_parent().unwrap();
     let (ns, tag) = state.model.decode_qname(qname);
     let mut new = self.open_element_internal(&mut parent, ns, &tag, state)?;
     self.after_open(&mut new, state)?;
-    let mut old_node = parent.replace_child_node(new.clone(), first_node)?;
+    parent.replace_child_node(new.clone(), first_node.clone())?;
 
     self.copy_node_font(&parent, &mut new)?;
 
     if let Some(tbox) = self.get_node_box(&parent) {
       self.set_node_box(&new, tbox);
     }
-    new.add_child(&mut old_node)?;
     for mut node in nodes.into_iter() {
+      node.unlink();
       new.add_child(&mut node)?;
     }
     self.after_close(&mut new, state)?;

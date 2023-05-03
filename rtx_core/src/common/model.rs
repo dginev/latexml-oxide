@@ -12,11 +12,10 @@ use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
-use crate::common::xml::{XPath, XML_NS};
+use crate::common::xml::{XML_NS};
 use crate::document::Document;
 use crate::util::pathname;
 use crate::Locator;
-use libxml::tree::Document as XmlDoc;
 use libxml::tree::Node;
 
 use super::arena::{
@@ -173,17 +172,6 @@ impl Model {
   }
   pub fn describe_model(&self) {}
 
-  pub fn get_xpath<'o>(&'o self, document: &'o XmlDoc) -> XPath {
-    let mut context = XPath::new(document, HashMap::default());
-    for (prefix, ns) in &self.code_namespaces {
-      // TODO: Is this too slow? We may need to store an active context in the State as an
-      // alternative
-      arena::with(*prefix, |p_str| {
-        arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
-      });
-    }
-    context
-  }
   ///**********************************************************************
   /// Namespaces
   ///**********************************************************************
