@@ -167,6 +167,7 @@ impl Core {
 pub trait BoxOps: Object {
   /// If composite, unwrap into the contained digested objects (or return self)
   fn unlist(&self) -> Vec<Digested> { unimplemented!() }
+  fn unlist_ref(&self) -> Vec<&Digested> { unimplemented!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
   /// build a string representation of the underlying digested data
