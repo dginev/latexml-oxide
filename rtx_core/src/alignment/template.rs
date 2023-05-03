@@ -53,7 +53,7 @@ impl Axis {
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Column {
+pub struct Cell {
   pub empty: bool,
   pub omitted: bool,
   pub skipped: bool,
@@ -73,11 +73,12 @@ pub struct Column {
   pub border_right: Option<usize>,
   pub border_top: Option<usize>,
   pub border_bottom: Option<usize>,
+  pub vattach: Option<String>,
   pub cell: Option<Node>,
   pub thead_in_row: bool,
   pub thead_in_column: bool,
 }
-impl Column {
+impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
     match side {
       BorderSpec::Left => self.border_left,
@@ -137,9 +138,9 @@ pub struct TemplateConfig {
   pub repeating: Option<bool>,
   pub pseudorow: Option<bool>,
   pub non_repeating: usize,
-  pub repeated: Vec<Column>,
+  pub repeated: Vec<Cell>,
   pub reversion: Option<Tokens>,
-  pub columns: Option<Vec<Column>>,
+  pub columns: Option<Vec<Cell>>,
   pub tokens: Option<Vec<Token>>,
   pub save_before: Option<VecDeque<Token>>,
   pub save_between: Option<VecDeque<Token>>,
@@ -150,10 +151,10 @@ pub struct Template {
   repeating: bool,
   pseudorow: bool,
   non_repeating: usize,
-  repeated: Vec<Column>,
+  repeated: Vec<Cell>,
   reversion: Option<Tokens>,
-  columns: Vec<Column>,
-  current_column: Option<Column>,
+  columns: Vec<Cell>,
+  current_column: Option<Cell>,
   pub tokens: Vec<Token>,
   padding: Option<Dimension>,
   pub top_padding: Option<Dimension>,
@@ -230,7 +231,7 @@ impl Template {
     }
   }
 
-  pub fn add_column(&mut self, mut col:Column) {
+  pub fn add_column(&mut self, mut col:Cell) {
     let mut before = Vec::new();
     if !self.save_between.is_empty() {
       before.extend(self.save_between.clone());
@@ -268,7 +269,7 @@ impl Template {
     }
   }
 
-  pub fn get_column_mut(&mut self, n: usize) -> Option<&mut Column> {
+  pub fn get_column_mut(&mut self, n: usize) -> Option<&mut Cell> {
     let all_columns = self.columns.len();
     if (n > all_columns) && self.repeating {
       let rep = &self.repeated;
@@ -287,8 +288,8 @@ impl Template {
     }
   }
 
-  pub fn get_columns(&self) -> &[Column] { &self.columns }
-  pub fn get_columns_mut(&mut self) -> &mut Vec<Column> { &mut self.columns }
+  pub fn get_columns(&self) -> &[Cell] { &self.columns }
+  pub fn get_columns_mut(&mut self) -> &mut Vec<Cell> { &mut self.columns }
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }

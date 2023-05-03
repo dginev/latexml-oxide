@@ -21,28 +21,28 @@ LoadDefinitions!(outer_state, {
       add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")]);
   });
   DefColumnType!("l", sub[_gullet,_args,state] {
-    state.current_build_template().unwrap().add_column(Column {
-      after: Some(Tokens!(T_CS!("\\hfil"))), ..Column::default()});
+    state.current_build_template().unwrap().add_column(Cell {
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
   });
   DefColumnType!("c", sub[_gullet,_args,state] {
-    state.current_build_template().unwrap().add_column(Column {
+    state.current_build_template().unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
-      after: Some(Tokens!(T_CS!("\\hfil"))), ..Column::default()});
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
   });
   DefColumnType!("r", sub[_gullet,_args,state] {
-    state.current_build_template().unwrap().add_column(Column {
+    state.current_build_template().unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
-      ..Column::default()});
+      ..Cell::default()});
   });
 
   DefColumnType!("p{Dimension}", sub[_gullet,args,state] {
     let width = args.remove(0).expect_dimension();
-    state.current_build_template().unwrap().add_column(Column {
+    state.current_build_template().unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
       after: Some(Tokens!(T_END!(), T_END!())),
       align: Some(Align::Justify),
       width: Some(width),
-      ..Column::default()});
+      ..Cell::default()});
   });
 
   DefColumnType!("*{Number}{}", sub[_gullet,args,_state] {
