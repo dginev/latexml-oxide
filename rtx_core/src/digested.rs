@@ -294,6 +294,15 @@ impl BoxOps for Digested {
       List(ref l) => l.unlist(),
     }
   }
+  fn unlist_ref(&self) -> Vec<&Digested> {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
+        vec![self]
+      },
+      List(ref l) => l.unlist_ref(),
+    }
+  }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     use DigestedData::*;

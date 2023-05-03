@@ -38,6 +38,7 @@ use crate::state::State;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::digested::Digested;
+use crate::BoxOps;
 use self::template::{Column, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
 
 use libxml::tree::{Node, NodeType};
@@ -365,7 +366,7 @@ impl Alignment {
   }
   pub fn be_absorbed(&mut self, document:&mut Document, state: &mut State) -> Result<Vec<Node>> {
     let ismath = self.is_math;
-    self.normalize_alignment()?;
+    self.normalize_alignment(state)?;
     let rows = &mut self.rows;
     if rows.is_empty() {
       return Ok(Vec::new())
@@ -434,7 +435,7 @@ impl Alignment {
         //       ($vpad                       ? (cssstyle => "padding-bottom:" . ToString($vpad))     : ()),
         //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
         //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
-        //       ($border                     ? (border   => $border)                                 : ()),
+        if !border.is_empty() { cell_attrs.insert(String::from("border"), border); }
         if cell.thead_in_column || cell.thead_in_row {
           let mut thead = String::new();
           if cell.thead_in_column {
@@ -523,12 +524,12 @@ impl Alignment {
   /// The & is still needed to allocate the cells in those rows.
   /// And in fact they need not even be empty! TeX will just pile them up!
   /// However, in HTML the spanned rows ARE omitted!
-  pub fn normalize_alignment(&mut self) -> Result<()> {
+  pub fn normalize_alignment(&mut self, state:&mut State) -> Result<()> {
     if self.is_normalized {
       return Ok(());
     }
     //======================================================================
-    self.normalize_cell_sizes()?;
+    self.normalize_cell_sizes(state)?;
     self.normalize_mark_spans()?;
     self.normalize_prune_rows()?;
     self.normalize_prune_columns()?;
@@ -538,34 +539,27 @@ impl Alignment {
     Ok(())
   }
   /// Compute (approximate) sizes of all cells
-  pub fn normalize_cell_sizes(&mut self) -> Result<()> {
+  pub fn normalize_cell_sizes(&mut self, state: &mut State) -> Result<()> {
     // Examines: boxes, align, vattach
     // Sets: cwidth, cheight, cdepth (per cell) & empty
     for row in &mut self.rows {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
-        if let Some(_boxes) = &cell.boxes {
-          // TODO
-          // let (w, h, d, cw, ch, cd)
-          //   = boxes.get_size(align => cell.align, width => cell.width,
-          //     vattach => cell.vattach);
-
+        if let Some(boxes) = &cell.boxes {
+          let (w, h, d) //, cw, ch, cd)
+            = boxes.get_size(Some(stored_map!(
+              "align" => cell.align.map(|a| a.char_code()), "width" => cell.width//, "vattach" => cell.vattach
+              )), state)?;
           // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width vattach))
           //     . ") size " . showSize($w,  $h,  $d)
           //     . " csize " . showSize($cw, $ch, $cd)
           //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
-
-          let empty = false;
-          // TODO:
-          // let empty =
-          //   ((!cw || cw.value_of() < 1)
-          //     || (((!ch) || ch->valueOf < 1)
-          //     && ((!cd) || cd->valueOf < 1))
-          //     || !(grep { !_->getProperty('isSpace'); } boxes->unlist)
-          //   ) && !preservedBoxes(boxes);
-          // cell{cwidth}  = w || Dimension(0);
-          // cell{cheight} = h || Dimension(0);
-          // cell{cdepth}  = d || Dimension(0);
+          // TODO: We can't do heights and depths yet
+          let empty = w.value_of() < 1 || // h.value_of() < 1 || d.value_of() < 1 ||
+            boxes.unlist_ref().iter().all(|tb| tb.get_property_bool("isSpace")) && !preserved_boxes(boxes);
+          cell.width  = Some(w);
+          // cell.height = Some(h);
+          // cell.depth  = Some(d);
           cell.empty = empty;
           if empty {
             cell.align = None;
@@ -581,7 +575,90 @@ impl Alignment {
   pub fn normalize_mark_spans(&mut self) -> Result<()> {Ok(())}
   /// Scan for and remove empty rows
   /// but copying borders and adjusting rowspan's & colspan's appropriately.
-  pub fn normalize_prune_rows(&mut self) -> Result<()> {Ok(())}
+  pub fn normalize_prune_rows(&mut self) -> Result<()> {
+    // Examines: rowspan,rowspanned, border, pseudorow, empty
+    // Sets: border, rowspan
+    let preserve = self.is_math || self.properties.get("preserve_structure").is_some();
+    // First, do rows.
+    let init_rows : Vec<_> = self.rows.drain(..).collect();
+    let mut rows = init_rows.into_iter().peekable();
+    let mut filtered = VecDeque::new();
+    while let Some(row) = rows.next() {
+      if row.get_columns().iter().any(|cell| !cell.empty) {    // Not empty! so keep it
+        filtered.push_back(row);
+      }
+      else if let Some(next) = rows.peek_mut() {    // Remove empty row, but copy top border to NEXT row
+        if preserve {
+          filtered.push_back(row);
+          continue;
+        } // don't remove inner rows from math EXCEPT last row!!
+        let (mut pruneh, mut pruned) = (0, 0);
+        for (j,col) in row.get_columns().iter().enumerate() {
+          // TODO: add cheight and cdepth
+          // if let Some(cheight) = col.cheight {
+          //   let chv = cheight.value_of();
+          //   if chv > pruneh { pruneh = chv; }
+          // }
+          // if let Some(cdepth) = col.cdepth {
+          //   let cdv = cdepth.value_of();
+          //   if cdv > pruned {
+          //     pruned = cdv;
+          //   }
+          // }
+            // TODO: add rowspanned
+          // if !row.pseudorow && col.rowspanned.is_some() {
+          //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
+          let border = col.border.chars().filter(|c|
+            matches!(c,'t'|'T'|'b'|'B')).map(|c| match c {
+              'b' => 't', //  but convert to top
+              'B' => 'T', //  but convert to top
+              other => other
+            }).collect::<String>();
+          // TODO: a little silly, the indexing of get_column in latexml is from 1, but the .enumerate() indexing is from 0
+          if !border.is_empty() {
+            next.get_column_mut(j+1).unwrap().border.push_str(&border); // add to NEXT row
+          }
+        }
+        // This top_padding should be combined w/any extra rowspacing from \\[dim] !
+        let prune_both = pruneh + pruned;
+        if prune_both > 0 {
+          next.top_padding = Some(Dimension::new(prune_both));
+        }    // And save padding.
+      } else {    // Remove empty last row, but copy top border to bottom of prev.
+        let mut prev_opt = filtered.back_mut();
+    //     my $nc   = scalar(@{ $$row{columns} });
+        let (mut pruneh, mut pruned) = (0, 0);
+        for (j,col) in row.get_columns().into_iter().enumerate() {
+          // TODO:
+          //  $pruneh = max($pruneh, $$col{cheight}->valueOf) if $$col{cheight};
+          //  $pruned = max($pruned, $$col{cdepth}->valueOf)  if $$col{cdepth};
+          //       if (!$$row{pseudorow} && defined $$col{rowspanned}) {
+          //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
+          let border = col.border.chars().filter(|c| // mask all but top border
+          matches!(c,'t'|'T')).map(|c| match c {
+            't' => 'b', // convert to bottom
+            'T' => 'B', // convert to bottom
+            other => other
+          }).collect::<String>();
+          if let Some(ref mut prev) = prev_opt {
+            // TODO: a little silly, the indexing of get_column in latexml is from 1, but the .enumerate() indexing is from 0
+            let ccol = prev.get_column_mut(j+1).unwrap();
+            // TODO: rowspanned
+            //       if (defined $$ccol{rowspanned}) {                        // skip to spanning column if rowspanned!
+            //         $ccol = $rows[$$ccol{rowspanned}]{columns}[$j]; }
+            if !border.is_empty() {
+              ccol.border.push_str(&border); // add to PREVIOUS row
+            }
+            let prune_both = pruneh + pruned;
+            if prune_both > 0 {    // And save padding.
+              prev.bottom_padding = Some(Dimension::new(prune_both));
+            }
+          }
+        }
+      }
+    }
+    self.rows = filtered;
+    Ok(())}
   /// Scan for and remove empty columns
   /// but copying borders and adjusting rowspan's & colspan's appropriately.
   pub fn normalize_prune_columns(&mut self) -> Result<()> {Ok(())}
@@ -622,6 +699,11 @@ impl PartialEq for Alignment {
     // TODO: Is it enough to compare the owned template?
     self.template == other.template
   }
+}
+
+
+fn preserved_boxes(boxes: &Digested) -> bool {
+  boxes.unlist_ref().iter().any(|tb| tb.get_property_bool("alignmentPreserve"))
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

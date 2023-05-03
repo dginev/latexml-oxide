@@ -19,7 +19,7 @@ pub enum Align {
   Justify
 }
 impl Align {
-  fn char_code(&self) -> char {
+  pub fn char_code(&self) -> char {
     match self {
       Align::Right => 'r',
       Align::Left => 'l',
@@ -61,6 +61,8 @@ pub struct Column {
   pub after: Option<Tokens>,
   pub align: Option<Align>,
   pub width: Option<Dimension>,
+  pub height: Option<Dimension>,
+  pub depth: Option<Dimension>,
   pub colspan: Option<usize>,
   pub boxes: Option<Digested>,
   pub cell_type: Option<char>,
@@ -154,6 +156,8 @@ pub struct Template {
   current_column: Option<Column>,
   pub tokens: Vec<Token>,
   padding: Option<Dimension>,
+  pub top_padding: Option<Dimension>,
+  pub bottom_padding: Option<Dimension>,
   pub before: VecDeque<Digested>,
   pub after: VecDeque<Digested>,
   save_before: VecDeque<Token>,
@@ -191,6 +195,8 @@ impl Template {
       after: VecDeque::new(),
       current_column: None,
       padding: None,
+      top_padding: None,
+      bottom_padding: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
     }

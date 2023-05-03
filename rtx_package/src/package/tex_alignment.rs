@@ -285,6 +285,68 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\@column@before", None);
   DefMacro!("\\@column@after", None);
 
+
+  //======================================================================
+  // Multicolumn support
+  // DefMacro('\multispan{Number}', sub {
+  //     my ($gullet, $span) = @_;
+  //     $span = $span->valueOf;
+  //     (T_CS('\omit'), map { (T_CS('\span'), T_CS('\omit')) } 1 .. $span - 1); });
+
+  // DefRegisterI('\@alignment@ncolumns', undef, Dimension(0),
+  //   getter => sub {
+  //     if (my $alignment = LookupValue('Alignment')) {
+  //       Number(scalar($alignment->getTemplate->columns)); }
+  //     else { Number(0); } });
+  // DefRegisterI('\@alignment@column', undef, Dimension(0),
+  //   getter => sub {
+  //     if (my $alignment = LookupValue('Alignment')) {
+  //       Number($alignment->currentColumnNumber); }
+  //     else { Number(0); } });
+
+  // DefMacro('\@multicolumn {Number}  AlignmentTemplate {}', sub {
+  //     my ($gullet, $span, $template, $tokens) = @_;
+  //     my $column = $template->column(1);
+  //     $span = $span->valueOf;
+  //     # First part, like \multispan
+  //     (T_CS('\omit'), (map { (T_CS('\span'), T_CS('\omit')) } 1 .. $span - 1),
+  //       # Next part, just put the template in-line, since it's only used once.
+  //       ($column ? beforeCellUnlist($$column{before}) : ()),
+  //       $tokens->unlist,
+  //       ($column ? afterCellUnlist($$column{after}) : ())); });
+
+  DefConditional!("\\if@in@alignment", { LookupValue!("Alignment").is_some() });
+
+  // DefPrimitive('\@alignment@bindings AlignmentTemplate []', sub {
+  //     my ($stomach, $template, $mode) = @_;
+  //     alignmentBindings($template, $mode); });
+
+  // # Utility, not really TeX, but used by LaTeX, AmSTeX...
+  // # Convert a vertical positioning, optional argument.
+  // #  t = "top", b = "bottom"; default is "middle".
+  // # Note that the default for vattach attribute is "baseline".
+  // sub translateAttachment {
+  //   my ($pos) = @_;
+  //   $pos = ($pos ? ToString($pos) : '');
+  //   return ($pos eq 't' ? 'top' : ($pos eq 'b' ? 'bottom' : 'middle')); }    # undef meaning 'baseline'
+
+  // This removes trailing whitespace from the current digested list.
+  // It is useful as the 1st thing in the rhs template of things like {tabular}.
+  // But note that \halign does NOT remove this trailing space!
+  DefPrimitive!("\\@@eat@space", sub[stomach,_args,_state] {
+    let mut save = Vec::new();
+    while let Some(tbox) = stomach.box_list.last() {
+      if tbox.get_property("alignmentSkippable").is_some()
+        || tbox.get_property("isFill").is_some() {
+        save.push(stomach.box_list.pop().unwrap());
+      } else if tbox.is_empty() {
+        stomach.box_list.pop().unwrap();
+      } else { break; }
+    }
+    stomach.box_list.append(&mut save);
+  });
+
+
 });
 
 
