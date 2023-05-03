@@ -191,7 +191,7 @@ pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node
   latexml.get_state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok(), "{:?}", xml_result.err());
-  let doc = xml_result.unwrap();
+  let mut doc = xml_result.unwrap();
 
   // grab the first formula
   let state = latexml.get_state_mut();

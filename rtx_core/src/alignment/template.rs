@@ -5,7 +5,7 @@ use crate::Digested;
 use crate::common::dimension::Dimension;
 
 use std::collections::VecDeque;
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Debug};
 use libxml::tree::Node;
 
 // ??
@@ -29,6 +29,29 @@ impl Align {
   }
 }
 
+/// Two axes of tabular orientation
+#[derive(Debug,Copy,Clone,PartialEq)]
+pub enum Axis {
+  Column,
+  Row
+}
+impl Axis {
+  /// The string name of a tabular axis
+  pub fn name(&self) -> &'static str {
+    match self {
+      Axis::Column => "column",
+      Axis::Row => "row",
+    }
+  }
+  /// Maybe these may have been better named as "horizontal_group" and "vertical_group" in latexml?
+  pub fn marker_name(&self) -> &'static str {
+    match self {
+      Axis::Column => "row",
+      Axis::Row => "column",
+    }
+  }
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Column {
   pub empty: bool,
@@ -48,7 +71,19 @@ pub struct Column {
   pub border_right: Option<usize>,
   pub border_top: Option<usize>,
   pub border_bottom: Option<usize>,
-  pub cell: Option<Node>
+  pub cell: Option<Node>,
+  pub thead_in_row: bool,
+  pub thead_in_column: bool,
+}
+impl Column {
+  pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
+    match side {
+      BorderSpec::Left => self.border_left,
+      BorderSpec::Right => self.border_right,
+      BorderSpec::Top => self.border_top,
+      BorderSpec::Bottom => self.border_bottom,
+    }
+  }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -63,6 +98,31 @@ pub enum ColumnSpec {
   D, // 'd'
   Graphics, // 'g'
 }
+impl ColumnSpec {
+  /// The cell comparator.
+  pub fn difference_heuristic(&self, other: &ColumnSpec) -> f64 {
+    use ColumnSpec::*;
+    match self {
+      Empty => match other {
+        Empty => 0.0, Math  => 0.05, Integer => 0.05, Text => 0.05, Unknown => 0.05, MathAltText => 0.05, _ => 0.75 },
+      Math   => match other {
+        Empty => 0.05, Math => 0.0, Integer => 0.1, MathAltText => 0.2, _ => 0.75 },
+      Integer   => match other {
+        Empty => 0.05,Math  => 0.1,  Integer  => 0.0, MathAltText => 0.2, _ => 0.75 },
+      Text => match other {
+        Empty => 0.05, Text => 0.0, MathAltText => 0.2, _ => 0.75 },
+      Unknown => match other {
+        Empty => 0.05, Unknown => 0.0,  MathAltText => 0.2, _ => 0.75 },
+      MathAltText => match other {
+        Empty => 0.05,Math  => 0.2,  Integer  => 0.2, Text => 0.2, Unknown => 0.2, MathAltText => 0.0, _ => 0.75 }
+      D => match other {
+        D => 0.0, _ => 0.75 },
+      Graphics => match other {
+        Graphics => 0.0, _ => 0.75 }
+    }
+  }
+}
+#[derive(Debug,Copy,Clone,PartialEq)]
 pub enum BorderSpec {
   Top,
   Bottom,
@@ -92,7 +152,7 @@ pub struct Template {
   reversion: Option<Tokens>,
   columns: Vec<Column>,
   current_column: Option<Column>,
-  tokens: Vec<Token>,
+  pub tokens: Vec<Token>,
   padding: Option<Dimension>,
   pub before: VecDeque<Digested>,
   pub after: VecDeque<Digested>,
@@ -222,7 +282,7 @@ impl Template {
   }
 
   pub fn get_columns(&self) -> &[Column] { &self.columns }
-  pub fn get_columns_mut(&mut self) -> &mut[Column] { &mut self.columns }
+  pub fn get_columns_mut(&mut self) -> &mut Vec<Column> { &mut self.columns }
   pub fn set_pseudo(&mut self) { self.pseudorow = true; }
   pub fn unset_pseudo(&mut self) { self.pseudorow = false; }
   pub fn is_pseudo(&self) -> bool { self.pseudorow }
