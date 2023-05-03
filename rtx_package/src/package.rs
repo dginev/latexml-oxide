@@ -15,7 +15,7 @@ pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::*;
 pub use rtx_core::aux_macros::*;
 pub use rtx_core::alignment::{Alignment,AlignmentConfig};
-pub use rtx_core::alignment::template::{Column,Template,Align};
+pub use rtx_core::alignment::template::{Cell,Template,Align};
 pub use rtx_core::common::arena::{self, EMPTY_SYM};
 pub use rtx_core::common::cleaners::*;
 pub use rtx_core::common::float::{floatformat, Float};

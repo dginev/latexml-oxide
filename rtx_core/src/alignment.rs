@@ -39,7 +39,7 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::digested::Digested;
 use crate::BoxOps;
-use self::template::{Column, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
+use self::template::{Cell, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
 
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
@@ -185,7 +185,7 @@ impl Alignment {
     }
   }
 
-  pub fn next_column(&mut self) -> Option<&mut Column> {
+  pub fn next_column(&mut self) -> Option<&mut Cell> {
     self.current_row?;
     self.current_column +=1 ;
     let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
@@ -199,7 +199,7 @@ impl Alignment {
     }
   }
 
-  pub fn last_column(&mut self) -> Option<&mut Column> {
+  pub fn last_column(&mut self) -> Option<&mut Cell> {
     if let Some(row_idx) = self.current_row {
       if let Some(row) = self.rows.get_mut(row_idx) {
         self.current_column = row.get_columns().len();
@@ -226,17 +226,17 @@ impl Alignment {
     n
   }
 
-  pub fn current_column(&mut self) -> Option<&mut Column> {
+  pub fn current_column(&mut self) -> Option<&mut Cell> {
     self.current_row.and_then(|cw| self.rows.get_mut(cw).unwrap()
       .get_column_mut(self.current_column))
   }
 
-  pub fn get_column(&mut self, n:usize) -> Option<&mut Column> {
+  pub fn get_column(&mut self, n:usize) -> Option<&mut Cell> {
     // TODO: do we need an immutable variant? For now alias the mutable one
     self.get_column_mut(n)
   }
 
-  pub fn get_column_mut(&mut self, n:usize) -> Option<&mut Column> {
+  pub fn get_column_mut(&mut self, n:usize) -> Option<&mut Cell> {
     self.current_row.and_then(|cw|
       self.rows.get_mut(cw).unwrap().get_column_mut(n)) }
 
@@ -431,7 +431,9 @@ impl Alignment {
         let mut cell_attrs = HashMap::default();
         // TODO: add to cell_attrs
         //       align   => $$cell{align}, width => $$cell{width},
-        //       vattach => $$cell{vattach},
+        if let Some(ref vattach) = cell.vattach {
+          cell_attrs.insert(String::from("vattach"), vattach.clone());
+        }
         //       ($vpad                       ? (cssstyle => "padding-bottom:" . ToString($vpad))     : ()),
         //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
         //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
@@ -787,10 +789,10 @@ pub fn parse_alignment_template(
 
 pub fn matrix_template() -> Template {
   Template::new(TemplateConfig {
-    repeated: vec![Column {
+    repeated: vec![Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
       after: Some(Tokens!(T_CS!("\\hfil"))),
-      ..Column::default()
+      ..Cell::default()
     }],
     ..TemplateConfig::default()
   })
@@ -826,6 +828,9 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
   // Flip the rows around to produce a column view.
   {
     let mut cols = collect_alignment_columns(alignment);
+    if cols.is_empty() {
+      return Ok(());
+    }
     // This usually does something unpleasant
     alignment_characterize_lines(document, Axis::Column, false,  cols.as_mut_slice(), state)?;
   }
@@ -929,7 +934,6 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut Sta
 //======================================================================
 /// Setup a View of the alignment, with characterized cells, for analysis -- modifying it in place.
 fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, state: &mut State) {
-  let nrows = alignment.rows.len();
   let mut ncols = 0;
   for arow in &mut alignment.rows {
     let n = arow.get_columns().len();
@@ -981,12 +985,12 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
     let to_pad = ncols - this_row_len;
     if to_pad > 0 {
       for _ in 0..to_pad {
-        let col = Column {
+        let col = Cell {
           align: Some(Align::Center),
           cell_type: Some('d'),
           content_class: Some(ColumnSpec::Empty),
           content_length: Some(0),
-          .. Column::default()
+          .. Cell::default()
         };
         cols.push(col);
       }
@@ -1050,12 +1054,12 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
   //           . (($$col{colspan} || 1) > 1 ? " colspan=" . $$col{colspan} : '')); } } }
 }
 
-fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Column>> {
+fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
   alignment.rows.iter_mut().map(|x| x.get_columns_mut().iter_mut()
     .collect()).collect()
 }
 
-fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Column>> {
+fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
   let mut columns = Vec::new();
   let mut row_cells : Vec<_> = alignment.rows.iter_mut().map(|r| r.get_columns_mut().iter_mut()).collect();
   for _ in 0..row_cells[0].len() {
@@ -1176,7 +1180,7 @@ const MAX_ALIGNMENT_HEADER_LINES : usize = 4; // [CONSTANT]
 // Check that header lines are `similar' to each other.  So, the strategy is to look
 // for a `hump' in the line differences and consider blocks containing these lines to be potential headers.
 
-fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool, lines: &mut [Vec<&mut Column>], state:&State) -> Result<()> {
+fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool, lines: &mut [Vec<&mut Cell>], state:&State) -> Result<()> {
   let n = lines.len();
   if n<2 {
     return Ok(());
@@ -1234,7 +1238,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   // The sets of lines 1--$minh, .. 1--$maxh are potential headers.
   for nh in (minh..=maxh).rev() {
     // Check whether the set 1..$nh is plausable.
-    let heads = alignment_test_headers(nh, lines);
+    let heads = alignment_test_headers(nh, tab_threshold, axis, lines);
     if !heads.is_empty()  {
       // Now, change all cells marked as header from td => th.
       for h in heads {
@@ -1259,75 +1263,142 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
 }
 
 /// Test whether `nhead` lines makes a good fit for the headers
-fn alignment_test_headers(nhead:usize, lines:&mut [Vec<&mut Column>]) -> Vec<usize> {
+fn alignment_test_headers(nhead:usize, tab_threshold:f64, axis: Axis, lines:&mut [Vec<&mut Cell>]) -> Vec<usize> {
   // Debug("Testing $nhead headers") if $LaTeXML::DEBUG{alignment};
-  let (mut head_length, mut data_length) = (0, 0);
-  let heads : Vec<usize> = (0 .. nhead).collect(); // The indices of heading lines.
-  let head_length = alignment_max_content_length(head_length, 0, nhead - 1, lines);
-  let next_line = nhead; // Start from the end of the proposed headings.
+  let mut heads : Vec<usize> = (0 .. nhead).collect(); // The indices of heading lines.
+  let mut head_length = alignment_max_content_length(0, 0, nhead - 1, lines);
+  let mut next_line = nhead; // Start from the end of the proposed headings.
 
   // Watch out for the assumed header being really data that is a repeated pattern.
   let nrep = lines.len() / nhead;
   if nhead > 1 {
-  //   Debug("Check for apparent header repeated $nrep times") if $LaTeXML::DEBUG{alignment};
-  //   my $matched = 1;
-  //   for (my $r = 1 ; $r < $nrep ; $r++) {
-  //     $matched &&= alignment_match_head(0, $r * $nhead, $nhead); }
+    //   Debug("Check for apparent header repeated $nrep times") if $LaTeXML::DEBUG{alignment};
+    let mut matched = true;
+      for r in 1..nrep {
+        matched = matched && alignment_match_head(0, r * nhead, nhead, tab_threshold, axis, lines)>0;
+      }
   //   Debug("Repeated headers: " . ($matched ? "Matched=> Fail" : "Nomatch => Succeed"))
   //     if $LaTeXML::DEBUG{alignment};
-  //   return if $matched;
+    if matched {
+      return Vec::new()
+    }
   }
 
-  // # And find a following grouping of data lines.
-  // my $ndata = alignment_skip_data($nextline);
-  // return if $ndata < $nhead;                     # ???? Well, maybe if _really_ convincing???
-  // return if ($ndata < $nhead) && ($ndata < 2);
-  // # Check that the content of the headers isn't dramatically larger than the content in the data
-  // $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $ndata - 1);
-  // $nextline += $ndata;
+  // And find a following grouping of data lines.
+  let ndata = alignment_skip_data(next_line, tab_threshold, axis, lines);
+  if ndata < nhead {// ???? Well, maybe if _really_ convincing???
+    return Vec::new();
+  }
+  if (ndata < nhead) && (ndata < 2) {
+    return Vec::new();
+  }
+  // Check that the content of the headers isn't dramatically larger than the content in the data
+  let mut data_length = alignment_max_content_length(0, next_line, next_line + ndata - 1, lines);
+  next_line += ndata;
 
-  // my $nd;
-  // # If there are more lines, they should match either the previous data block, or the head/data pattern.
-  // while ($nextline < lines.len()) {
-  //   # First try to match a repeat of the 1st data block;
-  //   # This would be the case when groups of data have borders around them.
-  //   # Could want to match a variable number of datalines, but they should be similar!!!??!?!?
-  //   if (($ndata > 1) && ($nd = alignment_match_data($nhead, $nextline, $ndata))) {
-  //     $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $nd - 1);
-  //     $nextline += $nd; }
-  //   # Else, try to match the first header block; less common.
-  //   elsif (alignment_match_head(0, $nextline, $nhead)) {
-  //     push(@heads, $nextline .. $nextline + $nhead - 1);
-  //     $head_length = alignment_max_content_length($head_length, $nextline, $nextline + $nhead - 1);
-  //     $nextline += $nhead;
-  //     # Then attempt to match a new data block.
-  //     #      my $d = alignment_skip_data($nextline);
-  //     #      return unless ($d >= $nhead) || ($d >= 2);
-  //     #      $nextline += $d; }
-  //     # No, better be the same data block?
-  //     return unless ($nd = alignment_match_data($nhead, $nextline, $ndata));
-  //     $data_length = alignment_max_content_length($data_length, $nextline, $nextline + $nd - 1);
-  //     $nextline += $nd; }
-  //   else { return; } }
-  // // Header content seems too large relative to data?
+  let mut nd = 0;
+  let max_n = lines.len();
+  // If there are more lines, they should match either the previous data block, or the head/data pattern.
+  while next_line < max_n {
+    // First try to match a repeat of the 1st data block;
+    // This would be the case when groups of data have borders around them.
+    // Could want to match a variable number of datalines, but they should be similar!!!??!?!?
+    nd = if ndata > 1 {
+      alignment_match_data(nhead, next_line, ndata, tab_threshold, axis, lines)
+    } else { 0 };
+    if nd > 0 {
+      data_length = alignment_max_content_length(data_length, next_line, next_line + nd - 1, lines);
+      next_line += nd;
+    }
+    // Else, try to match the first header block; less common.
+    else if alignment_match_head(0, next_line, nhead, tab_threshold, axis, lines) > 0 {
+      for idx in next_line .. next_line + nhead {
+        heads.push(idx);
+      }
+      head_length = alignment_max_content_length(head_length, next_line, next_line + nhead -1, lines);
+      next_line += nhead;
+      nd = alignment_match_data(nhead, next_line, ndata, tab_threshold, axis, lines);
+      if nd == 0 {
+        return Vec::new();
+      }
+      data_length = alignment_max_content_length(data_length, next_line, next_line + nd - 1, lines);
+      next_line += nd;
+    }
+    else { return Vec::new(); }
+  }
+  // Header content seems too large relative to data?
   // Debug("header content = $head_length; data content = $data_length")
   //   if $LaTeXML::DEBUG{alignment};
-  // if (($head_length > 10) && (0.25 * $head_length > $data_length)) {
+  if (head_length > 10) && (head_length > 4*data_length) {
   //   Debug("header content too much longer than data content")
   //     if $LaTeXML::DEBUG{alignment};
-  //   return; }
-  // // Or if a header cell has "large" content?
-  // if ($head_length >= 1000) {    # Or if a header cell has "large" content?
+    return Vec::new();
+  }
+  // Or if a header cell has "large" content?
+  if head_length >= 1000 { // Or if a header cell has "large" content?
   //   Debug("header content too large")
   //     if $LaTeXML::DEBUG{alignment};
-  //   return; }
+    return Vec::new();
+  }
 
   // Debug("Succeeded with $nhead headers") if $LaTeXML::DEBUG{alignment};
   heads
 }
 
+fn alignment_match_head(p1:usize, p2:usize, nhead:usize, tab_threshold: f64, axis: Axis, tablines: &mut [Vec<&mut Cell>]) -> usize {
+  let nh = alignment_match_lines(p1, p2, nhead, tab_threshold, axis, tablines);
+  let ok = nhead == nh;
+  // Debug("Matched $nh header lines => " . ($ok ? "Succeed" : "Failed")) if $LaTeXML::DEBUG{alignment};
+  if ok { nhead } else { 0 }
+}
+
+fn alignment_match_data(p1:usize, p2:usize, n:usize, tab_threshold:f64, axis: Axis, tablines: &mut [Vec<&mut Cell>]) -> usize {
+  let nd = alignment_match_lines(p1, p2, n, tab_threshold, axis, tablines);
+  let ok = (nd as f64 * 1.0) / n as f64 > 0.66;
+//   Debug("Matched $nd data lines => " . ($ok ? "Succeed" : "Failed"))
+//     if $LaTeXML::DEBUG{alignment};
+  if ok { nd } else { 0 }
+}
+
+// Match the $n lines starting at $i2 to those starting at $i1.
+fn alignment_match_lines(p1:usize, p2:usize, n:usize, tab_threshold:f64, axis: Axis, tablines: &mut [Vec<&mut Cell>]) -> usize {
+  let max_n = tablines.len();
+  for i in 0..n {
+    if (p1 + i >= max_n) || (p2 + i >= max_n)
+      || alignment_compare(axis, false, false, p1 + i, p2 + i, tablines) >= tab_threshold {
+      return i;
+    }
+  }
+  n
+}
+
+/// Skip through a block of lines starting at $i that appear to be data, returning the number of lines.
+/// We'll assume the 1st line is data, compare it to following lines,
+/// but also accept `continuation' data lines.
+fn alignment_skip_data(i:usize, tab_threshold:f64, axis:Axis, tablines: &mut [Vec<&mut Cell>]) -> usize {
+  if i > tablines.len() {
+    return 0;
+  }
+  //   Debug("Scanning for data") if $LaTeXML::DEBUG{alignment};
+  let mut n = 1;
+  let max_n = tablines.len() - i;
+  while n < max_n {
+    if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold
+      && n < 2 || (tablines[i + n].iter().filter(|c|
+        matches!(c.content_class, Some(ColumnSpec::Empty))).count() as f64 <= 0.4 * tablines[0].len() as f64)
+    {
+      break;
+    }
+    // Accept an outlying `continuation line' as data, if mostly empty
+    n+=1;
+  }
+  //   Debug("Found $n data lines at $i") if $LaTeXML::DEBUG{alignment};
+  if n >= MIN_ALIGNMENT_DATA_LINES  { n } else { 0 }
+}
+
+
 /// Return the maximum "content length" for lines from $from to $to.
-fn alignment_max_content_length(mut length: usize, from:usize, to:usize, tablines: &mut [Vec<&mut Column>]) -> usize {
+fn alignment_max_content_length(mut length: usize, from:usize, to:usize, tablines: &mut [Vec<&mut Cell>]) -> usize {
   for item in tablines.iter().take(to + 1).skip(from) {
     let mut l = 0;
     for cell in item.iter() {
@@ -1347,7 +1418,7 @@ fn alignment_max_content_length(mut length: usize, from:usize, to:usize, tabline
 /// The borders are compared differently if
 ///  `for_adjacency`: we adjacent lines that might belong to the same block,
 ///  otherwise    : comparing two lines that ought to have identical patterns (eg. in a repeated block)
-fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2:usize, lines: &mut [Vec<&mut Column>]) -> f64 {
+fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2:usize, lines: &mut [Vec<&mut Cell>]) -> f64 {
   let line1 = &lines[p1];
   let line2 = &lines[p2];
   if line1.is_empty() && line2.is_empty() {
