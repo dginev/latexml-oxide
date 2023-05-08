@@ -104,7 +104,7 @@ impl Alignment {
   ///    closeRow       = closes the row
   ///    openColumn     = sub($doc,%attrib); creates the column element with given attributes
   ///    closeColumn    = closes the column
-  ///    attributes = hashref containing extra attributes for the container element.
+  ///    properties = hashref containing extra attributes for the container element.
   pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
     Alignment {
@@ -193,8 +193,11 @@ impl Alignment {
       Some(colspec)
     } else {
       Error!("unexpected", "&", None, None, "Extra alignment tab '&'");
-      // current_row.add_column(Column{align: Some(Align::Center),..Column::default()});
-      // let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
+      // DG: Mutability issue, should we do an alternative recovery?
+      //     or change the call interface?
+      //
+      // let fallback_cell = Cell{align: Some(Align::Center),..Cell::default()};
+      // current_row.add_column(fallback_cell);
       None
     }
   }
@@ -217,13 +220,7 @@ impl Alignment {
   }
 
   pub fn current_row_number(&self) -> usize {
-    let mut n = 0;
-    for row in &self.rows {
-      if !row.is_pseudo() {
-        n+=1;
-      }
-    }
-    n
+    self.rows.iter().filter(|row| !row.is_pseudo()).count()
   }
 
   pub fn current_column(&mut self) -> Option<&mut Cell> {
@@ -388,7 +385,7 @@ impl Alignment {
       } else {
         HashMap::default()
       };
-    let open_attrs = attrs.clone();
+    let open_attrs = attrs;
     // TODO:
     // open_attrs.insert("cwidth", self.cwidth);
     // open_attrs.insert("cheight", self.cheight);
@@ -399,7 +396,7 @@ impl Alignment {
     open_container_fn(document, open_attrs, state)?;
 
     for row in rows {
-      let vpad = row.get_padding();
+      let vpad_opt = row.get_padding().copied();
       //     # Which properties do we expose to the constructor?
       let open_row_attrs = HashMap::default();
       //     "xml:id" => $$row{id}, tags => $$row{tags},
@@ -429,12 +426,17 @@ impl Alignment {
         let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
-        // TODO: add to cell_attrs
-        //       align   => $$cell{align}, width => $$cell{width},
+        if let Some(align) = cell.align {
+          cell_attrs.insert(String::from("align"), align.name().to_owned());
+        };
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());
         }
-        //       ($vpad                       ? (cssstyle => "padding-bottom:" . ToString($vpad))     : ()),
+        // TODO: add to cell_attrs
+        //  width => $$cell{width},
+        if let Some(vpad) = vpad_opt {
+          cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
+        }
         //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
         //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
         if !border.is_empty() { cell_attrs.insert(String::from("border"), border); }
@@ -550,8 +552,8 @@ impl Alignment {
         if let Some(boxes) = &cell.boxes {
           let (w, h, d) //, cw, ch, cd)
             = boxes.get_size(Some(stored_map!(
-              "align" => cell.align.map(|a| a.char_code()), "width" => cell.width//, "vattach" => cell.vattach
-              )), state)?;
+              "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
+              "vattach" => cell.vattach.clone() )), state)?;
           // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width vattach))
           //     . ") size " . showSize($w,  $h,  $d)
           //     . " csize " . showSize($cw, $ch, $cd)
@@ -630,7 +632,7 @@ impl Alignment {
         let mut prev_opt = filtered.back_mut();
     //     my $nc   = scalar(@{ $$row{columns} });
         let (mut pruneh, mut pruned) = (0, 0);
-        for (j,col) in row.get_columns().into_iter().enumerate() {
+        for (j,col) in row.get_columns().iter().enumerate() {
           // TODO:
           //  $pruneh = max($pruneh, $$col{cheight}->valueOf) if $$col{cheight};
           //  $pruned = max($pruned, $$col{cdepth}->valueOf)  if $$col{cdepth};
@@ -664,7 +666,112 @@ impl Alignment {
   /// Scan for and remove empty columns
   /// but copying borders and adjusting rowspan's & colspan's appropriately.
   pub fn normalize_prune_columns(&mut self) -> Result<()> {Ok(())}
-  pub fn normalize_sum_sizes(&mut self) -> Result<()> {Ok(())}
+  pub fn normalize_sum_sizes(&mut self) -> Result<()> {
+    // let mut rowheights = Vec::new();
+    // let mut colwidths  = Vec::new();
+    // let mut colrights  = Vec::new();
+    // let mut collefts   = Vec::new();
+    // # Uses cell's cwidth,cheight,cdepth
+    // # Computes net row & column sizes & positions
+    // # add spacing between rows? Or only from \\[..] ?
+    // my $strut = $self->getProperty('strut') || Dimension(0);
+    // my $hs    = $strut->multiply(0.7);
+    // my $ds    = $strut->multiply(0.3);
+    // my @rows  = @{ $$self{rows} };
+    // my $nrows = scalar(@rows);
+
+    // for (my $i = 0 ; $i < $nrows ; $i++) {
+    //   my $row   = $rows[$i];
+    //   my @cols  = @{ $$row{columns} };
+    //   my $ncols = scalar(@cols);
+    //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
+    //     push(@colwidths, map { 0 } 1 .. $short);
+    //     push(@collefts,  map { 0 } 1 .. $short);
+    //     push(@colrights, map { 0 } 1 .. $short); }
+    //   my ($rowh, $rowd) = (0, 0);
+    //   my ($rowt, $rowb) = (($$row{tpadding} ? $$row{tpadding}->valueOf : 0),
+    //     ($$row{bpadding} ? $$row{bpadding}->valueOf : 0));
+    //   for (my $j = 0 ; $j < $ncols ; $j++) {
+    //     my $cell = $cols[$j];
+    //     next if $$cell{skipped};
+    //     next unless $$cell{boxes};
+    //     my $w = $$cell{cwidth};
+    //     my $h = $$cell{cheight};
+    //     my $d = $$cell{cdepth};
+    //     my $t = $$cell{tpadding};
+    //     my $b = $$cell{bpadding};
+    //     my $r = $$cell{rpadding};
+    //     my $l = $$cell{lpadding};
+
+    //     if (($$cell{colspan} || 1) == 1) {
+    //       $colwidths[$j] = max($colwidths[$j], $w->valueOf) if $w;
+    //       $collefts[$j]  = max($collefts[$j],  $l->valueOf) if $l;
+    //       $colrights[$j] = max($colrights[$j], $r->valueOf) if $r; }
+    //     if (($$cell{rowspan} || 1) == 1) {
+    //       $rowh = max($rowh, $h->valueOf) if $h;
+    //       $rowd = max($rowd, $d->valueOf) if $d;
+    //       $rowt = max($rowt, $t->valueOf) if $t;
+    //       $rowb = max($rowb, $b->valueOf) if $b; }
+    //     else { }    # Ditto spanned rows
+    //   }
+    //   $$row{cheight}  = Dimension($rowh)->larger($hs);
+    //   $$row{cdepth}   = Dimension($rowd)->larger($ds);
+    //   $$row{tpadding} = Dimension($rowt);
+    //   $$row{bpadding} = Dimension($rowb);
+    //   # NOTE: Should be storing column widths to; individually, as well as per-column!
+    //   push(@rowheights, $rowh + $rowd); }    # somehow our heights are way too short????
+    // ## Now compute the positions
+    // my @rowpos = ();
+    // my @colpos = ();
+    // my $y      = 0;
+    // # Row & column positions: left,top
+    // for (my $i = 0 ; $i < scalar(@rowheights) ; $i++) {
+    //   my $row = $rows[$i];
+    //   $y += $$row{tpadding}->valueOf if $$row{tpadding};
+    //   $rowpos[$i] = Dimension($y);
+    //   $y += $$row{cheight}->valueOf  if $$row{cheight};
+    //   $y += $$row{cdepth}->valueOf   if $$row{cdepth};
+    //   $y += $$row{bpadding}->valueOf if $$row{bpadding}; }
+    // my $x = 0;
+    // for (my $j = 0 ; $j < scalar(@colwidths) ; $j++) {
+    //   $x += $collefts[$j];
+    //   $colpos[$j] = Dimension($x);
+    //   $x += $colwidths[$j];
+    //   $x += $colrights[$j]; }
+    // $$self{cwidth}       = Dimension($x);
+    // $$self{cheight}      = Dimension($y);    # or account for vertical position of array as a whole?
+    // $$self{cdepth}       = Dimension(0);
+    // @colwidths           = map { Dimension($_); } @colwidths;
+    // @rowheights          = map { Dimension($_); } @rowheights;
+    // $$self{columnwidths} = [@colwidths];
+    // $$self{rowheights}   = [@rowheights];
+
+    // for (my $i = 0 ; $i < scalar(@rowheights) ; $i++) {
+    //   my $row   = $rows[$i];
+    //   my @cols  = @{ $$row{columns} };
+    //   my $ncols = scalar(@cols);
+    //   $$row{x}      = $colpos[0]; $$row{y} = $rowpos[$i];
+    //   $$row{cwidth} = Dimension($x);
+    //   for (my $j = 0 ; $j < $ncols ; $j++) {
+    //     my $cell = $cols[$j];
+    //     my $colx = $colpos[$j];
+    //     my $a    = $$cell{align} || 'left';
+    //     # Adjust position according to alignment
+    //     if ($colwidths[$j] && $$cell{cwidth} && ($a ne 'left')) {    # If these are defined
+    //       my $dx = $colwidths[$j]->subtract($$cell{cwidth});
+    //       if    ($a eq 'center') { $colx = $colx->add($dx->multiply(0.5)); }
+    //       elsif ($a eq 'right')  { $colx = $colx->add($dx); } }
+    //     $$cell{x} = $colx;
+    //     $$cell{y} = $rowpos[$i];
+    //     Debug("CELL[$j,$i] " . showSize($$cell{cwidth}, $$cell{cheight}, $$cell{cdepth})
+    //         . " @ " . ToString($$cell{x}) . "," . ToString($$cell{y})
+    //         . " w/ " . join(',', map { $_ . '=' . ToString($$cell{$_}); }
+    //           (qw(align vattach skipped colspan rowspan))))
+    //       if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
+    // } }
+
+    Ok(())
+  }
 
 
   pub fn compute_size(
@@ -673,6 +780,10 @@ impl Alignment {
     _state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok((Dimension::new(0),Dimension::new(0),Dimension::new(0)))
+  }
+
+  pub fn get_properties_mut(&mut self) -> &mut HashMap<String,Stored> {
+    &mut self.properties
   }
 }
 
@@ -687,7 +798,7 @@ impl Object for Alignment {
 
 impl Debug for Alignment {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Alignment[TODO]")
+    write!(f, "Alignment{{template:{:?}, properties:{:?}, rows:{:?} }}", self.template, self.properties, self.rows)
   }
 }
 
@@ -941,6 +1052,7 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
       ncols = n;
     }
   }
+  let (mut h, mut v) = (false,false);
   for arow in &mut alignment.rows {
     let cols = arow.get_columns_mut();
     let this_row_len = cols.len();
@@ -966,8 +1078,8 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
           _ => {}// spaces etc.
         }
       }
-      let h =  border_top>0 || border_bottom>0;
-      let v = border_right > 0 || border_left > 0;
+      h =  (border_top > 0) || (border_bottom > 0);
+      v = (border_right > 0) || (border_left > 0);
       if border_top > 0 {
         col.border_top = Some(border_top);
       }
@@ -996,62 +1108,92 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
       }
     }
   }
-  // # copy the characterizations to spanned cells
-  // for (my $r = 0 ; $r < $nrows ; $r++) {
-  //   for (my $c = 0 ; $c < $ncols ; $c++) {
-  //     my $rs = $rows[$r][$c]{rowspan} || 1;
-  //     my $cs = $rows[$r][$c]{colspan} || 1;
-  //     my $ca = $rows[$r][$c]{align};
-  //     my $cc = $rows[$r][$c]{content_class};
-  //     my $cl = $rows[$r][$c]{content_length};
-  //     my $rb = $rows[$r][$c]{r}; $rows[$r][$c]{r} = 0;
-  //     my $bb = $rows[$r][$c]{b}; $rows[$r][$c]{b} = 0;
-  //     for (my $sc = 1 ; $sc < $cs ; $sc++) {
-  //       $rows[$r][$c + $sc]{align}          = $ca;
-  //       $rows[$r][$c + $sc]{content_class}  = $cc;
-  //       $rows[$r][$c + $sc]{content_length} = $cl; }
-  //     for (my $sr = 1 ; $sr < $rs ; $sr++) {
-  //       for (my $sc = 0 ; $sc < $cs ; $sc++) {
-  //         $rows[$r + $sr][$c + $sc]{align}          = $ca;
-  //         $rows[$r + $sr][$c + $sc]{content_class}  = $cc;
-  //         $rows[$r + $sr][$c + $sc]{content_length} = $cl; } }
-  //     # move the outer borders
-  //     for (my $sr = 0 ; $sr < $rs ; $sr++) {
-  //       $rows[$r + $sr][$c + $cs - 1]{r} = $rb; }
-  //     for (my $sc = 0 ; $sc < $cs ; $sc++) {
-  //       $rows[$r + $rs - 1][$c + $sc]{b} = $bb; }
-  // } }
+  // copy the characterizations to spanned cells
+  for (r, row) in alignment.rows.iter_mut().enumerate() {
+    let cols = row.get_columns_mut();
+    for c in 0 .. cols.len() {
+      let rs = cols[c].rowspan.unwrap_or(1);
+      let cs = cols[c].colspan.unwrap_or(1);
+      if cs > 1 || rs > 1 {
+        let ca = cols[c].align;
+        let cc = cols[c].content_class;
+        let cl = cols[c].content_length;
+        let rb = cols[c].border_right;
 
-  // # Now, do some border massaging...
-  // for (my $r = 0 ; $r < $nrows ; $r++) {
-  //   $rows[$r][0]{l}          = $v;
-  //   $rows[$r][0]{r}          = $rows[$r][1]{l}          if ($ncols > 1) && $rows[$r][1]{l};
-  //   $rows[$r][$ncols - 1]{l} = $rows[$r][$ncols - 2]{r} if ($ncols > 1) && $rows[$r][$ncols - 2]{r};
-  //   $rows[$r][$ncols - 1]{r} = $v; }
-  // for (my $c = 0 ; $c < $ncols ; $c++) {
-  //   $rows[0][$c]{t}          = $h;
-  //   $rows[0][$c]{b}          = $rows[1][$c]{t}          if ($nrows > 1) && $rows[1][$c]{t};
-  //   $rows[$nrows - 1][$c]{t} = $rows[$nrows - 2][$c]{b} if ($nrows > 1) && $rows[$nrows - 2][$c]{b};
-  //   $rows[$nrows - 1][$c]{b} = $h; }
-  // for (my $r = 1 ; $r < $nrows - 1 ; $r++) {
-  //   for (my $c = 1 ; $c < $ncols - 1 ; $c++) {
-  //     $rows[$r][$c]{t} = $rows[$r - 1][$c]{b} if $rows[$r - 1][$c]{b};
-  //     $rows[$r][$c]{b} = $rows[$r + 1][$c]{t} if $rows[$r + 1][$c]{t};
-  //     $rows[$r][$c]{l} = $rows[$r][$c - 1]{r} if $rows[$r][$c - 1]{r};
-  //     $rows[$r][$c]{r} = $rows[$r][$c + 1]{l} if $rows[$r][$c + 1]{l}; } }
+        cols[c].border_right = Some(0);
+        let bb = cols[c].border_bottom;
+        cols[c].border_bottom = Some(0);
+        for idx in c+1 .. c+cs {
+          let mut row_reach = &mut cols[idx];
+          row_reach.align          = ca;
+          row_reach.content_class  = cc;
+          row_reach.content_length = cl;
+        }
+        unimplemented!();
+        // for irow_idx in r+1 .. r+rs {
+        //   let mut irow = &mut alignment.rows[irow_idx];
+        //   let mut icols = irow.get_columns_mut();
+        //   for icol_idx in c .. c+cs {
+        //     let icol = &mut icols[icol_idx];
+        //     icol.align          = ca;
+        //     icol.content_class  = cc;
+        //     icol.content_length = cl;
+        //   }
+        // }
+
+        //     # move the outer borders
+        //     for (my $sr = 0 ; $sr < $rs ; $sr++) {
+        //       $rows[$r + $sr][$c + $cs - 1]{r} = $rb; }
+        //     for (my $sc = 0 ; $sc < $cs ; $sc++) {
+        //       $rows[$r + $rs - 1][$c + $sc]{b} = $bb; }
+      }
+    }
+  }
+
+  // Now, do some border massaging...
+  let nrows = alignment.rows.len();
+  for row in alignment.rows.iter_mut() {
+    let cols = row.get_columns_mut();
+    cols[0].border_left = Some(if v { 1 } else { 0 });
+    if ncols > 1 && cols[1].border_left.unwrap_or(0) > 0 {
+      cols[0].border_right = cols[1].border_left;
+    }
+    if (ncols > 1) && cols[ncols - 2].border_right.unwrap_or(0) > 0 {
+      cols[ncols - 1].border_left = cols[ncols - 2].border_right;
+    }
+    cols[ncols - 1].border_right = Some(if v { 1 } else { 0 });
+  }
+  for c in 0 .. ncols {
+    alignment.rows[0].get_column_mut(1+c).unwrap().border_top = Some(if h {1}else{0});
+    if nrows > 1 {
+      if let Some(bt) = alignment.rows[1].get_column_mut(1+c).unwrap().border_top {
+        alignment.rows[0].get_column_mut(1+c).unwrap().border_bottom = Some(bt);
+      }
+      if let Some(bb) = alignment.rows[nrows - 2].get_column_mut(1+c).unwrap().border_bottom {
+        alignment.rows[nrows - 1].get_column_mut(1+c).unwrap().border_top = Some(bb);
+      }
+    }
+    alignment.rows[nrows - 1].get_column_mut(1+c).unwrap().border_bottom = Some(if h {1} else{0});
+  }
+  // the constant array access *HAS* to be inefficient, but how do we avoid it without encountering
+  // the wrath of the Rust compiler? Mutability conflicts galore here if any &mut lives long enough.
+  for r in 1 .. nrows-1 {
+    for c in 1 .. ncols - 1 {
+      if let Some(bb) = alignment.rows[r - 1].get_column_mut(c+1).unwrap().border_bottom {
+        alignment.rows[r].get_column_mut(1+c).unwrap().border_top = Some(bb);
+      }
+      if let Some(bt) = alignment.rows[r + 1].get_column_mut(c+1).unwrap().border_top {
+        alignment.rows[r].get_column_mut(1+c).unwrap().border_bottom = Some(bt);
+      }
+      if let Some(br) = alignment.rows[r].get_column_mut(c).unwrap().border_right {
+        alignment.rows[r].get_column_mut(1+c).unwrap().border_left = Some(br);
+      }
+      if let Some(bl) = alignment.rows[r].get_column_mut(c + 2).unwrap().border_left {
+        alignment.rows[r].get_column_mut(1+c).unwrap().border_right = Some(bl);
+      }
+    }
+  }
   //
-  // if ($LaTeXML::DEBUG{alignment}) {
-  //   Debug("Cell characterizations:");
-  //   for (my $r = 0 ; $r < $nrows ; $r++) {
-  //     for (my $c = 0 ; $c < $ncols ; $c++) {
-  //       my $col = $rows[$r][$c];
-  //       Debug("[$r,$c]=>" . ($$col{cell_type} || '?')
-  //           . ($$col{align} ? $ALIGNMENT_CODE{ $$col{align} } : ' ')
-  //           . ($$col{content_class} || '?')
-  //           . ' ' . $$col{content_length}
-  //           . ' ' . $$col{border} . "=>" . join('', grep { $$col{$_} } qw(t r b l))
-  //           . (($$col{rowspan} || 1) > 1 ? " rowspan=" . $$col{rowspan} : '')
-  //           . (($$col{colspan} || 1) > 1 ? " colspan=" . $$col{colspan} : '')); } } }
 }
 
 fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
@@ -1296,10 +1438,9 @@ fn alignment_test_headers(nhead:usize, tab_threshold:f64, axis: Axis, lines:&mut
   let mut data_length = alignment_max_content_length(0, next_line, next_line + ndata - 1, lines);
   next_line += ndata;
 
-  let mut nd = 0;
-  let max_n = lines.len();
+  let mut nd;
   // If there are more lines, they should match either the previous data block, or the head/data pattern.
-  while next_line < max_n {
+  while next_line < lines.len() {
     // First try to match a repeat of the 1st data block;
     // This would be the case when groups of data have borders around them.
     // Could want to match a variable number of datalines, but they should be similar!!!??!?!?
@@ -1419,6 +1560,10 @@ fn alignment_max_content_length(mut length: usize, from:usize, to:usize, tabline
 ///  `for_adjacency`: we adjacent lines that might belong to the same block,
 ///  otherwise    : comparing two lines that ought to have identical patterns (eg. in a repeated block)
 fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2:usize, lines: &mut [Vec<&mut Cell>]) -> f64 {
+  let max_guard = lines.len();
+  if p1>=max_guard || p2 >= max_guard {
+    return 0.0;
+  }
   let line1 = &lines[p1];
   let line2 = &lines[p2];
   if line1.is_empty() && line2.is_empty() {

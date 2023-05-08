@@ -232,7 +232,7 @@ impl Gullet {
         }
         match pushback_token.get_catcode() {
           Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
-          Catcode::MARKER => unimplemented!(),
+          Catcode::MARKER =>  handle_marker(pushback_token, state),
           _ => {
             next_token = Some(pushback_token);
             break;
@@ -244,7 +244,7 @@ impl Gullet {
         while let Some(token) = runtime.mouth.read_token(state) {
           match token.get_catcode() {
             Catcode::COMMENT => self.pending_comments.push_back(token),
-            Catcode::MARKER => unimplemented!(),
+            Catcode::MARKER => handle_marker(token, state),
             _ => {
               next_token = Some(token);
               break;
@@ -266,7 +266,7 @@ impl Gullet {
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref nextt) = next_token {
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
-        if (state.align_group_count() > 0) && state.has_reading_alignment() {
+        if (state.align_group_count() == 0) && state.has_reading_alignment() {
           if let Some((atoken, atype, ahidden)) = is_column_end(nextt,state) {
             let reading_alignment = state.get_reading_alignment().unwrap();
             if let DigestedData::Alignment(data) = reading_alignment.data() {
@@ -353,45 +353,52 @@ impl Gullet {
         }
       }
       //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
-      match next_token {
-        None => {
-          if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
-            return Ok(None);
+      if next_token.is_none() {
+        if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
+          return Ok(None);
+        }
+        self.close_mouth(false, state)?; // Next input stream.
+        continue;
+      }
+      // we got a token
+      // -- check if smuggled for \the
+      let mut token = next_token.unwrap();
+      if token.has_smuggled() {
+        if token.get_catcode() != Catcode::SmuggleTHE || state.get_smuggle_the() {
+          return Ok(Some(token));
+        } else {
+          return Ok(token.take_smuggled().map(|t| *t));
+        }
+      }
+      if token.get_catcode().is_active_or_cs() {
+        if let Some(defn) = state.lookup_definition(&token) {
+          if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
+            // is this the right logic here? don't expand unless digesting?
+            state.set_current_token(token);
+            let result =
+            self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
+            state.expire_current_token();
+            return result;
           }
-          self.close_mouth(false, state)?; // Next input stream.
-          continue;
-        },
-        Some(mut token) => {
-          if token.has_smuggled() {
-            if token.get_catcode() != Catcode::SmuggleTHE || state.get_smuggle_the() {
-              return Ok(Some(token));
-            } else {
-              return Ok(token.take_smuggled().map(|t| *t));
-            }
-          } else {
-            // refactoring a very tricky perl if, so for now this looks awkward
-            // maybe we can refactor?
-            if token.get_catcode().is_active_or_cs() {
-              if let Some(defn) = state.lookup_definition(&token) {
-                if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
-                  // is this the right logic here? don't expand unless digesting?
-                  state.set_current_token(token);
-                  let result =
-                    self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
-                  state.expire_current_token();
-                  return result;
-                }
-              }
-            }
-            // TODO: ## Wow!!!!! See TeX the Program \S 309
-            if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
-              return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by
-                                                                         // now; report early!
-            } else {
-              return Ok(Some(token));
-            }
-          }
-        },
+        }
+      }
+      // --
+      // Wow!!!!! See TeX the Program \S 309
+      // SHOULD count nesting of { }!!! when SCANNED (not digested)
+      let check_alignment_data = if (state.align_group_count() == 0) && state.has_reading_alignment() {
+        if let Some((_atoken, atype, ahidden)) = is_column_end(&token,state) {
+          let reading_alignment = state.get_reading_alignment().unwrap();
+          Some((reading_alignment, atype, ahidden))
+        } else { None } } else { None };
+      // And *then* continue the main loop checks
+      if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
+        if let DigestedData::Alignment(data) = reading_alignment.data() {
+          self.handle_template(data.borrow_mut(), token, atype, ahidden, state)?;
+        } else { panic!("malformed alignmed was stored?"); }
+      } else if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
+        return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
+      } else {
+        return Ok(Some(token));
       }
     }
   }
@@ -1547,4 +1554,17 @@ pub fn is_column_end(token: &Token, state:&State) -> Option<(Token, &'static str
   }
 }
 
-fn handle_marker(marker_token: Token, state: &State) {}
+fn handle_marker(marker_token: Token, state: &mut State) {
+  marker_token.with_str(|arg| match arg {
+    "before-column" => { // Were in before-column template
+      // let alignment = state.lookup_alignment();
+      // Debug("Halign $alignment: alignment state => 0") if $LaTeXML::DEBUG{halign};
+      state.set_align_group_count(0);
+    }, // switch to column proper!
+    "after-column" => {     // Were in before-column template
+      // let alignment = state.lookup_alignment();
+      // Debug("Halign $alignment: alignment state: after column") if $LaTeXML::DEBUG{halign};
+    }
+    _ => {}
+  } );
+}

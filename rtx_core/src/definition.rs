@@ -244,6 +244,7 @@ pub trait Definition: Object {
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
+  fn is_token(&self) -> bool { false }
 
   fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>>
   where Self: Sized {
