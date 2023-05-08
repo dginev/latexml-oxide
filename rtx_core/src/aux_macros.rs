@@ -61,10 +61,16 @@ macro_rules! raw_char_map {
   }}
 }
 
-/// The `s!` macro is a briefer alias for `format!`, otherwise completely identical
+/// The `s!` macro is a briefer alias for `format!`
 #[macro_export]
 macro_rules! s {
-  ($($arg : tt )*) => (format!($($arg)*))
+  ($($arg : tt )*) => {format!($($arg)*)};
+}
+
+/// The `some!` macro transforms data in type S to Option<Into<T>> (always wrapping with Some)
+#[macro_export]
+macro_rules! some {
+  ($arg:expr) => { Some($arg.into()) }
 }
 
 /// A variant on `vec!` where each argument receives an additional `.into()` call

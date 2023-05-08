@@ -1042,7 +1042,11 @@ pub fn make_generic_message(
 /// Convert a vertical positioning, optional argument.
 ///  t = "top", b = "bottom"; default is "middle".
 /// Note that the default for vattach attribute is "baseline".
-pub fn translate_attachment(pos: &Stored) -> &'static str {
+pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
+  //implementor note:
+  //  T: AsRef<str> would be more efficient than allocating a string every time
+  //  but we first need `Stored` and `Digested` to be capable of that.
+
   let pos_str = pos.to_string();
   match pos_str.as_str() {
    "t" => "top",

@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
 use crate::{Digested,DigestedData};
+use crate::alignment::Alignment;
 use crate::alignment::template::Template;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
@@ -910,11 +911,11 @@ impl State {
     }
   }
 
-  pub fn lookup_alignment(&self, key: &str) -> Option<Digested> {
+  pub fn lookup_alignment(&self) -> Option<Digested> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
     self
-      .lookup_value(key)
+      .lookup_value("Alignment")
       .and_then(|v| if let Stored::Digested(d) = v {
         if matches!(d.data(), DigestedData::Alignment(_)) {
           // for now clone the Digested object (approx. an Rc<_> clone)
@@ -924,6 +925,10 @@ impl State {
           None
         }
       } else { None })
+  }
+
+  pub fn assign_alignment(&mut self, alignment: Alignment, scope: Option<Scope>) {
+    self.assign_value("Alignment", alignment, scope);
   }
 
   pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
@@ -2167,7 +2172,7 @@ impl State {
   pub fn has_reading_alignment(&self) -> bool {
     !self.localized.reading_alignment.is_empty()
   }
-  pub fn set_reading_alignment(&mut self, alignment: &Digested) {
+  pub fn local_reading_alignment(&mut self, alignment: &Digested) {
     self.localized.reading_alignment.push(alignment.clone());
   }
   pub fn expire_reading_alignment(&mut self) -> Option<Digested> {

@@ -27,6 +27,25 @@ impl Align {
       Align::Justify => 'p'
     }
   }
+  pub fn name(&self) -> &'static str {
+    match self {
+      Align::Right => "right",
+      Align::Left => "left",
+      Align::Center => "center",
+      Align::Justify => "justify" // ?
+    }
+  }
+}
+impl From<char> for Align {
+  fn from(c: char) -> Align {
+    match c {
+      'l' => Align::Left,
+      'r' => Align::Right,
+      'c' => Align::Center,
+      'p' => Align::Justify,
+      _ => Align::default() // fallback
+    }
+  }
 }
 
 /// Two axes of tabular orientation
@@ -73,6 +92,7 @@ pub struct Cell {
   pub border_right: Option<usize>,
   pub border_top: Option<usize>,
   pub border_bottom: Option<usize>,
+  pub rowspan: Option<usize>,
   pub vattach: Option<String>,
   pub cell: Option<Node>,
   pub thead_in_row: bool,
@@ -216,7 +236,7 @@ impl Template {
   // NOT \halign style templates!
   pub fn add_after_column(&mut self, new: Vec<Token>) {
     if let Some(current_column) = &mut self.current_column {
-      let current_after = current_column.after.take().unwrap_or_default().unlist();
+      let current_after = current_column.after.clone().unwrap_or_default().unlist();
       current_column.after = Some(Tokens!(T_CS!("\\@@eat@space"), new, current_after));
     }
   }
@@ -224,7 +244,7 @@ impl Template {
   // Or between this column & next...
   pub fn add_between_column(&mut self, tokens: Vec<Token>) {
     if let Some(current_column) = &mut self.current_column {
-      let current_after = current_column.after.take().unwrap_or_default().unlist();
+      let current_after = current_column.after.clone().unwrap_or_default().unlist();
       current_column.after = Some(Tokens!(current_after, tokens));
     } else {
       self.save_between.extend(tokens);

@@ -53,13 +53,20 @@ LoadDefinitions!(state, {
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     sizer        => "#3",
-    // TODO: vattach
-    // after_digest  => sub[stomach,whatsit,state] {
-    //   if let Some(Stored::Alignment(alignment)) = state.lookup_value("Alignment") {
-    //     let attr = alignment.borrow_mut().get_property_mut("attributes");
-    //     attr.insert(String::from("vattach"), Stored::String(arena::pin_static(translate_attachment(whatsit.get_arg(1)))));
-    //   }
-    // },
+    after_digest  => sub[_stomach,whatsit,state] {
+      if let Some(alignment) = state.lookup_alignment() {
+        if let DigestedData::Alignment(data) = alignment.data() {
+          let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
+          else { translate_attachment(String::new()) };
+          let mut data_lock = data.borrow_mut();
+          let props = data_lock.get_properties_mut();
+          let attributes_stored = props.entry("attributes".to_string()).or_insert_with(|| Stored::HashStored(HashMap::default()));
+          if let Stored::HashStored(attributes) = attributes_stored {
+            attributes.insert(String::from("vattach"), Stored::String(arena::pin_static(attachment)));
+          }
+        }
+      }
+    },
     locked => true,
     mode   => "text");
 
@@ -120,7 +127,7 @@ LoadDefinitions!(state, {
           cols_vec.push(this_num);
         }
       }
-      if let Some(alignment_stored) = state.lookup_alignment("Alignment") {
+      if let Some(alignment_stored) = state.lookup_alignment() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", cols_vec);
       }
