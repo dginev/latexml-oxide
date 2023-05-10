@@ -1,4 +1,6 @@
 use crate::package::*;
+use libxml::tree::NodeType;
+
 #[rustfmt::skip]
 LoadDefinitions!(state, {
   //======================================================================
@@ -23,6 +25,45 @@ LoadDefinitions!(state, {
     bounded => true,
     mode => "text"
   );
+
+  // Sanitize person names for (obvious) punctuation abuse at start+end
+  Tag!("ltx:personname", after_close => sub[_document, node, _state] {
+    if let Some(mut first) = node.get_first_child() {
+      if first.get_type() == Some(NodeType::TextNode) {
+        let first_text = first.get_content();
+        let mut first_text_iter = first_text.chars().peekable();
+        while let Some(peeked) = first_text_iter.peek() {
+          if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
+            first_text_iter.next();
+          } else {
+            break;
+          }
+        }
+        let new_text = first_text_iter.collect::<String>();
+        if first_text != new_text {
+          first.set_content(&new_text)?;
+        }
+      }
+      if let Some(mut last) = node.get_last_child() {
+        if last.get_type() == Some(NodeType::TextNode) {
+          let last_text = last.get_content();
+          let mut last_text_iter  = last_text.chars().rev().peekable();
+          while let Some(peeked) = last_text_iter.peek() {
+            if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
+              last_text_iter.next();
+            } else {
+              break;
+            }
+          }
+          let new_text = last_text_iter.rev().collect::<String>();
+
+          if last_text != new_text {
+            last.set_content(&new_text)?;
+          }
+        }
+      }
+    }
+    return Ok(()); });
 
   DefConstructor!("\\and", " and ");
 

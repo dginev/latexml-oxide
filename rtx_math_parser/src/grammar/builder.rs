@@ -91,7 +91,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     statement = formula
       | statement metarelop formula => infix_relation;
 
+    end_punct = punct | period;
     statements = statement
+      | statement end_punct
       | statement punct statement => infix_apply;
 
     // Extensions, now that we have more category variables defined
