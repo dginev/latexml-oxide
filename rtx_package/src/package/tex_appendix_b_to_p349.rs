@@ -545,12 +545,12 @@ LoadDefinitions!(state, {
   // DefPrimitiveI('\@text@quad', undef, "\x{2003}", alias => '\quad');
 
   // # Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
-  DefMacro!("\\qquad", "\\ifmmode\\@math@qquad\\else\\@text@qquad\\fi");
-  // DefConstructor('\@math@qquad', undef,
-  //   "<ltx:XMHint name='qquad' width='#width'/>",
-  //   alias => '\qquad',
-  //   properties => { isSpace => 1, width => sub { Dimension('2em'); } });
-  // DefPrimitiveI('\@text@qquad', undef, "\x{2003}\x{2003}", alias => '\qquad');
+  DefPrimitive!(T_CS!("\\qquad"), None, sub[_stomach,_args,state] {
+    Tbox::new(arena::pin_static("\u{2003}\u{2003}"), None, None, Tokens!(T_CS!("\\qquad")),
+      stored_map!("name" => "qquad", "width" => Dimension::from_str("2em", state)?,
+      "is_space" => true, "as_hint" => true
+    ), state)
+  });
 
   DefMacro!(
     "\\thinspace",
