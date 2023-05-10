@@ -17,15 +17,16 @@ LoadDefinitions!(state, {
   DefConstructor!("\\\\ OptionalMatch:* [Glue]",
     "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()),
-    // properties => is_break => true
+    properties => { stored_map!("isBreak" => true) }
   );
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
-    properties => sub[_whatsit,_args,_state] { Ok(stored_map!("isBreak" => Stored::Bool(true) )) }
+    properties => sub[_whatsit,_args,_state] { Ok(stored_map!("isBreak" => true)) }
   );
 
-  Let!(&T_CS!("\\@normalcr"), T_CS!("\\\\"));
+  Let!("\\@normalcr", "\\\\");
+  Let!("\\@normalnewline", "\\newline");
   // NOTE: Activating this binding messes up an \afterassign test,
   //       so it may be best left disabled.
   // PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));

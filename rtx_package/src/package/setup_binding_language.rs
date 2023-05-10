@@ -1119,9 +1119,8 @@ macro_rules! DefLigature {
 #[macro_export]
 macro_rules! DefAccent {
   ($accent:literal, $combiningchar:expr, $standalonechar:expr) => {{
-    let mut empty_opts : HashMap<String, Stored> = HashMap::default();
     bind_state_mut!(st);
-    DefAccent!($accent, $combiningchar, $standalonechar, empty_opts, st)
+    DefAccent!($accent, $combiningchar, $standalonechar, HashMap::default(), st)
   }};
   ($accent:literal, $combiningchar:expr, $standalonechar:expr, below => true) => {{
     bind_state_mut!(st);
@@ -1132,24 +1131,25 @@ macro_rules! DefAccent {
     DefAccent!($accent, $combiningchar, $standalonechar, $options, st)
   }};
   ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr, $state: ident) => {{
-    if $options.contains_key("below") {
-      $options.entry(String::from("above")).or_insert(Stored::Bool(true));
+    let mut options : HashMap<String, Stored> = $options;
+    if !options.contains_key("above") && !options.get("below").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
+      options.insert("above".to_string(), Stored::Bool(true));
     }
     // Used for converting a char used as an above-accent to a combining char (See \accent)
-    if $options.contains_key("above") {
+    if options.get("above").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
       $state.assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
     } else {
       $state.assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
-    let accent_proto = concat!($accent,"{}");
-    DefPrimitive!(&accent_proto, sub[stomach, letter, inner_state] {
-      let letter = letter.remove(0).owned_tokens().unwrap();
-      let letter_str = letter.to_string();
-      let invoked = Invocation!(T_CS!($accent), vec![letter],
-        stomach.get_gullet_mut(), inner_state)?;
-      $crate::package::tex_accents::apply_accent(
-        stomach, &letter_str, $combiningchar, $standalonechar, Some(invoked), inner_state)
-    }, mode => "text");
+    let plain_param = Some(Parameters::new(vec![Parameter {
+      name: Cow::Borrowed("Plain"), spec: Cow::Borrowed("{}"), ..Parameter::default()
+      }.init($state)?
+    ]));
+    def_macro(T_CS!($accent), plain_param, ExpansionBody::Tokens(Tokens!(
+        T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
+        T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),
+        T_BEGIN!(), T_ARG!(1), T_END!())),
+      Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}), $state);
   }};
 }
 

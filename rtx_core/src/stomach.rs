@@ -79,16 +79,32 @@ impl<'t> Stomach {
   ) -> Result<Vec<Digested>> {
     let start_location = self.get_locator().unwrap().into_owned();
     let init_depth = self.boxing.len();
+    let mut found_token = false;
     let mut found_terminal = false;
-    let local_box_list = self.regurgitate(); // grab the current boxes to emulate local frame;
+    self.new_local_box_list();
+    let alignment_opt = state.lookup_alignment();
+    // TODO: bookkeep for "expected" warning
+    //let mut aug = Vec::new();
 
     // try reading a executable token
     while let Some(token) = self
       .get_gullet_mut()
       .read_x_token(Some(true), true, state)?
-    {
+    { // done if we run out of tokens
+      found_token = true;
+      // first, check for alignment case
+      if alignment_opt.is_some() && !self.box_list.is_empty() && (
+        token == T_ALIGN!() || token == T_CS!("\\cr") ||
+        token == T_CS!("\\hidden@cr") || token == T_CS!("\\hidden@crcr")) {
+        // at least \over calls in here without the intent to passing through the alignment.
+        // So if we already have some digested boxes available, return them here.
+        self.get_gullet_mut().unread_one(token);
+        return Ok(self.expire_local_box_list());
+      }
+      // normal case
       let invoked = self.invoke_token(&token, state)?;
       self.box_list.extend(invoked);
+
       if let Some(ref terminal) = terminal_opt {
         if &token == terminal {
           found_terminal = true;
@@ -98,13 +114,6 @@ impl<'t> Stomach {
       if init_depth > self.boxing.len() {
         break;
       }
-    }
-
-    // We ran out, terminate,
-    // and add a Dummy `trailer' if none explicit.
-    if init_depth <= self.boxing.len() {
-      self.box_list.push(Digested::from(Tbox::default()));
-      // info!(target:"digest_next_body","no_token");
     }
 
     if let Some(ref terminal) = terminal_opt {
@@ -117,10 +126,12 @@ impl<'t> Stomach {
         Warn!("expected", terminal, self, state, message);
       }
     }
-
-    let final_box_list = self.regurgitate(); // grab the local boxes and return
-    self.box_list = local_box_list; // swap back in the boxes of the initial local frame
-    Ok(final_box_list)
+    // and add a Dummy `trailer' if none explicit.
+    if !found_token {
+      self.box_list.push(Digested::from(Tbox::default()));
+      // info!(target:"digest_next_body","no_token");
+    }
+    Ok(self.expire_local_box_list())
   }
 
   /// Digest a list of tokens independent from any current Gullet.
@@ -233,7 +244,7 @@ impl<'t> Stomach {
     while maybe_token.is_some() {
       let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
-      state.set_current_token(token.clone());
+      state.local_current_token(token.clone());
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
         fatal!(
@@ -763,7 +774,9 @@ impl<'t> Stomach {
   /// appropriate for the mode.
   pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     self.push_stack_frame(false, state); // Effectively bgroup
-    self.set_mode(mode, state)
+    self.set_mode(mode, state)?;
+    state.is_value_bound("MODE", Some(0));
+    Ok(())
   }
   /// End processing in `mode`; an error is signalled if `stomach` is not
   /// currently in `mode`.  This also ends a level of grouping.

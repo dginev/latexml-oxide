@@ -91,8 +91,8 @@ LoadDefinitions!(state, {
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", "\\begingroup\\urlstyle{tt}\\@Url\\path");
-  DefMacro!("\\url", "\\begingroup\\@Url\\url", locked => true);
+  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\@Url\path");
+  DefMacro!("\\url", r"\begingroup\@Url\url", locked => true);
 
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd

@@ -404,7 +404,7 @@ impl State {
     let mut value_table = HashMap::default();
     let mut specials_vdq = VecDeque::new();
     specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '~', '&', '$', '#', '\'']));
-    value_table.insert(arena::pin("SPECIALS"), specials_vdq);
+    value_table.insert(arena::pin_static("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::default();
     for (k, v) in catcodes {
@@ -1269,7 +1269,7 @@ impl State {
     let s = arena::pin(key.encode_utf8(&mut tmp));
     self.assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
   }
-  /// Get the `Meaning' of a token.  For active control sequence's
+  /// Get the `Meaning' of a token.  For active control sequences
   /// this may give the definition object (if defined) or another token (if \let) or undef
   /// Any other token is returned as is.
   pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
@@ -1286,6 +1286,30 @@ impl State {
       }
     } else {
       Some(Cow::Owned(Stored::Token(token.clone())))
+    }
+  }
+
+  /// Get the `Meaning' of a token IFF it implements Definition.
+  pub fn lookup_meaning_iff_def(&self, token: &Token) -> Option<Rc<dyn Definition>> {
+    if token.get_catcode().is_active_or_cs()
+      && !token.has_smuggled()
+      && token.text != EMPTY_SYM.with(|sym| *sym)
+    {
+      match self.meaning.get(&token.text) {
+        Some(entry) => match entry.front() {
+          Some(Stored::Conditional(entry)) => Some(entry.clone()),
+          Some(Stored::Constructor(entry)) => Some(entry.clone()),
+          Some(Stored::Expandable(entry)) => Some(entry.clone()),
+          Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
+          Some(Stored::Primitive(entry)) => Some(entry.clone()),
+          Some(Stored::Register(entry)) => Some(entry.clone()),
+          // None | Some(Stored::None) | Some(Stored::Bool(_)) | ...
+          _ => None,
+        },
+        None => None,
+      }
+    } else {
+      None
     }
   }
 
@@ -1434,7 +1458,7 @@ impl State {
             let lookup_sym = if t.has_smuggled() {
               arena::pin_static("\\relax")
             } else {
-              arena::pin(t.get_executable_primitive_name().unwrap())
+              arena::pin(t.get_executable_primitive_name().unwrap_or_default())
             };
             if let Some(retry_entry) = self.meaning.get(&lookup_sym) {
               // special case,
@@ -1907,7 +1931,7 @@ impl State {
     if self.model.permissive {
       // !!! Alarm!!!
       imodel
-        .entry(arena::pin("#Document"))
+        .entry(arena::pin_static("#Document"))
         .or_insert_with(HashMap::default)
         .insert(H_PCDATA_SYM.with(|sym| *sym), LTX_P_SYM.with(|sym| *sym));
     }
@@ -1963,7 +1987,7 @@ impl State {
 
   /// Initialize various stomach parameters, preload, etc.
   pub fn initialize_stomach(&mut self) {
-    self.assign_value("MODE", String::from("text"), Some(Scope::Global));
+    self.assign_value("MODE", arena::pin_static("text"), Some(Scope::Global));
     self.assign_value("IN_MATH", false, Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
     self.assign_value(
@@ -2123,8 +2147,8 @@ impl State {
   }
   /// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn expire_smuggle_the(&mut self) { self.localized.smuggle_the.pop(); }
-  /// sets the (localized) current token. see `Stomach::invoke_token`
-  pub fn set_current_token(&mut self, token: Token) { self.localized.current_token.push(token); }
+  /// localizes a new current token. see `Stomach::invoke_token`
+  pub fn local_current_token(&mut self, token: Token) { self.localized.current_token.push(token); }
   /// expires the most recent (localized) current token.
   pub fn expire_current_token(&mut self) { self.localized.current_token.pop(); }
   /// gets the (localized) current token

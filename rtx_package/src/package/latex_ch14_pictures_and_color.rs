@@ -4,7 +4,7 @@ LoadDefinitions!(outer_state, {
   // This should be fairly compact vertically.
   DefConstructor!("\\@shortstack@cr",
     "</ltx:p><ltx:p>",
-    properties   => { map!("isBreak" => true.into()) },
+    properties   => { stored_map!("isBreak" => true) },
     reversion    => Tokens!(T_CS!("\\\\"), T_CR!()),
     before_digest => sub[stomach,state] { stomach.egroup(state)?; },
     after_digest  => sub[stomach,_args,state] { stomach.bgroup(state); });

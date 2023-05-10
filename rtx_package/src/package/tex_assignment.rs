@@ -118,7 +118,7 @@ LoadDefinitions!(outer_state, {
       let defn_token_str = defn_token.to_string();
       if defn_token_str != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
-        state.set_current_token(defn_token);
+        state.local_current_token(defn_token);
         if let Some(defn) = defn_opt {
           let summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)?;
           let defn_args : Vec<ArgWrap> = inner.clone();

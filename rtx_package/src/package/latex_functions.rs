@@ -180,7 +180,7 @@ pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored
     if ! attributes.contains_key("rowsep") {
       let astr = gullet.do_expand(T_CS!("\\arraystretch"), state)?.to_string();
       if astr != "1" {
-        let astr_int = astr.parse::<i64>()?;
+        let astr_int = astr.parse::<i64>().expect(&astr);
         attributes.insert(String::from("rowsep"), s!("{}em",Dimension::new(astr_int - 1)).into());
       }
     }

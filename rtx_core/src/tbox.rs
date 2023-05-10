@@ -36,7 +36,7 @@ pub struct Tbox {
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text: arena::pin(""),
+      text: arena::pin_static(""),
       font: Rc::new(Font::text_default()),
       locator: Locator::default(),
       properties: HashMap::default(),

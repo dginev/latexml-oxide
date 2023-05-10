@@ -58,7 +58,7 @@ impl Dimension {
     } else if let Some(cap) = SPEC_RE.captures(spec) {
       // Dimensions given.
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
-      let num: f64 = num_str.parse::<f64>()?;
+      let num: f64 = num_str.parse::<f64>().expect(&num_str);
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
       let converted_unit = match state_opt {
         Some(state) => state.convert_unit(&unit),
@@ -73,7 +73,7 @@ impl Dimension {
       // As it turns out, using int() here results in non-terminating loops in pgf/tikz.
       // So, we use round (Knuth style)
       // Note that divide and such explicitly use int(), however!
-      Ok(kround(spec.parse::<f64>()?) as f64)
+      Ok(kround(spec.parse::<f64>().expect(spec)) as f64)
     }
   }
   pub fn from_str(spec: &str, state: &State) -> Result<Dimension> {

@@ -76,16 +76,16 @@ impl KeyVal {
 }
 
 // useful (only) for rtx_core::keyvals::KeyVals
-pub(crate) fn keyval_qname(prefix:&str, keyset:&str, key:&str) -> String {
+ fn keyval_qname(prefix:&str, keyset:&str, key:&str) -> String {
   let prefix = if prefix.is_empty() { "KV" } else {prefix};
   s!("{prefix}@{keyset}@{key}")
 }
 
-pub(crate) fn keyval_get<'a>(qname:&str, prop:&str, state:&'a State) -> Option<&'a Stored> {
+pub fn keyval_get<'a>(qname:&str, prop:&str, state:&'a State) -> Option<&'a Stored> {
   state.lookup_value_sym(&arena::pin(s!("KEYVAL@{prop}@{qname}")))
 }
 
-pub(crate) fn keyval_set(qname:&str, prop:&str, value:Stored, state:&mut State) {
+pub fn keyval_set(qname:&str, prop:&str, value:Stored, state:&mut State) {
   state.assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
 }
 

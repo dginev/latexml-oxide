@@ -550,7 +550,7 @@ impl Alignment {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
         if let Some(boxes) = &cell.boxes {
-          let (w, h, d) //, cw, ch, cd)
+          let (w, _h, _d) //, cw, ch, cd)
             = boxes.get_size(Some(stored_map!(
               "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
               "vattach" => cell.vattach.clone() )), state)?;
@@ -596,7 +596,8 @@ impl Alignment {
           filtered.push_back(row);
           continue;
         } // don't remove inner rows from math EXCEPT last row!!
-        let (mut pruneh, mut pruned) = (0, 0);
+
+        // let (mut pruneh, mut pruned) = (0, 0);
         for (j,col) in row.get_columns().iter().enumerate() {
           // TODO: add cheight and cdepth
           // if let Some(cheight) = col.cheight {
@@ -623,16 +624,17 @@ impl Alignment {
             next.get_column_mut(j+1).unwrap().border.push_str(&border); // add to NEXT row
           }
         }
+        // TODO:
         // This top_padding should be combined w/any extra rowspacing from \\[dim] !
-        let prune_both = pruneh + pruned;
-        if prune_both > 0 {
-          next.top_padding = Some(Dimension::new(prune_both));
-        }    // And save padding.
+        // let prune_both = pruneh + pruned;
+        // if prune_both > 0 {
+        //   next.top_padding = Some(Dimension::new(prune_both));
+        // }    // And save padding.
       } else {    // Remove empty last row, but copy top border to bottom of prev.
         let mut prev_opt = filtered.back_mut();
     //     my $nc   = scalar(@{ $$row{columns} });
-        let (mut pruneh, mut pruned) = (0, 0);
-        for (j,col) in row.get_columns().iter().enumerate() {
+    // let (mut pruneh, mut pruned) = (0, 0);
+    for (j,col) in row.get_columns().iter().enumerate() {
           // TODO:
           //  $pruneh = max($pruneh, $$col{cheight}->valueOf) if $$col{cheight};
           //  $pruned = max($pruned, $$col{cdepth}->valueOf)  if $$col{cdepth};
@@ -653,10 +655,11 @@ impl Alignment {
             if !border.is_empty() {
               ccol.border.push_str(&border); // add to PREVIOUS row
             }
-            let prune_both = pruneh + pruned;
-            if prune_both > 0 {    // And save padding.
-              prev.bottom_padding = Some(Dimension::new(prune_both));
-            }
+            // TODO:
+            // let prune_both = pruneh + pruned;
+            // if prune_both > 0 {    // And save padding.
+            //   prev.bottom_padding = Some(Dimension::new(prune_both));
+            // }
           }
         }
       }
@@ -1109,7 +1112,7 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
     }
   }
   // copy the characterizations to spanned cells
-  for (r, row) in alignment.rows.iter_mut().enumerate() {
+  for (_r, row) in alignment.rows.iter_mut().enumerate() {
     let cols = row.get_columns_mut();
     for c in 0 .. cols.len() {
       let rs = cols[c].rowspan.unwrap_or(1);
@@ -1118,13 +1121,12 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
         let ca = cols[c].align;
         let cc = cols[c].content_class;
         let cl = cols[c].content_length;
-        let rb = cols[c].border_right;
+        let _rb = cols[c].border_right;
 
         cols[c].border_right = Some(0);
-        let bb = cols[c].border_bottom;
+        let _bb = cols[c].border_bottom;
         cols[c].border_bottom = Some(0);
-        for idx in c+1 .. c+cs {
-          let mut row_reach = &mut cols[idx];
+        for row_reach in cols.iter_mut().take(c+cs).skip(c+1) {
           row_reach.align          = ca;
           row_reach.content_class  = cc;
           row_reach.content_length = cl;
@@ -1331,10 +1333,10 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   //   if $LaTeXML::DEBUG{alignment};
 
   // Establish a scale of differences for the table.
-  let (mut max_diff, mut min_diff, mut avg_diff) = (0.0, 99999999.0, 0.0);
+  let (mut max_diff, mut min_diff, _avg_diff) = (0.0, 99999999.0, 0.0);
   for l in 0..n-1 {
     let d = alignment_compare(axis, true, reversed, l, l + 1, lines);
-    avg_diff += d;
+    // avg_diff += d;
     if d > max_diff {
       max_diff = d;
     }
@@ -1342,7 +1344,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
       min_diff = d;
     }
   }
-  let avg_diff = avg_diff / (n - 1) as f64;
+  // avg_diff = avg_diff / (n - 1) as f64;
   if max_diff < 0.05 { // virtually no differences.
   //   Debug("Lines are almost identical => Fail") if $LaTeXML::DEBUG{alignment};
     return Ok(());
@@ -1359,7 +1361,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   //   if $LaTeXML::DEBUG{alignment};
   // Find the first hump in differences. These are candidates for header lines.
   // Debug("Scanning for headers") if $LaTeXML::DEBUG{alignment};
-  let (mut minh, mut maxh) = (1, 1);
+  let (minh, mut maxh) = (1, 1);
   let mut diff;
   loop {
     diff = alignment_compare(axis, true, reversed, maxh - 1, maxh, lines);
