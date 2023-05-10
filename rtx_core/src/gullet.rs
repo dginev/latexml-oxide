@@ -193,7 +193,7 @@ impl Gullet {
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
-    state.set_current_token(token.clone());
+    state.local_current_token(token.clone());
     let post = alignment.get_column_after();
     state.set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
@@ -204,17 +204,19 @@ impl Gullet {
     };
     // Debug("Halign $alignment: column after " . ToString($post)) if $LaTeXML::DEBUG{halign};
     if (vtype == "cr" || vtype == "crcr") &&
-       alignment.is_in_row() && ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
+      alignment.is_in_row() && ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
         self.unread_one(T_CS!("\\@row@after"));
-      }
+    }
     if let Some(arg) = arg_opt {
-      self.unread_one(T_BEGIN!());
-      self.unread(arg);
+      // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
       self.unread_one(T_END!());
+      self.unread(arg);
+      self.unread_one(T_BEGIN!());
     }
     self.unread_one(token);
     self.unread(post);
-  Ok(())
+    state.expire_current_token();
+    Ok(())
   }
 
   pub fn read_token(&mut self, state: &mut State) -> Result<Option<Token>> {
@@ -370,18 +372,6 @@ impl Gullet {
           return Ok(token.take_smuggled().map(|t| *t));
         }
       }
-      if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state.lookup_definition(&token) {
-          if (toplevel || !(*defn).is_protected()) && defn.is_expandable() {
-            // is this the right logic here? don't expand unless digesting?
-            state.set_current_token(token);
-            let result =
-            self.invoke_and_read_x_token(defn, Some(toplevel), commentsok, state);
-            state.expire_current_token();
-            return result;
-          }
-        }
-      }
       // --
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
@@ -390,13 +380,26 @@ impl Gullet {
           let reading_alignment = state.get_reading_alignment().unwrap();
           Some((reading_alignment, atype, ahidden))
         } else { None } } else { None };
-      // And *then* continue the main loop checks
       if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
         if let DigestedData::Alignment(data) = reading_alignment.data() {
           self.handle_template(data.borrow_mut(), token, atype, ahidden, state)?;
         } else { panic!("malformed alignmed was stored?"); }
-      } else if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
-        return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
+        // And *then* continue the main loop checks
+      } else if token.get_catcode().is_active_or_cs() {
+        if let Some(defn) = state.lookup_meaning_iff_def(&token) {
+          if (toplevel || !defn.is_protected()) && defn.is_expandable() {
+            // is this the right logic here? don't expand unless digesting?
+            state.local_current_token(token);
+            self.invoke_for_read_x_token(defn, state)?;
+            state.expire_current_token();
+            continue;
+          }
+        }
+        if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
+          return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
+        } else {
+          return Ok(Some(token));
+        }
       } else {
         return Ok(Some(token));
       }
@@ -407,14 +410,15 @@ impl Gullet {
   // TODO: linearizing in a single loop{}, as in perl, may be faster
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
-  fn invoke_and_read_x_token(
+  fn invoke_for_read_x_token(
     &mut self,
     defn: Rc<dyn Definition>,
-    toplevel: Option<bool>,
-    commentsok: bool,
     state: &mut State,
-  ) -> Result<Option<Token>> {
+  ) -> Result<()> {
     let mut expansion = defn.invoke(self, false, state)?;
+    if expansion.is_empty() {
+      return Ok(());
+    }
     if SMUGGLE_THE_COMMANDS.with(|set| set.contains(&defn.get_cs().get_sym())) {
       // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
       // at the exact time the token leaves the pushback.
@@ -438,7 +442,7 @@ impl Gullet {
         runtime.pushback.push_front(token);
       }
     }
-    self.read_x_token(toplevel, commentsok, state)
+    Ok(())
   }
 
   /// Read the next raw line (string);
@@ -950,7 +954,7 @@ impl Gullet {
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
           // Read decimal literal
           text.push_str(&self.read_digits(&DIGIT_RE, true, state)?);
-          Ok(Some(Number::new(text.parse::<i64>()?)))
+          Ok(Some(Number::new(text.parse::<i64>().expect(&text))))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
           let decimal = i64::from_str_radix(&self.read_digits(&OCT_RE, true, state)?, 8)?;
@@ -997,7 +1001,7 @@ impl Gullet {
           self.unread_one(t);
         }
       }
-      Some(string.parse::<f64>()?)
+      Some(string.parse::<f64>().expect(&string))
     } else {
       if let Some(t) = token {
         self.unread_one(t); // Unread

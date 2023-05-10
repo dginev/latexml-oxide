@@ -261,7 +261,7 @@ impl Catcode {
 /// We allow the fields to be public, so that we can use builder macros such as
 /// ```
 /// macro_rules! T_SPACE(() => {
-///     Token { text: arena::pin(" "), code: Catcode::SPACE}
+///     Token { text: arena::pin_static(" "), code: Catcode::SPACE}
 ///   });
 /// ```
 #[derive(Clone)]
@@ -313,61 +313,61 @@ impl PartialEq for Token {
 thread_local! {
   /// constant for an END "}" token
   pub static TOKEN_BEGIN: Token = Token {
-    text: arena::pin("{"),
+    text: arena::pin_static("{"),
     code: Catcode::BEGIN,
     smuggled: None,
   };
   /// constant for a BEGIN "{" token
   pub static TOKEN_END: Token = Token {
-    text: arena::pin("}"),
+    text: arena::pin_static("}"),
     code: Catcode::END,
     smuggled: None,
   };
   /// constant for a MATH "$" token
   pub static TOKEN_MATH: Token = Token {
-    text: arena::pin("$"),
+    text: arena::pin_static("$"),
     code: Catcode::MATH,
     smuggled: None,
   };
   /// constant for an ALIGN "&" token
   pub static TOKEN_ALIGN: Token = Token {
-    text: arena::pin("&"),
+    text: arena::pin_static("&"),
     code: Catcode::ALIGN,
     smuggled: None,
   };
   /// constant for a PARAM "#" token
   pub static TOKEN_PARAM: Token = Token {
-    text: arena::pin("#"),
+    text: arena::pin_static("#"),
     code: Catcode::PARAM,
     smuggled: None,
   };
   /// constant for a SUPER "^" token
   pub static TOKEN_SUPER: Token = Token {
-    text: arena::pin("^"),
+    text: arena::pin_static("^"),
     code: Catcode::SUPER,
     smuggled: None,
   };
   /// constant for a SUB "_" token
   pub static TOKEN_SUB: Token = Token {
-    text: arena::pin("_"),
+    text: arena::pin_static("_"),
     code: Catcode::SUB,
     smuggled: None,
   };
   /// constant for a SPACE " " token
   pub static TOKEN_SPACE: Token = Token {
-    text: arena::pin(" "),
+    text: arena::pin_static(" "),
     code: Catcode::SPACE,
     smuggled: None,
   };
   /// constant for a CR "\n" token
   pub static TOKEN_CR: Token = Token {
-    text: arena::pin("\n"),
+    text: arena::pin_static("\n"),
     code: Catcode::SPACE,
     smuggled: None,
   };
   /// constant for T_CS("\relax")
   pub static TOKEN_RELAX: Token = Token {
-    text: arena::pin("\\relax"),
+    text: arena::pin_static("\\relax"),
     code: Catcode::CS,
     smuggled: None,
   };
@@ -439,6 +439,17 @@ macro_rules! T_OTHER {
     }
   };
 }
+/// T_OTHER from a single character
+#[macro_export]
+macro_rules! T_OTHER_CHAR {
+  ($text:literal) => {
+    Token {
+      text: $crate::common::arena::pin_char($text),
+      code: Catcode::OTHER,
+      smuggled: None,
+    }
+  };
+}
 /// macro for an ACTIVE char token
 #[macro_export]
 macro_rules! T_ACTIVE {
@@ -503,7 +514,7 @@ macro_rules! T_MARKER {
 macro_rules! T_ARG {
   ($text:expr) => {
     Token {
-      text: $crate::common::arena::pin($text),
+      text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
       smuggled: None,
     }
@@ -526,7 +537,7 @@ macro_rules! T_SMUGGLE_THE {
         );
       },
       cc if cc.can_smuggle_the() => Token {
-        text: $crate::common::arena::pin("SMUGGLE_THE"),
+        text: $crate::common::arena::pin_static("SMUGGLE_THE"),
         code: Catcode::SmuggleTHE,
         smuggled: Some(Box::new($t)),
       },
@@ -605,7 +616,7 @@ macro_rules! ExplodeText(($text:expr) => ({
 impl Default for Token {
   fn default() -> Self {
     Token {
-      text: arena::pin("EXPECTED_TOKEN"),
+      text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
       smuggled: None,
     }
@@ -796,7 +807,7 @@ impl Token {
       Catcode::CS | Catcode::ACTIVE => {
         if state.is_dont_expandable(&self) {
           Ok(Token {
-            text: arena::pin("\\relax"),
+            text: arena::pin_static("\\relax"),
             code: Catcode::CS,
             smuggled: Some(Box::new(self)),
           })

@@ -9,13 +9,13 @@ static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 // Then we can apply combining accents to it.
 pub fn apply_accent(
   stomach: &mut Stomach,
-  letter: &str,
+  letter: Tokens,
   combiningchar: char,
   standalonechar: &str,
   reversion: Option<Tokens>,
   state: &mut State,
 ) -> Result<Tbox> {
-  let letter_box = stomach.digest(TokenizeInternal!(letter), state)?;
+  let letter_box = stomach.digest(letter, state)?;
   let locator = letter_box.get_locator();
   let font = letter_box.get_font(state)?.map(|f| Rc::new((*f).clone()));
 
@@ -56,6 +56,15 @@ LoadDefinitions!(state, {
   // work (via mozilla !?) best when the combining char is after the 1st char.
   // Further, the accents \d and \b seem to center the under dot or bar under multiple
   // chars --- how should this be handled in Unicode?
+
+  DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
+  sub[stomach,(accent, combiningchar, standalonechar, letter),inner_state] {
+    let letter_str = letter.to_string();
+    let combiningchar = combiningchar.to_string().chars().next().unwrap();
+    let standalonechar = standalonechar.to_string();
+    apply_accent(stomach, letter.clone(), combiningchar, &standalonechar, Some(
+      Tokens!(T_CS!(accent.to_string()),T_BEGIN!(),letter,T_END!())), inner_state)
+  }, mode => "text");
 
   // Since people sometimes try to get fancy by using an empty argument,
   // for each, I'm providing the combining code and an equivalent(?) spacing one.

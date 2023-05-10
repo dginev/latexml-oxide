@@ -394,7 +394,7 @@ impl Model {
     use libxml::tree::NodeType::*;
     let node_type = node.get_type();
     if node_type.is_none() {
-      return arena::pin("#BrokenNode");
+      return arena::pin_static("#BrokenNode");
     }
     match node_type.unwrap() {
       TextNode => arena::pin_static("#PCDATA"),

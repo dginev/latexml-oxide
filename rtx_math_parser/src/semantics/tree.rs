@@ -775,7 +775,7 @@ pub(crate) fn lookup_lex_node<'a>(
   lex: &'a str,
   nodes: &'a [Node],
 ) -> Result<&'a Node, Box<dyn Error>> {
-  let node_idx = lex.split(':').last().unwrap().parse::<usize>()? - 1;
+  let node_idx = lex.split(':').last().unwrap().parse::<usize>().expect(lex) - 1;
   let node = nodes
     .get(node_idx)
     .expect("lex node lookup is grammar-internal and should always have an accurate index.");

@@ -1262,7 +1262,7 @@ pub fn dualize_arglist(
   for cap in ARG_HOLE.captures_iter(presentation) {
     // Get the args that were actually used!
     let argi = cap.get(1).unwrap().as_str();
-    let entry = used.entry(argi.parse::<usize>()?).or_insert(0);
+    let entry = used.entry(argi.parse::<usize>().expect(argi)).or_insert(0);
     *entry += 1;
   }
   let mut cargs = Vec::new();

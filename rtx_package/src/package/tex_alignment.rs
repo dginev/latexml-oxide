@@ -181,8 +181,8 @@ LoadDefinitions!(outer_state, {
       tokens.push(T_END!());
     } else {
       tokens.push(T_CS!("\\@alignment@newline@marker"));
-      tokens.push(T_END!());
     }
+    tokens.push(T_END!());
     Tokens::new(tokens)
   });
 
@@ -201,6 +201,8 @@ LoadDefinitions!(outer_state, {
       tokens.push(T_CS!("\\@alignment@newline@marker"));
       tokens.push(T_END!());
     }
+    tokens.push(T_END!());
+    Tokens::new(tokens)
   });
 
   // These are the markers that produce \\ in the reversion,
@@ -471,7 +473,6 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
       .read_x_token(Some(false),false, state)?;
     if last_token.is_none() { break; }
     let token = last_token.as_ref().unwrap();
-    dbg!(token);
     if *token == T_SPACE!()   // Skip leading space.
       || *token == T_CS!("\\par")  // Skip or blank line(?)
       || (lastwascr &&             // Or \crcr following a \cr
@@ -535,10 +536,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
         out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
         return Ok((Some(out_list.into()),Some(token),Some(String::from(vtype)),hidden));
       }
-    } else if token == T_CS!("\\hidden@noalign") { //  \puts something in vertical list
+    // } else if token == T_CS!("\\hidden@noalign") { //  \puts something in vertical list
       // Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-      let invoked = stomach.invoke_token(&token, state)?;
-      stomach.box_list.extend(invoked.into_iter());
+      // let invoked = stomach.invoke_token(&token, state)?;
+      // stomach.box_list.extend(invoked.into_iter());
     } else {  // Else, we're getting some actual content for the column
   //     // Debug!("Halign $alignment: COLUMN invoking " . Stringify($token)) if $LaTeXML::DEBUG{halign};
       let invoked = stomach.invoke_token(&token, state)?;

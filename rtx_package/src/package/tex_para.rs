@@ -8,7 +8,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\indent", sub[document,whatsit,state] {
     if let Some(mut node) = document.get_element() {
       let tag = document.get_node_qname(&node,state);
-      let para_tag = arena::pin("ltx:para");
+      let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
       } else if document.sym_can_contain_somehow(tag,para_tag,state) {
@@ -21,7 +21,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\noindent", sub[document,whatsit,state] {
     if let Some(mut node) = document.get_element() {
       let tag = document.get_node_qname(&node,state);
-      let para_tag = arena::pin("ltx:para");
+      let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
       } else if document.sym_can_contain_somehow(tag, para_tag ,state) {

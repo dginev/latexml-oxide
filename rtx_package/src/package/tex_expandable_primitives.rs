@@ -297,7 +297,7 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\expandafter Token Token", sub[gullet, (tok, xtok), state] {
     let mut tokens : Vec<Token> = vec![tok];
     if let Some(defn) = state.lookup_expandable(&xtok, false) {
-      state.set_current_token(xtok);
+      state.local_current_token(xtok);
       let invoked = defn.invoke(gullet, true, state)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
