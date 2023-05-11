@@ -210,13 +210,12 @@ LoadDefinitions!(state, {
     }
   );
 
-  DefParameterType!(RuleSpecification, reader=>reader!(_gullet, _inner, _extra, _state, {
-    unimplemented!(); ()
-    // my $keyvals = LaTeXML::Core::KeyVals->new(undef, undef, skipMissing => 1);
-    // while (my $key = $gullet->readKeyword('width', 'height', 'depth')) {
-    //   $keyvals->setValue($key, $gullet->readDimension); }
-    // $keyvals;
-    }),
+  DefParameterType!(RuleSpecification, reader=>reader!(gullet, _inner, _extra, state, {
+    let mut keyvals = KeyVals::new(KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()}, state);
+    while let Some(key) = gullet.read_keyword(&["width", "height", "depth"], state)? {
+      keyvals.set_value(&key, Stored::Dimension(gullet.read_dimension(state)?), false, state);
+    }
+    keyvals }),
     optional => true,
     reader_predigest => undigested!()
   );
@@ -225,9 +224,7 @@ LoadDefinitions!(state, {
   // "?#invisible()(?#isVerticalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
   //    width='&GetKeyVal(#1,width)' color='#color'/>))",
-  after_digest=> {unimplemented!(); ()});
-  // afterDigest => sub {
-  //   my ($stomach, $whatsit) = @_;
+  after_digest => sub [_stomach,whatsit,state] {
   //   my $dims   = $whatsit->getArg(1);
   //   my $width  = GetKeyVal($dims, 'width');
   //   my $height = GetKeyVal($dims, 'height');
@@ -240,11 +237,13 @@ LoadDefinitions!(state, {
   //   my $d = ($depth  ? $depth->ptValue  : undef);
   //   $h -= $d if $h && $d;    # - ??
 
-  //   if (my $alignment = LookupValue('Alignment')) {
+    if let Some(alignment) = state.lookup_alignment() {
   //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
   //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
-  //       # This isXxxxRule property is to determine if it is used for separating rules within
-  // alignments       $whatsit->setProperty(isVerticalRule => 1) } }
+  // This isXxxxRule property is to determine if it is used for separating rules within alignments
+      whatsit.set_property("isVerticalRule", true);
+    }
+  // }
   //   elsif ((defined $w) && ($w == 0)) {
   //     $whatsit->setProperty(invisible => 1); }
   //   else {
@@ -252,7 +251,8 @@ LoadDefinitions!(state, {
   //   if (my $color = LookupValue('font')->getColor) {
   //     if ($color ne 'black') {
   //       $whatsit->setProperty(color => $color); } }
-  //   return; }
+    Ok(Vec::new())
+  });
 
   DefConstructor!("\\hrule RuleSpecification","",
   // "?#isHorizontalRule()\

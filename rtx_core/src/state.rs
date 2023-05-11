@@ -221,7 +221,7 @@ pub struct Localized {
   pub current_token: Vec<Token>,
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Digested>,
-  pub build_template: Option<Template>
+  pub build_template: Vec<Template>
 }
 
 /// The State efficiently maintain the bindings in a TeX-like fashion.
@@ -2203,13 +2203,18 @@ impl State {
     self.localized.reading_alignment.pop()
   }
 
+  pub fn local_build_template(&mut self, template: Template) {
+    self.localized.build_template.push(template);
+  }
   pub fn set_build_template(&mut self, template: Template) {
-    self.localized.build_template = Some(template);
+    *self.localized.build_template.last_mut()
+    .expect("set_build_template should not be called before the first local_build_template")
+    = template;
   }
   pub fn current_build_template(&mut self) -> Option<&mut Template> {
-    self.localized.build_template.as_mut()
+    self.localized.build_template.last_mut()
   }
   pub fn take_build_template(&mut self) -> Option<Template> {
-    self.localized.build_template.take()
+    self.localized.build_template.pop()
   }
 }
