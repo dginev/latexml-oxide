@@ -276,7 +276,6 @@ impl Gullet {
             } else {
               return Err("reading_alignment should always contain DigestedData::Alignment".into());
             }
-
           } else {
             break;
           }

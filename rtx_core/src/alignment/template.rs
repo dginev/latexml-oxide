@@ -174,7 +174,6 @@ pub struct Template {
   repeated: Vec<Cell>,
   reversion: Option<Tokens>,
   columns: Vec<Cell>,
-  current_column: Option<Cell>,
   pub tokens: Vec<Token>,
   padding: Option<Dimension>,
   pub top_padding: Option<Dimension>,
@@ -214,7 +213,6 @@ impl Template {
       save_between,
       before: VecDeque::new(),
       after: VecDeque::new(),
-      current_column: None,
       padding: None,
       top_padding: None,
       bottom_padding: None,
@@ -235,7 +233,7 @@ impl Template {
   // NOTE: \@@eat@space should ONLY be added to LaTeX tabular style templates!!!!
   // NOT \halign style templates!
   pub fn add_after_column(&mut self, new: Vec<Token>) {
-    if let Some(current_column) = &mut self.current_column {
+    if let Some(current_column) = self.columns.last_mut() {
       let current_after = current_column.after.clone().unwrap_or_default().unlist();
       current_column.after = Some(Tokens!(T_CS!("\\@@eat@space"), new, current_after));
     }
@@ -243,7 +241,7 @@ impl Template {
 
   // Or between this column & next...
   pub fn add_between_column(&mut self, tokens: Vec<Token>) {
-    if let Some(current_column) = &mut self.current_column {
+    if let Some(current_column) = self.columns.last_mut() {
       let current_after = current_column.after.clone().unwrap_or_default().unlist();
       current_column.after = Some(Tokens!(current_after, tokens));
     } else {
@@ -279,7 +277,6 @@ impl Template {
     col.empty           = true;
     self.save_between   = VecDeque::new();
     self.save_before    = VecDeque::new();
-    self.current_column = Some(col.clone());
 
     if self.repeating {
       self.non_repeating = self.columns.len();

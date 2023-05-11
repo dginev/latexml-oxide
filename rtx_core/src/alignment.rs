@@ -13,7 +13,7 @@
 //! since we stuff a lot of information into it
 //! (row, column boxes, borders, spacing, etc...)
 //! But once it has been captured, it should otherwise act
-//! like a Whatsit and be responsible for construction (beAbsorbed),
+//! like a Whatsit and be responsible for construction (be_absorbed),
 //! and sizing estimation (computeSize)
 //!
 //! Ultimately, this should be better tied into DefConstructor
@@ -833,7 +833,7 @@ fn preserved_boxes(boxes: &Digested) -> bool {
 /// a reader for the Template parameter type
 pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<Template> {
   gullet.skip_spaces(state)?;
-  state.set_build_template(Template::default());
+  state.local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
   while let Some(open) = gullet.read_token(state)? {
