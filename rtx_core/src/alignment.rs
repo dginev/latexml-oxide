@@ -582,7 +582,7 @@ impl Alignment {
   pub fn normalize_prune_rows(&mut self) -> Result<()> {
     // Examines: rowspan,rowspanned, border, pseudorow, empty
     // Sets: border, rowspan
-    let preserve = self.is_math || self.properties.get("preserve_structure").is_some();
+    let preserve = self.is_math || self.properties.contains_key("preserve_structure");
     // First, do rows.
     let init_rows : Vec<_> = self.rows.drain(..).collect();
     let mut rows = init_rows.into_iter().peekable();
@@ -590,13 +590,11 @@ impl Alignment {
     while let Some(row) = rows.next() {
       if row.get_columns().iter().any(|cell| !cell.empty) {    // Not empty! so keep it
         filtered.push_back(row);
-      }
-      else if let Some(next) = rows.peek_mut() {    // Remove empty row, but copy top border to NEXT row
+      } else if let Some(next) = rows.peek_mut() {    // Remove empty row, but copy top border to NEXT row
         if preserve {
           filtered.push_back(row);
           continue;
         } // don't remove inner rows from math EXCEPT last row!!
-
         // let (mut pruneh, mut pruned) = (0, 0);
         for (j,col) in row.get_columns().iter().enumerate() {
           // TODO: add cheight and cdepth
@@ -613,15 +611,16 @@ impl Alignment {
             // TODO: add rowspanned
           // if !row.pseudorow && col.rowspanned.is_some() {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
-          let border = col.border.chars().filter(|c|
-            matches!(c,'t'|'T'|'b'|'B')).map(|c| match c {
-              'b' => 't', //  but convert to top
-              'B' => 'T', //  but convert to top
-              other => other
-            }).collect::<String>();
-          // TODO: a little silly, the indexing of get_column in latexml is from 1, but the .enumerate() indexing is from 0
-          if !border.is_empty() {
-            next.get_column_mut(j+1).unwrap().border.push_str(&border); // add to NEXT row
+          let mut converted_border = String::new();
+          for border_c in col.border.chars() {
+            match border_c {//  but convert to top
+              't'| 'b' => converted_border.push('t'),
+              'T' | 'B' => converted_border.push('T'),
+              _ => {}
+            };
+          }
+          if !converted_border.is_empty() {
+            next.get_columns_mut()[j].border.push_str(&converted_border); // add to NEXT row
           }
         }
         // TODO:
@@ -632,28 +631,29 @@ impl Alignment {
         // }    // And save padding.
       } else {    // Remove empty last row, but copy top border to bottom of prev.
         let mut prev_opt = filtered.back_mut();
-    //     my $nc   = scalar(@{ $$row{columns} });
-    // let (mut pruneh, mut pruned) = (0, 0);
-    for (j,col) in row.get_columns().iter().enumerate() {
+        //     my $nc   = scalar(@{ $$row{columns} });
+        // let (mut pruneh, mut pruned) = (0, 0);
+        for (j,col) in row.get_columns().iter().enumerate() {
           // TODO:
           //  $pruneh = max($pruneh, $$col{cheight}->valueOf) if $$col{cheight};
           //  $pruned = max($pruned, $$col{cdepth}->valueOf)  if $$col{cdepth};
           //       if (!$$row{pseudorow} && defined $$col{rowspanned}) {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
-          let border = col.border.chars().filter(|c| // mask all but top border
-          matches!(c,'t'|'T')).map(|c| match c {
-            't' => 'b', // convert to bottom
-            'T' => 'B', // convert to bottom
-            other => other
-          }).collect::<String>();
+          let mut converted_border = String::new();
+          for c in col.border.chars() {
+            match c {
+              't' => converted_border.push('b'), // convert to bottom
+              'T' => converted_border.push('B'), // convert to bottom
+              _ => {}
+            };
+          }
           if let Some(ref mut prev) = prev_opt {
-            // TODO: a little silly, the indexing of get_column in latexml is from 1, but the .enumerate() indexing is from 0
-            let ccol = prev.get_column_mut(j+1).unwrap();
+            let ccol = &mut prev.get_columns_mut()[j];
             // TODO: rowspanned
             //       if (defined $$ccol{rowspanned}) {                        // skip to spanning column if rowspanned!
             //         $ccol = $rows[$$ccol{rowspanned}]{columns}[$j]; }
-            if !border.is_empty() {
-              ccol.border.push_str(&border); // add to PREVIOUS row
+            if !converted_border.is_empty() {
+              ccol.border.push_str(&converted_border); // add to PREVIOUS row
             }
             // TODO:
             // let prune_both = pruneh + pruned;
@@ -668,7 +668,106 @@ impl Alignment {
     Ok(())}
   /// Scan for and remove empty columns
   /// but copying borders and adjusting rowspan's & colspan's appropriately.
-  pub fn normalize_prune_columns(&mut self) -> Result<()> {Ok(())}
+  pub fn normalize_prune_columns(&mut self) -> Result<()> {
+    let preserve = self.is_math || self.properties.contains_key("preserve_structure");
+    // Now prune empty columns.
+    if !preserve { // Don't remove empty columns from math.
+      let mut nc   = 0;
+      for row in self.rows.iter() {
+        let n = row.get_columns().len();
+        if n > nc {
+          nc = n;
+        }
+      }
+      for j in (0..nc).rev() { // Prune from RIGHT!
+        let j_column_is_empty = self.rows.iter().all(|row|
+          row.get_columns().get(j).map(|col| col.empty).unwrap_or(true));
+        if j_column_is_empty {    // Empty!
+          // let mut prunew = 0;
+          for row in &mut self.rows {
+            let mut new_border = String::new();
+            if let Some(col) = row.get_columns().get(j) {
+              // TODO: colspanned
+              // if let Some(col_spanned) = col.colspanned {// Decrement colspan of spanning column
+              //     if let Some(ref mut colspan) = &mut row.get_columns_mut()[col_spanned].colspan {
+              //       *colspan -= 1;
+              //     }
+              // }
+              // TODO: cwidth
+              // if let Some(w) = col.cwidth {
+              //   if w > prunew {
+              //     prunew = w;
+              //   }
+              // }
+
+              if j > 0 {
+                // TODO:
+                // if (my $jj = $$prev{colspanned}) {
+                //   $prev = $$row{columns}[$jj]; }
+                for c in col.border.chars() {
+                  // mask all but left and right border
+                  match c {
+                    // convert to right
+                    'l' | 'r' => { new_border.push('r'); },
+                    // convert to right
+                    'L' | 'R' => { new_border.push('R'); },
+                    _ => {}
+                  }
+                }
+
+                // TODO:
+                // if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
+                //   $$prev{boxes} = LaTeXML::Core::List($$prev{boxes}
+                //     ? ($$prev{boxes}->unlist, @preserve) : @preserve); }
+              } else {
+                for c in col.border.chars() {
+                  // mask all but left and right border
+                  match c {
+                    // but convert to left
+                    'l' | 'r' => { new_border.push('l'); },
+                    // but convert to left
+                    'L' | 'R' => { new_border.push('L'); },
+                    _ => {}
+                  }
+                }
+
+    //             $$next{border} .= $border;
+    //             if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
+    //               $$next{boxes} = LaTeXML::Core::List($$col{boxes}
+    //                 ? (@preserve, $$next{boxes}->unlist) : @preserve); }
+              }
+              // Now, remove the column
+              row.get_columns_mut().remove(j);
+            }
+            // Changed: we need to first finish all work with "col" before we can mutably re-borrow
+            // the "prev" column from the same row.
+            if !new_border.is_empty() {
+              if j > 0 {
+                if let Some(prev) = row.get_columns_mut().get_mut(j-1) {
+                  prev.border.push_str(&new_border);
+                }
+              } else {
+                // next border case
+                if let Some(next) = row.get_columns_mut().get_mut(1) {
+                  // add to next row
+                  next.border.push_str(&new_border);
+                }
+              }
+            }
+          }
+          if j > 0 {    // If not 1st row, add right padding to previous column
+    //         foreach my $row (@rows) {
+    //           if (my $col = $$row{columns}[$j - 1]) {
+    //             $$col{rpadding} = Dimension($prunew); } } }
+    //       else {       // Else add left padding to (newly) first column
+    //         foreach my $row (@rows) {    // And add the padding to previous column
+    //           if (my $col = $$row{columns}[0]) {
+    //             $$col{lpadding} = Dimension($prunew); } } }
+          }
+        }
+      }
+    }
+    Ok(())}
   pub fn normalize_sum_sizes(&mut self) -> Result<()> {
     // let mut rowheights = Vec::new();
     // let mut colwidths  = Vec::new();
@@ -968,7 +1067,7 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
       }
     }
   }
-
+  dbg!((n_h, n_d));
 //   Debug("$n{h} header, $n{d} data cells") if $LaTeXML::DEBUG{alignment};
   if n_d == 1 { // Or any other heuristic?
     n_h = 0;
@@ -1074,27 +1173,24 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
       let (mut border_top, mut border_bottom, mut border_left, mut border_right) = (0,0,0,0);
       for c in col.border.chars() {
         match c {
-          'l' => border_left+=1,
-          'r' => border_right+=1,
-          't' => border_top +=1,
-          'b' => border_bottom +=1,
+          'l' | 'L' => border_left+=1,
+          'r' | 'R' => border_right+=1,
+          't' | 'T' => border_top +=1,
+          'b' | 'B' => border_bottom +=1,
           _ => {}// spaces etc.
         }
       }
-      h =  (border_top > 0) || (border_bottom > 0);
-      v = (border_right > 0) || (border_left > 0);
-      if border_top > 0 {
-        col.border_top = Some(border_top);
+      // Note: once h and v are set as true on any row, they remain globally true.
+      if (border_top > 0) || (border_bottom > 0) {
+        h = true;
       }
-      if border_bottom > 0 {
-        col.border_bottom = Some(border_bottom);
+      if (border_right > 0) || (border_left > 0) {
+        v = true;
       }
-      if border_left > 0 {
-        col.border_left = Some(border_left);
-      }
-      if border_right > 0 {
-        col.border_right = Some(border_right);
-      }
+      col.border_top = Some(border_top);
+      col.border_bottom = Some(border_bottom);
+      col.border_left = Some(border_left);
+      col.border_right = Some(border_right);
     }
     // pad the columns out.
     let to_pad = ncols - this_row_len;
@@ -1111,91 +1207,132 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
       }
     }
   }
+  // DG: cache assignments, and execute in post-loop, so that we can avoid indexing arithmetic
+  let mut outer_border_right_assignments = Vec::new();
+  let mut outer_border_bottom_assignments = Vec::new();
   // copy the characterizations to spanned cells
-  for (_r, row) in alignment.rows.iter_mut().enumerate() {
+  for r in 0..alignment.rows.len() {
+    let row = &mut alignment.rows[r];
     let cols = row.get_columns_mut();
     for c in 0 .. cols.len() {
       let rs = cols[c].rowspan.unwrap_or(1);
       let cs = cols[c].colspan.unwrap_or(1);
-      if cs > 1 || rs > 1 {
-        let ca = cols[c].align;
-        let cc = cols[c].content_class;
-        let cl = cols[c].content_length;
-        let _rb = cols[c].border_right;
+      let ca = cols[c].align;
+      let cc = cols[c].content_class;
+      let cl = cols[c].content_length;
+      let rb = cols[c].border_right;
 
-        cols[c].border_right = Some(0);
-        let _bb = cols[c].border_bottom;
-        cols[c].border_bottom = Some(0);
-        for row_reach in cols.iter_mut().take(c+cs).skip(c+1) {
-          row_reach.align          = ca;
-          row_reach.content_class  = cc;
-          row_reach.content_length = cl;
-        }
-        unimplemented!();
-        // for irow_idx in r+1 .. r+rs {
-        //   let mut irow = &mut alignment.rows[irow_idx];
-        //   let mut icols = irow.get_columns_mut();
-        //   for icol_idx in c .. c+cs {
-        //     let icol = &mut icols[icol_idx];
-        //     icol.align          = ca;
-        //     icol.content_class  = cc;
-        //     icol.content_length = cl;
-        //   }
-        // }
+      cols[c].border_right = Some(0);
+      let bb = cols[c].border_bottom;
+      cols[c].border_bottom = Some(0);
+      for row_reach in cols.iter_mut().take(c+cs).skip(c+1) {
+        row_reach.align          = ca;
+        row_reach.content_class  = cc;
+        row_reach.content_length = cl;
+      }
+      // TODO:
+      // for irow_idx in r+1 .. r+rs {
+      //   let mut irow = &mut alignment.rows[irow_idx];
+      //   let mut icols = irow.get_columns_mut();
+      //   for icol_idx in c .. c+cs {
+      //     let icol = &mut icols[icol_idx];
+      //     icol.align          = ca;
+      //     icol.content_class  = cc;
+      //     icol.content_length = cl;
+      //   }
+      // }
 
-        //     # move the outer borders
-        //     for (my $sr = 0 ; $sr < $rs ; $sr++) {
-        //       $rows[$r + $sr][$c + $cs - 1]{r} = $rb; }
-        //     for (my $sc = 0 ; $sc < $cs ; $sc++) {
-        //       $rows[$r + $rs - 1][$c + $sc]{b} = $bb; }
+      // move the outer borders
+      for sr in 0..rs {
+        outer_border_right_assignments.push((r+sr, c+cs-1, rb));
+      }
+      for sc in 0 .. cs {
+        outer_border_bottom_assignments.push((r+rs-1, c+sc, bb));
       }
     }
   }
-
+  // Apply the collected outer border assignments
+  for (row_idx, col_idx, value) in outer_border_right_assignments.into_iter() {
+    alignment.rows[row_idx].get_columns_mut()[col_idx].border_right = value;
+  }
+  for (row_idx, col_idx, value) in outer_border_bottom_assignments.into_iter() {
+    alignment.rows[row_idx].get_columns_mut()[col_idx].border_bottom = value;
+  }
   // Now, do some border massaging...
-  let nrows = alignment.rows.len();
   for row in alignment.rows.iter_mut() {
     let cols = row.get_columns_mut();
     cols[0].border_left = Some(if v { 1 } else { 0 });
-    if ncols > 1 && cols[1].border_left.unwrap_or(0) > 0 {
-      cols[0].border_right = cols[1].border_left;
-    }
-    if (ncols > 1) && cols[ncols - 2].border_right.unwrap_or(0) > 0 {
-      cols[ncols - 1].border_left = cols[ncols - 2].border_right;
+    if ncols > 1 {
+      if cols[1].border_left.unwrap_or(0) > 0 {
+        cols[0].border_right = cols[1].border_left;
+      }
+      if cols[ncols - 2].border_right.unwrap_or(0) > 0 {
+        cols[ncols - 1].border_left = cols[ncols - 2].border_right;
+      }
     }
     cols[ncols - 1].border_right = Some(if v { 1 } else { 0 });
   }
+  let nrows = alignment.rows.len();
   for c in 0 .. ncols {
-    alignment.rows[0].get_column_mut(1+c).unwrap().border_top = Some(if h {1}else{0});
+    alignment.rows[0].get_columns_mut()[c].border_top = Some(if h {1}else{0});
     if nrows > 1 {
-      if let Some(bt) = alignment.rows[1].get_column_mut(1+c).unwrap().border_top {
-        alignment.rows[0].get_column_mut(1+c).unwrap().border_bottom = Some(bt);
+      if let Some(bt) = alignment.rows[1].get_columns_mut()[c].border_top {
+        if bt > 0 { // only set if border is inked
+          alignment.rows[0].get_columns_mut()[c].border_bottom = Some(bt);
+        }
       }
-      if let Some(bb) = alignment.rows[nrows - 2].get_column_mut(1+c).unwrap().border_bottom {
-        alignment.rows[nrows - 1].get_column_mut(1+c).unwrap().border_top = Some(bb);
+      if let Some(bb) = alignment.rows[nrows - 2].get_columns_mut()[c].border_bottom {
+        if bb > 0 { // only set if border is inked
+          alignment.rows[nrows - 1].get_columns_mut()[c].border_top = Some(bb);
+        }
       }
     }
-    alignment.rows[nrows - 1].get_column_mut(1+c).unwrap().border_bottom = Some(if h {1} else{0});
+    alignment.rows[nrows - 1].get_columns_mut()[c].border_bottom = Some(if h {1} else{0});
   }
   // the constant array access *HAS* to be inefficient, but how do we avoid it without encountering
-  // the wrath of the Rust compiler? Mutability conflicts galore here if any &mut lives long enough.
+  // objections from the Rust compiler? Mutability conflicts galore here if any &mut lives long enough.
   for r in 1 .. nrows-1 {
-    for c in 1 .. ncols - 1 {
-      if let Some(bb) = alignment.rows[r - 1].get_column_mut(c+1).unwrap().border_bottom {
-        alignment.rows[r].get_column_mut(1+c).unwrap().border_top = Some(bb);
+    for c in 1 .. ncols-1 {
+      if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom {
+        if bb > 0 { // only set if border is inked
+          alignment.rows[r].get_columns_mut()[c].border_top = Some(bb);
+        }
       }
-      if let Some(bt) = alignment.rows[r + 1].get_column_mut(c+1).unwrap().border_top {
-        alignment.rows[r].get_column_mut(1+c).unwrap().border_bottom = Some(bt);
+      if let Some(bt) = alignment.rows[r + 1].get_columns_mut()[c].border_top {
+        if bt > 0 { // only set if border is inked
+          alignment.rows[r].get_columns_mut()[c].border_bottom = Some(bt);
+        }
       }
-      if let Some(br) = alignment.rows[r].get_column_mut(c).unwrap().border_right {
-        alignment.rows[r].get_column_mut(1+c).unwrap().border_left = Some(br);
+      if let Some(br) = alignment.rows[r].get_columns_mut()[c-1].border_right {
+        if br > 0 { // only set if border is inked
+          alignment.rows[r].get_columns_mut()[c].border_left = Some(br);
+        }
       }
-      if let Some(bl) = alignment.rows[r].get_column_mut(c + 2).unwrap().border_left {
-        alignment.rows[r].get_column_mut(1+c).unwrap().border_right = Some(bl);
+      if let Some(bl) = alignment.rows[r].get_columns_mut()[c + 1].border_left {
+        if bl > 0 { // only set if border is inked
+          alignment.rows[r].get_columns_mut()[c].border_right = Some(bl);
+        }
       }
     }
   }
-  //
+  // debug info
+  eprintln!("Cell characterizations:");
+  for (row_index,row) in alignment.rows.iter().enumerate() {
+    for (col_index, cell) in row.get_columns().iter().enumerate() {
+      eprintln!("[{row_index},{col_index}]=>{}{}{} {} {} => {}{}{}{}",
+        cell.cell_type.as_ref().unwrap_or(&'?'),
+        cell.align.map(|a| a.char_code()).unwrap_or(' '),
+        cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from("?")),
+        cell.content_length.unwrap_or(0),
+        cell.border,
+        if cell.border_top.unwrap_or(0) > 0 { "t" } else { "" },
+        if cell.border_right.unwrap_or(0) > 0  { "r" } else { "" },
+        if cell.border_bottom.unwrap_or(0) > 0 { "b" } else { "" },
+        if cell.border_left.unwrap_or(0) > 0 { "l" } else {""}
+      );
+    }
+  }
+
 }
 
 fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
@@ -1205,7 +1342,8 @@ fn collect_alignment_rows(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 
 fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
   let mut columns = Vec::new();
-  let mut row_cells : Vec<_> = alignment.rows.iter_mut().map(|r| r.get_columns_mut().iter_mut()).collect();
+  let mut row_cells : Vec<_> = alignment.rows.iter_mut().map(|r|
+    r.get_columns_mut().iter_mut()).collect();
   for _ in 0..row_cells[0].len() {
     let mut column = Vec::new();
     for row_iter in row_cells.iter_mut() {
@@ -1271,31 +1409,35 @@ fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut St
     }
   }
 
-  // check if we have alternating math-and-text or text-and-math
-  let mut alt_peekable = inferred_classes.iter().peekable();
-  let mut is_alternating = true;
-  while let Some(c) = alt_peekable.next() {
-    if matches!(c, ColumnSpec::Math | ColumnSpec::Integer) {
-      if let Some(peek) = alt_peekable.peek() {
-        if !matches!(peek, ColumnSpec::Text) {
+  // check if we have alternating math-and-text or text-and-math (only if 2+ classes)
+  if inferred_classes.len() > 1 {
+    let mut alt_peekable = inferred_classes.iter().peekable();
+    let mut is_alternating = true;
+    while let Some(c) = alt_peekable.next() {
+      match c {
+        ColumnSpec::Math | ColumnSpec::Integer =>
+          if let Some(peek) = alt_peekable.peek() {
+            if !matches!(peek, ColumnSpec::Text) {
+              is_alternating = false;
+              break;
+            }
+          },
+        ColumnSpec::Text =>
+          if let Some(peek) = alt_peekable.peek() {
+            if !matches!(peek, ColumnSpec::Math | ColumnSpec::Integer) {
+              is_alternating = false;
+              break;
+            }
+          },
+        _ => {
           is_alternating = false;
           break;
         }
       }
-    } else if matches!(c, ColumnSpec::Text) {
-      if let Some(peek) = alt_peekable.peek() {
-        if !matches!(peek, ColumnSpec::Math | ColumnSpec::Integer) {
-          is_alternating = false;
-          break;
-        }
-      }
-    } else {
-      is_alternating = false;
-      break;
     }
-  }
-  if is_alternating {
-    inferred_classes = vec![ColumnSpec::MathAltText];
+    if is_alternating {
+      inferred_classes = vec![ColumnSpec::MathAltText];
+    }
   }
   // Default to empty and return
   if inferred_classes.is_empty() {
@@ -1355,7 +1497,6 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
-  // local $::TAB_AXIS = $axis;
 
   // Debug("Differences $min_diff -- $max_diff => threshold = $::tab_threshold")
   //   if $LaTeXML::DEBUG{alignment};
@@ -1382,7 +1523,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   // The sets of lines 1--$minh, .. 1--$maxh are potential headers.
   for nh in (minh..=maxh).rev() {
     // Check whether the set 1..$nh is plausable.
-    let heads = alignment_test_headers(nh, tab_threshold, axis, lines);
+    let heads = dbg!(alignment_test_headers(nh, dbg!(tab_threshold), axis, lines));
     if !heads.is_empty()  {
       // Now, change all cells marked as header from td => th.
       for h in heads {
@@ -1571,18 +1712,20 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
   if line1.is_empty() && line2.is_empty() {
     return 0.0;
   } else if line1.is_empty() || line2.is_empty() {
-    return 999999.0;
+    return 99999.0;
   }
   let ncells = line1.len();
   let mut diff   = 0.0;
 
   for (cell1,cell2) in line1.iter().zip(line2.iter()) {
     // Annoying test avoids warnings if cells inconsistent; likely due to incorrect row/col spans
-    if cell1.content_class.is_none() || cell2.content_class.is_none() {
+    if cell1.content_class.is_none() || cell2.content_class.is_none() ||
+       cell1.border_left.is_none() || cell2.border_left.is_none() ||
+       cell1.border_right.is_none() || cell2.border_right.is_none() ||
+       cell1.border_bottom.is_none() || cell2.border_bottom.is_none() ||
+       cell1.border_top.is_none() || cell2.border_top.is_none() {
       continue;
     }
-    //   next if grep { !defined $$cell1{$_} } qw(content_class r l t b);
-    //   next if grep { !defined $$cell2{$_} } qw(content_class r l t b);
     if cell1.align != cell2.align && cell1.content_class != Some(ColumnSpec::Empty)
       && cell2.content_class != Some(ColumnSpec::Empty) {
       diff += 0.75;
@@ -1595,7 +1738,7 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
     // compare certain edges
     if for_adjacency { // Compare edges for adjacent rows of potentially different purpose
       let mut inner_diffs = 0.0;
-      if axis == Axis::Row {
+    if axis == Axis::Row {
         if cell1.border_right != cell2.border_right { inner_diffs += 1.0; }
         if cell1.border_left != cell2.border_left { inner_diffs += 1.0; }
       } else {
@@ -1624,6 +1767,7 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
     }
   }
   diff /= ncells as f64;
+  eprintln!("alignment_compare: {p1} - {p2} => {diff};");
   // Debug("$p1-$p2 => $diff; ") if $LaTeXML::DEBUG{alignment};
   diff
 }

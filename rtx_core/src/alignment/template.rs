@@ -83,6 +83,7 @@ pub struct Cell {
   pub height: Option<Dimension>,
   pub depth: Option<Dimension>,
   pub colspan: Option<usize>,
+  pub colspanned: Option<usize>,
   pub boxes: Option<Digested>,
   pub cell_type: Option<char>,
   pub content_class: Option<ColumnSpec>,
@@ -145,6 +146,21 @@ impl ColumnSpec {
     }
   }
 }
+impl Display for ColumnSpec {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      ColumnSpec::Integer => write!(f, "i"),
+      ColumnSpec::Empty => write!(f, "_"),
+      ColumnSpec::Unknown => write!(f, "?"),
+      ColumnSpec::Text => write!(f, "t"),
+      ColumnSpec::Math => write!(f, "m"),
+      ColumnSpec::MathAltText => write!(f, "mx"),
+      ColumnSpec::D => write!(f, "d"),
+      ColumnSpec::Graphics => write!(f, "g")
+    }
+  }
+}
+
 #[derive(Debug,Copy,Clone,PartialEq)]
 pub enum BorderSpec {
   Top,
