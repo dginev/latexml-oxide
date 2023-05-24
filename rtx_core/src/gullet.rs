@@ -558,6 +558,7 @@ impl Gullet {
           }
         },
         Catcode::MARKER => {
+          // Really should already have been handled by read(X)Token
           // TODO: Marker case
           // LaTeXML::Core::Definition::stopProfiling($token, 'expand');
         },
@@ -637,16 +638,20 @@ impl Gullet {
         if token == *want {
           break;
         }
-        if token.get_catcode() == Catcode::BEGIN {
-          // And if it's a BEGIN, copy till balanced END
-          nbraces += 1;
-          tokens.push(token);
-          if let Some(balanced) = self.read_balanced(false, state)? {
-            tokens.append(&mut balanced.unlist());
-          }
-          tokens.push(T_END!());
-        } else {
-          tokens.push(token);
+        match token.get_catcode() {
+          Catcode::MARKER => {// would have been handled by readToken, but we're bypassing
+            handle_marker(token, state);
+          },
+          Catcode::BEGIN => {
+            // And if it's a BEGIN, copy till balanced END
+            nbraces += 1;
+            tokens.push(token);
+            if let Some(balanced) = self.read_balanced(false, state)? {
+              tokens.extend(balanced.unlist());
+            }
+            tokens.push(T_END!());
+          },
+          _ =>  { tokens.push(token); }
         }
       }
     } else {
