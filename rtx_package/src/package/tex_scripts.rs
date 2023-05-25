@@ -326,7 +326,7 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
     }
   } else {
     // as if max of width & prev script's width
-    let wp = if let Some(Stored::Digested(prev)) = prev_opt { prev.get_width(None,state)?.unwrap_or_default().value_of() as f64 } else { 0.0 };
+    let wp = if let Some(Stored::Digested(ref prev)) = prev_opt { prev.get_width(None,state)?.unwrap_or_default().value_of() as f64 } else { 0.0 };
     w = (ws - wp).max(0.0);
     if op == "SUPERSCRIPT" {
       h = hb + hs / 2.0;

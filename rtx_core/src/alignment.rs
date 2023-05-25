@@ -535,17 +535,14 @@ impl Alignment {
   /// And in fact they need not even be empty! TeX will just pile them up!
   /// However, in HTML the spanned rows ARE omitted!
   pub fn normalize_alignment(&mut self, state:&mut State) -> Result<()> {
-    if self.is_normalized {
-      return Ok(());
+    if !self.is_normalized {
+      self.normalize_cell_sizes(state)?;
+      self.normalize_mark_spans()?;
+      self.normalize_prune_rows()?;
+      self.normalize_prune_columns()?;
+      self.normalize_sum_sizes()?;
+      self.is_normalized = true;
     }
-    //======================================================================
-    self.normalize_cell_sizes(state)?;
-    self.normalize_mark_spans()?;
-    self.normalize_prune_rows()?;
-    self.normalize_prune_columns()?;
-    self.normalize_sum_sizes()?;
-    //======================================================================
-    self.is_normalized = true;
     Ok(())
   }
   /// Compute (approximate) sizes of all cells
