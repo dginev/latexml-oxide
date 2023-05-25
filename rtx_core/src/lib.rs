@@ -176,9 +176,11 @@ pub trait BoxOps: Object {
   fn get_tokens(&self) -> Option<&Tokens> { None }
   /// get the map of named properties
   fn get_properties(&self) -> &HashMap<String, Stored>;
+  /// get a mutable reference to the map of named properties
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
   /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T);
-  /// get a single named property
+  /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     if key == "isSpace" {
       match self.get_properties().get(key) {
@@ -199,6 +201,10 @@ pub trait BoxOps: Object {
     } else {
       self.get_properties().get(key).map(Cow::Borrowed)
     }
+  }
+  /// get a mutable reference to a single named property (does NOT have the "isSpace" check)
+  fn get_property_mut(&mut self, key:&str) -> Option<&mut Stored> {
+    self.get_properties_mut().get_mut(key)
   }
   /// checks if a property key has been set
   fn has_property(&self, key: &str) -> bool;

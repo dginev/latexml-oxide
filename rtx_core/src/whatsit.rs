@@ -344,6 +344,9 @@ impl BoxOps for Whatsit {
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
+  fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
+    self.properties.get_mut(key)
+  }
   fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {

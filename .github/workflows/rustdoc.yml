@@ -4,7 +4,7 @@ on:
     push:
         branches:
             - master
-            - deny-missing-docs-2
+            - alignment-coverage
 jobs:
     release:
         name: GitHub Pages
