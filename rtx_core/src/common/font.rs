@@ -903,6 +903,14 @@ impl Font {
     (Dimension::new(w), Dimension::new(h), Dimension::new(d))
   }
 
+  /// Get nominal width, height base ?
+  /// Probably should be using data from FontMetric ???
+  pub fn get_nominal_size(&self) -> (Dimension, Dimension, Dimension) {
+    let size = self.get_size().unwrap_or(DEFSIZE);
+    let u    = size * UNITY_F64;
+    (Dimension::new_f64(0.75 * u), Dimension::new_f64(0.7 * u), Dimension::new_f64(0.2 * u))
+  }
+
   // Here's where I avoid trying to emulate Knuth's line-breaking...
   // Mostly for List & Whatsit: compute the size of a list of boxes.
   // Options _SHOULD_ include:

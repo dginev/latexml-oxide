@@ -444,7 +444,7 @@ impl BoxOps for Digested {
       List(ref l) => l.compute_size(options, state),
       KeyVals(ref kvs) => kvs.compute_size(options, state),
       Whatsit(ref w) => w.borrow().compute_size(options, state),
-      Alignment(ref w) => w.borrow().compute_size(options, state),
+      Alignment(ref w) => w.borrow_mut().compute_size(options, state),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }

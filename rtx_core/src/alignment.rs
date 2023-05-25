@@ -93,6 +93,9 @@ pub struct Alignment {
   close_row: CloseRowFn,
   open_column: OpenColumnFn,
   close_column: CloseColumnFn,
+  cwidth: Option<Dimension>,
+  cheight: Option<Dimension>,
+  cdepth: Option<Dimension>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -112,6 +115,9 @@ impl Alignment {
       current_row: None,
       reversion: None,
       content_reversion: None,
+      cwidth: None,
+      cheight: None,
+      cdepth: None,
       open_container: config.open_container,
       close_container: config.close_container,
       open_row: config.open_row,
@@ -423,7 +429,7 @@ impl Alignment {
             }
           }
         }
-        let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        let empty = cell.empty || dbg!(&cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
         if let Some(align) = cell.align {
@@ -550,10 +556,11 @@ impl Alignment {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
         if let Some(boxes) = &cell.boxes {
-          let (w, _h, _d) //, cw, ch, cd)
+          let (w, h, d) //, cw, ch, cd)
             = boxes.get_size(Some(stored_map!(
               "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
               "vattach" => cell.vattach.clone() )), state)?;
+          dbg!(w);
           // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width vattach))
           //     . ") size " . showSize($w,  $h,  $d)
           //     . " csize " . showSize($cw, $ch, $cd)
@@ -562,8 +569,8 @@ impl Alignment {
           let empty = w.value_of() < 1 || // h.value_of() < 1 || d.value_of() < 1 ||
             boxes.unlist_ref().iter().all(|tb| tb.get_property_bool("isSpace")) && !preserved_boxes(boxes);
           cell.width  = Some(w);
-          // cell.height = Some(h);
-          // cell.depth  = Some(d);
+          cell.height = Some(h);
+          cell.depth  = Some(d);
           cell.empty = empty;
           if empty {
             cell.align = None;
@@ -575,6 +582,7 @@ impl Alignment {
     }
     Ok(())
   }
+  // TODO:
   /// Mark any cells that are covered by rowspan or colspan
   pub fn normalize_mark_spans(&mut self) -> Result<()> {Ok(())}
   /// Scan for and remove empty rows
@@ -877,11 +885,12 @@ impl Alignment {
 
 
   pub fn compute_size(
-    &self,
+    &mut self,
     _options: HashMap<String, Stored>,
-    _state: &mut State,
+    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    Ok((Dimension::new(0),Dimension::new(0),Dimension::new(0)))
+    self.normalize_alignment(state)?;
+    Ok((self.cwidth.unwrap(), self.cheight.unwrap(), self.cdepth.unwrap()))
   }
 
   pub fn get_properties_mut(&mut self) -> &mut HashMap<String,Stored> {
@@ -1038,6 +1047,14 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
   // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
   classify_alignment_rows(document, alignment, state);
+
+  {
+    let mut rows = collect_alignment_rows(alignment);
+    if rows.is_empty() {
+      return Ok(());
+    }
+    alignment_characterize_lines(document, Axis::Row, false, rows.as_mut_slice(), state)?;
+  }
   // Flip the rows around to produce a column view.
   {
     let mut cols = collect_alignment_columns(alignment);
@@ -1048,13 +1065,8 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
     alignment_characterize_lines(document, Axis::Column, false,  cols.as_mut_slice(), state)?;
   }
 
-  let mut rows = collect_alignment_rows(alignment);
-  if rows.is_empty() {
-    return Ok(());
-  }
-  alignment_characterize_lines(document, Axis::Row, false, rows.as_mut_slice(), state)?;
-
   // Did we go overboard?
+  let rows = collect_alignment_rows(alignment);
   let mut n_h = 0;
   let mut n_d = 0;
   for r in rows.iter() {
@@ -1067,7 +1079,7 @@ fn guess_alignment_headers(document: &mut Document, table: &mut Node, alignment:
       }
     }
   }
-  dbg!((n_h, n_d));
+  // dbg!((n_h, n_d));
 //   Debug("$n{h} header, $n{d} data cells") if $LaTeXML::DEBUG{alignment};
   if n_d == 1 { // Or any other heuristic?
     n_h = 0;
@@ -1357,9 +1369,9 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 /// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or '_' (empty) (or some combination)
 ///  or 'mx' for alternating text & math.
 fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut State) -> ColumnSpec {
-  let content = xcell.get_content();
+  let content = dbg!(xcell.get_content());
   let mut inferred_classes: Vec<ColumnSpec>   = Vec::new();
-  if content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
+  if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
     inferred_classes.push(ColumnSpec::Integer);
   } else {
     let mut nodes = xcell.get_child_nodes();
@@ -1471,8 +1483,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   if n<2 {
     return Ok(());
   }
-  // Debug("Characterizing $n " . ($axis ? "columns" : "rows"))
-  //   if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Characterizing {n} {}", if axis == Axis::Row {"rows"} else {"columns"});
 
   // Establish a scale of differences for the table.
   let (mut max_diff, mut min_diff, _avg_diff) = (0.0, 99999999.0, 0.0);
@@ -1488,20 +1499,18 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   }
   // avg_diff = avg_diff / (n - 1) as f64;
   if max_diff < 0.05 { // virtually no differences.
-  //   Debug("Lines are almost identical => Fail") if $LaTeXML::DEBUG{alignment};
+    // eprintln!("Lines are almost identical => Fail");
     return Ok(());
   }
   if (n > 2) && ((max_diff - min_diff) < max_diff * 0.5) { // differences too similar to establish pattern
-  //   Debug("Differences between lines are almost identical => Fail")
-  //     if $LaTeXML::DEBUG{alignment};
+    // eprintln!("Differences between lines are almost identical => Fail");
     return Ok(());
   }
   let tab_threshold = min_diff + 0.3 * (max_diff - min_diff);
 
-  // Debug("Differences $min_diff -- $max_diff => threshold = $::tab_threshold")
-  //   if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Differences {min_diff} -- {max_diff} => threshold = {tab_threshold}");
   // Find the first hump in differences. These are candidates for header lines.
-  // Debug("Scanning for headers") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Scanning for headers");
   let (minh, mut maxh) = (1, 1);
   let mut diff;
   loop {
@@ -1517,13 +1526,13 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
   if maxh > MAX_ALIGNMENT_HEADER_LINES {
     maxh = MAX_ALIGNMENT_HEADER_LINES;
   }
-  // Debug("Found from $minh--$maxh potential headers") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Found from {minh}--{maxh} potential headers");
 
   let nn = lines[0].len() - 1;
   // The sets of lines 1--$minh, .. 1--$maxh are potential headers.
   for nh in (minh..=maxh).rev() {
     // Check whether the set 1..$nh is plausable.
-    let heads = dbg!(alignment_test_headers(nh, dbg!(tab_threshold), axis, lines));
+    let heads = alignment_test_headers(nh, tab_threshold, axis, lines);
     if !heads.is_empty()  {
       // Now, change all cells marked as header from td => th.
       for h in heads {
@@ -1549,7 +1558,7 @@ fn alignment_characterize_lines(document:&mut Document, axis:Axis, reversed:bool
 
 /// Test whether `nhead` lines makes a good fit for the headers
 fn alignment_test_headers(nhead:usize, tab_threshold:f64, axis: Axis, lines:&mut [Vec<&mut Cell>]) -> Vec<usize> {
-  // Debug("Testing $nhead headers") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Testing {nhead} headers with threshold {tab_threshold}");
   let mut heads : Vec<usize> = (0 .. nhead).collect(); // The indices of heading lines.
   let mut head_length = alignment_max_content_length(0, 0, nhead - 1, lines);
   let mut next_line = nhead; // Start from the end of the proposed headings.
@@ -1611,8 +1620,7 @@ fn alignment_test_headers(nhead:usize, tab_threshold:f64, axis: Axis, lines:&mut
     else { return Vec::new(); }
   }
   // Header content seems too large relative to data?
-  // Debug("header content = $head_length; data content = $data_length")
-  //   if $LaTeXML::DEBUG{alignment};
+  // eprintln!("header content = {head_length}; data content = {data_length}");
   if (head_length > 10) && (head_length > 4*data_length) {
   //   Debug("header content too much longer than data content")
   //     if $LaTeXML::DEBUG{alignment};
@@ -1660,23 +1668,23 @@ fn alignment_match_lines(p1:usize, p2:usize, n:usize, tab_threshold:f64, axis: A
 /// We'll assume the 1st line is data, compare it to following lines,
 /// but also accept `continuation' data lines.
 fn alignment_skip_data(i:usize, tab_threshold:f64, axis:Axis, tablines: &mut [Vec<&mut Cell>]) -> usize {
-  if i > tablines.len() {
+  let tab_lines_length = tablines.len();
+  if i >= tab_lines_length {
     return 0;
   }
-  //   Debug("Scanning for data") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Scanning for data");
   let mut n = 1;
-  let max_n = tablines.len() - i;
-  while n < max_n {
+  while i+n < tab_lines_length {
     if alignment_compare(axis, true, false, i + n - 1, i + n, tablines) >= tab_threshold
-      && n < 2 || (tablines[i + n].iter().filter(|c|
-        matches!(c.content_class, Some(ColumnSpec::Empty))).count() as f64 <= 0.4 * tablines[0].len() as f64)
+      && (n < 2 || (tablines[i + n].iter().filter(|c|
+        matches!(c.content_class, Some(ColumnSpec::Empty))).count() as f64 <= 0.4 * tablines[0].len() as f64))
     {
       break;
     }
     // Accept an outlying `continuation line' as data, if mostly empty
     n+=1;
   }
-  //   Debug("Found $n data lines at $i") if $LaTeXML::DEBUG{alignment};
+  // eprintln!("Found {n} data lines at {i}");
   if n >= MIN_ALIGNMENT_DATA_LINES  { n } else { 0 }
 }
 
@@ -1738,7 +1746,7 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
     // compare certain edges
     if for_adjacency { // Compare edges for adjacent rows of potentially different purpose
       let mut inner_diffs = 0.0;
-    if axis == Axis::Row {
+      if axis == Axis::Row {
         if cell1.border_right != cell2.border_right { inner_diffs += 1.0; }
         if cell1.border_left != cell2.border_left { inner_diffs += 1.0; }
       } else {
@@ -1753,7 +1761,7 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
       let border1_pedge = cell1.border_at(pedge);
       let border2_pedge = cell2.border_at(pedge);
       if let Some(b1p) = border1_pedge {
-        if border1_pedge != border2_pedge {
+        if b1p>0 && (border1_pedge != border2_pedge) {
           diff += (b1p as i64 - border2_pedge.unwrap_or(0)as i64).abs() as f64;
         }
       }
@@ -1767,7 +1775,7 @@ fn alignment_compare(axis: Axis, for_adjacency:bool, reversed:bool, p1:usize, p2
     }
   }
   diff /= ncells as f64;
-  eprintln!("alignment_compare: {p1} - {p2} => {diff};");
+  // eprintln!("alignment_compare: {p1} - {p2} => {diff};");
   // Debug("$p1-$p2 => $diff; ") if $LaTeXML::DEBUG{alignment};
   diff
 }
