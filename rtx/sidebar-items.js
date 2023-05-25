@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":[["tex_tests","Build a test function for each “*.tex” source found in a given directory path. The path should be absolute, or relative to the root rtx checkout."]],"mod":[["converter",""],["core_interface",""],["util",""]]};
+window.SIDEBAR_ITEMS = {"macro":["tex_tests"],"mod":["converter","core_interface","util"]};

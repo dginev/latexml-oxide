@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_assignment.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_assignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_assignment.rs`."><title>tex_assignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -382,6 +382,12 @@
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//======================================================================
@@ -468,7 +474,7 @@
       // Info!(&quot;unexpected&quot;, name, gullet, state, message);
       </span><span class="prelude-val">None
     </span>};
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>props) = props_opt {
       <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}&quot;</span>, cs.to_string()), props.clone());
     }
@@ -496,12 +502,13 @@
   //    | \multiply &lt;numeric variable&gt;&lt;optional by&gt;&lt;number&gt;
   //    | \divide &lt;numeric variable&gt;&lt;optional by&gt;&lt;number&gt;
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\advance Variable SkipKeyword:by&quot;</span>, sub[stomach, args, state] {
-    <span class="kw">if let </span>ArgWrap::RegisterDefinition((defn_token, inner)) = args.remove(<span class="number">0</span>) {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\advance Variable SkipKeyword:by&quot;</span>, sub[stomach, (var), state] {
+    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
+      <span class="kw">let </span>(defn_token, inner) = <span class="kw-2">*</span>dbox;
       <span class="kw">let </span>defn_token_str = defn_token.to_string();
       <span class="kw">if </span>defn_token_str != <span class="string">&quot;missing&quot; </span>{
         <span class="kw">let </span>defn_opt = state.lookup_register_definition(<span class="kw-2">&amp;</span>defn_token);
-        state.set_current_token(defn_token);
+        state.local_current_token(defn_token);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = defn_opt {
           <span class="kw">let </span>summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)<span class="question-mark">?</span>;
           <span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
@@ -517,14 +524,14 @@
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\multiply Variable SkipKeyword:by Number&quot;</span>, sub[stomach, args, state] {
-    <span class="kw">if let </span>ArgWrap::RegisterDefinition((varname, inner)) = args.remove(<span class="number">0</span>) {
-      <span class="macro">unpack!</span>(args =&gt; scale);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\multiply Variable SkipKeyword:by Number&quot;</span>, sub[stomach, (var,scale), state] {
+    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
+      <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       </span><span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
         <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
-        <span class="kw">let </span>scale_value = scale.to_number().value_of();
+        <span class="kw">let </span>scale_value = scale.value_of();
         defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
       } <span class="kw">else </span>{
         <span class="kw">let </span>message =
@@ -537,14 +544,14 @@
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\divide Variable SkipKeyword:by Number&quot;</span>, sub[stomach, args, state] {
-    <span class="kw">if let </span>ArgWrap::RegisterDefinition((varname, inner)) = args.remove(<span class="number">0</span>) {
-      <span class="macro">unpack!</span>(args =&gt; scale);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\divide Variable SkipKeyword:by Number&quot;</span>, sub[stomach, (var,scale), state] {
+    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
+      <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       </span><span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
         <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
-        <span class="kw">let </span><span class="kw-2">mut </span>denominator = scale.to_number().value_f64();
+        <span class="kw">let </span><span class="kw-2">mut </span>denominator = scale.value_f64();
         <span class="kw">if </span>denominator == <span class="number">0.0 </span>{
           <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, scale, stomach, state, <span class="string">&quot;Illegal \\divide by 0; assuming 1&quot;</span>);
           denominator = <span class="number">1.0</span>;
@@ -588,7 +595,8 @@
   // instead, here is the same pattern of definition, with different concrete value types.
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\countdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>reg = <span class="macro">s!</span>(<span class="string">&quot;\\count{}&quot;</span>, num.value_of());
     <span class="kw">let </span>setter_count = reg.clone();
@@ -601,7 +609,8 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\dimendef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>dimen = <span class="macro">s!</span>(<span class="string">&quot;\\dimen{}&quot;</span>, num.value_of());
     <span class="kw">let </span>dimen2 = dimen.clone();
@@ -614,7 +623,8 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\skipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>skip = <span class="macro">s!</span>(<span class="string">&quot;\\skip{}&quot;</span>, num.value_of());
     <span class="kw">let </span>skip2 = skip.clone();
@@ -627,7 +637,8 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\muskipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>muglue = <span class="macro">s!</span>(<span class="string">&quot;\\muskip{}&quot;</span>,num.value_of());
     <span class="kw">let </span>muglue_setter = muglue.clone();
@@ -640,7 +651,8 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\toksdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
+    state.assign_meaning(<span class="kw-2">&amp;</span>cs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(),<span class="prelude-val">None</span>);
     <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>toks = <span class="macro">s!</span>(<span class="string">&quot;\\toks{}&quot;</span>, num.value_of() <span class="kw">as </span>usize);
     <span class="kw">let </span>toks_setter = toks.clone();
@@ -767,4 +779,4 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\patterns{}&quot;</span>, <span class="prelude-val">None</span>);
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

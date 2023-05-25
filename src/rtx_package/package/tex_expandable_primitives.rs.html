@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -429,6 +429,10 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap());
 <span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap());
@@ -669,7 +673,7 @@
           <span class="kw">let </span>expansion = <span class="kw">match </span>expandable.get_expansion() {
             <span class="prelude-val">None </span>=&gt; String::new(),
             <span class="comment">// TODO: How to print closures? This follows Perl&#39;s raw pointer format
-            </span><span class="prelude-val">Some</span>(ExpansionBody::Closure(exp)) =&gt; <span class="macro">format!</span>(<span class="string">&quot;CODE({:p})&quot;</span>,Arc::as_ptr(exp)),
+            </span><span class="prelude-val">Some</span>(ExpansionBody::Closure(exp)) =&gt; <span class="macro">format!</span>(<span class="string">&quot;CODE({:p})&quot;</span>, Rc::as_ptr(exp)),
             <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; writable_tokens(tks, state)
           };
           meaning = <span class="macro">format!</span>(<span class="string">&quot;{prefixes}macro:{spec}-&gt;{expansion}{p_trailer}&quot;</span>);
@@ -679,17 +683,17 @@
         }
       }
     }
-    <span class="macro">Explode!</span>(meaning)
+    <span class="macro">ExplodeChars!</span>(meaning)
   });
 
   <span class="comment">//======================================================================
 
   </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
     <span class="kw">let </span><span class="kw-2">mut </span>cs = escapechar(state);
+    <span class="kw">let </span>e_sym = arena::pin_static(<span class="string">&quot;\\endcsname&quot;</span>);
     <span class="comment">// keep newlines from having \n inside!
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state)<span class="question-mark">? </span>{
-      <span class="kw">let </span>s = token.get_string();
-      <span class="kw">if </span>s == <span class="string">&quot;\\endcsname&quot; </span>{
+      <span class="kw">if </span>token.get_sym() == e_sym {
         <span class="kw">break</span>;
       }
       <span class="kw">let </span>cc = token.get_catcode();
@@ -706,7 +710,8 @@
       } <span class="kw">else if </span>cc == Catcode::SPACE {  <span class="comment">// Keep newlines from having \n!
         </span>cs.push(<span class="string">&#39; &#39;</span>);
       } <span class="kw">else </span>{
-        cs.push_str(s);
+        token.with_str(|s|
+          cs.push_str(s));
       }
     }
     <span class="macro">T_CS!</span>(cs)
@@ -714,7 +719,8 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\csname CSName&quot;</span>, sub[gullet, (token), state] {
     <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-      state.assign_meaning(<span class="kw-2">&amp;</span>token, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+      state.assign_meaning(<span class="kw-2">&amp;</span>token, TOKEN_RELAX.with(|tr|
+        state.lookup_meaning(tr)).unwrap().into_owned(), <span class="prelude-val">None</span>);
     }
     token
   });
@@ -726,7 +732,7 @@
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[gullet, (tok, xtok), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="macro">vec!</span>[tok];
     <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>) {
-      state.set_current_token(xtok);
+      state.local_current_token(xtok);
       <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
         tokens.append(<span class="kw-2">&amp;mut </span>invoked.unlist()); <span class="comment">// Expand $xtok ONCE ONLY!
@@ -744,12 +750,13 @@
     <span class="prelude-val">Ok</span>(Tokens::new(tokens))
   });
 
-  <span class="comment">// Insert magic token that Gullet knows not to expand the next one.
+  <span class="comment">// Replace the next token with it&#39;s not-expanded variant
   </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\noexpand&quot;</span>), <span class="prelude-val">None</span>, sub[gullet, _args, state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state)<span class="question-mark">? </span>{
       <span class="macro">vec!</span>[token.with_dont_expand(state)<span class="question-mark">?</span>]
     } <span class="kw">else </span>{
-      Vec::new()
+      <span class="comment">// Missing token likely the result of &quot;{\noexpand}&quot; for which TeX would be unperturbed
+      </span>Vec::new()
     }
   });
 
@@ -798,7 +805,8 @@
 
   <span class="comment">// \the&lt;internal quantity&gt;
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\the Register&quot;</span>, sub[gullet, args, state] {
-    <span class="kw">if let </span>ArgWrap::RegisterDefinition((rtoken, inner)) = args.remove(<span class="number">0</span>) {
+    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = args.remove(<span class="number">0</span>) {
+      <span class="kw">let </span>(rtoken, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// let register_type = defn.borrow().register_type;
       //     if (!$type) {
       //       my $cs = ToString($defn-&gt;getCS);
@@ -861,4 +869,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

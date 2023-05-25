@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/conditional.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>conditional.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/conditional.rs`."><title>conditional.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -404,10 +404,16 @@
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
-</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
+<a href="#407" id="407">407</a>
+</pre><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
+//! These represent the control sequences for conditionals, as well as
+//! `\else`, `\or` and `\fi`.
+
+</span><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::sync::{Arc, RwLock};
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::cell::RefCell;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
@@ -425,11 +431,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use </span><span class="kw">crate</span>::Digested;
 
-<span class="doccomment">///! Conditionals Control sequence definitions.
-///! These represent the control sequences for conditionals, as well as
-///! `\else`, `\or` and `\fi`.
-
-</span><span class="comment">// Conditional control sequences; Expandable
+<span class="comment">// Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
 //   record a flag somewhere so that \else or \fi is recognized
 //   (otherwise, they should signal an error)
@@ -546,7 +548,7 @@
 
   <span class="kw">fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt; { <span class="self">self</span>.paramlist.as_ref() }
   <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.cs) }
-  <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Borrowed(<span class="self">self</span>.cs.get_cs_name()) }
+  <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)) }
   <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="prelude-val">None </span>}
   <span class="comment">// Not implemented for expandable
   </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, _gullet: <span class="kw-2">&amp;mut </span>Stomach, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
@@ -590,19 +592,19 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>ifid = state.lookup_int(<span class="string">&quot;if_count&quot;</span>);
     ifid += <span class="number">1</span>;
     state.assign_value(<span class="string">&quot;if_count&quot;</span>, ifid, <span class="prelude-val">Some</span>(Scope::Global));
-    <span class="kw">let </span>if_frame = Arc::new(RwLock::new(IfFrame {
+    <span class="kw">let </span>if_frame = Rc::new(RefCell::new(IfFrame {
       token: state.get_current_token().unwrap().clone(),
       start: gullet.get_locator().unwrap().into_owned(),
       parsing: <span class="bool-val">true</span>,
       elses: <span class="bool-val">false</span>,
       ifid,
     }));
-    state.set_ifframe(<span class="prelude-val">Some</span>(Arc::clone(<span class="kw-2">&amp;</span>if_frame)));
-    state.unshift_value(<span class="string">&quot;if_stack&quot;</span>, <span class="macro">vec!</span>[Arc::clone(<span class="kw-2">&amp;</span>if_frame)]);
+    state.set_ifframe(<span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>if_frame)));
+    state.unshift_value(<span class="string">&quot;if_stack&quot;</span>, <span class="macro">vec!</span>[Rc::clone(<span class="kw-2">&amp;</span>if_frame)]);
 
     <span class="kw">let </span>args = <span class="self">self</span>.read_arguments(gullet, state)<span class="question-mark">?</span>;
 
-    if_frame.write().unwrap().parsing = <span class="bool-val">false</span>;
+    if_frame.borrow_mut().parsing = <span class="bool-val">false</span>;
     <span class="kw">let </span>tracing = state.lookup_bool(<span class="string">&quot;TRACINGCOMMANDS&quot;</span>);
     <span class="comment">//   print STDERR &#39;{&#39; . $self-&gt;tracingCSName . &quot;} [#$ifid]\n&quot; if $tracing;
     //   print STDERR $self-&gt;tracingArgs(@args) . &quot;\n&quot; if $tracing &amp;&amp; @args;
@@ -653,7 +655,7 @@
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to &quot;XY junk&quot;, since A==A
   // # Return the token we&#39;ve skipped to, and the frame that this applies to.
-  </span><span class="kw">fn </span>skip_conditional_body(<span class="kw-2">&amp;</span><span class="self">self</span>, nskips: i64, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; Tokens {
+  </span><span class="kw">fn </span>skip_conditional_body(<span class="kw-2">&amp;</span><span class="self">self</span>, nskips: i64, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>n_ors = <span class="number">0</span>;
     <span class="kw">let </span>_start = gullet.get_locator();
@@ -662,7 +664,7 @@
 
     </span><span class="kw">let </span>local_frame = state.get_ifframe();
     <span class="kw">loop </span>{
-      <span class="kw">let </span>(t, cond_type) = <span class="kw">match </span>gullet.read_next_conditional(state) {
+      <span class="kw">let </span>(t, cond_type) = <span class="kw">match </span>gullet.read_next_conditional(state)<span class="question-mark">? </span>{
         <span class="prelude-val">Some</span>((tok, typ)) =&gt; (<span class="macro">Tokens!</span>(tok), <span class="prelude-val">Some</span>(typ)),
         <span class="prelude-val">None </span>=&gt; (<span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>),
       };
@@ -673,7 +675,7 @@
           <span class="comment">// Found a \fi
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value_mut(<span class="string">&quot;if_stack&quot;</span>) {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-              <span class="kw">if </span><span class="kw-2">*</span>stack_frame.read().unwrap() != <span class="kw-2">*</span>local_frame.as_ref().unwrap().read().unwrap() {
+              <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() != <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
                 <span class="comment">// But is it for a condition nested in the test clause?
                 // then DO pop that conditional&#39;s frame; it&#39;s DONE!
               </span>} <span class="kw">else </span>{
@@ -681,7 +683,7 @@
                 <span class="kw">if </span>level == <span class="number">0 </span>{
                   <span class="comment">// otherwise, if no more nesting, we&#39;re done.
                   // Done with this frame, keep it removed
-                  </span><span class="kw">return </span>t; <span class="comment">// AND Return the finishing token.
+                  </span><span class="kw">return </span><span class="prelude-val">Ok</span>(t); <span class="comment">// AND Return the finishing token.
                 </span>} <span class="kw">else </span>{
                   stack.push_front(stack_frame.into());
                 }
@@ -695,17 +697,17 @@
           </span>} <span class="kw">else if </span>other_type == ConditionalType::Or {
             n_ors += <span class="number">1</span>;
             <span class="kw">if </span>n_ors == nskips {
-              <span class="kw">return </span>t;
+              <span class="kw">return </span><span class="prelude-val">Ok</span>(t);
             }
           } <span class="kw">else if </span>other_type == ConditionalType::Else &amp;&amp; nskips != <span class="number">0 </span>{
             <span class="comment">// Found \else and we&#39;re looking for one?
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value(<span class="string">&quot;if_stack&quot;</span>) {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(<span class="kw-2">ref </span>stack_frame)) = stack.front() {
-                <span class="kw">if </span><span class="kw-2">*</span>stack_frame.read().unwrap() == <span class="kw-2">*</span>local_frame.as_ref().unwrap().read().unwrap() {
+                <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() == <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
                   <span class="comment">// No need to actually call elseHandler, but note that we&#39;ve seen an \else!
-                  </span>stack_frame.write().unwrap().elses = <span class="bool-val">true</span>;
-                  <span class="kw">return </span>t;
+                  </span>stack_frame.borrow_mut().elses = <span class="bool-val">true</span>;
+                  <span class="kw">return </span><span class="prelude-val">Ok</span>(t);
                 }
               }
             }
@@ -720,14 +722,14 @@
       state,
       <span class="string">&quot;Missing \\fi or \\else, conditional fell off end&quot;
     </span>);
-    <span class="macro">Tokens!</span>()
+    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   }
 
   <span class="kw">fn </span>invoke_else(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span>stack_frame_opt =
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value_mut(<span class="string">&quot;if_stack&quot;</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.front() {
-          <span class="prelude-val">Some</span>(Arc::clone(stack_frame))
+          <span class="prelude-val">Some</span>(Rc::clone(stack_frame))
         } <span class="kw">else </span>{
           <span class="prelude-val">None
         </span>}
@@ -736,23 +738,23 @@
       </span>};
     <span class="kw">let </span>local_token = state.get_current_token().unwrap();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
-      <span class="kw">if </span>stack_frame.read().unwrap().parsing {
+      <span class="kw">if </span>stack_frame.borrow().parsing {
         <span class="comment">// Defer expanding the \else if we&#39;re still parsing the test
         </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_RELAX!</span>(), (<span class="kw-2">*</span>local_token).clone()))
-      } <span class="kw">else if </span>stack_frame.read().unwrap().elses {
+      } <span class="kw">else if </span>stack_frame.borrow().elses {
         <span class="comment">// Already seen an \else&#39;s at this level?
         </span><span class="kw">let </span>message = <span class="macro">s!</span>(
           <span class="string">&quot;Extra {} already saw \\else for {:?} [{:?}] at {:?}&quot;</span>,
           local_token.stringify(),
-          stack_frame.read().unwrap().token,
-          stack_frame.read().unwrap().ifid,
-          stack_frame.read().unwrap().start
+          stack_frame.borrow().token,
+          stack_frame.borrow().ifid,
+          stack_frame.borrow().start
         );
         <span class="kw">let </span>local_token_str = local_token.to_string();
         <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, local_token_str, gullet, state, message);
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       } <span class="kw">else </span>{
-        state.set_ifframe(<span class="prelude-val">Some</span>(Arc::clone(<span class="kw-2">&amp;</span>stack_frame)));
+        state.set_ifframe(<span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>stack_frame)));
         <span class="kw">let </span>_t = <span class="self">self</span>.skip_conditional_body(<span class="number">0</span>, gullet, state);
         <span class="comment">//     print STDERR &#39;{&#39; . ToString($LaTeXML::CURRENT_TOKEN) . &#39;}&#39;
         //       . &quot; [for &quot; . ToString($$LaTeXML::IFFRAME{token}) . &quot; #&quot; .
@@ -774,10 +776,10 @@
   }
 
   <span class="kw">fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-    <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Arc&lt;RwLock&lt;IfFrame&gt;&gt;&gt; =
+    <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; =
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = state.lookup_value(<span class="string">&quot;if_stack&quot;</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
-          <span class="prelude-val">Some</span>(Arc::clone(frame))
+          <span class="prelude-val">Some</span>(Rc::clone(frame))
         } <span class="kw">else </span>{
           <span class="prelude-val">None
         </span>}
@@ -785,7 +787,7 @@
         <span class="prelude-val">None
       </span>};
     <span class="kw">if let </span><span class="prelude-val">Some</span>(stack_frame) = stack_frame_opt {
-      <span class="kw">if </span>stack_frame.read().unwrap().parsing {
+      <span class="kw">if </span>stack_frame.borrow().parsing {
         <span class="comment">// Defer expanding the \else if we&#39;re still parsing the test
         </span><span class="kw">let </span>local_token = state.get_current_token().unwrap();
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_RELAX!</span>(), (<span class="kw-2">*</span>local_token).clone()))
@@ -811,4 +813,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Align","Axis","BorderSpec","ColumnSpec"],"struct":["Cell","Template","TemplateConfig"],"type":["Row"]};

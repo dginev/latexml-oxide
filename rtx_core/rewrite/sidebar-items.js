@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["RewriteOperator",""],["RewritePattern",""]],"struct":[["Rewrite",""],["RewriteClause",""],["RewriteOptions",""]],"type":[["RewriteReplaceClosure",""]]};
+window.SIDEBAR_ITEMS = {"enum":["RewriteOperator","RewritePattern"],"struct":["Rewrite","RewriteClause","RewriteOptions"],"type":["RewriteReplaceClosure"]};

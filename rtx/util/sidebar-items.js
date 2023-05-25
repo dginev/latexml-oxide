@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["test","text-related utility functions"]]};
+window.SIDEBAR_ITEMS = {"mod":["test"]};

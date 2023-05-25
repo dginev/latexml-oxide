@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ArgWrap",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ArgWrap"]};

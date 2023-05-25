@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/store.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>store.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/store.rs`."><title>store.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1014,13 +1014,26 @@
 <a href="#1014" id="1014">1014</a>
 <a href="#1015" id="1015">1015</a>
 <a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::sync::{Arc, RwLock};
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::cell::RefCell;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -1030,6 +1043,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
+<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{Conditional, IfFrame};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
@@ -1054,38 +1068,30 @@
 <span class="kw">const </span>STORED_TRUE: Stored = Stored::Bool(<span class="bool-val">true</span>);
 <span class="kw">const </span>STORED_FALSE: Stored = Stored::Bool(<span class="bool-val">false</span>);
 
-<span class="comment">// TODO: Some design decisions need to be finalzed w.r.t Stored
-// 1. which types are allowed,
-// 2. should the store be made generic? e.g. T:Clone ? I would lean towards no, since it is very
-// easy to mistakenly insert the wrongly wrapped data e.g. Stored(Primitive(x)) vs
-// Stored(Rc(Primitive(x))) ... best to enforce explicitly 3. consistent type principles - should
-// we always demand an Rc&lt;T&gt; for a complex struct T? do we ever want to mutate the values in
-// place? if so, would also need to consider a RefCell&lt;&gt; if not (which is what I lean to), a
-// simple Box&lt;&gt; may suffice, HOWEVER, there are cases where definitions need to be passed on
-// and shared, and especially so for Font      in which case an Rc&lt;()&gt; may make more sense.
-// 4. API ergonomics - we need From/Into implementations for ALL enum variants, to avoid explicitly
-//    writing a wrapper every time. if there is a primitive p, it should be accepted as an argument,
-//    rather than requiring writing Stored::Primitive(Arc::new(p)) each time
-//    and equally importantly for unwrapping.
-
-// Basic principles:
+<span class="comment">// Basic principles:
 // 1. If the type is `Copy`, store directly
 // 2. If the type is intended as State-exclusive, store in a Box
-//      (or directly if any already Boxed datatype such as Vec, VecDeque)
-// 3. If the struct is intended for reuse/(mutation?!) in digestion components, store it in an Rc,
+//      (or directly if any already Boxed datatype such as Vec, VecDeque, HashMap)
+// 3. If the struct is intended for reuse in digestion components, store it in an Rc,
 //    e.g. Rc&lt;Font&gt;
-
+// 4. In the very unfortunate cases where we have to mutate items while they are stored,
+//    we may consider a RefCell&lt;&gt; wrapper for interior mutability.
+//      BUT it is often possible to take the value out to mutate, and re-insert.
+//      State::checkout_value(key) + mutate + State::checkin_value(key,val)
+//      The only cases where this isn&#39;t straightforward is for deep recursive callchains,
+//      as in the ones where we rely on Stomach or a Mouth being in State.
 </span><span class="doccomment">/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
-</span><span class="attr">#[derive(Clone)]
+</span><span class="attr">#[derive(Default, Clone)]
 </span><span class="kw">pub enum </span>Stored {
   <span class="doccomment">/// if we want to keep a key but make it &#39;undef&#39;, set it to None
+  </span><span class="attr">#[default]
   </span><span class="prelude-val">None</span>,
   <span class="comment">// Primitives (Copy types, or cheap Clone)
   </span><span class="doccomment">/// atomic data (Copy)
   </span>Bool(bool),
   <span class="doccomment">/// atomic data (Clone)
-  </span>String(String),
+  </span>String(SymbolU32),
   <span class="doccomment">/// atomic data (Copy)
   </span>Charcode(u16),
   <span class="doccomment">/// atomic data (Copy)
@@ -1132,39 +1138,39 @@
   <span class="doccomment">/// latexml object
   </span>MuDimension(MuDimension),
   <span class="doccomment">/// metadata object
-  </span>Locator(Locator),
+  </span>Locator(Box&lt;Locator&gt;),
   <span class="doccomment">/// latexml object
-  </span>Rewrite(Rewrite),
+  </span>Rewrite(Box&lt;Rewrite&gt;),
   <span class="doccomment">/// latexml object
-  </span>Ligature(Ligature),
+  </span>Ligature(Box&lt;Ligature&gt;),
   <span class="doccomment">/// latexml object
   </span>Reversion(Reversion),
-  <span class="comment">// LaTeXML objects (Arc-wrapped)
-  </span><span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Register(Arc&lt;Register&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Expandable(Arc&lt;Expandable&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Conditional(Arc&lt;Conditional&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Primitive(Arc&lt;Primitive&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>MathPrimitive(Arc&lt;MathPrimitive&gt;),
+  <span class="comment">// LaTeXML objects (Rc-wrapped)
+  </span><span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Register(Rc&lt;Register&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Expandable(Rc&lt;Expandable&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Conditional(Rc&lt;Conditional&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Primitive(Rc&lt;Primitive&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>MathPrimitive(Rc&lt;MathPrimitive&gt;),
   <span class="comment">//  MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
-  </span><span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Constructor(Arc&lt;Constructor&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
+  </span><span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Constructor(Rc&lt;Constructor&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
   </span>Digested(<span class="kw">crate</span>::Digested),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Parameter(Arc&lt;Parameter&gt;),
-  <span class="doccomment">/// latexml object (Arc-wrapped)
-  </span>Font(Arc&lt;Font&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Parameter(Rc&lt;Parameter&gt;),
+  <span class="doccomment">/// latexml object (Rc-wrapped)
+  </span>Font(Rc&lt;Font&gt;),
   <span class="doccomment">/// a stored FontDirective (Font or closure building a Font)
   </span>FontDirective(FontDirective),
   <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
-  </span>Mouth(Arc&lt;RwLock&lt;Mouth&gt;&gt;),
+  </span>Mouth(Rc&lt;RefCell&lt;Mouth&gt;&gt;),
   <span class="doccomment">/// WALL OF SHAME (interior mutability) -- can we dispense with these?
-  </span>IfFrame(Arc&lt;RwLock&lt;IfFrame&gt;&gt;),
+  </span>IfFrame(Rc&lt;RefCell&lt;IfFrame&gt;&gt;),
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Stored {
@@ -1172,7 +1178,7 @@
     <span class="kw">use </span><span class="kw">crate</span>::Stored::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
       <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">&quot;None&quot;</span>),
-      String(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
+      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">&quot;{str}&quot;</span>)),
       Int(<span class="kw-2">ref </span>num) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Int[{num:?}]&quot;</span>),
       Node(<span class="kw-2">ref </span>n) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Node[{n:?}]&quot;</span>),
       VecChar(<span class="kw-2">ref </span>vs) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::VecChar[{vs:?}]&quot;</span>),
@@ -1197,7 +1203,7 @@
       Parameter(<span class="kw-2">ref </span>parameter) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Parameter[{parameter:?}]&quot;</span>),
       Register(<span class="kw-2">ref </span>register) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Register[{:?}]&quot;</span>, register.cs),
       Rewrite(<span class="kw-2">ref </span>rewrite) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Rewrite[{rewrite:?}]&quot;</span>),
-      Mouth(<span class="kw-2">ref </span>mouth) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Mouth[{:?}]&quot;</span>, mouth.read().unwrap().get_source()),
+      Mouth(<span class="kw-2">ref </span>mouth) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Mouth[{:?}]&quot;</span>, mouth.borrow().get_source()),
       Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Font[{font:?}]&quot;</span>),
       FontDirective(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::FontDirective[{font:?}]&quot;</span>),
       Number(<span class="kw-2">ref </span>number) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::Number[{number:?}]&quot;</span>),
@@ -1226,7 +1232,7 @@
       MuGlue(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
       MuDimension(<span class="kw-2">ref </span>v) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{v}&quot;</span>),
       Font(<span class="kw-2">ref </span>font) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{font}&quot;</span>),
-      String(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
+      String(<span class="kw-2">ref </span>s) =&gt; arena::with(<span class="kw-2">*</span>s, |str| <span class="macro">write!</span>(f, <span class="string">&quot;{str}&quot;</span>)),
       Int(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Bool(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Tokens(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
@@ -1239,10 +1245,12 @@
     }
   }
 }
+
 <span class="doccomment">/// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
-/// if it is safe to carelessly lock the RwLock guards of the suspect fields with interior
-/// mutability Worse: some conditions depend on the Stateful meaning of Token&#39;s,
-///        so the perfect equality check would need State as an argument :(
+/// if it is safe to eagerly borrow() from the RefCell guards over fields with interior
+/// mutability.
+/// Worse: some conditions depend on the Stateful meaning of Token&#39;s,
+///        so the perfect equality check would need State as an argument.
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Stored {
   <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Stored) -&gt; bool {
     <span class="kw">use </span><span class="kw">crate</span>::Stored::<span class="kw-2">*</span>;
@@ -1341,7 +1349,7 @@
       },
       IfFrame(<span class="kw-2">ref </span>fr) =&gt; {
         <span class="kw">if let </span>IfFrame(fr2) = other {
-          <span class="kw-2">*</span>fr.read().unwrap() == <span class="kw-2">*</span>fr2.read().unwrap()
+          <span class="kw-2">*</span>fr.borrow() == <span class="kw-2">*</span>fr2.borrow()
         } <span class="kw">else </span>{
           <span class="bool-val">false
         </span>}
@@ -1412,7 +1420,7 @@
       },
       Mouth(<span class="kw-2">ref </span>m) =&gt; {
         <span class="kw">if let </span>Mouth(m2) = other {
-          <span class="kw-2">*</span>m.read().unwrap() == <span class="kw-2">*</span>m2.read().unwrap()
+          <span class="kw-2">*</span>m.borrow() == <span class="kw-2">*</span>m2.borrow()
         } <span class="kw">else </span>{
           <span class="bool-val">false
         </span>}
@@ -1545,7 +1553,7 @@
     out_map
   }
   <span class="doccomment">/// Dynamic dispatch for Definition&#39;s `read_arguments`,
-  /// to circumvent the limitations of using trait objects with `Arc&lt;Definition&gt;`
+  /// to circumvent the limitations of using trait objects with `Rc&lt;Definition&gt;`
   </span><span class="kw">pub fn </span>read_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
     <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
     <span class="kw">match </span><span class="self">self </span>{
@@ -1587,19 +1595,22 @@
 }
 
 <span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: String) -&gt; <span class="self">Self </span>{ Stored::String(value) }
+  <span class="kw">fn </span>from(value: String) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
+}
+<span class="kw">impl </span>From&lt;SymbolU32&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: SymbolU32) -&gt; <span class="self">Self </span>{ Stored::String(value) }
 }
 
 <span class="kw">impl </span>From&lt;char&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: char) -&gt; <span class="self">Self </span>{ Stored::String(value.to_string()) }
+  <span class="kw">fn </span>from(value: char) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin_char(value)) }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; <span class="self">Self </span>{ Stored::String(value.clone()) }
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>String) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin(value)) }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str) -&gt; <span class="self">Self </span>{ value.to_owned().into() }
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="self">Self </span>{ Stored::String(arena::pin_static(value)) }
 }
 
 <span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>Stored {
@@ -1625,54 +1636,54 @@
   <span class="kw">fn </span>from(value: Token) -&gt; <span class="self">Self </span>{ Stored::Token(value) }
 }
 
-<span class="comment">// Storing all definitions is expected - Arc&lt;Expandable&gt; case
+<span class="comment">// Storing all definitions is expected - Rc&lt;Expandable&gt; case
 
 </span><span class="kw">impl </span>From&lt;Tokens&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: Tokens) -&gt; <span class="self">Self </span>{ Stored::Tokens(value) }
 }
 
 <span class="kw">impl </span>From&lt;Locator&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Locator) -&gt; <span class="self">Self </span>{ Stored::Locator(value) }
+  <span class="kw">fn </span>from(value: Locator) -&gt; <span class="self">Self </span>{ Stored::Locator(Box::new(value)) }
 }
 
 <span class="kw">impl </span>From&lt;Mouth&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Mouth) -&gt; <span class="self">Self </span>{ Stored::Mouth(Arc::new(RwLock::new(value))) }
+  <span class="kw">fn </span>from(value: Mouth) -&gt; <span class="self">Self </span>{ Stored::Mouth(Rc::new(RefCell::new(value))) }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Expandable&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Arc&lt;Expandable&gt;) -&gt; <span class="self">Self </span>{ Stored::Expandable(definition) }
+<span class="kw">impl </span>From&lt;Rc&lt;Expandable&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(definition: Rc&lt;Expandable&gt;) -&gt; <span class="self">Self </span>{ Stored::Expandable(definition) }
 }
 <span class="doccomment">/// Storing all definitions is expected - Expandable case
 </span><span class="kw">impl </span>From&lt;Expandable&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Expandable) -&gt; <span class="self">Self </span>{ Arc::new(definition).into() }
+  <span class="kw">fn </span>from(definition: Expandable) -&gt; <span class="self">Self </span>{ Rc::new(definition).into() }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Conditional&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Arc&lt;Conditional&gt;) -&gt; <span class="self">Self </span>{ Stored::Conditional(definition) }
+<span class="kw">impl </span>From&lt;Rc&lt;Conditional&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(definition: Rc&lt;Conditional&gt;) -&gt; <span class="self">Self </span>{ Stored::Conditional(definition) }
 }
 <span class="kw">impl </span>From&lt;Conditional&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Conditional) -&gt; <span class="self">Self </span>{ Arc::new(value).into() }
+  <span class="kw">fn </span>from(value: Conditional) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Primitive&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Arc&lt;Primitive&gt;) -&gt; <span class="self">Self </span>{ Stored::Primitive(definition) }
+<span class="kw">impl </span>From&lt;Rc&lt;Primitive&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(definition: Rc&lt;Primitive&gt;) -&gt; <span class="self">Self </span>{ Stored::Primitive(definition) }
 }
 <span class="kw">impl </span>From&lt;Primitive&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Primitive) -&gt; <span class="self">Self </span>{ Arc::new(value).into() }
+  <span class="kw">fn </span>from(value: Primitive) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;MathPrimitive&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Arc&lt;MathPrimitive&gt;) -&gt; <span class="self">Self </span>{ Stored::MathPrimitive(definition) }
+<span class="kw">impl </span>From&lt;Rc&lt;MathPrimitive&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(definition: Rc&lt;MathPrimitive&gt;) -&gt; <span class="self">Self </span>{ Stored::MathPrimitive(definition) }
 }
 <span class="kw">impl </span>From&lt;MathPrimitive&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: MathPrimitive) -&gt; <span class="self">Self </span>{ Arc::new(value).into() }
+  <span class="kw">fn </span>from(value: MathPrimitive) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Constructor&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(definition: Arc&lt;Constructor&gt;) -&gt; <span class="self">Self </span>{ Stored::Constructor(definition) }
+<span class="kw">impl </span>From&lt;Rc&lt;Constructor&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(definition: Rc&lt;Constructor&gt;) -&gt; <span class="self">Self </span>{ Stored::Constructor(definition) }
 }
 <span class="kw">impl </span>From&lt;Constructor&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Constructor) -&gt; <span class="self">Self </span>{ Arc::new(value).into() }
+  <span class="kw">fn </span>from(value: Constructor) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
 <span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span>Stored {
@@ -1691,11 +1702,12 @@
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Digested) -&gt; <span class="self">Self </span>{ <span class="kw">crate</span>::Stored::Digested(value.clone()) }
 }
 
-<span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">crate</span>::Digested&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">crate</span>::Digested&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>Stored <span class="kw">where
+  </span>T: Into&lt;Stored&gt; + Sized {
+  <span class="kw">fn </span>from(value_opt: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
     <span class="kw">match </span>value_opt {
-      <span class="prelude-val">Some</span>(v) =&gt; v.into(),
       <span class="prelude-val">None </span>=&gt; Stored::None,
+      <span class="prelude-val">Some</span>(v) =&gt; v.into()
     }
   }
 }
@@ -1709,30 +1721,30 @@
 }
 
 <span class="kw">impl </span>From&lt;Parameter&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Parameter) -&gt; <span class="self">Self </span>{ Stored::Parameter(Arc::new(value)) }
+  <span class="kw">fn </span>from(value: Parameter) -&gt; <span class="self">Self </span>{ Stored::Parameter(Rc::new(value)) }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Font&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(font: Arc&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Stored::Font(font) }
+<span class="kw">impl </span>From&lt;Rc&lt;Font&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(font: Rc&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Stored::Font(font) }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;Register&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(register: Arc&lt;Register&gt;) -&gt; <span class="self">Self </span>{ Stored::Register(register) }
+<span class="kw">impl </span>From&lt;Rc&lt;Register&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(register: Rc&lt;Register&gt;) -&gt; <span class="self">Self </span>{ Stored::Register(register) }
 }
 <span class="kw">impl </span>From&lt;Register&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(register: Register) -&gt; <span class="self">Self </span>{ Arc::new(register).into() }
+  <span class="kw">fn </span>from(register: Register) -&gt; <span class="self">Self </span>{ Rc::new(register).into() }
 }
 
 <span class="kw">impl </span>From&lt;Rewrite&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Rewrite) -&gt; <span class="self">Self </span>{ Stored::Rewrite(value) }
+  <span class="kw">fn </span>from(value: Rewrite) -&gt; <span class="self">Self </span>{ Stored::Rewrite(Box::new(value)) }
 }
 
 <span class="kw">impl </span>From&lt;Font&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Font) -&gt; <span class="self">Self </span>{ Arc::new(value).into() }
+  <span class="kw">fn </span>from(value: Font) -&gt; <span class="self">Self </span>{ Rc::new(value).into() }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;Cow&lt;<span class="lifetime">&#39;a</span>, Font&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(value: Cow&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Arc::new((<span class="kw-2">*</span>value).clone()).into() }
+  <span class="kw">fn </span>from(value: Cow&lt;Font&gt;) -&gt; <span class="self">Self </span>{ Rc::new((<span class="kw-2">*</span>value).clone()).into() }
 }
 
 <span class="kw">impl </span>From&lt;Number&gt; <span class="kw">for </span>Stored {
@@ -1744,6 +1756,10 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Token&gt; <span class="kw">for </span>Stored {
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Token) -&gt; <span class="self">Self </span>{ Stored::Token(value.clone()) }
+}
+
+<span class="kw">impl </span>From&lt;Alignment&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(a: Alignment) -&gt; <span class="self">Self </span>{ Stored::Digested(<span class="kw">crate</span>::Digested::from(a)) }
 }
 
 <span class="kw">impl </span>From&lt;Vec&lt;char&gt;&gt; <span class="kw">for </span>Stored {
@@ -1810,12 +1826,12 @@
   }
 }
 
-<span class="kw">impl </span>From&lt;Arc&lt;RwLock&lt;IfFrame&gt;&gt;&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(frame: Arc&lt;RwLock&lt;IfFrame&gt;&gt;) -&gt; Stored { Stored::IfFrame(frame) }
+<span class="kw">impl </span>From&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; <span class="kw">for </span>Stored {
+  <span class="kw">fn </span>from(frame: Rc&lt;RefCell&lt;IfFrame&gt;&gt;) -&gt; Stored { Stored::IfFrame(frame) }
 }
 
 <span class="kw">impl </span>From&lt;Ligature&gt; <span class="kw">for </span>Stored {
-  <span class="kw">fn </span>from(lig: Ligature) -&gt; Stored { Stored::Ligature(lig) }
+  <span class="kw">fn </span>from(lig: Ligature) -&gt; Stored { Stored::Ligature(Box::new(lig)) }
 }
 
 <span class="kw">impl </span>From&lt;Reversion&gt; <span class="kw">for </span>Stored {
@@ -1846,7 +1862,7 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span>String {
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>Stored) -&gt; String {
     <span class="kw">match </span>value {
-      Stored::String(v) =&gt; v.to_owned(),
+      Stored::String(v) =&gt; arena::to_string(<span class="kw-2">*</span>v),
       v =&gt; <span class="macro">s!</span>(<span class="string">&quot;{v:?}&quot;</span>),
     }
   }
@@ -1861,10 +1877,10 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Arc&lt;Font&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Font&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
     <span class="kw">match </span>value {
-      Stored::Font(<span class="kw-2">ref </span>f) =&gt; <span class="prelude-val">Some</span>(Arc::clone(f)),
+      Stored::Font(<span class="kw-2">ref </span>f) =&gt; <span class="prelude-val">Some</span>(Rc::clone(f)),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
@@ -1912,12 +1928,12 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Tokens&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
+<span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
     <span class="kw">match </span>value {
-      Stored::String(<span class="kw-2">ref </span>text) =&gt; <span class="prelude-val">Some</span>(mouth::tokenize_internal(text)),
-      Stored::Token(<span class="kw-2">ref </span>ts) =&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[ts.clone()])),
-      Stored::Tokens(<span class="kw-2">ref </span>ts) =&gt; <span class="prelude-val">Some</span>(ts.clone()),
+      Stored::String(sym) =&gt; <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>arena::to_string(sym))),
+      Stored::Token(ts) =&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[ts])),
+      Stored::Tokens(ts) =&gt; <span class="prelude-val">Some</span>(ts),
       Stored::VecDequeStored(vdq) =&gt; {
         <span class="comment">// Each item in the queue can be unlisted into a Vec&lt;Token&gt;
         // and then the result can be re-cast as a single Tokens
@@ -1939,10 +1955,10 @@
   }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
-  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
+  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
     <span class="kw">match </span>value {
-      Stored::Register(<span class="kw-2">ref </span>reg) =&gt; <span class="prelude-val">Some</span>(Arc::clone(reg)),
+      Stored::Register(<span class="kw-2">ref </span>reg) =&gt; <span class="prelude-val">Some</span>(Rc::clone(reg)),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
@@ -2004,7 +2020,7 @@
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
     <span class="kw">match </span>value {
       Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>digested).clone()),
-      Stored::String(text) =&gt; <span class="prelude-val">Some</span>(text.into()),
+      Stored::String(text) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>text).into()),
       Stored::Int(text) =&gt; <span class="prelude-val">Some</span>(text.to_string().into()),
       <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
     }
@@ -2020,7 +2036,11 @@
     <span class="kw">match </span>value {
       Stored::Tokens(ts) =&gt; ts.into(),
       Stored::Token(t) =&gt; (<span class="kw-2">*</span>t).clone(),
-      Stored::String(t) =&gt; <span class="macro">T_CS!</span>(t),
+      Stored::String(text) =&gt; Token {
+        text: <span class="kw-2">*</span>text,
+        code: Catcode::CS,
+        smuggled: <span class="prelude-val">None</span>,
+      },
       t =&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;dangerous cast to CS for {:?}&quot;</span>, t);
         <span class="macro">Warn!</span>(<span class="string">&quot;Stored&quot;</span>, <span class="string">&quot;cast&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, message);
@@ -2031,4 +2051,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

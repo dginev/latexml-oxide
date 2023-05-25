@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx/src/util/test.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx/src/util/test.rs`."><title>test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -214,12 +214,28 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
 <span class="kw">use </span>libxml::tree::{Node, SaveOptions};
 <span class="kw">use </span>std::path::PathBuf;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Once;
 
 <span class="kw">use </span><span class="kw">crate</span>::core_interface::DigestionAPI;
 <span class="kw">use </span>rtx_core::common::BindingDispatcher;
@@ -241,7 +257,6 @@
   requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
   dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 ) {
-  rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
   <span class="kw">if </span>!validate_requirements(dirpath, requires) {
     <span class="kw">return</span>; <span class="comment">// test group only if required files are found.
   </span>}
@@ -259,6 +274,20 @@
   }
 }
 
+<span class="kw">static </span>INIT_LOGGER: Once = Once::new();
+<span class="kw">pub fn </span>init_logger() {
+  INIT_LOGGER.call_once(|| {
+    rtx_core::util::logger::init(log::LevelFilter::Warn).unwrap();
+    <span class="comment">// Initializing the libxml parser ONCE is a recommendation for thread-safety,
+    // which should hopefully avoid any hangs in a threaded &quot;cargo test&quot;
+    // this may also be needed in web servers running parallel rtx conversion jobs
+    // See: https://dev.w3.org/XInclude-Test-Suite/libxml2-2.4.24/libxml2-2.4.24/doc/threads.html
+    </span><span class="kw">unsafe </span>{
+      libxml::bindings::xmlInitParser();
+    }
+  });
+}
+
 <span class="kw">pub fn </span>rtx_test_single(
   tex_file_str: <span class="kw-2">&amp;</span>str,
   name: <span class="kw-2">&amp;</span>str,
@@ -266,12 +295,13 @@
   requires: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>phf::Map&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;&gt;,
   dispatcher_opt: <span class="prelude-ty">Option</span>&lt;BindingDispatcher&gt;,
 ) {
+  init_logger();
   <span class="kw">if </span>!validate_requirements(dirpath, requires) {
     <span class="kw">return</span>; <span class="comment">// test group only if required files are found.
   </span>}
   <span class="kw">let </span>tex_file = PathBuf::from(tex_file_str);
   <span class="kw">let </span>xml_file = tex_file.with_extension(<span class="string">&quot;xml&quot;</span>);
-  <span class="kw">if </span>xml_file.exists() {
+  <span class="kw">if </span><span class="macro">matches!</span>(xml_file.try_exists(), <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)) {
     rtx_ok_internal(
       tex_file_str,
       <span class="kw-2">&amp;</span>xml_file.to_string_lossy(),
@@ -332,7 +362,7 @@
     ..CoreOptions::default()
   });
   <span class="comment">// Add the package bindings
-  </span>latexml.get_state_mut().bindings_dispatch = <span class="prelude-val">Some</span>(Arc::new(package::dispatch));
+  </span>latexml.get_state_mut().bindings_dispatch = <span class="prelude-val">Some</span>(Rc::new(package::dispatch));
   <span class="comment">// If we want to test the rtx_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to
@@ -340,11 +370,11 @@
   </span><span class="kw">if </span>extra_bindings_dispatcher.is_some() {
     latexml.get_state_mut().extra_bindings_dispatch = extra_bindings_dispatcher;
   }
-
-  <span class="kw">match </span>latexml.convert_file(tex_path.to_owned()) {
+  <span class="kw">let </span>res = <span class="kw">match </span>latexml.convert_file(tex_path.to_owned()) {
     <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{:?}: Couldn&#39;t convert {:?}; {:?}&quot;</span>, name, tex_path, e),
     <span class="prelude-val">Ok</span>(doc) =&gt; process_ltx_doc(doc, name, latexml.get_state_mut()),
-  }
+  };
+  res
 }
 
 <span class="doccomment">/// Loads and serialized the resulting XML for a test file target,
@@ -389,10 +419,10 @@
     include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
     ..CoreOptions::default()
   });
-  latexml.get_state_mut().bindings_dispatch = <span class="prelude-val">Some</span>(Arc::new(package::dispatch));
+  latexml.get_state_mut().bindings_dispatch = <span class="prelude-val">Some</span>(Rc::new(package::dispatch));
   <span class="kw">let </span>xml_result = latexml.convert_file(<span class="macro">format!</span>(<span class="string">&quot;literal:\\[ {tex} \\]&quot;</span>));
   <span class="macro">assert!</span>(xml_result.is_ok(), <span class="string">&quot;{:?}&quot;</span>, xml_result.err());
-  <span class="kw">let </span>doc = xml_result.unwrap();
+  <span class="kw">let </span><span class="kw-2">mut </span>doc = xml_result.unwrap();
 
   <span class="comment">// grab the first formula
   </span><span class="kw">let </span>state = latexml.get_state_mut();
@@ -431,4 +461,4 @@
   };
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

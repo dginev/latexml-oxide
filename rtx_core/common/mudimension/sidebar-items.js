@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MuDimension",""]]};
+window.SIDEBAR_ITEMS = {"struct":["MuDimension"]};

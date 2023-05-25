@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_functions.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_functions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_functions.rs`."><title>tex_functions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1009,9 +1009,54 @@
 <a href="#1009" id="1009">1009</a>
 <a href="#1010" id="1010">1010</a>
 <a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
-<span class="kw">use </span>rtx_core::keyvals::KeyValsOptions;
+<span class="kw">use </span>rtx_core::keyvals::KeyvalsConfig;
 <span class="kw">use </span>std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 <span class="kw">use </span>std::collections::VecDeque;
 
@@ -1107,7 +1152,7 @@
         </span>n += <span class="number">1</span>;
       }
       <span class="kw">if </span>n &gt; <span class="number">0 </span>{
-        <span class="kw">let </span>t_num = t.get_string().parse::&lt;i8&gt;().unwrap_or(-<span class="number">1</span>);
+        <span class="kw">let </span>t_num = t.with_str(|ts| ts.parse::&lt;i8&gt;()).unwrap_or(-<span class="number">1</span>);
         <span class="kw">if </span>t_num != n {
           <span class="macro">fatal!</span>(
             ParamSpec,
@@ -1232,7 +1277,7 @@
   <span class="kw">match </span>state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;box{}&quot;</span>, boxnum.value_of())) {
     <span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>d)) =&gt; <span class="kw">match </span>d.data() {
       DigestedData::Whatsit(<span class="kw-2">ref </span>w)
-        <span class="kw">if </span>w.read().unwrap().definition == state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\vbox&quot;</span>)).unwrap() =&gt;
+        <span class="kw">if </span>w.borrow().definition == state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\vbox&quot;</span>)).unwrap() =&gt;
       {
         <span class="string">&quot;vbox&quot;
       </span>},
@@ -1303,7 +1348,7 @@
   everybox_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet.read_token(state) {
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet.read_token(state)<span class="question-mark">? </span>{
     <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
       <span class="kw">break</span>;
     } <span class="comment">// Skip till { or \bgroup
@@ -1344,6 +1389,23 @@
   //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
   </span><span class="macro">unimplemented!</span>()
 }
+
+<span class="kw">pub fn </span>p_revert&lt;T&gt;(arg:T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
+<span class="kw">where </span>T: Sized+Object {
+  state.set_dual_branch(<span class="string">&quot;presentation&quot;</span>);
+  <span class="kw">let </span>result = arg.revert(state);
+  state.expire_dual_branch();
+  result
+}
+
+<span class="kw">pub fn </span>c_revert&lt;T&gt;(arg:T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
+<span class="kw">where </span>T: Sized+Object {
+  state.set_dual_branch(<span class="string">&quot;content&quot;</span>);
+  <span class="kw">let </span>result = arg.revert(state);
+  state.expire_dual_branch();
+  result
+}
+
 
 <span class="doccomment">/// This attempts to be a generalize vbox construction;
 /// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
@@ -1412,10 +1474,11 @@
   <span class="comment">// Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   </span><span class="kw">let </span><span class="kw-2">mut </span>newnodes = Vec::new();
   <span class="kw">while </span>!nodes.is_empty() {
-    <span class="kw">if </span>state.model.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>]) == <span class="string">&quot;ltx:break&quot; </span>{
-      <span class="kw">let </span>break_parent_name = state.model.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>].get_parent().unwrap());
+    <span class="kw">let </span>qname = document.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>], state);
+    <span class="kw">if </span>qname == arena::pin_static(<span class="string">&quot;ltx:break&quot;</span>) {
       <span class="comment">// ltx:break are superflous, now, unless we&#39;re transporting a figure/float
-      </span><span class="kw">if </span>break_parent_name != <span class="string">&quot;ltx:figure&quot; </span>&amp;&amp; break_parent_name != <span class="string">&quot;ltx:float&quot; </span>{
+      </span><span class="kw">let </span>bp_name = document.get_node_qname(<span class="kw-2">&amp;</span>nodes[<span class="number">0</span>].get_parent().unwrap(), state);
+      <span class="kw">if </span>bp_name != arena::pin_static(<span class="string">&quot;ltx:figure&quot;</span>) &amp;&amp; bp_name != arena::pin_static(<span class="string">&quot;ltx:float&quot;</span>) {
         document.remove_node(<span class="kw-2">&amp;mut </span>nodes.pop_front().unwrap());
         <span class="kw">continue</span>;
       }
@@ -1454,8 +1517,10 @@
       </span>document.remove_node(<span class="kw-2">&amp;mut </span>blocknode); <span class="comment">// then remove the new block entirely
     </span>} <span class="kw">else if </span>rows.len() == <span class="number">1
       </span>&amp;&amp; crows.len() == <span class="number">1
-      </span>&amp;&amp; state.model.get_node_qname(rows.first().unwrap()) == <span class="string">&quot;ltx:p&quot;
-      </span>&amp;&amp; document.can_contain(
+      </span>&amp;&amp; state
+        .model
+        .with_node_qname(rows.first().unwrap(), |qname| qname == <span class="string">&quot;ltx:p&quot;</span>)
+      &amp;&amp; document.can_contain_sym(
         <span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(),
         state.model.get_node_qname(<span class="kw-2">&amp;</span>crows[<span class="number">0</span>]),
         state,
@@ -1470,7 +1535,7 @@
       document.unwrap_nodes(rows.remove(<span class="number">0</span>))<span class="question-mark">?</span>;
       document.unwrap_nodes(blocknode)<span class="question-mark">?</span>;
     } <span class="kw">else if </span>rows.len() == <span class="number">1
-      </span>&amp;&amp; document.can_contain(
+      </span>&amp;&amp; document.can_contain_sym(
         <span class="kw-2">&amp;</span>blocknode.get_parent().unwrap(),
         state.model.get_node_qname(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]),
         state,
@@ -1619,9 +1684,10 @@
   </span>} <span class="kw">else if </span>children.len() == <span class="number">1
     </span>&amp;&amp; state
       .model
-      .get_node_qname(children.first().as_ref().unwrap())
-      == <span class="string">&quot;ltx:tabular&quot;
-  </span><span class="comment">//// Should we ALWAYS do this, or just for some minimal amount of math???
+      .with_node_qname(children.first().as_ref().unwrap(), |qname| {
+        qname == <span class="string">&quot;ltx:tabular&quot;
+      </span>})
+  <span class="comment">//// Should we ALWAYS do this, or just for some minimal amount of math???
   ////        &amp;&amp; !document.findnodes(&#39;ltx:tabular/ltx:tr/ltx:td/text()&#39;
   ////                                 .&#39; | ltx:tabular/ltx:tbody/ltx:tr/ltx:td/text()&#39;
   ////                                 .&#39; | ltx:tabular/ltx:tr/ltx:td[not(ltx:Math)]&#39;
@@ -1742,7 +1808,7 @@
       Catcode::ARG =&gt; {
         <span class="comment">// B Book, 294. Reduce to param+integer
         </span>wv.push(<span class="macro">T_PARAM!</span>());
-        wv.push(<span class="macro">T_OTHER!</span>(t.get_string()));
+        wv.push(t.as_other());
       },
       <span class="kw">_ </span>=&gt; {
         wv.push(t.clone());
@@ -1855,7 +1921,7 @@
 
   <span class="comment">// create a new set of Key-Value arguments
   </span><span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
-    KeyValsOptions {
+    KeyvalsConfig {
       prefix: spec.prefix,
       <span class="comment">// keysets: spec.keysets, // TODO!
       </span>keysets: Vec::new(),
@@ -1882,18 +1948,17 @@
 }
 
 <span class="kw">fn </span>either_case_token(token: Token, is_upper: bool, state: <span class="kw-2">&amp;</span>State) -&gt; Token {
-  <span class="kw">let </span>initial_string = token.get_string();
+  <span class="kw">let </span>(chars_count, thischar) = token.with_str(|s| (s.chars().count(), s.chars().next()));
   <span class="comment">// DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single
   // char-based (for now?)
-  </span><span class="kw">if </span>initial_string.chars().count() != <span class="number">1 </span>{
+  </span><span class="kw">if </span>chars_count != <span class="number">1 </span>{
     <span class="kw">return </span>token;
   }
   <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
-  <span class="kw">let </span>thischar = initial_string.chars().next().unwrap();
   <span class="kw">let </span>cased = <span class="kw">if </span>is_upper {
-    state.lookup_uccode(thischar)
+    state.lookup_uccode(thischar.unwrap())
   } <span class="kw">else </span>{
-    state.lookup_lccode(thischar)
+    state.lookup_lccode(thischar.unwrap())
   };
   <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = cased {
     <span class="kw">if </span>code != <span class="number">0 </span>{
@@ -1903,12 +1968,12 @@
           .collect::&lt;String&gt;(),
       )
     } <span class="kw">else </span>{
-      result.push(thischar);
+      result.push(thischar.unwrap());
     }
   } <span class="kw">else </span>{
-    result.push(thischar);
+    result.push(thischar.unwrap());
   }
-  <span class="kw">if </span>result != initial_string {
+  <span class="kw">if </span>token.with_str(|initial_str| initial_str != result) {
     Token::new(result, token.get_catcode())
   } <span class="kw">else </span>{
     token
@@ -1964,12 +2029,20 @@
   state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>qname = state.model.get_node_qname(node);
-  <span class="kw">if </span>qname == <span class="string">&quot;ltx:tag&quot; </span>{
+  <span class="kw">if </span>qname == arena::pin_static(<span class="string">&quot;ltx:tag&quot;</span>) {
   }
   <span class="comment">// HACK
-  </span><span class="kw">else if </span>!align.is_empty() &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;align&quot;</span>) {
+  </span><span class="kw">else if </span>!align.is_empty()
+    &amp;&amp; state
+      .model
+      .can_have_attribute(qname, arena::pin_static(<span class="string">&quot;align&quot;</span>))
+  {
     node.set_attribute(<span class="string">&quot;align&quot;</span>, align)<span class="question-mark">?</span>;
-  } <span class="kw">else if </span>!class.is_empty() &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;class&quot;</span>) {
+  } <span class="kw">else if </span>!class.is_empty()
+    &amp;&amp; state
+      .model
+      .can_have_attribute(qname, arena::pin_static(<span class="string">&quot;class&quot;</span>))
+  {
     document.add_class(node, class, state)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
@@ -2020,5 +2093,22 @@
   };
   <span class="prelude-val">Ok</span>(())
 }
+
+<span class="doccomment">/// Utility, not really TeX, but used by LaTeX, AmSTeX...
+/// Convert a vertical positioning, optional argument.
+///  t = &quot;top&quot;, b = &quot;bottom&quot;; default is &quot;middle&quot;.
+/// Note that the default for vattach attribute is &quot;baseline&quot;.
+</span><span class="kw">pub fn </span>translate_attachment&lt;T: ToString&gt;(pos: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+  <span class="comment">//implementor note:
+  //  T: AsRef&lt;str&gt; would be more efficient than allocating a string every time
+  //  but we first need `Stored` and `Digested` to be capable of that.
+
+  </span><span class="kw">let </span>pos_str = pos.to_string();
+  <span class="kw">match </span>pos_str.as_str() {
+   <span class="string">&quot;t&quot; </span>=&gt; <span class="string">&quot;top&quot;</span>,
+   <span class="string">&quot;b&quot; </span>=&gt; <span class="string">&quot;bottom&quot;</span>,
+   <span class="kw">_ </span>=&gt; <span class="string">&quot;middle&quot;
+  </span>} <span class="comment">// undef meaning &#39;baseline&#39;
+</span>}
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

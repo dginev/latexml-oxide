@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["KeyVal",""]]};
+window.SIDEBAR_ITEMS = {"fn":["define","keyval_get","keyval_set"],"struct":["KeyVal","KeyvalConfig"]};

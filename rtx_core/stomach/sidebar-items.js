@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Stomach","The Stomach is responsible for digesting tokens into boxes, lists, etc."]]};
+window.SIDEBAR_ITEMS = {"struct":["Stomach"]};

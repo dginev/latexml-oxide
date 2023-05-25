@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/stomach.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>stomach.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/stomach.rs`."><title>stomach.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -788,11 +788,38 @@
 <a href="#788" id="788">788</a>
 <a href="#789" id="789">789</a>
 <a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
@@ -822,6 +849,8 @@
   </span><span class="kw">pub </span>token_stack: Vec&lt;Token&gt;,
   <span class="doccomment">/// tracks the tokens of boxing groups(?)
   </span><span class="kw">pub </span>boxing: Vec&lt;Token&gt;,
+  <span class="doccomment">/// localized box lists for stacked digestion calls
+  </span>localized_box_list: Vec&lt;Vec&lt;Digested&gt;&gt;,
   <span class="doccomment">/// collects the intermediate boxes resulting from a `digest` call.
   </span><span class="kw">pub </span>box_list: Vec&lt;Digested&gt;,
 }
@@ -866,16 +895,32 @@
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
     <span class="kw">let </span>start_location = <span class="self">self</span>.get_locator().unwrap().into_owned();
     <span class="kw">let </span>init_depth = <span class="self">self</span>.boxing.len();
+    <span class="kw">let </span><span class="kw-2">mut </span>found_token = <span class="bool-val">false</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>found_terminal = <span class="bool-val">false</span>;
-    <span class="kw">let </span>local_box_list = <span class="self">self</span>.regurgitate(); <span class="comment">// grab the current boxes to emulate local frame;
+    <span class="self">self</span>.new_local_box_list();
+    <span class="kw">let </span>alignment_opt = state.lookup_alignment();
+    <span class="comment">// TODO: bookkeep for &quot;expected&quot; warning
+    //let mut aug = Vec::new();
 
     // try reading a executable token
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self
       </span>.get_gullet_mut()
       .read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state)<span class="question-mark">?
-    </span>{
-      <span class="kw">let </span>invoked = <span class="self">self</span>.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
+    </span>{ <span class="comment">// done if we run out of tokens
+      </span>found_token = <span class="bool-val">true</span>;
+      <span class="comment">// first, check for alignment case
+      </span><span class="kw">if </span>alignment_opt.is_some() &amp;&amp; !<span class="self">self</span>.box_list.is_empty() &amp;&amp; (
+        token == <span class="macro">T_ALIGN!</span>() || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\cr&quot;</span>) ||
+        token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@cr&quot;</span>) || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@crcr&quot;</span>)) {
+        <span class="comment">// at least \over calls in here without the intent to passing through the alignment.
+        // So if we already have some digested boxes available, return them here.
+        </span><span class="self">self</span>.get_gullet_mut().unread_one(token);
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.expire_local_box_list());
+      }
+      <span class="comment">// normal case
+      </span><span class="kw">let </span>invoked = <span class="self">self</span>.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
       <span class="self">self</span>.box_list.extend(invoked);
+
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
         <span class="kw">if </span><span class="kw-2">&amp;</span>token == terminal {
           found_terminal = <span class="bool-val">true</span>;
@@ -887,13 +932,6 @@
       }
     }
 
-    <span class="comment">// We ran out, terminate,
-    // and add a Dummy `trailer&#39; if none explicit.
-    </span><span class="kw">if </span>init_depth &lt;= <span class="self">self</span>.boxing.len() {
-      <span class="self">self</span>.box_list.push(Digested::from(Tbox::default()));
-      <span class="comment">// info!(target:&quot;digest_next_body&quot;,&quot;no_token&quot;);
-    </span>}
-
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>terminal) = terminal_opt {
       <span class="kw">if </span>!found_terminal {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
@@ -904,10 +942,12 @@
         <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, terminal, <span class="self">self</span>, state, message);
       }
     }
-
-    <span class="kw">let </span>final_box_list = <span class="self">self</span>.regurgitate(); <span class="comment">// grab the local boxes and return
-    </span><span class="self">self</span>.box_list = local_box_list; <span class="comment">// swap back in the boxes of the initial local frame
-    </span><span class="prelude-val">Ok</span>(final_box_list)
+    <span class="comment">// and add a Dummy `trailer&#39; if none explicit.
+    </span><span class="kw">if </span>!found_token {
+      <span class="self">self</span>.box_list.push(Digested::from(Tbox::default()));
+      <span class="comment">// info!(target:&quot;digest_next_body&quot;,&quot;no_token&quot;);
+    </span>}
+    <span class="prelude-val">Ok</span>(<span class="self">self</span>.expire_local_box_list())
   }
 
   <span class="doccomment">/// Digest a list of tokens independent from any current Gullet.
@@ -1020,7 +1060,7 @@
     </span><span class="kw">while </span>maybe_token.is_some() {
       <span class="kw">let </span>token = maybe_token.take().unwrap().into_owned();
       <span class="comment">// info!(target:&quot;invoke_token&quot;, &quot;{:?}&quot;, token);
-      </span>state.set_current_token(token.clone());
+      </span>state.local_current_token(token.clone());
       <span class="self">self</span>.token_stack.push(token.clone());
       <span class="kw">if </span><span class="self">self</span>.token_stack.len() &gt; MAXSTACK {
         <span class="macro">fatal!</span>(
@@ -1142,8 +1182,8 @@
     token: <span class="kw-2">&amp;</span><span class="lifetime">&#39;t </span>Token,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-    <span class="kw">let </span>cs = token.get_cs_name();
-    state.note_status(<span class="string">&quot;undefined&quot;</span>, cs);
+    <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
+    state.note_status(<span class="string">&quot;undefined&quot;</span>, <span class="kw-2">&amp;</span>cs);
 
     <span class="comment">// To minimize chatter, go ahead and define it...
     </span><span class="kw">if </span>cs.starts_with(<span class="string">&quot;\\if&quot;</span>) {
@@ -1163,7 +1203,7 @@
         Expandable::new(
           <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}true&quot;</span>, name)),
           <span class="prelude-val">None</span>,
-          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iftrue&quot;</span>)),
+          <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iftrue&quot;</span>)),
           <span class="prelude-val">None</span>,
           state,
         ),
@@ -1194,13 +1234,12 @@
         <span class="kw-2">&amp;</span>message,
         <span class="string">&quot;Defining it now as &lt;ltx:ERROR/&gt;&quot;
       </span>);
-      <span class="kw">let </span>closure_cs = cs.to_owned();
       state.install_definition(
         Constructor {
           cs: token.clone(),
           paramlist: <span class="prelude-val">None</span>,
-          replacement: <span class="prelude-val">Some</span>(Arc::new(<span class="kw">move </span>|document, _args, _props, state| {
-            document.make_error(<span class="string">&quot;undefined&quot;</span>, <span class="kw-2">&amp;</span>closure_cs, state)
+          replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props, state| {
+            document.make_error(<span class="string">&quot;undefined&quot;</span>, <span class="kw-2">&amp;</span>cs, state)
           })),
           ..Constructor::default()
         },
@@ -1221,7 +1260,7 @@
           <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         } <span class="kw">else </span>{
           <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
-            meaning.to_string(),
+            meaning.get_sym(),
             font,
             <span class="self">self</span>.gullet.get_locator().map(|l| l.into_owned()),
             <span class="macro">Tokens!</span>(meaning),
@@ -1240,7 +1279,7 @@
         </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(comment)))
       },
       <span class="kw">_ </span>=&gt; {
-        <span class="kw">let </span>text = font::decode_string(meaning.get_string(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="self">self</span>, state);
+        <span class="kw">let </span>text = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>, <span class="self">self</span>, state);
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
           text,
           <span class="prelude-val">None</span>,
@@ -1261,14 +1300,14 @@
   /// Stomach. the need comes from techniques that use a *Stomach* inside the inner reader
   /// function, as is done by `Stomach::raw_tex`. ideally `reading_from_mouth` should be used with
   /// a Gullet, and this variation should be removed.
-  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; R
-  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">&amp;mut </span>State) -&gt; R {
+  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     {
       <span class="kw">let </span>gullet = <span class="self">self</span>.get_gullet_mut();
       gullet.open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
     </span>}
-    <span class="kw">let </span>results: R = reader(<span class="self">self</span>, state);
+    <span class="kw">let </span>results: R = reader(<span class="self">self</span>, state)<span class="question-mark">?</span>;
     <span class="kw">let </span>gullet = <span class="self">self</span>.get_gullet_mut();
     <span class="comment">// `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
     </span><span class="kw">loop </span>{
@@ -1290,7 +1329,7 @@
         }
       }
       <span class="kw">if </span>is_mouth {
-        gullet.close_mouth(<span class="bool-val">true</span>, state);
+        gullet.close_mouth(<span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
         <span class="kw">break</span>;
       } <span class="kw">else if </span>gullet.mouthstack.is_empty() {
         <span class="macro">Error!</span>(
@@ -1328,15 +1367,15 @@
               runtime.mouth.finish(state);
             }
           }
-          gullet.close_mouth(<span class="bool-val">true</span>, state);
+          gullet.close_mouth(<span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
         }
         <span class="comment">// ?? if we continue?
         </span><span class="kw">else </span>{
-          gullet.close_mouth(<span class="bool-val">false</span>, state);
+          gullet.close_mouth(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
         }
       }
     }
-    results
+    <span class="prelude-val">Ok</span>(results)
   }
 
   <span class="comment">//**********************************************************************
@@ -1450,7 +1489,7 @@
     // to find all the places to manage it.
     // So, let&#39;s try this for now...
     // was $LaTeXML::ALIGN_STATE
-    </span>state.align_group_count += <span class="number">1</span>;
+    </span>state.increment_align_group_count();
   }
   <span class="doccomment">/// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there, and also
@@ -1469,7 +1508,7 @@
       <span class="comment">// Don&#39;t pop if there&#39;s an error; maybe we&#39;ll recover?
       </span><span class="self">self</span>.pop_stack_frame(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
     }
-    state.align_group_count -= <span class="number">1</span>;
+    state.decrement_align_group_count();
     <span class="prelude-val">Ok</span>(())
   }
   <span class="doccomment">/// Begin a new level of binding by pushing a new stack frame.
@@ -1505,7 +1544,7 @@
   </span><span class="kw">pub fn </span>set_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mode: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>prevmode = state.lookup_string(<span class="string">&quot;MODE&quot;</span>);
     <span class="kw">let </span>ismath = mode.ends_with(<span class="string">&quot;math&quot;</span>);
-    state.assign_value(<span class="string">&quot;MODE&quot;</span>, mode, <span class="prelude-val">Some</span>(Scope::Local));
+    state.assign_value(<span class="string">&quot;MODE&quot;</span>, arena::pin(mode), <span class="prelude-val">Some</span>(Scope::Local));
     state.assign_value(<span class="string">&quot;IN_MATH&quot;</span>, ismath, <span class="prelude-val">Some</span>(Scope::Local));
     <span class="kw">let </span>curfont = state.lookup_font().unwrap();
     <span class="kw">if </span>mode == prevmode {
@@ -1527,13 +1566,13 @@
         },
         ..Font::default()
       });
-      state.assign_font(Arc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
+      state.assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
     } <span class="kw">else </span>{
       <span class="comment">// When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(saved_font)) = state.lookup_value(<span class="string">&quot;savedfont&quot;</span>) {
         state.assign_font(
-          Arc::new(saved_font.merge(Font {
+          Rc::new(saved_font.merge(Font {
             color: curfont.color.clone(),
             bg: curfont.bg.clone(),
             size: curfont.size,
@@ -1551,7 +1590,9 @@
   /// appropriate for the mode.
   </span><span class="kw">pub fn </span>begin_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mode: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="self">self</span>.push_stack_frame(<span class="bool-val">false</span>, state); <span class="comment">// Effectively bgroup
-    </span><span class="self">self</span>.set_mode(mode, state)
+    </span><span class="self">self</span>.set_mode(mode, state)<span class="question-mark">?</span>;
+    state.is_value_bound(<span class="string">&quot;MODE&quot;</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>));
+    <span class="prelude-val">Ok</span>(())
   }
   <span class="doccomment">/// End processing in `mode`; an error is signalled if `stomach` is not
   /// currently in `mode`.  This also ends a level of grouping.
@@ -1576,7 +1617,18 @@
     </span><span class="prelude-val">Ok</span>(())
   }
 
+  <span class="kw">pub fn </span>new_local_box_list(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
+    std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.box_list, <span class="kw-2">&amp;mut </span>buffer);
+    <span class="self">self</span>.localized_box_list.push(buffer);
+  }
+  <span class="kw">pub fn </span>expire_local_box_list(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;Digested&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="self">self</span>.localized_box_list.pop().unwrap_or_default();
+    std::mem::swap(<span class="kw-2">&amp;mut </span><span class="self">self</span>.box_list, <span class="kw-2">&amp;mut </span>buffer);
+    buffer
+  }
+
   <span class="comment">//**********************************************************************
 </span>}
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

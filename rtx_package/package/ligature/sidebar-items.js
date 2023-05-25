@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Ligature",""],["MathLigatureOptions",""]],"type":[["FontTestClosure",""],["LigatureClosure",""],["LigatureMatcher",""]]};
+window.SIDEBAR_ITEMS = {"struct":["Ligature","MathLigatureOptions"],"type":["FontTestClosure","LigatureClosure","LigatureMatcher"]};

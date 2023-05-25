@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/font.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>font.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/font.rs`."><title>font.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1206,7 +1206,21 @@
 <a href="#1206" id="1206">1206</a>
 <a href="#1207" id="1207">1207</a>
 <a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{NumericOps, UNITY_F64};
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
@@ -1226,6 +1240,7 @@
 <span class="kw">use </span>std::cmp::max;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::hash::{BuildHasher, Hash, Hasher};
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">mod </span>standard_metrics;
 <span class="kw">use </span>standard_metrics::{MetricData, STDMETRICS};
@@ -1408,21 +1423,21 @@
 <span class="kw">pub fn </span>decode_fontname(name: <span class="kw-2">&amp;</span>str, at_opt: <span class="prelude-ty">Option</span>&lt;f64&gt;, scaled_opt: <span class="prelude-ty">Option</span>&lt;f64&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Font&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(cap) = FONT_RE.captures(name) {
     <span class="kw">let </span><span class="kw-2">mut </span>props = Font::default();
-    <span class="kw">let </span>fam = cap.get(<span class="number">1</span>).map_or(String::new(), |m| m.as_str().to_string());
-    <span class="kw">let </span>ser = cap.get(<span class="number">2</span>).map_or(String::new(), |m| m.as_str().to_string());
-    <span class="kw">let </span>shp = cap.get(<span class="number">3</span>).map_or(String::new(), |m| m.as_str().to_string());
-    <span class="kw">let </span>size_str = cap.get(<span class="number">4</span>).map_or(String::new(), |m| m.as_str().to_string());
+    <span class="kw">let </span>fam = cap.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+    <span class="kw">let </span>ser = cap.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+    <span class="kw">let </span>shp = cap.get(<span class="number">3</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+    <span class="kw">let </span>size_str = cap.get(<span class="number">4</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
     <span class="comment">// TODO: Maybe a straight merge isn&#39;t the way to go here -- and we should do a property
     // whitelist as in Perl? but the merge is convenient, especially if we can state &quot;only the
     // values different from the default Font&quot; which may already work courtesy of &quot;None&quot;? Need
     // to think it through...
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ffam) = lookup_font_family(<span class="kw-2">&amp;</span>fam) {
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ffam) = lookup_font_family(fam) {
       props = props.merge(ffam.clone());
     }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(fser) = lookup_font_series(<span class="kw-2">&amp;</span>ser) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(fser) = lookup_font_series(ser) {
       props = props.merge(fser.clone());
     }
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(fsh) = lookup_font_shape(<span class="kw-2">&amp;</span>shp) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(fsh) = lookup_font_shape(shp) {
       props = props.merge(fsh.clone());
     }
     <span class="kw">let </span><span class="kw-2">mut </span>size = <span class="kw">if let </span><span class="prelude-val">Some</span>(at) = at_opt {
@@ -2109,6 +2124,14 @@
     (Dimension::new(w), Dimension::new(h), Dimension::new(d))
   }
 
+  <span class="doccomment">/// Get nominal width, height base ?
+  /// Probably should be using data from FontMetric ???
+  </span><span class="kw">pub fn </span>get_nominal_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (Dimension, Dimension, Dimension) {
+    <span class="kw">let </span>size = <span class="self">self</span>.get_size().unwrap_or(DEFSIZE);
+    <span class="kw">let </span>u    = size * UNITY_F64;
+    (Dimension::new_f64(<span class="number">0.75 </span>* u), Dimension::new_f64(<span class="number">0.7 </span>* u), Dimension::new_f64(<span class="number">0.2 </span>* u))
+  }
+
   <span class="comment">// Here&#39;s where I avoid trying to emulate Knuth&#39;s line-breaking...
   // Mostly for List &amp; Whatsit: compute the size of a list of boxes.
   // Options _SHOULD_ include:
@@ -2158,8 +2181,8 @@
     <span class="kw">let </span>(<span class="kw-2">mut </span>wd, <span class="kw-2">mut </span>ht, <span class="kw-2">mut </span>dp) = (<span class="number">0.0</span>, <span class="number">0</span>, <span class="number">0</span>);
     <span class="kw">let </span>(_minwd, _minht, _mindp) = (<span class="number">0.0</span>, <span class="number">0.0</span>, <span class="number">0.0</span>);
     <span class="kw">let </span>_vattach = <span class="kw">match </span>options.get(<span class="string">&quot;vattach&quot;</span>) {
-      <span class="prelude-val">Some</span>(Stored::String(vattach)) =&gt; vattach,
-      <span class="kw">_ </span>=&gt; <span class="string">&quot;baseline&quot;</span>,
+      <span class="prelude-val">Some</span>(Stored::String(vattach)) =&gt; <span class="kw-2">*</span>vattach,
+      <span class="kw">_ </span>=&gt; arena::pin_static(<span class="string">&quot;baseline&quot;</span>),
     };
     <span class="comment">// Flatten top-level Lists (orrr pass-thru `fillwidth` ???)
     </span><span class="kw">let </span>filtered_boxes = boxes
@@ -2284,16 +2307,16 @@
 ) -&gt; <span class="prelude-ty">Option</span>&lt;char&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
   <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
-    <span class="prelude-val">Some</span>(enc) =&gt; enc,
+    <span class="prelude-val">Some</span>(enc) =&gt; Cow::Owned(enc),
     <span class="prelude-val">None </span>=&gt; {
       font = state.lookup_font();
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
         <span class="kw">match </span>font.get_encoding() {
-          <span class="prelude-val">None </span>=&gt; String::new(),
-          <span class="prelude-val">Some</span>(encoding) =&gt; encoding.clone().into_owned(),
+          <span class="prelude-val">None </span>=&gt; Cow::Borrowed(<span class="string">&quot;&quot;</span>),
+          <span class="prelude-val">Some</span>(encoding) =&gt; encoding.clone(),
         }
       } <span class="kw">else </span>{
-        String::new()
+        Cow::Borrowed(<span class="string">&quot;&quot;</span>)
       }
     },
   };
@@ -2304,7 +2327,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(encmap) = load_font_map(<span class="kw-2">&amp;</span>encoding, state) {
       <span class="comment">// OK got some map.
       </span>map = <span class="prelude-val">Some</span>(encmap);
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = font {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>font) = font {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(family) = (<span class="kw-2">*</span>font).get_family() {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(fmap) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_{family}_fontmap&quot;</span>)) {
             map = fmap.into(); <span class="comment">// Use the family specific map, if any.
@@ -2338,14 +2361,15 @@
 }
 
 <span class="kw">pub fn </span>decode_string(
-  string: <span class="kw-2">&amp;</span>str,
+  string: SymbolU32,
   encoding_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
   implicit: bool,
   stomach: <span class="kw-2">&amp;mut </span>Stomach,
   state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; String {
-  <span class="kw">if </span>string.is_empty() {
-    <span class="kw">return </span>String::new();
+) -&gt; SymbolU32 {
+  <span class="kw">let </span>empty_sym = EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym);
+  <span class="kw">if </span>string == empty_sym {
+    <span class="kw">return </span>empty_sym;
   }
   <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
   <span class="kw">let </span>encoding = <span class="kw">match </span>encoding_opt {
@@ -2377,28 +2401,30 @@
   }
 
   <span class="kw">let </span><span class="kw-2">mut </span>result_string: String = String::new();
-  <span class="kw">for </span>c <span class="kw">in </span>string.chars() {
-    <span class="kw">if </span>implicit {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = map {
-        <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
-        </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map.get(code <span class="kw">as </span>usize) {
-            result_string.push(<span class="kw-2">*</span>mapc_val);
+  arena::with(string, |str| {
+    <span class="kw">for </span>c <span class="kw">in </span>str.chars() {
+      <span class="kw">if </span>implicit {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = map {
+          <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
+          </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map.get(code <span class="kw">as </span>usize) {
+              result_string.push(<span class="kw-2">*</span>mapc_val);
+            }
+          } <span class="kw">else </span>{
+            result_string.push(c);
           }
         } <span class="kw">else </span>{
-          result_string.push(c);
+          result_string.push(c)
         }
-      } <span class="kw">else </span>{
-        result_string.push(c)
-      }
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(map) = map {
-      <span class="kw">let </span>code = c <span class="kw">as </span>u8;
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map.get(code <span class="kw">as </span>usize) {
-        result_string.push(<span class="kw-2">*</span>mapc_val);
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(map) = map {
+        <span class="kw">let </span>code = c <span class="kw">as </span>u8;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map.get(code <span class="kw">as </span>usize) {
+          result_string.push(<span class="kw-2">*</span>mapc_val);
+        }
       }
     }
-  }
-  result_string
+  });
+  arena::pin(result_string)
 }
 
 <span class="doccomment">/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
@@ -2415,4 +2441,4 @@
   <span class="macro">s!</span>(<span class="string">&quot;{}%&quot;</span>, (<span class="number">0.5 </span>+ <span class="number">100.0 </span>* newsize / oldsize).floor())
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

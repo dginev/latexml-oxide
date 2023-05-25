@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["logger","log recording and reporting interface"],["pathname","helper methods for file system paths"],["radix","“radix” may be a misnomer here. Primarily used to generate labels, or uniquifying suffixes to make ID’s simple radix conversion utilities"],["text","helpers for extracting structured data from replacement (and other) strings"]]};
+window.SIDEBAR_ITEMS = {"mod":["logger","pathname","radix","text"]};

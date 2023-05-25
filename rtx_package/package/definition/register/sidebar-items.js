@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["RegisterType","The type of a TeX Register"],["RegisterValue","The values that can be read by, and stored in, a Register"]],"struct":[["Register","A struct representing a TeX register"]],"type":[["RegisterGetterClosure","looks up a stored value from the State frame (at a constant key, or key based on the arguments)"],["RegisterSetterClosure","sets a register value in the State frame"]]};
+window.SIDEBAR_ITEMS = {"enum":["RegisterType","RegisterValue"],"struct":["Register"],"type":["RegisterGetterClosure","RegisterSetterClosure"]};

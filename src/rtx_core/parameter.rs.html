@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -603,15 +603,16 @@
 <a href="#603" id="603">603</a>
 <a href="#604" id="604">604</a>
 <a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
 </pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
-<span class="kw">use </span>proc_macro2::TokenStream; <span class="comment">// use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
-</span><span class="kw">use </span>quote::{quote, ToTokens};
+<span class="kw">use </span>proc_macro2::TokenStream;
+<span class="kw">use </span>quote::{quote, ToTokens};
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::sync::Arc; <span class="comment">// TokenStreamExt
+<span class="kw">use </span>std::rc::Rc;
 
-</span><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
@@ -629,8 +630,8 @@
 <span class="kw">pub type </span>ReaderFn =
   <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Gullet, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
 <span class="kw">pub type </span>ReaderPredigestFn = <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Stomach, ArgWrap, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;;
-<span class="kw">pub type </span>ReaderPredigestClosure = Arc&lt;ReaderPredigestFn&gt;;
-<span class="kw">pub type </span>ReaderClosure = Arc&lt;ReaderFn&gt;;
+<span class="kw">pub type </span>ReaderPredigestClosure = Rc&lt;ReaderPredigestFn&gt;;
+<span class="kw">pub type </span>ReaderClosure = Rc&lt;ReaderFn&gt;;
 
 <span class="comment">// Rust Note:
 // the reversion functions initially had &quot;&amp;mut Gullet&quot; as a parameter.
@@ -641,7 +642,7 @@
 // let mut gullet = stomach.get_gullet_mut();
 //
 </span><span class="kw">pub type </span>ReversionClosure =
-  Arc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
+  Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
 
 <span class="kw">static </span>LAST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\w$&quot;</span>).unwrap());
 <span class="kw">static </span>FIRST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w&quot;</span>).unwrap());
@@ -673,7 +674,7 @@
       spec: Cow::Borrowed(<span class="string">&quot;&quot;</span>),
       extra: Vec::new(),
       inner: <span class="prelude-val">None</span>,
-      reader: Arc::new(|_gullet, _args, _extra, _state| {
+      reader: Rc::new(|_gullet, _args, _extra, _state| {
         <span class="macro">Warn!</span>(
           <span class="string">&quot;Parameter&quot;</span>,
           <span class="string">&quot;mock_reader&quot;</span>,
@@ -681,7 +682,7 @@
           <span class="prelude-val">None</span>,
           <span class="string">&quot;Please define a real reader, this is a mock fallback!&quot;
         </span>);
-        <span class="prelude-val">Ok</span>(ArgWrap::OptionTokens(<span class="prelude-val">None</span>))
+        <span class="prelude-val">Ok</span>(ArgWrap::None)
       }),
       reader_predigest: <span class="prelude-val">None</span>,
       reversion: <span class="prelude-val">None</span>,
@@ -738,21 +739,21 @@
     // If either a declared entry or a function Read&lt;Type&gt; accessible from LaTeXML::Package::Pool
     // is defined.
     </span><span class="kw">let </span>looked_up_mapping = state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name);
-    <span class="kw">let </span>descriptor: <span class="prelude-ty">Option</span>&lt;Arc&lt;Parameter&gt;&gt;;
+    <span class="kw">let </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt;;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
-      descriptor = <span class="prelude-val">Some</span>(Arc::clone(d_lookup));
+      descriptor = <span class="prelude-val">Some</span>(Rc::clone(d_lookup));
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
       <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       descriptor = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype) {
         <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
         <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name), state) {
-          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Arc::new(Parameter {
+          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
             reader,
             optional: <span class="bool-val">true</span>,
             ..Parameter::default()
           })),
           <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype), state) {
-            <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Arc::new(Parameter {
+            <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
               reader,
               optional: <span class="bool-val">true</span>,
               novalue: <span class="bool-val">true</span>,
@@ -772,14 +773,14 @@
       descriptor = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype) {
         <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
         <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="self">self</span>.name, state) {
-          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Arc::new(Parameter {
+          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
             reader,
             optional: <span class="bool-val">true</span>,
             novalue: <span class="bool-val">true</span>,
             ..Parameter::default()
           })),
           <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype), state).map(|reader| {
-            Arc::new(Parameter {
+            Rc::new(Parameter {
               reader,
               optional: <span class="bool-val">true</span>,
               novalue: <span class="bool-val">true</span>,
@@ -795,7 +796,7 @@
     } <span class="kw">else </span>{
       descriptor =
         Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name), state).map(|reader| {
-          Arc::new(Parameter {
+          Rc::new(Parameter {
             reader,
             ..Parameter::default()
           })
@@ -880,7 +881,7 @@
     <span class="kw">let </span>closure = <span class="kw-2">&amp;</span><span class="self">self</span>.reader;
     <span class="kw">let </span>value_from_reader: ArgWrap = closure(gullet, <span class="self">self</span>.inner.as_ref(), <span class="kw-2">&amp;</span><span class="self">self</span>.extra, state)<span class="question-mark">?</span>;
     <span class="kw">let </span>value_arg = <span class="kw">if </span>value_from_reader.is_tokens() {
-      <span class="kw">let </span>wants_option = <span class="self">self</span>.optional || value_from_reader.is_option();
+      <span class="kw">let </span>wants_option = <span class="self">self</span>.optional || value_from_reader.is_none();
       <span class="kw">match </span>value_from_reader.owned_tokens() {
         <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>value) =&gt; {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>semi_chars) = <span class="self">self</span>.semiverbatim {
@@ -891,9 +892,9 @@
           }
           <span class="kw">if </span>wants_option {
             <span class="kw">if </span>value.is_empty() {
-              ArgWrap::OptionTokens(<span class="prelude-val">None</span>)
+              ArgWrap::None
             } <span class="kw">else </span>{
-              ArgWrap::OptionTokens(<span class="prelude-val">Some</span>(value))
+              ArgWrap::Tokens(value)
             }
           } <span class="kw">else </span>{
             ArgWrap::Tokens(value)
@@ -901,7 +902,7 @@
         },
         <span class="prelude-val">None </span>=&gt; {
           <span class="kw">if </span>wants_option {
-            ArgWrap::OptionTokens(<span class="prelude-val">None</span>)
+            ArgWrap::None
           } <span class="kw">else </span>{
             ArgWrap::Tokens(<span class="macro">Tokens!</span>())
           }
@@ -1071,6 +1072,7 @@
   <span class="kw">pub fn </span>new(params: Vec&lt;Parameter&gt;) -&gt; <span class="self">Self </span>{ Parameters(params) }
   <span class="kw">pub fn </span>get_num_args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="self">self</span>.<span class="number">0</span>.iter().filter(|<span class="kw-2">&amp;</span>p| !p.novalue).count() }
   <span class="kw">pub fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Parameter&gt; { <span class="self">self</span>.<span class="number">0</span>.iter().collect() }
+  <span class="kw">pub fn </span>take_parameters(<span class="self">self</span>) -&gt; Vec&lt;Parameter&gt; { <span class="self">self</span>.<span class="number">0 </span>}
   <span class="kw">pub fn </span>revert_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">for </span>(parameter, arg) <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter().zip(args.into_iter()) {
@@ -1150,7 +1152,7 @@
     gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: <span class="kw-2">&amp;mut </span>Gullet, state| {
       gulletx.unread(value_tokens); <span class="comment">// but put back tokens to be read
       </span><span class="kw">let </span>values = <span class="self">self</span>.read_arguments(gulletx, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-      gulletx.skip_spaces(state);
+      gulletx.skip_spaces(state)<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(values)
     })
   }
@@ -1209,4 +1211,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

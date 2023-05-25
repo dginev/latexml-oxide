@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_setup.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_setup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_setup.rs`."><title>tex_setup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1077,10 +1077,6 @@
 <a href="#1077" id="1077">1077</a>
 <a href="#1078" id="1078">1078</a>
 <a href="#1079" id="1079">1079</a>
-<a href="#1080" id="1080">1080</a>
-<a href="#1081" id="1081">1081</a>
-<a href="#1082" id="1082">1082</a>
-<a href="#1083" id="1083">1083</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -1218,16 +1214,16 @@
   <span class="macro">DefParameterType!</span>(Optional, sub[gullet, inner, default, state] {
       <span class="kw">let </span>value = gullet.read_optional(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="kw">let </span>value_2 = <span class="kw">if </span>value.is_none() &amp;&amp; !default.is_empty() {
-        ArgWrap::OptionTokens(<span class="prelude-val">Some</span>(default[<span class="number">0</span>].clone()))
+        ArgWrap::Tokens(default[<span class="number">0</span>].clone())
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(inner_ps) = inner {
-        <span class="kw">let </span><span class="kw-2">mut </span>reparsed = inner_ps.reparse_argument(gullet, ArgWrap::OptionTokens(value), state)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>reparsed = inner_ps.reparse_argument(gullet, value.into(), state)<span class="question-mark">?</span>;
         <span class="kw">if </span>!reparsed.is_empty() {
           reparsed.remove(<span class="number">0</span>)
         } <span class="kw">else </span>{
-          ArgWrap::OptionTokens(<span class="prelude-val">None</span>)
+          ArgWrap::None
         }
       } <span class="kw">else </span>{
-        ArgWrap::OptionTokens(value)
+        value.into()
       };
       <span class="prelude-val">Ok</span>(value_2)
     },
@@ -1283,16 +1279,16 @@
 
   <span class="comment">// Skip any spaces, but don&#39;t contribute an argument.
   </span><span class="macro">DefParameterType!</span>(SkipSpaces, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)<span class="question-mark">?</span>;
   }, novalue =&gt; <span class="bool-val">true</span>);
 
   <span class="macro">DefParameterType!</span>(Skip1Space, sub[gullet, _inner, _extra, state] {
-    gullet.skip_one_space(state);
+    gullet.skip_one_space(state)<span class="question-mark">?</span>;
   }, novalue =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// Read the next token
   </span><span class="macro">DefParameterType!</span>(Token, sub[gullet, _inner, _extra, state] {
-    <span class="kw">match </span>gullet.read_token(state) {
+    <span class="kw">match </span>gullet.read_token(state)<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t)),
       <span class="prelude-val">None </span>=&gt; {
         <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;Token&quot;</span>, gullet, state, <span class="string">&quot;Paramater &lt;Token&gt; found None.&quot;</span>);
@@ -1347,7 +1343,7 @@
 
   <span class="comment">// Yet another special case: Require a { but do not read it!!!
   </span><span class="macro">DefParameterType!</span>(RequireBrace, sub[gullet, _inner, _extra, state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state)<span class="question-mark">? </span>{
       <span class="kw">let </span>cc = tok.get_catcode();
       gullet.unread_one(tok.clone());
       <span class="kw">if </span>cc != Catcode::BEGIN {
@@ -1596,7 +1592,7 @@
 
   <span class="comment">// Read a token as used when defining it, ie. it may be enclosed in braces.
   </span><span class="macro">DefParameterType!</span>(DefToken, sub[gullet, _inner, _extra, state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>token = gullet.read_token(state);
+    <span class="kw">let </span><span class="kw-2">mut </span>token = gullet.read_token(state)<span class="question-mark">?</span>;
     <span class="kw">let </span>space_token = <span class="macro">T_SPACE!</span>();
 
     <span class="kw">while </span>token.is_some() &amp;&amp; token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
@@ -1635,7 +1631,7 @@
           // How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
           // Ok(Tokens!(defn_tok, defn_args))
-          </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition((token_opt.unwrap(), args)))
+          </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;variable&gt; was supposed to be here\n Got {:?}&quot;</span>, token_opt);
           <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;variable&gt;&quot;</span>, gullet, state, message);
@@ -1672,7 +1668,7 @@
     <span class="kw">match </span>defn {
       <span class="prelude-val">Some</span>(register) =&gt; {
         <span class="kw">let </span>args = register.read_arguments(gullet, state)<span class="question-mark">?</span>;
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition((token.unwrap(), args)));
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))));
       },
       <span class="prelude-val">None </span>=&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;register&gt; was supposed to be here. Got {:?}&quot;</span>, token);
@@ -1761,7 +1757,7 @@
   // Hopefully there are no issues with the box being digested
   // as part of the reader???
   </span><span class="macro">DefParameterType!</span>(MoveableBox, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state);
+    gullet.skip_spaces(state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(xtoken) = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
       <span class="macro">Tokens!</span>(xtoken)
     } <span class="kw">else </span>{
@@ -1774,7 +1770,7 @@
       <span class="kw">let </span>tbox = stuff.remove(<span class="number">0</span>);
       <span class="kw">let </span>csname = <span class="kw">match </span>tbox.data() {
         DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt;
-          w.read().unwrap().definition.get_cs_name().to_string(),
+          w.borrow().definition.get_cs_name().to_string(),
         <span class="kw">_ </span>=&gt; tbox.to_string()
       };
       <span class="kw">if </span>csname != <span class="string">&quot;\\hbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vtop&quot; </span>{
@@ -1796,7 +1792,7 @@
   </span><span class="macro">DefParameterType!</span>(BalancedParen, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span>tok_opt = gullet.read_x_token(<span class="prelude-val">None</span>,<span class="bool-val">false</span>,state)<span class="question-mark">?</span>;
     <span class="kw">let </span>is_paren = <span class="kw">match </span>tok_opt {
-      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) =&gt; t.get_string() == <span class="string">&quot;(&quot;</span>,
+      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>t) =&gt; t.with_str(|ts| ts == <span class="string">&quot;(&quot;</span>),
       <span class="kw">_ </span>=&gt; <span class="bool-val">false
     </span>};
     <span class="kw">if </span>is_paren {
@@ -1814,35 +1810,48 @@
     ))
   }));
 
-  <span class="comment">// Read a digested argument.
-  // The usual parameter (generally written as {}) gets
-  // tokenized and digested in separate stages (like TeX),
-  // and so it is tokenized w/o recognizing any special macros within (eg. \url).
-  // This parameter gets digested until the (required) opening { is balanced.
+  <span class="comment">// Read a digested argument, digesting as it is being read.
+  // The usual macro parameter (generally written as {}) gets tokenized and digested
+  // in separate stages, w/o recognizing any special macros or catcode changes within (eg. \url).
+  // Rarely, you need a parameter that gets digested AS IT&#39;S READ until ending }.
+  // Note that this also recognizes args as \bgroup ... \engroup
   // It is useful when the content would usually need to have been \protect&#39;d
   // in order to correctly deal with catcodes.
-  </span><span class="macro">DefParameterType!</span>(Digested, sub[_gullet, _inner, _extra, _state] {
-    <span class="comment">//   my ($gullet) = @_;
-    //   $gullet-&gt;skipSpaces;
-    //   my $ismath = $STATE-&gt;lookupValue(&#39;IN_MATH&#39;);
-    //   my $token;
-    //   do { $token = $gullet-&gt;readXToken(0);
-    //   } while (defined $token &amp;&amp; $token-&gt;getCatcode == CC_SPACE);
-    //   my @list = ();
-    //   if (!defined $token) { }
-    //   elsif ($token-&gt;getCatcode == CC_BEGIN) {
-    //     Digest($token);
-    //     @list = $STATE-&gt;getStomach-&gt;digestNextBody(); pop(@list); }
-    //   else {
-    //     @list = $STATE-&gt;getStomach-&gt;invokeToken($token); }
-    //   # In most (all?) cases, we&#39;re really looking for a single Whatsit here...
-    //   @list = grep { ref $_ ne &#39;LaTeXML::Core::Comment&#39; } @list;
-    //   List(@list, mode =&gt; ($ismath ? &#39;math&#39; : &#39;text&#39;)); },
-    // undigested =&gt; 1,                                          # since _already_ digested.
-    // reversion =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
-    </span><span class="macro">unimplemented!</span>();
-    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-  });
+  // BEWARE: This is NOT a shorthand for a simple digested {}!
+  </span><span class="macro">DefParameterType!</span>(Digested, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+      gullet.skip_spaces(state)<span class="question-mark">?</span>;
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+    }),
+    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, _arg, state, {
+      <span class="kw">let </span>ismath = state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>);
+      <span class="kw">let </span><span class="kw-2">mut </span>list = Vec::new();
+      <span class="kw">let </span><span class="kw-2">mut </span>next_token = <span class="prelude-val">None</span>;
+      <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+      <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false </span>,state)<span class="question-mark">? </span>{
+        <span class="kw">let </span>is_last = token.get_catcode() != Catcode::SPACE &amp;&amp; token != <span class="macro">T_RELAX!</span>();
+        next_token = <span class="prelude-val">Some</span>(token);
+        <span class="kw">if </span>is_last {
+          <span class="kw">break</span>;
+        }
+      }
+
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next_token {
+        <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
+          stomach.digest(token, state)<span class="question-mark">?</span>;
+          list.extend(stomach.digest_next_body(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>);
+          list.pop();
+        } <span class="kw">else </span>{
+          list = stomach.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
+        }
+      }
+
+      list.retain(|tbox| ! <span class="macro">matches!</span>(tbox.data(), DigestedData::Comment(<span class="kw">_</span>)));
+      <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>ismath { TexMode::Math } <span class="kw">else </span>{ TexMode::Text });
+      List { boxes:list,  mode, ..List::default() }
+    })
+  <span class="comment">// undigested =&gt; true                                         // since _already_ digested.
+  // reversion  =&gt; sub { (T_BEGIN, Revert($_[0]), T_END); });
+  </span>);
 
   <span class="comment">// A variation: Digest until we encounter a given token!
   </span><span class="macro">DefParameterType!</span>(DigestUntil, sub[_gullet, _inner, _extra, _state] {
@@ -2026,7 +2035,7 @@
     keysets: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;,
     gullet: <span class="kw-2">&amp;mut </span>Gullet,
     state: <span class="kw-2">&amp;mut </span>State,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;KeyVals&gt;&gt; {
     <span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>), state)<span class="question-mark">? </span>{
       <span class="kw">let </span>kvs: KeyVals = keyvals_aux(
         gullet,
@@ -2039,47 +2048,27 @@
         },
         state,
       )<span class="question-mark">?</span>;
-      kvs.into_tokens(gullet, state)
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(kvs))
     } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
   }
 
   <span class="macro">DefParameterType!</span>(OptionalKeyVals, sub[gullet, inner, _extra, state] {
-      optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, gullet, state)
-    },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
-      <span class="kw">if </span>!arg.is_empty() {
-        <span class="prelude-val">Some</span>(arg.expected_keyvals(state))
-      } <span class="kw">else </span>{
-        <span class="prelude-val">None
-      </span>}
-    }),
-   optional=&gt;<span class="bool-val">true</span>);
+    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">false</span>, inner, gullet, state)
+  }, optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
   </span><span class="macro">DefParameterType!</span>(OptionalKeyValsStar, sub[gullet, inner, _extra, state] {
-      optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, gullet, state)
-    },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=&gt;<span class="bool-val">true</span>);
+    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">false</span>, inner, gullet, state)
+  }, optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
   </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlus, sub[gullet, inner, _extra, state] {
-      optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, gullet, state)
-    },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=&gt;<span class="bool-val">true</span>);
+    optional_key_vals(<span class="bool-val">false</span>, <span class="bool-val">true</span>, inner, gullet, state)
+  }, optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
   </span><span class="macro">DefParameterType!</span>(OptionalKeyValsPlusStar, sub[gullet, inner, _extra, state] {
-      optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, gullet, state)
-    },
-    reader_predigest =&gt; <span class="macro">reader_predigest!</span>(_stomach, arg, state, {
-      arg.expected_keyvals(state)
-    }),
-   optional=&gt;<span class="bool-val">true</span>);
+    optional_key_vals(<span class="bool-val">true</span>, <span class="bool-val">true</span>, inner, gullet, state)
+  }, optional=&gt;<span class="bool-val">true</span>);
   <span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
 
   // # Not sure that this is the most elegant solution, but...
@@ -2131,16 +2120,19 @@
   <span class="comment">// # NOTE: the various parameter features don&#39;t combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
-  // DefParameterType!(OptionalInScriptStyle, sub[gullet, inner, _extra, state] {
-  //     $_[0]-&gt;readOptional; },
-  //   beforeDigest =&gt; sub {
-  //     $_[0]-&gt;bgroup;
-  //     MergeFont(scripted =&gt; 1); },
-  //   afterDigest =&gt; sub {
-  //     $_[0]-&gt;egroup; },
-  //   optional =&gt; 1,
-  //   reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); });
-  // DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
+  </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
+      gullet.read_optional(<span class="prelude-val">None</span>, state)
+    },
+    <span class="comment">// before_digest =&gt; sub [stomach,state] {
+    //   gullet.bgroup(state);
+    //   MergeFont!(&quot;scripted&quot; =&gt; true);
+    // },
+    // after_digest =&gt; sub[stomach,state] {
+    //   stomach.egroup(state); },
+    </span>optional =&gt; <span class="bool-val">true
+    </span><span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); }
+  </span>);
+  <span class="comment">// DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
   //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {
   //     $_[0]-&gt;bgroup;
@@ -2165,4 +2157,4 @@
   });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

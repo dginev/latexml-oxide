@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_fonts.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_fonts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_fonts.rs`."><title>tex_fonts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -478,6 +478,8 @@
 <a href="#478" id="478">478</a>
 <a href="#479" id="479">479</a>
 <a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>FONT_TOKEN_RE: Lazy&lt;Regex&gt; =
@@ -592,8 +594,8 @@
   // #  &lt;family member&gt; = &lt;font range&gt;&lt;4bit number&gt;
   // #  &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
   </span><span class="macro">DefParameterType!</span>(FontToken, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
-    <span class="kw">let </span>token = gullet.read_token(state).unwrap();
-    <span class="kw">if </span>FONT_TOKEN_RE.is_match(token.as_ref()) {
+    <span class="kw">let </span>token = gullet.read_token(state)<span class="question-mark">?</span>.unwrap();
+    <span class="kw">if </span>token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
       gullet.read_number(state)<span class="question-mark">?</span>;
     }
     token
@@ -848,8 +850,8 @@
     <span class="kw">let </span>token = args.remove(<span class="number">0</span>);
     <span class="kw">let </span>number = token.clone().try_to_number()<span class="question-mark">?</span>;
     <span class="kw">let </span>decoded = <span class="kw">match </span>font::decode(number.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, p_state) {
-      <span class="prelude-val">None </span>=&gt; String::new(),
-      <span class="prelude-val">Some</span>(c) =&gt; c.to_string()
+      <span class="prelude-val">None </span>=&gt; EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym),
+      <span class="prelude-val">Some</span>(c) =&gt; arena::pin_char(c)
     };
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
     <span class="kw">let </span>invoked = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), <span class="macro">vec!</span>[token], gullet)<span class="question-mark">?</span>;
@@ -865,13 +867,14 @@
   <span class="comment">// Almost like a register, but different...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\chardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>value = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
-    <span class="kw">let </span>csname = newcs.get_cs_name().to_owned();
-    <span class="kw">let </span>internalcs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
+    <span class="kw">let </span>internalcs_str = newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
+    <span class="kw">let </span>internalcs = <span class="macro">T_CS!</span>(internalcs_str);
     <span class="macro">DefPrimitive!</span>(internalcs.clone(), <span class="prelude-val">None</span>, sub[stomach,args,i_state] {
       <span class="kw">let </span>decoded = font::decode(value.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, i_state)
-        .map(|c| c.to_string()).unwrap_or_default();
+        .map(arena::pin_char).unwrap_or_else(|| EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym));
       <span class="kw">let </span>gullet = stomach.get_gullet_mut();
       Tbox::new(decoded,
         <span class="prelude-val">None</span>,
@@ -909,13 +912,14 @@
   <span class="comment">// Almost like a register, but different...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\mathchardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, TOKEN_RELAX.with(|tr|
+      state.lookup_meaning(tr)).unwrap().into_owned(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>value  = stomach.get_gullet_mut().read_number(state).unwrap();
-    <span class="kw">let </span>csname = newcs.get_cs_name().to_owned();
     <span class="comment">// eprintln!(&quot; ** {} + {}&quot;, value,csname);
     </span><span class="kw">let </span>(role, glyph) = decode_math_char(value.value_of() <span class="kw">as </span>u16, stomach, state);
     <span class="comment">// eprintln!(&quot;    role: {:?} + glyph: {:?}&quot;, role, glyph);
-    </span><span class="kw">let </span>internalcs_opt = glyph.map(|<span class="kw">_</span>| <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@mathchardef@{}&quot;</span>, csname)));
+    </span><span class="kw">let </span>internalcs_opt = glyph.map(|<span class="kw">_</span>|
+      <span class="macro">T_CS!</span>(newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@mathchardef@{csname}&quot;</span>))));
     <span class="kw">let </span>internalcs_2 = internalcs_opt.clone();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(internalcs) = internalcs_opt {
       <span class="kw">let </span><span class="kw-2">mut </span>glyph_props: HashMap&lt;String, Stored&gt; = HashMap::default();
@@ -959,4 +963,4 @@
   });
 });
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

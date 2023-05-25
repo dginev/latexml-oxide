@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/counter/dialect.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -840,12 +840,28 @@
 <a href="#840" id="840">840</a>
 <a href="#841" id="841">841</a>
 <a href="#842" id="842">842</a>
-</pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+</pre><pre class="rust"><code><span class="doccomment">//! # Counters
+//!
+//! This is modelled on LaTeX&#39;s counter mechanisms, but since it also
+//! provides support for ID&#39;s, even where there is no visible reference number,
+//! it is defined in general.
+//! These id&#39;s should be both unique, and parallel the visible reference numbers
+//! (as much as possible).  Also, for consistency, we add id&#39;s to unnumbered
+//! document elements (eg from \section*); this requires an additional counter
+//! (eg. UNsection) and  mechanisms to track it.
+
+</span><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::collections::VecDeque;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span><span class="kw">crate</span>::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::{def_macro, def_register, is_defined};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::cleaners::{clean_id, clean_label, roman_aux};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
@@ -861,18 +877,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 
-<span class="doccomment">///!
-///! # Counters
-///!
-///! This is modelled on LaTeX&#39;s counter mechanisms, but since it also
-///! provides support for ID&#39;s, even where there is no visible reference number,
-///! it is defined in general.
-///! These id&#39;s should be both unique, and parallel the visible reference numbers
-///! (as much as possible).  Also, for consistency, we add id&#39;s to unnumbered
-///! document elements (eg from \section*); this requires an additional counter
-///! (eg. UNsection) and  mechanisms to track it.
-
-/// configuration for new_counter
+<span class="doccomment">/// configuration for new_counter
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>NewCounterOptions&lt;<span class="lifetime">&#39;ct</span>&gt; {
   <span class="doccomment">/// specifies a prefix to be used in formatting ID&#39;s for document structure elements
@@ -963,7 +968,7 @@
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{}&quot;</span>, ctr)),
     <span class="prelude-val">None</span>,
-    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
       <span class="kw">move </span>|_gullet, _args, inner_state| {
         <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string, inner_state).value_of();
         <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
@@ -1026,7 +1031,7 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
           <span class="kw">move </span>|_gullet, _args, _inner_state| {
             <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
               <span class="string">&quot;\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\
@@ -1048,7 +1053,7 @@
       def_macro(
         <span class="macro">T_CS!</span>(thectrid),
         <span class="prelude-val">None</span>,
-        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Arc::new(
+        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
           <span class="kw">move </span>|_gullet, _args, _inner_state| {
             <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
               <span class="string">&quot;{}\\csname @{}@ID\\endcsname&quot;</span>,
@@ -1141,7 +1146,7 @@
   </span><span class="kw">if </span>!noreset {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\cl@{}&quot;</span>, ctr)) {
       <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
-        reset_counter(c.get_string(), state);
+        reset_counter(<span class="kw-2">&amp;</span>c, state);
       }
     }
   }
@@ -1183,7 +1188,7 @@
   </span><span class="kw">if </span>!noreset {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\cl@{}&quot;</span>, ctr)) {
       <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
-        reset_counter(c.get_string(), state);
+        reset_counter(<span class="kw-2">&amp;</span>c, state);
       }
     }
   }
@@ -1203,7 +1208,7 @@
   state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">let </span>ctr = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;counter_for_type&quot;</span>, ctype) {
-    <span class="prelude-val">Some</span>(Stored::String(ctr)) =&gt; ctr.to_string(),
+    <span class="prelude-val">Some</span>(Stored::String(ctr)) =&gt; arena::to_string(<span class="kw-2">*</span>ctr),
     <span class="kw">_ </span>=&gt; ctype.to_string(),
   };
   step_counter(<span class="kw-2">&amp;</span>ctr, noreset, stomach, state)<span class="question-mark">?</span>;
@@ -1271,19 +1276,19 @@
   <span class="comment">// And install the scope (if any) for this reference number.
   </span>state.assign_value(<span class="string">&quot;current_counter&quot;</span>, ctr.to_string(), <span class="prelude-val">Some</span>(Scope::Local));
 
-  <span class="kw">let </span>scope = <span class="macro">s!</span>(<span class="string">&quot;{ctr}:{refnum}&quot;</span>);
+  <span class="kw">let </span>scope = arena::pin(<span class="macro">format!</span>(<span class="string">&quot;{ctr}:{refnum}&quot;</span>));
   <span class="kw">let </span><span class="kw-2">mut </span>receiver = VecDeque::new();
-  receiver.push_front(Stored::String(scope.clone()));
+  receiver.push_front(Stored::String(scope));
   state.assign_value(
     <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scopes_for_counter:{ctr}&quot;</span>),
     receiver,
     <span class="prelude-val">Some</span>(Scope::Local),
   );
-  state.activate_scope(<span class="kw-2">&amp;</span>scope);
+  state.activate_scope(scope);
 
   <span class="prelude-val">Ok</span>(<span class="macro">map!</span>(
     <span class="string">&quot;tags&quot; </span>=&gt; Stored::Digested(tags),
-    <span class="string">&quot;id&quot; </span>=&gt; Stored::String(id)
+    <span class="string">&quot;id&quot; </span>=&gt; Stored::String(arena::pin(id))
   ))
 }
 
@@ -1350,7 +1355,7 @@
       </span>state.remove_value(<span class="string">&quot;PROCESSED_LABEL&quot;</span>);
       state.assign_value(
         <span class="string">&quot;PEEKED_LABEL&quot;</span>,
-        Stored::String(label.into_owned()),
+        Stored::String(arena::pin(label)),
         <span class="prelude-val">Some</span>(Scope::Global),
       );
     }
@@ -1364,7 +1369,7 @@
   {
     <span class="kw">for </span>scope_stored <span class="kw">in </span>stored_scopes.clone() {
       <span class="kw">if let </span>Stored::String(scope) = scope_stored {
-        state.deactivate_scope(<span class="kw-2">&amp;</span>scope);
+        state.deactivate_scope(scope);
       } <span class="kw">else </span>{
         <span class="macro">panic!</span>(<span class="string">&quot;assignmenet scopes should be stored as strings, got: {scope_stored:?}&quot;</span>);
       }
@@ -1416,11 +1421,13 @@
 }
 
 <span class="doccomment">/// Resets the counter `ctr` to zero.
-</span><span class="kw">pub fn </span>reset_counter(ctr: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) {
-  state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{ctr}&quot;</span>), Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
-  state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@UN{ctr}&quot;</span>), Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
+</span><span class="kw">pub fn </span>reset_counter(ctr: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="kw">let </span>(c_ctr, c_un_ctr, ctr_id) =
+    ctr.with_str(|ctr| (<span class="macro">s!</span>(<span class="string">&quot;\\c@{ctr}&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;\\c@UN{ctr}&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>, ctr)));
+  state.assign_value(<span class="kw-2">&amp;</span>c_ctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
+  state.assign_value(<span class="kw-2">&amp;</span>c_un_ctr, Number::new(<span class="number">0</span>), <span class="prelude-val">Some</span>(Scope::Global));
   def_macro(
-    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@{}@ID&quot;</span>, ctr)),
+    <span class="macro">T_CS!</span>(ctr_id),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(state
       .lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{ctr}&quot;</span>))
@@ -1435,7 +1442,7 @@
   <span class="comment">// and reset any within counters!
   </span><span class="kw">let </span>nested = state.lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\cl@{ctr}&quot;</span>)).unwrap_or_default();
   <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
-    reset_counter(c.get_string(), state);
+    reset_counter(<span class="kw-2">&amp;</span>c, state);
   }
 }
 
@@ -1594,7 +1601,7 @@
   );
   <span class="comment">// Now arrange that this list&#39;s id&#39;s are relative to the current (outer) item (if any)
   // And that the items within this list&#39;s id&#39;s are relative to this (new) list.
-  </span>state.assign_value(<span class="string">&quot;itemcounter&quot;</span>, Stored::String(usecounter.clone()), <span class="prelude-val">None</span>);
+  </span>state.assign_value(<span class="string">&quot;itemcounter&quot;</span>, Stored::String(arena::pin(<span class="kw-2">&amp;</span>usecounter)), <span class="prelude-val">None</span>);
   <span class="kw">let </span>listcounter = <span class="macro">s!</span>(<span class="string">&quot;@itemize{listpostfix}&quot;</span>);
   <span class="kw">if </span>state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;\\c@{listcounter}&quot;</span>)).is_none() {
     <span class="comment">//Create new list counters as needed
@@ -1650,12 +1657,15 @@
       //   state);
     </span>}
   } <span class="kw">else </span>{
-    reset_counter(<span class="kw-2">&amp;</span>usecounter, state);
+    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="kw-2">&amp;</span>usecounter), state);
   }
 
   <span class="kw">let </span><span class="kw-2">mut </span>rsc = ref_step_counter(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;@itemize{listpostfix}&quot;</span>), <span class="bool-val">false</span>, stomach, state)<span class="question-mark">?</span>;
-  rsc.insert(<span class="string">&quot;counter&quot;</span>.to_string(), Stored::String(usecounter));
-  rsc.insert(<span class="string">&quot;series&quot;</span>.to_string(), Stored::String(series));
+  rsc.insert(
+    <span class="string">&quot;counter&quot;</span>.to_string(),
+    Stored::String(arena::pin(usecounter)),
+  );
+  rsc.insert(<span class="string">&quot;series&quot;</span>.to_string(), Stored::String(arena::pin(series)));
   <span class="prelude-val">Ok</span>(rsc)
 }
 
@@ -1683,4 +1693,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

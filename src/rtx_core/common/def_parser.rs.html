@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/def_parser.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>def_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/def_parser.rs`."><title>def_parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -215,60 +215,60 @@
   state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(Token, <span class="prelude-ty">Option</span>&lt;Parameters&gt;)&gt; {
   <span class="kw">let </span>cs;
-  <span class="kw">let </span>final_proto = <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = CSNAME_MACRO_RE.captures(proto) {
+  <span class="kw">let </span>normalized_proto = <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = CSNAME_MACRO_RE.captures(proto) {
     cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}&quot;</span>, captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str())));
     <span class="comment">// also replace in proto
-    </span>CSNAME_MACRO_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
+    </span>CSNAME_MACRO_RE.replace(proto, <span class="string">&quot;&quot;</span>)
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = CS_RE.captures(proto) {
     <span class="comment">// Match a cs
     </span><span class="kw">let </span>csname = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
     cs = <span class="macro">T_CS!</span>(csname);
     <span class="comment">// also replace in proto
-    </span>CS_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
+    </span>CS_RE.replace(proto, <span class="string">&quot;&quot;</span>)
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SINGLE_CHAR_RE.captures(proto) {
     <span class="comment">// Match a single char cs, env name,...
     </span>cs = <span class="macro">T_CS!</span>(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()));
     <span class="comment">// also replace in proto
-    </span>SINGLE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
+    </span>SINGLE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>)
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = ACTIVE_CHAR_RE.captures(proto) {
     <span class="comment">// Match an active char
     </span>cs = mouth::tokenize_internal(captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()))
       .unlist()
       .remove(<span class="number">0</span>);
     <span class="comment">// also replace in proto
-    </span>ACTIVE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>).to_string()
+    </span>ACTIVE_CHAR_RE.replace(proto, <span class="string">&quot;&quot;</span>)
   } <span class="kw">else </span>{
     <span class="kw">let </span>message = <span class="macro">s!</span>(
       <span class="string">&quot;Definition prototype doesn&#39;t have proper control sequence: \&quot;{}\&quot;&quot;</span>,
       proto
     );
     <span class="macro">fatal!</span>(Prototype, Misdefined, <span class="prelude-val">None</span>, state, message);
-  }
-  .trim()
-  .to_string();
+  };
+  <span class="kw">let </span>final_proto = normalized_proto.trim();
   <span class="kw">let </span>paramlist = parse_parameters(final_proto, <span class="kw-2">&amp;</span>cs, state_opt)<span class="question-mark">?</span>;
   <span class="prelude-val">Ok</span>((cs, paramlist))
 }
 
 <span class="doccomment">/// If calling at compile-time, pass `None` for state, to avoid initialization.
 </span><span class="kw">pub fn </span>parse_parameters(
-  <span class="kw-2">mut </span>prototype: String,
+  outer_prototype: <span class="kw-2">&amp;</span>str,
   cs: <span class="kw-2">&amp;</span>Token,
   <span class="kw-2">mut </span>state_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>State&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>prototype = Cow::Borrowed(outer_prototype);
   <span class="kw">let </span><span class="kw-2">mut </span>parameters = Vec::new();
   <span class="kw">while </span>!prototype.is_empty() {
-    <span class="kw">let </span>next_proto: String;
+    <span class="kw">let </span>next_proto: Cow&lt;str&gt;;
     <span class="comment">// Handle possibly nested cases, such as {Number}
     </span><span class="kw">if </span>NESTED_CHECK_RE.is_match(<span class="kw-2">&amp;</span>prototype) {
       <span class="kw">let </span>captures = NESTED_CHECK_RE.captures(<span class="kw-2">&amp;</span>prototype).unwrap();
-      next_proto = NESTED_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>).to_string();
+      next_proto = NESTED_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>);
       <span class="kw">let </span>spec = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       <span class="kw">let </span>inner_spec = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       <span class="kw">let </span>inner: <span class="prelude-ty">Option</span>&lt;Parameters&gt; = <span class="kw">if </span>inner_spec.is_empty() {
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
-        parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())<span class="question-mark">?
+        parse_parameters(inner_spec, cs, state_opt.as_deref_mut())<span class="question-mark">?
       </span>};
       <span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
         name: Cow::Borrowed(<span class="string">&quot;Plain&quot;</span>),
@@ -288,7 +288,7 @@
       <span class="comment">// Ditto for Optional
       </span><span class="kw">let </span>spec = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
       <span class="kw">let </span>inner_spec = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-      next_proto = OPTIONAL_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>).to_string();
+      next_proto = OPTIONAL_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>);
       <span class="kw">if let </span><span class="prelude-val">Some</span>(_default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
         <span class="comment">// TODO: Add the defaults !
         </span><span class="kw">let </span><span class="kw-2">mut </span>p = Parameter {
@@ -313,7 +313,7 @@
           } <span class="kw">else </span>{
             Cow::Owned(spec.to_string())
           },
-          inner: parse_parameters(inner_spec.to_string(), cs, state_opt.as_deref_mut())<span class="question-mark">?
+          inner: parse_parameters(inner_spec, cs, state_opt.as_deref_mut())<span class="question-mark">?
             </span>.map(|ps| ps.into())
             .unwrap_or_default(),
           ..Parameter::default()
@@ -337,7 +337,7 @@
       <span class="kw">let </span>spec = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
       <span class="kw">let </span>name = captures.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
       <span class="kw">let </span>extra_str = captures.get(<span class="number">4</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
-      next_proto = PARAMSPECT_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>).to_string();
+      next_proto = PARAMSPECT_CHECK_RE.replace(<span class="kw-2">&amp;</span>prototype, <span class="string">&quot;&quot;</span>);
       <span class="kw">let </span>extra: Vec&lt;Tokens&gt; = <span class="kw">if </span>extra_str.is_empty() {
         Vec::new()
       } <span class="kw">else </span>{
@@ -366,7 +366,7 @@
         )
       );
     }
-    prototype = next_proto.to_string();
+    prototype = Cow::Owned(next_proto.to_string());
   }
   <span class="kw">if </span>parameters.is_empty() {
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -375,4 +375,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

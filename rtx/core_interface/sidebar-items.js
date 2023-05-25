@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["DigestionOptions",""]],"trait":[["DigestionAPI",""]]};
+window.SIDEBAR_ITEMS = {"struct":["DigestionOptions"],"trait":["DigestionAPI"]};

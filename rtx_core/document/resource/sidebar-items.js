@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["resource_type",""]],"struct":[["Resource",""]]};
+window.SIDEBAR_ITEMS = {"fn":["resource_type"],"struct":["Resource"]};

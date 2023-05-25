@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Delimiter","kinds of delimiters used by the binding replacement strings"]],"fn":[["extract_bracketed","Extract a bracketed subexpression at the start of a larger string. defaults to () delimiters."]]};
+window.SIDEBAR_ITEMS = {"enum":["Delimiter"],"fn":["extract_bracketed"]};

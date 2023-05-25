@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["LTX_NAMESPACE",""]],"struct":[["Model",""],["TagFrame",""]],"type":[["IndirectModel",""]]};
+window.SIDEBAR_ITEMS = {"constant":["LTX_NAMESPACE"],"struct":["Model","TagFrame"],"type":["IndirectModel"]};

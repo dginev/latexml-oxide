@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/token.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>token.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/token.rs`."><title>token.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -808,10 +808,125 @@
 <a href="#808" id="808">808</a>
 <a href="#809" id="809">809</a>
 <a href="#810" id="810">810</a>
-</pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
-<span class="kw">use </span>std::fmt;
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a>
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a>
+<a href="#911" id="911">911</a>
+<a href="#912" id="912">912</a>
+<a href="#913" id="913">913</a>
+<a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+</pre><pre class="rust"><code><span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::Display;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::rc::Rc;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
@@ -1072,7 +1187,7 @@
 /// We allow the fields to be public, so that we can use builder macros such as
 /// ```
 /// macro_rules! T_SPACE(() =&gt; {
-///     Token { text: arena::pin(&quot; &quot;), code: Catcode::SPACE}
+///     Token { text: arena::pin_static(&quot; &quot;), code: Catcode::SPACE}
 ///   });
 /// ```
 </span><span class="attr">#[derive(Clone)]
@@ -1088,9 +1203,9 @@
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Token {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::ARG {
-      <span class="macro">write!</span>(f, <span class="string">&quot;\&quot;#{}\&quot;&quot;</span>, <span class="self">self</span>.get_string())
+      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;\&quot;#{}\&quot;&quot;</span>, text))
     } <span class="kw">else </span>{
-      <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.get_string())
+      <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, text))
     }
   }
 }
@@ -1100,7 +1215,7 @@
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::ARG {
       <span class="macro">write!</span>(f, <span class="string">&quot;#&quot;</span>)<span class="question-mark">?</span>;
     }
-    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.get_string())
+    <span class="self">self</span>.with_str(|text| <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, text))
   }
 }
 
@@ -1121,101 +1236,109 @@
 //  a known token than it is to build a new one
 //  (as the arena lookup is a hair slower than copying a u32)
 
-</span><span class="doccomment">/// constant for an END &quot;}&quot; token
-</span><span class="kw">pub static </span>TOKEN_BEGIN: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;{&quot;</span>),
-  code: Catcode::BEGIN,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a BEGIN &quot;{&quot; token
-</span><span class="kw">pub static </span>TOKEN_END: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;}&quot;</span>),
-  code: Catcode::END,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a MATH &quot;$&quot; token
-</span><span class="kw">pub static </span>TOKEN_MATH: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;$&quot;</span>),
-  code: Catcode::MATH,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for an ALIGN &quot;&amp;&quot; token
-</span><span class="kw">pub static </span>TOKEN_ALIGN: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;&amp;&quot;</span>),
-  code: Catcode::ALIGN,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a PARAM &quot;#&quot; token
-</span><span class="kw">pub static </span>TOKEN_PARAM: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;#&quot;</span>),
-  code: Catcode::PARAM,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a SUPER &quot;^&quot; token
-</span><span class="kw">pub static </span>TOKEN_SUPER: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;^&quot;</span>),
-  code: Catcode::SUPER,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a SUB &quot;_&quot; token
-</span><span class="kw">pub static </span>TOKEN_SUB: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;_&quot;</span>),
-  code: Catcode::SUB,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a SPACE &quot; &quot; token
-</span><span class="kw">pub static </span>TOKEN_SPACE: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot; &quot;</span>),
-  code: Catcode::SPACE,
-  smuggled: <span class="prelude-val">None</span>,
-});
-<span class="doccomment">/// constant for a CR &quot;\n&quot; token
-</span><span class="kw">pub static </span>TOKEN_CR: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;\n&quot;</span>),
-  code: Catcode::SPACE,
-  smuggled: <span class="prelude-val">None</span>,
-});
-
-<span class="doccomment">/// constant for T_CS(&quot;\relax&quot;)
-</span><span class="kw">pub static </span>TOKEN_RELAX: Lazy&lt;Token&gt; = Lazy::new(|| Token {
-  text: arena::pin(<span class="string">&quot;\\relax&quot;</span>),
-  code: Catcode::CS,
-  smuggled: <span class="prelude-val">None</span>,
-});
+</span><span class="macro">thread_local! </span>{
+  <span class="doccomment">/// constant for an END &quot;}&quot; token
+  </span><span class="kw">pub static </span>TOKEN_BEGIN: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;{&quot;</span>),
+    code: Catcode::BEGIN,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a BEGIN &quot;{&quot; token
+  </span><span class="kw">pub static </span>TOKEN_END: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;}&quot;</span>),
+    code: Catcode::END,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a MATH &quot;$&quot; token
+  </span><span class="kw">pub static </span>TOKEN_MATH: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;$&quot;</span>),
+    code: Catcode::MATH,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for an ALIGN &quot;&amp;&quot; token
+  </span><span class="kw">pub static </span>TOKEN_ALIGN: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;&amp;&quot;</span>),
+    code: Catcode::ALIGN,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a PARAM &quot;#&quot; token
+  </span><span class="kw">pub static </span>TOKEN_PARAM: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;#&quot;</span>),
+    code: Catcode::PARAM,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a SUPER &quot;^&quot; token
+  </span><span class="kw">pub static </span>TOKEN_SUPER: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;^&quot;</span>),
+    code: Catcode::SUPER,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a SUB &quot;_&quot; token
+  </span><span class="kw">pub static </span>TOKEN_SUB: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;_&quot;</span>),
+    code: Catcode::SUB,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a SPACE &quot; &quot; token
+  </span><span class="kw">pub static </span>TOKEN_SPACE: Token = Token {
+    text: arena::pin_static(<span class="string">&quot; &quot;</span>),
+    code: Catcode::SPACE,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for a CR &quot;\n&quot; token
+  </span><span class="kw">pub static </span>TOKEN_CR: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;\n&quot;</span>),
+    code: Catcode::SPACE,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+  <span class="doccomment">/// constant for T_CS(&quot;\relax&quot;)
+  </span><span class="kw">pub static </span>TOKEN_RELAX: Token = Token {
+    text: arena::pin_static(<span class="string">&quot;\\relax&quot;</span>),
+    code: Catcode::CS,
+    smuggled: <span class="prelude-val">None</span>,
+  };
+}
 
 <span class="attr">#[macro_export]
 </span><span class="doccomment">/// macro for a BEGIN &quot;{&quot; token
-</span><span class="macro">macro_rules! </span>T_BEGIN(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_BEGIN</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_BEGIN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_BEGIN</span>.with(|t| t.clone()) });
 <span class="attr">#[macro_export]
 </span><span class="doccomment">/// macro for a new END &quot;{&quot; token
-</span><span class="macro">macro_rules! </span>T_END(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_END</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_END(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_END</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a MATH &quot;$&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_MATH(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_MATH</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_MATH(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_MATH</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for an ALIGN &quot;&amp;&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_ALIGN(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_ALIGN</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_ALIGN(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_ALIGN</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a PARAM &quot;#&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_PARAM(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_PARAM</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_PARAM(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_PARAM</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a SUPER &quot;^&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SUPER(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_SUPER</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_SUPER(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUPER</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a SUB &quot;_&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SUB(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_SUB</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_SUB(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SUB</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a SPACE token (default &quot; &quot;)
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_SPACE(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_SPACE</span>).clone() };
+</span><span class="macro">macro_rules! </span>T_SPACE(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_SPACE</span>.with(|t| t.clone()) };
 (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
   Token { text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>), code: Catcode::SPACE, smuggled: <span class="prelude-val">None</span>}
 });
 <span class="doccomment">/// macro for a CR &quot;\n&quot; token
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_CR(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_CR</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_CR(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_CR</span>.with(|t| t.clone()) });
 <span class="doccomment">/// macro for a LETTER token
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>T_LETTER {
+  (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
+    Token {
+      text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
+      code: Catcode::LETTER,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
@@ -1227,9 +1350,27 @@
 <span class="doccomment">/// macro for an OTHER code token
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>T_OTHER {
+  (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
+    Token {
+      text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
+      code: Catcode::OTHER,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
+      code: Catcode::OTHER,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  };
+}
+<span class="doccomment">/// T_OTHER from a single character
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules! </span>T_OTHER_CHAR {
+  (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
+    Token {
+      text: <span class="macro-nonterminal">$crate::common::arena::pin_char</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::OTHER,
       smuggled: <span class="prelude-val">None</span>,
     }
@@ -1253,7 +1394,7 @@
 </span><span class="macro">macro_rules! </span>T_COMMENT {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
-      text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>.to_string()),
+      text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
       code: Catcode::COMMENT,
       smuggled: <span class="prelude-val">None</span>,
     }
@@ -1262,6 +1403,13 @@
 <span class="doccomment">/// macro for a command sequence token
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>T_CS {
+  (<span class="macro-nonterminal">$text</span>:literal) =&gt; {
+    <span class="macro-nonterminal">$crate::token::Token </span>{
+      text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="macro-nonterminal">$text</span>),
+      code: <span class="macro-nonterminal">$crate::token::Catcode::CS</span>,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  };
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     <span class="macro-nonterminal">$crate::token::Token </span>{
       text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
@@ -1273,7 +1421,7 @@
 
 <span class="doccomment">/// macro for T_CS(&quot;\\relax&quot;)
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>T_RELAX(() =&gt; { (<span class="kw-2">*</span><span class="macro-nonterminal">$crate::token::TOKEN_RELAX</span>).clone() });
+</span><span class="macro">macro_rules! </span>T_RELAX(() =&gt; { <span class="macro-nonterminal">$crate::token::TOKEN_RELAX</span>.with(|t| t.clone()) });
 
 <span class="doccomment">/// macro for a tracing MARKER token
 </span><span class="attr">#[macro_export]
@@ -1292,7 +1440,7 @@
 </span><span class="macro">macro_rules! </span>T_ARG {
   (<span class="macro-nonterminal">$text</span>:expr) =&gt; {
     Token {
-      text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>),
+      text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="macro-nonterminal">$text</span>.to_string()),
       code: Catcode::ARG,
       smuggled: <span class="prelude-val">None</span>,
     }
@@ -1315,7 +1463,7 @@
         );
       },
       cc <span class="kw">if </span>cc.can_smuggle_the() =&gt; Token {
-        text: <span class="macro-nonterminal">$crate::common::arena::pin</span>(<span class="string">&quot;SMUGGLE_THE&quot;</span>),
+        text: <span class="macro-nonterminal">$crate::common::arena::pin_static</span>(<span class="string">&quot;SMUGGLE_THE&quot;</span>),
         code: Catcode::SmuggleTHE,
         smuggled: <span class="prelude-val">Some</span>(Box::new(<span class="macro-nonterminal">$t</span>)),
       },
@@ -1355,7 +1503,17 @@
 <span class="doccomment">/// Explode a string into a list of tokens, all w/catcode OTHER (except space).
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>Explode((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
-  <span class="macro-nonterminal">$text</span>.to_string().as_str().chars().map(|c|
+  <span class="macro-nonterminal">$text</span>.to_string().chars().map(|c|
+    <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
+    <span class="kw">else </span>{
+      <span class="macro">CharToken!</span>(c)
+    }
+  ).collect::&lt;Vec&lt;Token&gt;&gt;()
+));
+
+<span class="attr">#[macro_export]
+</span><span class="macro">macro_rules! </span>ExplodeChars((<span class="macro-nonterminal">$text</span>:expr) =&gt; (
+  <span class="macro-nonterminal">$text</span>.as_str().chars().map(|c|
     <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
     <span class="kw">else </span>{
       <span class="macro">CharToken!</span>(c)
@@ -1368,7 +1526,7 @@
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>ExplodeText((<span class="macro-nonterminal">$text</span>:expr) =&gt; ({
   <span class="kw">use </span><span class="macro-nonterminal">$crate::token</span>::{Catcode,Token};
-  <span class="macro-nonterminal">$text</span>.to_string().as_str().chars().map(|c|
+  <span class="macro-nonterminal">$text</span>.to_string().chars().map(|c|
     <span class="kw">if </span>c==<span class="string">&#39; &#39; </span>{ <span class="macro">T_SPACE!</span>() }
     <span class="kw">else </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>tmp = [<span class="number">0u8</span>; <span class="number">3</span>];
@@ -1384,7 +1542,7 @@
 </span><span class="kw">impl </span>Default <span class="kw">for </span>Token {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Token {
-      text: arena::pin(<span class="string">&quot;EXPECTED_TOKEN&quot;</span>),
+      text: arena::pin_static(<span class="string">&quot;EXPECTED_TOKEN&quot;</span>),
       code: Catcode::OTHER,
       smuggled: <span class="prelude-val">None</span>,
     }
@@ -1393,7 +1551,7 @@
 
 <span class="doccomment">///======================================================================
 /// Accessors.
-</span><span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Token {
+</span><span class="kw">impl </span>Token {
   <span class="doccomment">/// simple Token constructor, wrapping over text and catcode
   </span><span class="kw">pub fn </span>new&lt;T: AsRef&lt;str&gt;&gt;(text: T, code: Catcode) -&gt; <span class="self">Self </span>{
     Token {
@@ -1405,11 +1563,32 @@
 
   <span class="doccomment">/// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It&#39;s the same for various `different&#39; BEGIN tokens, eg.
-  </span><span class="kw">pub fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str {
+  </span><span class="kw">pub fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 {
     <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
-      <span class="self">self</span>.code.name()
+      arena::pin(<span class="self">self</span>.code.name())
     } <span class="kw">else </span>{
-      <span class="self">self</span>.get_string()
+      <span class="self">self</span>.get_sym()
+    }
+  }
+
+  <span class="doccomment">/// Execute a closure using the CS Name of the token.
+  /// This is the name that definitions will be stored under;
+  /// It&#39;s the same for various `different&#39; BEGIN tokens, eg.
+  </span><span class="kw">pub fn </span>with_cs_name&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+    <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
+      caller(<span class="self">self</span>.code.name())
+    } <span class="kw">else </span>{
+      <span class="self">self</span>.with_str(caller)
+    }
+  }
+
+  <span class="doccomment">/// artificial, but avoids the data race
+  </span><span class="kw">pub fn </span>pin_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 {
+    <span class="kw">if </span><span class="self">self</span>.code.is_primitive() {
+      arena::pin_static(<span class="self">self</span>.code.name())
+    } <span class="kw">else </span>{
+      <span class="self">self</span>.get_sym()
     }
   }
 
@@ -1428,8 +1607,8 @@
     <span class="kw">if </span>cc.is_executable() {
       <span class="self">self
         </span>.get_primitive_name()
-        .unwrap_or(<span class="self">self</span>.get_string())
-        .to_string()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| <span class="self">self</span>.with_str(|text| text.to_string()))
     } <span class="kw">else </span>{
       String::new()
     }
@@ -1445,20 +1624,29 @@
     </span>}
   }
 
-  <span class="doccomment">/// Return the the borrowed &amp;str &quot;text&quot; of the token
-  /// use `to_string` instead for an owned String
-  </span><span class="kw">pub fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str { arena::resolve(<span class="self">self</span>.text) }
+  <span class="doccomment">/// Use the ticket representing the interned &quot;text&quot; of the token
+  </span><span class="kw">pub fn </span>get_sym(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SymbolU32 { <span class="self">self</span>.text }
+  <span class="doccomment">/// Use the interned &amp;str &quot;text&quot; of the token
+  /// use `to_string` instead for an owned String with simpler
+  </span><span class="kw">pub fn </span>with_str&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+    arena::with(<span class="self">self</span>.text, caller)
+  }
 
   <span class="doccomment">/// Return the character code of  character part of the token, or 256 if it is a control
   /// sequence
   </span><span class="kw">pub fn </span>get_charcode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::CS {
       <span class="number">256
-    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(c) = <span class="self">self</span>.get_string().chars().next() {
-      c <span class="kw">as </span>u32
-    } <span class="kw">else </span>{
-      <span class="number">0
-    </span>}
+    </span>} <span class="kw">else </span>{
+      <span class="self">self</span>.with_str(|text| {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = text.chars().next() {
+          c <span class="kw">as </span>u32
+        } <span class="kw">else </span>{
+          <span class="number">0
+        </span>}
+      })
+    }
   }
 
   <span class="doccomment">/// Return the catcode of the token.
@@ -1474,7 +1662,8 @@
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
   </span><span class="kw">pub fn </span>neutralize(<span class="self">self</span>, extraspecials: <span class="kw-2">&amp;</span>[char], state: <span class="kw-2">&amp;</span>State) -&gt; Token {
-    <span class="kw">let </span>ch = <span class="kw">match </span><span class="self">self</span>.get_string().chars().next() {
+    <span class="kw">let </span>first_c: <span class="prelude-ty">Option</span>&lt;char&gt; = <span class="self">self</span>.with_str(|text| text.chars().next());
+    <span class="kw">let </span>ch = <span class="kw">match </span>first_c {
       <span class="prelude-val">Some</span>(ch) =&gt; ch,
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="self">self</span>,
     };
@@ -1500,13 +1689,29 @@
     <span class="self">self
   </span>}
 
+  <span class="kw">pub fn </span>as_other(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Token {
+    Token {
+      text: <span class="self">self</span>.text,
+      code: Catcode::OTHER,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  }
+  <span class="kw">pub fn </span>as_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Token {
+    Token {
+      text: <span class="self">self</span>.text,
+      code: Catcode::CS,
+      smuggled: <span class="prelude-val">None</span>,
+    }
+  }
+
   <span class="kw">pub fn </span>substitute_parameters(<span class="self">self</span>, args: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>Token]) -&gt; <span class="self">Self </span>{
     <span class="kw">if </span><span class="self">self</span>.code == Catcode::ARG {
-      <span class="kw">let </span>arg_idx = <span class="self">self
-        </span>.get_string()
-        .parse::&lt;usize&gt;()
-        .expect(<span class="string">&quot;ARG catcode tokens should always contain numeric literals as text&quot;</span>);
-      args[arg_idx - <span class="number">1</span>].clone()
+      <span class="self">self</span>.with_str(|text| {
+        <span class="kw">let </span>arg_idx = text
+          .parse::&lt;usize&gt;()
+          .expect(<span class="string">&quot;ARG catcode tokens should always contain numeric literals as text&quot;</span>);
+        args[arg_idx - <span class="number">1</span>].clone()
+      })
     } <span class="kw">else </span>{
       <span class="self">self
     </span>}
@@ -1528,7 +1733,7 @@
       Catcode::CS | Catcode::ACTIVE =&gt; {
         <span class="kw">if </span>state.is_dont_expandable(<span class="kw-2">&amp;</span><span class="self">self</span>) {
           <span class="prelude-val">Ok</span>(Token {
-            text: arena::pin(<span class="string">&quot;\\relax&quot;</span>),
+            text: arena::pin_static(<span class="string">&quot;\\relax&quot;</span>),
             code: Catcode::CS,
             smuggled: <span class="prelude-val">Some</span>(Box::new(<span class="self">self</span>)),
           })
@@ -1570,11 +1775,9 @@
   </span><span class="comment">// A Token reverts to itself
   </span><span class="kw">pub fn </span>revert(<span class="self">self</span>) -&gt; Token { <span class="self">self </span>}
 
-  <span class="doccomment">/// borrow the string content of this Token
-  </span><span class="kw">pub fn </span>as_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str { <span class="self">self</span>.get_string() }
   <span class="doccomment">/// A string form which is primarily used for error-reporting
   </span><span class="kw">pub fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>string = <span class="self">self</span>.get_string().to_string();
+    <span class="kw">let </span><span class="kw-2">mut </span>string = <span class="self">self</span>.with_str(|text| text.to_string());
     <span class="comment">// Make the token&#39;s char content more printable, since this is for a visual messages.
     </span><span class="kw">if </span>string.len() == <span class="number">1 </span>{
       <span class="kw">let </span>c = string.chars().next().unwrap() <span class="kw">as </span>u16;
@@ -1583,31 +1786,40 @@
         </span>string = <span class="macro">s!</span>(<span class="string">&quot;U+{}/{}&quot;</span>, c, CONTROLNAME[c <span class="kw">as </span>usize]);
       }
     }
-    <span class="macro">s!</span>(<span class="string">&quot;{}[{}]&quot;</span>, <span class="self">self</span>.code.short_name(), string)
+    <span class="kw">let </span>smuggled = <span class="self">self
+      </span>.smuggled
+      .as_ref()
+      .map(|t| <span class="macro">s!</span>(<span class="string">&quot;&lt;{}&gt;&quot;</span>, t.stringify()))
+      .unwrap_or_default();
+    <span class="macro">s!</span>(<span class="string">&quot;{}[{}]{}&quot;</span>, <span class="self">self</span>.code.short_name(), string, smuggled)
   }
 
-  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Register&gt;&gt; {
+  <span class="kw">pub fn </span>to_register(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
     state.lookup_register_definition(<span class="self">self</span>)
   }
 
-  <span class="kw">pub fn </span>to_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Number { Number::new(<span class="self">self</span>.get_string().parse::&lt;i64&gt;().unwrap_or(<span class="number">0</span>)) }
+  <span class="kw">pub fn </span>to_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Number {
+    Number::new(<span class="self">self</span>.with_str(|text| text.parse::&lt;i64&gt;()).unwrap_or(<span class="number">0</span>))
+  }
 
   <span class="kw">pub fn </span>to_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Dimension {
-    Dimension::new_f64(<span class="self">self</span>.get_string().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+    Dimension::new_f64(<span class="self">self</span>.with_str(|text| text.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)))
   }
 
   <span class="kw">pub fn </span>to_mu_dimension(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MuDimension {
-    MuDimension::new_f64(<span class="self">self</span>.get_string().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+    MuDimension::new_f64(<span class="self">self</span>.with_str(|s| s.parse::&lt;f64&gt;()).unwrap_or(<span class="number">0.0</span>))
   }
 
-  <span class="kw">pub fn </span>to_glue(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Glue { Glue::new_f64(<span class="self">self</span>.get_string().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)) }
+  <span class="kw">pub fn </span>to_glue(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Glue {
+    Glue::new_f64(<span class="self">self</span>.with_str(|s| s.parse::&lt;f64&gt;()).unwrap_or(<span class="number">0.0</span>))
+  }
 
   <span class="kw">pub fn </span>to_mu_glue(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MuGlue {
-    MuGlue::new_f64(<span class="self">self</span>.get_string().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+    MuGlue::new_f64(<span class="self">self</span>.with_str(|s| s.parse::&lt;f64&gt;()).unwrap_or(<span class="number">0.0</span>))
   }
 
   <span class="kw">pub fn </span>to_float(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Float {
-    Float::new_f64(<span class="self">self</span>.get_string().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>))
+    Float::new_f64(<span class="self">self</span>.with_str(|s| s.parse::&lt;f64&gt;()).unwrap_or(<span class="number">0.0</span>))
   }
 
   <span class="kw">pub fn </span>be_digested(<span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
@@ -1615,8 +1827,28 @@
   }
 }
 
-<span class="kw">impl </span>AsRef&lt;str&gt; <span class="kw">for </span>Token {
-  <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str { <span class="self">self</span>.get_string() }
+<span class="comment">// A simple (constant!) auto-cast for &amp;str to Token. Beware this will not respect the current catcodes in State (and @ is OTHER).
+</span><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Token {
+  <span class="kw">fn </span>from(text:<span class="kw-2">&amp;</span>str) -&gt; Token {
+    <span class="kw">match </span>text.chars().next() {
+      <span class="prelude-val">Some</span>(<span class="string">&#39;{&#39;</span>) =&gt; <span class="macro">T_BEGIN!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;}&#39;</span>) =&gt; <span class="macro">T_END!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;$&#39;</span>) =&gt; <span class="macro">T_MATH!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;#&#39;</span>) =&gt; <span class="macro">T_PARAM!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;&amp;&#39;</span>) =&gt; <span class="macro">T_ALIGN!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;^&#39;</span>) =&gt; <span class="macro">T_SUPER!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;_&#39;</span>) =&gt; <span class="macro">T_SUB!</span>(),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;\\&#39;</span>) =&gt; <span class="macro">T_CS!</span>(text),
+      <span class="prelude-val">Some</span>(<span class="string">&#39;%&#39;</span>) =&gt; <span class="macro">T_COMMENT!</span>(text),
+      <span class="kw">_ </span>=&gt; <span class="kw">if </span>text.chars().all(|c| c.is_alphabetic()) {
+        <span class="macro">T_LETTER!</span>(text)
+      } <span class="kw">else if </span>text.chars().all(|c| c.is_whitespace()) {
+        <span class="macro">T_SPACE!</span>()
+      } <span class="kw">else </span>{
+        <span class="macro">T_OTHER!</span>(text)
+      }
+    }
+  }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

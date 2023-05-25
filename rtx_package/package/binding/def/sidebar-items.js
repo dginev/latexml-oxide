@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["dialect",""],["macros",""],["traits",""]]};
+window.SIDEBAR_ITEMS = {"mod":["dialect","macros","traits"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyvals.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>keyvals.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyvals.rs`."><title>keyvals.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -662,18 +662,57 @@
 <a href="#662" id="662">662</a>
 <a href="#663" id="663">663</a>
 <a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt;
+<span class="kw">use </span>core::slice::Iter;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::EMPTY_SYM;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="comment">// use crate::definition::expandable::Expandable;
@@ -767,7 +806,7 @@
     </span><span class="kw">for </span>tuple <span class="kw">in </span><span class="self">self</span>.tuples.drain(..) {
       <span class="kw">let </span>(key, value, use_default, resolution, keyval) = tuple;
       <span class="comment">// digest a single token
-      </span><span class="kw">let </span>value_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = value.borrow().into();
+      </span><span class="kw">let </span>value_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = value.into();
       <span class="kw">let </span>digested_value: Digested = <span class="kw">if let </span><span class="prelude-val">Some</span>(keydef) = keyval.get_type(state) {
         <span class="comment">// keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
@@ -776,7 +815,7 @@
         </span>keydef
           .digest(
             stomach,
-            ArgWrap::OptionTokens(value_tokens_opt),
+            value_tokens_opt.into(),
             <span class="prelude-val">None</span>,
             state,
           )<span class="question-mark">?
@@ -834,7 +873,7 @@
 }
 
 <span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>KeyValsOptions {
+</span><span class="kw">pub struct </span>KeyvalsConfig {
   <span class="kw">pub </span>prefix: <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>keysets: Vec&lt;String&gt;,
   <span class="kw">pub </span>set_all: bool,
@@ -852,7 +891,7 @@
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  </span><span class="kw">pub fn </span>new(options: KeyValsOptions, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
+  </span><span class="kw">pub fn </span>new(options: KeyvalsConfig, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
     <span class="comment">// parse all the arguments
     </span><span class="kw">let </span>prefix = options.prefix.unwrap_or_else(|| String::from(<span class="string">&quot;KV&quot;</span>));
     <span class="comment">// $keysets = [split(&#39;,&#39;, ToString(defined($keysets) ? $keysets : &#39;_anonymous_&#39;))] unless
@@ -937,7 +976,7 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
 
     <span class="comment">// we do not want any spaces
-    </span>gullet.skip_spaces(state);
+    </span>gullet.skip_spaces(state)<span class="question-mark">?</span>;
 
     <span class="comment">// read tokens one-by-one
     </span><span class="kw">let </span><span class="kw-2">mut </span>last_token = <span class="prelude-val">None</span>;
@@ -977,6 +1016,56 @@
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
       <span class="prelude-val">Some</span>(value) =&gt; value.last(),
     }
+  }
+
+
+  <span class="doccomment">/// return a list of values for a given key
+  </span><span class="kw">pub fn </span>get_values(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;Stored&gt;&gt; {
+    <span class="self">self</span>.cached_hash.get(key)
+  }
+
+
+  <span class="doccomment">/// return the set of key-value pairs
+  </span><span class="kw">pub fn </span>get_pairs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;_</span>, (String, Stored)&gt; {
+    <span class="self">self</span>.cached_pairs.iter()
+  }
+  <span class="doccomment">/// consume KeyVals and return a flat HashMap
+  </span><span class="kw">pub fn </span>as_flat_hash(<span class="self">self</span>) -&gt; HashMap&lt;String,Stored&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>flat_hash = HashMap::default();
+    <span class="kw">for </span>(k,<span class="kw-2">mut </span>vec) <span class="kw">in </span><span class="self">self</span>.cached_hash {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = vec.pop() {
+        flat_hash.insert(k, v);
+      }
+    }
+    flat_hash
+  }
+  <span class="doccomment">/// consume KeyVals and return the cached HashMap
+  </span><span class="kw">pub fn </span>as_hash(<span class="self">self</span>) -&gt; HashMap&lt;String,Vec&lt;Stored&gt;&gt; {
+    <span class="self">self</span>.cached_hash
+  }
+  <span class="doccomment">/// returns a key =&gt; ToString(value)
+  </span><span class="kw">pub fn </span>get_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashMap&lt;String, String&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::default();
+    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash {
+      hashed.insert(
+        k.to_string(),
+        v.iter()
+          .map(ToString::to_string)
+          .collect::&lt;Vec&lt;String&gt;&gt;()
+          .join(<span class="string">&quot;&quot;</span>),
+      );
+    }
+    hashed
+  }
+
+  <span class="comment">// return a hash of key-value pairs
+  </span><span class="kw">pub fn </span>get_keyvals(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Vec&lt;Stored&gt;&gt; {
+    <span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash
+  }
+
+  <span class="comment">// checks if the value for a given key exists
+  </span><span class="kw">pub fn </span>has_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="self">self</span>.cached_hash.contains_key(key)
   }
 
   <span class="comment">//======================================================================
@@ -1077,7 +1166,7 @@
     </span><span class="kw">let </span>value = <span class="kw">if </span>use_default {
       headset
         .get_default(state)
-        .unwrap_or_else(|| Stored::String(String::new()))
+        .unwrap_or_else(|| Stored::String(EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym)))
     } <span class="kw">else </span>{
       value
     };
@@ -1225,7 +1314,7 @@
             <span class="kw">if </span>delim_opt.is_some() {
               <span class="kw">break</span>; <span class="comment">// only until we hit a delim.
             </span>}
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state)<span class="question-mark">? </span>{
               <span class="comment">// Copy next token to args
               </span><span class="kw">let </span><span class="kw-2">mut </span>rest = Vec::new();
               <span class="kw">if </span>tok.get_catcode() == Catcode::BEGIN {
@@ -1276,21 +1365,6 @@
     </span><span class="prelude-val">Ok</span>(())
   }
 
-  <span class="comment">// returns a key =&gt; ToString(value)
-  </span><span class="kw">pub fn </span>get_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashMap&lt;String, String&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>hashed = HashMap::default();
-    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.cached_hash {
-      hashed.insert(
-        k.to_string(),
-        v.iter()
-          .map(ToString::to_string)
-          .collect::&lt;Vec&lt;String&gt;&gt;()
-          .join(<span class="string">&quot;&quot;</span>),
-      );
-    }
-    hashed
-  }
-
   <span class="doccomment">/// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected
   /// metadata       the long-term solution ought to be via a type system extension, where the
   /// arguments to our before-digest closures       are a vector of a new type ReadValue ::=
@@ -1312,7 +1386,11 @@
           tks.push(<span class="macro">T_OTHER!</span>(exp_str));
         },
         Stored::Token(vtk) =&gt; tks.push(vtk),
-        Stored::String(vstr) =&gt; tks.push(<span class="macro">T_OTHER!</span>(vstr)),
+        Stored::String(vstr) =&gt; tks.push(Token {
+          text: vstr,
+          code: Catcode::OTHER,
+          smuggled: <span class="prelude-val">None</span>,
+        }),
         <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
       }
     }
@@ -1327,4 +1405,4 @@
   }
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Tbox","Box is a Rust keyword, so we use “Tbox” instead, as in “TeX Box”"]]};
+window.SIDEBAR_ITEMS = {"struct":["Tbox"]};

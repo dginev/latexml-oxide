@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/parser.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_math_parser/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_math_parser/src/parser.rs`."><title>parser.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_math_parser/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -898,19 +898,22 @@
 <a href="#898" id="898">898</a>
 <a href="#899" id="899">899</a>
 <a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::io::Cursor;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span>rtx_core::common::arena;
 <span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, note_progress, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rtx_core::common::xml::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::document::Document;
 <span class="kw">use </span>rtx_core::state::State;
-<span class="kw">use </span>rtx_core::{fatal, map, s, static_map, Error};
+<span class="kw">use </span>rtx_core::{fatal, map, raw_map, s, static_map, Error};
 
 <span class="kw">use </span><span class="kw">crate</span>::grammar::builder::init_grammar;
 <span class="kw">use </span><span class="kw">crate</span>::pragmatics::ValidationPragmatics;
@@ -953,13 +956,13 @@
   engine: Parser,
   <span class="kw">pub </span>expert_pragmatics: Vec&lt;ValidationPragmatics&gt;,
   <span class="kw">pub </span>student_pragmatics: Vec&lt;ValidationPragmatics&gt;,
-  passed: HashMap&lt;String, usize&gt;,
-  failed: HashMap&lt;String, usize&gt;,
-  unknowns: HashMap&lt;String, usize&gt;,
+  passed: HashMap&lt;SymbolU32, usize&gt;,
+  failed: HashMap&lt;SymbolU32, usize&gt;,
+  unknowns: HashMap&lt;SymbolU32, usize&gt;,
   <span class="comment">// punctuation: HashMap&lt;String, usize&gt;,
   // lostnodes: HashMap&lt;String, Node&gt;,
   // idrefs: Vec&lt;(String, Node)&gt;,
-  </span>maybe_functions: HashMap&lt;String, usize&gt;,
+  </span>maybe_functions: HashMap&lt;SymbolU32, usize&gt;,
   n_parsed: usize,
   <span class="comment">// strict: bool,
   // warned: bool,
@@ -1081,8 +1084,11 @@
 
   // ================================================================================
   </span><span class="kw">pub fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-    <span class="self">self</span>.passed = <span class="macro">map!</span>(<span class="string">&quot;ltx:XMath&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMWrap&quot; </span>=&gt; <span class="number">0</span>);
-    <span class="self">self</span>.failed = <span class="macro">map!</span>(<span class="string">&quot;ltx:XMath&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; <span class="number">0</span>, <span class="string">&quot;ltx:XMWrap&quot; </span>=&gt; <span class="number">0 </span>);
+    <span class="self">self</span>.passed = <span class="macro">raw_map!</span>(arena::pin_static(<span class="string">&quot;ltx:XMath&quot;</span>) =&gt; <span class="number">0</span>, arena::pin_static(<span class="string">&quot;ltx:XMArg&quot;</span>) =&gt; <span class="number">0</span>,
+      arena::pin_static(<span class="string">&quot;ltx:XMWrap&quot;</span>) =&gt; <span class="number">0</span>);
+    <span class="self">self</span>.failed = <span class="macro">raw_map!</span>(arena::pin_static(<span class="string">&quot;ltx:XMath&quot;</span>) =&gt; <span class="number">0</span>,
+      arena::pin_static(<span class="string">&quot;ltx:XMArg&quot;</span>) =&gt; <span class="number">0</span>,
+      arena::pin_static(<span class="string">&quot;ltx:XMWrap&quot;</span>) =&gt; <span class="number">0 </span>);
     <span class="self">self</span>.unknowns = HashMap::default();
     <span class="self">self</span>.maybe_functions = HashMap::default();
     <span class="self">self</span>.n_parsed = <span class="number">0</span>;
@@ -1203,7 +1209,7 @@
     </span><span class="kw">for </span>nested <span class="kw">in </span>document.findnodes(<span class="string">&quot;descendant::ltx:XMath&quot;</span>, <span class="prelude-val">Some</span>(node), state) {
       <span class="self">self</span>.parse(nested, document, state)<span class="question-mark">?</span>;
     }
-    <span class="kw">let </span>tag = arena::as_static(document.get_node_qname(node, state));
+    <span class="kw">let </span>tag = document.get_node_qname(node, state);
     <span class="kw">let </span>rule = <span class="kw">if let </span><span class="prelude-val">Some</span>(requested_rule) = node.get_attribute(<span class="string">&quot;rule&quot;</span>) {
       requested_rule
     } <span class="kw">else </span>{
@@ -1214,8 +1220,8 @@
       <span class="self">self</span>.parse_kludge(node, document, state);
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) = <span class="self">self</span>.parse_single(node, document, state, <span class="kw-2">&amp;</span>rule)<span class="question-mark">? </span>{
-      <span class="kw-2">*</span><span class="self">self</span>.passed.entry(tag.to_string()).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
-      <span class="kw">if </span>tag == <span class="string">&quot;ltx:XMath&quot; </span>{
+      <span class="kw-2">*</span><span class="self">self</span>.passed.entry(tag).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
+      <span class="kw">if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMath&quot;</span>) {
         <span class="comment">// Replace the content of XMath with parsed result
         </span><span class="self">self</span>.n_parsed += <span class="number">1</span>;
         note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;[{}]&quot;</span>, <span class="self">self</span>.n_parsed));
@@ -1239,7 +1245,7 @@
 
         <span class="comment">// add to result, even allowing modification of xml node, since we&#39;re committed.
         // [Annotate converts node to array which messes up clearing the id!]
-        </span><span class="kw">let </span>rtag = arena::as_static(document.get_node_qname(<span class="kw-2">&amp;</span>result, state));
+        </span><span class="kw">let </span>rtag = document.get_node_qname(<span class="kw-2">&amp;</span>result, state);
         <span class="comment">// TODO: Is this needed in a world where `result` is always a `Node` ?
         // // // Make sure font is &quot;Appropriate&quot;, if we&#39;re creating a new token (yuck)
         // // if ($isarr &amp;&amp; $attr{_font} &amp;&amp; ($rtag eq &#39;ltx:XMTok&#39;)) {
@@ -1259,7 +1265,9 @@
           attr.insert(String::from(<span class="string">&quot;xml:id&quot;</span>), nid.to_owned());
         }
         <span class="kw">for </span>(key, value) <span class="kw">in </span>attr {
-          <span class="kw">if </span>!(key.starts_with(<span class="string">&#39;_&#39;</span>) || document.can_have_attribute(rtag, <span class="kw-2">&amp;</span>key, state)) {
+          <span class="kw">if </span>!(key.starts_with(<span class="string">&#39;_&#39;</span>)
+            || document.sym_can_have_attribute(rtag, arena::pin(<span class="kw-2">&amp;</span>key), state))
+          {
             <span class="kw">continue</span>;
           }
           <span class="kw">if </span>key == <span class="string">&quot;xml:id&quot; </span>{
@@ -1306,19 +1314,16 @@
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>element_nodes(node) {
       <span class="kw">let </span>tag = document.get_node_qname(<span class="kw-2">&amp;</span>child, state);
-      <span class="kw">match </span>tag {
-        <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; {
-          <span class="self">self</span>.parse_rec(<span class="kw-2">&amp;mut </span>child, <span class="string">&quot;Anything&quot;</span>, document, state)<span class="question-mark">?</span>;
-        },
-        <span class="string">&quot;ltx:XMWrap&quot; </span>=&gt; {
-          <span class="self">self</span>.parse_rec(<span class="kw-2">&amp;mut </span>child, <span class="string">&quot;Anything&quot;</span>, document, state)<span class="question-mark">?</span>;
-        },
-        <span class="string">&quot;ltx:XMApp&quot; </span>| <span class="string">&quot;ltx:XMArray&quot; </span>| <span class="string">&quot;ltx:XMRow&quot; </span>| <span class="string">&quot;ltx:XMCell&quot; </span>=&gt; {
-          <span class="self">self</span>.parse_children(<span class="kw-2">&amp;mut </span>child, document, state)<span class="question-mark">?
-        </span>},
-        <span class="string">&quot;ltx:XMDual&quot; </span>=&gt; <span class="self">self</span>.parse_children(<span class="kw-2">&amp;mut </span>child, document, state)<span class="question-mark">?</span>,
-        <span class="kw">_ </span>=&gt; {},
-      };
+      <span class="kw">if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMArg&quot;</span>) || tag == arena::pin_static(<span class="string">&quot;ltx:XMWrap&quot;</span>) {
+        <span class="self">self</span>.parse_rec(<span class="kw-2">&amp;mut </span>child, <span class="string">&quot;Anything&quot;</span>, document, state)<span class="question-mark">?</span>;
+      } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMApp&quot;</span>)
+        || tag == arena::pin_static(<span class="string">&quot;ltx:XMArray&quot;</span>)
+        || tag == arena::pin_static(<span class="string">&quot;ltx:XMRow&quot;</span>)
+        || tag == arena::pin_static(<span class="string">&quot;ltx:XMCell&quot;</span>)
+        || tag == arena::pin_static(<span class="string">&quot;ltx:XMDual&quot;</span>)
+      {
+        <span class="self">self</span>.parse_children(<span class="kw-2">&amp;mut </span>child, document, state)<span class="question-mark">?</span>;
+      }
     }
     <span class="prelude-val">Ok</span>(())
   }
@@ -1533,86 +1538,82 @@
       <span class="prelude-val">None </span>=&gt; meaning,
     };
   }
-  <span class="kw">match </span>tag {
-    <span class="string">&quot;ltx:XMApp&quot; </span>=&gt; {
-      <span class="kw">let </span><span class="kw-2">mut </span>args = element_nodes(<span class="kw-2">&amp;</span>node);
-      <span class="kw">if </span>args.is_empty() {
-        <span class="comment">// Error!(&quot;expected&quot;,&quot;arguments&quot; ...);
-        </span><span class="macro">unimplemented!</span>();
+  <span class="kw">if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMApp&quot;</span>) {
+    <span class="kw">let </span><span class="kw-2">mut </span>args = element_nodes(<span class="kw-2">&amp;</span>node);
+    <span class="kw">if </span>args.is_empty() {
+      <span class="comment">// Error!(&quot;expected&quot;,&quot;arguments&quot; ...);
+      </span><span class="macro">unimplemented!</span>();
+    }
+    <span class="kw">let </span>arg_node = args.remove(<span class="number">0</span>);
+    <span class="kw">let </span>op = realize_xmnode(<span class="kw-2">&amp;</span>arg_node, document, state);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(app_role) = node.get_attribute(<span class="string">&quot;role&quot;</span>) {
+      <span class="kw">if </span>app_role == <span class="string">&quot;FLOATSUBSCRIPT&quot; </span>{
+        <span class="kw">return </span>String::from(<span class="string">&quot;_&quot;</span>) + <span class="kw-2">&amp;</span>textrec(<span class="kw-2">&amp;</span>op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state);
+      } <span class="kw">else if </span>app_role == <span class="string">&quot;FLOATSUPERSCRIPT&quot; </span>{
+        <span class="kw">return </span>String::from(<span class="string">&quot;^&quot;</span>) + <span class="kw-2">&amp;</span>textrec(<span class="kw-2">&amp;</span>op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state);
       }
-      <span class="kw">let </span>arg_node = args.remove(<span class="number">0</span>);
-      <span class="kw">let </span>op = realize_xmnode(<span class="kw-2">&amp;</span>arg_node, document, state);
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(app_role) = node.get_attribute(<span class="string">&quot;role&quot;</span>) {
-        <span class="kw">if </span>app_role == <span class="string">&quot;FLOATSUBSCRIPT&quot; </span>{
-          <span class="kw">return </span>String::from(<span class="string">&quot;_&quot;</span>) + <span class="kw-2">&amp;</span>textrec(<span class="kw-2">&amp;</span>op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state);
-        } <span class="kw">else if </span>app_role == <span class="string">&quot;FLOATSUPERSCRIPT&quot; </span>{
-          <span class="kw">return </span>String::from(<span class="string">&quot;^&quot;</span>) + <span class="kw-2">&amp;</span>textrec(<span class="kw-2">&amp;</span>op, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state);
-        }
-      }
+    }
 
-      <span class="kw">let </span>name = <span class="kw">if </span>document.get_node_qname(<span class="kw-2">&amp;</span>op, state) == <span class="string">&quot;ltx:XMTok&quot; </span>{
-        get_token_meaning(<span class="kw-2">&amp;</span>op, document, state).unwrap_or_else(|| <span class="string">&quot;unknown&quot;</span>.to_owned())
-      } <span class="kw">else </span>{
-        String::new()
-      };
-      <span class="kw">let </span>(bp, string) = textrec_apply(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>op, args, document, state);
-      <span class="kw">if </span>(bp &lt; outer_bp) || ((bp == outer_bp) &amp;&amp; (name != outer_name)) {
-        <span class="macro">format!</span>(<span class="string">&quot;({string})&quot;</span>)
-      } <span class="kw">else </span>{
-        string
-      }
-    },
-    <span class="string">&quot;ltx:XMDual&quot; </span>=&gt; {
-      <span class="kw">let </span>children = element_nodes(<span class="kw-2">&amp;</span>node);
-      <span class="kw">let </span>content = children
-        .first()
-        .expect(<span class="string">&quot;XMDual should always have 2 child elements.&quot;</span>);
-      textrec(content, <span class="prelude-val">Some</span>(outer_bp), <span class="prelude-val">Some</span>(outer_name), document, state) <span class="comment">// Just send out the
-                                                                          // semantic form
-                                                                          // Fall back to
-                                                                          // presentation, if
-                                                                          // content has poor
-                                                                          // semantics (eg. from
-                                                                          // replacement patterns)
-                                                                          // TODO
-                                                                          // return ($text =~
-                                                                          // /^\(*Unknown/ ?
-                                                                          // textrec($presentation,
-                                                                          // $outer_bp, $outer_name)
-                                                                          // : $text); }
-    </span>},
-    <span class="string">&quot;ltx:XMTok&quot; </span>=&gt; {
-      <span class="kw">let </span>name = <span class="kw">match </span>get_token_meaning(<span class="kw-2">&amp;</span>node, document, state) {
-        <span class="prelude-val">Some</span>(meaning) =&gt; meaning,
-        <span class="prelude-val">None </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;Unknown&quot;</span>),
-      };
-      <span class="kw">match </span>PREFIX_ALIAS.get(name.as_str()) {
-        <span class="prelude-val">Some</span>(v) =&gt; v.to_string(),
-        <span class="prelude-val">None </span>=&gt; name,
-      }
-    },
-    <span class="string">&quot;ltx:XMWrap&quot; </span>| <span class="string">&quot;ltx:XMCell&quot; </span>=&gt; {
-      <span class="comment">// ??
-      </span>element_nodes(<span class="kw-2">&amp;</span>node)
-        .into_iter()
-        .map(|child| textrec(<span class="kw-2">&amp;</span>child, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state))
-        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-        .join(<span class="string">&quot;@&quot;</span>)
-    },
-    <span class="string">&quot;ltx:XMArg&quot; </span>=&gt; {
-      <span class="kw">let </span>args = element_nodes(<span class="kw-2">&amp;</span>node);
-      <span class="kw">if </span>args.is_empty() {
-        <span class="comment">// Error!(&quot;expected&quot;,&quot;arguments&quot; ...);
-        </span><span class="macro">unimplemented!</span>();
-      }
-      args
-        .iter()
-        .map(|arg| textrec(arg, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state))
-        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-        .join(<span class="string">&quot;&quot;</span>)
-    },
-    <span class="string">&quot;ltx:XMArray&quot; </span>=&gt; textrec_array(<span class="kw-2">&amp;</span>node, state),
-    <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;[{}]&quot;</span>, p_get_value(<span class="kw-2">&amp;</span>node)),
+    <span class="kw">let </span>name = <span class="kw">if </span>document.with_node_qname(<span class="kw-2">&amp;</span>op, state, |name| name == <span class="string">&quot;ltx:XMTok&quot;</span>) {
+      get_token_meaning(<span class="kw-2">&amp;</span>op, document, state).unwrap_or_else(|| <span class="string">&quot;unknown&quot;</span>.to_owned())
+    } <span class="kw">else </span>{
+      String::new()
+    };
+    <span class="kw">let </span>(bp, string) = textrec_apply(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>op, args, document, state);
+    <span class="kw">if </span>(bp &lt; outer_bp) || ((bp == outer_bp) &amp;&amp; (name != outer_name)) {
+      <span class="macro">format!</span>(<span class="string">&quot;({string})&quot;</span>)
+    } <span class="kw">else </span>{
+      string
+    }
+  } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMDual&quot;</span>) {
+    <span class="kw">let </span>children = element_nodes(<span class="kw-2">&amp;</span>node);
+    <span class="kw">let </span>content = children
+      .first()
+      .expect(<span class="string">&quot;XMDual should always have 2 child elements.&quot;</span>);
+    textrec(content, <span class="prelude-val">Some</span>(outer_bp), <span class="prelude-val">Some</span>(outer_name), document, state) <span class="comment">// Just send out the
+                                                                        // semantic form
+                                                                        // Fall back to
+                                                                        // presentation, if
+                                                                        // content has poor
+                                                                        // semantics (eg. from
+                                                                        // replacement patterns)
+                                                                        // TODO
+                                                                        // return ($text =~
+                                                                        // /^\(*Unknown/ ?
+                                                                        // textrec($presentation,
+                                                                        // $outer_bp, $outer_name)
+                                                                        // : $text); }
+  </span>} <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMTok&quot;</span>) {
+    <span class="kw">let </span>name = <span class="kw">match </span>get_token_meaning(<span class="kw-2">&amp;</span>node, document, state) {
+      <span class="prelude-val">Some</span>(meaning) =&gt; meaning,
+      <span class="prelude-val">None </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;Unknown&quot;</span>),
+    };
+    <span class="kw">match </span>PREFIX_ALIAS.get(name.as_str()) {
+      <span class="prelude-val">Some</span>(v) =&gt; v.to_string(),
+      <span class="prelude-val">None </span>=&gt; name,
+    }
+  } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMWrap&quot;</span>) || tag == arena::pin_static(<span class="string">&quot;ltx:XMCell&quot;</span>) {
+    <span class="comment">// ??
+    </span>element_nodes(<span class="kw-2">&amp;</span>node)
+      .into_iter()
+      .map(|child| textrec(<span class="kw-2">&amp;</span>child, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state))
+      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+      .join(<span class="string">&quot;@&quot;</span>)
+  } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMArg&quot;</span>) {
+    <span class="kw">let </span>args = element_nodes(<span class="kw-2">&amp;</span>node);
+    <span class="kw">if </span>args.is_empty() {
+      <span class="comment">// Error!(&quot;expected&quot;,&quot;arguments&quot; ...);
+      </span><span class="macro">unimplemented!</span>();
+    }
+    args
+      .iter()
+      .map(|arg| textrec(arg, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document, state))
+      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+      .join(<span class="string">&quot;&quot;</span>)
+  } <span class="kw">else if </span>tag == arena::pin_static(<span class="string">&quot;ltx:XMArray&quot;</span>) {
+    textrec_array(<span class="kw-2">&amp;</span>node, state)
+  } <span class="kw">else </span>{
+    <span class="macro">s!</span>(<span class="string">&quot;[{}]&quot;</span>, p_get_value(<span class="kw-2">&amp;</span>node))
   }
 }
 
@@ -1769,7 +1770,10 @@
 <span class="comment">//================================================================================
 
 </span><span class="kw">pub fn </span>realize_xmnode&lt;<span class="lifetime">&#39;a</span>&gt;(node: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Node, document: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Document, state: <span class="kw-2">&amp;</span>State) -&gt; Cow&lt;<span class="lifetime">&#39;a</span>, Node&gt; {
-  <span class="kw">if </span>state.model.get_node_qname(node) == <span class="string">&quot;ltx:XMRef&quot; </span>{
+  <span class="kw">if </span>state
+    .model
+    .with_node_qname(node, |name| name == <span class="string">&quot;ltx:XMRef&quot;</span>)
+  {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = node.get_attribute(<span class="string">&quot;idref&quot;</span>) {
       <span class="comment">// Can it happen that $realnode is, itself, an XMRef?
       // Then we should recurse recurse!
@@ -1799,4 +1803,4 @@
   </span>}
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_math_parser" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

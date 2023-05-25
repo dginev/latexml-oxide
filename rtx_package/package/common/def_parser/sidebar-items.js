@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["parse_parameters","If calling at compile-time, pass `None` for state, to avoid initialization."],["parse_prototype","If calling at compile-time, pass `None` for state, to avoid initialization."]]};
+window.SIDEBAR_ITEMS = {"fn":["parse_parameters","parse_prototype"]};

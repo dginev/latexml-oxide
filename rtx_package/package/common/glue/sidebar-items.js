@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["FillCode","Positively silly enum, but it solves all kinds of issues with the Glue struct most importantly allows us to keep deriving the Copy trait, and avoids storing strings in Glue objects"]],"fn":[["glue_string",""],["new_setup",""],["spec_setup",""]],"struct":[["Glue",""]]};
+window.SIDEBAR_ITEMS = {"enum":["FillCode"],"fn":["glue_string","new_setup","spec_setup"],"struct":["Glue"]};

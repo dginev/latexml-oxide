@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>document.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><title>document.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -3334,6 +3334,100 @@
 <a href="#3334" id="3334">3334</a>
 <a href="#3335" id="3335">3335</a>
 <a href="#3336" id="3336">3336</a>
+<a href="#3337" id="3337">3337</a>
+<a href="#3338" id="3338">3338</a>
+<a href="#3339" id="3339">3339</a>
+<a href="#3340" id="3340">3340</a>
+<a href="#3341" id="3341">3341</a>
+<a href="#3342" id="3342">3342</a>
+<a href="#3343" id="3343">3343</a>
+<a href="#3344" id="3344">3344</a>
+<a href="#3345" id="3345">3345</a>
+<a href="#3346" id="3346">3346</a>
+<a href="#3347" id="3347">3347</a>
+<a href="#3348" id="3348">3348</a>
+<a href="#3349" id="3349">3349</a>
+<a href="#3350" id="3350">3350</a>
+<a href="#3351" id="3351">3351</a>
+<a href="#3352" id="3352">3352</a>
+<a href="#3353" id="3353">3353</a>
+<a href="#3354" id="3354">3354</a>
+<a href="#3355" id="3355">3355</a>
+<a href="#3356" id="3356">3356</a>
+<a href="#3357" id="3357">3357</a>
+<a href="#3358" id="3358">3358</a>
+<a href="#3359" id="3359">3359</a>
+<a href="#3360" id="3360">3360</a>
+<a href="#3361" id="3361">3361</a>
+<a href="#3362" id="3362">3362</a>
+<a href="#3363" id="3363">3363</a>
+<a href="#3364" id="3364">3364</a>
+<a href="#3365" id="3365">3365</a>
+<a href="#3366" id="3366">3366</a>
+<a href="#3367" id="3367">3367</a>
+<a href="#3368" id="3368">3368</a>
+<a href="#3369" id="3369">3369</a>
+<a href="#3370" id="3370">3370</a>
+<a href="#3371" id="3371">3371</a>
+<a href="#3372" id="3372">3372</a>
+<a href="#3373" id="3373">3373</a>
+<a href="#3374" id="3374">3374</a>
+<a href="#3375" id="3375">3375</a>
+<a href="#3376" id="3376">3376</a>
+<a href="#3377" id="3377">3377</a>
+<a href="#3378" id="3378">3378</a>
+<a href="#3379" id="3379">3379</a>
+<a href="#3380" id="3380">3380</a>
+<a href="#3381" id="3381">3381</a>
+<a href="#3382" id="3382">3382</a>
+<a href="#3383" id="3383">3383</a>
+<a href="#3384" id="3384">3384</a>
+<a href="#3385" id="3385">3385</a>
+<a href="#3386" id="3386">3386</a>
+<a href="#3387" id="3387">3387</a>
+<a href="#3388" id="3388">3388</a>
+<a href="#3389" id="3389">3389</a>
+<a href="#3390" id="3390">3390</a>
+<a href="#3391" id="3391">3391</a>
+<a href="#3392" id="3392">3392</a>
+<a href="#3393" id="3393">3393</a>
+<a href="#3394" id="3394">3394</a>
+<a href="#3395" id="3395">3395</a>
+<a href="#3396" id="3396">3396</a>
+<a href="#3397" id="3397">3397</a>
+<a href="#3398" id="3398">3398</a>
+<a href="#3399" id="3399">3399</a>
+<a href="#3400" id="3400">3400</a>
+<a href="#3401" id="3401">3401</a>
+<a href="#3402" id="3402">3402</a>
+<a href="#3403" id="3403">3403</a>
+<a href="#3404" id="3404">3404</a>
+<a href="#3405" id="3405">3405</a>
+<a href="#3406" id="3406">3406</a>
+<a href="#3407" id="3407">3407</a>
+<a href="#3408" id="3408">3408</a>
+<a href="#3409" id="3409">3409</a>
+<a href="#3410" id="3410">3410</a>
+<a href="#3411" id="3411">3411</a>
+<a href="#3412" id="3412">3412</a>
+<a href="#3413" id="3413">3413</a>
+<a href="#3414" id="3414">3414</a>
+<a href="#3415" id="3415">3415</a>
+<a href="#3416" id="3416">3416</a>
+<a href="#3417" id="3417">3417</a>
+<a href="#3418" id="3418">3418</a>
+<a href="#3419" id="3419">3419</a>
+<a href="#3420" id="3420">3420</a>
+<a href="#3421" id="3421">3421</a>
+<a href="#3422" id="3422">3422</a>
+<a href="#3423" id="3423">3423</a>
+<a href="#3424" id="3424">3424</a>
+<a href="#3425" id="3425">3425</a>
+<a href="#3426" id="3426">3426</a>
+<a href="#3427" id="3427">3427</a>
+<a href="#3428" id="3428">3428</a>
+<a href="#3429" id="3429">3429</a>
+<a href="#3430" id="3430">3430</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3343,21 +3437,25 @@
 <span class="kw">use </span>libxml::tree::{Namespace, Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
-
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
+
 <span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>std::collections::HashSet;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, LTX_STAR_SYM};
+<span class="kw">use </span><span class="kw">crate</span>::common::arena::{
+  <span class="self">self</span>, CAPTURE_SYM, EMPTY_SYM, FONT_SYM, H_PCDATA_SYM, LTX_STAR_SYM, XML_ID_SYM,
+};
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, FONT_TEXT_DEFAULT};
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XML_NS};
+<span class="kw">use </span><span class="kw">crate</span>::common::model::Model;
+<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XML_NS,XPath};
 <span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
 <span class="kw">use </span><span class="kw">crate</span>::ligature::Ligature;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
@@ -3373,7 +3471,7 @@
 <span class="kw">static </span>ONLY_SPACE_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s+$&quot;</span>).unwrap());
 <span class="kw">static </span>DASHES_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\-\-+&quot;</span>).unwrap());
 <span class="kw">static </span>NON_MERGEABLE_ATTRIBUTES: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
-  HashSet::from([
+  HashSet::from_iter([
     <span class="string">&quot;about&quot;</span>,
     <span class="string">&quot;aboutlabelref&quot;</span>,
     <span class="string">&quot;aboutidref&quot;</span>,
@@ -3394,13 +3492,13 @@
 <span class="comment">// When merging attributes of two nodes, some attributes should be combined
 // Merged space separated
 </span><span class="kw">static </span>MERGE_ATTRIBUTE_SPACEJOIN: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
-  Lazy::new(|| HashSet::from([<span class="string">&quot;class&quot;</span>, <span class="string">&quot;lists&quot;</span>, <span class="string">&quot;inlist&quot;</span>, <span class="string">&quot;labels&quot;</span>]));
+  Lazy::new(|| HashSet::from_iter([<span class="string">&quot;class&quot;</span>, <span class="string">&quot;lists&quot;</span>, <span class="string">&quot;inlist&quot;</span>, <span class="string">&quot;labels&quot;</span>]));
 <span class="comment">// Merged &quot;;&quot; separated
 </span><span class="kw">static </span>MERGE_ATTRIBUTE_SEMICOLONJOIN: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
-  Lazy::new(|| HashSet::from([<span class="string">&quot;cssstyle&quot;</span>]));
+  Lazy::new(|| HashSet::from_iter([<span class="string">&quot;cssstyle&quot;</span>]));
 <span class="comment">// Summed lengths
 </span><span class="kw">static </span>MERGE_ATTRIBUTE_SUMLENGTH: Lazy&lt;HashSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; = Lazy::new(|| {
-  HashSet::from([
+  HashSet::from_iter([
     <span class="string">&quot;xoffset&quot;</span>,
     <span class="string">&quot;yoffset&quot;</span>,
     <span class="string">&quot;lpadding&quot;</span>,
@@ -3413,9 +3511,15 @@
 <span class="kw">pub static </span>FONT_ELEMENT_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ltx:text&quot;</span>;
 <span class="kw">pub static </span>MATH_TOKEN_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ltx:XMTok&quot;</span>;
 <span class="kw">pub static </span>MATH_HINT_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ltx:XMHint&quot;</span>;
+<span class="macro">thread_local! </span>{
+  <span class="kw">pub static </span>FONT_ELEMENT_SYM: SymbolU32 = arena::pin_static(<span class="string">&quot;ltx:text&quot;</span>);
+  <span class="kw">pub static </span>MATH_TOKEN_SYM: SymbolU32 = arena::pin_static(<span class="string">&quot;ltx:XMTok&quot;</span>);
+  <span class="kw">pub static </span>MATH_HINT_SYM: SymbolU32 = arena::pin_static(<span class="string">&quot;ltx:XMHint&quot;</span>);
+}
 <span class="kw">pub struct </span>Document {
   <span class="kw">pub </span>document: XmlDoc,
   <span class="kw">pub </span>pending: Vec&lt;Node&gt;,
+  context: <span class="prelude-ty">Option</span>&lt;XPath&gt;,
   <span class="kw">pub </span>node: Node,
   <span class="kw">pub </span>node_boxes: HashMap&lt;usize, Digested&gt;, <span class="comment">// used to be _box attribute
   </span><span class="kw">pub </span>node_fonts: HashMap&lt;u64, Font&gt;,       <span class="comment">// used to be _font attribute
@@ -3427,7 +3531,7 @@
   constructed_nodes: Vec&lt;Node&gt;,
   localized_boxes: Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;,
   box_to_absorb: <span class="prelude-ty">Option</span>&lt;Digested&gt;, <span class="comment">// local $LaTeXML::BOX;
-  </span>localized_fonts: Vec&lt;Arc&lt;Font&gt;&gt;,
+  </span>localized_fonts: Vec&lt;Rc&lt;Font&gt;&gt;,
 }
 <span class="kw">impl </span>Default <span class="kw">for </span>Document {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::new() }
@@ -3460,6 +3564,7 @@
       localized_constructed_nodes: Vec::new(),
       constructed_nodes: Vec::new(),
       box_to_absorb: <span class="prelude-val">None</span>,
+      context: <span class="prelude-val">None</span>,
       localized_boxes: Vec::new(),
       localized_fonts: Vec::new(),
     }
@@ -3480,28 +3585,41 @@
     }
   }
 
-  <span class="doccomment">/// Find the nodes according to the given $xpath expression,
+  <span class="doccomment">/// Find the nodes according to the given `xpath` expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  </span><span class="kw">pub fn </span>findnodes(<span class="kw-2">&amp;</span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;Node&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = <span class="self">self</span>.document.get_root_element() {
-      <span class="kw">match </span>node_opt {
-        <span class="prelude-val">Some</span>(node) =&gt; state
-          .model
-          .get_xpath(<span class="kw-2">&amp;</span><span class="self">self</span>.document)
-          .findnodes(xpath, <span class="prelude-val">Some</span>(node)),
-        <span class="prelude-val">None </span>=&gt; state
-          .model
-          .get_xpath(<span class="kw-2">&amp;</span><span class="self">self</span>.document)
-          .findnodes(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>root)),
+  </span><span class="kw">pub fn </span>findnodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;Node&gt; {
+    <span class="kw">let </span>node = <span class="kw">match </span>node_opt {
+      <span class="prelude-val">Some</span>(node) =&gt; Cow::Borrowed(node),
+      <span class="prelude-val">None </span>=&gt; <span class="kw">match </span><span class="self">self</span>.document.get_root_element() {
+        <span class="prelude-val">Some</span>(root) =&gt; Cow::Owned(root),
+        <span class="prelude-val">None </span>=&gt; {<span class="kw">return </span>Vec::new()}
       }
+    };
+    <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model)
+      .findnodes(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node))
+  }
+
+  <span class="doccomment">/// Get an XPath context that knows about our namespace mappings.
+  </span><span class="kw">pub fn </span>get_xpath(<span class="kw-2">&amp;mut </span><span class="self">self</span>, model: <span class="kw-2">&amp;</span>Model) -&gt; <span class="kw-2">&amp;mut </span>XPath {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>ctxt) = <span class="self">self</span>.context {
+      ctxt
     } <span class="kw">else </span>{
-      <span class="macro">vec!</span>[]
+      <span class="kw">let </span><span class="kw-2">mut </span>context = XPath::new(<span class="kw-2">&amp;</span><span class="self">self</span>.document, HashMap::default());
+      <span class="kw">for </span>(prefix, ns) <span class="kw">in </span><span class="kw-2">&amp;</span>model.code_namespaces {
+        <span class="comment">// TODO: Is this too slow? We may need to store an active context in the State as an
+        // alternative
+        </span>arena::with(<span class="kw-2">*</span>prefix, |p_str| {
+          arena::with(<span class="kw-2">*</span>ns, |ns_str| context.register_namespace(p_str, ns_str))
+        });
+      }
+      <span class="self">self</span>.context = <span class="prelude-val">Some</span>(context);
+      <span class="self">self</span>.context.as_mut().unwrap()
     }
   }
 
   <span class="doccomment">/// Like findnodes, but only returns the first matched node
-  </span><span class="kw">pub fn </span>findnode(<span class="kw-2">&amp;</span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>nodes = state.model.get_xpath(<span class="kw-2">&amp;</span><span class="self">self</span>.document).findnodes(xpath, node);
+  </span><span class="kw">pub fn </span>findnode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>nodes = <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model).findnodes(xpath, node);
     <span class="kw">if </span>nodes.is_empty() {
       <span class="prelude-val">None
     </span>} <span class="kw">else </span>{
@@ -3510,17 +3628,15 @@
   }
 
   <span class="doccomment">/// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
-  </span><span class="kw">pub fn </span>findvalues(<span class="kw-2">&amp;</span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;String&gt; {
+  </span><span class="kw">pub fn </span>findvalues(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;String&gt; {
     <span class="kw">match </span>node_opt {
-      <span class="prelude-val">Some</span>(node) =&gt; state
-        .model
-        .get_xpath(<span class="kw-2">&amp;</span><span class="self">self</span>.document)
+      <span class="prelude-val">Some</span>(node) =&gt; <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state
+        .model)
         .findvalues(xpath, <span class="prelude-val">Some</span>(node)),
       <span class="prelude-val">None </span>=&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = <span class="self">self</span>.document.get_root_element() {
-          state
-            .model
-            .get_xpath(<span class="kw-2">&amp;</span><span class="self">self</span>.document)
+          <span class="self">self
+            </span>.get_xpath(<span class="kw-2">&amp;</span>state.model)
             .findvalues(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>root))
         } <span class="kw">else </span>{
           Vec::new()
@@ -3533,8 +3649,12 @@
   /// Ie. using the registered prefix for that namespace.
   /// NOTE: Reconsider how _Capture_ &amp; _WildCard_ should be integrated!?!
   /// NOTE: Should Deprecate! (use model)
-  </span><span class="kw">pub fn </span>get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="kw-2">&amp;</span>str {
+  </span><span class="kw">pub fn </span>get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State) -&gt; SymbolU32 {
     state.model.get_node_qname(node)
+  }
+  <span class="kw">pub fn </span>with_node_qname&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
+    state.model.with_node_qname(node, caller)
   }
 
   <span class="kw">pub fn </span>get_node(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Node { <span class="kw-2">&amp;</span><span class="self">self</span>.node }
@@ -3551,7 +3671,7 @@
   </span><span class="kw">pub fn </span>finalize(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="self">self</span>.prune_xmduals(state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>root) = <span class="self">self</span>.document.get_root_element() {
-      <span class="self">self</span>.set_local_font(Arc::new(Font::text_default()));
+      <span class="self">self</span>.set_local_font(Rc::new(Font::text_default()));
       <span class="self">self</span>.finalize_rec(<span class="kw-2">&amp;mut </span>root, state)<span class="question-mark">?</span>;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(prefixes)) = state.lookup_value(<span class="string">&quot;RDFa_prefixes&quot;</span>) {
         <span class="self">self</span>.set_rdfa_prefixes(<span class="prelude-val">Some</span>(prefixes));
@@ -3584,8 +3704,8 @@
       }
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>keys_to_remove: Vec&lt;String&gt; = Vec::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>attrs_to_set: Vec&lt;(String, String)&gt; = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>keys_to_remove: Vec&lt;SymbolU32&gt; = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>attrs_to_set: Vec&lt;(SymbolU32, SymbolU32)&gt; = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>pending_declaration = HashMap::default();
 
     <span class="kw">if </span><span class="self">self</span>.has_node_font(node) {
@@ -3595,38 +3715,44 @@
         &amp;&amp; !pending_declaration.is_empty()
       {
         <span class="kw">for </span>(key, (value, properties)) <span class="kw">in </span><span class="kw-2">&amp;</span>pending_declaration {
-          <span class="kw">if </span>state.model.can_have_attribute(qname, key) {
-            attrs_to_set.push((key.to_string(), value.to_string()));
+          <span class="kw">if </span>state.model.can_have_attribute(qname, arena::pin(key)) {
+            <span class="kw">let </span>key_sym = arena::pin(key);
+            attrs_to_set.push((key_sym, arena::pin(value)));
             <span class="comment">// Merge to set the font currently in effect
             </span>declared_font = Cow::Owned(declared_font.merge(properties.clone()));
-            keys_to_remove.push(key.to_string());
+            keys_to_remove.push(key_sym);
           }
         }
 
         <span class="kw">for </span>(key, <span class="kw-2">mut </span>value) <span class="kw">in </span>attrs_to_set {
-          <span class="kw">if </span>key == <span class="string">&quot;class&quot; </span>{
+          <span class="kw">if </span>key == arena::pin_static(<span class="string">&quot;class&quot;</span>) {
             <span class="comment">// Generalize?
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ovalue) = node.get_attribute(<span class="string">&quot;class&quot;</span>) {
-              value.push(<span class="string">&#39; &#39;</span>);
-              value.push_str(<span class="kw-2">&amp;</span>ovalue);
+              value = arena::with(value, |value_str| arena::pin(<span class="macro">s!</span>(<span class="string">&quot;{value_str} {ovalue}&quot;</span>)))
             }
           }
-          <span class="self">self</span>.set_attribute(node, <span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>value, state)<span class="question-mark">?</span>;
+          arena::with(key, |key_str| {
+            arena::with(value, |value_str| {
+              <span class="self">self</span>.set_attribute(node, key_str, value_str, state)
+            })
+          })<span class="question-mark">?</span>;
         }
         <span class="kw">for </span>key <span class="kw">in </span>keys_to_remove {
-          pending_declaration.remove(<span class="kw-2">&amp;</span>key);
+          arena::with(key, |key_str| pending_declaration.remove(key_str));
         }
       }
     }
     <span class="comment">// Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
-    </span><span class="kw">if </span>qname != <span class="string">&quot;ltx:document&quot;
-      </span>&amp;&amp; state.lookup_bool(<span class="string">&quot;GENERATE_IDS&quot;</span>)
+    </span><span class="kw">if </span>qname != arena::pin_static(<span class="string">&quot;ltx:document&quot;</span>)
+      &amp;&amp; state.lookup_bool(<span class="string">&quot;GENERATE_IDS&quot;</span>)
       &amp;&amp; !node.has_attribute(<span class="string">&quot;xml:id&quot;</span>)
-      &amp;&amp; <span class="self">self</span>.can_have_attribute(qname, <span class="string">&quot;xml:id&quot;</span>, state)
+      &amp;&amp; arena::with(qname, |qname_str| {
+        <span class="self">self</span>.can_have_attribute(qname_str, <span class="string">&quot;xml:id&quot;</span>, state)
+      })
     {
       <span class="self">self</span>.generate_id(node, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
     }
-    <span class="self">self</span>.set_local_font(Arc::new(declared_font.into_owned()));
+    <span class="self">self</span>.set_local_font(Rc::new(declared_font.into_owned()));
     <span class="kw">for </span><span class="kw-2">mut </span>child <span class="kw">in </span>node.get_child_nodes() {
       <span class="kw">let </span>child_type = child.get_type();
       <span class="kw">if </span>child_type == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
@@ -3634,14 +3760,14 @@
         <span class="self">self</span>.finalize_rec(<span class="kw-2">&amp;mut </span>child, state)<span class="question-mark">?</span>;
         <span class="comment">// Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child&#39;s content, we&#39;ll collapse it.
-        </span><span class="kw">if </span>(state.model.get_node_qname(<span class="kw-2">&amp;</span>child) == FONT_ELEMENT_NAME)
+        </span><span class="kw">if </span>(state.model.get_node_qname(<span class="kw-2">&amp;</span>child) == arena::pin_static(FONT_ELEMENT_NAME))
           &amp;&amp; !was_forcefont
           &amp;&amp; child.get_attributes().is_empty()
         {
           <span class="kw">let </span>grandchildren = child.get_child_nodes();
           <span class="kw">if </span>grandchildren
             .iter()
-            .all(|gchild| <span class="self">self</span>.can_contain_qname(qname, state.model.get_node_qname(gchild), state))
+            .all(|gchild| <span class="self">self</span>.can_contain_qsym(qname, state.model.get_node_qname(gchild), state))
           {
             <span class="macro">Debug!</span>(
               <span class="string">&quot;will replace {} grandchildren nodes in finalize_rec&quot;</span>,
@@ -3738,7 +3864,20 @@
         Whatsit(<span class="kw-2">ref </span>digested) =&gt; {
           <span class="self">self</span>.set_box_to_absorb(<span class="prelude-val">Some</span>((<span class="kw-2">*</span>front_box).clone()));
           <span class="self">self</span>.init_constructed_nodes();
-          digested.read().unwrap().be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+          digested.borrow().be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+          <span class="comment">// record these for OUTER caller!
+          // but return only the most recent set
+          </span>{
+            <span class="kw">for </span>n <span class="kw">in </span><span class="self">self</span>.drain_constructed_nodes() {
+              <span class="self">self</span>.record_constructed_node(<span class="kw-2">&amp;</span>n);
+            }
+          }
+          <span class="self">self</span>.expire_box_to_absorb();
+        },
+        Alignment(<span class="kw-2">ref </span>alignment) =&gt; {
+          <span class="self">self</span>.set_box_to_absorb(<span class="prelude-val">Some</span>((<span class="kw-2">*</span>front_box).clone()));
+          <span class="self">self</span>.init_constructed_nodes();
+          alignment.borrow_mut().be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="comment">// record these for OUTER caller!
           // but return only the most recent set
           </span>{
@@ -3754,12 +3893,12 @@
         Postponed(<span class="kw-2">ref </span>tokens) =&gt; {
           <span class="kw">if </span>!<span class="macro">matches!</span>(props.get(<span class="string">&quot;isMath&quot;</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>))) {
             <span class="kw">let </span>text_font_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>prop_font)) = props.get(<span class="string">&quot;font&quot;</span>) {
-              <span class="prelude-val">Some</span>(Arc::clone(prop_font))
+              <span class="prelude-val">Some</span>(Rc::clone(prop_font))
             } <span class="kw">else </span>{
               <span class="kw">match </span><span class="self">self</span>.box_to_absorb {
                 <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>thisbox) =&gt; thisbox
                   .get_font(state)<span class="question-mark">?
-                  </span>.map(|thisfont| Arc::new(thisfont.into_owned())),
+                  </span>.map(|thisfont| Rc::new(thisfont.into_owned())),
                 <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
               }
             };
@@ -3821,7 +3960,7 @@
           .into_owned(),
       };
       <span class="self">self</span>.open_text(object, <span class="kw-2">&amp;</span>font, state)
-    } <span class="kw">else if </span><span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node, state) == MATH_TOKEN_NAME {
+    } <span class="kw">else if </span><span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node, state) == arena::pin_static(MATH_TOKEN_NAME) {
       <span class="comment">// Or plain string in math mode.
       // Note text nodes can ONLY appear in &lt;XMTok&gt; or &lt;text&gt;!!!
       // Have we already opened an XMTok? Then insert into it.
@@ -3906,19 +4045,15 @@
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>attr_data = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(attributes) = attributes_opt {
-      <span class="kw">let </span><span class="kw-2">mut </span>keys = <span class="macro">vec!</span>[
-        String::from(<span class="string">&quot;class&quot;</span>),
-        String::from(<span class="string">&quot;package&quot;</span>),
-        String::from(<span class="string">&quot;options&quot;</span>),
-      ];
+      <span class="kw">let </span><span class="kw-2">mut </span>keys = <span class="macro">vec!</span>[<span class="string">&quot;class&quot;</span>, <span class="string">&quot;package&quot;</span>, <span class="string">&quot;options&quot;</span>];
       <span class="kw">let </span>other_keys = attributes
         .keys()
         .filter(|k| k.as_str() != <span class="string">&quot;class&quot; </span>&amp;&amp; k.as_str() != <span class="string">&quot;package&quot; </span>&amp;&amp; k.as_str() != <span class="string">&quot;options&quot;</span>)
-        .map(ToString::to_string)
-        .collect::&lt;Vec&lt;String&gt;&gt;();
+        .map(String::as_str)
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
       keys.extend(other_keys);
       <span class="kw">for </span>key <span class="kw">in </span>keys {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = attributes.get(<span class="kw-2">&amp;</span>key) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = attributes.get(key) {
           attr_data.push(<span class="macro">s!</span>(<span class="string">&quot;{}=\&quot;{}\&quot;&quot;</span>, key, value));
         }
       }
@@ -3975,6 +4110,7 @@
       qname,
       <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.node)
     );
+    <span class="kw">let </span>qsym = arena::pin(qname);
     <span class="self">self</span>.close_text_internal(state)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="self">self</span>.node.clone();
     <span class="kw">let </span><span class="kw-2">mut </span>cant_close = Vec::new();
@@ -3982,7 +4118,9 @@
       <span class="kw">let </span>t = state.model.get_node_qname(<span class="kw-2">&amp;</span>node);
       <span class="comment">// autoclose until node of same name BUT also close nodes opened&#39; for font
       // switches!
-      </span><span class="kw">if </span>t == qname &amp;&amp; !(t == FONT_ELEMENT_NAME &amp;&amp; node.has_attribute(<span class="string">&quot;_fontswitch&quot;</span>)) {
+      </span><span class="kw">if </span>t == qsym
+        &amp;&amp; !(t == arena::pin_static(FONT_ELEMENT_NAME) &amp;&amp; node.has_attribute(<span class="string">&quot;_fontswitch&quot;</span>))
+      {
         <span class="kw">break</span>;
       }
       <span class="kw">if </span>!<span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>node, state) {
@@ -3995,7 +4133,7 @@
       <span class="comment">// Didn&#39;t find $qname at all!!
       </span><span class="kw">let </span>qname_msg: String = <span class="kw">match </span>qname {
         <span class="string">&quot;#PCDATA&quot; </span>=&gt; qname.to_owned(),
-        <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;&lt;/{}&gt;&quot;</span>, qname),
+        <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">&quot;&lt;/{qname}&gt;&quot;</span>),
       };
       <span class="kw">let </span>message = <span class="macro">s!</span>(
         <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {}&quot;</span>,
@@ -4031,7 +4169,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>node_opt = <span class="prelude-val">Some</span>(<span class="self">self</span>.node.clone());
     <span class="kw">while let </span><span class="prelude-val">Some</span>(node) = node_opt {
       <span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>node, state);
-      <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(node_qname, qname, state) {
+      <span class="kw">if </span><span class="self">self</span>.sym_can_contain_somehow(node_qname, arena::pin(qname), state) {
         <span class="kw">return </span><span class="bool-val">true</span>;
       } <span class="kw">else if </span>!<span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>node, state) {
         <span class="kw">return </span><span class="bool-val">false</span>; <span class="comment">// could close, then check if parent can contain
@@ -4064,7 +4202,7 @@
           <span class="kw">return </span><span class="prelude-val">None</span>;
         }
         <span class="kw">let </span>this_qname = state.model.get_node_qname(node);
-        <span class="kw">if </span>this_qname == qname {
+        <span class="kw">if </span>this_qname == arena::pin(<span class="kw-2">&amp;</span>qname) {
           <span class="kw">break </span><span class="lifetime">&#39;inner</span>;
         }
         <span class="kw">if </span>!<span class="self">self</span>.can_auto_close(node, state) {
@@ -4087,7 +4225,7 @@
 
   <span class="comment">// Close $qname, if it is closeable.
   </span><span class="kw">pub fn </span>maybe_close_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = <span class="self">self</span>.is_closeable(qname.to_string(), state) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = <span class="self">self</span>.is_closeable(qname, state) {
       <span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>node, state)<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(node))
     } <span class="kw">else </span>{
@@ -4117,13 +4255,9 @@
     <span class="kw">if </span>n_type == <span class="prelude-val">Some</span>(NodeType::DocumentNode) {
       <span class="comment">// Didn&#39;t find $node at all!!
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Attempt to close {:?}, which isn&#39;t open&quot;</span>, node.get_name());
-      <span class="macro">Error!</span>(
-        <span class="string">&quot;malformed&quot;</span>,
-        state.model.get_node_qname(node),
-        <span class="self">self</span>,
-        state,
-        message
-      );
+      arena::with(state.model.get_node_qname(node), |qname_str| {
+        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
+      });
     <span class="comment">//     &quot;Currently in &quot; . $self-&gt;getInsertionContext()) unless $ifopen;
     </span>} <span class="kw">else </span>{
       <span class="comment">// Found node.
@@ -4139,7 +4273,9 @@
             .collect::&lt;Vec&lt;String&gt;&gt;()
             .join(<span class="string">&quot;,&quot;</span>)
         );
-        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+        arena::with(qname, |qname_str| {
+          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
+        });
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(lastopen_node) = lastopen {
         <span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>lastopen_node, state)<span class="question-mark">?</span>;
@@ -4179,32 +4315,35 @@
       <span class="comment">// Didn&#39;t find $qname at all!!
       </span><span class="kw">if </span>strict {
         <span class="kw">let </span>qname = state.model.get_node_qname(node);
-        <span class="kw">let </span>message = <span class="macro">s!</span>(
-          <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {:?}&quot;</span>,
-          qname,
-          <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
-        );
-        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+        arena::with(qname, |qname_str| {
+          <span class="kw">let </span>message = <span class="macro">s!</span>(
+            <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {:?}&quot;</span>,
+            qname_str,
+            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
+          );
+          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
+        });
       }
     } <span class="kw">else </span>{
       <span class="comment">// Found node.
       // Intervening non-auto-closeable nodes!!
       </span><span class="kw">if </span>!cant_close.is_empty() {
-        <span class="kw">let </span>qname = state.model.get_node_qname(node);
-        <span class="kw">let </span>message = <span class="macro">s!</span>(
-          <span class="string">&quot;Closing {} whose open descendents do not auto-close. Descendents are {}&quot;</span>,
-          qname,
-          cant_close
-            .iter()
-            .map(Node::get_name)
-            .collect::&lt;Vec&lt;String&gt;&gt;()
-            .join(<span class="string">&quot;, &quot;</span>)
-        );
-        <span class="kw">if </span>strict {
-          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
-        } <span class="kw">else </span>{
-          <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
-        }
+        state.model.with_node_qname(node, |qname| {
+          <span class="kw">let </span>message = <span class="macro">s!</span>(
+            <span class="string">&quot;Closing {} whose open descendents do not auto-close. Descendents are {}&quot;</span>,
+            qname,
+            cant_close
+              .iter()
+              .map(Node::get_name)
+              .collect::&lt;Vec&lt;String&gt;&gt;()
+              .join(<span class="string">&quot;, &quot;</span>)
+          );
+          <span class="kw">if </span>strict {
+            <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+          } <span class="kw">else </span>{
+            <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+          }
+        });
       }
       <span class="self">self</span>.close_node_internal(node, state)<span class="question-mark">?</span>;
     }
@@ -4227,10 +4366,7 @@
         <span class="kw">if </span>!node.has_attribute(<span class="string">&quot;_noautoclose&quot;</span>) {
           <span class="kw">if </span>node.has_attribute(<span class="string">&quot;_autoclose&quot;</span>) {
             <span class="bool-val">true
-          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(props) = state
-            .tag_properties
-            .get(<span class="kw-2">&amp;</span>arena::pin(<span class="self">self</span>.get_node_qname(node, state)))
-          {
+          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(props) = state.tag_properties.get(<span class="kw-2">&amp;</span><span class="self">self</span>.get_node_qname(node, state)) {
             props.auto_close.unwrap_or(<span class="bool-val">false</span>)
           } <span class="kw">else </span>{
             <span class="bool-val">false
@@ -4246,7 +4382,7 @@
   <span class="doccomment">/// get the actions that should be performed on afterOpen or afterClose
   </span><span class="kw">pub fn </span>get_tag_action_list(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    tag: <span class="kw-2">&amp;</span>str,
+    tag: SymbolU32,
     when: TagOptionName,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; Vec&lt;TagConstructionClosure&gt; {
@@ -4271,14 +4407,13 @@
 
     <span class="kw">let </span>tag_hash = state
       .tag_properties
-      .entry(arena::pin(tag))
+      .entry(tag)
       .or_insert_with(TagOptions::default)
       .clone();
     <span class="comment">// let ns_hash  = ((defined $p) &amp;&amp; $STATE-&gt;lookupMapping(&#39;TAG_PROPERTIES&#39;, $p .
     // &#39;:*&#39;)) || {};
-    </span><span class="kw">let </span>all_hash = state
-      .tag_properties
-      .entry(<span class="kw-2">*</span>LTX_STAR_SYM)
+    </span><span class="kw">let </span>all_hash = LTX_STAR_SYM
+      .with(|sym| state.tag_properties.entry(<span class="kw-2">*</span>sym))
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -4379,11 +4514,14 @@
           <span class="kw">if </span>key == <span class="string">&quot;id&quot; </span>{
             <span class="kw">continue</span>;
           } <span class="comment">// HACK for xml:id
-          </span><span class="kw">let </span>key_serialized = state
+          </span><span class="kw">let </span>key_sym = state
             .model
             .get_node_document_qname(<span class="kw-2">&amp;</span>node.get_attribute_node(key).unwrap());
           <span class="kw">let </span>val_serialized = serialize_attr(<span class="kw-2">&amp;</span>node.get_property(key).unwrap_or_default());
-          <span class="macro">write!</span>(open_tag, <span class="string">&quot; {key_serialized}=\&quot;{val_serialized}\&quot;&quot;</span>).ok();
+          arena::with(key_sym, |key_str| {
+            <span class="macro">write!</span>(open_tag, <span class="string">&quot; {key_str}=\&quot;{val_serialized}\&quot;&quot;</span>)
+          })
+          .ok();
         }
         <span class="comment">// HACK for xml:id for now, assuming last element
         </span><span class="kw">if </span>anodes.contains_key(<span class="string">&quot;id&quot;</span>) {
@@ -4400,7 +4538,9 @@
         } <span class="kw">else </span>{
           <span class="comment">// This is the &quot;Correct&quot; way to determine whether to add indentation
           </span><span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
-          state.model.can_contain(node_qname, <span class="string">&quot;#PCDATA&quot;</span>)
+          state
+            .model
+            .can_contain_sym(node_qname, H_PCDATA_SYM.with(|sym| <span class="kw-2">*</span>sym))
         };
 
         <span class="kw">if </span>!noindent {
@@ -4482,7 +4622,7 @@
   }
 
   <span class="comment">// Internals
-  </span><span class="kw">fn </span>set_rdfa_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _prefixes: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) {}
+  </span><span class="kw">fn </span>set_rdfa_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _prefixes: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SymbolU32&gt;) {}
 
   <span class="kw">pub fn </span>insert_math_token(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -4511,7 +4651,7 @@
     </span>} <span class="kw">else </span>{
       text
     };
-    <span class="kw">if </span>qname == MATH_TOKEN_NAME &amp;&amp; cur_qname == qname {
+    <span class="kw">if </span>qname == MATH_TOKEN_NAME &amp;&amp; cur_qname == MATH_TOKEN_SYM.with(|sym| <span class="kw-2">*</span>sym) {
       <span class="comment">// Already INSIDE a token!
       </span><span class="kw">if </span>!text.is_empty() {
         <span class="self">self</span>.open_math_text_internal(text, state)<span class="question-mark">?</span>;
@@ -4613,6 +4753,7 @@
       <span class="prelude-val">Some</span>((k, _v)) =&gt; k,
       <span class="prelude-val">None </span>=&gt; FONT_ELEMENT_NAME,
     };
+    <span class="kw">let </span>element_sym = arena::pin(elementname);
     <span class="comment">// If not at document begin. And not appending text in same font.
     </span><span class="kw">if </span>node_type != <span class="prelude-val">Some</span>(NodeType::DocumentNode)
       &amp;&amp; !(node_type == <span class="prelude-val">Some</span>(NodeType::TextNode)
@@ -4621,9 +4762,9 @@
       <span class="comment">// then we&#39;ll need to do some open/close to get fonts matched.
       </span><span class="kw">let </span>node = <span class="self">self</span>.close_text_internal(state)<span class="question-mark">?</span>; <span class="comment">// Close text node, if any.
       </span><span class="kw">let </span><span class="kw-2">mut </span>bestdiff = <span class="number">99</span>;
-      <span class="kw">let </span>rc_node = Arc::new(node);
-      <span class="kw">let </span><span class="kw-2">mut </span>closeto: Arc&lt;Node&gt; = Arc::clone(<span class="kw-2">&amp;</span>rc_node);
-      <span class="kw">let </span><span class="kw-2">mut </span>n: Arc&lt;Node&gt; = Arc::clone(<span class="kw-2">&amp;</span>rc_node);
+      <span class="kw">let </span>rc_node = Rc::new(node);
+      <span class="kw">let </span><span class="kw-2">mut </span>closeto: Rc&lt;Node&gt; = Rc::clone(<span class="kw-2">&amp;</span>rc_node);
+      <span class="kw">let </span><span class="kw-2">mut </span>n: Rc&lt;Node&gt; = Rc::clone(<span class="kw-2">&amp;</span>rc_node);
       <span class="kw">while </span>n.get_type() != <span class="prelude-val">Some</span>(NodeType::DocumentNode) {
         <span class="kw">let </span>node_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span>n);
         <span class="kw">let </span>d = font.distance(node_font);
@@ -4634,11 +4775,11 @@
             <span class="kw">break</span>;
           }
         }
-        <span class="kw">if </span>state.model.get_node_qname(<span class="kw-2">&amp;</span>n) != elementname || n.has_attribute(<span class="string">&quot;_noautoclose&quot;</span>) {
+        <span class="kw">if </span>state.model.get_node_qname(<span class="kw-2">&amp;</span>n) != element_sym || n.has_attribute(<span class="string">&quot;_noautoclose&quot;</span>) {
           <span class="kw">break</span>;
         }
         <span class="kw">match </span>n.get_parent() {
-          <span class="prelude-val">Some</span>(p) =&gt; n = Arc::new(p),
+          <span class="prelude-val">Some</span>(p) =&gt; n = Rc::new(p),
           <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
         }
       }
@@ -4666,11 +4807,19 @@
 
   <span class="kw">pub fn </span>can_contain(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     <span class="kw">let </span>tag = state.model.get_node_qname(node);
-    state.model.can_contain(tag, child)
+    state.model.can_contain_sym(tag, arena::pin(child))
   }
 
   <span class="kw">pub fn </span>can_contain_qname(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     state.model.can_contain(tag, child)
+  }
+
+  <span class="kw">pub fn </span>can_contain_sym(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, child: SymbolU32, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+    <span class="kw">let </span>tag = state.model.get_node_qname(node);
+    state.model.can_contain_sym(tag, child)
+  }
+  <span class="kw">pub fn </span>can_contain_qsym(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: SymbolU32, child: SymbolU32, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+    state.model.can_contain_sym(tag, child)
   }
 
   <span class="doccomment">/// Can an element with (qualified name) $tag contain a $childtag element indirectly?
@@ -4678,10 +4827,10 @@
   /// And if so, return the tag to open.
   </span><span class="kw">pub fn </span>can_contain_indirect(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    tag: <span class="kw-2">&amp;</span>str,
-    child: <span class="kw-2">&amp;</span>str,
+    tag: SymbolU32,
+    child: SymbolU32,
     state: <span class="kw-2">&amp;mut </span>State,
-  ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+  ) -&gt; <span class="prelude-ty">Option</span>&lt;SymbolU32&gt; {
     <span class="comment">// $tag = $model-&gt;getNodeQName($tag) if ref $tag;          // In case tag is a
     // node. $child = $model-&gt;getNodeQName($child) if ref $child;    // In case
     // child is a node.
@@ -4692,28 +4841,48 @@
 
     <span class="kw">let </span>imodel = state.indirect_model.as_ref().unwrap();
     <span class="comment">// returning inner_node
-    </span><span class="kw">match </span>imodel.get(<span class="kw-2">&amp;</span>arena::pin(tag)) {
-      <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m
-        .get(<span class="kw-2">&amp;</span>arena::pin(child))
-        .map(|sym| arena::resolve(<span class="kw-2">*</span>sym)),
+    </span><span class="kw">match </span>imodel.get(<span class="kw-2">&amp;</span>tag) {
+      <span class="prelude-val">Some</span>(sub_m) =&gt; sub_m.get(<span class="kw-2">&amp;</span>child).copied(),
       <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
     }
   }
 
   <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
-    <span class="self">self</span>.can_contain_somehow(state.model.get_node_qname(tag), child, state)
+    <span class="kw">let </span>child_sym = arena::pin(child);
+    <span class="self">self</span>.sym_can_contain_somehow(state.model.get_node_qname(tag), child_sym, state)
   }
 
   <span class="kw">pub fn </span>can_contain_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
-    state.model.can_contain(tag, child) || <span class="self">self</span>.can_contain_indirect(tag, child, state).is_some()
+    <span class="kw">let </span>tag_sym = arena::pin(tag);
+    <span class="kw">let </span>child_sym = arena::pin(child);
+    <span class="self">self</span>.sym_can_contain_somehow(tag_sym, child_sym, state)
+  }
+
+  <span class="kw">pub fn </span>sym_can_contain_somehow(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    tag: SymbolU32,
+    child: SymbolU32,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; bool {
+    state.model.can_contain_sym(tag, child)
+      || <span class="self">self</span>.can_contain_indirect(tag, child, state).is_some()
   }
 
   <span class="kw">pub fn </span>can_node_have_attribute(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, attrib: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
-    state
-      .model
-      .can_have_attribute(state.model.get_node_qname(node), attrib)
+    <span class="kw">let </span>qname = state.model.get_node_qname(node);
+    state.model.can_have_attribute(qname, arena::pin(attrib))
   }
   <span class="kw">pub fn </span>can_have_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, attrib: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+    state
+      .model
+      .can_have_attribute(arena::pin(tag), arena::pin(attrib))
+  }
+  <span class="kw">pub fn </span>sym_can_have_attribute(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    tag: SymbolU32,
+    attrib: SymbolU32,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; bool {
     state.model.can_have_attribute(tag, attrib)
   }
 
@@ -4769,19 +4938,21 @@
   /// a single FONT_ELEMENT_NAME node; pull it up.
   </span><span class="kw">fn </span>auto_collapse_children(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>qname = state.model.get_node_qname(node);
-    <span class="kw">if </span>qname != <span class="string">&quot;ltx:_Capture_&quot; </span>{
+    <span class="kw">if </span>CAPTURE_SYM.with(|sym| qname != <span class="kw-2">*</span>sym) {
       <span class="kw">let </span><span class="kw-2">mut </span>c = node.get_child_nodes();
       <span class="comment">// with single child, AND, $node can have all the attributes that the child has (but at least
       // &quot;font&quot;) BUT, it isn&quot;t being forced somehow
       </span><span class="kw">if </span>c.len() == <span class="number">1
-        </span>&amp;&amp; (state.model.get_node_qname(<span class="kw-2">&amp;</span>c[<span class="number">0</span>]) == FONT_ELEMENT_NAME)
-        &amp;&amp; state.model.can_have_attribute(qname, <span class="string">&quot;font&quot;</span>)
+        </span>&amp;&amp; (state.model.get_node_qname(<span class="kw-2">&amp;</span>c[<span class="number">0</span>]) == FONT_ELEMENT_SYM.with(|sym| <span class="kw-2">*</span>sym))
+        &amp;&amp; state
+          .model
+          .can_have_attribute(qname, FONT_SYM.with(|sym| <span class="kw-2">*</span>sym))
         &amp;&amp; c[<span class="number">0</span>]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with(<span class="string">&#39;_&#39;</span>))
           .all(|v| {
-            state.model.can_have_attribute(qname, v)
+            state.model.can_have_attribute(qname, arena::pin(v))
               &amp;&amp; !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
           })
         &amp;&amp; !c[<span class="number">0</span>].has_attribute(<span class="string">&quot;_force_font&quot;</span>)
@@ -5079,21 +5250,24 @@
   </span><span class="kw">pub fn </span>find_insertion_point(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     qname: <span class="kw-2">&amp;</span>str,
-    has_opened_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+    has_opened_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Node&gt; {
+    <span class="kw">let </span>qsym = arena::pin(qname);
     <span class="self">self</span>.close_text_internal(state)<span class="question-mark">?</span>; <span class="comment">// Close any current text node.
     </span><span class="kw">let </span>cur_qname = state.model.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
     <span class="comment">// If `qname` is allowed at the current point, we&#39;re done.
-    </span><span class="kw">if </span><span class="self">self</span>.can_contain_qname(cur_qname, qname, state) {
+    </span><span class="kw">if </span><span class="self">self</span>.can_contain_qsym(cur_qname, qsym, state) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone());
     <span class="comment">// Else, if we can create an intermediate node that accepts $qname, we&#39;ll do
     // that.
-    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(inter) = <span class="self">self</span>.can_contain_indirect(cur_qname, qname, state) {
-      <span class="kw">if </span>(inter != qname) &amp;&amp; (inter != cur_qname) {
+    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(inter) = <span class="self">self</span>.can_contain_indirect(cur_qname, qsym, state) {
+      <span class="kw">if </span>(inter != qsym) &amp;&amp; (inter != cur_qname) {
         <span class="comment">// TODO: can we avoid the clone here? there is a mutability conflict...
         </span><span class="kw">let </span>node_font = <span class="self">self</span>.get_node_font(<span class="kw-2">&amp;</span><span class="self">self</span>.node).clone();
-        <span class="self">self</span>.open_element(inter, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font), state)<span class="question-mark">?</span>;
+        <span class="comment">// TODO: avoid this clone?
+        </span><span class="kw">let </span>inter_string = arena::to_string(inter);
+        <span class="self">self</span>.open_element(<span class="kw-2">&amp;</span>inter_string, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node_font), state)<span class="question-mark">?</span>;
 
         <span class="kw">return </span><span class="self">self</span>.find_insertion_point(qname, <span class="prelude-val">Some</span>(inter), state); <span class="comment">// And retry insertion (should
                                                                      // work now).
@@ -5102,12 +5276,16 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(has_opened) = has_opened_opt {
       <span class="comment">// out of options if already inside an auto-open chain
-      </span><span class="kw">let </span>message = <span class="macro">s!</span>(
-        <span class="string">&quot;failed auto-open through &lt;{}&gt; at inadmissible &lt;{}&gt;. Currently in {}&quot;</span>,
-        has_opened,
-        cur_qname,
-        <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
-      );
+      </span><span class="kw">let </span>message = arena::with(has_opened, |has_opened_str| {
+        arena::with(cur_qname, |cur_qname_str| {
+          <span class="macro">s!</span>(
+            <span class="string">&quot;failed auto-open through &lt;{}&gt; at inadmissible &lt;{}&gt;. Currently in {}&quot;</span>,
+            has_opened_str,
+            cur_qname_str,
+            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
+          )
+        })
+      });
       <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
       <span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone()) <span class="comment">// But we&#39;ll do it anyway, unless Error =&gt; Fatal.
     </span>} <span class="kw">else </span>{
@@ -5118,10 +5296,10 @@
       <span class="kw">while </span>(node.get_type() != <span class="prelude-val">Some</span>(NodeType::DocumentNode)) &amp;&amp; <span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>node, state) {
         <span class="kw">let </span>parent_opt = node.get_parent();
         <span class="kw">let </span>parent_name = <span class="kw">match </span>parent_opt {
-          <span class="prelude-val">None </span>=&gt; <span class="string">&quot;&quot;</span>,
+          <span class="prelude-val">None </span>=&gt; EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym),
           <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>p) =&gt; state.model.get_node_qname(p),
         };
-        <span class="kw">if </span><span class="self">self</span>.can_contain_somehow(parent_name, qname, state) {
+        <span class="kw">if </span><span class="self">self</span>.sym_can_contain_somehow(parent_name, qsym, state) {
           close_to = <span class="prelude-val">Some</span>(node);
           <span class="kw">break</span>;
         }
@@ -5135,7 +5313,9 @@
         </span><span class="self">self</span>.find_insertion_point(qname, <span class="prelude-val">None</span>, state) <span class="comment">// Then retry, possibly w/auto open&#39;s
       </span>} <span class="kw">else </span>{
         <span class="comment">// Didn&#39;t find a legit place.
-        </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;{:?} isn&#39;t allowed in &lt;{}&gt;&quot;</span>, qname, cur_qname);
+        </span><span class="kw">let </span>message = arena::with(cur_qname, |cur_qname_str| {
+          <span class="macro">s!</span>(<span class="string">&quot;{:?} isn&#39;t allowed in &lt;{}&gt;&quot;</span>, qname, cur_qname_str)
+        });
         <span class="comment">//&quot;Currently in &quot; self.getInsertionContext());
         </span><span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
 
@@ -5236,9 +5416,9 @@
       // Ignore attributes not allowed by the model,
       // but accept &quot;internal&quot; attributes.
       </span><span class="kw">let </span>qname = state.model.get_node_qname(<span class="kw-2">&amp;</span><span class="self">self</span>.node);
-      <span class="kw">if </span>key.starts_with(<span class="string">&#39;_&#39;</span>) || state.model.can_have_attribute(qname, key) {
-        <span class="self">self</span>.node.set_attribute(key, value)<span class="question-mark">?</span>;
-      }
+      <span class="kw">if </span>key.starts_with(<span class="string">&#39;_&#39;</span>) || state.model.can_have_attribute(qname, arena::pin(key)) {
+        <span class="self">self</span>.node.set_attribute(key, value)<span class="question-mark">?
+      </span>};
     } <span class="kw">else </span>{
       <span class="comment">// Accept any namespaced attributes
       </span><span class="macro">unimplemented!</span>();
@@ -5343,7 +5523,7 @@
     </span><span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">fn </span>add_ss_values(
+  <span class="kw">pub fn </span>add_ss_values(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     node: <span class="kw-2">&amp;mut </span>Node,
     key: <span class="kw-2">&amp;</span>str,
@@ -5515,13 +5695,13 @@
     <span class="kw-2">mut </span>pvis: bool,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">let </span>qname = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>node, state);
     <span class="kw">if </span>(!cvis || node.has_attribute(<span class="string">&quot;_cvis&quot;</span>)) &amp;&amp; (!pvis || node.has_attribute(<span class="string">&quot;_pvis&quot;</span>)) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
+    <span class="kw">let </span>qname = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>node, state);
     <span class="comment">// Special case: for XMArg used to wrap &quot;formal&quot; arguments on the content side,
     // mark them as visible as presentation as well.
-    </span><span class="kw">if </span>cvis &amp;&amp; (qname == <span class="string">&quot;ltx:XMArg&quot;</span>) {
+    </span><span class="kw">if </span>cvis &amp;&amp; (qname == arena::pin_static(<span class="string">&quot;ltx:XMArg&quot;</span>)) {
       pvis = <span class="bool-val">true</span>;
     }
     <span class="kw">if </span>cvis {
@@ -5530,7 +5710,7 @@
     <span class="kw">if </span>pvis {
       node.set_attribute(<span class="string">&quot;_pvis&quot;</span>, <span class="string">&quot;true&quot;</span>)<span class="question-mark">?</span>;
     }
-    <span class="kw">if </span>qname == <span class="string">&quot;ltx:XMDual&quot; </span>{
+    <span class="kw">if </span>qname == arena::pin_static(<span class="string">&quot;ltx:XMDual&quot;</span>) {
       <span class="kw">let </span><span class="kw-2">mut </span>children = xml::element_nodes(<span class="kw-2">&amp;</span>node);
       <span class="kw">let </span>c = children.remove(<span class="number">0</span>);
       <span class="kw">let </span>p = children.remove(<span class="number">0</span>);
@@ -5540,7 +5720,7 @@
       <span class="kw">if </span>pvis {
         <span class="self">self</span>.mark_xmnode_visibility_aux(p, <span class="bool-val">false</span>, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       }
-    } <span class="kw">else if </span>qname == <span class="string">&quot;ltx:XMRef&quot; </span>{
+    } <span class="kw">else if </span>qname == arena::pin_static(<span class="string">&quot;ltx:XMRef&quot;</span>) {
       <span class="kw">match </span>node.get_attribute(<span class="string">&quot;idref&quot;</span>) {
         <span class="prelude-val">None </span>=&gt; {
           <span class="kw">let </span>key = node.get_attribute(<span class="string">&quot;_xmkey&quot;</span>);
@@ -5931,8 +6111,11 @@
         </span><span class="kw">let </span>prefix_opt = state.model.get_document_namespace_prefix(<span class="kw-2">&amp;</span>ns, <span class="bool-val">false</span>, <span class="bool-val">false</span>);
         <span class="kw">let </span>attprefix_opt = state.model.get_document_namespace_prefix(<span class="kw-2">&amp;</span>ns, <span class="bool-val">true</span>, <span class="bool-val">true</span>);
         <span class="kw">if </span>prefix_opt.is_none() {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>attprefix) = attprefix_opt {
-            <span class="kw">let </span>attr_ns_node = Namespace::new(attprefix, <span class="kw-2">&amp;</span>ns, <span class="kw-2">&amp;mut </span>newnode).unwrap();
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(attprefix_sym) = attprefix_opt {
+            <span class="kw">let </span>attr_ns_node = arena::with(attprefix_sym, |attprefix| {
+              Namespace::new(attprefix, <span class="kw-2">&amp;</span>ns, <span class="kw-2">&amp;mut </span>newnode)
+            })
+            .unwrap();
             newnode.set_namespace(<span class="kw-2">&amp;</span>attr_ns_node)<span class="question-mark">?</span>;
           }
         }
@@ -5950,9 +6133,9 @@
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(attrs) = attributes {
-      <span class="kw">let </span><span class="kw-2">mut </span>sorted_keys = attrs.keys().map(ToString::to_string).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+      <span class="kw">let </span><span class="kw-2">mut </span>sorted_keys = attrs.keys().map(String::as_str).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
       sorted_keys.sort();
-      <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>sorted_keys {
+      <span class="kw">for </span>key <span class="kw">in </span>sorted_keys {
         <span class="kw">if </span>key == <span class="string">&quot;font&quot; </span>|| key == <span class="string">&quot;locator&quot; </span>{
           <span class="kw">continue</span>;
         }
@@ -6011,9 +6194,11 @@
               .model
               .get_document_namespace_prefix(<span class="kw-2">&amp;</span>ns_uri, <span class="bool-val">false</span>, <span class="bool-val">false</span>)
             {
-              <span class="kw">if </span>!prefix.is_empty() {
+              <span class="kw">if </span>prefix != EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym) {
                 <span class="kw">let </span><span class="kw-2">mut </span>root = <span class="self">self</span>.document.get_root_element().unwrap();
-                <span class="kw">match </span>Namespace::new(<span class="kw-2">&amp;</span>prefix, <span class="kw-2">&amp;</span>ns_uri, <span class="kw-2">&amp;mut </span>root) {
+                <span class="kw">match </span>arena::with(prefix, |prefix_str| {
+                  Namespace::new(prefix_str, <span class="kw-2">&amp;</span>ns_uri, <span class="kw-2">&amp;mut </span>root)
+                }) {
                   <span class="prelude-val">Ok</span>(ns) =&gt; <span class="prelude-val">Some</span>(ns),
                   <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;failed to create namespace: {:?}&quot;</span>, prefix);
@@ -6196,26 +6381,26 @@
   </span><span class="kw">pub fn </span>wrap_nodes(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     qname: <span class="kw-2">&amp;</span>str,
-    <span class="kw-2">mut </span>nodes: Vec&lt;Node&gt;,
+    nodes: Vec&lt;Node&gt;,
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
     <span class="kw">if </span>nodes.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
     }
-    <span class="kw">let </span>first_node = nodes.remove(<span class="number">0</span>);
+    <span class="kw">let </span>first_node = <span class="kw-2">&amp;</span>nodes[<span class="number">0</span>];
     <span class="kw">let </span><span class="kw-2">mut </span>parent = first_node.get_parent().unwrap();
     <span class="kw">let </span>(ns, tag) = state.model.decode_qname(qname);
     <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_internal(<span class="kw-2">&amp;mut </span>parent, ns, <span class="kw-2">&amp;</span>tag, state)<span class="question-mark">?</span>;
     <span class="self">self</span>.after_open(<span class="kw-2">&amp;mut </span>new, state)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>old_node = parent.replace_child_node(new.clone(), first_node)<span class="question-mark">?</span>;
+    parent.replace_child_node(new.clone(), first_node.clone())<span class="question-mark">?</span>;
 
     <span class="self">self</span>.copy_node_font(<span class="kw-2">&amp;</span>parent, <span class="kw-2">&amp;mut </span>new)<span class="question-mark">?</span>;
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(tbox) = <span class="self">self</span>.get_node_box(<span class="kw-2">&amp;</span>parent) {
       <span class="self">self</span>.set_node_box(<span class="kw-2">&amp;</span>new, tbox);
     }
-    new.add_child(<span class="kw-2">&amp;mut </span>old_node)<span class="question-mark">?</span>;
     <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>nodes.into_iter() {
+      node.unlink();
       new.add_child(<span class="kw-2">&amp;mut </span>node)<span class="question-mark">?</span>;
     }
     <span class="self">self</span>.after_close(<span class="kw-2">&amp;mut </span>new, state)<span class="question-mark">?</span>;
@@ -6468,8 +6653,8 @@
     }
   }
 
-  <span class="kw">fn </span>set_local_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, arg: Arc&lt;Font&gt;) { <span class="self">self</span>.localized_fonts.push(arg); }
-  <span class="kw">fn </span>get_local_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Arc&lt;Font&gt;&gt; { <span class="self">self</span>.localized_fonts.last().cloned() }
+  <span class="kw">fn </span>set_local_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, arg: Rc&lt;Font&gt;) { <span class="self">self</span>.localized_fonts.push(arg); }
+  <span class="kw">fn </span>get_local_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; { <span class="self">self</span>.localized_fonts.last().cloned() }
   <span class="kw">fn </span>expire_local_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.localized_fonts.pop(); }
 
   <span class="comment">//**********************************************************************
@@ -6487,11 +6672,12 @@
     state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// If node doesn&#39;t already have an id, and can
-    </span><span class="kw">let </span>node_qname = <span class="self">self</span>.get_node_qname(node, state);
-    <span class="comment">// but isn&#39;t a _Capture_ node (which ultimately should disappear)
-    </span><span class="kw">if </span>!node.has_attribute_ns(<span class="string">&quot;id&quot;</span>, XML_NS)
-      &amp;&amp; <span class="self">self</span>.can_have_attribute(node_qname, <span class="string">&quot;xml:id&quot;</span>, state)
-      &amp;&amp; (node_qname != <span class="string">&quot;ltx:_Capture_&quot;</span>)
+    // but isn&#39;t a _Capture_ node (which ultimately should disappear)
+    </span><span class="kw">let </span>model = <span class="kw-2">&amp;</span>state.model;
+    <span class="kw">let </span>qname = model.get_node_qname(node);
+    <span class="kw">if </span>!node.has_attribute_ns(<span class="string">&quot;id&quot;</span>, XML_NS)
+      &amp;&amp; model.can_have_attribute(qname, XML_ID_SYM.with(|sym| <span class="kw-2">*</span>sym))
+      &amp;&amp; (qname != CAPTURE_SYM.with(|sym| <span class="kw-2">*</span>sym))
     {
       <span class="kw">let </span><span class="kw-2">mut </span>ancestor = <span class="self">self
         </span>.findnode(<span class="string">&quot;ancestor::*[@xml:id][1]&quot;</span>, <span class="prelude-val">Some</span>(node), state)
@@ -6563,7 +6749,6 @@
     <span class="kw">for </span>child <span class="kw">in </span>data {
       <span class="kw">match </span>child.get_type() {
         <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-          <span class="kw">let </span>tag: <span class="kw-2">&amp;</span>str = arena::as_static(<span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>child, state));
           <span class="kw">let </span>attributes = child.get_attributes().into_iter().collect();
 
           <span class="comment">// map { $_-&gt;nodeType == XML_ATTRIBUTE_NODE ? ($self-&gt;getNodeQName($_) =&gt; $_-&gt;getValue) :
@@ -6575,7 +6760,10 @@
           //           $child-&gt;removeAttribute(&#39;xml:id&#39;);
           //           $self-&gt;unRecordID($id); }
 
-          </span><span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          </span><span class="kw">let </span>tag_sym = <span class="self">self</span>.get_node_qname(<span class="kw-2">&amp;</span>child, state);
+          <span class="comment">// TODO: do NOT allocate
+          </span><span class="kw">let </span>tag = arena::to_string(tag_sym);
+          <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_at(node, <span class="kw-2">&amp;</span>tag, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
           <span class="self">self</span>.append_tree(<span class="kw-2">&amp;mut </span>new, child.get_child_nodes(), state)<span class="question-mark">?</span>;
           <span class="self">self</span>.close_element_at(<span class="kw-2">&amp;mut </span>new, state)<span class="question-mark">?</span>;
         },
@@ -6671,4 +6859,4 @@
   <span class="kw">fn </span>into_vdqs(<span class="self">self</span>) -&gt; VecDeque&lt;String&gt; { <span class="self">self </span>}
 }
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

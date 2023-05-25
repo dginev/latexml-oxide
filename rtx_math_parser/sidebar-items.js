@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["node_to_grammar_lexemes","Generate a textual token for each node; The parser operates on this encoded string."],["text_form",""]],"macro":[["default_registry",""],["register",""],["registry",""],["rule",""],["rules",""],["start",""],["token",""],["unp",""]],"struct":[["MathParser",""]]};
+window.SIDEBAR_ITEMS = {"fn":["node_to_grammar_lexemes","text_form"],"macro":["default_registry","register","registry","rule","rules","start","token","unp"],"struct":["MathParser"]};

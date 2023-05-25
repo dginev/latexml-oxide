@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["XMLNS_NS",""],["XML_NS",""]],"fn":[["closest_element",""],["element_nodes",""],["is_descendant_or_self","Is `child` the same as `parent`, or a descendent of `parent`?"]],"struct":[["XPath",""]]};
+window.SIDEBAR_ITEMS = {"constant":["XMLNS_NS","XML_NS"],"fn":["closest_element","element_nodes","is_descendant_or_self"],"struct":["XPath"]};

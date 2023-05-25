@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["prune_empty_para","In some cases we could have e.g. a \\noindent followed by a {table}, in which case we end up with an empty ltx:para which we can prune."]]};
+window.SIDEBAR_ITEMS = {"fn":["prune_empty_para"]};

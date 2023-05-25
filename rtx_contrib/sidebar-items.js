@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["dispatch",""]],"mod":[["mytemplate_sty",""],["scopemacro_sty",""]]};
+window.SIDEBAR_ITEMS = {"fn":["dispatch"],"mod":["mytemplate_sty","scopemacro_sty"]};

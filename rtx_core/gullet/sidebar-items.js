@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Gullet",""],["MouthRuntime",""]]};
+window.SIDEBAR_ITEMS = {"fn":["is_column_end"],"struct":["Gullet","MouthRuntime"]};

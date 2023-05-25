@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["lex_single_tex_formula","Simple tokenization of a single formula, without any custom preloads byond latex and amsmath"],["rtx_test_single",""],["rtx_tests",""],["rtx_tests_internal",""]]};
+window.SIDEBAR_ITEMS = {"fn":["init_logger","lex_single_tex_formula","rtx_test_single","rtx_tests","rtx_tests_internal"]};

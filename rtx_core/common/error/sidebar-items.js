@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["ErrorCategory",""],["ErrorTarget",""]],"fn":[["note_begin",""],["note_end",""],["note_progress",""],["note_progress_detailed",""]],"struct":[["Error",""]],"type":[["Result",""]]};
+window.SIDEBAR_ITEMS = {"enum":["ErrorCategory","ErrorTarget"],"fn":["note_begin","note_end","note_progress","note_progress_detailed"],"struct":["Error"],"type":["Result"]};

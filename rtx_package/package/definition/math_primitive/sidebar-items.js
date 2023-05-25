@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MathPrimitive",""],["MathPrimitiveOptions",""]]};
+window.SIDEBAR_ITEMS = {"struct":["MathPrimitive","MathPrimitiveOptions"]};

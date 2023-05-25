@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["clean_bib_key","cleans a string down to characters acceptable for a bibliography key"],["clean_id","cleans a string down to characters acceptable for an id attribute"],["clean_label","cleans a string down to characters acceptable for a label attribute"],["clean_url","cleans a string down to characters acceptable for a URL"],["compose_url","builds a complete url from fragments"],["roman_aux","auxiliary helper for `roman`"]]};
+window.SIDEBAR_ITEMS = {"fn":["clean_bib_key","clean_id","clean_label","clean_url","compose_url","roman_aux"]};

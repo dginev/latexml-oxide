@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["content",""],["counter",""],["def",""]]};
+window.SIDEBAR_ITEMS = {"mod":["content","counter","def"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ConversionResponse",""],["Converter",""],["Runtime",""]]};
+window.SIDEBAR_ITEMS = {"struct":["ConversionResponse","Converter","Runtime"]};

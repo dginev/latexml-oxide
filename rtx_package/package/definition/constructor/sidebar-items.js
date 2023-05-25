@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Constructor",""],["ConstructorOptions","configuration for creating a new Constructor"]]};
+window.SIDEBAR_ITEMS = {"struct":["Constructor","ConstructorOptions"]};

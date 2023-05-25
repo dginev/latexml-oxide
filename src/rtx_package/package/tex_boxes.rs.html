@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_boxes.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>tex_boxes.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_boxes.rs`."><title>tex_boxes.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-be46fdc453a55015.css"><script src="../../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -364,7 +364,7 @@
     </span>reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, key, state, {
       <span class="kw">if </span>!key.is_empty() {
         <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
-          KeyValsOptions{skip_missing: <span class="bool-val">true</span>, ..KeyValsOptions::default()}, state);
+          KeyvalsConfig{skip_missing: <span class="bool-val">true</span>, ..KeyvalsConfig::default()}, state);
         <span class="kw">let </span>dim = stomach.get_gullet_mut().read_dimension(state)<span class="question-mark">?</span>;
         keyvals.set_value(<span class="kw-2">&amp;</span>key.owned_tokens().unwrap().to_string(), dim.into(), <span class="bool-val">false</span>, state);
         keyvals.into()
@@ -400,13 +400,13 @@
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\hbox BoxSpecification HBoxContents&quot;</span>, sub[document, args, props, state] {
       <span class="comment">// &quot;&lt;ltx:text width=&#39;#width&#39; _noautoclose=&#39;1&#39;&gt;#2&lt;/ltx:text&gt;&quot;,
       </span><span class="macro">unpack_opt_ref!</span>(args =&gt; _spec_opt, contents_opt);
-      <span class="kw">let </span>contents = contents_opt.unwrap().as_ref().unwrap();
+      <span class="kw">let </span>contents = contents_opt.as_ref().unwrap();
       <span class="kw">let </span>current_opt = document.get_element();
 
       <span class="comment">// What is the CORRECT (&amp; general) way to ask whether we&#39;re in &quot;vertical mode&quot;??
       //  my $vmode = $tag eq &#39;ltx:inline-block&#39;; # ie, explicitly \vbox !?!?!?!
       </span><span class="kw">let </span>is_svg  = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>current) = current_opt {
-        document.get_node_qname(current, state).starts_with(<span class="string">&quot;svg:&quot;</span>)
+        document.with_node_qname(current, state, |qname| qname.starts_with(<span class="string">&quot;svg:&quot;</span>))
       } <span class="kw">else </span>{ <span class="bool-val">false </span>};
       <span class="kw">let </span>vmode = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>current) = current_opt {
         current.has_attribute(<span class="string">&quot;_vertical_mode_&quot;</span>)
@@ -421,7 +421,7 @@
       <span class="kw">let </span>node = document.open_element(newtag,
         <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;_noautoclose&quot; </span>=&gt; <span class="string">&quot;true&quot;</span>, <span class="string">&quot;width&quot; </span>=&gt; width)), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="comment">// Note on the clone: Remember that contents is a Digested,
-      // i.e. we are cloning an Arc&lt;&gt; wrapper, which is relatively cheap.
+      // i.e. we are cloning an Rc&lt;&gt; wrapper, which is relatively cheap.
       // see the documentation on `Digested` on why we don&#39;t have a neater way of dealing with this.
       </span>document.absorb(contents, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if </span>!is_svg {
@@ -500,13 +500,12 @@
     }
   );
 
-  <span class="macro">DefParameterType!</span>(RuleSpecification, reader=&gt;<span class="macro">reader!</span>(_gullet, _inner, _extra, _state, {
-    <span class="macro">unimplemented!</span>(); ()
-    <span class="comment">// my $keyvals = LaTeXML::Core::KeyVals-&gt;new(undef, undef, skipMissing =&gt; 1);
-    // while (my $key = $gullet-&gt;readKeyword(&#39;width&#39;, &#39;height&#39;, &#39;depth&#39;)) {
-    //   $keyvals-&gt;setValue($key, $gullet-&gt;readDimension); }
-    // $keyvals;
-    </span>}),
+  <span class="macro">DefParameterType!</span>(RuleSpecification, reader=&gt;<span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+    <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(KeyvalsConfig{ skip_missing: <span class="bool-val">true</span>, .. KeyvalsConfig::default()}, state);
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>], state)<span class="question-mark">? </span>{
+      keyvals.set_value(<span class="kw-2">&amp;</span>key, Stored::Dimension(gullet.read_dimension(state)<span class="question-mark">?</span>), <span class="bool-val">false</span>, state);
+    }
+    keyvals }),
     optional =&gt; <span class="bool-val">true</span>,
     reader_predigest =&gt; <span class="macro">undigested!</span>()
   );
@@ -515,10 +514,8 @@
   <span class="comment">// &quot;?#invisible()(?#isVerticalRule()\
   //   (&lt;ltx:rule height=&#39;&amp;GetKeyVal(#1,height)&#39; depth=&#39;&amp;GetKeyVal(#1,depth)&#39; \
   //    width=&#39;&amp;GetKeyVal(#1,width)&#39; color=&#39;#color&#39;/&gt;))&quot;,
-  </span>after_digest=&gt; {<span class="macro">unimplemented!</span>(); ()});
-  <span class="comment">// afterDigest =&gt; sub {
-  //   my ($stomach, $whatsit) = @_;
-  //   my $dims   = $whatsit-&gt;getArg(1);
+  </span>after_digest =&gt; sub [_stomach,whatsit,state] {
+  <span class="comment">//   my $dims   = $whatsit-&gt;getArg(1);
   //   my $width  = GetKeyVal($dims, &#39;width&#39;);
   //   my $height = GetKeyVal($dims, &#39;height&#39;);
   //   my $depth  = GetKeyVal($dims, &#39;depth&#39;);
@@ -530,11 +527,13 @@
   //   my $d = ($depth  ? $depth-&gt;ptValue  : undef);
   //   $h -= $d if $h &amp;&amp; $d;    # - ??
 
-  //   if (my $alignment = LookupValue(&#39;Alignment&#39;)) {
-  //     if (((!defined $h) &amp;&amp; (!defined $w)) || ((defined $h) &amp;&amp; ($h &gt; 20))
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = state.lookup_alignment() {
+  <span class="comment">//     if (((!defined $h) &amp;&amp; (!defined $w)) || ((defined $h) &amp;&amp; ($h &gt; 20))
   //       || ((defined $h) &amp;&amp; (defined $w) &amp;&amp; ($h &gt; 3 * $w))) {
-  //       # This isXxxxRule property is to determine if it is used for separating rules within
-  // alignments       $whatsit-&gt;setProperty(isVerticalRule =&gt; 1) } }
+  // This isXxxxRule property is to determine if it is used for separating rules within alignments
+      </span>whatsit.set_property(<span class="string">&quot;isVerticalRule&quot;</span>, <span class="bool-val">true</span>);
+    }
+  <span class="comment">// }
   //   elsif ((defined $w) &amp;&amp; ($w == 0)) {
   //     $whatsit-&gt;setProperty(invisible =&gt; 1); }
   //   else {
@@ -542,9 +541,10 @@
   //   if (my $color = LookupValue(&#39;font&#39;)-&gt;getColor) {
   //     if ($color ne &#39;black&#39;) {
   //       $whatsit-&gt;setProperty(color =&gt; $color); } }
-  //   return; }
+    </span><span class="prelude-val">Ok</span>(Vec::new())
+  });
 
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\hrule RuleSpecification&quot;</span>,<span class="string">&quot;&quot;</span>,
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\hrule RuleSpecification&quot;</span>,<span class="string">&quot;&quot;</span>,
   <span class="comment">// &quot;?#isHorizontalRule()\
   //   (&lt;ltx:rule height=&#39;&amp;GetKeyVal(#1,height)&#39; depth=&#39;&amp;GetKeyVal(#1,depth)&#39;\
   //    width=&#39;&amp;GetKeyVal(#1,width)&#39; color=&#39;#color&#39;/&gt;)&quot;,
@@ -579,4 +579,4 @@
   //   return; });
 </span>});
 </code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
