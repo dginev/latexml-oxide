@@ -226,7 +226,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         // locator: stomach.get_gullet().get_locator(),
         ..Whatsit::default()
       })];
-      with_script.append(&mut stuff);
+      with_script.extend(stuff);
       stuff = with_script;
     }
     state.assign_font(font, Some(Scope::Local)); // revert
@@ -238,7 +238,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       c,
       stomach,
       state,
-      s!("Script {} can only appear in math mode", c)
+      format!("Script {} can only appear in math mode", c)
     );
     let placeholder = if cc == Catcode::SUPER {
       T_SUPER!()
@@ -280,6 +280,66 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
   }
 }
 
+// Compute the 'advance' of this script.
+// can we do this before parsing? we can do the advance or something.... Hmmmm.
+// * Need to know scriptpos (mid or post) to determine position.
+// * need to know sub/super
+fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&Stored>,
+  op: &str, pos: &str, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+  eprintln!("SCRIPT SIZER IS ON!");
+  // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
+  // Or is it now ?????
+  // [unless it's different from the 'expected' style!!!]
+  let script_size = script.get_size(None,state)?;
+  let (mut ws, mut hs, mut ds) = (script_size.0.value_of() as f64, script_size.1.value_of() as f64, script_size.2.value_of() as f64);
+  ws *= 0.8; hs *= 0.8; ds *= 0.8;    // HACK!@!!
+  let (wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
+    let base_size = base.get_size(None, state)?;
+    (base_size.0.value_of() as f64, base_size.1.value_of() as f64, base_size.2.value_of() as f64)
+  } else {
+    let nominal_size = state.lookup_font().unwrap().get_nominal_size();
+    (nominal_size.0.value_of() as f64,nominal_size.1.value_of() as f64,nominal_size.2.value_of() as f64)
+  };
+  let w;
+  let (mut h, mut d) = (0.0, 0.0);
+  // Fishing for the scriptpos on the base (if any)
+  let inferred_pos = if pos.is_empty() {
+    if let Some(Stored::Digested(ref base)) = base_opt {
+      let base_pos = base.get_property("scriptpos").map(|s| s.to_string()).unwrap_or_default();
+      if base_pos.is_empty() {
+        Cow::Borrowed("post")
+      } else {
+        Cow::Owned(base_pos)
+      }
+    } else {
+      Cow::Borrowed("post")
+    }
+  } else {
+    Cow::Borrowed("post")
+  };
+  if inferred_pos == "mid" {
+    w = (ws - wb).max(0.0);    // as if max width of base & script
+    if op == "SUPERSCRIPT" {
+      h = hb + ds + hs;
+    } else {
+      d = db + hs + ds;
+    }
+  } else {
+    // as if max of width & prev script's width
+    let wp = if let Some(Stored::Digested(prev)) = prev_opt { prev.get_width(None,state)?.unwrap_or_default().value_of() as f64 } else { 0.0 };
+    w = (ws - wp).max(0.0);
+    if op == "SUPERSCRIPT" {
+      h = hb + hs / 2.0;
+    } else {
+      d = hs / 2.0 + ds;
+    }
+  }
+  // $w = Dimension($w); $h = Dimension($h); $d = Dimension($d);
+  dbg!(w);
+  Ok((Dimension::new_f64(w), Dimension::new_f64(h), Dimension::new_f64(d)))
+}
+
+
 LoadDefinitions!(state, {
   // TODO: Should I add a special macro case that takes an arbitrary token as argument?
   // DefPrimitiveT ?
@@ -314,9 +374,10 @@ LoadDefinitions!(state, {
   "###,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) }
-    // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
-    //     $_[0].get_property("prevscript"), "SUPERSCRIPT", "post"); }
+      Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) },
+    sizer => sub[w,state] {
+      script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
+        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post", state) }
   );
 
   DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r###"
@@ -327,10 +388,10 @@ LoadDefinitions!(state, {
     ,
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
-      Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) }
-    // sizer     => sub { script_sizer($_[0]->getArg(1), $_[0].get_property("base"),
-    //     $_[0].get_property("prevscript"),
-    //     "SUBSCRIPT", "post"); }
+      Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) },
+    sizer => sub[w,state] {
+      script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
+        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post", state) }
   );
 
   DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r###"
@@ -341,7 +402,8 @@ LoadDefinitions!(state, {
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
-    // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, "SUPERSCRIPT", 'post"); }
+    sizer => sub[w,state] {
+      script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post", state) }
   );
   DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
   <ltx:XMApp role="FLOATSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
@@ -351,7 +413,8 @@ LoadDefinitions!(state, {
     reversion => sub[_whatsit,args,state] {
       unref!(args=>arg);
       Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
-    // sizer     => sub { script_sizer($_[0]->getArg(1), undef, undef, 'SUBSCRIPT', 'post"); }
+      sizer => sub[w,state] {
+        script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post", state) }
   );
 
   DefMacro!("'", sub[gullet,_args,state] {

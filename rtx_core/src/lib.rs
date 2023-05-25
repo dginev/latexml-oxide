@@ -232,7 +232,7 @@ pub trait BoxOps: Object {
 
   /// gets the "width" property value, if any
   fn get_width(
-    &mut self,
+    &self,
     options: Option<HashMap<String, Stored>>,
     state: &mut State,
   ) -> Result<Option<RegisterValue>> {

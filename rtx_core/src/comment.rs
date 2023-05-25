@@ -44,7 +44,7 @@ impl BoxOps for Comment {
   fn has_property(&self, _key: &str) -> bool { false }
   fn get_property_bool(&self, _key: &str) -> bool { false }
   fn get_width(
-    &mut self,
+    &self,
     _options: Option<HashMap<String, Stored>>,
     _state: &mut State,
   ) -> Result<Option<RegisterValue>> {
