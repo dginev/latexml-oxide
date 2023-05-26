@@ -69,6 +69,21 @@ pub trait NumericOps {
   where Self: Sized {
     round_to(self.value_of() as f64 / UNITY_F64, prec)
   }
+  fn absolute(self) -> Self
+  where Self: Sized {
+    Self::new(self.value_of().abs())
+  }
+
+  fn sign(self) -> i8
+  where Self: Sized {
+    use std::cmp::Ordering::*;
+    match self.value_of().cmp(&0) {
+      Less => -1,
+      Equal => 0,
+      Greater => 1,
+    }
+  }
+
   fn negate(self) -> Self
   where Self: Sized {
     Self::new(-self.value_of())
@@ -103,6 +118,16 @@ pub trait NumericOps {
       other_value = EPSILON; // avoid dividing by zero
     }
     Self::new((0.5 + self.value_of() as f64 / other_value).trunc() as i64)
+  }
+
+  fn smaller<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_of().min(other.value_of()))
+  }
+
+  fn larger<T: NumericOps>(self, other: T) -> Self
+  where Self: Sized {
+    Self::new(self.value_of().max(other.value_of()))
   }
 
   fn to_token(self) -> Token

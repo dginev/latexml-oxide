@@ -3,10 +3,11 @@ use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::Digested;
 use crate::common::dimension::Dimension;
+use super::cell::Cell;
 
 use std::collections::VecDeque;
 use std::fmt::{self, Display, Debug};
-use libxml::tree::Node;
+
 
 // ??
 pub type Row = Template;
@@ -71,44 +72,6 @@ impl Axis {
   }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Cell {
-  pub empty: bool,
-  pub omitted: bool,
-  pub skipped: bool,
-  pub before: Option<Tokens>,
-  pub after: Option<Tokens>,
-  pub align: Option<Align>,
-  pub width: Option<Dimension>,
-  pub height: Option<Dimension>,
-  pub depth: Option<Dimension>,
-  pub colspan: Option<usize>,
-  pub colspanned: Option<usize>,
-  pub boxes: Option<Digested>,
-  pub cell_type: Option<char>,
-  pub content_class: Option<ColumnSpec>,
-  pub content_length: Option<usize>,
-  pub border: String,
-  pub border_left: Option<usize>,
-  pub border_right: Option<usize>,
-  pub border_top: Option<usize>,
-  pub border_bottom: Option<usize>,
-  pub rowspan: Option<usize>,
-  pub vattach: Option<String>,
-  pub cell: Option<Node>,
-  pub thead_in_row: bool,
-  pub thead_in_column: bool,
-}
-impl Cell {
-  pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
-    match side {
-      BorderSpec::Left => self.border_left,
-      BorderSpec::Right => self.border_right,
-      BorderSpec::Top => self.border_top,
-      BorderSpec::Bottom => self.border_bottom,
-    }
-  }
-}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColumnSpec {
@@ -198,6 +161,11 @@ pub struct Template {
   pub after: VecDeque<Digested>,
   save_before: VecDeque<Token>,
   save_between: VecDeque<Token>,
+  pub cached_width: Option<Dimension>,
+  pub cached_height : Option<Dimension>,
+  pub cached_depth: Option<Dimension>,
+  pub x : Option<Dimension>,
+  pub y : Option<Dimension>,
 }
 
 impl Display for Template {
@@ -232,6 +200,11 @@ impl Template {
       padding: None,
       top_padding: None,
       bottom_padding: None,
+      cached_width: None,
+      cached_height: None,
+      cached_depth: None,
+      x: None,
+      y: None,
       reversion: config.reversion,
       tokens: config.tokens.unwrap_or_default(),
     }
