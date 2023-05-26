@@ -287,6 +287,8 @@ pub trait BoxOps: Object {
     }
   }
   /// gets the box size as a triple of (width, height, depth)
+  /// the generic implementation is immutable and will recompute the size on each call
+  /// see `Digested::get_size` for a variant with interior mutability which caches the box size
   fn get_size(
     &self,
     options: Option<HashMap<String, Stored>>,

@@ -23,7 +23,9 @@
 // keep in until code is completed.
 #[allow(dead_code)]
 pub mod template;
+pub mod cell;
 
+use crate::common::float::Float;
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
@@ -39,7 +41,8 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::digested::Digested;
 use crate::BoxOps;
-use self::template::{Cell, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
+use self::cell::Cell;
+use self::template::{Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
 
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
@@ -93,9 +96,11 @@ pub struct Alignment {
   close_row: CloseRowFn,
   open_column: OpenColumnFn,
   close_column: CloseColumnFn,
-  cwidth: Option<Dimension>,
-  cheight: Option<Dimension>,
-  cdepth: Option<Dimension>,
+  cached_width: Option<Dimension>,
+  cached_height: Option<Dimension>,
+  cached_depth: Option<Dimension>,
+  column_widths: Vec<Dimension>,
+  row_heights: Vec<Dimension>
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -115,9 +120,9 @@ impl Alignment {
       current_row: None,
       reversion: None,
       content_reversion: None,
-      cwidth: None,
-      cheight: None,
-      cdepth: None,
+      cached_width: None,
+      cached_height: None,
+      cached_depth: None,
       open_container: config.open_container,
       close_container: config.close_container,
       open_row: config.open_row,
@@ -132,6 +137,8 @@ impl Alignment {
       is_normalized: false,
       properties: config.properties,
       rows: VecDeque::new(),
+      column_widths: Vec::new(),
+      row_heights: Vec::new()
     }
   }
 
@@ -406,7 +413,7 @@ impl Alignment {
     for row in &mut self.rows {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
-        if let Some(boxes) = &cell.boxes {
+        if let Some(ref mut boxes) = &mut cell.boxes {
           let (w, h, d) //, cw, ch, cd)
             = boxes.get_size(Some(stored_map!(
               "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
@@ -494,8 +501,8 @@ impl Alignment {
         // let (mut pruneh, mut pruned) = (0, 0);
         for (j,col) in row.get_columns().iter().enumerate() {
           // TODO:
-          //  $pruneh = max($pruneh, $$col{cheight}->valueOf) if $$col{cheight};
-          //  $pruned = max($pruned, $$col{cdepth}->valueOf)  if $$col{cdepth};
+          //  $pruneh = max($pruneh, $$col{cheight}->value_of) if $$col{cheight};
+          //  $pruned = max($pruned, $$col{cdepth}->value_of)  if $$col{cdepth};
           //       if (!$$row{pseudorow} && defined $$col{rowspanned}) {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
           let mut converted_border = String::new();
@@ -628,91 +635,104 @@ impl Alignment {
     }
     Ok(())}
   pub fn normalize_sum_sizes(&mut self) -> Result<()> {
-    // let mut rowheights = Vec::new();
-    // let mut colwidths  = Vec::new();
-    // let mut colrights  = Vec::new();
-    // let mut collefts   = Vec::new();
-    // # Uses cell's cwidth,cheight,cdepth
-    // # Computes net row & column sizes & positions
-    // # add spacing between rows? Or only from \\[..] ?
-    // my $strut = $self->getProperty('strut') || Dimension(0);
-    // my $hs    = $strut->multiply(0.7);
-    // my $ds    = $strut->multiply(0.3);
-    // my @rows  = @{ $$self{rows} };
-    // my $nrows = scalar(@rows);
+    let mut rowheights = Vec::new();
+    let mut colwidths  = Vec::new();
+    let mut colrights  = Vec::new();
+    let mut collefts   = Vec::new();
+    // Uses cell's cwidth,cheight,cdepth
+    // Computes net row & column sizes & positions
+    // add spacing between rows? Or only from \\[..] ?
+    let strut = if let Some(Stored::Dimension(ref d)) = self.get_property("strut").as_deref() { *d } else { Dimension::new(0) };
+    let hs    = strut.multiply(Float::new_f64(0.7));
+    let ds    = strut.multiply(Float::new_f64(0.3));
+    // let nrows = rows.len();
 
-    // for (my $i = 0 ; $i < $nrows ; $i++) {
-    //   my $row   = $rows[$i];
-    //   my @cols  = @{ $$row{columns} };
-    //   my $ncols = scalar(@cols);
-    //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
-    //     push(@colwidths, map { 0 } 1 .. $short);
-    //     push(@collefts,  map { 0 } 1 .. $short);
-    //     push(@colrights, map { 0 } 1 .. $short); }
-    //   my ($rowh, $rowd) = (0, 0);
-    //   my ($rowt, $rowb) = (($$row{tpadding} ? $$row{tpadding}->valueOf : 0),
-    //     ($$row{bpadding} ? $$row{bpadding}->valueOf : 0));
-    //   for (my $j = 0 ; $j < $ncols ; $j++) {
-    //     my $cell = $cols[$j];
-    //     next if $$cell{skipped};
-    //     next unless $$cell{boxes};
-    //     my $w = $$cell{cwidth};
-    //     my $h = $$cell{cheight};
-    //     my $d = $$cell{cdepth};
-    //     my $t = $$cell{tpadding};
-    //     my $b = $$cell{bpadding};
-    //     my $r = $$cell{rpadding};
-    //     my $l = $$cell{lpadding};
+    for row in self.rows.iter_mut() {
+      //   my $ncols = scalar(@cols);
+      //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
+      //     push(@colwidths, map { 0 } 1 .. $short);
+      //     push(@collefts,  map { 0 } 1 .. $short);
+      //     push(@colrights, map { 0 } 1 .. $short);
+  //         }
+      let (mut rowh, mut rowd) = (0, 0);
+      let mut rowt = row.top_padding.unwrap_or_default().value_of();
+      let mut rowb = row.bottom_padding.unwrap_or_default().value_of();
+      //   for (my $j = 0 ; $j < $ncols ; $j++) {
+      for cell in row.get_columns_mut().iter_mut()
+        .filter(|cell| !cell.skipped && cell.boxes.is_some()) {
+        let (mut colwidths_j, mut collefts_j, mut colrights_j) = (0,0,0);
+        let w = cell.cached_width.unwrap_or_default().value_of();
+        let h = cell.cached_height.unwrap_or_default().value_of();
+        let d = cell.cached_depth.unwrap_or_default().value_of();
+        let t = cell.top_padding.unwrap_or_default();
+        let b = cell.bottom_padding.unwrap_or_default();
+        let r = cell.right_padding.unwrap_or_default();
+        let l = cell.left_padding.unwrap_or_default();
 
-    //     if (($$cell{colspan} || 1) == 1) {
-    //       $colwidths[$j] = max($colwidths[$j], $w->valueOf) if $w;
-    //       $collefts[$j]  = max($collefts[$j],  $l->valueOf) if $l;
-    //       $colrights[$j] = max($colrights[$j], $r->valueOf) if $r; }
-    //     if (($$cell{rowspan} || 1) == 1) {
-    //       $rowh = max($rowh, $h->valueOf) if $h;
-    //       $rowd = max($rowd, $d->valueOf) if $d;
-    //       $rowt = max($rowt, $t->valueOf) if $t;
-    //       $rowb = max($rowb, $b->valueOf) if $b; }
-    //     else { }    # Ditto spanned rows
-    //   }
-    //   $$row{cheight}  = Dimension($rowh)->larger($hs);
-    //   $$row{cdepth}   = Dimension($rowd)->larger($ds);
-    //   $$row{tpadding} = Dimension($rowt);
-    //   $$row{bpadding} = Dimension($rowb);
-    //   # NOTE: Should be storing column widths to; individually, as well as per-column!
-    //   push(@rowheights, $rowh + $rowd); }    # somehow our heights are way too short????
-    // ## Now compute the positions
-    // my @rowpos = ();
-    // my @colpos = ();
-    // my $y      = 0;
-    // # Row & column positions: left,top
-    // for (my $i = 0 ; $i < scalar(@rowheights) ; $i++) {
-    //   my $row = $rows[$i];
-    //   $y += $$row{tpadding}->valueOf if $$row{tpadding};
-    //   $rowpos[$i] = Dimension($y);
-    //   $y += $$row{cheight}->valueOf  if $$row{cheight};
-    //   $y += $$row{cdepth}->valueOf   if $$row{cdepth};
-    //   $y += $$row{bpadding}->valueOf if $$row{bpadding}; }
-    // my $x = 0;
-    // for (my $j = 0 ; $j < scalar(@colwidths) ; $j++) {
-    //   $x += $collefts[$j];
-    //   $colpos[$j] = Dimension($x);
-    //   $x += $colwidths[$j];
-    //   $x += $colrights[$j]; }
-    // $$self{cwidth}       = Dimension($x);
-    // $$self{cheight}      = Dimension($y);    # or account for vertical position of array as a whole?
-    // $$self{cdepth}       = Dimension(0);
-    // @colwidths           = map { Dimension($_); } @colwidths;
-    // @rowheights          = map { Dimension($_); } @rowheights;
-    // $$self{columnwidths} = [@colwidths];
-    // $$self{rowheights}   = [@rowheights];
+        if cell.colspan.unwrap_or(1) == 1 {
+          if w > 0 {
+            colwidths_j = w.max(colwidths_j); }
+          if l > 0 {
+            collefts_j  =  l.max(collefts_j); }
+          if r > 0 {
+            colrights_j = r.max(colrights_j); }
+        }
+        if cell.rowspan.unwrap_or(1) == 1 {
+          rowh = rowh.max(h);
+          rowd = rowd.max(d);
+          rowt = rowt.max(t as i64);
+          rowb = rowb.max(b as i64);
+        } else { } // Ditto spanned rows
+        colwidths.push(colwidths_j);
+        collefts.push(collefts_j);
+        colrights.push(colrights_j);
+      }
+      row.cached_height  = Some(Dimension::new(rowh).larger(hs));
+      row.cached_depth   = Some(Dimension::new(rowd).larger(ds));
+      row.top_padding = Some(Dimension::new(rowt));
+      row.bottom_padding = Some(Dimension::new(rowb));
+      // NOTE: Should be storing column widths to; individually, as well as per-column!
+      rowheights.push(rowh + rowd);
+    }    // somehow our heights are way too short????
+    // Now compute the positions
+    let mut rowpos = Vec::new();
+    let mut colpos = Vec::new();
+    let mut y      = 0;
+    // Row & column positions: left,top
+    for row in self.rows.iter().take(rowheights.len()) {
+      if let Some(tp) = row.top_padding {
+        y += tp.value_of();
+      }
+      rowpos.push(Dimension::new(y));
+      if let Some(ch) = row.cached_height {
+        y += ch.value_of();
+      }
+      if let Some(cd) = row.cached_depth {
+        y += cd.value_of();
+      }
+      if let Some(bp) = row.bottom_padding {
+        y += bp.value_of();
+      }
+    }
+    let mut x = 0i64;
+    for ((w,l),r) in colwidths.iter().zip(collefts.iter()).zip(colrights.iter()) {
+      x += *l as i64;
+      colpos.push(Dimension::new(x));
+      x += w;
+      x += *r as i64;
+    }
+    self.cached_width  = Some(Dimension::new(x));
+    self.cached_height = Some(Dimension::new(y));    // or account for vertical position of array as a whole)?
+    self.cached_depth  = Some(Dimension::new(0));
+    self.column_widths = colwidths.iter().map(|v| Dimension::new(*v)).collect();
+    self.row_heights   = rowheights.iter().map(|v| Dimension::new(*v)).collect();
 
-    // for (my $i = 0 ; $i < scalar(@rowheights) ; $i++) {
-    //   my $row   = $rows[$i];
-    //   my @cols  = @{ $$row{columns} };
-    //   my $ncols = scalar(@cols);
-    //   $$row{x}      = $colpos[0]; $$row{y} = $rowpos[$i];
-    //   $$row{cwidth} = Dimension($x);
+    for (i,row) in self.rows.iter_mut().take(rowheights.len()).enumerate() {
+      //   my $ncols = scalar(@cols);
+      row.x = Some(colpos[0]);
+      row.y = Some(rowpos[i]);
+      row.cached_width = Some(Dimension::new(x));
+      let cols  = row.get_columns();
     //   for (my $j = 0 ; $j < $ncols ; $j++) {
     //     my $cell = $cols[$j];
     //     my $colx = $colpos[$j];
@@ -729,7 +749,8 @@ impl Alignment {
     //         . " w/ " . join(',', map { $_ . '=' . ToString($$cell{$_}); }
     //           (qw(align vattach skipped colspan rowspan))))
     //       if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
-    // } }
+    // }
+    }
 
     Ok(())
   }
@@ -763,7 +784,7 @@ impl BoxOps for Alignment {
     ) -> Result<(Dimension, Dimension, Dimension)> {
     unimplemented!();
   }
-  fn get_font(&self, state: &mut State) -> Result<Option<Cow<crate::common::font::Font>>> {
+  fn get_font(&self, _state: &mut State) -> Result<Option<Cow<crate::common::font::Font>>> {
     unimplemented!();
   }
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { unimplemented!() }
@@ -774,10 +795,10 @@ impl BoxOps for Alignment {
       state: &mut State,
     ) -> Result<(Dimension, Dimension, Dimension)> {
     self.normalize_alignment(state)?;
-    Ok((self.cwidth.unwrap(), self.cheight.unwrap(), self.cdepth.unwrap()))
+    Ok((self.cached_width.unwrap(), self.cached_height.unwrap(), self.cached_depth.unwrap()))
   }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
     unimplemented!(); // call the mutable version only, we need to rearrange the alignment first!
   }
   fn be_absorbed_mut(&mut self, document:&mut Document, state: &mut State) -> Result<Vec<Node>> {
