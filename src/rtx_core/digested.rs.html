@@ -986,8 +986,8 @@
       TBox(<span class="kw-2">ref </span>b) =&gt; b.compute_size(options, state),
       List(<span class="kw-2">ref </span>l) =&gt; l.compute_size(options, state),
       KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.compute_size(options, state),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size(options, state),
-      Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size(options, state),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size_and_cache(options, state),
+      Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size_and_cache(options, state),
       Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }

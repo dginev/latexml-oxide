@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Align","Axis","BorderSpec","ColumnSpec"],"struct":["Cell","Template","TemplateConfig"],"type":["Row"]};
+window.SIDEBAR_ITEMS = {"enum":["Align","Axis","BorderSpec","ColumnSpec"],"struct":["Template","TemplateConfig"],"type":["Row"]};

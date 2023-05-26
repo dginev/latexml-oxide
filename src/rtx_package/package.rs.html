@@ -221,6 +221,7 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
 </pre><pre class="rust"><code><span class="attr">#![allow(unreachable_code)]
 </span><span class="kw">pub use </span>libxml::tree::{Namespace, Node};
 <span class="kw">pub use </span>log;
@@ -238,7 +239,8 @@
 <span class="kw">pub use </span>rtx_core::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::aux_macros::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::alignment::{Alignment,AlignmentConfig};
-<span class="kw">pub use </span>rtx_core::alignment::template::{Cell,Template,Align};
+<span class="kw">pub use </span>rtx_core::alignment::cell::Cell;
+<span class="kw">pub use </span>rtx_core::alignment::template::{Template,Align};
 <span class="kw">pub use </span>rtx_core::common::arena::{<span class="self">self</span>, EMPTY_SYM};
 <span class="kw">pub use </span>rtx_core::common::cleaners::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::common::float::{floatformat, Float};

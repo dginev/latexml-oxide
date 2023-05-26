@@ -120,6 +120,31 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
@@ -191,6 +216,21 @@
   <span class="kw">where </span><span class="self">Self</span>: Sized {
     round_to(<span class="self">self</span>.value_of() <span class="kw">as </span>f64 / UNITY_F64, prec)
   }
+  <span class="kw">fn </span>absolute(<span class="self">self</span>) -&gt; <span class="self">Self
+  </span><span class="kw">where </span><span class="self">Self</span>: Sized {
+    <span class="self">Self</span>::new(<span class="self">self</span>.value_of().abs())
+  }
+
+  <span class="kw">fn </span>sign(<span class="self">self</span>) -&gt; i8
+  <span class="kw">where </span><span class="self">Self</span>: Sized {
+    <span class="kw">use </span>std::cmp::Ordering::<span class="kw-2">*</span>;
+    <span class="kw">match </span><span class="self">self</span>.value_of().cmp(<span class="kw-2">&amp;</span><span class="number">0</span>) {
+      Less =&gt; -<span class="number">1</span>,
+      Equal =&gt; <span class="number">0</span>,
+      Greater =&gt; <span class="number">1</span>,
+    }
+  }
+
   <span class="kw">fn </span>negate(<span class="self">self</span>) -&gt; <span class="self">Self
   </span><span class="kw">where </span><span class="self">Self</span>: Sized {
     <span class="self">Self</span>::new(-<span class="self">self</span>.value_of())
@@ -225,6 +265,16 @@
       other_value = EPSILON; <span class="comment">// avoid dividing by zero
     </span>}
     <span class="self">Self</span>::new((<span class="number">0.5 </span>+ <span class="self">self</span>.value_of() <span class="kw">as </span>f64 / other_value).trunc() <span class="kw">as </span>i64)
+  }
+
+  <span class="kw">fn </span>smaller&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self
+  </span><span class="kw">where </span><span class="self">Self</span>: Sized {
+    <span class="self">Self</span>::new(<span class="self">self</span>.value_of().min(other.value_of()))
+  }
+
+  <span class="kw">fn </span>larger&lt;T: NumericOps&gt;(<span class="self">self</span>, other: T) -&gt; <span class="self">Self
+  </span><span class="kw">where </span><span class="self">Self</span>: Sized {
+    <span class="self">Self</span>::new(<span class="self">self</span>.value_of().max(other.value_of()))
   }
 
   <span class="kw">fn </span>to_token(<span class="self">self</span>) -&gt; Token

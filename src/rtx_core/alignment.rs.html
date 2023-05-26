@@ -1800,6 +1800,27 @@
 <a href="#1800" id="1800">1800</a>
 <a href="#1801" id="1801">1801</a>
 <a href="#1802" id="1802">1802</a>
+<a href="#1803" id="1803">1803</a>
+<a href="#1804" id="1804">1804</a>
+<a href="#1805" id="1805">1805</a>
+<a href="#1806" id="1806">1806</a>
+<a href="#1807" id="1807">1807</a>
+<a href="#1808" id="1808">1808</a>
+<a href="#1809" id="1809">1809</a>
+<a href="#1810" id="1810">1810</a>
+<a href="#1811" id="1811">1811</a>
+<a href="#1812" id="1812">1812</a>
+<a href="#1813" id="1813">1813</a>
+<a href="#1814" id="1814">1814</a>
+<a href="#1815" id="1815">1815</a>
+<a href="#1816" id="1816">1816</a>
+<a href="#1817" id="1817">1817</a>
+<a href="#1818" id="1818">1818</a>
+<a href="#1819" id="1819">1819</a>
+<a href="#1820" id="1820">1820</a>
+<a href="#1821" id="1821">1821</a>
+<a href="#1822" id="1822">1822</a>
+<a href="#1823" id="1823">1823</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -1825,7 +1846,9 @@
 </span><span class="comment">// keep in until code is completed.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub mod </span>template;
+<span class="kw">pub mod </span>cell;
 
+<span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
@@ -1841,7 +1864,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::BoxOps;
-<span class="kw">use </span><span class="self">self</span>::template::{Cell, Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
+<span class="kw">use </span><span class="self">self</span>::cell::Cell;
+<span class="kw">use </span><span class="self">self</span>::template::{Row, Template, Align, TemplateConfig, ColumnSpec, Axis, BorderSpec};
 
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -1895,9 +1919,11 @@
   close_row: CloseRowFn,
   open_column: OpenColumnFn,
   close_column: CloseColumnFn,
-  cwidth: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  cheight: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  cdepth: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  cached_width: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  cached_height: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  cached_depth: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  column_widths: Vec&lt;Dimension&gt;,
+  row_heights: Vec&lt;Dimension&gt;
 }
 <span class="kw">impl </span>Alignment {
   <span class="doccomment">/// Create a new Alignment.
@@ -1917,9 +1943,9 @@
       current_row: <span class="prelude-val">None</span>,
       reversion: <span class="prelude-val">None</span>,
       content_reversion: <span class="prelude-val">None</span>,
-      cwidth: <span class="prelude-val">None</span>,
-      cheight: <span class="prelude-val">None</span>,
-      cdepth: <span class="prelude-val">None</span>,
+      cached_width: <span class="prelude-val">None</span>,
+      cached_height: <span class="prelude-val">None</span>,
+      cached_depth: <span class="prelude-val">None</span>,
       open_container: config.open_container,
       close_container: config.close_container,
       open_row: config.open_row,
@@ -1934,6 +1960,8 @@
       is_normalized: <span class="bool-val">false</span>,
       properties: config.properties,
       rows: VecDeque::new(),
+      column_widths: Vec::new(),
+      row_heights: Vec::new()
     }
   }
 
@@ -2208,7 +2236,7 @@
     </span><span class="kw">for </span>row <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.rows {
       <span class="comment">// Do we need to account for any space in the $$row{before} or $$row{after}?
       </span><span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(boxes) = <span class="kw-2">&amp;</span>cell.boxes {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
           <span class="kw">let </span>(w, h, d) <span class="comment">//, cw, ch, cd)
             </span>= boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
               <span class="string">&quot;align&quot; </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">&quot;width&quot; </span>=&gt; cell.width,
@@ -2296,8 +2324,8 @@
         // let (mut pruneh, mut pruned) = (0, 0);
         </span><span class="kw">for </span>(j,col) <span class="kw">in </span>row.get_columns().iter().enumerate() {
           <span class="comment">// TODO:
-          //  $pruneh = max($pruneh, $$col{cheight}-&gt;valueOf) if $$col{cheight};
-          //  $pruned = max($pruned, $$col{cdepth}-&gt;valueOf)  if $$col{cdepth};
+          //  $pruneh = max($pruneh, $$col{cheight}-&gt;value_of) if $$col{cheight};
+          //  $pruned = max($pruned, $$col{cdepth}-&gt;value_of)  if $$col{cdepth};
           //       if (!$$row{pseudorow} &amp;&amp; defined $$col{rowspanned}) {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
           </span><span class="kw">let </span><span class="kw-2">mut </span>converted_border = String::new();
@@ -2430,92 +2458,105 @@
     }
     <span class="prelude-val">Ok</span>(())}
   <span class="kw">pub fn </span>normalize_sum_sizes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// let mut rowheights = Vec::new();
-    // let mut colwidths  = Vec::new();
-    // let mut colrights  = Vec::new();
-    // let mut collefts   = Vec::new();
-    // # Uses cell&#39;s cwidth,cheight,cdepth
-    // # Computes net row &amp; column sizes &amp; positions
-    // # add spacing between rows? Or only from \\[..] ?
-    // my $strut = $self-&gt;getProperty(&#39;strut&#39;) || Dimension(0);
-    // my $hs    = $strut-&gt;multiply(0.7);
-    // my $ds    = $strut-&gt;multiply(0.3);
-    // my @rows  = @{ $$self{rows} };
-    // my $nrows = scalar(@rows);
+    <span class="kw">let </span><span class="kw-2">mut </span>rowheights = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>colwidths  = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>colrights  = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>collefts   = Vec::new();
+    <span class="comment">// Uses cell&#39;s cwidth,cheight,cdepth
+    // Computes net row &amp; column sizes &amp; positions
+    // add spacing between rows? Or only from \\[..] ?
+    </span><span class="kw">let </span>strut = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>d)) = <span class="self">self</span>.get_property(<span class="string">&quot;strut&quot;</span>).as_deref() { <span class="kw-2">*</span>d } <span class="kw">else </span>{ Dimension::new(<span class="number">0</span>) };
+    <span class="kw">let </span>hs    = strut.multiply(Float::new_f64(<span class="number">0.7</span>));
+    <span class="kw">let </span>ds    = strut.multiply(Float::new_f64(<span class="number">0.3</span>));
+    <span class="comment">// let nrows = rows.len();
 
-    // for (my $i = 0 ; $i &lt; $nrows ; $i++) {
-    //   my $row   = $rows[$i];
-    //   my @cols  = @{ $$row{columns} };
-    //   my $ncols = scalar(@cols);
-    //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
-    //     push(@colwidths, map { 0 } 1 .. $short);
-    //     push(@collefts,  map { 0 } 1 .. $short);
-    //     push(@colrights, map { 0 } 1 .. $short); }
-    //   my ($rowh, $rowd) = (0, 0);
-    //   my ($rowt, $rowb) = (($$row{tpadding} ? $$row{tpadding}-&gt;valueOf : 0),
-    //     ($$row{bpadding} ? $$row{bpadding}-&gt;valueOf : 0));
-    //   for (my $j = 0 ; $j &lt; $ncols ; $j++) {
-    //     my $cell = $cols[$j];
-    //     next if $$cell{skipped};
-    //     next unless $$cell{boxes};
-    //     my $w = $$cell{cwidth};
-    //     my $h = $$cell{cheight};
-    //     my $d = $$cell{cdepth};
-    //     my $t = $$cell{tpadding};
-    //     my $b = $$cell{bpadding};
-    //     my $r = $$cell{rpadding};
-    //     my $l = $$cell{lpadding};
+    </span><span class="kw">for </span>row <span class="kw">in </span><span class="self">self</span>.rows.iter_mut() {
+      <span class="comment">//   my $ncols = scalar(@cols);
+      //   if (my $short = $ncols - scalar(@colwidths)) {    # Extend column arrays, if needed
+      //     push(@colwidths, map { 0 } 1 .. $short);
+      //     push(@collefts,  map { 0 } 1 .. $short);
+      //     push(@colrights, map { 0 } 1 .. $short);
+  //         }
+      </span><span class="kw">let </span>(<span class="kw-2">mut </span>rowh, <span class="kw-2">mut </span>rowd) = (<span class="number">0</span>, <span class="number">0</span>);
+      <span class="kw">let </span><span class="kw-2">mut </span>rowt = row.top_padding.unwrap_or_default().value_of();
+      <span class="kw">let </span><span class="kw-2">mut </span>rowb = row.bottom_padding.unwrap_or_default().value_of();
+      <span class="comment">//   for (my $j = 0 ; $j &lt; $ncols ; $j++) {
+      </span><span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut().iter_mut()
+        .filter(|cell| !cell.skipped &amp;&amp; cell.boxes.is_some()) {
+        <span class="kw">let </span>(<span class="kw-2">mut </span>colwidths_j, <span class="kw-2">mut </span>collefts_j, <span class="kw-2">mut </span>colrights_j) = (<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>);
+        <span class="kw">let </span>w = cell.cached_width.unwrap_or_default().value_of();
+        <span class="kw">let </span>h = cell.cached_height.unwrap_or_default().value_of();
+        <span class="kw">let </span>d = cell.cached_depth.unwrap_or_default().value_of();
+        <span class="kw">let </span>t = cell.top_padding.unwrap_or_default();
+        <span class="kw">let </span>b = cell.bottom_padding.unwrap_or_default();
+        <span class="kw">let </span>r = cell.right_padding.unwrap_or_default();
+        <span class="kw">let </span>l = cell.left_padding.unwrap_or_default();
 
-    //     if (($$cell{colspan} || 1) == 1) {
-    //       $colwidths[$j] = max($colwidths[$j], $w-&gt;valueOf) if $w;
-    //       $collefts[$j]  = max($collefts[$j],  $l-&gt;valueOf) if $l;
-    //       $colrights[$j] = max($colrights[$j], $r-&gt;valueOf) if $r; }
-    //     if (($$cell{rowspan} || 1) == 1) {
-    //       $rowh = max($rowh, $h-&gt;valueOf) if $h;
-    //       $rowd = max($rowd, $d-&gt;valueOf) if $d;
-    //       $rowt = max($rowt, $t-&gt;valueOf) if $t;
-    //       $rowb = max($rowb, $b-&gt;valueOf) if $b; }
-    //     else { }    # Ditto spanned rows
-    //   }
-    //   $$row{cheight}  = Dimension($rowh)-&gt;larger($hs);
-    //   $$row{cdepth}   = Dimension($rowd)-&gt;larger($ds);
-    //   $$row{tpadding} = Dimension($rowt);
-    //   $$row{bpadding} = Dimension($rowb);
-    //   # NOTE: Should be storing column widths to; individually, as well as per-column!
-    //   push(@rowheights, $rowh + $rowd); }    # somehow our heights are way too short????
-    // ## Now compute the positions
-    // my @rowpos = ();
-    // my @colpos = ();
-    // my $y      = 0;
-    // # Row &amp; column positions: left,top
-    // for (my $i = 0 ; $i &lt; scalar(@rowheights) ; $i++) {
-    //   my $row = $rows[$i];
-    //   $y += $$row{tpadding}-&gt;valueOf if $$row{tpadding};
-    //   $rowpos[$i] = Dimension($y);
-    //   $y += $$row{cheight}-&gt;valueOf  if $$row{cheight};
-    //   $y += $$row{cdepth}-&gt;valueOf   if $$row{cdepth};
-    //   $y += $$row{bpadding}-&gt;valueOf if $$row{bpadding}; }
-    // my $x = 0;
-    // for (my $j = 0 ; $j &lt; scalar(@colwidths) ; $j++) {
-    //   $x += $collefts[$j];
-    //   $colpos[$j] = Dimension($x);
-    //   $x += $colwidths[$j];
-    //   $x += $colrights[$j]; }
-    // $$self{cwidth}       = Dimension($x);
-    // $$self{cheight}      = Dimension($y);    # or account for vertical position of array as a whole?
-    // $$self{cdepth}       = Dimension(0);
-    // @colwidths           = map { Dimension($_); } @colwidths;
-    // @rowheights          = map { Dimension($_); } @rowheights;
-    // $$self{columnwidths} = [@colwidths];
-    // $$self{rowheights}   = [@rowheights];
+        <span class="kw">if </span>cell.colspan.unwrap_or(<span class="number">1</span>) == <span class="number">1 </span>{
+          <span class="kw">if </span>w &gt; <span class="number">0 </span>{
+            colwidths_j = w.max(colwidths_j); }
+          <span class="kw">if </span>l &gt; <span class="number">0 </span>{
+            collefts_j  =  l.max(collefts_j); }
+          <span class="kw">if </span>r &gt; <span class="number">0 </span>{
+            colrights_j = r.max(colrights_j); }
+        }
+        <span class="kw">if </span>cell.rowspan.unwrap_or(<span class="number">1</span>) == <span class="number">1 </span>{
+          rowh = rowh.max(h);
+          rowd = rowd.max(d);
+          rowt = rowt.max(t <span class="kw">as </span>i64);
+          rowb = rowb.max(b <span class="kw">as </span>i64);
+        } <span class="kw">else </span>{ } <span class="comment">// Ditto spanned rows
+        </span>colwidths.push(colwidths_j);
+        collefts.push(collefts_j);
+        colrights.push(colrights_j);
+      }
+      row.cached_height  = <span class="prelude-val">Some</span>(Dimension::new(rowh).larger(hs));
+      row.cached_depth   = <span class="prelude-val">Some</span>(Dimension::new(rowd).larger(ds));
+      row.top_padding = <span class="prelude-val">Some</span>(Dimension::new(rowt));
+      row.bottom_padding = <span class="prelude-val">Some</span>(Dimension::new(rowb));
+      <span class="comment">// NOTE: Should be storing column widths to; individually, as well as per-column!
+      </span>rowheights.push(rowh + rowd);
+    }    <span class="comment">// somehow our heights are way too short????
+    // Now compute the positions
+    </span><span class="kw">let </span><span class="kw-2">mut </span>rowpos = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>colpos = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>y      = <span class="number">0</span>;
+    <span class="comment">// Row &amp; column positions: left,top
+    </span><span class="kw">for </span>row <span class="kw">in </span><span class="self">self</span>.rows.iter().take(rowheights.len()) {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(tp) = row.top_padding {
+        y += tp.value_of();
+      }
+      rowpos.push(Dimension::new(y));
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = row.cached_height {
+        y += ch.value_of();
+      }
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(cd) = row.cached_depth {
+        y += cd.value_of();
+      }
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(bp) = row.bottom_padding {
+        y += bp.value_of();
+      }
+    }
+    <span class="kw">let </span><span class="kw-2">mut </span>x = <span class="number">0i64</span>;
+    <span class="kw">for </span>((w,l),r) <span class="kw">in </span>colwidths.iter().zip(collefts.iter()).zip(colrights.iter()) {
+      x += <span class="kw-2">*</span>l <span class="kw">as </span>i64;
+      colpos.push(Dimension::new(x));
+      x += w;
+      x += <span class="kw-2">*</span>r <span class="kw">as </span>i64;
+    }
+    <span class="self">self</span>.cached_width  = <span class="prelude-val">Some</span>(Dimension::new(x));
+    <span class="self">self</span>.cached_height = <span class="prelude-val">Some</span>(Dimension::new(y));    <span class="comment">// or account for vertical position of array as a whole)?
+    </span><span class="self">self</span>.cached_depth  = <span class="prelude-val">Some</span>(Dimension::new(<span class="number">0</span>));
+    <span class="self">self</span>.column_widths = colwidths.iter().map(|v| Dimension::new(<span class="kw-2">*</span>v)).collect();
+    <span class="self">self</span>.row_heights   = rowheights.iter().map(|v| Dimension::new(<span class="kw-2">*</span>v)).collect();
 
-    // for (my $i = 0 ; $i &lt; scalar(@rowheights) ; $i++) {
-    //   my $row   = $rows[$i];
-    //   my @cols  = @{ $$row{columns} };
-    //   my $ncols = scalar(@cols);
-    //   $$row{x}      = $colpos[0]; $$row{y} = $rowpos[$i];
-    //   $$row{cwidth} = Dimension($x);
-    //   for (my $j = 0 ; $j &lt; $ncols ; $j++) {
+    <span class="kw">for </span>(i,row) <span class="kw">in </span><span class="self">self</span>.rows.iter_mut().take(rowheights.len()).enumerate() {
+      <span class="comment">//   my $ncols = scalar(@cols);
+      </span>row.x = <span class="prelude-val">Some</span>(colpos[<span class="number">0</span>]);
+      row.y = <span class="prelude-val">Some</span>(rowpos[i]);
+      row.cached_width = <span class="prelude-val">Some</span>(Dimension::new(x));
+      <span class="kw">let </span>cols  = row.get_columns();
+    <span class="comment">//   for (my $j = 0 ; $j &lt; $ncols ; $j++) {
     //     my $cell = $cols[$j];
     //     my $colx = $colpos[$j];
     //     my $a    = $$cell{align} || &#39;left&#39;;
@@ -2531,9 +2572,10 @@
     //         . &quot; w/ &quot; . join(&#39;,&#39;, map { $_ . &#39;=&#39; . ToString($$cell{$_}); }
     //           (qw(align vattach skipped colspan rowspan))))
     //       if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
-    // } }
+    // }
+    </span>}
 
-    </span><span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(())
   }
 
   <span class="kw">pub fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String,Stored&gt; {
@@ -2565,7 +2607,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::font::Font&gt;&gt;&gt; {
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::font::Font&gt;&gt;&gt; {
     <span class="macro">unimplemented!</span>();
   }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="macro">unimplemented!</span>() }
@@ -2576,10 +2618,10 @@
       state: <span class="kw-2">&amp;mut </span>State,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cwidth.unwrap(), <span class="self">self</span>.cheight.unwrap(), <span class="self">self</span>.cdepth.unwrap()))
+    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cached_width.unwrap(), <span class="self">self</span>.cached_height.unwrap(), <span class="self">self</span>.cached_depth.unwrap()))
   }
 
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">unimplemented!</span>(); <span class="comment">// call the mutable version only, we need to rearrange the alignment first!
   </span>}
   <span class="kw">fn </span>be_absorbed_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document:<span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
