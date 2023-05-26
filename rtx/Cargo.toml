@@ -22,7 +22,7 @@ name = "integration_benchmarks"
 harness = false
 
 [dev-dependencies]
-criterion = "0.3.0"
+criterion = "0.5.1"
 
 [dependencies]
 log = "0.4"
