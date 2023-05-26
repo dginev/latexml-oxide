@@ -143,12 +143,9 @@ impl Object for KeyVals {
     Ok(new.into())
   }
 }
+
 impl BoxOps for KeyVals {
-  fn get_properties(&self) -> &HashMap<String, Stored> { unimplemented!() }
-  fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { unimplemented!() }
-  fn get_property_bool(&self, _key: &str) -> bool { unimplemented!() }
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
-  fn has_property(&self, _key: &str) -> bool { unimplemented!() }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     unimplemented!();
   }
