@@ -362,6 +362,17 @@
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
 </pre><pre class="rust"><code><span class="doccomment">//! The Core of rtx - roughly the equivalent of TeX conversion.
 
 </span><span class="attr">#![allow(missing_docs)]
@@ -428,6 +439,7 @@
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -445,6 +457,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
+
+<span class="kw">pub static </span>NO_PROPERTIES : Lazy&lt;HashMap&lt;String,Stored&gt;&gt; = Lazy::new(HashMap::default);
 
 <span class="doccomment">/// The Core conversion runtime
 </span><span class="kw">pub struct </span>Core {
@@ -534,16 +548,22 @@
   <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Digested&gt; { <span class="macro">unimplemented!</span>() }
   <span class="doccomment">/// absorb the current object into the `Document` XML - returning the corresponding nodes
   </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt;;
+  <span class="doccomment">/// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
+  </span><span class="kw">fn </span>be_absorbed_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; { <span class="macro">unimplemented!</span>(); }
   <span class="doccomment">/// build a string representation of the underlying digested data
   </span><span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt;;
   <span class="doccomment">/// get the underlying tokens (preceding digestion)
   </span><span class="kw">fn </span>get_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt; { <span class="prelude-val">None </span>}
   <span class="doccomment">/// get the map of named properties
-  </span><span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;;
+  </span><span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; {
+    <span class="kw-2">&amp;</span>NO_PROPERTIES
+  }
   <span class="doccomment">/// get a mutable reference to the map of named properties
   </span><span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String, Stored&gt; { <span class="macro">unimplemented!</span>() }
   <span class="doccomment">/// set a named property (allows all `Stored` types for values)
-  </span><span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T);
+  </span><span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="self">self</span>.get_properties_mut().insert(key.to_string(), value.into());
+  }
   <span class="doccomment">/// get a single named property (with special &quot;isSpace&quot; check)
   </span><span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
     <span class="kw">if </span>key == <span class="string">&quot;isSpace&quot; </span>{
@@ -571,9 +591,11 @@
     <span class="self">self</span>.get_properties_mut().get_mut(key)
   }
   <span class="doccomment">/// checks if a property key has been set
-  </span><span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool;
+  </span><span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool { <span class="self">self</span>.get_properties().contains_key(key) }
   <span class="doccomment">/// obtains a boolean property value (false unless `Stored::Bool`)
-  </span><span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str) -&gt; bool;
+  </span><span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="macro">matches!</span>(<span class="self">self</span>.get_properties().get(key), <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)))
+  }
   <span class="doccomment">/// obtains the &quot;body&quot; of a digested object which captured it
   </span><span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
     <span class="macro">Error!</span>(
@@ -685,11 +707,11 @@
   }
 
   <span class="doccomment">/// deprecated/to be revisited - computes and caches the size of a box-like object
-  </span><span class="kw">fn </span>compute_size_store(
+  </span><span class="kw">fn </span>compute_size_and_cache(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     <span class="kw-2">mut </span>options: HashMap&lt;String, Stored&gt;,
     state: <span class="kw-2">&amp;mut </span>State,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">for </span>key <span class="kw">in </span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>, <span class="string">&quot;vattach&quot;</span>, <span class="string">&quot;layout&quot;</span>] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = <span class="self">self</span>.get_property(key) {
         options.insert(String::from(key), v.into_owned());
@@ -707,7 +729,7 @@
     <span class="kw">if </span>!<span class="self">self</span>.has_property(<span class="string">&quot;cdepth&quot;</span>) {
       <span class="self">self</span>.set_property(<span class="string">&quot;cdepth&quot;</span>, d);
     }
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>((w,h,d))
   }
 
   <span class="doccomment">/// computes and returns the size of a box-like object

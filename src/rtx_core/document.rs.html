@@ -3877,7 +3877,7 @@
         Alignment(<span class="kw-2">ref </span>alignment) =&gt; {
           <span class="self">self</span>.set_box_to_absorb(<span class="prelude-val">Some</span>((<span class="kw-2">*</span>front_box).clone()));
           <span class="self">self</span>.init_constructed_nodes();
-          alignment.borrow_mut().be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+          alignment.borrow_mut().be_absorbed_mut(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="comment">// record these for OUTER caller!
           // but return only the most recent set
           </span>{

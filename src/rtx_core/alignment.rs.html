@@ -1776,6 +1776,30 @@
 <a href="#1776" id="1776">1776</a>
 <a href="#1777" id="1777">1777</a>
 <a href="#1778" id="1778">1778</a>
+<a href="#1779" id="1779">1779</a>
+<a href="#1780" id="1780">1780</a>
+<a href="#1781" id="1781">1781</a>
+<a href="#1782" id="1782">1782</a>
+<a href="#1783" id="1783">1783</a>
+<a href="#1784" id="1784">1784</a>
+<a href="#1785" id="1785">1785</a>
+<a href="#1786" id="1786">1786</a>
+<a href="#1787" id="1787">1787</a>
+<a href="#1788" id="1788">1788</a>
+<a href="#1789" id="1789">1789</a>
+<a href="#1790" id="1790">1790</a>
+<a href="#1791" id="1791">1791</a>
+<a href="#1792" id="1792">1792</a>
+<a href="#1793" id="1793">1793</a>
+<a href="#1794" id="1794">1794</a>
+<a href="#1795" id="1795">1795</a>
+<a href="#1796" id="1796">1796</a>
+<a href="#1797" id="1797">1797</a>
+<a href="#1798" id="1798">1798</a>
+<a href="#1799" id="1799">1799</a>
+<a href="#1800" id="1800">1800</a>
+<a href="#1801" id="1801">1801</a>
+<a href="#1802" id="1802">1802</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -2145,152 +2169,6 @@
   <span class="kw">pub fn </span>is_in_tabular_head(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="self">self</span>.in_tabular_head
   }
-  <span class="kw">pub fn </span>be_absorbed(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document:<span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
-    <span class="kw">let </span>ismath = <span class="self">self</span>.is_math;
-    <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
-    <span class="kw">let </span>rows = <span class="kw-2">&amp;mut </span><span class="self">self</span>.rows;
-    <span class="kw">if </span>rows.is_empty() {
-      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new())
-    }
-
-    <span class="comment">// # Guard via the absorb limit to avoid infinite loops
-    // TODO
-    // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $STATE-&gt;lookupValue(&quot;absorb_count&quot;) || 0;
-    //   $STATE-&gt;assignValue(absorb_count =&gt; ++$absorb_counter, &quot;global&quot;);
-    //   if ($absorb_counter &gt; $LaTeXML::ABSORB_LIMIT) {
-    //     Fatal(&quot;timeout&quot;, &quot;absorb_limit&quot;, $self,
-    //       &quot;Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?&quot;); } }
-
-    // We _should_ attach boxes to the alignment and rows,
-    // but (ATM) we&quot;ve only got sensible boxes for the cells.
-      </span><span class="kw">let </span>attrs   = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attrs)) = <span class="self">self</span>.properties.remove(<span class="string">&quot;attributes&quot;</span>) {
-        attrs
-      } <span class="kw">else </span>{
-        HashMap::default()
-      };
-    <span class="kw">let </span>open_attrs = attrs;
-    <span class="comment">// TODO:
-    // open_attrs.insert(&quot;cwidth&quot;, self.cwidth);
-    // open_attrs.insert(&quot;cheight&quot;, self.cheight);
-    // open_attrs.insert(&quot;cdepth&quot;, self.cdepth);
-    // open_attrs.insert(&quot;rowheights&quot;, self.rowheights);
-    // open_attrs.insert(&quot;columnwidths&quot;, self.columnwidths);
-    </span><span class="kw">let </span>open_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_container;
-    open_container_fn(document, open_attrs, state)<span class="question-mark">?</span>;
-
-    <span class="kw">for </span>row <span class="kw">in </span>rows {
-      <span class="kw">let </span>vpad_opt = row.get_padding().copied();
-      <span class="comment">//     # Which properties do we expose to the constructor?
-      </span><span class="kw">let </span>open_row_attrs = HashMap::default();
-      <span class="comment">//     &quot;xml:id&quot; =&gt; $$row{id}, tags =&gt; $$row{tags},
-      //     x      =&gt; $$row{x}, y =&gt; $$row{y},
-      //     cwidth =&gt; $$row{cwidth}, cheight =&gt; $$row{cheight}, cdepth =&gt; $$row{cdepth},
-      //   );
-      </span><span class="kw">let </span>open_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_row;
-      open_row_fn(document, open_row_attrs, state)<span class="question-mark">?</span>;
-      <span class="kw">for </span>before <span class="kw">in </span>row.before.iter() {
-        document.absorb(before, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-      }
-      <span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
-        <span class="kw">if </span>cell.skipped {
-          <span class="kw">continue</span>;
-        }
-        <span class="comment">// Normalize the border attribute
-        </span><span class="kw">let </span><span class="kw-2">mut </span>border = String::new();
-        <span class="kw">let </span><span class="kw-2">mut </span>border_iter = cell.border.chars().filter(|c| !c.is_whitespace()).peekable();
-        <span class="kw">while let </span><span class="prelude-val">Some</span>(border_c) =  border_iter.next() {
-          border.push(border_c);
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(next_c) = border_iter.peek() {
-            <span class="kw">if </span>border_c != <span class="kw-2">*</span>next_c {
-              border.push(<span class="string">&#39; &#39;</span>);
-            }
-          }
-        }
-        <span class="kw">let </span>empty = cell.empty || <span class="macro">dbg!</span>(<span class="kw-2">&amp;</span>cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
-        <span class="kw">let </span>open_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_column;
-        <span class="kw">let </span><span class="kw-2">mut </span>cell_attrs = HashMap::default();
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.align {
-          cell_attrs.insert(String::from(<span class="string">&quot;align&quot;</span>), align.name().to_owned());
-        };
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>vattach) = cell.vattach {
-          cell_attrs.insert(String::from(<span class="string">&quot;vattach&quot;</span>), vattach.clone());
-        }
-        <span class="comment">// TODO: add to cell_attrs
-        //  width =&gt; $$cell{width},
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(vpad) = vpad_opt {
-          cell_attrs.insert(String::from(<span class="string">&quot;cssstyle&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;padding-bottom: {vpad}&quot;</span>));
-        }
-        <span class="comment">//       (($$cell{colspan} || 1) != 1 ? (colspan  =&gt; $$cell{colspan})                         : ()),
-        //       (($$cell{rowspan} || 1) != 1 ? (rowspan  =&gt; $$cell{rowspan})                         : ()),
-        </span><span class="kw">if </span>!border.is_empty() { cell_attrs.insert(String::from(<span class="string">&quot;border&quot;</span>), border); }
-        <span class="kw">if </span>cell.thead_in_column || cell.thead_in_row {
-          <span class="kw">let </span><span class="kw-2">mut </span>thead = String::new();
-          <span class="kw">if </span>cell.thead_in_column {
-            thead.push_str(Axis::Column.name());
-            <span class="kw">if </span>cell.thead_in_row {
-              thead.push(<span class="string">&#39; &#39;</span>);
-            }
-          }
-          <span class="kw">if </span>cell.thead_in_row {
-            thead.push_str(Axis::Row.name());
-          }
-          <span class="kw">if </span>!thead.is_empty() {
-            cell_attrs.insert(String::from(<span class="string">&quot;thead&quot;</span>), thead);
-          }
-        }
-        <span class="comment">//       # Which properties do we expose to the constructor?
-        //       x      =&gt; $$cell{x}, y =&gt; $$cell{y},
-        //       cwidth =&gt; $$cell{cwidth}, cheight =&gt; $$cell{cheight}, cdepth =&gt; $$cell{cdepth})
-        </span>cell.cell = open_column_fn(document, cell_attrs, state)<span class="question-mark">?</span>;
-        <span class="kw">if </span>!empty {
-          <span class="kw">let </span>box_ref = cell.boxes.as_ref().unwrap();
-          <span class="comment">// local $LaTeXML::BOX
-          </span>document.set_box_to_absorb(<span class="prelude-val">Some</span>(box_ref.clone()));
-          <span class="kw">if </span>ismath {<span class="comment">// Hacky!
-            </span>document.open_element(<span class="string">&quot;ltx:XMArg&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;rule&quot; </span>=&gt; <span class="string">&quot;Anything&quot;</span>)), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-          }
-          document.absorb(box_ref, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-          <span class="kw">if </span>ismath {<span class="comment">// Hacky!
-            </span>document.close_element(<span class="string">&quot;ltx:XMArg&quot;</span>, state)<span class="question-mark">?</span>;
-          }
-          <span class="comment">// expire local $LaTeXML::BOX
-          </span>document.expire_box_to_absorb();
-        }
-        <span class="kw">let </span>close_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_column;
-        close_column_fn(document, state)<span class="question-mark">?</span>;
-      }
-      <span class="kw">for </span>after <span class="kw">in </span>row.after.iter() {
-        document.absorb(after, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-      }
-      <span class="kw">let </span>close_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_row;
-      close_row_fn(document, state)<span class="question-mark">?</span>;
-    }
-    <span class="kw">let </span>close_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_container;
-    <span class="kw">let </span>node_opt = close_container_fn(document, state)<span class="question-mark">?</span>;
-
-    <span class="comment">// If we&#39;re not nested inside another tabular
-    // [This should be an afterConstruct somewhere?]
-    // If requested to guess headers &amp; we&#39;re not nested inside another tabular
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = node_opt {
-      <span class="kw">if </span>document.findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state).is_empty() {
-        <span class="kw">let </span>hashead = !document.findnodes(<span class="string">&quot;descendant::ltx:td[@thead]&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state).is_empty();
-        <span class="comment">// If requested &amp;&amp; no cells are already marked as being thead, apply heuristic
-        </span><span class="kw">if </span><span class="self">self</span>.properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) &amp;&amp; !hashead {
-          guess_alignment_headers(document, <span class="kw-2">&amp;mut </span>node, <span class="self">self</span>, state)<span class="question-mark">?</span>;
-        }
-        <span class="comment">// Otherwise, if not a math array, group thead &amp; tbody rows
-        // TODO: Re-design asking the outer Whatsit about &quot;!body-&gt;isMath&quot;
-        </span><span class="kw">else if </span>hashead &amp;&amp; !ismath { <span class="comment">// in case already marked w/thead|tbody
-          </span>alignment_regroup_rows(document, <span class="kw-2">&amp;</span>node, state)<span class="question-mark">?</span>;
-        }
-      }
-      <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node])
-    } <span class="kw">else </span>{
-      <span class="prelude-val">Ok</span>(Vec::new())
-    }
-
-  }
 
   <span class="doccomment">///======================================================================
   /// Normalize an alignment before construction
@@ -2658,16 +2536,6 @@
     </span><span class="prelude-val">Ok</span>(())
   }
 
-
-  <span class="kw">pub fn </span>compute_size(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    _options: HashMap&lt;String, Stored&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
-    <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cwidth.unwrap(), <span class="self">self</span>.cheight.unwrap(), <span class="self">self</span>.cdepth.unwrap()))
-  }
-
   <span class="kw">pub fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String,Stored&gt; {
     <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties
   }
@@ -2680,6 +2548,186 @@
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::locator::Locator&gt;&gt; {
       <span class="prelude-val">None
   </span>}
+}
+
+<span class="kw">impl </span>BoxOps <span class="kw">for </span>Alignment {
+  <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; {
+    <span class="kw-2">&amp;</span><span class="self">self</span>.properties
+  }
+  <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String, Stored&gt; {
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties
+  }
+
+  <span class="kw">fn </span>compute_size(
+      <span class="kw-2">&amp;</span><span class="self">self</span>,
+      _options: HashMap&lt;String, Stored&gt;,
+      _state: <span class="kw-2">&amp;mut </span>State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+    <span class="macro">unimplemented!</span>();
+  }
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::font::Font&gt;&gt;&gt; {
+    <span class="macro">unimplemented!</span>();
+  }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="macro">unimplemented!</span>() }
+
+  <span class="kw">fn </span>compute_size_and_cache(
+      <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+      _options: HashMap&lt;String, Stored&gt;,
+      state: <span class="kw-2">&amp;mut </span>State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+    <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cwidth.unwrap(), <span class="self">self</span>.cheight.unwrap(), <span class="self">self</span>.cdepth.unwrap()))
+  }
+
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="macro">unimplemented!</span>(); <span class="comment">// call the mutable version only, we need to rearrange the alignment first!
+  </span>}
+  <span class="kw">fn </span>be_absorbed_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document:<span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+    <span class="kw">let </span>ismath = <span class="self">self</span>.is_math;
+    <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>rows = <span class="kw-2">&amp;mut </span><span class="self">self</span>.rows;
+    <span class="kw">if </span>rows.is_empty() {
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new())
+    }
+
+    <span class="comment">// # Guard via the absorb limit to avoid infinite loops
+    // TODO
+    // if ($LaTeXML::ABSORB_LIMIT) {
+    //   my $absorb_counter = $STATE-&gt;lookupValue(&quot;absorb_count&quot;) || 0;
+    //   $STATE-&gt;assignValue(absorb_count =&gt; ++$absorb_counter, &quot;global&quot;);
+    //   if ($absorb_counter &gt; $LaTeXML::ABSORB_LIMIT) {
+    //     Fatal(&quot;timeout&quot;, &quot;absorb_limit&quot;, $self,
+    //       &quot;Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?&quot;); } }
+
+    // We _should_ attach boxes to the alignment and rows,
+    // but (ATM) we&quot;ve only got sensible boxes for the cells.
+      </span><span class="kw">let </span>attrs   = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attrs)) = <span class="self">self</span>.properties.remove(<span class="string">&quot;attributes&quot;</span>) {
+        attrs
+      } <span class="kw">else </span>{
+        HashMap::default()
+      };
+    <span class="kw">let </span>open_attrs = attrs;
+    <span class="comment">// TODO:
+    // open_attrs.insert(&quot;cwidth&quot;, self.cwidth);
+    // open_attrs.insert(&quot;cheight&quot;, self.cheight);
+    // open_attrs.insert(&quot;cdepth&quot;, self.cdepth);
+    // open_attrs.insert(&quot;rowheights&quot;, self.rowheights);
+    // open_attrs.insert(&quot;columnwidths&quot;, self.columnwidths);
+    </span><span class="kw">let </span>open_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_container;
+    open_container_fn(document, open_attrs, state)<span class="question-mark">?</span>;
+
+    <span class="kw">for </span>row <span class="kw">in </span>rows {
+      <span class="kw">let </span>vpad_opt = row.get_padding().copied();
+      <span class="comment">//     # Which properties do we expose to the constructor?
+      </span><span class="kw">let </span>open_row_attrs = HashMap::default();
+      <span class="comment">//     &quot;xml:id&quot; =&gt; $$row{id}, tags =&gt; $$row{tags},
+      //     x      =&gt; $$row{x}, y =&gt; $$row{y},
+      //     cwidth =&gt; $$row{cwidth}, cheight =&gt; $$row{cheight}, cdepth =&gt; $$row{cdepth},
+      //   );
+      </span><span class="kw">let </span>open_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_row;
+      open_row_fn(document, open_row_attrs, state)<span class="question-mark">?</span>;
+      <span class="kw">for </span>before <span class="kw">in </span>row.before.iter() {
+        document.absorb(before, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      }
+      <span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
+        <span class="kw">if </span>cell.skipped {
+          <span class="kw">continue</span>;
+        }
+        <span class="comment">// Normalize the border attribute
+        </span><span class="kw">let </span><span class="kw-2">mut </span>border = String::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>border_iter = cell.border.chars().filter(|c| !c.is_whitespace()).peekable();
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(border_c) =  border_iter.next() {
+          border.push(border_c);
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(next_c) = border_iter.peek() {
+            <span class="kw">if </span>border_c != <span class="kw-2">*</span>next_c {
+              border.push(<span class="string">&#39; &#39;</span>);
+            }
+          }
+        }
+        <span class="kw">let </span>empty = cell.empty || <span class="macro">dbg!</span>(<span class="kw-2">&amp;</span>cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        <span class="kw">let </span>open_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_column;
+        <span class="kw">let </span><span class="kw-2">mut </span>cell_attrs = HashMap::default();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.align {
+          cell_attrs.insert(String::from(<span class="string">&quot;align&quot;</span>), align.name().to_owned());
+        };
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>vattach) = cell.vattach {
+          cell_attrs.insert(String::from(<span class="string">&quot;vattach&quot;</span>), vattach.clone());
+        }
+        <span class="comment">// TODO: add to cell_attrs
+        //  width =&gt; $$cell{width},
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(vpad) = vpad_opt {
+          cell_attrs.insert(String::from(<span class="string">&quot;cssstyle&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;padding-bottom: {vpad}&quot;</span>));
+        }
+        <span class="comment">//       (($$cell{colspan} || 1) != 1 ? (colspan  =&gt; $$cell{colspan})                         : ()),
+        //       (($$cell{rowspan} || 1) != 1 ? (rowspan  =&gt; $$cell{rowspan})                         : ()),
+        </span><span class="kw">if </span>!border.is_empty() { cell_attrs.insert(String::from(<span class="string">&quot;border&quot;</span>), border); }
+        <span class="kw">if </span>cell.thead_in_column || cell.thead_in_row {
+          <span class="kw">let </span><span class="kw-2">mut </span>thead = String::new();
+          <span class="kw">if </span>cell.thead_in_column {
+            thead.push_str(Axis::Column.name());
+            <span class="kw">if </span>cell.thead_in_row {
+              thead.push(<span class="string">&#39; &#39;</span>);
+            }
+          }
+          <span class="kw">if </span>cell.thead_in_row {
+            thead.push_str(Axis::Row.name());
+          }
+          <span class="kw">if </span>!thead.is_empty() {
+            cell_attrs.insert(String::from(<span class="string">&quot;thead&quot;</span>), thead);
+          }
+        }
+        <span class="comment">//       # Which properties do we expose to the constructor?
+        //       x      =&gt; $$cell{x}, y =&gt; $$cell{y},
+        //       cwidth =&gt; $$cell{cwidth}, cheight =&gt; $$cell{cheight}, cdepth =&gt; $$cell{cdepth})
+        </span>cell.cell = open_column_fn(document, cell_attrs, state)<span class="question-mark">?</span>;
+        <span class="kw">if </span>!empty {
+          <span class="kw">let </span>box_ref = cell.boxes.as_ref().unwrap();
+          <span class="comment">// local $LaTeXML::BOX
+          </span>document.set_box_to_absorb(<span class="prelude-val">Some</span>(box_ref.clone()));
+          <span class="kw">if </span>ismath {<span class="comment">// Hacky!
+            </span>document.open_element(<span class="string">&quot;ltx:XMArg&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;rule&quot; </span>=&gt; <span class="string">&quot;Anything&quot;</span>)), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          }
+          document.absorb(box_ref, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          <span class="kw">if </span>ismath {<span class="comment">// Hacky!
+            </span>document.close_element(<span class="string">&quot;ltx:XMArg&quot;</span>, state)<span class="question-mark">?</span>;
+          }
+          <span class="comment">// expire local $LaTeXML::BOX
+          </span>document.expire_box_to_absorb();
+        }
+        <span class="kw">let </span>close_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_column;
+        close_column_fn(document, state)<span class="question-mark">?</span>;
+      }
+      <span class="kw">for </span>after <span class="kw">in </span>row.after.iter() {
+        document.absorb(after, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      }
+      <span class="kw">let </span>close_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_row;
+      close_row_fn(document, state)<span class="question-mark">?</span>;
+    }
+    <span class="kw">let </span>close_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_container;
+    <span class="kw">let </span>node_opt = close_container_fn(document, state)<span class="question-mark">?</span>;
+
+    <span class="comment">// If we&#39;re not nested inside another tabular
+    // [This should be an afterConstruct somewhere?]
+    // If requested to guess headers &amp; we&#39;re not nested inside another tabular
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = node_opt {
+      <span class="kw">if </span>document.findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state).is_empty() {
+        <span class="kw">let </span>hashead = !document.findnodes(<span class="string">&quot;descendant::ltx:td[@thead]&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state).is_empty();
+        <span class="comment">// If requested &amp;&amp; no cells are already marked as being thead, apply heuristic
+        </span><span class="kw">if </span><span class="self">self</span>.properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) &amp;&amp; !hashead {
+          guess_alignment_headers(document, <span class="kw-2">&amp;mut </span>node, <span class="self">self</span>, state)<span class="question-mark">?</span>;
+        }
+        <span class="comment">// Otherwise, if not a math array, group thead &amp; tbody rows
+        // TODO: Re-design asking the outer Whatsit about &quot;!body-&gt;isMath&quot;
+        </span><span class="kw">else if </span>hashead &amp;&amp; !ismath { <span class="comment">// in case already marked w/thead|tbody
+          </span>alignment_regroup_rows(document, <span class="kw-2">&amp;</span>node, state)<span class="question-mark">?</span>;
+        }
+      }
+      <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node])
+    } <span class="kw">else </span>{
+      <span class="prelude-val">Ok</span>(Vec::new())
+    }
+
+  }
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>Alignment {

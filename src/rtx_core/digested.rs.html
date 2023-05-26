@@ -531,6 +531,11 @@
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Interface layer for the full range of digested objects
 </span><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -560,8 +565,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 
-<span class="doccomment">/// An `Arc`-guarded abstraction for any object encountered at the &quot;digested&quot; phase of processing
-</span><span class="comment">// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
+<span class="doccomment">/// An `Rc`-guarded abstraction for any object encountered at the &quot;digested&quot; phase of processing
+</span><span class="comment">// Each variant is wrapped in an `Rc`, for cheap(er) cloning when passing around
 // these objects to various auxiliary state (e.g. bookkeeping current box),
 // but also for repeatedly passing them as owned into binding closures
 // while also storing them in their owner Box.
@@ -579,7 +584,7 @@
   </span>TBox(Tbox),
   <span class="doccomment">/// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   </span>Whatsit(RefCell&lt;Whatsit&gt;),
-  <span class="doccomment">/// A TeX Alignment
+  <span class="doccomment">/// A TeX Alignment (with interior mutability, for setters invoked while stored in state)
   </span>Alignment(RefCell&lt;Alignment&gt;),
   <span class="doccomment">/// A list of Digested data
   </span>List(List),
@@ -844,7 +849,7 @@
       List(l) =&gt; l.be_absorbed(document, state),
       Comment(c) =&gt; c.be_absorbed(document, state),
       Whatsit(w) =&gt; w.borrow().be_absorbed(document, state),
-      Alignment(w) =&gt; w.borrow_mut().be_absorbed(document, state),
+      Alignment(w) =&gt; w.borrow_mut().be_absorbed_mut(document, state),
       KeyVals(kvs) =&gt; kvs.be_absorbed(document, state),
       Postponed(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
       RegisterValue(<span class="kw-2">ref </span>_rv) =&gt; <span class="macro">unimplemented!</span>(),
@@ -857,13 +862,18 @@
       TBox(<span class="kw-2">ref </span>b) =&gt; b.get_properties(),
       List(<span class="kw-2">ref </span>l) =&gt; l.get_properties(),
       KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.get_properties(),
-      Whatsit(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(), <span class="comment">// Oooof; w.borrow().get_properties(),
-      </span>Alignment(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(), <span class="comment">// Oooof; w.borrow().get_properties(),
-      </span>Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      <span class="comment">// Oooof lifetimes; w.borrow().get_properties(),
+      </span>Whatsit(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(),
+      <span class="comment">// Oooof lifetimes; w.borrow().get_properties(),
+      </span>Alignment(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(),
+      Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
+  <span class="comment">// Note: get_properties_mut is not implemented, as it would generically require a RefCell
+  // around each type of DigestedData. Currently we are trying to keep some immutability guarantees.
+  // at the Digested interface
 
-  <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+  </span><span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="comment">// TODO: This is only possible if we have interior mutability for *ALL* Digested variants
       // i.e. Rc&lt;RefCell&lt;Tbox&gt;&gt;, Rc&lt;RefCell&lt;List&gt;&gt;, etc.
@@ -976,7 +986,7 @@
       TBox(<span class="kw-2">ref </span>b) =&gt; b.compute_size(options, state),
       List(<span class="kw-2">ref </span>l) =&gt; l.compute_size(options, state),
       KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.compute_size(options, state),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().compute_size(options, state),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size(options, state),
       Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size(options, state),
       Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
     }
