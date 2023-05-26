@@ -27,8 +27,8 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::BoxOps;
 
-/// An `Arc`-guarded abstraction for any object encountered at the "digested" phase of processing
-// Each variant is wrapped in an `Arc`, for cheap(er) cloning when passing around
+/// An `Rc`-guarded abstraction for any object encountered at the "digested" phase of processing
+// Each variant is wrapped in an `Rc`, for cheap(er) cloning when passing around
 // these objects to various auxiliary state (e.g. bookkeeping current box),
 // but also for repeatedly passing them as owned into binding closures
 // while also storing them in their owner Box.
@@ -46,7 +46,7 @@ pub enum DigestedData {
   TBox(Tbox),
   /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   Whatsit(RefCell<Whatsit>),
-  /// A TeX Alignment
+  /// A TeX Alignment (with interior mutability, for setters invoked while stored in state)
   Alignment(RefCell<Alignment>),
   /// A list of Digested data
   List(List),
@@ -311,7 +311,7 @@ impl BoxOps for Digested {
       List(l) => l.be_absorbed(document, state),
       Comment(c) => c.be_absorbed(document, state),
       Whatsit(w) => w.borrow().be_absorbed(document, state),
-      Alignment(w) => w.borrow_mut().be_absorbed(document, state),
+      Alignment(w) => w.borrow_mut().be_absorbed_mut(document, state),
       KeyVals(kvs) => kvs.be_absorbed(document, state),
       Postponed(_) => unimplemented!(),
       RegisterValue(ref _rv) => unimplemented!(),
@@ -324,11 +324,16 @@ impl BoxOps for Digested {
       TBox(ref b) => b.get_properties(),
       List(ref l) => l.get_properties(),
       KeyVals(ref kvs) => kvs.get_properties(),
-      Whatsit(ref _w) => unimplemented!(), // Oooof; w.borrow().get_properties(),
-      Alignment(ref _w) => unimplemented!(), // Oooof; w.borrow().get_properties(),
+      // Oooof lifetimes; w.borrow().get_properties(),
+      Whatsit(ref _w) => unimplemented!(),
+      // Oooof lifetimes; w.borrow().get_properties(),
+      Alignment(ref _w) => unimplemented!(),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
+  // Note: get_properties_mut is not implemented, as it would generically require a RefCell
+  // around each type of DigestedData. Currently we are trying to keep some immutability guarantees.
+  // at the Digested interface
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     match *self.0 {
@@ -443,7 +448,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.compute_size(options, state),
       List(ref l) => l.compute_size(options, state),
       KeyVals(ref kvs) => kvs.compute_size(options, state),
-      Whatsit(ref w) => w.borrow().compute_size(options, state),
+      Whatsit(ref w) => w.borrow_mut().compute_size(options, state),
       Alignment(ref w) => w.borrow_mut().compute_size(options, state),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }

@@ -367,152 +367,6 @@ impl Alignment {
   pub fn is_in_tabular_head(&self) -> bool {
     self.in_tabular_head
   }
-  pub fn be_absorbed(&mut self, document:&mut Document, state: &mut State) -> Result<Vec<Node>> {
-    let ismath = self.is_math;
-    self.normalize_alignment(state)?;
-    let rows = &mut self.rows;
-    if rows.is_empty() {
-      return Ok(Vec::new())
-    }
-
-    // # Guard via the absorb limit to avoid infinite loops
-    // TODO
-    // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $STATE->lookupValue("absorb_count") || 0;
-    //   $STATE->assignValue(absorb_count => ++$absorb_counter, "global");
-    //   if ($absorb_counter > $LaTeXML::ABSORB_LIMIT) {
-    //     Fatal("timeout", "absorb_limit", $self,
-    //       "Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?"); } }
-
-    // We _should_ attach boxes to the alignment and rows,
-    // but (ATM) we"ve only got sensible boxes for the cells.
-      let attrs   = if let Some(Stored::HashString(attrs)) = self.properties.remove("attributes") {
-        attrs
-      } else {
-        HashMap::default()
-      };
-    let open_attrs = attrs;
-    // TODO:
-    // open_attrs.insert("cwidth", self.cwidth);
-    // open_attrs.insert("cheight", self.cheight);
-    // open_attrs.insert("cdepth", self.cdepth);
-    // open_attrs.insert("rowheights", self.rowheights);
-    // open_attrs.insert("columnwidths", self.columnwidths);
-    let open_container_fn = &self.open_container;
-    open_container_fn(document, open_attrs, state)?;
-
-    for row in rows {
-      let vpad_opt = row.get_padding().copied();
-      //     # Which properties do we expose to the constructor?
-      let open_row_attrs = HashMap::default();
-      //     "xml:id" => $$row{id}, tags => $$row{tags},
-      //     x      => $$row{x}, y => $$row{y},
-      //     cwidth => $$row{cwidth}, cheight => $$row{cheight}, cdepth => $$row{cdepth},
-      //   );
-      let open_row_fn = &self.open_row;
-      open_row_fn(document, open_row_attrs, state)?;
-      for before in row.before.iter() {
-        document.absorb(before, None, state)?;
-      }
-      for cell in row.get_columns_mut() {
-        if cell.skipped {
-          continue;
-        }
-        // Normalize the border attribute
-        let mut border = String::new();
-        let mut border_iter = cell.border.chars().filter(|c| !c.is_whitespace()).peekable();
-        while let Some(border_c) =  border_iter.next() {
-          border.push(border_c);
-          if let Some(next_c) = border_iter.peek() {
-            if border_c != *next_c {
-              border.push(' ');
-            }
-          }
-        }
-        let empty = cell.empty || dbg!(&cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
-        let open_column_fn = &self.open_column;
-        let mut cell_attrs = HashMap::default();
-        if let Some(align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name().to_owned());
-        };
-        if let Some(ref vattach) = cell.vattach {
-          cell_attrs.insert(String::from("vattach"), vattach.clone());
-        }
-        // TODO: add to cell_attrs
-        //  width => $$cell{width},
-        if let Some(vpad) = vpad_opt {
-          cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
-        }
-        //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
-        //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
-        if !border.is_empty() { cell_attrs.insert(String::from("border"), border); }
-        if cell.thead_in_column || cell.thead_in_row {
-          let mut thead = String::new();
-          if cell.thead_in_column {
-            thead.push_str(Axis::Column.name());
-            if cell.thead_in_row {
-              thead.push(' ');
-            }
-          }
-          if cell.thead_in_row {
-            thead.push_str(Axis::Row.name());
-          }
-          if !thead.is_empty() {
-            cell_attrs.insert(String::from("thead"), thead);
-          }
-        }
-        //       # Which properties do we expose to the constructor?
-        //       x      => $$cell{x}, y => $$cell{y},
-        //       cwidth => $$cell{cwidth}, cheight => $$cell{cheight}, cdepth => $$cell{cdepth})
-        cell.cell = open_column_fn(document, cell_attrs, state)?;
-        if !empty {
-          let box_ref = cell.boxes.as_ref().unwrap();
-          // local $LaTeXML::BOX
-          document.set_box_to_absorb(Some(box_ref.clone()));
-          if ismath {// Hacky!
-            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None, state)?;
-          }
-          document.absorb(box_ref, None, state)?;
-          if ismath {// Hacky!
-            document.close_element("ltx:XMArg", state)?;
-          }
-          // expire local $LaTeXML::BOX
-          document.expire_box_to_absorb();
-        }
-        let close_column_fn = &self.close_column;
-        close_column_fn(document, state)?;
-      }
-      for after in row.after.iter() {
-        document.absorb(after, None, state)?;
-      }
-      let close_row_fn = &self.close_row;
-      close_row_fn(document, state)?;
-    }
-    let close_container_fn = &self.close_container;
-    let node_opt = close_container_fn(document, state)?;
-
-    // If we're not nested inside another tabular
-    // [This should be an afterConstruct somewhere?]
-    // If requested to guess headers & we're not nested inside another tabular
-    if let Some(mut node) = node_opt {
-      if document.findnodes("ancestor::ltx:tabular", Some(&node), state).is_empty() {
-        let hashead = !document.findnodes("descendant::ltx:td[@thead]", Some(&node), state).is_empty();
-        // If requested && no cells are already marked as being thead, apply heuristic
-        if self.properties.contains_key("guess_headers") && !hashead {
-          guess_alignment_headers(document, &mut node, self, state)?;
-        }
-        // Otherwise, if not a math array, group thead & tbody rows
-        // TODO: Re-design asking the outer Whatsit about "!body->isMath"
-        else if hashead && !ismath { // in case already marked w/thead|tbody
-          alignment_regroup_rows(document, &node, state)?;
-        }
-      }
-      Ok(vec![node])
-    } else {
-      Ok(Vec::new())
-    }
-
-  }
 
   ///======================================================================
   /// Normalize an alignment before construction
@@ -880,16 +734,6 @@ impl Alignment {
     Ok(())
   }
 
-
-  pub fn compute_size(
-    &mut self,
-    _options: HashMap<String, Stored>,
-    state: &mut State,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
-    self.normalize_alignment(state)?;
-    Ok((self.cwidth.unwrap(), self.cheight.unwrap(), self.cdepth.unwrap()))
-  }
-
   pub fn get_properties_mut(&mut self) -> &mut HashMap<String,Stored> {
     &mut self.properties
   }
@@ -901,6 +745,186 @@ impl Alignment {
 impl Object for Alignment {
   fn get_locator(&self) -> Option<Cow<crate::common::locator::Locator>> {
       None
+  }
+}
+
+impl BoxOps for Alignment {
+  fn get_properties(&self) -> &HashMap<String, Stored> {
+    &self.properties
+  }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> {
+    &mut self.properties
+  }
+
+  fn compute_size(
+      &self,
+      _options: HashMap<String, Stored>,
+      _state: &mut State,
+    ) -> Result<(Dimension, Dimension, Dimension)> {
+    unimplemented!();
+  }
+  fn get_font(&self, state: &mut State) -> Result<Option<Cow<crate::common::font::Font>>> {
+    unimplemented!();
+  }
+  fn get_string(&self, _state: &State) -> Result<Cow<str>> { unimplemented!() }
+
+  fn compute_size_and_cache(
+      &mut self,
+      _options: HashMap<String, Stored>,
+      state: &mut State,
+    ) -> Result<(Dimension, Dimension, Dimension)> {
+    self.normalize_alignment(state)?;
+    Ok((self.cwidth.unwrap(), self.cheight.unwrap(), self.cdepth.unwrap()))
+  }
+
+  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
+    unimplemented!(); // call the mutable version only, we need to rearrange the alignment first!
+  }
+  fn be_absorbed_mut(&mut self, document:&mut Document, state: &mut State) -> Result<Vec<Node>> {
+    let ismath = self.is_math;
+    self.normalize_alignment(state)?;
+    let rows = &mut self.rows;
+    if rows.is_empty() {
+      return Ok(Vec::new())
+    }
+
+    // # Guard via the absorb limit to avoid infinite loops
+    // TODO
+    // if ($LaTeXML::ABSORB_LIMIT) {
+    //   my $absorb_counter = $STATE->lookupValue("absorb_count") || 0;
+    //   $STATE->assignValue(absorb_count => ++$absorb_counter, "global");
+    //   if ($absorb_counter > $LaTeXML::ABSORB_LIMIT) {
+    //     Fatal("timeout", "absorb_limit", $self,
+    //       "Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?"); } }
+
+    // We _should_ attach boxes to the alignment and rows,
+    // but (ATM) we"ve only got sensible boxes for the cells.
+      let attrs   = if let Some(Stored::HashString(attrs)) = self.properties.remove("attributes") {
+        attrs
+      } else {
+        HashMap::default()
+      };
+    let open_attrs = attrs;
+    // TODO:
+    // open_attrs.insert("cwidth", self.cwidth);
+    // open_attrs.insert("cheight", self.cheight);
+    // open_attrs.insert("cdepth", self.cdepth);
+    // open_attrs.insert("rowheights", self.rowheights);
+    // open_attrs.insert("columnwidths", self.columnwidths);
+    let open_container_fn = &self.open_container;
+    open_container_fn(document, open_attrs, state)?;
+
+    for row in rows {
+      let vpad_opt = row.get_padding().copied();
+      //     # Which properties do we expose to the constructor?
+      let open_row_attrs = HashMap::default();
+      //     "xml:id" => $$row{id}, tags => $$row{tags},
+      //     x      => $$row{x}, y => $$row{y},
+      //     cwidth => $$row{cwidth}, cheight => $$row{cheight}, cdepth => $$row{cdepth},
+      //   );
+      let open_row_fn = &self.open_row;
+      open_row_fn(document, open_row_attrs, state)?;
+      for before in row.before.iter() {
+        document.absorb(before, None, state)?;
+      }
+      for cell in row.get_columns_mut() {
+        if cell.skipped {
+          continue;
+        }
+        // Normalize the border attribute
+        let mut border = String::new();
+        let mut border_iter = cell.border.chars().filter(|c| !c.is_whitespace()).peekable();
+        while let Some(border_c) =  border_iter.next() {
+          border.push(border_c);
+          if let Some(next_c) = border_iter.peek() {
+            if border_c != *next_c {
+              border.push(' ');
+            }
+          }
+        }
+        let empty = cell.empty || dbg!(&cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        let open_column_fn = &self.open_column;
+        let mut cell_attrs = HashMap::default();
+        if let Some(align) = cell.align {
+          cell_attrs.insert(String::from("align"), align.name().to_owned());
+        };
+        if let Some(ref vattach) = cell.vattach {
+          cell_attrs.insert(String::from("vattach"), vattach.clone());
+        }
+        // TODO: add to cell_attrs
+        //  width => $$cell{width},
+        if let Some(vpad) = vpad_opt {
+          cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
+        }
+        //       (($$cell{colspan} || 1) != 1 ? (colspan  => $$cell{colspan})                         : ()),
+        //       (($$cell{rowspan} || 1) != 1 ? (rowspan  => $$cell{rowspan})                         : ()),
+        if !border.is_empty() { cell_attrs.insert(String::from("border"), border); }
+        if cell.thead_in_column || cell.thead_in_row {
+          let mut thead = String::new();
+          if cell.thead_in_column {
+            thead.push_str(Axis::Column.name());
+            if cell.thead_in_row {
+              thead.push(' ');
+            }
+          }
+          if cell.thead_in_row {
+            thead.push_str(Axis::Row.name());
+          }
+          if !thead.is_empty() {
+            cell_attrs.insert(String::from("thead"), thead);
+          }
+        }
+        //       # Which properties do we expose to the constructor?
+        //       x      => $$cell{x}, y => $$cell{y},
+        //       cwidth => $$cell{cwidth}, cheight => $$cell{cheight}, cdepth => $$cell{cdepth})
+        cell.cell = open_column_fn(document, cell_attrs, state)?;
+        if !empty {
+          let box_ref = cell.boxes.as_ref().unwrap();
+          // local $LaTeXML::BOX
+          document.set_box_to_absorb(Some(box_ref.clone()));
+          if ismath {// Hacky!
+            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None, state)?;
+          }
+          document.absorb(box_ref, None, state)?;
+          if ismath {// Hacky!
+            document.close_element("ltx:XMArg", state)?;
+          }
+          // expire local $LaTeXML::BOX
+          document.expire_box_to_absorb();
+        }
+        let close_column_fn = &self.close_column;
+        close_column_fn(document, state)?;
+      }
+      for after in row.after.iter() {
+        document.absorb(after, None, state)?;
+      }
+      let close_row_fn = &self.close_row;
+      close_row_fn(document, state)?;
+    }
+    let close_container_fn = &self.close_container;
+    let node_opt = close_container_fn(document, state)?;
+
+    // If we're not nested inside another tabular
+    // [This should be an afterConstruct somewhere?]
+    // If requested to guess headers & we're not nested inside another tabular
+    if let Some(mut node) = node_opt {
+      if document.findnodes("ancestor::ltx:tabular", Some(&node), state).is_empty() {
+        let hashead = !document.findnodes("descendant::ltx:td[@thead]", Some(&node), state).is_empty();
+        // If requested && no cells are already marked as being thead, apply heuristic
+        if self.properties.contains_key("guess_headers") && !hashead {
+          guess_alignment_headers(document, &mut node, self, state)?;
+        }
+        // Otherwise, if not a math array, group thead & tbody rows
+        // TODO: Re-design asking the outer Whatsit about "!body->isMath"
+        else if hashead && !ismath { // in case already marked w/thead|tbody
+          alignment_regroup_rows(document, &node, state)?;
+        }
+      }
+      Ok(vec![node])
+    } else {
+      Ok(Vec::new())
+    }
+
   }
 }
 

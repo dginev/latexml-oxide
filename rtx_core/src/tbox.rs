@@ -146,13 +146,7 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn get_property_bool(&self, key: &str) -> bool {
-    matches!(self.properties.get(key), Some(Stored::Bool(true)))
-  }
-  fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self.properties.insert(key.to_string(), value.into());
-  }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
     // TODO: Should we switch these to symbols? are they used often?
     Ok(Cow::Owned(arena::with(self.text, |text| text.to_string())))

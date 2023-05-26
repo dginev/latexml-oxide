@@ -324,6 +324,7 @@ impl Object for Whatsit {
 
 impl BoxOps for Whatsit {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
     Ok(Cow::Owned(self.revert(state)?.to_string()))
   }
@@ -339,22 +340,6 @@ impl BoxOps for Whatsit {
 
     self.definition.do_absorbtion(document, self, state)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
-  }
-
-  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
-    self.properties.get(key).map(Cow::Borrowed)
-  }
-  fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
-    self.properties.get_mut(key)
-  }
-  fn has_property(&self, key: &str) -> bool { self.properties.contains_key(key) }
-
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self.properties.insert(key.to_string(), value.into());
-  }
-
-  fn get_property_bool(&self, key: &str) -> bool {
-    matches!(self.properties.get(key), Some(Stored::Bool(true)))
   }
   fn get_body(&self) -> Option<Digested> {
     match self.properties.get("body") {

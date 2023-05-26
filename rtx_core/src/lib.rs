@@ -64,6 +64,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::cell::RefCell;
 use std::rc::Rc;
+use once_cell::sync::Lazy;
 use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
@@ -81,6 +82,8 @@ use crate::state::{State, StateOptions};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
+
+pub static NO_PROPERTIES : Lazy<HashMap<String,Stored>> = Lazy::new(HashMap::default);
 
 /// The Core conversion runtime
 pub struct Core {
@@ -170,16 +173,22 @@ pub trait BoxOps: Object {
   fn unlist_ref(&self) -> Vec<&Digested> { unimplemented!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
+  /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
+  fn be_absorbed_mut(&mut self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { unimplemented!(); }
   /// build a string representation of the underlying digested data
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
   /// get the underlying tokens (preceding digestion)
   fn get_tokens(&self) -> Option<&Tokens> { None }
   /// get the map of named properties
-  fn get_properties(&self) -> &HashMap<String, Stored>;
+  fn get_properties(&self) -> &HashMap<String, Stored> {
+    &NO_PROPERTIES
+  }
   /// get a mutable reference to the map of named properties
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
   /// set a named property (allows all `Stored` types for values)
-  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T);
+  fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    self.get_properties_mut().insert(key.to_string(), value.into());
+  }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     if key == "isSpace" {
@@ -207,9 +216,11 @@ pub trait BoxOps: Object {
     self.get_properties_mut().get_mut(key)
   }
   /// checks if a property key has been set
-  fn has_property(&self, key: &str) -> bool;
+  fn has_property(&self, key: &str) -> bool { self.get_properties().contains_key(key) }
   /// obtains a boolean property value (false unless `Stored::Bool`)
-  fn get_property_bool(&self, _key: &str) -> bool;
+  fn get_property_bool(&self, key: &str) -> bool {
+    matches!(self.get_properties().get(key), Some(Stored::Bool(true)))
+  }
   /// obtains the "body" of a digested object which captured it
   fn get_body(&self) -> Option<Digested> {
     Error!(
@@ -321,11 +332,11 @@ pub trait BoxOps: Object {
   }
 
   /// deprecated/to be revisited - computes and caches the size of a box-like object
-  fn compute_size_store(
+  fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<String, Stored>,
     state: &mut State,
-  ) -> Result<()> {
+  ) -> Result<(Dimension, Dimension, Dimension)> {
     for key in ["width", "height", "depth", "vattach", "layout"] {
       if let Some(v) = self.get_property(key) {
         options.insert(String::from(key), v.into_owned());
@@ -343,7 +354,7 @@ pub trait BoxOps: Object {
     if !self.has_property("cdepth") {
       self.set_property("cdepth", d);
     }
-    Ok(())
+    Ok((w,h,d))
   }
 
   /// computes and returns the size of a box-like object
