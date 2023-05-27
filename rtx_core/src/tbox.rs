@@ -146,6 +146,28 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_property(&self,key: &str) -> Option<Cow<Stored>> {
+    let props = &self.properties;
+    if key == "isSpace" {
+      match props.get(key) {
+        Some(value) => Some(Cow::Owned(value.clone())),
+        None => {
+          let tex = self
+            .get_tokens()
+            .map(|tks| tks.clone().untex())
+            .unwrap_or_default(); // !
+          if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
+            // Check the TeX code, not (just) the string!
+            Some(Cow::Owned(Stored::Bool(true)))
+          } else {
+            None
+          }
+        },
+      }
+    } else {
+      props.get(key).map(|v| Cow::Owned(v.clone()))
+    }
+  }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&HashMap<String, Stored>) -> R {
     caller(&self.properties)

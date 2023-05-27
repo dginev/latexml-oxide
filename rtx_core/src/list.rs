@@ -70,6 +70,7 @@ impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn unlist_ref(&self) -> Vec<&Digested> { self.boxes.iter().collect() }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn get_property(&self, key:&str) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&HashMap<String, Stored>) -> R {
     caller(&self.properties)
