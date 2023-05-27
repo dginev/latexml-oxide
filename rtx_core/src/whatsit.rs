@@ -324,6 +324,10 @@ impl Object for Whatsit {
 
 impl BoxOps for Whatsit {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&self.properties)
+  }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
     Ok(Cow::Owned(self.revert(state)?.to_string()))

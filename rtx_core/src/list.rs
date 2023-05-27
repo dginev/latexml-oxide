@@ -70,6 +70,10 @@ impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
   fn unlist_ref(&self) -> Vec<&Digested> { self.boxes.iter().collect() }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&self.properties)
+  }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.properties.insert(key.to_string(), value.into());

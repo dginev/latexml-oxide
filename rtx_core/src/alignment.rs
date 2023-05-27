@@ -409,12 +409,12 @@ impl Alignment {
   /// Compute (approximate) sizes of all cells
   pub fn normalize_cell_sizes(&mut self, state: &mut State) -> Result<()> {
     // Examines: boxes, align, vattach
-    // Sets: cwidth, cheight, cdepth (per cell) & empty
+    // Sets: cached_width, cached_height, cached_depth (per cell) & empty
     for row in &mut self.rows {
       // Do we need to account for any space in the $$row{before} or $$row{after}?
       for cell in row.get_columns_mut() {
         if let Some(ref mut boxes) = &mut cell.boxes {
-          let (w, h, d) //, cw, ch, cd)
+          let (w, h, d , cw, _ch, _cd)
             = boxes.get_size(Some(stored_map!(
               "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
               "vattach" => cell.vattach.clone() )), state)?;
@@ -424,7 +424,7 @@ impl Alignment {
           //     . " csize " . showSize($cw, $ch, $cd)
           //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
           // TODO: We can't do heights and depths yet
-          let empty = w.value_of() < 1 || // h.value_of() < 1 || d.value_of() < 1 ||
+          let empty = cw.value_of() < 1 || // h.value_of() < 1 || d.value_of() < 1 ||
             boxes.unlist_ref().iter().all(|tb| tb.get_property_bool("isSpace")) && !preserved_boxes(boxes);
           cell.width  = Some(w);
           cell.height = Some(h);
@@ -463,13 +463,13 @@ impl Alignment {
         } // don't remove inner rows from math EXCEPT last row!!
         // let (mut pruneh, mut pruned) = (0, 0);
         for (j,col) in row.get_columns().iter().enumerate() {
-          // TODO: add cheight and cdepth
-          // if let Some(cheight) = col.cheight {
-          //   let chv = cheight.value_of();
+          // TODO: add cached_height and cached_depth
+          // if let Some(cached_height) = col.cached_height {
+          //   let chv = cached_height.value_of();
           //   if chv > pruneh { pruneh = chv; }
           // }
-          // if let Some(cdepth) = col.cdepth {
-          //   let cdv = cdepth.value_of();
+          // if let Some(cached_depth) = col.cached_depth {
+          //   let cdv = cached_depth.value_of();
           //   if cdv > pruned {
           //     pruned = cdv;
           //   }
@@ -501,8 +501,8 @@ impl Alignment {
         // let (mut pruneh, mut pruned) = (0, 0);
         for (j,col) in row.get_columns().iter().enumerate() {
           // TODO:
-          //  $pruneh = max($pruneh, $$col{cheight}->value_of) if $$col{cheight};
-          //  $pruned = max($pruned, $$col{cdepth}->value_of)  if $$col{cdepth};
+          //  $pruneh = max($pruneh, $$col{cached_height}->value_of) if $$col{cached_height};
+          //  $pruned = max($pruned, $$col{cached_depth}->value_of)  if $$col{cached_depth};
           //       if (!$$row{pseudorow} && defined $$col{rowspanned}) {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
           let mut converted_border = String::new();
@@ -559,8 +559,8 @@ impl Alignment {
               //       *colspan -= 1;
               //     }
               // }
-              // TODO: cwidth
-              // if let Some(w) = col.cwidth {
+              // TODO: cached_width
+              // if let Some(w) = col.cached_width {
               //   if w > prunew {
               //     prunew = w;
               //   }
@@ -634,12 +634,13 @@ impl Alignment {
       }
     }
     Ok(())}
+
   pub fn normalize_sum_sizes(&mut self) -> Result<()> {
     let mut rowheights = Vec::new();
     let mut colwidths  = Vec::new();
     let mut colrights  = Vec::new();
     let mut collefts   = Vec::new();
-    // Uses cell's cwidth,cheight,cdepth
+    // Uses cell's cached_width,cached_height,cached_depth
     // Computes net row & column sizes & positions
     // add spacing between rows? Or only from \\[..] ?
     let strut = if let Some(Stored::Dimension(ref d)) = self.get_property("strut").as_deref() { *d } else { Dimension::new(0) };
@@ -728,28 +729,32 @@ impl Alignment {
     self.row_heights   = rowheights.iter().map(|v| Dimension::new(*v)).collect();
 
     for (i,row) in self.rows.iter_mut().take(rowheights.len()).enumerate() {
-      //   my $ncols = scalar(@cols);
       row.x = Some(colpos[0]);
       row.y = Some(rowpos[i]);
       row.cached_width = Some(Dimension::new(x));
-      let cols  = row.get_columns();
-    //   for (my $j = 0 ; $j < $ncols ; $j++) {
-    //     my $cell = $cols[$j];
-    //     my $colx = $colpos[$j];
-    //     my $a    = $$cell{align} || 'left';
-    //     # Adjust position according to alignment
-    //     if ($colwidths[$j] && $$cell{cwidth} && ($a ne 'left')) {    # If these are defined
-    //       my $dx = $colwidths[$j]->subtract($$cell{cwidth});
-    //       if    ($a eq 'center') { $colx = $colx->add($dx->multiply(0.5)); }
-    //       elsif ($a eq 'right')  { $colx = $colx->add($dx); } }
-    //     $$cell{x} = $colx;
-    //     $$cell{y} = $rowpos[$i];
-    //     Debug("CELL[$j,$i] " . showSize($$cell{cwidth}, $$cell{cheight}, $$cell{cdepth})
+      for ((cell, colwidth), colposx) in row.get_columns_mut().iter_mut()
+        .zip(colwidths.iter())
+        .zip(colpos.iter()) {
+        let a  = cell.align.unwrap_or(Align::Left);
+        // Adjust position according to alignment
+        // If these are defined
+        let cached_width = cell.cached_width.unwrap_or_default().value_of();
+        let colx = if *colwidth > 0 && cached_width > 0 && a != Align::Left {
+          let dx = Dimension::new(colwidth - cached_width);
+          match a {
+            Align::Center => colposx.add(dx.multiply(Float::new_f64(0.5))),
+            Align::Right => colposx.add(dx),
+            _ => *colposx
+          }
+        } else { *colposx };
+        cell.x = Some(colx);
+        cell.y = Some(rowpos[i]);
+    //     Debug("CELL[$j,$i] " . showSize($$cell{cached_width}, $$cell{cached_height}, $$cell{cached_depth})
     //         . " @ " . ToString($$cell{x}) . "," . ToString($$cell{y})
     //         . " w/ " . join(',', map { $_ . '=' . ToString($$cell{$_}); }
     //           (qw(align vattach skipped colspan rowspan))))
     //       if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
-    // }
+      }
     }
 
     Ok(())
@@ -773,6 +778,10 @@ impl BoxOps for Alignment {
   fn get_properties(&self) -> &HashMap<String, Stored> {
     &self.properties
   }
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&self.properties)
+  }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> {
     &mut self.properties
   }
@@ -795,7 +804,7 @@ impl BoxOps for Alignment {
       state: &mut State,
     ) -> Result<(Dimension, Dimension, Dimension)> {
     self.normalize_alignment(state)?;
-    Ok((self.cached_width.unwrap(), self.cached_height.unwrap(), self.cached_depth.unwrap()))
+    Ok(dbg!((self.cached_width.unwrap(), self.cached_height.unwrap(), self.cached_depth.unwrap())))
   }
 
   fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
@@ -825,15 +834,18 @@ impl BoxOps for Alignment {
       } else {
         HashMap::default()
       };
-    let open_attrs = attrs;
-    // TODO:
-    // open_attrs.insert("cwidth", self.cwidth);
-    // open_attrs.insert("cheight", self.cheight);
-    // open_attrs.insert("cdepth", self.cdepth);
-    // open_attrs.insert("rowheights", self.rowheights);
-    // open_attrs.insert("columnwidths", self.columnwidths);
+    // TODO: where are these used? We currently have a typed restriction for options passed to
+    // construction closures to be a String value (for trivial insertion in attributes)
+    // the values here are Dimensions and collections of Dimensions - where are they used ?
+
+    // let mut open_attrs = attrs;
+    // open_attrs.insert(String::from("cached_width"), self.cached_width.into());
+    // open_attrs.insert(String::from("cached_height"), self.cached_height.into());
+    // open_attrs.insert(String::from("cached_depth"), self.cached_depth.into());
+    // open_attrs.insert(String::from("row_heights"), self.row_heights.into());
+    // open_attrs.insert(String::from("column_widths"), self.column_widths.into());
     let open_container_fn = &self.open_container;
-    open_container_fn(document, open_attrs, state)?;
+    open_container_fn(document, attrs, state)?;
 
     for row in rows {
       let vpad_opt = row.get_padding().copied();
@@ -841,7 +853,7 @@ impl BoxOps for Alignment {
       let open_row_attrs = HashMap::default();
       //     "xml:id" => $$row{id}, tags => $$row{tags},
       //     x      => $$row{x}, y => $$row{y},
-      //     cwidth => $$row{cwidth}, cheight => $$row{cheight}, cdepth => $$row{cdepth},
+      //     cached_width => $$row{cached_width}, cached_height => $$row{cached_height}, cached_depth => $$row{cached_depth},
       //   );
       let open_row_fn = &self.open_row;
       open_row_fn(document, open_row_attrs, state)?;
@@ -897,7 +909,7 @@ impl BoxOps for Alignment {
         }
         //       # Which properties do we expose to the constructor?
         //       x      => $$cell{x}, y => $$cell{y},
-        //       cwidth => $$cell{cwidth}, cheight => $$cell{cheight}, cdepth => $$cell{cdepth})
+        //       cached_width => $$cell{cached_width}, cached_height => $$cell{cached_height}, cached_depth => $$cell{cached_depth})
         cell.cell = open_column_fn(document, cell_attrs, state)?;
         if !empty {
           let box_ref = cell.boxes.as_ref().unwrap();

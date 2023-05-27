@@ -1,6 +1,6 @@
 //! Interface layer for the full range of digested objects
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
+use std::borrow::{Cow};
 use std::fmt;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -25,7 +25,7 @@ use crate::state::State;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::BoxOps;
+use crate::{BoxOps, NO_PROPERTIES};
 
 /// An `Rc`-guarded abstraction for any object encountered at the "digested" phase of processing
 // Each variant is wrapped in an `Rc`, for cheap(er) cloning when passing around
@@ -43,13 +43,13 @@ pub struct Digested(Rc<DigestedData>);
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 pub enum DigestedData {
   /// A TeX Box
-  TBox(Tbox),
+  TBox(RefCell<Tbox>),
   /// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   Whatsit(RefCell<Whatsit>),
   /// A TeX Alignment (with interior mutability, for setters invoked while stored in state)
   Alignment(RefCell<Alignment>),
   /// A list of Digested data
-  List(List),
+  List(RefCell<List>),
   /// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
   Postponed(Tokens),
   /// A LaTeX-like digested key-value map
@@ -173,10 +173,10 @@ impl From<Tokens> for Digested {
   fn from(value: Tokens) -> Digested { Digested(Rc::new(DigestedData::Postponed(value))) }
 }
 impl From<Tbox> for Digested {
-  fn from(value: Tbox) -> Digested { Digested(Rc::new(DigestedData::TBox(value))) }
+  fn from(value: Tbox) -> Digested { Digested(Rc::new(DigestedData::TBox(RefCell::new(value)))) }
 }
 impl From<List> for Digested {
-  fn from(value: List) -> Digested { Digested(Rc::new(DigestedData::List(value))) }
+  fn from(value: List) -> Digested { Digested(Rc::new(DigestedData::List(RefCell::new(value)))) }
 }
 impl From<Whatsit> for Digested {
   fn from(value: Whatsit) -> Digested {
@@ -218,15 +218,15 @@ impl From<Digested> for Result<Option<Digested>> {
 }
 
 impl Default for Digested {
-  fn default() -> Self { Digested(Rc::new(DigestedData::TBox(Tbox::default()))) }
+  fn default() -> Self { Digested(Rc::new(DigestedData::TBox(RefCell::new(Tbox::default())))) }
 }
 
 impl fmt::Display for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => write!(f, "{b}"),
-      List(ref l) => write!(f, "{l}"),
+      TBox(ref b) => write!(f, "{}",b.borrow()),
+      List(ref l) => write!(f, "{}", l.borrow()),
       Whatsit(ref w) => write!(f, "{}", w.borrow()),
       Alignment(ref a) => write!(f, "{}", a.borrow()),
       Postponed(ref t) => write!(f, "{t}"),
@@ -240,8 +240,8 @@ impl Object for Digested {
   fn stringify(&self) -> String {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.stringify(),
-      List(ref l) => l.stringify(),
+      TBox(ref b) => b.borrow().stringify(),
+      List(ref l) => l.borrow().stringify(),
       Whatsit(ref w) => w.borrow().stringify(),
       Alignment(ref w) => w.borrow().stringify(),
       Postponed(ref t) => (*t).stringify(),
@@ -253,8 +253,10 @@ impl Object for Digested {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_locator(),
-      List(ref l) => l.get_locator(),
+      TBox(ref b) => b.borrow().get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
+      List(ref l) => l.borrow().get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
       Comment(ref c) => c.get_locator(),
       Whatsit(ref w) => w
         .borrow()
@@ -272,8 +274,8 @@ impl Object for Digested {
   fn revert(&self, state: &State) -> Result<Tokens> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.revert(state),
-      List(ref l) => l.revert(state),
+      TBox(ref b) => b.borrow().revert(state),
+      List(ref l) => l.borrow().revert(state),
       Whatsit(ref w) => w.borrow().revert(state),
       Alignment(ref w) => w.borrow().revert(state),
       Postponed(ref t) => Ok(t.clone()),
@@ -291,7 +293,7 @@ impl BoxOps for Digested {
       TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
         vec![self.clone()]
       },
-      List(ref l) => l.unlist(),
+      List(ref l) => l.borrow().unlist(),
     }
   }
   fn unlist_ref(&self) -> Vec<&Digested> {
@@ -300,15 +302,15 @@ impl BoxOps for Digested {
       TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
         vec![self]
       },
-      List(ref l) => l.unlist_ref(),
+      List(ref _l) => unimplemented!()// l.borrow().unlist_ref()
     }
   }
 
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
     use DigestedData::*;
     match &*self.0 {
-      TBox(b) => b.be_absorbed(document, state),
-      List(l) => l.be_absorbed(document, state),
+      TBox(b) => b.borrow().be_absorbed(document, state),
+      List(l) => l.borrow().be_absorbed(document, state),
       Comment(c) => c.be_absorbed(document, state),
       Whatsit(w) => w.borrow().be_absorbed(document, state),
       Alignment(w) => w.borrow_mut().be_absorbed_mut(document, state),
@@ -318,17 +320,17 @@ impl BoxOps for Digested {
     }
   }
 
-  fn get_properties(&self) -> &HashMap<String, Stored> {
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
     use DigestedData::*;
-    match *self.0 {
-      TBox(ref b) => b.get_properties(),
-      List(ref l) => l.get_properties(),
-      KeyVals(ref kvs) => kvs.get_properties(),
-      // Oooof lifetimes; w.borrow().get_properties(),
-      Whatsit(ref _w) => unimplemented!(),
-      // Oooof lifetimes; w.borrow().get_properties(),
-      Alignment(ref _w) => unimplemented!(),
-      Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
+    match &*self.0 {
+      TBox(b) => caller(b.borrow().get_properties()),
+      List(l) => caller(l.borrow().get_properties()),
+      Comment(c) => caller(c.get_properties()),
+      Whatsit(w) => caller(w.borrow().get_properties()),
+      Alignment(w) => caller(w.borrow().get_properties()),
+      KeyVals(kvs) => caller(kvs.get_properties()),
+      Postponed(_) | RegisterValue(_) => caller(&NO_PROPERTIES),
     }
   }
   // Note: get_properties_mut is not implemented, as it would generically require a RefCell
@@ -336,29 +338,24 @@ impl BoxOps for Digested {
   // at the Digested interface
 
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
+    use DigestedData::*;
     match *self.0 {
       // TODO: This is only possible if we have interior mutability for *ALL* Digested variants
       // i.e. Rc<RefCell<Tbox>>, Rc<RefCell<List>>, etc.
-      //
-      // Digested::TBox(ref b) => b.set_property(key, value),
-      // Digested::List(ref l) => l.set_property(key, value),
-      DigestedData::Whatsit(ref w) => w.borrow_mut().set_property(key, value),
-      DigestedData::List(ref _l) => Debug!(
-        "ignore",
-        "set_property",
-        None,
-        None,
-        format!("List::set_property({key},_)")
-      ),
-      _ => unimplemented!(),
+      TBox(ref b) => b.borrow_mut().set_property(key, value),
+      List(ref l) => l.borrow_mut().set_property(key, value),
+      Whatsit(ref w) => w.borrow_mut().set_property(key, value),
+      _ => { dbg!(self); unimplemented!();},
     }
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_property(key),
-      List(ref l) => l.get_property(key),
+      TBox(ref b) => b.borrow().get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
+      List(ref l) => l.borrow().get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
       Whatsit(ref w) => w
         .borrow()
         .get_property(key)
@@ -369,20 +366,20 @@ impl BoxOps for Digested {
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_string(state),
-      List(ref l) => l.get_string(state),
-      Whatsit(ref w) => match w.borrow().get_string(state) {
-        Ok(v) => Ok(Cow::Owned(v.into_owned())),
-        Err(e) => Err(format!("failed Whatsit get_string: {e}").into()),
-      },
+      TBox(ref b) => b.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
+      List(ref l) => l.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(ref w) => w.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
   }
   fn has_property(&self, key: &str) -> bool {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.has_property(key),
-      List(ref l) => l.has_property(key),
+      TBox(ref b) => b.borrow().has_property(key),
+      List(ref l) => l.borrow().has_property(key),
       Whatsit(ref w) => w.borrow().has_property(key),
       _ => unimplemented!(),
     }
@@ -417,8 +414,8 @@ impl BoxOps for Digested {
   fn get_property_bool(&self, key: &str) -> bool {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_property_bool(key),
-      List(ref l) => l.get_property_bool(key),
+      TBox(ref b) => b.borrow().get_property_bool(key),
+      List(ref l) => l.borrow().get_property_bool(key),
       Whatsit(ref w) => w.borrow().get_property_bool(key),
       _ => unimplemented!(),
     }
@@ -426,8 +423,10 @@ impl BoxOps for Digested {
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.get_font(state),
-      List(ref l) => l.get_font(state),
+      TBox(ref b) => Ok(b.borrow().get_font(state)?
+        .map(|v| Cow::Owned(v.into_owned()))),
+      List(ref l) => Ok(l.borrow().get_font(state)?
+        .map(|v| Cow::Owned(v.into_owned()))),
       Whatsit(ref w) => Ok(
         w.borrow()
           .get_font(state)?
@@ -445,8 +444,8 @@ impl BoxOps for Digested {
   ) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.compute_size(options, state),
-      List(ref l) => l.compute_size(options, state),
+      TBox(ref b) => b.borrow_mut().compute_size_and_cache(options, state),
+      List(ref l) => l.borrow_mut().compute_size_and_cache(options, state),
       KeyVals(ref kvs) => kvs.compute_size(options, state),
       Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options, state),
       Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options, state),
@@ -480,7 +479,7 @@ impl Digested {
     match &*self.0 {
       TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
-      List(l) => l.boxes.iter().any(check),
+      List(l) => l.borrow().boxes.iter().any(check),
     }
   }
 
@@ -491,7 +490,7 @@ impl Digested {
     match &*self.0 {
       TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
       Comment(_) => true,
-      List(l) => l.boxes.iter().all(check),
+      List(l) => l.borrow().boxes.iter().all(check),
     }
   }
 
@@ -499,8 +498,8 @@ impl Digested {
   pub fn is_empty(&self) -> bool {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.is_empty(),
-      List(ref l) => l.is_empty(),
+      TBox(ref b) => b.borrow().is_empty(),
+      List(ref l) => l.borrow().is_empty(),
       Whatsit(ref w) => w.borrow().is_empty(),
       Postponed(ref tks) => tks.is_empty(),
       _ => unimplemented!(),

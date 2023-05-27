@@ -9,6 +9,8 @@ pub struct Cell {
   pub empty: bool,
   pub omitted: bool,
   pub skipped: bool,
+  pub thead_in_row: bool,
+  pub thead_in_column: bool,
   pub before: Option<Tokens>,
   pub after: Option<Tokens>,
   pub align: Option<Align>,
@@ -24,7 +26,6 @@ pub struct Cell {
   pub cell_type: Option<char>,
   pub content_class: Option<ColumnSpec>,
   pub content_length: Option<usize>,
-  pub border: String,
   pub border_left: Option<usize>,
   pub border_right: Option<usize>,
   pub border_top: Option<usize>,
@@ -36,8 +37,9 @@ pub struct Cell {
   pub rowspan: Option<usize>,
   pub vattach: Option<String>,
   pub cell: Option<Node>,
-  pub thead_in_row: bool,
-  pub thead_in_column: bool,
+  pub x : Option<Dimension>,
+  pub y : Option<Dimension>,
+  pub border: String,
 }
 impl Cell {
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {

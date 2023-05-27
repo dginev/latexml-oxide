@@ -413,7 +413,7 @@ impl Document {
       match front_box.data() {
         List(ref list) => {
           // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-          for tbox in list.unlist().into_iter().rev() {
+          for tbox in list.borrow().unlist().into_iter().rev() {
             boxes.push(Cow::Owned(tbox));
           }
         },
@@ -421,7 +421,7 @@ impl Document {
         TBox(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.be_absorbed(self, state)?;
+          digested.borrow().be_absorbed(self, state)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {
