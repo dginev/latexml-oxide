@@ -435,6 +435,7 @@
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
 <a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
@@ -475,11 +476,11 @@
     </span><span class="bool-val">true
   </span>} <span class="kw">else </span>{
     <span class="kw">match </span>digested.data() {
-      TBox(tbox) =&gt; <span class="kw">match </span>tbox.get_string(state) {
+      TBox(tbox) =&gt; <span class="kw">match </span>tbox.borrow().get_string(state) {
         <span class="prelude-val">Ok</span>(s) =&gt; s.trim().is_empty(),
         <span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
       },
-      List(list) =&gt; list.boxes.iter().all(|b| is_empty(b, state)),
+      List(list) =&gt; list.borrow().boxes.iter().all(|b| is_empty(b, state)),
       Whatsit(ws_arc) =&gt; {
         <span class="kw">let </span>ws = ws_arc.borrow();
         <span class="kw-2">*</span>(<span class="kw-2">*</span>ws).get_definition() == <span class="kw-2">*</span>state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>()).unwrap()
@@ -498,8 +499,9 @@
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 </span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
   <span class="kw">let </span>box_opt = <span class="kw">match </span>object.data() {
-    DigestedData::List(obj) =&gt; obj.boxes.last(),
-    <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(object),
+    DigestedData::List(obj) =&gt; obj.borrow().boxes.last()
+      .map(|v| Cow::Owned(v.clone())),
+    <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(object)),
   };
   <span class="kw">if let </span><span class="prelude-val">Some</span>(boxobj) = box_opt {
     <span class="kw">if let </span>DigestedData::Whatsit(<span class="kw-2">ref </span>obj) = boxobj.data() {
@@ -727,11 +729,11 @@
   <span class="comment">// NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it&#39;s different from the &#39;expected&#39; style!!!]
-  </span><span class="kw">let </span>script_size = script.get_size(<span class="prelude-val">None</span>,state)<span class="question-mark">?</span>;
+  </span><span class="kw">let </span>script_size = script.clone().get_size(<span class="prelude-val">None</span>,state)<span class="question-mark">?</span>;
   <span class="kw">let </span>(<span class="kw-2">mut </span>ws, <span class="kw-2">mut </span>hs, <span class="kw-2">mut </span>ds) = (script_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64, script_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64, script_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64);
   ws <span class="kw-2">*</span>= <span class="number">0.8</span>; hs <span class="kw-2">*</span>= <span class="number">0.8</span>; ds <span class="kw-2">*</span>= <span class="number">0.8</span>;    <span class="comment">// HACK!@!!
   </span><span class="kw">let </span>(wb, hb, db) = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>base)) = base_opt {
-    <span class="kw">let </span>base_size = base.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>base_size = base.clone().get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
     (base_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64, base_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64, base_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64)
   } <span class="kw">else </span>{
     <span class="kw">let </span>nominal_size = state.lookup_font().unwrap().get_nominal_size();

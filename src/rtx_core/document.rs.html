@@ -3843,7 +3843,7 @@
       <span class="kw">match </span>front_box.data() {
         List(<span class="kw-2">ref </span>list) =&gt; {
           <span class="comment">// Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
-          </span><span class="kw">for </span>tbox <span class="kw">in </span>list.unlist().into_iter().rev() {
+          </span><span class="kw">for </span>tbox <span class="kw">in </span>list.borrow().unlist().into_iter().rev() {
             boxes.push(Cow::Owned(tbox));
           }
         },
@@ -3851,7 +3851,7 @@
         </span>TBox(<span class="kw-2">ref </span>digested) =&gt; {
           <span class="self">self</span>.set_box_to_absorb(<span class="prelude-val">Some</span>((<span class="kw-2">*</span>front_box).clone()));
           <span class="self">self</span>.init_constructed_nodes();
-          digested.be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+          digested.borrow().be_absorbed(<span class="self">self</span>, state)<span class="question-mark">?</span>;
           <span class="comment">// record these for OUTER caller!
           // but return only the most recent set
           </span>{

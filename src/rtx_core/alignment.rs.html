@@ -1821,6 +1821,18 @@
 <a href="#1821" id="1821">1821</a>
 <a href="#1822" id="1822">1822</a>
 <a href="#1823" id="1823">1823</a>
+<a href="#1824" id="1824">1824</a>
+<a href="#1825" id="1825">1825</a>
+<a href="#1826" id="1826">1826</a>
+<a href="#1827" id="1827">1827</a>
+<a href="#1828" id="1828">1828</a>
+<a href="#1829" id="1829">1829</a>
+<a href="#1830" id="1830">1830</a>
+<a href="#1831" id="1831">1831</a>
+<a href="#1832" id="1832">1832</a>
+<a href="#1833" id="1833">1833</a>
+<a href="#1834" id="1834">1834</a>
+<a href="#1835" id="1835">1835</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -2232,13 +2244,13 @@
   <span class="doccomment">/// Compute (approximate) sizes of all cells
   </span><span class="kw">pub fn </span>normalize_cell_sizes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Examines: boxes, align, vattach
-    // Sets: cwidth, cheight, cdepth (per cell) &amp; empty
+    // Sets: cached_width, cached_height, cached_depth (per cell) &amp; empty
     </span><span class="kw">for </span>row <span class="kw">in </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.rows {
       <span class="comment">// Do we need to account for any space in the $$row{before} or $$row{after}?
       </span><span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
-          <span class="kw">let </span>(w, h, d) <span class="comment">//, cw, ch, cd)
-            </span>= boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
+          <span class="kw">let </span>(w, h, d , cw, _ch, _cd)
+            = boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
               <span class="string">&quot;align&quot; </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">&quot;width&quot; </span>=&gt; cell.width,
               <span class="string">&quot;vattach&quot; </span>=&gt; cell.vattach.clone() )), state)<span class="question-mark">?</span>;
           <span class="macro">dbg!</span>(w);
@@ -2247,7 +2259,7 @@
           //     . &quot; csize &quot; . showSize($cw, $ch, $cd)
           //     . &quot; Boxes=&quot; . ToString($boxes)) if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
           // TODO: We can&#39;t do heights and depths yet
-          </span><span class="kw">let </span>empty = w.value_of() &lt; <span class="number">1 </span>|| <span class="comment">// h.value_of() &lt; 1 || d.value_of() &lt; 1 ||
+          </span><span class="kw">let </span>empty = cw.value_of() &lt; <span class="number">1 </span>|| <span class="comment">// h.value_of() &lt; 1 || d.value_of() &lt; 1 ||
             </span>boxes.unlist_ref().iter().all(|tb| tb.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)) &amp;&amp; !preserved_boxes(boxes);
           cell.width  = <span class="prelude-val">Some</span>(w);
           cell.height = <span class="prelude-val">Some</span>(h);
@@ -2286,13 +2298,13 @@
         } <span class="comment">// don&#39;t remove inner rows from math EXCEPT last row!!
         // let (mut pruneh, mut pruned) = (0, 0);
         </span><span class="kw">for </span>(j,col) <span class="kw">in </span>row.get_columns().iter().enumerate() {
-          <span class="comment">// TODO: add cheight and cdepth
-          // if let Some(cheight) = col.cheight {
-          //   let chv = cheight.value_of();
+          <span class="comment">// TODO: add cached_height and cached_depth
+          // if let Some(cached_height) = col.cached_height {
+          //   let chv = cached_height.value_of();
           //   if chv &gt; pruneh { pruneh = chv; }
           // }
-          // if let Some(cdepth) = col.cdepth {
-          //   let cdv = cdepth.value_of();
+          // if let Some(cached_depth) = col.cached_depth {
+          //   let cdv = cached_depth.value_of();
           //   if cdv &gt; pruned {
           //     pruned = cdv;
           //   }
@@ -2324,8 +2336,8 @@
         // let (mut pruneh, mut pruned) = (0, 0);
         </span><span class="kw">for </span>(j,col) <span class="kw">in </span>row.get_columns().iter().enumerate() {
           <span class="comment">// TODO:
-          //  $pruneh = max($pruneh, $$col{cheight}-&gt;value_of) if $$col{cheight};
-          //  $pruned = max($pruned, $$col{cdepth}-&gt;value_of)  if $$col{cdepth};
+          //  $pruneh = max($pruneh, $$col{cached_height}-&gt;value_of) if $$col{cached_height};
+          //  $pruned = max($pruned, $$col{cached_depth}-&gt;value_of)  if $$col{cached_depth};
           //       if (!$$row{pseudorow} &amp;&amp; defined $$col{rowspanned}) {
           //         $rows[$$col{rowspanned}]{columns}[$j]{rowspan}--; }    // Decrement rowspan of spanning column
           </span><span class="kw">let </span><span class="kw-2">mut </span>converted_border = String::new();
@@ -2382,8 +2394,8 @@
               //       *colspan -= 1;
               //     }
               // }
-              // TODO: cwidth
-              // if let Some(w) = col.cwidth {
+              // TODO: cached_width
+              // if let Some(w) = col.cached_width {
               //   if w &gt; prunew {
               //     prunew = w;
               //   }
@@ -2457,12 +2469,13 @@
       }
     }
     <span class="prelude-val">Ok</span>(())}
+
   <span class="kw">pub fn </span>normalize_sum_sizes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>rowheights = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>colwidths  = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>colrights  = Vec::new();
     <span class="kw">let </span><span class="kw-2">mut </span>collefts   = Vec::new();
-    <span class="comment">// Uses cell&#39;s cwidth,cheight,cdepth
+    <span class="comment">// Uses cell&#39;s cached_width,cached_height,cached_depth
     // Computes net row &amp; column sizes &amp; positions
     // add spacing between rows? Or only from \\[..] ?
     </span><span class="kw">let </span>strut = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>d)) = <span class="self">self</span>.get_property(<span class="string">&quot;strut&quot;</span>).as_deref() { <span class="kw-2">*</span>d } <span class="kw">else </span>{ Dimension::new(<span class="number">0</span>) };
@@ -2551,29 +2564,33 @@
     <span class="self">self</span>.row_heights   = rowheights.iter().map(|v| Dimension::new(<span class="kw-2">*</span>v)).collect();
 
     <span class="kw">for </span>(i,row) <span class="kw">in </span><span class="self">self</span>.rows.iter_mut().take(rowheights.len()).enumerate() {
-      <span class="comment">//   my $ncols = scalar(@cols);
-      </span>row.x = <span class="prelude-val">Some</span>(colpos[<span class="number">0</span>]);
+      row.x = <span class="prelude-val">Some</span>(colpos[<span class="number">0</span>]);
       row.y = <span class="prelude-val">Some</span>(rowpos[i]);
       row.cached_width = <span class="prelude-val">Some</span>(Dimension::new(x));
-      <span class="kw">let </span>cols  = row.get_columns();
-    <span class="comment">//   for (my $j = 0 ; $j &lt; $ncols ; $j++) {
-    //     my $cell = $cols[$j];
-    //     my $colx = $colpos[$j];
-    //     my $a    = $$cell{align} || &#39;left&#39;;
-    //     # Adjust position according to alignment
-    //     if ($colwidths[$j] &amp;&amp; $$cell{cwidth} &amp;&amp; ($a ne &#39;left&#39;)) {    # If these are defined
-    //       my $dx = $colwidths[$j]-&gt;subtract($$cell{cwidth});
-    //       if    ($a eq &#39;center&#39;) { $colx = $colx-&gt;add($dx-&gt;multiply(0.5)); }
-    //       elsif ($a eq &#39;right&#39;)  { $colx = $colx-&gt;add($dx); } }
-    //     $$cell{x} = $colx;
-    //     $$cell{y} = $rowpos[$i];
-    //     Debug(&quot;CELL[$j,$i] &quot; . showSize($$cell{cwidth}, $$cell{cheight}, $$cell{cdepth})
+      <span class="kw">for </span>((cell, colwidth), colposx) <span class="kw">in </span>row.get_columns_mut().iter_mut()
+        .zip(colwidths.iter())
+        .zip(colpos.iter()) {
+        <span class="kw">let </span>a  = cell.align.unwrap_or(Align::Left);
+        <span class="comment">// Adjust position according to alignment
+        // If these are defined
+        </span><span class="kw">let </span>cached_width = cell.cached_width.unwrap_or_default().value_of();
+        <span class="kw">let </span>colx = <span class="kw">if </span><span class="kw-2">*</span>colwidth &gt; <span class="number">0 </span>&amp;&amp; cached_width &gt; <span class="number">0 </span>&amp;&amp; a != Align::Left {
+          <span class="kw">let </span>dx = Dimension::new(colwidth - cached_width);
+          <span class="kw">match </span>a {
+            Align::Center =&gt; colposx.add(dx.multiply(Float::new_f64(<span class="number">0.5</span>))),
+            Align::Right =&gt; colposx.add(dx),
+            <span class="kw">_ </span>=&gt; <span class="kw-2">*</span>colposx
+          }
+        } <span class="kw">else </span>{ <span class="kw-2">*</span>colposx };
+        cell.x = <span class="prelude-val">Some</span>(colx);
+        cell.y = <span class="prelude-val">Some</span>(rowpos[i]);
+    <span class="comment">//     Debug(&quot;CELL[$j,$i] &quot; . showSize($$cell{cached_width}, $$cell{cached_height}, $$cell{cached_depth})
     //         . &quot; @ &quot; . ToString($$cell{x}) . &quot;,&quot; . ToString($$cell{y})
     //         . &quot; w/ &quot; . join(&#39;,&#39;, map { $_ . &#39;=&#39; . ToString($$cell{$_}); }
     //           (qw(align vattach skipped colspan rowspan))))
     //       if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
-    // }
-    </span>}
+      </span>}
+    }
 
     <span class="prelude-val">Ok</span>(())
   }
@@ -2595,6 +2612,10 @@
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Alignment {
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; {
     <span class="kw-2">&amp;</span><span class="self">self</span>.properties
+  }
+  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
+    caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
   }
   <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String, Stored&gt; {
     <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties
@@ -2618,7 +2639,7 @@
       state: <span class="kw-2">&amp;mut </span>State,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="self">self</span>.normalize_alignment(state)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cached_width.unwrap(), <span class="self">self</span>.cached_height.unwrap(), <span class="self">self</span>.cached_depth.unwrap()))
+    <span class="prelude-val">Ok</span>(<span class="macro">dbg!</span>((<span class="self">self</span>.cached_width.unwrap(), <span class="self">self</span>.cached_height.unwrap(), <span class="self">self</span>.cached_depth.unwrap())))
   }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
@@ -2648,15 +2669,18 @@
       } <span class="kw">else </span>{
         HashMap::default()
       };
-    <span class="kw">let </span>open_attrs = attrs;
-    <span class="comment">// TODO:
-    // open_attrs.insert(&quot;cwidth&quot;, self.cwidth);
-    // open_attrs.insert(&quot;cheight&quot;, self.cheight);
-    // open_attrs.insert(&quot;cdepth&quot;, self.cdepth);
-    // open_attrs.insert(&quot;rowheights&quot;, self.rowheights);
-    // open_attrs.insert(&quot;columnwidths&quot;, self.columnwidths);
+    <span class="comment">// TODO: where are these used? We currently have a typed restriction for options passed to
+    // construction closures to be a String value (for trivial insertion in attributes)
+    // the values here are Dimensions and collections of Dimensions - where are they used ?
+
+    // let mut open_attrs = attrs;
+    // open_attrs.insert(String::from(&quot;cached_width&quot;), self.cached_width.into());
+    // open_attrs.insert(String::from(&quot;cached_height&quot;), self.cached_height.into());
+    // open_attrs.insert(String::from(&quot;cached_depth&quot;), self.cached_depth.into());
+    // open_attrs.insert(String::from(&quot;row_heights&quot;), self.row_heights.into());
+    // open_attrs.insert(String::from(&quot;column_widths&quot;), self.column_widths.into());
     </span><span class="kw">let </span>open_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_container;
-    open_container_fn(document, open_attrs, state)<span class="question-mark">?</span>;
+    open_container_fn(document, attrs, state)<span class="question-mark">?</span>;
 
     <span class="kw">for </span>row <span class="kw">in </span>rows {
       <span class="kw">let </span>vpad_opt = row.get_padding().copied();
@@ -2664,7 +2688,7 @@
       </span><span class="kw">let </span>open_row_attrs = HashMap::default();
       <span class="comment">//     &quot;xml:id&quot; =&gt; $$row{id}, tags =&gt; $$row{tags},
       //     x      =&gt; $$row{x}, y =&gt; $$row{y},
-      //     cwidth =&gt; $$row{cwidth}, cheight =&gt; $$row{cheight}, cdepth =&gt; $$row{cdepth},
+      //     cached_width =&gt; $$row{cached_width}, cached_height =&gt; $$row{cached_height}, cached_depth =&gt; $$row{cached_depth},
       //   );
       </span><span class="kw">let </span>open_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_row;
       open_row_fn(document, open_row_attrs, state)<span class="question-mark">?</span>;
@@ -2720,7 +2744,7 @@
         }
         <span class="comment">//       # Which properties do we expose to the constructor?
         //       x      =&gt; $$cell{x}, y =&gt; $$cell{y},
-        //       cwidth =&gt; $$cell{cwidth}, cheight =&gt; $$cell{cheight}, cdepth =&gt; $$cell{cdepth})
+        //       cached_width =&gt; $$cell{cached_width}, cached_height =&gt; $$cell{cached_height}, cached_depth =&gt; $$cell{cached_depth})
         </span>cell.cell = open_column_fn(document, cell_attrs, state)<span class="question-mark">?</span>;
         <span class="kw">if </span>!empty {
           <span class="kw">let </span>box_ref = cell.boxes.as_ref().unwrap();

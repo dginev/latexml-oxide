@@ -396,6 +396,10 @@
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -722,6 +726,10 @@
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
+  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
+    caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
+  }
   <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
     <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.to_string()))

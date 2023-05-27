@@ -210,6 +210,10 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -358,6 +362,10 @@
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Tbox {
   <span class="kw">fn </span>get_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt; { <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.tokens) }
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
+  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
+    caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
+  }
   <span class="kw">fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;<span class="lifetime">&#39;_</span>, str&gt;&gt; {
     <span class="comment">// TODO: Should we switch these to symbols? are they used often?

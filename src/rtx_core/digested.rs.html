@@ -535,10 +535,9 @@
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Interface layer for the full range of digested objects
 </span><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::borrow::{Cow};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::rc::Rc;
@@ -563,7 +562,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::tbox::Tbox;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
+<span class="kw">use crate</span>::{BoxOps, NO_PROPERTIES};
 
 <span class="doccomment">/// An `Rc`-guarded abstraction for any object encountered at the &quot;digested&quot; phase of processing
 </span><span class="comment">// Each variant is wrapped in an `Rc`, for cheap(er) cloning when passing around
@@ -581,13 +580,13 @@
 /// as outputs from the digestion phase of TeX, i.e. from invoking a token.
 </span><span class="kw">pub enum </span>DigestedData {
   <span class="doccomment">/// A TeX Box
-  </span>TBox(Tbox),
+  </span>TBox(RefCell&lt;Tbox&gt;),
   <span class="doccomment">/// A TeX Whatsit (with interior mutability, for setters invoked while stored in state)
   </span>Whatsit(RefCell&lt;Whatsit&gt;),
   <span class="doccomment">/// A TeX Alignment (with interior mutability, for setters invoked while stored in state)
   </span>Alignment(RefCell&lt;Alignment&gt;),
   <span class="doccomment">/// A list of Digested data
-  </span>List(List),
+  </span>List(RefCell&lt;List&gt;),
   <span class="doccomment">/// Raw Tokens that were postponed to the digestion phase uninvoked/undigested
   </span>Postponed(Tokens),
   <span class="doccomment">/// A LaTeX-like digested key-value map
@@ -711,10 +710,10 @@
   <span class="kw">fn </span>from(value: Tokens) -&gt; Digested { Digested(Rc::new(DigestedData::Postponed(value))) }
 }
 <span class="kw">impl </span>From&lt;Tbox&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: Tbox) -&gt; Digested { Digested(Rc::new(DigestedData::TBox(value))) }
+  <span class="kw">fn </span>from(value: Tbox) -&gt; Digested { Digested(Rc::new(DigestedData::TBox(RefCell::new(value)))) }
 }
 <span class="kw">impl </span>From&lt;List&gt; <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>from(value: List) -&gt; Digested { Digested(Rc::new(DigestedData::List(value))) }
+  <span class="kw">fn </span>from(value: List) -&gt; Digested { Digested(Rc::new(DigestedData::List(RefCell::new(value)))) }
 }
 <span class="kw">impl </span>From&lt;Whatsit&gt; <span class="kw">for </span>Digested {
   <span class="kw">fn </span>from(value: Whatsit) -&gt; Digested {
@@ -756,15 +755,15 @@
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Digested {
-  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ Digested(Rc::new(DigestedData::TBox(Tbox::default()))) }
+  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ Digested(Rc::new(DigestedData::TBox(RefCell::new(Tbox::default())))) }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Digested {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{b}&quot;</span>),
-      List(<span class="kw-2">ref </span>l) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{l}&quot;</span>),
+      TBox(<span class="kw-2">ref </span>b) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>,b.borrow()),
+      List(<span class="kw-2">ref </span>l) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, l.borrow()),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, w.borrow()),
       Alignment(<span class="kw-2">ref </span>a) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, a.borrow()),
       Postponed(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{t}&quot;</span>),
@@ -778,8 +777,8 @@
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.stringify(),
-      List(<span class="kw-2">ref </span>l) =&gt; l.stringify(),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().stringify(),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().stringify(),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().stringify(),
       Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow().stringify(),
       Postponed(<span class="kw-2">ref </span>t) =&gt; (<span class="kw-2">*</span>t).stringify(),
@@ -791,8 +790,10 @@
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_locator(),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_locator(),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().get_locator()
+        .map(|l| Cow::Owned(l.into_owned())),
       Comment(<span class="kw-2">ref </span>c) =&gt; c.get_locator(),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w
         .borrow()
@@ -810,8 +811,8 @@
   <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.revert(state),
-      List(<span class="kw-2">ref </span>l) =&gt; l.revert(state),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().revert(state),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().revert(state),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().revert(state),
       Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow().revert(state),
       Postponed(<span class="kw-2">ref </span>t) =&gt; <span class="prelude-val">Ok</span>(t.clone()),
@@ -829,7 +830,7 @@
       TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | Alignment(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; {
         <span class="macro">vec!</span>[<span class="self">self</span>.clone()]
       },
-      List(<span class="kw-2">ref </span>l) =&gt; l.unlist(),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().unlist(),
     }
   }
   <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Digested&gt; {
@@ -838,15 +839,15 @@
       TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | Alignment(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; {
         <span class="macro">vec!</span>[<span class="self">self</span>]
       },
-      List(<span class="kw-2">ref </span>l) =&gt; l.unlist_ref(),
-    }
+      List(<span class="kw-2">ref </span>_l) =&gt; <span class="macro">unimplemented!</span>()<span class="comment">// l.borrow().unlist_ref()
+    </span>}
   }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(b) =&gt; b.be_absorbed(document, state),
-      List(l) =&gt; l.be_absorbed(document, state),
+      TBox(b) =&gt; b.borrow().be_absorbed(document, state),
+      List(l) =&gt; l.borrow().be_absorbed(document, state),
       Comment(c) =&gt; c.be_absorbed(document, state),
       Whatsit(w) =&gt; w.borrow().be_absorbed(document, state),
       Alignment(w) =&gt; w.borrow_mut().be_absorbed_mut(document, state),
@@ -856,17 +857,17 @@
     }
   }
 
-  <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; {
+  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
-    <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_properties(),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_properties(),
-      KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.get_properties(),
-      <span class="comment">// Oooof lifetimes; w.borrow().get_properties(),
-      </span>Whatsit(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(),
-      <span class="comment">// Oooof lifetimes; w.borrow().get_properties(),
-      </span>Alignment(<span class="kw-2">ref </span>_w) =&gt; <span class="macro">unimplemented!</span>(),
-      Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+    <span class="kw">match </span><span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
+      TBox(b) =&gt; caller(b.borrow().get_properties()),
+      List(l) =&gt; caller(l.borrow().get_properties()),
+      Comment(c) =&gt; caller(c.get_properties()),
+      Whatsit(w) =&gt; caller(w.borrow().get_properties()),
+      Alignment(w) =&gt; caller(w.borrow().get_properties()),
+      KeyVals(kvs) =&gt; caller(kvs.get_properties()),
+      Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; caller(<span class="kw-2">&amp;</span>NO_PROPERTIES),
     }
   }
   <span class="comment">// Note: get_properties_mut is not implemented, as it would generically require a RefCell
@@ -874,29 +875,24 @@
   // at the Digested interface
 
   </span><span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: T) {
+    <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       <span class="comment">// TODO: This is only possible if we have interior mutability for *ALL* Digested variants
       // i.e. Rc&lt;RefCell&lt;Tbox&gt;&gt;, Rc&lt;RefCell&lt;List&gt;&gt;, etc.
-      //
-      // Digested::TBox(ref b) =&gt; b.set_property(key, value),
-      // Digested::List(ref l) =&gt; l.set_property(key, value),
-      </span>DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().set_property(key, value),
-      DigestedData::List(<span class="kw-2">ref </span>_l) =&gt; <span class="macro">Debug!</span>(
-        <span class="string">&quot;ignore&quot;</span>,
-        <span class="string">&quot;set_property&quot;</span>,
-        <span class="prelude-val">None</span>,
-        <span class="prelude-val">None</span>,
-        <span class="macro">format!</span>(<span class="string">&quot;List::set_property({key},_)&quot;</span>)
-      ),
-      <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
+      </span>TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow_mut().set_property(key, value),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow_mut().set_property(key, value),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().set_property(key, value),
+      <span class="kw">_ </span>=&gt; { <span class="macro">dbg!</span>(<span class="self">self</span>); <span class="macro">unimplemented!</span>();},
     }
   }
 
   <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_property(key),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_property(key),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().get_property(key)
+        .map(|v| Cow::Owned(v.into_owned())),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w
         .borrow()
         .get_property(key)
@@ -907,20 +903,20 @@
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_string(state),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_string(state),
-      Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="kw">match </span>w.borrow().get_string(state) {
-        <span class="prelude-val">Ok</span>(v) =&gt; <span class="prelude-val">Ok</span>(Cow::Owned(v.into_owned())),
-        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;failed Whatsit get_string: {e}&quot;</span>).into()),
-      },
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
+      Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().get_string(state)
+        .map(|v| Cow::Owned(v.into_owned())),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">fn </span>has_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.has_property(key),
-      List(<span class="kw-2">ref </span>l) =&gt; l.has_property(key),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().has_property(key),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().has_property(key),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().has_property(key),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
@@ -955,8 +951,8 @@
   <span class="kw">fn </span>get_property_bool(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_property_bool(key),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_property_bool(key),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().get_property_bool(key),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().get_property_bool(key),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().get_property_bool(key),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
     }
@@ -964,8 +960,10 @@
   <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.get_font(state),
-      List(<span class="kw-2">ref </span>l) =&gt; l.get_font(state),
+      TBox(<span class="kw-2">ref </span>b) =&gt; <span class="prelude-val">Ok</span>(b.borrow().get_font(state)<span class="question-mark">?
+        </span>.map(|v| Cow::Owned(v.into_owned()))),
+      List(<span class="kw-2">ref </span>l) =&gt; <span class="prelude-val">Ok</span>(l.borrow().get_font(state)<span class="question-mark">?
+        </span>.map(|v| Cow::Owned(v.into_owned()))),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; <span class="prelude-val">Ok</span>(
         w.borrow()
           .get_font(state)<span class="question-mark">?
@@ -983,8 +981,8 @@
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.compute_size(options, state),
-      List(<span class="kw-2">ref </span>l) =&gt; l.compute_size(options, state),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow_mut().compute_size_and_cache(options, state),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow_mut().compute_size_and_cache(options, state),
       KeyVals(<span class="kw-2">ref </span>kvs) =&gt; kvs.compute_size(options, state),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size_and_cache(options, state),
       Alignment(<span class="kw-2">ref </span>w) =&gt; w.borrow_mut().compute_size_and_cache(options, state),
@@ -1018,7 +1016,7 @@
     <span class="kw">match </span><span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | Alignment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; check(<span class="self">self</span>),
       Comment(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
-      List(l) =&gt; l.boxes.iter().any(check),
+      List(l) =&gt; l.borrow().boxes.iter().any(check),
     }
   }
 
@@ -1029,7 +1027,7 @@
     <span class="kw">match </span><span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | Alignment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; check(<span class="self">self</span>),
       Comment(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
-      List(l) =&gt; l.boxes.iter().all(check),
+      List(l) =&gt; l.borrow().boxes.iter().all(check),
     }
   }
 
@@ -1037,8 +1035,8 @@
   </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-      TBox(<span class="kw-2">ref </span>b) =&gt; b.is_empty(),
-      List(<span class="kw-2">ref </span>l) =&gt; l.is_empty(),
+      TBox(<span class="kw-2">ref </span>b) =&gt; b.borrow().is_empty(),
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().is_empty(),
       Whatsit(<span class="kw-2">ref </span>w) =&gt; w.borrow().is_empty(),
       Postponed(<span class="kw-2">ref </span>tks) =&gt; tks.is_empty(),
       <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),

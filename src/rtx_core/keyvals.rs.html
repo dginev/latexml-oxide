@@ -698,6 +698,10 @@
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
 <a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -720,7 +724,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use crate</span>::{BoxOps, Digested};
+<span class="kw">use crate</span>::{BoxOps, Digested, NO_PROPERTIES};
 
 <span class="kw">type </span>KVTuple = (String, Stored, bool, Vec&lt;KeyVal&gt;, KeyVal);
 
@@ -845,6 +849,10 @@
 }
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>KeyVals {
+  <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
+  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
+    caller(<span class="kw-2">&amp;</span>NO_PROPERTIES)
+  }
   <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
   <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {
     <span class="macro">unimplemented!</span>();

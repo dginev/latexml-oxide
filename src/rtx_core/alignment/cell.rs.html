@@ -49,6 +49,8 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
@@ -60,6 +62,8 @@
   <span class="kw">pub </span>empty: bool,
   <span class="kw">pub </span>omitted: bool,
   <span class="kw">pub </span>skipped: bool,
+  <span class="kw">pub </span>thead_in_row: bool,
+  <span class="kw">pub </span>thead_in_column: bool,
   <span class="kw">pub </span>before: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   <span class="kw">pub </span>after: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   <span class="kw">pub </span>align: <span class="prelude-ty">Option</span>&lt;Align&gt;,
@@ -75,7 +79,6 @@
   <span class="kw">pub </span>cell_type: <span class="prelude-ty">Option</span>&lt;char&gt;,
   <span class="kw">pub </span>content_class: <span class="prelude-ty">Option</span>&lt;ColumnSpec&gt;,
   <span class="kw">pub </span>content_length: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-  <span class="kw">pub </span>border: String,
   <span class="kw">pub </span>border_left: <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>border_right: <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>border_top: <span class="prelude-ty">Option</span>&lt;usize&gt;,
@@ -87,8 +90,9 @@
   <span class="kw">pub </span>rowspan: <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>vattach: <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>cell: <span class="prelude-ty">Option</span>&lt;Node&gt;,
-  <span class="kw">pub </span>thead_in_row: bool,
-  <span class="kw">pub </span>thead_in_column: bool,
+  <span class="kw">pub </span>x : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>y : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>border: String,
 }
 <span class="kw">impl </span>Cell {
   <span class="kw">pub fn </span>border_at(<span class="kw-2">&amp;</span><span class="self">self</span>, side: BorderSpec) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {

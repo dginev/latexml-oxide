@@ -2191,9 +2191,9 @@
       .filter(|thisbox| !thisbox.has_property(<span class="string">&quot;isEmpty&quot;</span>));
 
     <span class="kw">let </span><span class="kw-2">mut </span>prevbox_opt: <span class="prelude-ty">Option</span>&lt;Digested&gt; = <span class="prelude-val">None</span>;
-    <span class="kw">for </span>thisbox <span class="kw">in </span>filtered_boxes {
+    <span class="kw">for </span><span class="kw-2">mut </span>thisbox <span class="kw">in </span>filtered_boxes {
       <span class="comment">// Should any `options` be inherited by the contained boxes?
-      </span><span class="kw">let </span>(w, h, d) = thisbox.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      </span><span class="kw">let </span>(w, h, d, <span class="kw">_</span>,<span class="kw">_</span>,<span class="kw">_</span>) = thisbox.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
 
       <span class="comment">// DG: TODO: We&#39;ll have to figure out how to rearrange this logic,
       //           now that every emitted result of get_size is a Dimension.
