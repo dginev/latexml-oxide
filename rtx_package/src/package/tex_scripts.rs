@@ -38,11 +38,11 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
     true
   } else {
     match digested.data() {
-      TBox(tbox) => match tbox.get_string(state) {
+      TBox(tbox) => match tbox.borrow().get_string(state) {
         Ok(s) => s.trim().is_empty(),
         _ => true,
       },
-      List(list) => list.boxes.iter().all(|b| is_empty(b, state)),
+      List(list) => list.borrow().boxes.iter().all(|b| is_empty(b, state)),
       Whatsit(ws_arc) => {
         let ws = ws_arc.borrow();
         *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
@@ -61,8 +61,9 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)> {
   let box_opt = match object.data() {
-    DigestedData::List(obj) => obj.boxes.last(),
-    _ => Some(object),
+    DigestedData::List(obj) => obj.borrow().boxes.last()
+      .map(|v| Cow::Owned(v.clone())),
+    _ => Some(Cow::Borrowed(object)),
   };
   if let Some(boxobj) = box_opt {
     if let DigestedData::Whatsit(ref obj) = boxobj.data() {
@@ -290,11 +291,11 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
   // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it's different from the 'expected' style!!!]
-  let script_size = script.get_size(None,state)?;
+  let script_size = script.clone().get_size(None,state)?;
   let (mut ws, mut hs, mut ds) = (script_size.0.value_of() as f64, script_size.1.value_of() as f64, script_size.2.value_of() as f64);
   ws *= 0.8; hs *= 0.8; ds *= 0.8;    // HACK!@!!
   let (wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
-    let base_size = base.get_size(None, state)?;
+    let base_size = base.clone().get_size(None, state)?;
     (base_size.0.value_of() as f64, base_size.1.value_of() as f64, base_size.2.value_of() as f64)
   } else {
     let nominal_size = state.lookup_font().unwrap().get_nominal_size();

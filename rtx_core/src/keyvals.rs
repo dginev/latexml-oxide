@@ -20,7 +20,7 @@ use crate::keyval::KeyVal;
 use crate::state::State;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{BoxOps, Digested};
+use crate::{BoxOps, Digested, NO_PROPERTIES};
 
 type KVTuple = (String, Stored, bool, Vec<KeyVal>, KeyVal);
 
@@ -145,6 +145,10 @@ impl Object for KeyVals {
 }
 
 impl BoxOps for KeyVals {
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&NO_PROPERTIES)
+  }
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     unimplemented!();

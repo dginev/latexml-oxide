@@ -74,9 +74,9 @@ pub enum Stored {
   /// atomic data (Clone)
   Node(Node),
   // Collections (boxed)
-  /// boxed collection
+  /// boxed Vec<char>
   VecChar(Vec<char>),
-  /// boxed collection
+  /// boxed Vec<Option<char>>
   VecOptionChar(Vec<Option<char>>),
   /// boxed collection
   VecString(Vec<String>),

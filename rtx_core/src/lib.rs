@@ -178,11 +178,17 @@ pub trait BoxOps: Object {
   /// build a string representation of the underlying digested data
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
   /// get the underlying tokens (preceding digestion)
-  fn get_tokens(&self) -> Option<&Tokens> { None }
-  /// get the map of named properties
+  fn get_tokens(&self) -> Option<&Tokens> { unimplemented!() }
+  /// deprecated: get the map of named properties. This can not be usable as long as we have any
+  /// data behind a RefCell wrapper.
+  /// Use `with_properties` instead.
   fn get_properties(&self) -> &HashMap<String, Stored> {
-    &NO_PROPERTIES
+    unimplemented!();
   }
+
+  /// execute a function using this object's named properties
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R;
   /// get a mutable reference to the map of named properties
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
   /// set a named property (allows all `Stored` types for values)
@@ -191,35 +197,39 @@ pub trait BoxOps: Object {
   }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
-    if key == "isSpace" {
-      match self.get_properties().get(key) {
-        Some(value) => Some(Cow::Borrowed(value)),
-        None => {
-          let tex = self
-            .get_tokens()
-            .map(|tks| tks.clone().untex())
-            .unwrap_or_default(); // !
-          if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
-            // Check the TeX code, not (just) the string!
-            Some(Cow::Owned(Stored::Bool(true)))
-          } else {
-            None
-          }
-        },
+    self.with_properties(|props|
+      if key == "isSpace" {
+        match props.get(key) {
+          Some(value) => Some(Cow::Owned(value.clone())),
+          None => {
+            let tex = self
+              .get_tokens()
+              .map(|tks| tks.clone().untex())
+              .unwrap_or_default(); // !
+            if !tex.is_empty() && tex.chars().all(char::is_whitespace) {
+              // Check the TeX code, not (just) the string!
+              Some(Cow::Owned(Stored::Bool(true)))
+            } else {
+              None
+            }
+          },
+        }
+      } else {
+        props.get(key).map(|v| Cow::Owned(v.clone()))
       }
-    } else {
-      self.get_properties().get(key).map(Cow::Borrowed)
-    }
+    )
   }
   /// get a mutable reference to a single named property (does NOT have the "isSpace" check)
   fn get_property_mut(&mut self, key:&str) -> Option<&mut Stored> {
     self.get_properties_mut().get_mut(key)
   }
   /// checks if a property key has been set
-  fn has_property(&self, key: &str) -> bool { self.get_properties().contains_key(key) }
+  fn has_property(&self, key: &str) -> bool { self.with_properties(|props| props.contains_key(key)) }
   /// obtains a boolean property value (false unless `Stored::Bool`)
   fn get_property_bool(&self, key: &str) -> bool {
-    matches!(self.get_properties().get(key), Some(Stored::Bool(true)))
+    self.with_properties(|props|
+      matches!(props.get(key), Some(Stored::Bool(true)))
+    )
   }
   /// obtains the "body" of a digested object which captured it
   fn get_body(&self) -> Option<Digested> {
@@ -240,7 +250,7 @@ pub trait BoxOps: Object {
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 
   // For the dimensions of boxes, we'll store the (lazily) computed size as:
-  //    cwidth, cheight, cdepth
+  //    cached_width, cached_height, cached_depth
   // and the explicitly requested/assigned size as
   //    width, height, depth.
   // Generally speaking, an XML element should only get width, height, depth
@@ -253,7 +263,7 @@ pub trait BoxOps: Object {
     options: Option<HashMap<String, Stored>>,
     state: &mut State,
   ) -> Result<Option<RegisterValue>> {
-    if !self.has_property("width") && !self.has_property("cwidth") {
+    if !self.has_property("width") && !self.has_property("cached_width") {
       // TODO: Restore caching?
       // self.compute_size_store(options.unwrap_or_default(), state)?
       let (w, _, _) = self.compute_size(options.unwrap_or_default(), state)?;
@@ -262,7 +272,7 @@ pub trait BoxOps: Object {
 
     Ok(match self.get_property("width") {
       Some(val) => (&*val).into(),
-      None => match self.get_property("cwidth") {
+      None => match self.get_property("cached_width") {
         Some(val) => (&*val).into(),
         None => Some(RegisterValue::Dimension(Dimension::default())),
       },
@@ -290,50 +300,75 @@ pub trait BoxOps: Object {
   /// the generic implementation is immutable and will recompute the size on each call
   /// see `Digested::get_size` for a variant with interior mutability which caches the box size
   fn get_size(
-    &self,
+    &mut self,
     options: Option<HashMap<String, Stored>>,
     state: &mut State,
-  ) -> Result<(Dimension, Dimension, Dimension)> {
+  ) -> Result<(Dimension, Dimension, Dimension, Dimension,Dimension,Dimension)> {
     // TODO: Reintroduce caching?
-    if !(self.has_property("cwidth") && self.has_property("cheight") && self.has_property("cdepth"))
+    if !(self.has_property("cached_width") && self.has_property("cached_height") && self.has_property("cached_depth"))
     {
-      return self.compute_size(options.unwrap_or_default(), state);
+      self.compute_size_and_cache(options.unwrap_or_default(), state)?;
     }
-    let props = self.get_properties();
+    self.with_properties(|props| {
+      let (width,height,depth,
+        cached_width,cached_height,cached_depth) = (
+      props.get("width"), props.get("height"), props.get("depth"),
+      props.get("cached_width"), props.get("cached_height"),props.get("cached_depth"));
 
     // Debug("SIZE of $self"
     //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
-    //     . "\n calculated : " . _showsize($$props{cwidth}, $$props{cheight}, $$props{cdepth})
+    //     . "\n calculated : " . _showsize($$props{cached_width}, $$props{cached_height}, $$props{cached_depth})
     //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys
-    // %options)     . "\n =>: " . _showsize($$props{width} || $$props{cwidth}, $$props{height}
-    // || $$props{cheight}, $$props{depth} || $$props{cdepth})     . "\n   Of " .
+    // %options)     . "\n =>: " . _showsize($$props{width} || $$props{cached_width}, $$props{height}
+    // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
     // ToString($self)) if $LaTeXML::DEBUG{size};
     Ok((
-      match props.get("width") {
+      match width {
         Some(Stored::Dimension(w)) => *w,
-        _ => match props.get("cwidth") {
+        _ => match cached_width {
           Some(Stored::Dimension(w)) => *w,
           _ => Dimension::default(),
         },
       },
-      match props.get("height") {
+      match height {
         Some(Stored::Dimension(h)) => *h,
-        _ => match props.get("cheight") {
+        _ => match cached_height {
           Some(Stored::Dimension(h)) => *h,
           _ => Dimension::default(),
         },
       },
-      match props.get("depth") {
+      match depth {
         Some(Stored::Dimension(d)) => *d,
-        _ => match props.get("cdepth") {
+        _ => match cached_depth {
           Some(Stored::Dimension(d)) => *d,
           _ => Dimension::default(),
         },
       },
-    ))
+      match cached_width {
+        Some(Stored::Dimension(w)) => *w,
+        _ => match width  {
+          Some(Stored::Dimension(w)) => *w,
+          _ => Dimension::default(),
+        },
+      },
+      match cached_height {
+        Some(Stored::Dimension(h)) => *h,
+        _ => match height {
+          Some(Stored::Dimension(h)) => *h,
+          _ => Dimension::default(),
+        },
+      },
+      match cached_depth {
+        Some(Stored::Dimension(d)) => *d,
+        _ => match depth {
+          Some(Stored::Dimension(d)) => *d,
+          _ => Dimension::default(),
+        },
+      },
+    )) })
   }
 
-  /// deprecated/to be revisited - computes and caches the size of a box-like object
+  /// computes and caches (via named properties) the size of a box-like object
   fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<String, Stored>,
@@ -345,16 +380,16 @@ pub trait BoxOps: Object {
       }
     }
 
-    let (w, h, d) = self.compute_size(options, state)?;
+    let (w, h, d) = dbg!(self.compute_size(options, state)?);
 
-    if !self.has_property("cwidth") {
-      self.set_property("cwidth", w);
+    if !self.has_property("cached_width") {
+      self.set_property("cached_width", w);
     }
-    if !self.has_property("cheight") {
-      self.set_property("cheight", h);
+    if !self.has_property("cached_height") {
+      self.set_property("cached_height", h);
     }
-    if !self.has_property("cdepth") {
-      self.set_property("cdepth", d);
+    if !self.has_property("cached_depth") {
+      self.set_property("cached_depth", d);
     }
     Ok((w,h,d))
   }

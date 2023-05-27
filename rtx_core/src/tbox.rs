@@ -146,6 +146,10 @@ impl Tbox {
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&self.properties)
+  }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
   fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
     // TODO: Should we switch these to symbols? are they used often?

@@ -15,7 +15,7 @@ use crate::document::Document;
 use crate::state::State;
 use crate::tokens::Tokens;
 use crate::tokens::NO_TOKENS;
-use crate::BoxOps;
+use crate::{BoxOps, NO_PROPERTIES};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Comment(pub String);
@@ -28,6 +28,10 @@ impl Object for Comment {
   fn revert(&self, _state: &State) -> Result<Tokens> { Ok(NO_TOKENS) }
 }
 impl BoxOps for Comment {
+  fn with_properties<R, FnR>(&self, caller: FnR) -> R
+  where FnR: FnOnce(&HashMap<String, Stored>) -> R {
+    caller(&NO_PROPERTIES)
+  }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {} // no-op
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
