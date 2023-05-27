@@ -400,6 +400,9 @@
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -778,7 +781,10 @@
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
-      sizer(<span class="self">self</span>, state)
+      <span class="macro">eprintln!</span>(<span class="string">&quot;calling explicit sizer!&quot;</span>);
+      <span class="kw">let </span>out = sizer(<span class="self">self</span>, state);
+      <span class="macro">eprintln!</span>(<span class="string">&quot;done!&quot;</span>);
+      out
     } <span class="kw">else </span>{
       <span class="comment">// Nothing specified? use #body if any, else sum all box args
       </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
