@@ -376,7 +376,10 @@ impl BoxOps for Whatsit {
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
-      sizer(self, state)
+      eprintln!("calling explicit sizer!");
+      let out = sizer(self, state);
+      eprintln!("done!");
+      out
     } else {
       // Nothing specified? use #body if any, else sum all box args
       let mut boxes = Vec::new();
