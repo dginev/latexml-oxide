@@ -140,7 +140,12 @@ impl Tbox {
     }
   }
   /// checks if the text content is empty
-  pub fn is_empty(&self) -> bool { arena::with(self.text, |text| text.is_empty()) }
+  pub fn is_empty(&self) -> bool {
+    // 1. A space-like thing
+    self.get_property_bool("isEmpty") || self.get_property_bool("isSpace") ||
+    // 2. empty (or whitespace) text content
+    arena::with(self.text, |text| text.trim().is_empty())
+  }
 }
 
 impl BoxOps for Tbox {

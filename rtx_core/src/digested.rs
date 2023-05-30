@@ -296,13 +296,13 @@ impl BoxOps for Digested {
       List(ref l) => l.borrow().unlist(),
     }
   }
-  fn unlist_ref(&self) -> Vec<&Digested> {
+  fn unlist_ref(&self) -> Vec<Cow<Digested>> {
     use DigestedData::*;
     match *self.0 {
       TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
-        vec![self]
+        vec![Cow::Borrowed(self)]
       },
-      List(ref _l) => unimplemented!()// l.borrow().unlist_ref()
+      List(ref l) => l.borrow().unlist().into_iter().map(Cow::Owned).collect()
     }
   }
 
@@ -437,6 +437,10 @@ impl BoxOps for Digested {
     }
   }
 
+  /// Note the difference between calling `compute_size` on a Digested object, and calling it on a
+  /// concrete box type. When called on `Digested` it will opt for caching the computed sizes,
+  /// but when called on the concrete types it will always compute sizes fresh.
+  ///
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,

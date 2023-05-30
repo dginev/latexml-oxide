@@ -4,6 +4,7 @@ use crate::common::dimension::Dimension;
 use crate::common::store::Stored;
 use crate::common::error::*;
 use crate::state::State;
+use crate::list::List;
 use crate::digested::Digested;
 use crate::BoxOps;
 
@@ -37,7 +38,7 @@ pub fn normalize_alignment(alignment: &mut Alignment, state:&mut State) -> Resul
     normalize_cell_sizes(alignment,state)?;
     normalize_mark_spans(alignment)?;
     normalize_prune_rows(alignment)?;
-    normalize_prune_columns(alignment)?;
+    normalize_prune_columns(alignment, state)?;
     normalize_sum_sizes(alignment)?;
     alignment.is_normalized = true;
   }
@@ -55,17 +56,16 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment, state: &mut State) -> Res
           = boxes.get_size(Some(stored_map!(
             "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )), state)?;
-        dbg!(w);
         // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width vattach))
         //     . ") size " . showSize($w,  $h,  $d)
         //     . " csize " . showSize($cw, $ch, $cd)
         //     . " Boxes=" . ToString($boxes)) if $LaTeXML::DEBUG{halign} && $LaTeXML::DEBUG{size};
         // TODO: We can't do heights and depths yet
         let empty = cw.value_of() < 1 || // h.value_of() < 1 || d.value_of() < 1 ||
-          boxes.unlist_ref().iter().all(|tb| tb.get_property_bool("isSpace")) && !preserved_boxes(boxes);
-        cell.width  = Some(w);
-        cell.height = Some(h);
-        cell.depth  = Some(d);
+          boxes.unlist_ref().iter().all(|tb| tb.get_property_bool("isSpace")) && preserved_boxes(Some(boxes)).is_empty();
+        cell.cached_width  = Some(w);
+        cell.cached_height = Some(h);
+        cell.cached_depth  = Some(d);
         cell.empty = empty;
         if empty {
           cell.align = None;
@@ -171,102 +171,102 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
   Ok(())}
 /// Scan for and remove empty columns
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
-pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
-  let preserve = alignment.is_math || alignment.properties.contains_key("preserve_structure");
+pub fn normalize_prune_columns(alignment: &mut Alignment, state: &mut State) -> Result<()> {
+  if alignment.is_math || alignment.properties.contains_key("preserve_structure") { // Don't remove empty columns from math.
+    return Ok(());
+  }
   // Now prune empty columns.
-  if !preserve { // Don't remove empty columns from math.
-    let mut nc   = 0;
-    for row in alignment.rows.iter() {
-      let n = row.get_columns().len();
-      if n > nc {
-        nc = n;
-      }
+  let mut nc   = 0;
+  for row in alignment.rows.iter() {
+    let n = row.get_columns().len();
+    if n > nc {
+      nc = n;
     }
-    for j in (0..nc).rev() { // Prune from RIGHT!
-      let j_column_is_empty = alignment.rows.iter().all(|row|
-        row.get_columns().get(j).map(|col| col.empty).unwrap_or(true));
-      if j_column_is_empty {    // Empty!
-        // let mut prunew = 0;
-        for row in &mut alignment.rows {
-          let mut new_border = String::new();
-          if let Some(col) = row.get_columns().get(j) {
-            // TODO: colspanned
-            // if let Some(col_spanned) = col.colspanned {// Decrement colspan of spanning column
-            //     if let Some(ref mut colspan) = &mut row.get_columns_mut()[col_spanned].colspan {
-            //       *colspan -= 1;
-            //     }
-            // }
-            // TODO: cached_width
-            // if let Some(w) = col.cached_width {
-            //   if w > prunew {
-            //     prunew = w;
-            //   }
-            // }
-
-            if j > 0 {
-              // TODO:
-              // if (my $jj = $$prev{colspanned}) {
-              //   $prev = $$row{columns}[$jj]; }
-              for c in col.border.chars() {
-                // mask all but left and right border
-                match c {
-                  // convert to right
-                  'l' | 'r' => { new_border.push('r'); },
-                  // convert to right
-                  'L' | 'R' => { new_border.push('R'); },
-                  _ => {}
-                }
-              }
-
-              // TODO:
-              // if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
-              //   $$prev{boxes} = LaTeXML::Core::List($$prev{boxes}
-              //     ? ($$prev{boxes}->unlist, @preserve) : @preserve); }
-            } else {
-              for c in col.border.chars() {
-                // mask all but left and right border
-                match c {
-                  // but convert to left
-                  'l' | 'r' => { new_border.push('l'); },
-                  // but convert to left
-                  'L' | 'R' => { new_border.push('L'); },
-                  _ => {}
-                }
-              }
-
-  //             $$next{border} .= $border;
-  //             if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
-  //               $$next{boxes} = LaTeXML::Core::List($$col{boxes}
-  //                 ? (@preserve, $$next{boxes}->unlist) : @preserve); }
-            }
-            // Now, remove the column
-            row.get_columns_mut().remove(j);
+  }
+  for j in (0..nc).rev() { // Prune from RIGHT!
+    let j_column_is_empty = alignment.rows.iter().all(|row|
+      row.get_columns().get(j).map(|col| col.empty).unwrap_or(true));
+    if j_column_is_empty {    // Empty!
+      let mut prunew = 0;
+      let mut colspanned = None;
+      for row in &mut alignment.rows {
+        let mut new_border = String::new();
+        let mut preserve = Vec::new();
+        if let Some(col) = row.get_columns().get(j) {
+          colspanned = col.colspanned;
+          if let Some(w) = col.cached_width {
+            prunew = prunew.max(w.value_of());
           }
-          // Changed: we need to first finish all work with "col" before we can mutably re-borrow
-          // the "prev" column from the same row.
-          if !new_border.is_empty() {
-            if j > 0 {
-              if let Some(prev) = row.get_columns_mut().get_mut(j-1) {
-                prev.border.push_str(&new_border);
+
+          if j > 0 {
+            for c in col.border.chars() {
+              // mask all but left and right border
+              match c {
+                // convert to right
+                'l' | 'r' => { new_border.push('r'); },
+                // convert to right
+                'L' | 'R' => { new_border.push('R'); },
+                _ => {}
               }
-            } else {
-              // next border case
-              if let Some(next) = row.get_columns_mut().get_mut(1) {
-                // add to next row
-                next.border.push_str(&new_border);
+            }
+          } else {
+            for c in col.border.chars() {
+              // mask all but left and right border
+              match c {
+                // but convert to left
+                'l' | 'r' => { new_border.push('l'); },
+                // but convert to left
+                'L' | 'R' => { new_border.push('L'); },
+                _ => {}
               }
             }
           }
+          preserve = preserved_boxes(col.boxes.as_ref());
         }
-        if j > 0 {    // If not 1st row, add right padding to previous column
-  //         foreach my $row (@rows) {
-  //           if (my $col = $$row{columns}[$j - 1]) {
-  //             $$col{rpadding} = Dimension($prunew); } } }
-  //       else {       // Else add left padding to (newly) first column
-  //         foreach my $row (@rows) {    // And add the padding to previous column
-  //           if (my $col = $$row{columns}[0]) {
-  //             $$col{lpadding} = Dimension($prunew); } } }
+
+        // Now, remove the column
+        row.get_columns_mut().remove(j);
+        if let Some(col_spanned) = colspanned {// Decrement colspan of spanning column
+          if let Some(ref mut colspan) = &mut row.get_columns_mut()[col_spanned].colspan {
+            *colspan -= 1;
+          }
         }
+        // preserved-boxes handling moved here for mutability reasons.
+        if j > 0 {{
+          let mut prev = &mut row.get_columns_mut()[j-1];
+          if let Some(jj) = prev.colspanned {
+            prev = &mut row.get_columns_mut()[jj];
+          }
+          if !preserve.is_empty() {    // Copy boxes over, in case side effects?
+            let mut new_boxes = prev.boxes.as_mut().map(|b| b.unlist()).unwrap_or_default();
+            new_boxes.extend(preserve);
+            prev.boxes = Some(Digested::from(List::new(new_boxes, state)));
+          }
+        }}
+        // Changed: we need to first finish all work with "col" before we can mutably re-borrow
+        // the "prev" column from the same row.
+        if !new_border.is_empty() {
+          if j > 0 {
+            if let Some(prev) = row.get_columns_mut().get_mut(j-1) {
+              prev.border.push_str(&new_border);
+            }
+          } else {
+            // next border case
+            if let Some(next) = row.get_columns_mut().get_mut(1) {
+              // add to next row
+              next.border.push_str(&new_border);
+            }
+          }
+        }
+      }
+      if j > 0 {    // If not 1st row, add right padding to previous column
+//         foreach my $row (@rows) {
+//           if (my $col = $$row{columns}[$j - 1]) {
+//             $$col{rpadding} = Dimension($prunew); } } }
+//       else {       // Else add left padding to (newly) first column
+//         foreach my $row (@rows) {    // And add the padding to previous column
+//           if (my $col = $$row{columns}[0]) {
+//             $$col{lpadding} = Dimension($prunew); } } }
       }
     }
   }
@@ -397,6 +397,9 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   Ok(())
 }
 
-fn preserved_boxes(boxes: &Digested) -> bool {
-  boxes.unlist_ref().iter().any(|tb| tb.get_property_bool("alignmentPreserve"))
+fn preserved_boxes(boxes_opt: Option<&Digested>) -> Vec<Digested> {
+  match boxes_opt {
+    Some(boxes) => boxes.unlist().into_iter().filter(|tb| tb.get_property_bool("alignmentPreserve")).collect(),
+    None => Vec::new()
+  }
 }

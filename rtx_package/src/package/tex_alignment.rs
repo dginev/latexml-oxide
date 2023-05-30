@@ -329,18 +329,20 @@ LoadDefinitions!(outer_state, {
   // But note that \halign does NOT remove this trailing space!
   DefPrimitive!("\\@@eat@space", sub[stomach,(),_state] {
     let mut save = Vec::new();
-    while let Some(tbox) = stomach.box_list.last() {
+    while let Some(tbox) = stomach.box_list.pop() {
       if tbox.get_property_bool("alignmentSkippable")
         || tbox.get_property_bool("isFill") {
-        save.push(stomach.box_list.pop().unwrap());
-      } else if tbox.is_empty() {
-        stomach.box_list.pop().unwrap();
-      } else { break; }
+        save.push(tbox);
+      } else if !tbox.is_empty() {
+        stomach.box_list.push(tbox);
+        break;
+      }
     }
-    stomach.box_list.append(&mut save);
+    if !save.is_empty() {
+      stomach.box_list.extend(save);
+    }
+    Ok(Vec::new())
   });
-
-
 });
 
 
@@ -465,87 +467,89 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
-  let mut last_token: Option<Token>;
-  let spanning = false;// TODO: Revise spanning use
+  let mut last_token: Option<Token> = None;
+  let mut spanning = false;
   loop {   // Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    last_token = stomach.get_gullet_mut()
-      .read_x_token(Some(false),false, state)?;
-    if last_token.is_none() { break; }
-    let token = last_token.as_ref().unwrap();
-    if *token == T_SPACE!()   // Skip leading space.
-      || *token == T_CS!("\\par")  // Skip or blank line(?)
-      || (lastwascr &&             // Or \crcr following a \cr
-         (*token == T_CS!("\\crcr") || *token == T_CS!("\\hidden@crcr"))) {
-    } else if *token == T_CS!("\\omit") { // \omit removes template for this column.
-//         Debug("Halign $alignment: OMIT at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
-      if !alignment.borrow().is_in_row() {
-        alignment.borrow_mut().start_row(false, stomach,state)?;
-      }
-      alignment.borrow_mut().omit_next_column();
-    } else if *token == T_CS!("\\noalign") {    // \puts something in vertical list
-      // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
-      if alignment.borrow().is_in_row() {
+    while let Some(xtoken) = stomach.get_gullet_mut()
+    .read_x_token(Some(false),false, state)? {
+      last_token = Some(xtoken);
+      let token = last_token.as_ref().unwrap();
+      if *token == T_SPACE!()   // Skip leading space.
+        || *token == T_CS!("\\par")  // Skip or blank line(?)
+        || (lastwascr &&             // Or \crcr following a \cr
+          (*token == T_CS!("\\crcr") || *token == T_CS!("\\hidden@crcr"))) {
+      } else if *token == T_CS!("\\omit") { // \omit removes template for this column.
+  //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+        if !alignment.borrow().is_in_row() {
+          alignment.borrow_mut().start_row(false, stomach,state)?;
+        }
+        alignment.borrow_mut().omit_next_column();
+      } else if *token == T_CS!("\\noalign") {    // \puts something in vertical list
+        // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+        if alignment.borrow().is_in_row() {
+          alignment.borrow_mut().end_row(stomach,state)?;
+        }
+        alignment.borrow_mut().start_column(true, stomach,state)?;
+        alignment.borrow_mut().last_column();
+        let next_arg = stomach.get_gullet_mut().read_arg(state)?;
+        let r = stomach.digest(next_arg, state)?;
         alignment.borrow_mut().end_row(stomach,state)?;
-      }
-      alignment.borrow_mut().start_column(true, stomach,state)?;
-      alignment.borrow_mut().last_column();
-      let next_arg = stomach.get_gullet_mut().read_arg(state)?;
-      let r = stomach.digest(next_arg, state)?;
-      alignment.borrow_mut().end_row(stomach,state)?;
-      stomach.expire_local_box_list();
-      return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole row???
-    } else if *token == T_CS!("\\hidden@noalign") { // \puts something in vertical list
-//         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-      let invoked =  stomach.invoke_token(token, state)?;
-      stomach.box_list.extend(invoked);
-    } else {
-      break;
-    }
-  }
-//     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
-  if last_token.is_none() || last_token == Some(T_END!()) || last_token == Some(T_CS!("\\@close@alignment")) {
-    stomach.expire_local_box_list();
-    return Ok((None, last_token, None, false));
-  }
-  // Next column, unless spanning (then combine columns)
-  if spanning {
-    // spanning = false;
-    alignment.borrow_mut().next_column();
-  } else {
-    alignment.borrow_mut().start_column(false, stomach, state)?;
-  }
-  // Push before template,  Marker and put the token back
-  // Debug("Halign $alignment: COLUMN preload at "
-  //     . Stringify(Tokens($alignment->getColumnBefore, T_MARKER('before-column'), $token)))
-  //   if $LaTeXML::DEBUG{halign};
-  let to_unread = Tokens!(
-    alignment.borrow_mut().get_column_before(), T_MARKER!("before-column"), last_token.unwrap());
-  stomach.get_gullet_mut().unread(to_unread);
-  while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
-    if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token, state) {
-      if vtype == "span" { // next column, but continue accumulating
-        // Debug("Halign $alignment: COLUMN span") if $LaTeXML::DEBUG{halign};
-        // spanning = true;
-        break;
+        stomach.expire_local_box_list();
+        return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole row???
+      } else if *token == T_CS!("\\hidden@noalign") { // \puts something in vertical list
+  //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
+        let invoked =  stomach.invoke_token(token, state)?;
+        stomach.box_list.extend(invoked);
       } else {
-        // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
-        //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
-        let current_list = stomach.expire_local_box_list();
-        let mut out_list = List::new(current_list, state);
-        out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
-        return Ok((Some(out_list.into()),Some(token),Some(String::from(vtype)),hidden));
+        break;
       }
-    // } else if token == T_CS!("\\hidden@noalign") { //  \puts something in vertical list
-      // Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-      // let invoked = stomach.invoke_token(&token, state)?;
-      // stomach.box_list.extend(invoked.into_iter());
-    } else {  // Else, we're getting some actual content for the column
-  //     // Debug!("Halign $alignment: COLUMN invoking " . Stringify($token)) if $LaTeXML::DEBUG{halign};
-      let invoked = stomach.invoke_token(&token, state)?;
-      stomach.box_list.extend(invoked.into_iter());
-  // //     Debug("Halign $alignment: COLUMN " . Stringify($token) . " ==> " . Stringify(List(@LaTeXML::LIST)))
-  // //       if $LaTeXML::DEBUG{halign};
+    }
+    //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+    if last_token.is_none() || last_token == Some(T_END!()) || last_token == Some(T_CS!("\\@close@alignment")) {
+      stomach.expire_local_box_list();
+      return Ok((None, last_token, None, false));
+    }
+    // Next column, unless spanning (then combine columns)
+    if spanning {
+      spanning = false;
+      alignment.borrow_mut().next_column();
+    } else {
+      alignment.borrow_mut().start_column(false, stomach, state)?;
+    }
+    // Push before template,  Marker and put the token back
+    let to_unread = Tokens!(
+      alignment.borrow_mut().get_column_before(), T_MARKER!("before-column"), last_token.clone().unwrap());
+    // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
+    stomach.get_gullet_mut().unread(to_unread);
+    while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
+      if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token, state) {
+        if vtype == "span" { // next column, but continue accumulating
+          // Debug("Halign $alignment: COLUMN span") if $LaTeXML::DEBUG{halign};
+          spanning = true;
+          break;
+        } else {
+          // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
+          //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
+          let current_list = stomach.expire_local_box_list();
+          let mut out_list = List::new(current_list, state);
+          out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
+          return Ok((Some(out_list.into()),Some(token),Some(String::from(vtype)),hidden));
+        }
+      // DG: Note this block is commented out as clippy warned it has the exact identical logic
+      // as the "all other cases" else that follows it
+      //
+      // } else if token == T_CS!("\\hidden@noalign") { //  \puts something in vertical list
+      //   // Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
+      //   let invoked = stomach.invoke_token(&token, state)?;
+      //   stomach.box_list.extend(invoked.into_iter());
+      } else {  // Else, we're getting some actual content for the column
+        // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
+        let invoked = stomach.invoke_token(&token, state)?;
+        stomach.box_list.extend(invoked);
+        // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(), List::new(stomach.box_list.clone(),state).stringify());
+    // //       if $LaTeXML::DEBUG{halign};
+      }
     }
   }
   stomach.expire_local_box_list();
@@ -594,8 +598,7 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
 // extract & remove the various fills and rules from the ends to annotate the cell structure
 pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digested, state: &mut State) -> Digested {
   let mut boxes = VecDeque::new();
-  boxes.push_back(in_box);
-  // let is_math  = in_box.is_math();
+  boxes.extend(in_box.unlist());
   let is_math  = state.lookup_bool("IN_MATH");
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
   let n0      = state.lookup_int("alignmentStartColumn") as usize + 1;

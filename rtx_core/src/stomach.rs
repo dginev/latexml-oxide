@@ -143,10 +143,8 @@ impl<'t> Stomach {
     outer_state: &mut State,
   ) -> Result<Digested> {
     let tokens: Tokens = tokens.into();
-
+    if tokens.is_empty() { return Ok(Digested::default()) }
     self.reading_from_mouth(Mouth::default(), outer_state, move |stomach, state| {
-      let local_box_list = stomach.regurgitate(); // grab the current boxes to emulate local frame;
-
       stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); // prefixes shouldn't apply here.
       let mode = if state.lookup_bool("IN_MATH") {
@@ -156,18 +154,14 @@ impl<'t> Stomach {
       };
       let initdepth = stomach.boxing.len();
       let depth = initdepth;
-
+      stomach.new_local_box_list();
       while let Some(token) = stomach
         .get_gullet_mut()
         .read_x_token(Some(true), true, state)?
       {
         // Done if we run out of tokens
-        // {
-        //   let list = STOMACH_LIST.lock()
-        // info!(target:"stomach:digest:invoke_token","{:?}", token);
         let invoked = stomach.invoke_token(&token, state)?;
         stomach.box_list.extend(invoked);
-        // }
 
         if initdepth > stomach.boxing.len() {
           // if we've closed the initial mode.
@@ -185,10 +179,7 @@ impl<'t> Stomach {
         }
       }
 
-      let final_box_list = stomach.regurgitate(); // grab the local boxes and return
-      stomach.box_list = local_box_list; // swap back in the boxes of the initial local frame
-
-      let mut digested_list = List::new(final_box_list, state);
+      let mut digested_list = List::new(stomach.expire_local_box_list(), state);
       digested_list.mode = Some(mode);
       digested_list.into()
     })
@@ -730,9 +721,9 @@ impl<'t> Stomach {
     let ismath = mode.ends_with("math");
     state.assign_value("MODE", arena::pin(mode), Some(Scope::Local));
     state.assign_value("IN_MATH", ismath, Some(Scope::Local));
-    let curfont = state.lookup_font().unwrap();
     if mode == prevmode {
     } else if ismath {
+      let curfont = state.lookup_font().unwrap();
       // When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
       state.assign_value("savedfont", curfont.clone(), Some(Scope::Local));
@@ -752,6 +743,7 @@ impl<'t> Stomach {
       });
       state.assign_font(Rc::new(new_font), Some(Scope::Local));
     } else {
+      let curfont = state.lookup_font().unwrap();
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       if let Some(Stored::Font(saved_font)) = state.lookup_value("savedfont") {
@@ -775,7 +767,6 @@ impl<'t> Stomach {
   pub fn begin_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     self.push_stack_frame(false, state); // Effectively bgroup
     self.set_mode(mode, state)?;
-    state.is_value_bound("MODE", Some(0));
     Ok(())
   }
   /// End processing in `mode`; an error is signalled if `stomach` is not

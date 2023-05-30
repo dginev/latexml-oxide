@@ -187,8 +187,7 @@ impl Gullet {
   ///
 
   fn handle_template(&mut self, mut alignment: RefMut<Alignment>, token: Token, vtype: &str, hidden: bool, state: &mut State) -> Result<()> {
-    // Debug("Halign $alignment: ALIGNMENT Column ended at " . Stringify($token)
-    //     . " type $type [" . Stringify($STATE->lookupMeaning($token)) . "]"
+    // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(), state.lookup_meaning(&token).unwrap());
     //     . "@ " . ToString($self->getLocator))
     // if $LaTeXML::DEBUG{halign};
 
@@ -202,7 +201,7 @@ impl Gullet {
     } else {
       None
     };
-    // Debug("Halign $alignment: column after " . ToString($post)) if $LaTeXML::DEBUG{halign};
+    // eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
     if (vtype == "cr" || vtype == "crcr") &&
       alignment.is_in_row() && ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
         self.unread_one(T_CS!("\\@row@after"));

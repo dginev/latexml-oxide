@@ -25,7 +25,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
-use crate::definition::FontDirective;
+use crate::definition::{FontDirective, Definition};
 use crate::definition::Reversion;
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
@@ -212,6 +212,7 @@ impl fmt::Display for Stored {
       Tokens(ref s) => write!(f, "{s}"),
       Token(ref s) => write!(f, "{s}"),
       Conditional(ref s) => write!(f, "{s}"),
+      Constructor(ref c) => write!(f, "Constructor[{}]", c.get_cs_name()),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {variant:?}");
         // write!(f, "{:?}", self)
@@ -529,7 +530,6 @@ impl Stored {
   /// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Rc<Definition>`
   pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
-    use crate::definition::Definition;
     match self {
       Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),
       Stored::Constructor(ref entry) => entry.read_arguments(gullet, state),
