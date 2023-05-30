@@ -805,15 +805,6 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
-<a href="#814" id="814">814</a>
-<a href="#815" id="815">815</a>
-<a href="#816" id="816">816</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
@@ -959,11 +950,9 @@
     outer_state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
     <span class="kw">let </span>tokens: Tokens = tokens.into();
-
+    <span class="kw">if </span>tokens.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default()) }
     <span class="self">self</span>.reading_from_mouth(Mouth::default(), outer_state, <span class="kw">move </span>|stomach, state| {
-      <span class="kw">let </span>local_box_list = stomach.regurgitate(); <span class="comment">// grab the current boxes to emulate local frame;
-
-      </span>stomach.get_gullet_mut().unread(tokens);
+      stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); <span class="comment">// prefixes shouldn&#39;t apply here.
       </span><span class="kw">let </span>mode = <span class="kw">if </span>state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) {
         TexMode::Math
@@ -972,20 +961,16 @@
       };
       <span class="kw">let </span>initdepth = stomach.boxing.len();
       <span class="kw">let </span>depth = initdepth;
-
+      stomach.new_local_box_list();
       <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = stomach
         .get_gullet_mut()
         .read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state)<span class="question-mark">?
       </span>{
         <span class="comment">// Done if we run out of tokens
-        // {
-        //   let list = STOMACH_LIST.lock()
-        // info!(target:&quot;stomach:digest:invoke_token&quot;,&quot;{:?}&quot;, token);
         </span><span class="kw">let </span>invoked = stomach.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
         stomach.box_list.extend(invoked);
-        <span class="comment">// }
 
-        </span><span class="kw">if </span>initdepth &gt; stomach.boxing.len() {
+        <span class="kw">if </span>initdepth &gt; stomach.boxing.len() {
           <span class="comment">// if we&#39;ve closed the initial mode.
           </span><span class="kw">break</span>;
         }
@@ -1001,10 +986,7 @@
         </span>}
       }
 
-      <span class="kw">let </span>final_box_list = stomach.regurgitate(); <span class="comment">// grab the local boxes and return
-      </span>stomach.box_list = local_box_list; <span class="comment">// swap back in the boxes of the initial local frame
-
-      </span><span class="kw">let </span><span class="kw-2">mut </span>digested_list = List::new(final_box_list, state);
+      <span class="kw">let </span><span class="kw-2">mut </span>digested_list = List::new(stomach.expire_local_box_list(), state);
       digested_list.mode = <span class="prelude-val">Some</span>(mode);
       digested_list.into()
     })
@@ -1546,9 +1528,9 @@
     <span class="kw">let </span>ismath = mode.ends_with(<span class="string">&quot;math&quot;</span>);
     state.assign_value(<span class="string">&quot;MODE&quot;</span>, arena::pin(mode), <span class="prelude-val">Some</span>(Scope::Local));
     state.assign_value(<span class="string">&quot;IN_MATH&quot;</span>, ismath, <span class="prelude-val">Some</span>(Scope::Local));
-    <span class="kw">let </span>curfont = state.lookup_font().unwrap();
     <span class="kw">if </span>mode == prevmode {
     } <span class="kw">else if </span>ismath {
+      <span class="kw">let </span>curfont = state.lookup_font().unwrap();
       <span class="comment">// When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
       </span>state.assign_value(<span class="string">&quot;savedfont&quot;</span>, curfont.clone(), <span class="prelude-val">Some</span>(Scope::Local));
@@ -1568,6 +1550,7 @@
       });
       state.assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
     } <span class="kw">else </span>{
+      <span class="kw">let </span>curfont = state.lookup_font().unwrap();
       <span class="comment">// When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(saved_font)) = state.lookup_value(<span class="string">&quot;savedfont&quot;</span>) {
@@ -1591,7 +1574,6 @@
   </span><span class="kw">pub fn </span>begin_mode(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mode: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="self">self</span>.push_stack_frame(<span class="bool-val">false</span>, state); <span class="comment">// Effectively bgroup
     </span><span class="self">self</span>.set_mode(mode, state)<span class="question-mark">?</span>;
-    state.is_value_bound(<span class="string">&quot;MODE&quot;</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>));
     <span class="prelude-val">Ok</span>(())
   }
   <span class="doccomment">/// End processing in `mode`; an error is signalled if `stomach` is not

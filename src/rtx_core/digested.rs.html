@@ -535,6 +535,10 @@
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Interface layer for the full range of digested objects
 </span><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::{Cow};
@@ -833,14 +837,14 @@
       List(<span class="kw-2">ref </span>l) =&gt; l.borrow().unlist(),
     }
   }
-  <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Digested&gt; {
+  <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Cow&lt;Digested&gt;&gt; {
     <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
       TBox(<span class="kw">_</span>) | Whatsit(<span class="kw">_</span>) | Alignment(<span class="kw">_</span>) | KeyVals(<span class="kw">_</span>) | Comment(<span class="kw">_</span>) | Postponed(<span class="kw">_</span>) | RegisterValue(<span class="kw">_</span>) =&gt; {
-        <span class="macro">vec!</span>[<span class="self">self</span>]
+        <span class="macro">vec!</span>[Cow::Borrowed(<span class="self">self</span>)]
       },
-      List(<span class="kw-2">ref </span>_l) =&gt; <span class="macro">unimplemented!</span>()<span class="comment">// l.borrow().unlist_ref()
-    </span>}
+      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().unlist().into_iter().map(Cow::Owned).collect()
+    }
   }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
@@ -974,7 +978,11 @@
     }
   }
 
-  <span class="kw">fn </span>compute_size(
+  <span class="doccomment">/// Note the difference between calling `compute_size` on a Digested object, and calling it on a
+  /// concrete box type. When called on `Digested` it will opt for caching the computed sizes,
+  /// but when called on the concrete types it will always compute sizes fresh.
+  ///
+  </span><span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     options: HashMap&lt;String, Stored&gt;,
     state: <span class="kw-2">&amp;mut </span>State,

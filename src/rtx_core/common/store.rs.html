@@ -1051,7 +1051,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::math_primitive::MathPrimitive; <span class="comment">//MathPrimitiveOptions
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::primitive::Primitive;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterValue};
-<span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
+<span class="kw">use </span><span class="kw">crate</span>::definition::{FontDirective, Definition};
 <span class="kw">use </span><span class="kw">crate</span>::definition::Reversion;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagData;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
@@ -1238,6 +1238,7 @@
       Tokens(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Token(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Conditional(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
+      Constructor(<span class="kw-2">ref </span>c) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Constructor[{}]&quot;</span>, c.get_cs_name()),
       <span class="kw-2">ref </span>variant =&gt; {
         <span class="macro">panic!</span>(<span class="string">&quot;TODO: implement Display for Stored variant {variant:?}&quot;</span>);
         <span class="comment">// write!(f, &quot;{:?}&quot;, self)
@@ -1555,7 +1556,6 @@
   <span class="doccomment">/// Dynamic dispatch for Definition&#39;s `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Rc&lt;Definition&gt;`
   </span><span class="kw">pub fn </span>read_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
-    <span class="kw">use </span><span class="kw">crate</span>::definition::Definition;
     <span class="kw">match </span><span class="self">self </span>{
       Stored::Conditional(<span class="kw-2">ref </span>entry) =&gt; entry.read_arguments(gullet, state),
       Stored::Constructor(<span class="kw-2">ref </span>entry) =&gt; entry.read_arguments(gullet, state),

@@ -236,6 +236,11 @@
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
 <a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -378,7 +383,12 @@
     }
   }
   <span class="doccomment">/// checks if the text content is empty
-  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { arena::with(<span class="self">self</span>.text, |text| text.is_empty()) }
+  </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="comment">// 1. A space-like thing
+    </span><span class="self">self</span>.get_property_bool(<span class="string">&quot;isEmpty&quot;</span>) || <span class="self">self</span>.get_property_bool(<span class="string">&quot;isSpace&quot;</span>) ||
+    <span class="comment">// 2. empty (or whitespace) text content
+    </span>arena::with(<span class="self">self</span>.text, |text| text.trim().is_empty())
+  }
 }
 
 <span class="kw">impl </span>BoxOps <span class="kw">for </span>Tbox {

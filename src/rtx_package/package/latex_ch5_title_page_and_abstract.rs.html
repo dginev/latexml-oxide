@@ -396,7 +396,7 @@
     after_digest =&gt; sub[stomach, _args, state] {
       <span class="kw">let </span>abstract_title = stomach.digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\format@title@abstract&quot;</span>),
         <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\abstractname&quot;</span>), <span class="macro">T_END!</span>()), state)<span class="question-mark">?</span>;
-      <span class="kw">let </span>regurgitated = List::new(stomach.regurgitate(), state);
+      <span class="kw">let </span>regurgitated = List::new(stomach.box_list.clone(), state);
       <span class="kw">let </span>frontmatter = <span class="kw">match </span>state.lookup_value_mut(<span class="string">&quot;frontmatter&quot;</span>) {
         <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::HashTagData(<span class="kw-2">ref mut </span>frnt)) =&gt; frnt,
         <span class="kw">_ </span>=&gt; <span class="macro">Fatal!</span>(TexPool, Expected, stomach, state,

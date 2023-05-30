@@ -400,12 +400,16 @@
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Alignment;
 <span class="kw">use </span><span class="kw">super</span>::template::Align;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
+<span class="kw">use </span><span class="kw">crate</span>::list::List;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
 <span class="kw">use </span><span class="kw">crate</span>::BoxOps;
 
@@ -439,7 +443,7 @@
     normalize_cell_sizes(alignment,state)<span class="question-mark">?</span>;
     normalize_mark_spans(alignment)<span class="question-mark">?</span>;
     normalize_prune_rows(alignment)<span class="question-mark">?</span>;
-    normalize_prune_columns(alignment)<span class="question-mark">?</span>;
+    normalize_prune_columns(alignment, state)<span class="question-mark">?</span>;
     normalize_sum_sizes(alignment)<span class="question-mark">?</span>;
     alignment.is_normalized = <span class="bool-val">true</span>;
   }
@@ -457,17 +461,16 @@
           = boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
             <span class="string">&quot;align&quot; </span>=&gt; cell.align.map(|a| a.char_code()), <span class="string">&quot;width&quot; </span>=&gt; cell.width,
             <span class="string">&quot;vattach&quot; </span>=&gt; cell.vattach.clone() )), state)<span class="question-mark">?</span>;
-        <span class="macro">dbg!</span>(w);
         <span class="comment">// Debug(&quot;CELL (&quot; . join(&#39;,&#39;, map { $_ . &quot;=&quot; . ToString($$cell{$_}); } qw(align width vattach))
         //     . &quot;) size &quot; . showSize($w,  $h,  $d)
         //     . &quot; csize &quot; . showSize($cw, $ch, $cd)
         //     . &quot; Boxes=&quot; . ToString($boxes)) if $LaTeXML::DEBUG{halign} &amp;&amp; $LaTeXML::DEBUG{size};
         // TODO: We can&#39;t do heights and depths yet
         </span><span class="kw">let </span>empty = cw.value_of() &lt; <span class="number">1 </span>|| <span class="comment">// h.value_of() &lt; 1 || d.value_of() &lt; 1 ||
-          </span>boxes.unlist_ref().iter().all(|tb| tb.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)) &amp;&amp; !preserved_boxes(boxes);
-        cell.width  = <span class="prelude-val">Some</span>(w);
-        cell.height = <span class="prelude-val">Some</span>(h);
-        cell.depth  = <span class="prelude-val">Some</span>(d);
+          </span>boxes.unlist_ref().iter().all(|tb| tb.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)) &amp;&amp; preserved_boxes(<span class="prelude-val">Some</span>(boxes)).is_empty();
+        cell.cached_width  = <span class="prelude-val">Some</span>(w);
+        cell.cached_height = <span class="prelude-val">Some</span>(h);
+        cell.cached_depth  = <span class="prelude-val">Some</span>(d);
         cell.empty = empty;
         <span class="kw">if </span>empty {
           cell.align = <span class="prelude-val">None</span>;
@@ -573,103 +576,103 @@
   <span class="prelude-val">Ok</span>(())}
 <span class="doccomment">/// Scan for and remove empty columns
 /// but copying borders and adjusting rowspan&#39;s &amp; colspan&#39;s appropriately.
-</span><span class="kw">pub fn </span>normalize_prune_columns(alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>preserve = alignment.is_math || alignment.properties.contains_key(<span class="string">&quot;preserve_structure&quot;</span>);
+</span><span class="kw">pub fn </span>normalize_prune_columns(alignment: <span class="kw-2">&amp;mut </span>Alignment, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">if </span>alignment.is_math || alignment.properties.contains_key(<span class="string">&quot;preserve_structure&quot;</span>) { <span class="comment">// Don&#39;t remove empty columns from math.
+    </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
+  }
   <span class="comment">// Now prune empty columns.
-  </span><span class="kw">if </span>!preserve { <span class="comment">// Don&#39;t remove empty columns from math.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>nc   = <span class="number">0</span>;
-    <span class="kw">for </span>row <span class="kw">in </span>alignment.rows.iter() {
-      <span class="kw">let </span>n = row.get_columns().len();
-      <span class="kw">if </span>n &gt; nc {
-        nc = n;
-      }
+  </span><span class="kw">let </span><span class="kw-2">mut </span>nc   = <span class="number">0</span>;
+  <span class="kw">for </span>row <span class="kw">in </span>alignment.rows.iter() {
+    <span class="kw">let </span>n = row.get_columns().len();
+    <span class="kw">if </span>n &gt; nc {
+      nc = n;
     }
-    <span class="kw">for </span>j <span class="kw">in </span>(<span class="number">0</span>..nc).rev() { <span class="comment">// Prune from RIGHT!
-      </span><span class="kw">let </span>j_column_is_empty = alignment.rows.iter().all(|row|
-        row.get_columns().get(j).map(|col| col.empty).unwrap_or(<span class="bool-val">true</span>));
-      <span class="kw">if </span>j_column_is_empty {    <span class="comment">// Empty!
-        // let mut prunew = 0;
-        </span><span class="kw">for </span>row <span class="kw">in </span><span class="kw-2">&amp;mut </span>alignment.rows {
-          <span class="kw">let </span><span class="kw-2">mut </span>new_border = String::new();
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = row.get_columns().get(j) {
-            <span class="comment">// TODO: colspanned
-            // if let Some(col_spanned) = col.colspanned {// Decrement colspan of spanning column
-            //     if let Some(ref mut colspan) = &amp;mut row.get_columns_mut()[col_spanned].colspan {
-            //       *colspan -= 1;
-            //     }
-            // }
-            // TODO: cached_width
-            // if let Some(w) = col.cached_width {
-            //   if w &gt; prunew {
-            //     prunew = w;
-            //   }
-            // }
-
-            </span><span class="kw">if </span>j &gt; <span class="number">0 </span>{
-              <span class="comment">// TODO:
-              // if (my $jj = $$prev{colspanned}) {
-              //   $prev = $$row{columns}[$jj]; }
-              </span><span class="kw">for </span>c <span class="kw">in </span>col.border.chars() {
-                <span class="comment">// mask all but left and right border
-                </span><span class="kw">match </span>c {
-                  <span class="comment">// convert to right
-                  </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; { new_border.push(<span class="string">&#39;r&#39;</span>); },
-                  <span class="comment">// convert to right
-                  </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; { new_border.push(<span class="string">&#39;R&#39;</span>); },
-                  <span class="kw">_ </span>=&gt; {}
-                }
-              }
-
-              <span class="comment">// TODO:
-              // if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
-              //   $$prev{boxes} = LaTeXML::Core::List($$prev{boxes}
-              //     ? ($$prev{boxes}-&gt;unlist, @preserve) : @preserve); }
-            </span>} <span class="kw">else </span>{
-              <span class="kw">for </span>c <span class="kw">in </span>col.border.chars() {
-                <span class="comment">// mask all but left and right border
-                </span><span class="kw">match </span>c {
-                  <span class="comment">// but convert to left
-                  </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; { new_border.push(<span class="string">&#39;l&#39;</span>); },
-                  <span class="comment">// but convert to left
-                  </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; { new_border.push(<span class="string">&#39;L&#39;</span>); },
-                  <span class="kw">_ </span>=&gt; {}
-                }
-              }
-
-  <span class="comment">//             $$next{border} .= $border;
-  //             if (my @preserve = preservedBoxes($$col{boxes})) {    // Copy boxes over, in case side effects?
-  //               $$next{boxes} = LaTeXML::Core::List($$col{boxes}
-  //                 ? (@preserve, $$next{boxes}-&gt;unlist) : @preserve); }
-            </span>}
-            <span class="comment">// Now, remove the column
-            </span>row.get_columns_mut().remove(j);
+  }
+  <span class="kw">for </span>j <span class="kw">in </span>(<span class="number">0</span>..nc).rev() { <span class="comment">// Prune from RIGHT!
+    </span><span class="kw">let </span>j_column_is_empty = alignment.rows.iter().all(|row|
+      row.get_columns().get(j).map(|col| col.empty).unwrap_or(<span class="bool-val">true</span>));
+    <span class="kw">if </span>j_column_is_empty {    <span class="comment">// Empty!
+      </span><span class="kw">let </span><span class="kw-2">mut </span>prunew = <span class="number">0</span>;
+      <span class="kw">let </span><span class="kw-2">mut </span>colspanned = <span class="prelude-val">None</span>;
+      <span class="kw">for </span>row <span class="kw">in </span><span class="kw-2">&amp;mut </span>alignment.rows {
+        <span class="kw">let </span><span class="kw-2">mut </span>new_border = String::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>preserve = Vec::new();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(col) = row.get_columns().get(j) {
+          colspanned = col.colspanned;
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(w) = col.cached_width {
+            prunew = prunew.max(w.value_of());
           }
-          <span class="comment">// Changed: we need to first finish all work with &quot;col&quot; before we can mutably re-borrow
-          // the &quot;prev&quot; column from the same row.
-          </span><span class="kw">if </span>!new_border.is_empty() {
-            <span class="kw">if </span>j &gt; <span class="number">0 </span>{
-              <span class="kw">if let </span><span class="prelude-val">Some</span>(prev) = row.get_columns_mut().get_mut(j-<span class="number">1</span>) {
-                prev.border.push_str(<span class="kw-2">&amp;</span>new_border);
+
+          <span class="kw">if </span>j &gt; <span class="number">0 </span>{
+            <span class="kw">for </span>c <span class="kw">in </span>col.border.chars() {
+              <span class="comment">// mask all but left and right border
+              </span><span class="kw">match </span>c {
+                <span class="comment">// convert to right
+                </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; { new_border.push(<span class="string">&#39;r&#39;</span>); },
+                <span class="comment">// convert to right
+                </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; { new_border.push(<span class="string">&#39;R&#39;</span>); },
+                <span class="kw">_ </span>=&gt; {}
               }
-            } <span class="kw">else </span>{
-              <span class="comment">// next border case
-              </span><span class="kw">if let </span><span class="prelude-val">Some</span>(next) = row.get_columns_mut().get_mut(<span class="number">1</span>) {
-                <span class="comment">// add to next row
-                </span>next.border.push_str(<span class="kw-2">&amp;</span>new_border);
+            }
+          } <span class="kw">else </span>{
+            <span class="kw">for </span>c <span class="kw">in </span>col.border.chars() {
+              <span class="comment">// mask all but left and right border
+              </span><span class="kw">match </span>c {
+                <span class="comment">// but convert to left
+                </span><span class="string">&#39;l&#39; </span>| <span class="string">&#39;r&#39; </span>=&gt; { new_border.push(<span class="string">&#39;l&#39;</span>); },
+                <span class="comment">// but convert to left
+                </span><span class="string">&#39;L&#39; </span>| <span class="string">&#39;R&#39; </span>=&gt; { new_border.push(<span class="string">&#39;L&#39;</span>); },
+                <span class="kw">_ </span>=&gt; {}
               }
             }
           }
+          preserve = preserved_boxes(col.boxes.as_ref());
         }
-        <span class="kw">if </span>j &gt; <span class="number">0 </span>{    <span class="comment">// If not 1st row, add right padding to previous column
-  //         foreach my $row (@rows) {
-  //           if (my $col = $$row{columns}[$j - 1]) {
-  //             $$col{rpadding} = Dimension($prunew); } } }
-  //       else {       // Else add left padding to (newly) first column
-  //         foreach my $row (@rows) {    // And add the padding to previous column
-  //           if (my $col = $$row{columns}[0]) {
-  //             $$col{lpadding} = Dimension($prunew); } } }
-        </span>}
+
+        <span class="comment">// Now, remove the column
+        </span>row.get_columns_mut().remove(j);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(col_spanned) = colspanned {<span class="comment">// Decrement colspan of spanning column
+          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>colspan) = <span class="kw-2">&amp;mut </span>row.get_columns_mut()[col_spanned].colspan {
+            <span class="kw-2">*</span>colspan -= <span class="number">1</span>;
+          }
+        }
+        <span class="comment">// preserved-boxes handling moved here for mutability reasons.
+        </span><span class="kw">if </span>j &gt; <span class="number">0 </span>{{
+          <span class="kw">let </span><span class="kw-2">mut </span>prev = <span class="kw-2">&amp;mut </span>row.get_columns_mut()[j-<span class="number">1</span>];
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(jj) = prev.colspanned {
+            prev = <span class="kw-2">&amp;mut </span>row.get_columns_mut()[jj];
+          }
+          <span class="kw">if </span>!preserve.is_empty() {    <span class="comment">// Copy boxes over, in case side effects?
+            </span><span class="kw">let </span><span class="kw-2">mut </span>new_boxes = prev.boxes.as_mut().map(|b| b.unlist()).unwrap_or_default();
+            new_boxes.extend(preserve);
+            prev.boxes = <span class="prelude-val">Some</span>(Digested::from(List::new(new_boxes, state)));
+          }
+        }}
+        <span class="comment">// Changed: we need to first finish all work with &quot;col&quot; before we can mutably re-borrow
+        // the &quot;prev&quot; column from the same row.
+        </span><span class="kw">if </span>!new_border.is_empty() {
+          <span class="kw">if </span>j &gt; <span class="number">0 </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(prev) = row.get_columns_mut().get_mut(j-<span class="number">1</span>) {
+              prev.border.push_str(<span class="kw-2">&amp;</span>new_border);
+            }
+          } <span class="kw">else </span>{
+            <span class="comment">// next border case
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(next) = row.get_columns_mut().get_mut(<span class="number">1</span>) {
+              <span class="comment">// add to next row
+              </span>next.border.push_str(<span class="kw-2">&amp;</span>new_border);
+            }
+          }
+        }
       }
+      <span class="kw">if </span>j &gt; <span class="number">0 </span>{    <span class="comment">// If not 1st row, add right padding to previous column
+//         foreach my $row (@rows) {
+//           if (my $col = $$row{columns}[$j - 1]) {
+//             $$col{rpadding} = Dimension($prunew); } } }
+//       else {       // Else add left padding to (newly) first column
+//         foreach my $row (@rows) {    // And add the padding to previous column
+//           if (my $col = $$row{columns}[0]) {
+//             $$col{lpadding} = Dimension($prunew); } } }
+      </span>}
     }
   }
   <span class="prelude-val">Ok</span>(())}
@@ -799,7 +802,10 @@
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>preserved_boxes(boxes: <span class="kw-2">&amp;</span>Digested) -&gt; bool {
-  boxes.unlist_ref().iter().any(|tb| tb.get_property_bool(<span class="string">&quot;alignmentPreserve&quot;</span>))
+<span class="kw">fn </span>preserved_boxes(boxes_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Digested&gt;) -&gt; Vec&lt;Digested&gt; {
+  <span class="kw">match </span>boxes_opt {
+    <span class="prelude-val">Some</span>(boxes) =&gt; boxes.unlist().into_iter().filter(|tb| tb.get_property_bool(<span class="string">&quot;alignmentPreserve&quot;</span>)).collect(),
+    <span class="prelude-val">None </span>=&gt; Vec::new()
+  }
 }</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

@@ -1741,7 +1741,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(column) = <span class="self">self</span>.current_column() {
       <span class="kw">if </span>!column.omitted {
         <span class="comment">// Possible \@@eat@space ??? (if LaTeX style???)
-        </span><span class="macro">Tokens!</span>(column.after.clone().unwrap_or_default().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@column@after&quot;</span>))
+        </span><span class="macro">Tokens!</span>(column.after.clone().unwrap().unlist(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@column@after&quot;</span>))
       } <span class="kw">else </span>{
         <span class="macro">Tokens!</span>()
       }
@@ -1866,7 +1866,7 @@
       state: <span class="kw-2">&amp;mut </span>State,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     normalize_alignment(<span class="self">self</span>, state)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="macro">dbg!</span>((<span class="self">self</span>.cached_width.unwrap(), <span class="self">self</span>.cached_height.unwrap(), <span class="self">self</span>.cached_depth.unwrap())))
+    <span class="prelude-val">Ok</span>((<span class="self">self</span>.cached_width.unwrap(), <span class="self">self</span>.cached_height.unwrap(), <span class="self">self</span>.cached_depth.unwrap()))
   }
 
   <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
@@ -1937,7 +1937,7 @@
             }
           }
         }
-        <span class="kw">let </span>empty = cell.empty || <span class="macro">dbg!</span>(<span class="kw-2">&amp;</span>cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        <span class="kw">let </span>empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
         <span class="kw">let </span>open_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_column;
         <span class="kw">let </span><span class="kw-2">mut </span>cell_attrs = HashMap::default();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.align {
@@ -2439,24 +2439,24 @@
     }
   }
   <span class="comment">// debug info
-  </span><span class="macro">eprintln!</span>(<span class="string">&quot;Cell characterizations:&quot;</span>);
-  <span class="kw">for </span>(row_index,row) <span class="kw">in </span>alignment.rows.iter().enumerate() {
-    <span class="kw">for </span>(col_index, cell) <span class="kw">in </span>row.get_columns().iter().enumerate() {
-      <span class="macro">eprintln!</span>(<span class="string">&quot;[{row_index},{col_index}]=&gt;{}{}{} {} {} =&gt; {}{}{}{}&quot;</span>,
-        cell.cell_type.as_ref().unwrap_or(<span class="kw-2">&amp;</span><span class="string">&#39;?&#39;</span>),
-        cell.align.map(|a| a.char_code()).unwrap_or(<span class="string">&#39; &#39;</span>),
-        cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from(<span class="string">&quot;?&quot;</span>)),
-        cell.content_length.unwrap_or(<span class="number">0</span>),
-        cell.border,
-        <span class="kw">if </span>cell.border_top.unwrap_or(<span class="number">0</span>) &gt; <span class="number">0 </span>{ <span class="string">&quot;t&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>},
-        <span class="kw">if </span>cell.border_right.unwrap_or(<span class="number">0</span>) &gt; <span class="number">0  </span>{ <span class="string">&quot;r&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>},
-        <span class="kw">if </span>cell.border_bottom.unwrap_or(<span class="number">0</span>) &gt; <span class="number">0 </span>{ <span class="string">&quot;b&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>},
-        <span class="kw">if </span>cell.border_left.unwrap_or(<span class="number">0</span>) &gt; <span class="number">0 </span>{ <span class="string">&quot;l&quot; </span>} <span class="kw">else </span>{<span class="string">&quot;&quot;</span>}
-      );
-    }
-  }
+  // eprintln!(&quot;Cell characterizations:&quot;);
+  // for (row_index,row) in alignment.rows.iter().enumerate() {
+  //   for (col_index, cell) in row.get_columns().iter().enumerate() {
+  //     eprintln!(&quot;[{row_index},{col_index}]=&gt;{}{}{} {} {} =&gt; {}{}{}{}&quot;,
+  //       cell.cell_type.as_ref().unwrap_or(&amp;&#39;?&#39;),
+  //       cell.align.map(|a| a.char_code()).unwrap_or(&#39; &#39;),
+  //       cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from(&quot;?&quot;)),
+  //       cell.content_length.unwrap_or(0),
+  //       cell.border,
+  //       if cell.border_top.unwrap_or(0) &gt; 0 { &quot;t&quot; } else { &quot;&quot; },
+  //       if cell.border_right.unwrap_or(0) &gt; 0  { &quot;r&quot; } else { &quot;&quot; },
+  //       if cell.border_bottom.unwrap_or(0) &gt; 0 { &quot;b&quot; } else { &quot;&quot; },
+  //       if cell.border_left.unwrap_or(0) &gt; 0 { &quot;l&quot; } else {&quot;&quot;}
+  //     );
+  //   }
+  // }
 
-}
+</span>}
 
 <span class="kw">fn </span>collect_alignment_rows(alignment: <span class="kw-2">&amp;mut </span>Alignment) -&gt; Vec&lt;Vec&lt;<span class="kw-2">&amp;mut </span>Cell&gt;&gt; {
   alignment.rows.iter_mut().map(|x| x.get_columns_mut().iter_mut()
@@ -2480,7 +2480,7 @@
 <span class="doccomment">/// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or &#39;_&#39; (empty) (or some combination)
 ///  or &#39;mx&#39; for alternating text &amp; math.
 </span><span class="kw">fn </span>classify_alignment_cell(document: <span class="kw-2">&amp;mut </span>Document, xcell: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; ColumnSpec {
-  <span class="kw">let </span>content = <span class="macro">dbg!</span>(xcell.get_content());
+  <span class="kw">let </span>content = xcell.get_content();
   <span class="kw">let </span><span class="kw-2">mut </span>inferred_classes: Vec&lt;ColumnSpec&gt;   = Vec::new();
   <span class="kw">if </span>!content.is_empty() &amp;&amp; content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
     inferred_classes.push(ColumnSpec::Integer);

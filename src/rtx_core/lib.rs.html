@@ -582,7 +582,7 @@
 </span><span class="kw">pub trait </span>BoxOps: Object {
   <span class="doccomment">/// If composite, unwrap into the contained digested objects (or return self)
   </span><span class="kw">fn </span>unlist(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Digested&gt; { <span class="macro">unimplemented!</span>() }
-  <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Digested&gt; { <span class="macro">unimplemented!</span>() }
+  <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Cow&lt;Digested&gt;&gt; { <span class="macro">unimplemented!</span>() }
   <span class="doccomment">/// absorb the current object into the `Document` XML - returning the corresponding nodes
   </span><span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt;;
   <span class="doccomment">/// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
@@ -727,7 +727,7 @@
       props.get(<span class="string">&quot;width&quot;</span>), props.get(<span class="string">&quot;height&quot;</span>), props.get(<span class="string">&quot;depth&quot;</span>),
       props.get(<span class="string">&quot;cached_width&quot;</span>), props.get(<span class="string">&quot;cached_height&quot;</span>),props.get(<span class="string">&quot;cached_depth&quot;</span>));
 
-    <span class="comment">// Debug(&quot;SIZE of $self&quot;
+    <span class="comment">// eprintln!(&quot;SIZE of {} {}&quot;, std::any::type_name::&lt;Self&gt;(), self.get_string(state)?);
     //     . &quot;\n preassigned: &quot; . _showsize($$props{width},  $$props{height},  $$props{depth})
     //     . &quot;\n calculated : &quot; . _showsize($$props{cached_width}, $$props{cached_height}, $$props{cached_depth})
     //     . &quot;\n w/options &quot; . join(&#39;,&#39;, map { $_ . &quot;=&quot; . ToString($options{$_}); } sort keys
@@ -792,7 +792,7 @@
       }
     }
 
-    <span class="kw">let </span>(w, h, d) = <span class="macro">dbg!</span>(<span class="self">self</span>.compute_size(options, state)<span class="question-mark">?</span>);
+    <span class="kw">let </span>(w, h, d) = <span class="self">self</span>.compute_size(options, state)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>!<span class="self">self</span>.has_property(<span class="string">&quot;cached_width&quot;</span>) {
       <span class="self">self</span>.set_property(<span class="string">&quot;cached_width&quot;</span>, w);

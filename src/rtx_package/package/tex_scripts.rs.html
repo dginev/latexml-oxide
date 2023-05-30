@@ -434,8 +434,6 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
@@ -773,8 +771,6 @@
       d = hs / <span class="number">2.0 </span>+ ds;
     }
   }
-  <span class="comment">// $w = Dimension($w); $h = Dimension($h); $d = Dimension($d);
-  </span><span class="macro">dbg!</span>(w);
   <span class="prelude-val">Ok</span>((Dimension::new_f64(w), Dimension::new_f64(h), Dimension::new_f64(d)))
 }
 
