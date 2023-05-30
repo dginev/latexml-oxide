@@ -27,10 +27,7 @@ pub struct List {
 
 impl fmt::Debug for List {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    for tbox in &self.boxes {
-      writeln!(f, "{}", tbox.stringify())?;
-    }
-    Ok(())
+    write!(f, "{}", self.boxes.iter().map(|d| d.stringify()).collect::<Vec<_>>().join(", "))
   }
 }
 
@@ -55,7 +52,7 @@ impl PartialEq for List {
 }
 
 impl Object for List {
-  fn stringify(&self) -> String { format!("{self:?}") }
+  fn stringify(&self) -> String { format!("List[{self:?}]") }
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
   fn revert(&self, state: &State) -> Result<Tokens> {
@@ -68,7 +65,7 @@ impl Object for List {
 }
 impl BoxOps for List {
   fn unlist(&self) -> Vec<Digested> { self.boxes.clone() }
-  fn unlist_ref(&self) -> Vec<&Digested> { self.boxes.iter().collect() }
+  fn unlist_ref(&self) -> Vec<Cow<Digested>> { self.boxes.iter().map(Cow::Borrowed).collect() }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn get_property(&self, key:&str) -> Option<Cow<Stored>> { self.properties.get(key).map(Cow::Borrowed) }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
@@ -137,7 +134,12 @@ impl List {
     }
   }
 
-  pub fn is_empty(&self) -> bool { self.boxes.is_empty() }
+  pub fn is_empty(&self) -> bool {
+    // 1. A space-like thing
+    self.get_property_bool("isEmpty") || self.get_property_bool("isSpace") ||
+    // 2. empty contents
+    self.boxes.iter().all(|item| item.is_empty())
+  }
 }
 
 impl From<List> for Result<Vec<Digested>> {

@@ -335,8 +335,6 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
       d = hs / 2.0 + ds;
     }
   }
-  // $w = Dimension($w); $h = Dimension($h); $d = Dimension($d);
-  dbg!(w);
   Ok((Dimension::new_f64(w), Dimension::new_f64(h), Dimension::new_f64(d)))
 }
 

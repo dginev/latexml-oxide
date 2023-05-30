@@ -170,7 +170,7 @@ impl Core {
 pub trait BoxOps: Object {
   /// If composite, unwrap into the contained digested objects (or return self)
   fn unlist(&self) -> Vec<Digested> { unimplemented!() }
-  fn unlist_ref(&self) -> Vec<&Digested> { unimplemented!() }
+  fn unlist_ref(&self) -> Vec<Cow<Digested>> { unimplemented!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
   /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
@@ -315,7 +315,7 @@ pub trait BoxOps: Object {
       props.get("width"), props.get("height"), props.get("depth"),
       props.get("cached_width"), props.get("cached_height"),props.get("cached_depth"));
 
-    // Debug("SIZE of $self"
+    // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string(state)?);
     //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
     //     . "\n calculated : " . _showsize($$props{cached_width}, $$props{cached_height}, $$props{cached_depth})
     //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys
@@ -380,7 +380,7 @@ pub trait BoxOps: Object {
       }
     }
 
-    let (w, h, d) = dbg!(self.compute_size(options, state)?);
+    let (w, h, d) = self.compute_size(options, state)?;
 
     if !self.has_property("cached_width") {
       self.set_property("cached_width", w);

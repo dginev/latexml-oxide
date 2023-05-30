@@ -295,7 +295,7 @@ impl Alignment {
     if let Some(column) = self.current_column() {
       if !column.omitted {
         // Possible \@@eat@space ??? (if LaTeX style???)
-        Tokens!(column.after.clone().unwrap_or_default().unlist(), T_CS!("\\@column@after"))
+        Tokens!(column.after.clone().unwrap().unlist(), T_CS!("\\@column@after"))
       } else {
         Tokens!()
       }
@@ -420,7 +420,7 @@ impl BoxOps for Alignment {
       state: &mut State,
     ) -> Result<(Dimension, Dimension, Dimension)> {
     normalize_alignment(self, state)?;
-    Ok(dbg!((self.cached_width.unwrap(), self.cached_height.unwrap(), self.cached_depth.unwrap())))
+    Ok((self.cached_width.unwrap(), self.cached_height.unwrap(), self.cached_depth.unwrap()))
   }
 
   fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
@@ -491,7 +491,7 @@ impl BoxOps for Alignment {
             }
           }
         }
-        let empty = cell.empty || dbg!(&cell.boxes).is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
         if let Some(align) = cell.align {
@@ -993,22 +993,22 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
     }
   }
   // debug info
-  eprintln!("Cell characterizations:");
-  for (row_index,row) in alignment.rows.iter().enumerate() {
-    for (col_index, cell) in row.get_columns().iter().enumerate() {
-      eprintln!("[{row_index},{col_index}]=>{}{}{} {} {} => {}{}{}{}",
-        cell.cell_type.as_ref().unwrap_or(&'?'),
-        cell.align.map(|a| a.char_code()).unwrap_or(' '),
-        cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from("?")),
-        cell.content_length.unwrap_or(0),
-        cell.border,
-        if cell.border_top.unwrap_or(0) > 0 { "t" } else { "" },
-        if cell.border_right.unwrap_or(0) > 0  { "r" } else { "" },
-        if cell.border_bottom.unwrap_or(0) > 0 { "b" } else { "" },
-        if cell.border_left.unwrap_or(0) > 0 { "l" } else {""}
-      );
-    }
-  }
+  // eprintln!("Cell characterizations:");
+  // for (row_index,row) in alignment.rows.iter().enumerate() {
+  //   for (col_index, cell) in row.get_columns().iter().enumerate() {
+  //     eprintln!("[{row_index},{col_index}]=>{}{}{} {} {} => {}{}{}{}",
+  //       cell.cell_type.as_ref().unwrap_or(&'?'),
+  //       cell.align.map(|a| a.char_code()).unwrap_or(' '),
+  //       cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from("?")),
+  //       cell.content_length.unwrap_or(0),
+  //       cell.border,
+  //       if cell.border_top.unwrap_or(0) > 0 { "t" } else { "" },
+  //       if cell.border_right.unwrap_or(0) > 0  { "r" } else { "" },
+  //       if cell.border_bottom.unwrap_or(0) > 0 { "b" } else { "" },
+  //       if cell.border_left.unwrap_or(0) > 0 { "l" } else {""}
+  //     );
+  //   }
+  // }
 
 }
 
@@ -1034,7 +1034,7 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 /// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or '_' (empty) (or some combination)
 ///  or 'mx' for alternating text & math.
 fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut State) -> ColumnSpec {
-  let content = dbg!(xcell.get_content());
+  let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec>   = Vec::new();
   if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
     inferred_classes.push(ColumnSpec::Integer);
