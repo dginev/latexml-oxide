@@ -1052,8 +1052,6 @@
 <a href="#1052" id="1052">1052</a>
 <a href="#1053" id="1053">1053</a>
 <a href="#1054" id="1054">1054</a>
-<a href="#1055" id="1055">1055</a>
-<a href="#1056" id="1056">1056</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>rtx_core::keyvals::KeyvalsConfig;
@@ -2102,9 +2100,7 @@
   <span class="comment">//implementor note:
   //  T: AsRef&lt;str&gt; would be more efficient than allocating a string every time
   //  but we first need `Stored` and `Digested` to be capable of that.
-
-  </span><span class="kw">let </span>pos_str = pos.to_string();
-  <span class="kw">match </span>pos_str.as_str() {
+  </span><span class="kw">match </span>pos.to_string().as_str() {
    <span class="string">&quot;t&quot; </span>=&gt; <span class="string">&quot;top&quot;</span>,
    <span class="string">&quot;b&quot; </span>=&gt; <span class="string">&quot;bottom&quot;</span>,
    <span class="kw">_ </span>=&gt; <span class="string">&quot;middle&quot;

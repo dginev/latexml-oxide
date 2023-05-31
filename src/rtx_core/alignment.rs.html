@@ -1444,6 +1444,10 @@
 <a href="#1444" id="1444">1444</a>
 <a href="#1445" id="1445">1445</a>
 <a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -1519,6 +1523,7 @@
   <span class="kw">pub </span>open_column: OpenColumnFn,
   <span class="kw">pub </span>close_column: CloseColumnFn,
   <span class="kw">pub </span>properties: HashMap&lt;String, Stored&gt;,
+  <span class="kw">pub </span>xml_attributes: HashMap&lt;String, String&gt;,
   <span class="kw">pub </span>is_math: bool,
 }
 
@@ -1535,6 +1540,7 @@
   content_reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   rows: VecDeque&lt;Row&gt;,
   properties: HashMap&lt;String,Stored&gt;,
+  xml_attributes: HashMap&lt;String, String&gt;,
   template: Template,
   open_container: OpenContainerFn,
   close_container: CloseContainerFn,
@@ -1558,7 +1564,8 @@
   ///    closeRow       = closes the row
   ///    openColumn     = sub($doc,%attrib); creates the column element with given attributes
   ///    closeColumn    = closes the column
-  ///    properties = hashref containing extra attributes for the container element.
+  ///    properties     = hashmap containing extra attributes for the container element.
+  ///    xml_attributes = hashmap containing attributes for the main XML node
   </span><span class="kw">pub fn </span>new(config: AlignmentConfig) -&gt; <span class="self">Self </span>{
     <span class="kw">let </span>template = config.template.unwrap_or_default();
     Alignment {
@@ -1582,6 +1589,7 @@
       in_tabular_head: <span class="bool-val">false</span>,
       is_normalized: <span class="bool-val">false</span>,
       properties: config.properties,
+      xml_attributes: config.xml_attributes,
       rows: VecDeque::new(),
       column_widths: Vec::new(),
       row_heights: Vec::new()
@@ -1824,6 +1832,9 @@
   <span class="kw">pub fn </span>get_properties_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String,Stored&gt; {
     <span class="kw-2">&amp;mut </span><span class="self">self</span>.properties
   }
+  <span class="kw">pub fn </span>get_xml_attributes_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>HashMap&lt;String,String&gt; {
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>.xml_attributes
+  }
 }
 
 <span class="comment">//======================================================================
@@ -1891,11 +1902,8 @@
 
     // We _should_ attach boxes to the alignment and rows,
     // but (ATM) we&quot;ve only got sensible boxes for the cells.
-      </span><span class="kw">let </span>attrs   = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attrs)) = <span class="self">self</span>.properties.remove(<span class="string">&quot;attributes&quot;</span>) {
-        attrs
-      } <span class="kw">else </span>{
-        HashMap::default()
-      };
+    </span><span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
+    std::mem::swap(<span class="kw-2">&amp;mut </span>attrs, <span class="kw-2">&amp;mut </span><span class="self">self</span>.xml_attributes);
     <span class="comment">// TODO: where are these used? We currently have a typed restriction for options passed to
     // construction closures to be a String value (for trivial insertion in attributes)
     // the values here are Dimensions and collections of Dimensions - where are they used ?

@@ -178,6 +178,7 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">//======================================================================
 // C.10.2 The array and tabular Environments
@@ -206,12 +207,16 @@
   </span><span class="macro">DefKeyVal!</span>(<span class="string">&quot;tabular&quot;</span>, <span class="string">&quot;width&quot;</span>, <span class="string">&quot;Dimension&quot;</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular&quot;</span>,
     sub[stomach, (template, attributes_opt), state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>attrs = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    <span class="kw">let </span>attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    <span class="kw">let </span><span class="kw-2">mut </span>attrs = HashMap::default();
+    <span class="kw">for </span>(k,v) <span class="kw">in </span>attrs_stored {
+      attrs.insert(k, v.to_string());
+    }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(va) = attrs.get(<span class="string">&quot;vattach&quot;</span>) {
-      attrs.insert(String::from(<span class="string">&quot;vattach&quot;</span>), Stored::String(arena::pin_static(translate_attachment(va))));
+      attrs.insert(String::from(<span class="string">&quot;vattach&quot;</span>), translate_attachment(va).to_string());
     }
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    tabular_bindings(template, attrs, gullet, state)<span class="question-mark">?</span>;
+    tabular_bindings(template, HashMap::default(), attrs, gullet, state)<span class="question-mark">?</span>;
   });
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@tabular@before&quot;</span>, <span class="prelude-val">None</span>);
@@ -239,11 +244,8 @@
           <span class="kw">let </span>attachment = <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg(<span class="number">1</span>) { translate_attachment(arg) }
           <span class="kw">else </span>{ translate_attachment(String::new()) };
           <span class="kw">let </span><span class="kw-2">mut </span>data_lock = data.borrow_mut();
-          <span class="kw">let </span>props = data_lock.get_properties_mut();
-          <span class="kw">let </span>attributes_stored = props.entry(<span class="string">&quot;attributes&quot;</span>.to_string()).or_insert_with(|| Stored::HashStored(HashMap::default()));
-          <span class="kw">if let </span>Stored::HashStored(attributes) = attributes_stored {
-            attributes.insert(String::from(<span class="string">&quot;vattach&quot;</span>), Stored::String(arena::pin_static(attachment)));
-          }
+          <span class="kw">let </span>attributes = data_lock.get_xml_attributes_mut();
+          attributes.insert(String::from(<span class="string">&quot;vattach&quot;</span>), attachment.to_string());
         }
       }
     },

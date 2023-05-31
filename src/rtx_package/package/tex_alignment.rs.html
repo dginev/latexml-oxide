@@ -690,6 +690,7 @@
 <a href="#690" id="690">690</a>
 <a href="#691" id="691">691</a>
 <a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::common::object::Object;
 <span class="kw">use </span>rtx_core::alignment::read_alignment_template;
@@ -1043,7 +1044,7 @@
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
-</span><span class="kw">pub fn </span>alignment_bindings(template: Template, mode: String, properties: HashMap&lt;String,Stored&gt;, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) {
+</span><span class="kw">pub fn </span>alignment_bindings(template: Template, mode: String, properties: HashMap&lt;String,Stored&gt;, xml_attributes: HashMap&lt;String,String&gt;, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) {
   <span class="kw">let </span>mode = <span class="kw">if </span>mode.is_empty() { state.lookup_string(<span class="string">&quot;MODE&quot;</span>) } <span class="kw">else </span>{ mode };
   <span class="kw">let </span>is_math    = mode.ends_with(<span class="string">&quot;math&quot;</span>);
   <span class="kw">let </span>(container,rowtype,coltype) = <span class="kw">if </span>is_math {
@@ -1066,7 +1067,8 @@
     close_column   : Rc::new(
       |document,state| document.close_element(coltype, state)),
     is_math,
-    properties
+    properties,
+    xml_attributes
   });
   state.assign_alignment(alignment, <span class="prelude-val">None</span>);
   <span class="comment">// Debug(&quot;Halign $alignment: New &quot; . $template-&gt;show) if $LaTeXML::DEBUG{halign};

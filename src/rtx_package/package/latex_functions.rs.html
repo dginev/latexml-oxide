@@ -368,33 +368,33 @@
   }
 }
 
-<span class="kw">pub fn </span>tabular_bindings(template:Template, <span class="kw-2">mut </span>properties: HashMap&lt;String,Stored&gt;, gullet:<span class="kw-2">&amp;mut </span>Gullet, state:<span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>tabular_bindings(template:Template, <span class="kw-2">mut </span>properties: HashMap&lt;String,Stored&gt;, <span class="kw-2">mut </span>xml_attributes:HashMap&lt;String,String&gt;, gullet:<span class="kw-2">&amp;mut </span>Gullet, state:<span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state.lookup_value(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot;</span>) {
       properties.insert(String::from(<span class="string">&quot;guess_headers&quot;</span>), v.clone());
     }
   }
-  <span class="kw">let </span>attributes_entry = properties.entry(String::from(<span class="string">&quot;attributes&quot;</span>)).or_insert_with(|| Stored::HashStored(HashMap::default()));
-  <span class="kw">if let </span>Stored::HashStored(<span class="kw-2">ref mut </span>attributes) = attributes_entry {
-    <span class="kw">if </span>! attributes.contains_key(<span class="string">&quot;colsep&quot;</span>) {
-      <span class="kw">let </span>sep = state.lookup_dimension(<span class="string">&quot;\\tabcolsep&quot;</span>);
-      <span class="kw">if </span>sep.is_some() &amp;&amp; (sep.unwrap().value_of() != state.lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>).unwrap().value_of()) {
-        attributes.insert(String::from(<span class="string">&quot;colsep&quot;</span>), sep.into());
-      }
-    }
-    <span class="kw">if </span>! attributes.contains_key(<span class="string">&quot;rowsep&quot;</span>) {
-      <span class="kw">let </span>astr = gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>), state)<span class="question-mark">?</span>.to_string();
-      <span class="kw">if </span>astr != <span class="string">&quot;1&quot; </span>{
-        <span class="kw">let </span>astr_int = astr.parse::&lt;i64&gt;().expect(<span class="kw-2">&amp;</span>astr);
-        attributes.insert(String::from(<span class="string">&quot;rowsep&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>,Dimension::new(astr_int - <span class="number">1</span>)).into());
+  <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;colsep&quot;</span>) {
+    <span class="kw">let </span>sep_opt = state.lookup_dimension(<span class="string">&quot;\\tabcolsep&quot;</span>);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(sep) = sep_opt {
+      <span class="kw">if </span>sep.value_of() != state.lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>).unwrap().value_of() {
+        xml_attributes.insert(String::from(<span class="string">&quot;colsep&quot;</span>), sep.to_attribute());
       }
     }
   }
+  <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;rowsep&quot;</span>) {
+    <span class="kw">let </span>astr = gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>), state)<span class="question-mark">?</span>.to_string();
+    <span class="kw">if </span>astr != <span class="string">&quot;1&quot; </span>{
+      <span class="kw">let </span>astr_int = astr.parse::&lt;i64&gt;().expect(<span class="kw-2">&amp;</span>astr);
+      xml_attributes.insert(String::from(<span class="string">&quot;rowsep&quot;</span>), Dimension::from_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>, astr_int - <span class="number">1</span>),state)<span class="question-mark">?</span>.to_attribute());
+    }
+  }
+
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;strut&quot;</span>) {
     properties.insert(String::from(<span class="string">&quot;strut&quot;</span>), state.lookup_register(<span class="string">&quot;\\baselineskip&quot;</span>, Vec::new())
       .unwrap().multiply(Float::new_f64(<span class="number">1.5</span>)).into());
   }    <span class="comment">// Account for html space
-  </span>alignment_bindings(template, String::from(<span class="string">&quot;text&quot;</span>), properties, gullet, state);
+  </span>alignment_bindings(template, String::from(<span class="string">&quot;text&quot;</span>), properties, xml_attributes, gullet, state);
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>),<span class="macro">T_CS!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>), <span class="prelude-val">None</span>, gullet);
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\tabularnewline&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="prelude-val">None</span>, gullet);
   <span class="comment">// NOTE: Fit this back in!!!!!!!
