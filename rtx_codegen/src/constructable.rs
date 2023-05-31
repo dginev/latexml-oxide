@@ -446,7 +446,11 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
 /// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &function(args,...)
 /// Note: signals an error if no recognizable value was found!
-fn translate_value(exclude_chars: &str, for_test: bool, text: &mut String) -> proc_macro2::TokenStream {
+fn translate_value(
+  exclude_chars: &str,
+  for_test: bool,
+  text: &mut String,
+) -> proc_macro2::TokenStream {
   let mut val = quote!("");
   let mut is_match = false;
   let mut fcn = String::new();
@@ -502,10 +506,11 @@ fn translate_value(exclude_chars: &str, for_test: bool, text: &mut String) -> pr
           //|| (n_int > *NARGS) {
           panic!("Illegal argument number {n_int:?} at '{text:?}'\n");
         } else {
-          let n_lit_usize = n_int as usize;
-          let n_usize: usize = (n_int - 1) as usize; // index starts at 0
+          // index starts at 0
           // if we need the argument for a test such as `?#1(yes)(no)`
           // make sure we yield an Option<T> instead of T.
+          let n_lit_usize = n_int as usize;
+          let n_usize: usize = (n_int - 1) as usize;
           val = if for_test {
             quote!(if args.len() < #n_lit_usize { &None } else { &args[#n_usize] })
           } else {

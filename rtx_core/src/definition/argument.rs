@@ -17,7 +17,7 @@ use crate::keyvals::KeyVals;
 use crate::state::State;
 use crate::stomach::Stomach;
 use crate::token::Token;
-use crate::tokens::{Tokens,NO_BORROWED_TOKENS};
+use crate::tokens::{Tokens, NO_BORROWED_TOKENS};
 use crate::Locator;
 
 #[derive(Debug, Clone, Default)]
@@ -35,7 +35,7 @@ pub enum ArgWrap {
   // TODO: what do we do with this custom case? feels iffy
   RegisterDefinition(Box<(Token, Vec<ArgWrap>)>),
   #[default]
-  None
+  None,
 }
 
 impl Display for ArgWrap {
@@ -51,8 +51,8 @@ impl Display for ArgWrap {
       ArgWrap::MuDimension(mudim) => write!(f, "{mudim}"),
       ArgWrap::KV(kv) => write!(f, "{kv}"),
       ArgWrap::AlignmentTemplate(at) => write!(f, "{at}"),
-      ArgWrap::RegisterDefinition(dbox) => write!(f, "({},{:?})",dbox.0,dbox.1),
-      ArgWrap::None => write!(f, "None")
+      ArgWrap::RegisterDefinition(dbox) => write!(f, "({},{:?})", dbox.0, dbox.1),
+      ArgWrap::None => write!(f, "None"),
     }
   }
 }
@@ -61,7 +61,7 @@ impl Object for ArgWrap {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     use ArgWrap::*;
     match self {
-      Token(_) | Tokens(_)  | Number(_) | Float(_)  | Dimension(_)  | AlignmentTemplate(_) => {
+      Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | AlignmentTemplate(_) => {
         Option::None
       },
       Glue(t) => t.get_locator(),
@@ -110,15 +110,8 @@ impl Object for ArgWrap {
 
 impl ArgWrap {
   pub fn is_some(&self) -> bool { !self.is_none() }
-  pub fn is_none(&self) -> bool {
-    matches!(self, ArgWrap::None)
-  }
-  pub fn is_tokens(&self) -> bool {
-    matches!(
-      self,
-      ArgWrap::Tokens(_) | ArgWrap::Token(_)
-    )
-  }
+  pub fn is_none(&self) -> bool { matches!(self, ArgWrap::None) }
+  pub fn is_tokens(&self) -> bool { matches!(self, ArgWrap::Tokens(_) | ArgWrap::Token(_)) }
   pub fn mut_tokens(&mut self) -> Option<&mut Tokens> {
     match self {
       ArgWrap::Tokens(tks) => Some(tks),
@@ -345,7 +338,7 @@ impl ArgWrap {
     match self {
       None => true,
       Tokens(tks) => tks.is_empty(),
-      _ => false
+      _ => false,
     }
   }
 }
@@ -363,12 +356,13 @@ impl From<ArgWrap> for Tokens {
   }
 }
 
-impl<T> From<Option<T>> for ArgWrap where
-  T: Into<ArgWrap> + Sized {
+impl<T> From<Option<T>> for ArgWrap
+where T: Into<ArgWrap> + Sized
+{
   fn from(t: Option<T>) -> Self {
     match t {
       Some(t) => t.into(),
-      None => ArgWrap::None
+      None => ArgWrap::None,
     }
   }
 }
@@ -456,7 +450,7 @@ impl From<ArgWrap> for Option<KeyVals> {
   fn from(aw: ArgWrap) -> Option<KeyVals> {
     match aw {
       ArgWrap::KV(kv) => Some(*kv),
-      _ => None
+      _ => None,
     }
   }
 }
@@ -465,7 +459,7 @@ impl From<ArgWrap> for Template {
   fn from(aw: ArgWrap) -> Template {
     match aw {
       ArgWrap::AlignmentTemplate(t) => *t,
-      other => panic!("illegal auto-cast to alignment::Template on {other:?}")
+      other => panic!("illegal auto-cast to alignment::Template on {other:?}"),
     }
   }
 }

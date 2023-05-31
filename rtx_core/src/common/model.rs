@@ -12,7 +12,7 @@ use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
-use crate::common::xml::{XML_NS};
+use crate::common::xml::XML_NS;
 use crate::document::Document;
 use crate::util::pathname;
 use crate::Locator;

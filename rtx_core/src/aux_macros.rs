@@ -70,7 +70,9 @@ macro_rules! s {
 /// The `some!` macro transforms data in type S to Option<Into<T>> (always wrapping with Some)
 #[macro_export]
 macro_rules! some {
-  ($arg:expr) => { Some($arg.into()) }
+  ($arg:expr) => {
+    Some($arg.into())
+  };
 }
 
 /// A variant on `vec!` where each argument receives an additional `.into()` call

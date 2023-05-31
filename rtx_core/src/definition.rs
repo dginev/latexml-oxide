@@ -66,7 +66,7 @@ impl ExpansionBody {
       ExpansionBody::Tokens(tks) => tks.unlist_mut().push(t),
       ExpansionBody::Closure(_) => {
         unimplemented!()
-      }
+      },
     }
   }
 }

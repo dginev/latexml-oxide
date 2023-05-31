@@ -907,8 +907,12 @@ impl Font {
   /// Probably should be using data from FontMetric ???
   pub fn get_nominal_size(&self) -> (Dimension, Dimension, Dimension) {
     let size = self.get_size().unwrap_or(DEFSIZE);
-    let u    = size * UNITY_F64;
-    (Dimension::new_f64(0.75 * u), Dimension::new_f64(0.7 * u), Dimension::new_f64(0.2 * u))
+    let u = size * UNITY_F64;
+    (
+      Dimension::new_f64(0.75 * u),
+      Dimension::new_f64(0.7 * u),
+      Dimension::new_f64(0.2 * u),
+    )
   }
 
   // Here's where I avoid trying to emulate Knuth's line-breaking...
@@ -972,7 +976,7 @@ impl Font {
     let mut prevbox_opt: Option<Digested> = None;
     for mut thisbox in filtered_boxes {
       // Should any `options` be inherited by the contained boxes?
-      let (w, h, d, _,_,_) = thisbox.get_size(None, state)?;
+      let (w, h, d, _, _, _) = thisbox.get_size(None, state)?;
 
       // DG: TODO: We'll have to figure out how to rearrange this logic,
       //           now that every emitted result of get_size is a Dimension.

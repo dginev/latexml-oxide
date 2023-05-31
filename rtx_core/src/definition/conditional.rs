@@ -4,9 +4,9 @@
 
 use libxml::tree::Node;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::common::error::*;
 use crate::common::locator::Locator;
@@ -248,7 +248,12 @@ impl Conditional {
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to "XY junk", since A==A
   // # Return the token we've skipped to, and the frame that this applies to.
-  fn skip_conditional_body(&self, nskips: i64, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  fn skip_conditional_body(
+    &self,
+    nskips: i64,
+    gullet: &mut Gullet,
+    state: &mut State,
+  ) -> Result<Tokens> {
     let mut level = 1;
     let mut n_ors = 0;
     let _start = gullet.get_locator();

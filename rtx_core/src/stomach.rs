@@ -90,12 +90,17 @@ impl<'t> Stomach {
     while let Some(token) = self
       .get_gullet_mut()
       .read_x_token(Some(true), true, state)?
-    { // done if we run out of tokens
+    {
+      // done if we run out of tokens
       found_token = true;
       // first, check for alignment case
-      if alignment_opt.is_some() && !self.box_list.is_empty() && (
-        token == T_ALIGN!() || token == T_CS!("\\cr") ||
-        token == T_CS!("\\hidden@cr") || token == T_CS!("\\hidden@crcr")) {
+      if alignment_opt.is_some()
+        && !self.box_list.is_empty()
+        && (token == T_ALIGN!()
+          || token == T_CS!("\\cr")
+          || token == T_CS!("\\hidden@cr")
+          || token == T_CS!("\\hidden@crcr"))
+      {
         // at least \over calls in here without the intent to passing through the alignment.
         // So if we already have some digested boxes available, return them here.
         self.get_gullet_mut().unread_one(token);
@@ -143,7 +148,9 @@ impl<'t> Stomach {
     outer_state: &mut State,
   ) -> Result<Digested> {
     let tokens: Tokens = tokens.into();
-    if tokens.is_empty() { return Ok(Digested::default()) }
+    if tokens.is_empty() {
+      return Ok(Digested::default());
+    }
     self.reading_from_mouth(Mouth::default(), outer_state, move |stomach, state| {
       stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); // prefixes shouldn't apply here.
@@ -475,8 +482,15 @@ impl<'t> Stomach {
   /// Stomach. the need comes from techniques that use a *Stomach* inside the inner reader
   /// function, as is done by `Stomach::raw_tex`. ideally `reading_from_mouth` should be used with
   /// a Gullet, and this variation should be removed.
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> Result<R>
-  where FnR: FnOnce(&mut Stomach, &mut State) -> Result<R> {
+  pub fn reading_from_mouth<R, FnR>(
+    &mut self,
+    mouth: Mouth,
+    state: &mut State,
+    reader: FnR,
+  ) -> Result<R>
+  where
+    FnR: FnOnce(&mut Stomach, &mut State) -> Result<R>,
+  {
     let mouth_source = mouth.get_source().to_string();
     {
       let gullet = self.get_gullet_mut();

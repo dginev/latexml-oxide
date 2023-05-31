@@ -80,16 +80,15 @@ impl Whatsit {
   /// A Whatsit is empty if it is marked empty, or space-like, or has an empty body.
   pub fn is_empty(&self) -> bool {
     // 1. A space-like thing
-    self.get_property_bool("isEmpty") || self.get_property_bool("isSpace") ||
     // 2. An environment-like structure with an empty body
     // TODO: For now it is difficult to pass in a State with an initialized TeX.pool.
-    //       DG: aren't ALL whatsits with an empty body -- empty?
-    // (self.get_definition() == STD_STATE.with(|state| state.borrow().lookup_definition(&T_BEGIN!()).unwrap()) &&
-      (self.get_definition().get_cs_name() == "Begin" &&
-      match self.get_body() {
-        Some(b) => b.unlist_ref().iter().all(|inner| inner.is_empty()),
-        None => true
-      })
+    self.get_property_bool("isEmpty")
+      || self.get_property_bool("isSpace")
+      || (self.get_definition().get_cs_name() == "Begin"
+        && match self.get_body() {
+          Some(b) => b.unlist_ref().iter().all(|inner| inner.is_empty()),
+          None => true,
+        })
   }
   /// sets a pre-assembled HashMap of properties
   pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
@@ -344,9 +343,7 @@ impl BoxOps for Whatsit {
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     self.properties.get(key).map(Cow::Borrowed)
   }
-  fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
-    self.properties.get_mut(key)
-  }
+  fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> { self.properties.get_mut(key) }
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
     Ok(Cow::Owned(self.revert(state)?.to_string()))
   }

@@ -1,8 +1,8 @@
+use core::slice::Iter;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use core::slice::Iter;
 
 use crate::common::arena::EMPTY_SYM;
 use crate::common::error::*;
@@ -110,12 +110,7 @@ impl Object for KeyVals {
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to
         // keyval specifications.
         keydef
-          .digest(
-            stomach,
-            value_tokens_opt.into(),
-            None,
-            state,
-          )?
+          .digest(stomach, value_tokens_opt.into(), None, state)?
           .unwrap()
       } else {
         let value_tokens = value_tokens_opt.unwrap_or_default();
@@ -316,21 +311,15 @@ impl KeyVals {
     }
   }
 
-
   /// return a list of values for a given key
-  pub fn get_values(&self, key: &str) -> Option<&Vec<Stored>> {
-    self.cached_hash.get(key)
-  }
-
+  pub fn get_values(&self, key: &str) -> Option<&Vec<Stored>> { self.cached_hash.get(key) }
 
   /// return the set of key-value pairs
-  pub fn get_pairs(&self) -> Iter<'_, (String, Stored)> {
-    self.cached_pairs.iter()
-  }
+  pub fn get_pairs(&self) -> Iter<'_, (String, Stored)> { self.cached_pairs.iter() }
   /// consume KeyVals and return a flat HashMap
-  pub fn as_flat_hash(self) -> HashMap<String,Stored> {
+  pub fn as_flat_hash(self) -> HashMap<String, Stored> {
     let mut flat_hash = HashMap::default();
-    for (k,mut vec) in self.cached_hash {
+    for (k, mut vec) in self.cached_hash {
       if let Some(v) = vec.pop() {
         flat_hash.insert(k, v);
       }
@@ -338,9 +327,7 @@ impl KeyVals {
     flat_hash
   }
   /// consume KeyVals and return the cached HashMap
-  pub fn as_hash(self) -> HashMap<String,Vec<Stored>> {
-    self.cached_hash
-  }
+  pub fn as_hash(self) -> HashMap<String, Vec<Stored>> { self.cached_hash }
   /// returns a key => ToString(value)
   pub fn get_hash(&self) -> HashMap<String, String> {
     let mut hashed = HashMap::default();
@@ -357,14 +344,10 @@ impl KeyVals {
   }
 
   // return a hash of key-value pairs
-  pub fn get_keyvals(&self) -> &HashMap<String, Vec<Stored>> {
-    &self.cached_hash
-  }
+  pub fn get_keyvals(&self) -> &HashMap<String, Vec<Stored>> { &self.cached_hash }
 
   // checks if the value for a given key exists
-  pub fn has_key(&self, key:&str) -> bool {
-    self.cached_hash.contains_key(key)
-  }
+  pub fn has_key(&self, key: &str) -> bool { self.cached_hash.contains_key(key) }
 
   //======================================================================
   // Value Related Reversion

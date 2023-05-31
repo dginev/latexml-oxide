@@ -1,8 +1,8 @@
 use crate::package::*;
-use rtx_core::common::object::Object;
 use rtx_core::alignment::read_alignment_template;
 use rtx_core::alignment::template::Template;
-use std::cell::{RefMut,RefCell};
+use rtx_core::common::object::Object;
+use std::cell::{RefCell, RefMut};
 //======================================================================
 // Basic alignment support needed by most environments & commands.
 //======================================================================
@@ -93,7 +93,7 @@ LoadDefinitions!(outer_state, {
   //======================================================================
   // Low-level bits that appear within alignments or \halign
 
-  DefConstructor!("\\cr",   "\n");
+  DefConstructor!("\\cr", "\n");
   DefConstructor!("\\crcr", "\n");
   // These are useful for reversion of higher-level macros that use alignment
   // internally, but don't use explicit &,\cr in the user markup
@@ -124,20 +124,23 @@ LoadDefinitions!(outer_state, {
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
 
-
   // #######
   // Support for \\[dim] .... TO BE WORKED OUT!
   // NOTE that this does NOT skip spaces before * or []!!!!!
   //  As if: \@alignment@newline OptionalMatch:* [Dimension]
   // Read arguments for \\, namely * and/or [Dimension]
   // BUT optionally do it while skipping spaces (latex style) or not (ams style)
-  fn read_newline_args(gullet: &mut Gullet, skipspaces: bool, state: &mut State) -> Result<(bool, Option<Tokens>)> {
+  fn read_newline_args(
+    gullet: &mut Gullet,
+    skipspaces: bool,
+    state: &mut State,
+  ) -> Result<(bool, Option<Tokens>)> {
     if state.lookup_alignment().is_some() {
       state.local_align_group_count(1000000);
       if skipspaces {
         gullet.skip_spaces(state)?;
       }
-      let (mut star, mut optional) = (false,None);
+      let (mut star, mut optional) = (false, None);
       let mut next_opt = gullet.read_token(state)?;
       if next_opt == Some(T_OTHER!("*")) {
         star = true;
@@ -148,15 +151,17 @@ LoadDefinitions!(outer_state, {
       }
       if next_opt == Some(T_OTHER!("[")) {
         optional = Some(gullet.read_until(&Tokens!(T_OTHER!("]")), state)?);
-        next_opt     = None;
+        next_opt = None;
       }
-      if let Some(next)  = next_opt {
+      if let Some(next) = next_opt {
         gullet.unread_one(next);
       }
       state.expire_align_group_count();
       Ok((star, optional))
     } else {
-      Err("read_newline_args should only be called with a proper 'Alignment' active in State".into())
+      Err(
+        "read_newline_args should only be called with a proper 'Alignment' active in State".into(),
+      )
     }
   }
 
@@ -211,24 +216,23 @@ LoadDefinitions!(outer_state, {
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()));
   // AND add the spacing to the alignment!!!
   DefConstructor!("\\@alignment@newline@markertall {Dimension}", "",
-    after_digest => sub[_stomach,whatsit,state] {
-    if let Some(alignment) = state.lookup_alignment() {
-      let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
-      let current_row = alignment_mut.current_row_mut().unwrap();
-      let padding = if let Some(arg) = whatsit.get_arg(1) {
-        if let DigestedData::RegisterValue(RegisterValue::Dimension(v)) = arg.data() {
-          *v
-        } else { Dimension::new(0) }
-      }  else { Dimension::new(0) };
-      current_row.set_padding(padding);
-    }},
-    reversion => sub[whatsit,_args,state] {
-      let reverted = whatsit.revert(state)?;
-      Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
-    });
+  after_digest => sub[_stomach,whatsit,state] {
+  if let Some(alignment) = state.lookup_alignment() {
+    let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
+    let current_row = alignment_mut.current_row_mut().unwrap();
+    let padding = if let Some(arg) = whatsit.get_arg(1) {
+      if let DigestedData::RegisterValue(RegisterValue::Dimension(v)) = arg.data() {
+        *v
+      } else { Dimension::new(0) }
+    }  else { Dimension::new(0) };
+    current_row.set_padding(padding);
+  }},
+  reversion => sub[whatsit,_args,state] {
+    let reverted = whatsit.revert(state)?;
+    Ok(Tokens!(T_CS!("\\\\"), T_OTHER!("["), reverted, T_OTHER!("]"), T_CR!()))
+  });
 
   DefMacro!("\\tabularnewline", "\\cr"); // ???
-
 
   //======================================================================
   // Various decorations within alignments, rules, headers, etc
@@ -258,16 +262,15 @@ LoadDefinitions!(outer_state, {
     sizer      => 0, alias => "\\hline");
 
   DefMacro!("\\@tabular@begin@heading", sub[_gullet,_args,state] {
-    if let Some(alignment_stored) = state.lookup_alignment() {
-      alignment_stored.alignment_cell().unwrap().borrow_mut()
-        .set_in_tabular_head();
-    }});
+  if let Some(alignment_stored) = state.lookup_alignment() {
+    alignment_stored.alignment_cell().unwrap().borrow_mut()
+      .set_in_tabular_head();
+  }});
   DefMacro!("\\@tabular@end@heading", sub[_gullet,_args,state] {
-    if let Some(alignment_stored) = state.lookup_alignment() {
-      alignment_stored.alignment_cell().unwrap().borrow_mut()
-        .unset_in_tabular_head();
-    }});
-
+  if let Some(alignment_stored) = state.lookup_alignment() {
+    alignment_stored.alignment_cell().unwrap().borrow_mut()
+      .unset_in_tabular_head();
+  }});
 
   //======================================================================
   // Math mode in alignment
@@ -287,7 +290,6 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\@row@after", None);
   DefMacro!("\\@column@before", None);
   DefMacro!("\\@column@after", None);
-
 
   //======================================================================
   // Multicolumn support
@@ -345,44 +347,73 @@ LoadDefinitions!(outer_state, {
   });
 });
 
-
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // And the general alignment processing.
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
-pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, xml_attributes: HashMap<String,String>, gullet: &mut Gullet, state: &mut State) {
-  let mode = if mode.is_empty() { state.lookup_string("MODE") } else { mode };
-  let is_math    = mode.ends_with("math");
-  let (container,rowtype,coltype) = if is_math {
-    ("ltx:XMArray","ltx:XMRow","ltx:XMCell")
-  }  else {
-    ("ltx:tabular","ltx:tr","ltx:td")
+pub fn alignment_bindings(
+  template: Template,
+  mode: String,
+  properties: HashMap<String, Stored>,
+  xml_attributes: HashMap<String, String>,
+  gullet: &mut Gullet,
+  state: &mut State,
+) {
+  let mode = if mode.is_empty() {
+    state.lookup_string("MODE")
+  } else {
+    mode
   };
-let alignment = Alignment::new(AlignmentConfig {
+  let is_math = mode.ends_with("math");
+  let (container, rowtype, coltype) = if is_math {
+    ("ltx:XMArray", "ltx:XMRow", "ltx:XMCell")
+  } else {
+    ("ltx:tabular", "ltx:tr", "ltx:td")
+  };
+  let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
-    open_container: Rc::new(
-      |document,props,state| document.open_element(container, Some(props), None, state).map(Option::Some)),
-    close_container: Rc::new(
-      |document,state| document.close_element(container, state) ),
-    open_row       : Rc::new(
-      |document,props,state| document.open_element(rowtype, Some(props), None, state).and(Ok(()))),
-    close_row      : Rc::new(
-      |document,state| document.close_element(rowtype, state) ),
-    open_column    : Rc::new(
-      |document,props,state| document.open_element(coltype, Some(props), None, state).map(Option::Some)),
-    close_column   : Rc::new(
-      |document,state| document.close_element(coltype, state)),
+    open_container: Rc::new(|document, props, state| {
+      document
+        .open_element(container, Some(props), None, state)
+        .map(Option::Some)
+    }),
+    close_container: Rc::new(|document, state| document.close_element(container, state)),
+    open_row: Rc::new(|document, props, state| {
+      document
+        .open_element(rowtype, Some(props), None, state)
+        .and(Ok(()))
+    }),
+    close_row: Rc::new(|document, state| document.close_element(rowtype, state)),
+    open_column: Rc::new(|document, props, state| {
+      document
+        .open_element(coltype, Some(props), None, state)
+        .map(Option::Some)
+    }),
+    close_column: Rc::new(|document, state| document.close_element(coltype, state)),
     is_math,
     properties,
-    xml_attributes
+    xml_attributes,
   });
   state.assign_alignment(alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
-  state.let_i(&T_MATH!(), if is_math { T_CS!("\\@dollar@in@mathmode") } else {T_CS!("\\@dollar@in@textmode")}, None, gullet);
+  state.let_i(
+    &T_MATH!(),
+    if is_math {
+      T_CS!("\\@dollar@in@mathmode")
+    } else {
+      T_CS!("\\@dollar@in@textmode")
+    },
+    None,
+    gullet,
+  );
 }
 
-pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state:&mut State) -> Result<()> {
+pub fn digest_alignment_body(
+  whatsit: &mut Whatsit,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> Result<()> {
   // Now read & digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
@@ -390,45 +421,58 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state
   let alignment_stored = if let Some(alignment) = state.lookup_alignment() {
     alignment
   } else {
-    Error!("missing", "alignment", stomach, state, "There is no open alignment structure here");
+    Error!(
+      "missing",
+      "alignment",
+      stomach,
+      state,
+      "There is no open alignment structure here"
+    );
     return Ok(());
   };
   state.local_reading_alignment(&alignment_stored);
   whatsit.set_property("alignment", Stored::Digested(alignment_stored.clone()));
 
   // Debug!("Halign {}: BODY Processing...",alignment) if $LaTeXML::DEBUG{halign};
-  let mut lastwascr  = false;
-  let mut reversion: Vec<Token>  = Vec::new();
+  let mut lastwascr = false;
+  let mut reversion: Vec<Token> = Vec::new();
   let mut creversion: Vec<Token> = Vec::new();
   let alignment_cell = alignment_stored.alignment_cell().unwrap();
   loop {
     let (cell_opt, next, vtype, hidden) =
       digest_alignment_column(alignment_cell, lastwascr, stomach, state)?;
-//     Debug("Halign $alignment: BODY got CELL"
-//         . "[" . $alignment->currentRowNumber . "," . $alignment->currentColumnNumber . "]"
-//         . ToString($cell) . " ended at " . Stringify($next)) if $LaTeXML::DEBUG{halign};
+    //     Debug("Halign $alignment: BODY got CELL"
+    //         . "[" . $alignment->currentRowNumber . "," . $alignment->currentColumnNumber . "]"
+    //         . ToString($cell) . " ended at " . Stringify($next)) if $LaTeXML::DEBUG{halign};
 
     if let Some(cell) = cell_opt {
-      reversion.extend(trim_column_template(alignment_cell.borrow_mut(), p_revert(cell.clone(), state)?)
-        .unlist().into_iter());
-      creversion.extend(trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone(), state)?)
-        .unlist().into_iter());
+      reversion.extend(
+        trim_column_template(alignment_cell.borrow_mut(), p_revert(cell.clone(), state)?)
+          .unlist()
+          .into_iter(),
+      );
+      creversion.extend(
+        trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone(), state)?)
+          .unlist()
+          .into_iter(),
+      );
       extract_alignment_column(alignment_cell.borrow_mut(), cell, state);
     } else {
       // Debug("Halign $alignment: BODY DONE!") if $LaTeXML::DEBUG{halign};
       break;
     }
     lastwascr = false;
-    if (vtype.is_none() || vtype.as_ref().unwrap().is_empty()) && (next.is_none()
-      || next == Some(T_END!())                         // End of alignment
-      || next == Some(T_CS!("\\@close@alignment"))) {   // End of alignment
-        alignment_cell.borrow_mut().end_row(stomach, state)?;
-        break;
+    if (vtype.is_none() || vtype.as_ref().unwrap().is_empty())
+      && (next.is_none() || next == Some(T_END!()) || next == Some(T_CS!("\\@close@alignment")))
+    {
+      // End of alignment
+      alignment_cell.borrow_mut().end_row(stomach, state)?;
+      break;
     } else if vtype.as_deref() == Some("align") {
       alignment_cell.borrow_mut().end_column(stomach, state)?;
       if !hidden {
-        reversion.push(next.clone().unwrap());              // and record the &
-        creversion.push(next.unwrap());                     // and record the &
+        reversion.push(next.clone().unwrap()); // and record the &
+        creversion.push(next.unwrap()); // and record the &
       }
     } else if vtype.as_deref() == Some("insert") {
       alignment_cell.borrow_mut().end_column(stomach, state)?;
@@ -442,17 +486,29 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state
         let arg = stomach.digest(arg_toks, state)?;
         reversion.extend(p_revert(arg.clone(), state)?.unlist().into_iter());
         creversion.extend(c_revert(arg, state)?.unlist().into_iter());
-      } else if vtype.as_deref() == Some("crcr") { }
+      } else if vtype.as_deref() == Some("crcr") {
+      }
       lastwascr = true;
-    } else if let Some(next_tok) = next {    // Note, in case next is \crcr
-      Error!("unexpected", next_tok, stomach, state, s!("Column ended with {next_tok}"));
+    } else if let Some(next_tok) = next {
+      // Note, in case next is \crcr
+      Error!(
+        "unexpected",
+        next_tok,
+        stomach,
+        state,
+        s!("Column ended with {next_tok}")
+      );
     }
   }
   alignment_cell.borrow_mut().end_row(stomach, state)?;
-  alignment_cell.borrow_mut().set_reversion(Tokens!(reversion));
-  alignment_cell.borrow_mut().set_content_reversion(Tokens!(creversion));
-//   Debug("Halign $alignment: BODY DONE!\n"
-//       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
+  alignment_cell
+    .borrow_mut()
+    .set_reversion(Tokens!(reversion));
+  alignment_cell
+    .borrow_mut()
+    .set_content_reversion(Tokens!(creversion));
+  //   Debug("Halign $alignment: BODY DONE!\n"
+  //       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
   state.expire_align_group_count();
   state.expire_reading_alignment();
   Ok(())
@@ -462,7 +518,12 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, stomach: &mut Stomach, state
 // accommodating the current template and any special cs's
 // Returns the column's digested boxes, the ending token, and it's alignment type.
 type DigestedColumn = Result<(Option<Digested>, Option<Token>, Option<String>, bool)>;
-pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, stomach:&mut Stomach, state: &mut State) -> DigestedColumn {
+pub fn digest_alignment_column(
+  alignment: &RefCell<Alignment>,
+  lastwascr: bool,
+  stomach: &mut Stomach,
+  state: &mut State,
+) -> DigestedColumn {
   stomach.new_local_box_list();
   let ismath = state.lookup_bool("IN_MATH");
   // Scan for leading \omit, skipping over (& saving) \hline.
@@ -470,44 +531,57 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
   let mut last_token: Option<Token> = None;
   let mut spanning = false;
-  loop {   // Outer loop; collects 1 column (possibly multiple spans) return from within!
+  loop {
+    // Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    while let Some(xtoken) = stomach.get_gullet_mut()
-    .read_x_token(Some(false),false, state)? {
+    while let Some(xtoken) = stomach
+      .get_gullet_mut()
+      .read_x_token(Some(false), false, state)?
+    {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
-      if *token == T_SPACE!()   // Skip leading space.
-        || *token == T_CS!("\\par")  // Skip or blank line(?)
-        || (lastwascr &&             // Or \crcr following a \cr
-          (*token == T_CS!("\\crcr") || *token == T_CS!("\\hidden@crcr"))) {
-      } else if *token == T_CS!("\\omit") { // \omit removes template for this column.
-  //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+      // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
+      if *token == T_SPACE!()
+        || *token == T_CS!("\\par")
+        || (lastwascr && (*token == T_CS!("\\crcr") || *token == T_CS!("\\hidden@crcr")))
+      {
+      } else if *token == T_CS!("\\omit") {
+        // \omit removes template for this column.
+        //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if
+        // $LaTeXML::DEBUG{halign};
         if !alignment.borrow().is_in_row() {
-          alignment.borrow_mut().start_row(false, stomach,state)?;
+          alignment.borrow_mut().start_row(false, stomach, state)?;
         }
         alignment.borrow_mut().omit_next_column();
-      } else if *token == T_CS!("\\noalign") {    // \puts something in vertical list
+      } else if *token == T_CS!("\\noalign") {
+        // \puts something in vertical list
         // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
         if alignment.borrow().is_in_row() {
-          alignment.borrow_mut().end_row(stomach,state)?;
+          alignment.borrow_mut().end_row(stomach, state)?;
         }
-        alignment.borrow_mut().start_column(true, stomach,state)?;
+        alignment.borrow_mut().start_column(true, stomach, state)?;
         alignment.borrow_mut().last_column();
         let next_arg = stomach.get_gullet_mut().read_arg(state)?;
         let r = stomach.digest(next_arg, state)?;
-        alignment.borrow_mut().end_row(stomach,state)?;
+        alignment.borrow_mut().end_row(stomach, state)?;
         stomach.expire_local_box_list();
-        return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole row???
-      } else if *token == T_CS!("\\hidden@noalign") { // \puts something in vertical list
-  //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-        let invoked =  stomach.invoke_token(token, state)?;
+        return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
+                                                                       // row???
+      } else if *token == T_CS!("\\hidden@noalign") {
+        // \puts something in vertical list
+        //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
+        let invoked = stomach.invoke_token(token, state)?;
         stomach.box_list.extend(invoked);
       } else {
         break;
       }
     }
-    //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
-    if last_token.is_none() || last_token == Some(T_END!()) || last_token == Some(T_CS!("\\@close@alignment")) {
+    //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
+    // $LaTeXML::DEBUG{halign};
+    if last_token.is_none()
+      || last_token == Some(T_END!())
+      || last_token == Some(T_CS!("\\@close@alignment"))
+    {
       stomach.expire_local_box_list();
       return Ok((None, last_token, None, false));
     }
@@ -520,12 +594,19 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
     }
     // Push before template,  Marker and put the token back
     let to_unread = Tokens!(
-      alignment.borrow_mut().get_column_before(), T_MARKER!("before-column"), last_token.clone().unwrap());
+      alignment.borrow_mut().get_column_before(),
+      T_MARKER!("before-column"),
+      last_token.clone().unwrap()
+    );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     stomach.get_gullet_mut().unread(to_unread);
-    while let Some(token) = stomach.get_gullet_mut().read_x_token(Some(false), false, state)? {
+    while let Some(token) = stomach
+      .get_gullet_mut()
+      .read_x_token(Some(false), false, state)?
+    {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token, state) {
-        if vtype == "span" { // next column, but continue accumulating
+        if vtype == "span" {
+          // next column, but continue accumulating
           // Debug("Halign $alignment: COLUMN span") if $LaTeXML::DEBUG{halign};
           spanning = true;
           break;
@@ -535,7 +616,12 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
           let current_list = stomach.expire_local_box_list();
           let mut out_list = List::new(current_list, state);
           out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
-          return Ok((Some(out_list.into()),Some(token),Some(String::from(vtype)),hidden));
+          return Ok((
+            Some(out_list.into()),
+            Some(token),
+            Some(String::from(vtype)),
+            hidden,
+          ));
         }
       // DG: Note this block is commented out as clippy warned it has the exact identical logic
       // as the "all other cases" else that follows it
@@ -544,12 +630,14 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool, 
       //   // Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
       //   let invoked = stomach.invoke_token(&token, state)?;
       //   stomach.box_list.extend(invoked.into_iter());
-      } else {  // Else, we're getting some actual content for the column
+      } else {
+        // Else, we're getting some actual content for the column
         // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
         let invoked = stomach.invoke_token(&token, state)?;
         stomach.box_list.extend(invoked);
-        // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(), List::new(stomach.box_list.clone(),state).stringify());
-    // //       if $LaTeXML::DEBUG{halign};
+        // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),
+        // List::new(stomach.box_list.clone(),state).stringify()); //       if
+        // $LaTeXML::DEBUG{halign};
       }
     }
   }
@@ -569,7 +657,7 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
       return tokens;
     }
   }
-  let mut pre  = alignment.get_column_before().unlist();
+  let mut pre = alignment.get_column_before().unlist();
   let mut post = alignment.get_column_after().unlist();
   //   Debug("Halign $alignment: COLUMN Compare:\n"
   //       . "  Column: " . ToString(Tokens(@tokens)) . "\n"
@@ -592,25 +680,29 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
       }
     }
   }
-    //   Debug("  Trimmed: " . ToString(Tokens(@tokens))) if $LaTeXML::DEBUG{halign};
+  //   Debug("  Trimmed: " . ToString(Tokens(@tokens))) if $LaTeXML::DEBUG{halign};
   Tokens::new(tks_vec)
 }
 // Given the boxes for an alignment cell,
 // extract & remove the various fills and rules from the ends to annotate the cell structure
-pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digested, state: &mut State) -> Digested {
+pub fn extract_alignment_column(
+  mut alignment: RefMut<Alignment>,
+  in_box: Digested,
+  state: &mut State,
+) -> Digested {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
-  let is_math  = state.lookup_bool("IN_MATH");
+  let is_math = state.lookup_bool("IN_MATH");
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
-  let n0      = state.lookup_int("alignmentStartColumn") as usize + 1;
-  let n1      = alignment.current_column_number();
+  let n0 = state.lookup_int("alignmentStartColumn") as usize + 1;
+  let n1 = alignment.current_column_number();
   let colspec = alignment.get_column(n0).unwrap();
-  let mut align   = colspec.align.unwrap_or(Align::Left);
-  let mut border  = String::new();
+  let mut align = colspec.align.unwrap_or(Align::Left);
+  let mut border = String::new();
   // Peel off any boxes from both sides until we get the "meat" of the column.
   // from this we can establish borders, alignment and emptiness.
   // But we, of course, immediately put them back...
-  let mut saveleft  = VecDeque::new();
+  let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   while let Some(front_box) = boxes.pop_front() {
     match front_box.data() {
@@ -626,17 +718,20 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
       _ if front_box.get_property("isVerticalRule").is_some() => {
         border.push('l');
       },
-      item if front_box.get_property("isHorizontalRule").is_some()
-                        || front_box.get_property("alignmentSkippable").is_some()
-                        || front_box.get_property("isSpace").is_some()
-                        || matches!(item,DigestedData::Comment(_))
-                        || front_box.is_empty() => {
-              saveleft.push_front(front_box) }
+      item
+        if front_box.get_property("isHorizontalRule").is_some()
+          || front_box.get_property("alignmentSkippable").is_some()
+          || front_box.get_property("isSpace").is_some()
+          || matches!(item, DigestedData::Comment(_))
+          || front_box.is_empty() =>
+      {
+        saveleft.push_front(front_box)
+      },
       _ => {
         // put the box back, and terminate left side loop.
         boxes.push_front(front_box);
         break;
-      }
+      },
     }
   }
   while let Some(last_box) = boxes.pop_back() {
@@ -647,24 +742,28 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
         }
       },
       _ if last_box.get_property("isFill").is_some() => {
-        if align == Align::Right { align = Align::Center };
+        if align == Align::Right {
+          align = Align::Center
+        };
         break;
       },
       _ if last_box.get_property("isVerticalRule").is_some() => {
         border.push('r');
-      }
-      item if last_box.get_property("isHorizontalRule").is_some()
-                        || last_box.get_property("alignmentSkippable").is_some()
-                        || last_box.get_property("isSpace").is_some()
-                        || matches!(item,DigestedData::Comment(_))
-                        || last_box.is_empty() => {
+      },
+      item
+        if last_box.get_property("isHorizontalRule").is_some()
+          || last_box.get_property("alignmentSkippable").is_some()
+          || last_box.get_property("isSpace").is_some()
+          || matches!(item, DigestedData::Comment(_))
+          || last_box.is_empty() =>
+      {
         saveright.push_front(last_box);
       },
       _ => {
         // put the box back, and terminate right side loop.
         boxes.push_back(last_box);
         break;
-      }
+      },
     }
   }
   if align != Align::Justify {
@@ -675,19 +774,24 @@ pub fn extract_alignment_column(mut alignment: RefMut<Alignment>, in_box: Digest
   final_boxes.extend(boxes.into_iter());
   final_boxes.extend(saveright.into_iter());
   let mut boxes_list = List::new(final_boxes, state);
-  boxes_list.mode = Some( if is_math {TexMode::Math} else {TexMode::Text});
+  boxes_list.mode = Some(if is_math {
+    TexMode::Math
+  } else {
+    TexMode::Text
+  });
   let digested_out = Digested::from(boxes_list);
   // record relevant info in the Alignment.
-  colspec.align   = Some(align);
-  border = s!("{}{}",colspec.border, border);
-  colspec.border  = border;
-  colspec.boxes   = Some(digested_out.clone());
+  colspec.align = Some(align);
+  border = s!("{}{}", colspec.border, border);
+  colspec.border = border;
+  colspec.boxes = Some(digested_out.clone());
   colspec.colspan = Some(n1 - n0 + 1);
-//   if ($$alignment{in_tabular_head} || $$alignment{in_tabular_foot}) {
-//     $$colspec{thead}{column} = 1; }
-//   for (my $i = $n0 + 1 ; $i <= $n1 ; $i++) {
-//     my $c = $alignment->getColumn($i);
-//     $$c{skipped} = 1 if $c; }
-//   Debug("Halign $alignment: INSTALL column " . join(',', map { $_ . "=" . ToString($$colspec{$_}); } sort keys %$colspec)) if $LaTeXML::DEBUG{halign};
+  //   if ($$alignment{in_tabular_head} || $$alignment{in_tabular_foot}) {
+  //     $$colspec{thead}{column} = 1; }
+  //   for (my $i = $n0 + 1 ; $i <= $n1 ; $i++) {
+  //     my $c = $alignment->getColumn($i);
+  //     $$c{skipped} = 1 if $c; }
+  //   Debug("Halign $alignment: INSTALL column " . join(',', map { $_ . "=" .
+  // ToString($$colspec{$_}); } sort keys %$colspec)) if $LaTeXML::DEBUG{halign};
   digested_out
 }

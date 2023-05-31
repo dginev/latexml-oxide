@@ -1,12 +1,12 @@
-use libxml::tree::Node;
-use std::error::Error;
-use std::borrow::Cow;
-use rtx_core::binding::def::dialect::get_xmarg_id;
 use crate::data::{get_grammatical_role, get_token_meaning};
 use crate::semantics::tree::lookup_lex_node;
 use crate::semantics::tree::XM;
-use crate::semantics::XProps;
 use crate::semantics::ActionContext;
+use crate::semantics::XProps;
+use libxml::tree::Node;
+use rtx_core::binding::def::dialect::get_xmarg_id;
+use std::borrow::Cow;
+use std::error::Error;
 
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
@@ -84,7 +84,10 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
     match arg {
       XM::Token(props, _meta) => {
         if let Some(id) = props.id.as_ref() {
-          refs.push(XM::Ref(XProps{id: Some(id.clone()), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            id: Some(id.clone()),
+            ..XProps::default()
+          }));
         }
       },
       XM::Lexeme(lex, _) => {
@@ -95,36 +98,46 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
 
         match node.get_attribute("id") {
           //  already has id, so refer to it.
-          Some(id) => refs.push(XM::Ref(XProps{id: Some(Cow::Owned(id)), ..XProps::default()})),
+          Some(id) => refs.push(XM::Ref(XProps {
+            id: Some(Cow::Owned(id)),
+            ..XProps::default()
+          })),
           None => {
             // If arg is already XML, it's too late to get automatic ID's
             document.generate_id(&mut node.clone(), "", state)?;
-            refs.push(XM::Ref(
-              XProps{ id: Some(Cow::Owned(
-                node .get_attribute("id")
-                .expect("generate_id should always succeed in setting an id"))),
-                .. XProps::default()
-              }
-            ));
+            refs.push(XM::Ref(XProps {
+              id: Some(Cow::Owned(
+                node
+                  .get_attribute("id")
+                  .expect("generate_id should always succeed in setting an id"),
+              )),
+              ..XProps::default()
+            }));
           },
         }
       },
-      XM::Apply(_op,_args, ref mut props, _meta) => {
+      XM::Apply(_op, _args, ref mut props, _meta) => {
         if let Some(id) = props.id.as_ref() {
-          refs.push(XM::Ref(XProps{id: Some(id.clone()), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            id: Some(id.clone()),
+            ..XProps::default()
+          }));
         } else {
           // not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
           // DG: Interior mutability Trick to grab a gullet!
           let stomach = state.stomach.clone();
           let key = get_xmarg_id(stomach.borrow_mut().get_gullet_mut(), state)?.to_string();
           props.xmkey = Some(Cow::Owned(key.clone()));
-          refs.push(XM::Ref(XProps{xmkey: Some(Cow::Owned(key)), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(Cow::Owned(key)),
+            ..XProps::default()
+          }));
         }
       },
       // clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef
       XM::Ref(props) => {
         refs.push(XM::Ref(props.clone()));
-      }
+      },
       // TODO:
       //   # XMHint's are ephemeral, they may disappear; so just clone it w/o id
       //   if ($qname eq 'ltx:XMHint') {

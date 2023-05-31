@@ -61,29 +61,24 @@ pub fn is_empty(digested: &Digested, state: &State) -> bool {
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)> {
   let box_opt = match object.data() {
-    DigestedData::List(obj) => obj.borrow().boxes.last()
-      .map(|v| Cow::Owned(v.clone())),
+    DigestedData::List(obj) => obj.borrow().boxes.last().map(|v| Cow::Owned(v.clone())),
     _ => Some(Cow::Borrowed(object)),
   };
   if let Some(boxobj) = box_opt {
     if let DigestedData::Whatsit(ref obj) = boxobj.data() {
       // careful w/alias in getCSName!
-      obj
-        .borrow()
-        .get_definition()
-        .get_cs()
-        .with_cs_name(|name| {
-          SCRIPT_NAME_RE.captures(name).map(|cap| {
-            (
-              cap.get(1).map_or("", |m| m.as_str()).to_owned(),
-              if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
-                Catcode::SUB
-              } else {
-                Catcode::SUPER
-              },
-            )
-          })
+      obj.borrow().get_definition().get_cs().with_cs_name(|name| {
+        SCRIPT_NAME_RE.captures(name).map(|cap| {
+          (
+            cap.get(1).map_or("", |m| m.as_str()).to_owned(),
+            if cap.get(2).map_or("", |m| m.as_str()) == "SUBSCRIPT" {
+              Catcode::SUB
+            } else {
+              Catcode::SUPER
+            },
+          )
         })
+      })
     } else {
       None
     }
@@ -285,28 +280,51 @@ pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
 // can we do this before parsing? we can do the advance or something.... Hmmmm.
 // * Need to know scriptpos (mid or post) to determine position.
 // * need to know sub/super
-fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&Stored>,
-  op: &str, pos: &str, state: &mut State) -> Result<(Dimension, Dimension, Dimension)> {
+fn script_sizer(
+  script: &Digested,
+  base_opt: Option<&Stored>,
+  prev_opt: Option<&Stored>,
+  op: &str,
+  pos: &str,
+  state: &mut State,
+) -> Result<(Dimension, Dimension, Dimension)> {
   eprintln!("SCRIPT SIZER IS ON!");
   // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it's different from the 'expected' style!!!]
-  let script_size = script.clone().get_size(None,state)?;
-  let (mut ws, mut hs, mut ds) = (script_size.0.value_of() as f64, script_size.1.value_of() as f64, script_size.2.value_of() as f64);
-  ws *= 0.8; hs *= 0.8; ds *= 0.8;    // HACK!@!!
+  let script_size = script.clone().get_size(None, state)?;
+  let (mut ws, mut hs, mut ds) = (
+    script_size.0.value_of() as f64,
+    script_size.1.value_of() as f64,
+    script_size.2.value_of() as f64,
+  );
+  ws *= 0.8;
+  hs *= 0.8;
+  ds *= 0.8; // HACK!@!!
   let (wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
     let base_size = base.clone().get_size(None, state)?;
-    (base_size.0.value_of() as f64, base_size.1.value_of() as f64, base_size.2.value_of() as f64)
+    (
+      base_size.0.value_of() as f64,
+      base_size.1.value_of() as f64,
+      base_size.2.value_of() as f64,
+    )
   } else {
     let nominal_size = state.lookup_font().unwrap().get_nominal_size();
-    (nominal_size.0.value_of() as f64,nominal_size.1.value_of() as f64,nominal_size.2.value_of() as f64)
+    (
+      nominal_size.0.value_of() as f64,
+      nominal_size.1.value_of() as f64,
+      nominal_size.2.value_of() as f64,
+    )
   };
   let w;
   let (mut h, mut d) = (0.0, 0.0);
   // Fishing for the scriptpos on the base (if any)
   let inferred_pos = if pos.is_empty() {
     if let Some(Stored::Digested(ref base)) = base_opt {
-      let base_pos = base.get_property("scriptpos").map(|s| s.to_string()).unwrap_or_default();
+      let base_pos = base
+        .get_property("scriptpos")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
       if base_pos.is_empty() {
         Cow::Borrowed("post")
       } else {
@@ -319,7 +337,7 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
     Cow::Borrowed("post")
   };
   if inferred_pos == "mid" {
-    w = (ws - wb).max(0.0);    // as if max width of base & script
+    w = (ws - wb).max(0.0); // as if max width of base & script
     if op == "SUPERSCRIPT" {
       h = hb + ds + hs;
     } else {
@@ -327,7 +345,11 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
     }
   } else {
     // as if max of width & prev script's width
-    let wp = if let Some(Stored::Digested(ref prev)) = prev_opt { prev.get_width(None,state)?.unwrap_or_default().value_of() as f64 } else { 0.0 };
+    let wp = if let Some(Stored::Digested(ref prev)) = prev_opt {
+      prev.get_width(None, state)?.unwrap_or_default().value_of() as f64
+    } else {
+      0.0
+    };
     w = (ws - wp).max(0.0);
     if op == "SUPERSCRIPT" {
       h = hb + hs / 2.0;
@@ -335,9 +357,12 @@ fn script_sizer(script: &Digested, base_opt: Option<&Stored>, prev_opt: Option<&
       d = hs / 2.0 + ds;
     }
   }
-  Ok((Dimension::new_f64(w), Dimension::new_f64(h), Dimension::new_f64(d)))
+  Ok((
+    Dimension::new_f64(w),
+    Dimension::new_f64(h),
+    Dimension::new_f64(d),
+  ))
 }
-
 
 LoadDefinitions!(state, {
   // TODO: Should I add a special macro case that takes an arbitrary token as argument?

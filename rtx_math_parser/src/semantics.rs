@@ -338,7 +338,11 @@ pub fn fenced(
 
 /// This is similar, but "interprets" a delimited list as being the
 /// application of some operator to the items in the list.
-fn interpret_delimited(op: XM, mut stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM, Box<dyn Error>> {
+fn interpret_delimited(
+  op: XM,
+  mut stuff: Vec<XM>,
+  ctxt: ActionContext,
+) -> Result<XM, Box<dyn Error>> {
   let upto = stuff.len() - 1;
   let (_seps, mut args) = extract_separators(&mut stuff[1..upto]);
   let ref_args = create_xmrefs(&mut args, ctxt)?;
@@ -368,7 +372,11 @@ pub fn postfix_embellished(
   let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
   Ok(Some(XM::Dual(
     Box::new(ref_arg.remove(0)),
-    Box::new(XM::Wrap(vec![arg,trailer], XProps::default(), Meta::default())),
+    Box::new(XM::Wrap(
+      vec![arg, trailer],
+      XProps::default(),
+      Meta::default(),
+    )),
     XProps::default(),
     Meta::default(),
   )))
@@ -565,7 +573,7 @@ pub fn new_props(
     idref,
     fontref,
     font: Some(font),
-    xmkey: None
+    xmkey: None,
   }
 }
 

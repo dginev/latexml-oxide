@@ -1,12 +1,13 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
-use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
+use crate::alignment::Alignment;
 use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -17,7 +18,6 @@ use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
-use crate::alignment::Alignment;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::{Conditional, IfFrame};
 use crate::definition::constructor::Constructor;
@@ -25,8 +25,8 @@ use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
-use crate::definition::{FontDirective, Definition};
 use crate::definition::Reversion;
+use crate::definition::{Definition, FontDirective};
 use crate::document::tag::TagData;
 use crate::gullet::Gullet;
 use crate::ligature::Ligature;
@@ -676,12 +676,13 @@ impl From<&crate::Digested> for Stored {
   fn from(value: &crate::Digested) -> Self { crate::Stored::Digested(value.clone()) }
 }
 
-impl<T> From<Option<T>> for Stored where
-  T: Into<Stored> + Sized {
+impl<T> From<Option<T>> for Stored
+where T: Into<Stored> + Sized
+{
   fn from(value_opt: Option<T>) -> Self {
     match value_opt {
       None => Stored::None,
-      Some(v) => v.into()
+      Some(v) => v.into(),
     }
   }
 }

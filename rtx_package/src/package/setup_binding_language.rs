@@ -1132,8 +1132,9 @@ macro_rules! DefAccent {
   }};
   ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr, $state: ident) => {{
     let mut options : HashMap<String, Stored> = $options;
-    if !options.contains_key("above") && !options.get("below").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
-      options.insert("above".to_string(), Stored::Bool(true));
+    if !options.contains_key("above") &&
+      !options.get("below").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
+        options.insert("above".to_string(), Stored::Bool(true));
     }
     // Used for converting a char used as an above-accent to a combining char (See \accent)
     if options.get("above").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
@@ -1828,8 +1829,9 @@ macro_rules! DefColumnType {
   ($proto:literal, sub[ $gullet:ident,$args:ident,$inner_state:ident ] $body:block) => {
     #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |$gullet, mut $args, $inner_state|
-      WithInnerState!($body, $inner_state).into_tokens_result()
+      move |$gullet, mut $args, $inner_state| {
+        WithInnerState!($body, $inner_state).into_tokens_result()
+      },
     )));
     DefColumnType!($proto, expansion_closure)
   };
@@ -1842,11 +1844,23 @@ macro_rules! DefColumnType {
       }
       bind_state_mut!(st);
       let proto = parse_parameters(&c_chars_peek.collect::<String>(), &T_RELAX!(), Some(st))?;
-      def_macro(T_CS!(s!("\\NC@rewrite@{first_c}")), proto, $expansion_closure, None, st);
+      def_macro(
+        T_CS!(s!("\\NC@rewrite@{first_c}")),
+        proto,
+        $expansion_closure,
+        None,
+        st,
+      );
     } else {
-      Warn!("expected", "character", None, None, "Expected Column specifier");
+      Warn!(
+        "expected",
+        "character",
+        None,
+        None,
+        "Expected Column specifier"
+      );
     }
-  }
+  };
 }
 
 // Reverts an object into TeX code, as a Tokens list, that would create it.
@@ -1892,29 +1906,46 @@ macro_rules! GetKeyVals {
 macro_rules! DefKeyVal {
   ($keyset:expr, $key:expr, $vtype:expr) => {{
     let prefix = "KV";
-    bind_state_mut!(stomach,st);
+    bind_state_mut!(stomach, st);
     let gullet = stomach.get_gullet_mut();
-    ::rtx_core::keyval::define(KeyvalConfig{
-      prefix, keyset:$keyset, key:$key, vtype:$vtype, default:None,
-      ..KeyvalConfig::default()}, gullet, st)?;
+    ::rtx_core::keyval::define(
+      KeyvalConfig {
+        prefix,
+        keyset: $keyset,
+        key: $key,
+        vtype: $vtype,
+        default: None,
+        ..KeyvalConfig::default()
+      },
+      gullet,
+      st,
+    )?;
   }};
-  ($keyset:expr, $key:expr, $vtype:expr, $default:expr) =>{{
-      // extract the prefix
-      // my $prefix = $options{prefix} || 'KV';
-      let prefix = "KV";
-      bind_state_mut!(stomach,st);
-      let gullet = stomach.get_gullet_mut();
-      ::rtx_core::keyval::define(KeyvalConfig{
-        prefix, keyset:$keyset, key:$key, vtype:$vtype, default:Some($default),
-        ..KeyvalConfig::default()}, st)?;
+  ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
+    // extract the prefix
+    // my $prefix = $options{prefix} || 'KV';
+    let prefix = "KV";
+    bind_state_mut!(stomach, st);
+    let gullet = stomach.get_gullet_mut();
+    ::rtx_core::keyval::define(
+      KeyvalConfig {
+        prefix,
+        keyset: $keyset,
+        key: $key,
+        vtype: $vtype,
+        default: Some($default),
+        ..KeyvalConfig::default()
+      },
+      st,
+    )?;
   }};
-  ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) =>{
+  ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {
     // TODO: explicit $options with prefix logic
     // should we tokenize the code?
     // let code_expansion = ExpansionBody::Tokens(tokenize(
     // code.unwrap_or(""), Some(state)));
     unimplemented!();
-  }
+  };
 }
 
 #[macro_export]

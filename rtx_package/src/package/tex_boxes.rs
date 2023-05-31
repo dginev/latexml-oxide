@@ -211,7 +211,8 @@ LoadDefinitions!(state, {
   );
 
   DefParameterType!(RuleSpecification, reader=>reader!(gullet, _inner, _extra, state, {
-    let mut keyvals = KeyVals::new(KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()}, state);
+    let mut keyvals = KeyVals::new(
+      KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()}, state);
     while let Some(key) = gullet.read_keyword(&["width", "height", "depth"], state)? {
       keyvals.set_value(&key, Stored::Dimension(gullet.read_dimension(state)?), false, state);
     }

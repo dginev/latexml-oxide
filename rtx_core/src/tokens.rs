@@ -7,8 +7,8 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::convert::AsRef;
 use std::fmt::Display;
-use std::string::ToString;
 use std::rc::Rc;
+use std::string::ToString;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -30,7 +30,7 @@ pub const UNTEX_LINELENGTH: usize = 78;
 /// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return
 /// value
 pub const NO_TOKENS: Tokens = Tokens(Vec::new());
-pub const NO_BORROWED_TOKENS : &Tokens = &NO_TOKENS;
+pub const NO_BORROWED_TOKENS: &Tokens = &NO_TOKENS;
 /// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`
