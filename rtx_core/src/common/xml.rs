@@ -37,7 +37,7 @@ impl XPath {
         let message = s!("{:?}", e);
         Error!("xpath", "findnodes", None, None, message);
         panic!("this is an external libxml2 error; unwinding...");
-     },
+      },
     }
   }
 

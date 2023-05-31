@@ -334,22 +334,21 @@ pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str, _state: &mut State) -
   unimplemented!()
 }
 
-pub fn p_revert<T>(arg:T, state: &mut State) -> Result<Tokens>
-where T: Sized+Object {
+pub fn p_revert<T>(arg: T, state: &mut State) -> Result<Tokens>
+where T: Sized + Object {
   state.set_dual_branch("presentation");
   let result = arg.revert(state);
   state.expire_dual_branch();
   result
 }
 
-pub fn c_revert<T>(arg:T, state: &mut State) -> Result<Tokens>
-where T: Sized+Object {
+pub fn c_revert<T>(arg: T, state: &mut State) -> Result<Tokens>
+where T: Sized + Object {
   state.set_dual_branch("content");
   let result = arg.revert(state);
   state.expire_dual_branch();
   result
 }
-
 
 /// This attempts to be a generalize vbox construction;
 /// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
@@ -1047,8 +1046,8 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
   //  T: AsRef<str> would be more efficient than allocating a string every time
   //  but we first need `Stored` and `Digested` to be capable of that.
   match pos.to_string().as_str() {
-   "t" => "top",
-   "b" => "bottom",
-   _ => "middle"
+    "t" => "top",
+    "b" => "bottom",
+    _ => "middle",
   } // undef meaning 'baseline'
 }

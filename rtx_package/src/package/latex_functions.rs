@@ -1,11 +1,11 @@
-use rustc_hash::FxHashMap as HashMap;
 use libxml::tree::Node;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use rustc_hash::FxHashMap as HashMap;
 
-use rtx_core::alignment::template::Template;
-use crate::package::*;
 use crate::package::tex_alignment::alignment_bindings;
+use crate::package::*;
+use rtx_core::alignment::template::Template;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
@@ -163,7 +163,13 @@ pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
   }
 }
 
-pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored>, mut xml_attributes:HashMap<String,String>, gullet:&mut Gullet, state:&mut State) -> Result<()> {
+pub fn tabular_bindings(
+  template: Template,
+  mut properties: HashMap<String, Stored>,
+  mut xml_attributes: HashMap<String, String>,
+  gullet: &mut Gullet,
+  state: &mut State,
+) -> Result<()> {
   if !properties.contains_key("guess_headers") {
     if let Some(v) = state.lookup_value("GUESS_TABULAR_HEADERS") {
       properties.insert(String::from("guess_headers"), v.clone());
@@ -172,29 +178,57 @@ pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored
   if !xml_attributes.contains_key("colsep") {
     let sep_opt = state.lookup_dimension("\\tabcolsep");
     if let Some(sep) = sep_opt {
-      if sep.value_of() != state.lookup_dimension("\\lx@default@tabcolsep").unwrap().value_of() {
+      if sep.value_of()
+        != state
+          .lookup_dimension("\\lx@default@tabcolsep")
+          .unwrap()
+          .value_of()
+      {
         xml_attributes.insert(String::from("colsep"), sep.to_attribute());
       }
     }
   }
   if !xml_attributes.contains_key("rowsep") {
-    let astr = gullet.do_expand(T_CS!("\\arraystretch"), state)?.to_string();
+    let astr = gullet
+      .do_expand(T_CS!("\\arraystretch"), state)?
+      .to_string();
     if astr != "1" {
       let astr_int = astr.parse::<i64>().expect(&astr);
-      xml_attributes.insert(String::from("rowsep"), Dimension::from_str(&s!("{}em", astr_int - 1),state)?.to_attribute());
+      xml_attributes.insert(
+        String::from("rowsep"),
+        Dimension::from_str(&s!("{}em", astr_int - 1), state)?.to_attribute(),
+      );
     }
   }
 
   if !properties.contains_key("strut") {
-    properties.insert(String::from("strut"), state.lookup_register("\\baselineskip", Vec::new())
-      .unwrap().multiply(Float::new_f64(1.5)).into());
-  }    // Account for html space
-  alignment_bindings(template, String::from("text"), properties, xml_attributes, gullet, state);
-  state.let_i(&T_CS!("\\\\"),T_CS!("\\@tabularcr"), None, gullet);
+    properties.insert(
+      String::from("strut"),
+      state
+        .lookup_register("\\baselineskip", Vec::new())
+        .unwrap()
+        .multiply(Float::new_f64(1.5))
+        .into(),
+    );
+  } // Account for html space
+  alignment_bindings(
+    template,
+    String::from("text"),
+    properties,
+    xml_attributes,
+    gullet,
+    state,
+  );
+  state.let_i(&T_CS!("\\\\"), T_CS!("\\@tabularcr"), None, gullet);
   state.let_i(&T_CS!("\\tabularnewline"), T_CS!("\\\\"), None, gullet);
   // NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!
-  for name in ["@row@before", "@row@after", "@column@before", "@column@after"] {
+  for name in [
+    "@row@before",
+    "@row@after",
+    "@column@before",
+    "@column@after",
+  ] {
     let cs = T_CS!(s!("\\{name}"));
     let cs_def = state.lookup_definition(&cs).unwrap();
     let mut expansion = cs_def.get_expansion().cloned().unwrap_or_default();

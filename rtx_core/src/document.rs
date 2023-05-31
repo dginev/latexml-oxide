@@ -7,9 +7,9 @@ use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use string_interner::symbol::SymbolU32;
 use rustc_hash::FxHashMap as HashMap;
 use rustc_hash::FxHashSet as HashSet;
+use string_interner::symbol::SymbolU32;
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -22,10 +22,10 @@ use crate::common::arena::{
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
+use crate::common::model::Model;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::model::Model;
-use crate::common::xml::{self, XML_NS,XPath};
+use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
@@ -157,16 +157,20 @@ impl Document {
 
   /// Find the nodes according to the given `xpath` expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  pub fn findnodes(&mut self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<Node> {
+  pub fn findnodes(
+    &mut self,
+    xpath: &str,
+    node_opt: Option<&Node>,
+    state: &mut State,
+  ) -> Vec<Node> {
     let node = match node_opt {
       Some(node) => Cow::Borrowed(node),
       None => match self.document.get_root_element() {
         Some(root) => Cow::Owned(root),
-        None => {return Vec::new()}
-      }
+        None => return Vec::new(),
+      },
     };
-    self.get_xpath(&state.model)
-      .findnodes(xpath, Some(&node))
+    self.get_xpath(&state.model).findnodes(xpath, Some(&node))
   }
 
   /// Get an XPath context that knows about our namespace mappings.
@@ -198,16 +202,17 @@ impl Document {
   }
 
   /// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
-  pub fn findvalues(&mut self, xpath: &str, node_opt: Option<&Node>, state: &mut State) -> Vec<String> {
+  pub fn findvalues(
+    &mut self,
+    xpath: &str,
+    node_opt: Option<&Node>,
+    state: &mut State,
+  ) -> Vec<String> {
     match node_opt {
-      Some(node) => self.get_xpath(&state
-        .model)
-        .findvalues(xpath, Some(node)),
+      Some(node) => self.get_xpath(&state.model).findvalues(xpath, Some(node)),
       None => {
         if let Some(root) = self.document.get_root_element() {
-          self
-            .get_xpath(&state.model)
-            .findvalues(xpath, Some(&root))
+          self.get_xpath(&state.model).findvalues(xpath, Some(&root))
         } else {
           Vec::new()
         }

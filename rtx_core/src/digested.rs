@@ -1,12 +1,13 @@
 //! Interface layer for the full range of digested objects
-use rustc_hash::FxHashMap as HashMap;
-use std::borrow::{Cow};
-use std::fmt;
-use std::cell::RefCell;
-use std::rc::Rc;
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use std::borrow::Cow;
+use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
+use crate::alignment::Alignment;
 use crate::comment::Comment;
 use crate::common::arena;
 use crate::common::dimension::Dimension;
@@ -16,7 +17,6 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::alignment::Alignment;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::keyvals::KeyVals;
@@ -148,24 +148,24 @@ impl PartialEq for Digested {
 // we have the most current font information
 impl<'a> From<&'a String> for Digested {
   fn from(value: &'a String) -> Digested {
-    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
-      ExplodeText!(value),
-    ))))
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(
+      value
+    )))))
   }
 }
 impl From<String> for Digested {
   fn from(value: String) -> Digested {
-    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
-      ExplodeText!(value),
-    ))))
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(
+      value
+    )))))
   }
 }
 impl From<SymbolU32> for Digested {
   fn from(sym: SymbolU32) -> Digested {
     let allocated = arena::to_string(sym);
-    Digested(Rc::new(DigestedData::Postponed(Tokens::new(
-      ExplodeText!(allocated),
-    ))))
+    Digested(Rc::new(DigestedData::Postponed(Tokens::new(ExplodeText!(
+      allocated
+    )))))
   }
 }
 
@@ -225,7 +225,7 @@ impl fmt::Display for Digested {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => write!(f, "{}",b.borrow()),
+      TBox(ref b) => write!(f, "{}", b.borrow()),
       List(ref l) => write!(f, "{}", l.borrow()),
       Whatsit(ref w) => write!(f, "{}", w.borrow()),
       Alignment(ref a) => write!(f, "{}", a.borrow()),
@@ -253,19 +253,11 @@ impl Object for Digested {
   fn get_locator(&self) -> Option<Cow<Locator>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow().get_locator()
-        .map(|l| Cow::Owned(l.into_owned())),
-      List(ref l) => l.borrow().get_locator()
-        .map(|l| Cow::Owned(l.into_owned())),
+      TBox(ref b) => b.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      List(ref l) => l.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
       Comment(ref c) => c.get_locator(),
-      Whatsit(ref w) => w
-        .borrow()
-        .get_locator()
-        .map(|l| Cow::Owned(l.into_owned())),
-      Alignment(ref w) => w
-        .borrow()
-        .get_locator()
-        .map(|l| Cow::Owned(l.into_owned())),
+      Whatsit(ref w) => w.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      Alignment(ref w) => w.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
       Postponed(ref _t) => None, // Tokens locator?
@@ -290,7 +282,8 @@ impl BoxOps for Digested {
   fn unlist(&self) -> Vec<Digested> {
     use DigestedData::*;
     match *self.0 {
-      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
+      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_)
+      | RegisterValue(_) => {
         vec![self.clone()]
       },
       List(ref l) => l.borrow().unlist(),
@@ -299,10 +292,11 @@ impl BoxOps for Digested {
   fn unlist_ref(&self) -> Vec<Cow<Digested>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_) | RegisterValue(_) => {
+      TBox(_) | Whatsit(_) | Alignment(_) | KeyVals(_) | Comment(_) | Postponed(_)
+      | RegisterValue(_) => {
         vec![Cow::Borrowed(self)]
       },
-      List(ref l) => l.borrow().unlist().into_iter().map(Cow::Owned).collect()
+      List(ref l) => l.borrow().unlist().into_iter().map(Cow::Owned).collect(),
     }
   }
 
@@ -345,16 +339,23 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow_mut().set_property(key, value),
       List(ref l) => l.borrow_mut().set_property(key, value),
       Whatsit(ref w) => w.borrow_mut().set_property(key, value),
-      _ => { dbg!(self); unimplemented!();},
+      _ => {
+        dbg!(self);
+        unimplemented!();
+      },
     }
   }
 
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow().get_property(key)
+      TBox(ref b) => b
+        .borrow()
+        .get_property(key)
         .map(|v| Cow::Owned(v.into_owned())),
-      List(ref l) => l.borrow().get_property(key)
+      List(ref l) => l
+        .borrow()
+        .get_property(key)
         .map(|v| Cow::Owned(v.into_owned())),
       Whatsit(ref w) => w
         .borrow()
@@ -366,11 +367,17 @@ impl BoxOps for Digested {
   fn get_string(&self, state: &State) -> Result<Cow<str>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow().get_string(state)
+      TBox(ref b) => b
+        .borrow()
+        .get_string(state)
         .map(|v| Cow::Owned(v.into_owned())),
-      List(ref l) => l.borrow().get_string(state)
+      List(ref l) => l
+        .borrow()
+        .get_string(state)
         .map(|v| Cow::Owned(v.into_owned())),
-      Whatsit(ref w) => w.borrow().get_string(state)
+      Whatsit(ref w) => w
+        .borrow()
+        .get_string(state)
         .map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
@@ -423,10 +430,16 @@ impl BoxOps for Digested {
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => Ok(b.borrow().get_font(state)?
-        .map(|v| Cow::Owned(v.into_owned()))),
-      List(ref l) => Ok(l.borrow().get_font(state)?
-        .map(|v| Cow::Owned(v.into_owned()))),
+      TBox(ref b) => Ok(
+        b.borrow()
+          .get_font(state)?
+          .map(|v| Cow::Owned(v.into_owned())),
+      ),
+      List(ref l) => Ok(
+        l.borrow()
+          .get_font(state)?
+          .map(|v| Cow::Owned(v.into_owned())),
+      ),
       Whatsit(ref w) => Ok(
         w.borrow()
           .get_font(state)?
@@ -440,7 +453,6 @@ impl BoxOps for Digested {
   /// Note the difference between calling `compute_size` on a Digested object, and calling it on a
   /// concrete box type. When called on `Digested` it will opt for caching the computed sizes,
   /// but when called on the concrete types it will always compute sizes fresh.
-  ///
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
@@ -481,7 +493,9 @@ impl Digested {
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
     match &*self.0 {
-      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => {
+        check(self)
+      },
       Comment(_) => true,
       List(l) => l.borrow().boxes.iter().any(check),
     }
@@ -492,7 +506,9 @@ impl Digested {
   where F: FnMut(&Self) -> bool {
     use DigestedData::*;
     match &*self.0 {
-      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => check(self),
+      TBox(_) | Whatsit(_) | Alignment(_) | Postponed(_) | KeyVals(_) | RegisterValue(_) => {
+        check(self)
+      },
       Comment(_) => true,
       List(l) => l.borrow().boxes.iter().all(check),
     }

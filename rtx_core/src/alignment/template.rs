@@ -1,23 +1,22 @@
 //! Support for tabular/array environments
+use super::cell::Cell;
+use crate::common::dimension::Dimension;
 use crate::token::Token;
 use crate::tokens::Tokens;
 use crate::Digested;
-use crate::common::dimension::Dimension;
-use super::cell::Cell;
 
 use std::collections::VecDeque;
-use std::fmt::{self, Display, Debug};
-
+use std::fmt::{self, Debug, Display};
 
 // ??
 pub type Row = Template;
-#[derive(Debug,Copy,Clone,Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub enum Align {
   #[default]
   Left,
   Center,
   Right,
-  Justify
+  Justify,
 }
 impl Align {
   pub fn char_code(&self) -> char {
@@ -25,7 +24,7 @@ impl Align {
       Align::Right => 'r',
       Align::Left => 'l',
       Align::Center => 'c',
-      Align::Justify => 'p'
+      Align::Justify => 'p',
     }
   }
   pub fn name(&self) -> &'static str {
@@ -33,7 +32,7 @@ impl Align {
       Align::Right => "right",
       Align::Left => "left",
       Align::Center => "center",
-      Align::Justify => "justify" // ?
+      Align::Justify => "justify", // ?
     }
   }
 }
@@ -44,16 +43,16 @@ impl From<char> for Align {
       'r' => Align::Right,
       'c' => Align::Center,
       'p' => Align::Justify,
-      _ => Align::default() // fallback
+      _ => Align::default(), // fallback
     }
   }
 }
 
 /// Two axes of tabular orientation
-#[derive(Debug,Copy,Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Axis {
   Column,
-  Row
+  Row,
 }
 impl Axis {
   /// The string name of a tabular axis
@@ -72,17 +71,16 @@ impl Axis {
   }
 }
 
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColumnSpec {
   Integer, // 'i'
-  Empty, // '_'
+  Empty,   // '_'
   Unknown, // '?'
-  Text, // 't'
-  Math, // 'm'
+  Text,    // 't'
+  Math,    // 'm'
   /// Math *and* Text, alternating
   MathAltText, // 'mx'
-  D, // 'd'
+  D,       // 'd'
   Graphics, // 'g'
 }
 impl ColumnSpec {
@@ -91,21 +89,57 @@ impl ColumnSpec {
     use ColumnSpec::*;
     match self {
       Empty => match other {
-        Empty => 0.0, Math  => 0.05, Integer => 0.05, Text => 0.05, Unknown => 0.05, MathAltText => 0.05, _ => 0.75 },
-      Math   => match other {
-        Empty => 0.05, Math => 0.0, Integer => 0.1, MathAltText => 0.2, _ => 0.75 },
-      Integer   => match other {
-        Empty => 0.05,Math  => 0.1,  Integer  => 0.0, MathAltText => 0.2, _ => 0.75 },
+        Empty => 0.0,
+        Math => 0.05,
+        Integer => 0.05,
+        Text => 0.05,
+        Unknown => 0.05,
+        MathAltText => 0.05,
+        _ => 0.75,
+      },
+      Math => match other {
+        Empty => 0.05,
+        Math => 0.0,
+        Integer => 0.1,
+        MathAltText => 0.2,
+        _ => 0.75,
+      },
+      Integer => match other {
+        Empty => 0.05,
+        Math => 0.1,
+        Integer => 0.0,
+        MathAltText => 0.2,
+        _ => 0.75,
+      },
       Text => match other {
-        Empty => 0.05, Text => 0.0, MathAltText => 0.2, _ => 0.75 },
+        Empty => 0.05,
+        Text => 0.0,
+        MathAltText => 0.2,
+        _ => 0.75,
+      },
       Unknown => match other {
-        Empty => 0.05, Unknown => 0.0,  MathAltText => 0.2, _ => 0.75 },
+        Empty => 0.05,
+        Unknown => 0.0,
+        MathAltText => 0.2,
+        _ => 0.75,
+      },
       MathAltText => match other {
-        Empty => 0.05,Math  => 0.2,  Integer  => 0.2, Text => 0.2, Unknown => 0.2, MathAltText => 0.0, _ => 0.75 }
+        Empty => 0.05,
+        Math => 0.2,
+        Integer => 0.2,
+        Text => 0.2,
+        Unknown => 0.2,
+        MathAltText => 0.0,
+        _ => 0.75,
+      },
       D => match other {
-        D => 0.0, _ => 0.75 },
+        D => 0.0,
+        _ => 0.75,
+      },
       Graphics => match other {
-        Graphics => 0.0, _ => 0.75 }
+        Graphics => 0.0,
+        _ => 0.75,
+      },
     }
   }
 }
@@ -119,17 +153,17 @@ impl Display for ColumnSpec {
       ColumnSpec::Math => write!(f, "m"),
       ColumnSpec::MathAltText => write!(f, "mx"),
       ColumnSpec::D => write!(f, "d"),
-      ColumnSpec::Graphics => write!(f, "g")
+      ColumnSpec::Graphics => write!(f, "g"),
     }
   }
 }
 
-#[derive(Debug,Copy,Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum BorderSpec {
   Top,
   Bottom,
   Left,
-  Right
+  Right,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -162,10 +196,10 @@ pub struct Template {
   save_before: VecDeque<Token>,
   save_between: VecDeque<Token>,
   pub cached_width: Option<Dimension>,
-  pub cached_height : Option<Dimension>,
+  pub cached_height: Option<Dimension>,
   pub cached_depth: Option<Dimension>,
-  pub x : Option<Dimension>,
-  pub y : Option<Dimension>,
+  pub x: Option<Dimension>,
+  pub y: Option<Dimension>,
 }
 
 impl Display for Template {
@@ -238,7 +272,7 @@ impl Template {
     }
   }
 
-  pub fn add_column(&mut self, mut col:Cell) {
+  pub fn add_column(&mut self, mut col: Cell) {
     let mut before = Vec::new();
     if !self.save_between.is_empty() {
       before.extend(self.save_between.clone());
@@ -263,9 +297,9 @@ impl Template {
     } else {
       Some(Tokens::new(after))
     };
-    col.empty           = true;
-    self.save_between   = VecDeque::new();
-    self.save_before    = VecDeque::new();
+    col.empty = true;
+    self.save_between = VecDeque::new();
+    self.save_before = VecDeque::new();
 
     if self.repeating {
       self.non_repeating = self.columns.len();

@@ -42,7 +42,6 @@ LoadDefinitions!(state, {
     Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfill")),
     stored_map!("isSpace" => true, "isFill" => true), state) });
 
-
   // \lower <dimen> <box>
   // \raise <dimen> <box>
   // But <box> apparently must really explicitly be an \hbox, \vbox or \vtop (?)

@@ -2,15 +2,14 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt::{self, Display};
 use std::rc::Rc;
-use std::cell::RefCell;
 use string_interner::symbol::SymbolU32;
 
-use crate::{Digested,DigestedData};
-use crate::alignment::Alignment;
 use crate::alignment::template::Template;
+use crate::alignment::Alignment;
 use crate::common::arena::{self, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -32,11 +31,12 @@ use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
 use crate::gullet::Gullet;
-use crate::stomach::Stomach;
 use crate::mouth;
+use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
+use crate::{Digested, DigestedData};
 
 static CODE_TEX_EXT: &str = ".code.tex";
 
@@ -221,7 +221,7 @@ pub struct Localized {
   pub current_token: Vec<Token>,
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Digested>,
-  pub build_template: Vec<Template>
+  pub build_template: Vec<Template>,
 }
 
 /// The State efficiently maintain the bindings in a TeX-like fashion.
@@ -900,7 +900,7 @@ impl State {
       Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
       Some(Stored::String(sym)) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
       Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
-      _ => None
+      _ => None,
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Token`
@@ -914,9 +914,8 @@ impl State {
   pub fn lookup_alignment(&self) -> Option<Digested> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
-    self
-      .lookup_value("Alignment")
-      .and_then(|v| if let Stored::Digested(d) = v {
+    self.lookup_value("Alignment").and_then(|v| {
+      if let Stored::Digested(d) = v {
         if matches!(d.data(), DigestedData::Alignment(_)) {
           // for now clone the Digested object (approx. an Rc<_> clone)
           // instead of returning &Digested, to simplify lifetime checks
@@ -924,7 +923,10 @@ impl State {
         } else {
           None
         }
-      } else { None })
+      } else {
+        None
+      }
+    })
   }
 
   pub fn assign_alignment(&mut self, alignment: Alignment, scope: Option<Scope>) {
@@ -2137,7 +2139,8 @@ impl State {
   pub fn expire_ifframe(&mut self) { self.localized.if_frames.pop(); }
   /// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn set_smuggle_the(&mut self, smuggle_the: bool) {
-    self.localized.smuggle_the.push(smuggle_the); }
+    self.localized.smuggle_the.push(smuggle_the);
+  }
   /// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
   pub fn get_smuggle_the(&self) -> bool {
     match self.localized.smuggle_the.last() {
@@ -2159,22 +2162,33 @@ impl State {
   /// expire (localized) flag for "dual branch"
   pub fn expire_dual_branch(&mut self) { self.localized.dual_branch.pop(); }
   /// get the current value for "dual branch"
-  pub fn get_dual_branch(&self) -> Option<&'static str> { self.localized.dual_branch.last().cloned() }
+  pub fn get_dual_branch(&self) -> Option<&'static str> {
+    self.localized.dual_branch.last().cloned()
+  }
 
   pub fn increment_align_group_count(&mut self) {
     match self.localized.align_group_count.last_mut() {
-      Some(v) => {*v += 1},
-      None => { self.localized.align_group_count.push(1); }
+      Some(v) => *v += 1,
+      None => {
+        self.localized.align_group_count.push(1);
+      },
     }
   }
   pub fn decrement_align_group_count(&mut self) {
     match self.localized.align_group_count.last_mut() {
-      Some(v) => {*v -= 1},
-      None => { self.localized.align_group_count.push(-1); }
+      Some(v) => *v -= 1,
+      None => {
+        self.localized.align_group_count.push(-1);
+      },
     }
   }
   pub fn align_group_count(&self) -> i32 {
-    self.localized.align_group_count.last().copied().unwrap_or_default()
+    self
+      .localized
+      .align_group_count
+      .last()
+      .copied()
+      .unwrap_or_default()
   }
   pub fn set_align_group_count(&mut self, v: i32) {
     if let Some(gc) = self.localized.align_group_count.last_mut() {
@@ -2183,9 +2197,7 @@ impl State {
       self.localized.align_group_count.push(v);
     }
   }
-  pub fn local_align_group_count(&mut self, v: i32) {
-    self.localized.align_group_count.push(v);
-  }
+  pub fn local_align_group_count(&mut self, v: i32) { self.localized.align_group_count.push(v); }
   pub fn expire_align_group_count(&mut self) -> Option<i32> {
     self.localized.align_group_count.pop()
   }
@@ -2193,9 +2205,7 @@ impl State {
   pub fn get_reading_alignment(&self) -> Option<Digested> {
     self.localized.reading_alignment.last().map(Clone::clone)
   }
-  pub fn has_reading_alignment(&self) -> bool {
-    !self.localized.reading_alignment.is_empty()
-  }
+  pub fn has_reading_alignment(&self) -> bool { !self.localized.reading_alignment.is_empty() }
   pub fn local_reading_alignment(&mut self, alignment: &Digested) {
     self.localized.reading_alignment.push(alignment.clone());
   }
@@ -2207,14 +2217,15 @@ impl State {
     self.localized.build_template.push(template);
   }
   pub fn set_build_template(&mut self, template: Template) {
-    *self.localized.build_template.last_mut()
-    .expect("set_build_template should not be called before the first local_build_template")
-    = template;
+    *self
+      .localized
+      .build_template
+      .last_mut()
+      .expect("set_build_template should not be called before the first local_build_template") =
+      template;
   }
   pub fn current_build_template(&mut self) -> Option<&mut Template> {
     self.localized.build_template.last_mut()
   }
-  pub fn take_build_template(&mut self) -> Option<Template> {
-    self.localized.build_template.pop()
-  }
+  pub fn take_build_template(&mut self) -> Option<Template> { self.localized.build_template.pop() }
 }

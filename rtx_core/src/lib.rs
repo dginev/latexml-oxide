@@ -59,13 +59,13 @@ pub mod util;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 
+use libxml::tree::Node;
+use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::fmt;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
-use once_cell::sync::Lazy;
-use libxml::tree::Node;
 
 use crate::common::dimension::Dimension;
 pub use crate::common::error::*;
@@ -83,7 +83,7 @@ use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
 
-pub static NO_PROPERTIES : Lazy<HashMap<String,Stored>> = Lazy::new(HashMap::default);
+pub static NO_PROPERTIES: Lazy<HashMap<String, Stored>> = Lazy::new(HashMap::default);
 
 /// The Core conversion runtime
 pub struct Core {
@@ -174,7 +174,9 @@ pub trait BoxOps: Object {
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
   /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
-  fn be_absorbed_mut(&mut self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> { unimplemented!(); }
+  fn be_absorbed_mut(&mut self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+    unimplemented!();
+  }
   /// build a string representation of the underlying digested data
   fn get_string(&self, state: &State) -> Result<Cow<str>>;
   /// get the underlying tokens (preceding digestion)
@@ -193,11 +195,13 @@ pub trait BoxOps: Object {
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
   /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
-    self.get_properties_mut().insert(key.to_string(), value.into());
+    self
+      .get_properties_mut()
+      .insert(key.to_string(), value.into());
   }
   /// get a single named property (with special "isSpace" check)
   fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
-    self.with_properties(|props|
+    self.with_properties(|props| {
       if key == "isSpace" {
         match props.get(key) {
           Some(value) => Some(Cow::Owned(value.clone())),
@@ -217,19 +221,19 @@ pub trait BoxOps: Object {
       } else {
         props.get(key).map(|v| Cow::Owned(v.clone()))
       }
-    )
+    })
   }
   /// get a mutable reference to a single named property (does NOT have the "isSpace" check)
-  fn get_property_mut(&mut self, key:&str) -> Option<&mut Stored> {
+  fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
     self.get_properties_mut().get_mut(key)
   }
   /// checks if a property key has been set
-  fn has_property(&self, key: &str) -> bool { self.with_properties(|props| props.contains_key(key)) }
+  fn has_property(&self, key: &str) -> bool {
+    self.with_properties(|props| props.contains_key(key))
+  }
   /// obtains a boolean property value (false unless `Stored::Bool`)
   fn get_property_bool(&self, key: &str) -> bool {
-    self.with_properties(|props|
-      matches!(props.get(key), Some(Stored::Bool(true)))
-    )
+    self.with_properties(|props| matches!(props.get(key), Some(Stored::Bool(true))))
   }
   /// obtains the "body" of a digested object which captured it
   fn get_body(&self) -> Option<Digested> {
@@ -303,69 +307,84 @@ pub trait BoxOps: Object {
     &mut self,
     options: Option<HashMap<String, Stored>>,
     state: &mut State,
-  ) -> Result<(Dimension, Dimension, Dimension, Dimension,Dimension,Dimension)> {
+  ) -> Result<(
+    Dimension,
+    Dimension,
+    Dimension,
+    Dimension,
+    Dimension,
+    Dimension,
+  )> {
     // TODO: Reintroduce caching?
-    if !(self.has_property("cached_width") && self.has_property("cached_height") && self.has_property("cached_depth"))
+    if !(self.has_property("cached_width")
+      && self.has_property("cached_height")
+      && self.has_property("cached_depth"))
     {
       self.compute_size_and_cache(options.unwrap_or_default(), state)?;
     }
     self.with_properties(|props| {
-      let (width,height,depth,
-        cached_width,cached_height,cached_depth) = (
-      props.get("width"), props.get("height"), props.get("depth"),
-      props.get("cached_width"), props.get("cached_height"),props.get("cached_depth"));
+      let (width, height, depth, cached_width, cached_height, cached_depth) = (
+        props.get("width"),
+        props.get("height"),
+        props.get("depth"),
+        props.get("cached_width"),
+        props.get("cached_height"),
+        props.get("cached_depth"),
+      );
 
-    // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string(state)?);
-    //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
-    //     . "\n calculated : " . _showsize($$props{cached_width}, $$props{cached_height}, $$props{cached_depth})
-    //     . "\n w/options " . join(',', map { $_ . "=" . ToString($options{$_}); } sort keys
-    // %options)     . "\n =>: " . _showsize($$props{width} || $$props{cached_width}, $$props{height}
-    // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
-    // ToString($self)) if $LaTeXML::DEBUG{size};
-    Ok((
-      match width {
-        Some(Stored::Dimension(w)) => *w,
-        _ => match cached_width {
+      // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string(state)?);
+      //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
+      //     . "\n calculated : " . _showsize($$props{cached_width}, $$props{cached_height},
+      // $$props{cached_depth})     . "\n w/options " . join(',', map { $_ . "=" .
+      // ToString($options{$_}); } sort keys %options)     . "\n =>: " .
+      // _showsize($$props{width} || $$props{cached_width}, $$props{height}
+      // || $$props{cached_height}, $$props{depth} || $$props{cached_depth})     . "\n   Of " .
+      // ToString($self)) if $LaTeXML::DEBUG{size};
+      Ok((
+        match width {
           Some(Stored::Dimension(w)) => *w,
-          _ => Dimension::default(),
+          _ => match cached_width {
+            Some(Stored::Dimension(w)) => *w,
+            _ => Dimension::default(),
+          },
         },
-      },
-      match height {
-        Some(Stored::Dimension(h)) => *h,
-        _ => match cached_height {
+        match height {
           Some(Stored::Dimension(h)) => *h,
-          _ => Dimension::default(),
+          _ => match cached_height {
+            Some(Stored::Dimension(h)) => *h,
+            _ => Dimension::default(),
+          },
         },
-      },
-      match depth {
-        Some(Stored::Dimension(d)) => *d,
-        _ => match cached_depth {
+        match depth {
           Some(Stored::Dimension(d)) => *d,
-          _ => Dimension::default(),
+          _ => match cached_depth {
+            Some(Stored::Dimension(d)) => *d,
+            _ => Dimension::default(),
+          },
         },
-      },
-      match cached_width {
-        Some(Stored::Dimension(w)) => *w,
-        _ => match width  {
+        match cached_width {
           Some(Stored::Dimension(w)) => *w,
-          _ => Dimension::default(),
+          _ => match width {
+            Some(Stored::Dimension(w)) => *w,
+            _ => Dimension::default(),
+          },
         },
-      },
-      match cached_height {
-        Some(Stored::Dimension(h)) => *h,
-        _ => match height {
+        match cached_height {
           Some(Stored::Dimension(h)) => *h,
-          _ => Dimension::default(),
+          _ => match height {
+            Some(Stored::Dimension(h)) => *h,
+            _ => Dimension::default(),
+          },
         },
-      },
-      match cached_depth {
-        Some(Stored::Dimension(d)) => *d,
-        _ => match depth {
+        match cached_depth {
           Some(Stored::Dimension(d)) => *d,
-          _ => Dimension::default(),
+          _ => match depth {
+            Some(Stored::Dimension(d)) => *d,
+            _ => Dimension::default(),
+          },
         },
-      },
-    )) })
+      ))
+    })
   }
 
   /// computes and caches (via named properties) the size of a box-like object
@@ -391,7 +410,7 @@ pub trait BoxOps: Object {
     if !self.has_property("cached_depth") {
       self.set_property("cached_depth", d);
     }
-    Ok((w,h,d))
+    Ok((w, h, d))
   }
 
   /// computes and returns the size of a box-like object

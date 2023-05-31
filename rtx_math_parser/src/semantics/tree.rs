@@ -41,7 +41,7 @@ pub struct XProps {
   /// a pointer to a different node, usually for `XMRef`
   pub idref: Option<Cow<'static, str>>,
   /// an intermediate key to be fully realized as an id at a later time
-  pub xmkey: Option<Cow<'static,  str>>,
+  pub xmkey: Option<Cow<'static, str>>,
   /// an optional subtree-specific Font
   pub font: Option<Font>,
   /// usually associated with the internal `_font` attribute references
@@ -856,7 +856,7 @@ impl From<&Node> for XProps {
       idref,
       fontref,
       font: None,
-      xmkey: None
+      xmkey: None,
     }
   }
 }

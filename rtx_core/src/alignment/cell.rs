@@ -1,7 +1,7 @@
-use crate::tokens::Tokens;
+use super::template::{Align, BorderSpec, ColumnSpec};
 use crate::common::dimension::Dimension;
 use crate::digested::Digested;
-use super::template::{Align,ColumnSpec, BorderSpec};
+use crate::tokens::Tokens;
 use libxml::tree::Node;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -37,8 +37,8 @@ pub struct Cell {
   pub rowspan: Option<usize>,
   pub vattach: Option<String>,
   pub cell: Option<Node>,
-  pub x : Option<Dimension>,
-  pub y : Option<Dimension>,
+  pub x: Option<Dimension>,
+  pub y: Option<Dimension>,
   pub border: String,
 }
 impl Cell {

@@ -32,7 +32,7 @@ impl BoxOps for Comment {
   where FnR: FnOnce(&HashMap<String, Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
-  fn get_property(&self,_key: &str) -> Option<Cow<Stored>> { None }
+  fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {} // no-op
   fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
   fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {

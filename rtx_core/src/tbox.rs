@@ -142,16 +142,17 @@ impl Tbox {
   /// checks if the text content is empty
   pub fn is_empty(&self) -> bool {
     // 1. A space-like thing
-    self.get_property_bool("isEmpty") || self.get_property_bool("isSpace") ||
     // 2. empty (or whitespace) text content
-    arena::with(self.text, |text| text.trim().is_empty())
+    self.get_property_bool("isEmpty")
+      || self.get_property_bool("isSpace")
+      || arena::with(self.text, |text| text.trim().is_empty())
   }
 }
 
 impl BoxOps for Tbox {
   fn get_tokens(&self) -> Option<&Tokens> { Some(&self.tokens) }
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
-  fn get_property(&self,key: &str) -> Option<Cow<Stored>> {
+  fn get_property(&self, key: &str) -> Option<Cow<Stored>> {
     let props = &self.properties;
     if key == "isSpace" {
       match props.get(key) {

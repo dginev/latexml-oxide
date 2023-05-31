@@ -2,16 +2,14 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
 use std::borrow::Cow;
+use std::cell::RefMut;
 use std::collections::VecDeque;
 use std::mem;
 use std::rc::Rc;
-use std::cell::{RefMut};
 use string_interner::symbol::SymbolU32;
 
-use crate::DigestedData;
-use crate::common::arena;
-use crate::common::store::Stored;
 use crate::alignment::Alignment;
+use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::float::Float;
@@ -22,6 +20,8 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
+use crate::common::store::Stored;
+use crate::DigestedData;
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -41,7 +41,7 @@ thread_local! {
 }
 
 // If it is a column ending token, Returns the token, a keyword and whether it is "hidden"
-thread_local!{
+thread_local! {
  static COLUMN_ENDS : [(Token,&'static str, bool); 6] = [    // besides T_ALIGN
   (T_CS!("\\cr"),           "cr",     false),
   (T_CS!("\\crcr"),         "crcr",   false),
@@ -184,11 +184,17 @@ impl Gullet {
   ///**********************************************************************
   /// Note that every char (token) comes through here (maybe even twice, through args parsing),
   /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
-  ///
 
-  fn handle_template(&mut self, mut alignment: RefMut<Alignment>, token: Token, vtype: &str, hidden: bool, state: &mut State) -> Result<()> {
-    // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(), state.lookup_meaning(&token).unwrap());
-    //     . "@ " . ToString($self->getLocator))
+  fn handle_template(
+    &mut self,
+    mut alignment: RefMut<Alignment>,
+    token: Token,
+    vtype: &str,
+    hidden: bool,
+    state: &mut State,
+  ) -> Result<()> {
+    // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
+    // state.lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
@@ -196,15 +202,21 @@ impl Gullet {
     let post = alignment.get_column_after();
     state.set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
-    let arg_opt = if (vtype == "cr") && hidden {    // \hidden@cr gets an argument as payload!!!!!
+    let arg_opt = if (vtype == "cr") && hidden {
+      // \hidden@cr gets an argument as payload!!!!!
       Some(self.read_arg(state)?)
     } else {
       None
     };
     // eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
-    if (vtype == "cr" || vtype == "crcr") &&
-      alignment.is_in_row() && ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(false) {
-        self.unread_one(T_CS!("\\@row@after"));
+    if (vtype == "cr" || vtype == "crcr")
+      && alignment.is_in_row()
+      && !alignment
+        .current_row()
+        .map(|v| v.is_pseudo())
+        .unwrap_or(false)
+    {
+      self.unread_one(T_CS!("\\@row@after"));
     }
     if let Some(arg) = arg_opt {
       // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
@@ -233,7 +245,7 @@ impl Gullet {
         }
         match pushback_token.get_catcode() {
           Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
-          Catcode::MARKER =>  handle_marker(pushback_token, state),
+          Catcode::MARKER => handle_marker(pushback_token, state),
           _ => {
             next_token = Some(pushback_token);
             break;
@@ -268,7 +280,7 @@ impl Gullet {
       if let Some(ref nextt) = next_token {
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
         if (state.align_group_count() == 0) && state.has_reading_alignment() {
-          if let Some((atoken, atype, ahidden)) = is_column_end(nextt,state) {
+          if let Some((atoken, atype, ahidden)) = is_column_end(nextt, state) {
             let reading_alignment = state.get_reading_alignment().unwrap();
             if let DigestedData::Alignment(data) = reading_alignment.data() {
               self.handle_template(data.borrow_mut(), atoken, atype, ahidden, state)?;
@@ -326,7 +338,7 @@ impl Gullet {
               self.pending_comments.push_back(token);
             }
           },
-          Catcode::MARKER => handle_marker(token,state),
+          Catcode::MARKER => handle_marker(token, state),
           _ => {
             next_token = Some(token);
             break;
@@ -344,7 +356,7 @@ impl Gullet {
                 self.pending_comments.push_back(token);
               }
             },
-            Catcode::MARKER => handle_marker(token,state),
+            Catcode::MARKER => handle_marker(token, state),
             _ => {
               next_token = Some(token);
               break;
@@ -373,15 +385,23 @@ impl Gullet {
       // --
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
-      let check_alignment_data = if (state.align_group_count() == 0) && state.has_reading_alignment() {
-        if let Some((_atoken, atype, ahidden)) = is_column_end(&token,state) {
-          let reading_alignment = state.get_reading_alignment().unwrap();
-          Some((reading_alignment, atype, ahidden))
-        } else { None } } else { None };
+      let check_alignment_data =
+        if (state.align_group_count() == 0) && state.has_reading_alignment() {
+          if let Some((_atoken, atype, ahidden)) = is_column_end(&token, state) {
+            let reading_alignment = state.get_reading_alignment().unwrap();
+            Some((reading_alignment, atype, ahidden))
+          } else {
+            None
+          }
+        } else {
+          None
+        };
       if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
         if let DigestedData::Alignment(data) = reading_alignment.data() {
           self.handle_template(data.borrow_mut(), token, atype, ahidden, state)?;
-        } else { panic!("malformed alignmed was stored?"); }
+        } else {
+          panic!("malformed alignmed was stored?");
+        }
         // And *then* continue the main loop checks
       } else if token.get_catcode().is_active_or_cs() {
         if let Some(defn) = state.lookup_meaning_iff_def(&token) {
@@ -394,7 +414,8 @@ impl Gullet {
           }
         }
         if token.get_catcode() == Catcode::CS && state.lookup_meaning(&token).is_none() {
-          return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now; report early!
+          return Ok(Some(state.generate_error_stub(self, &token)?)); // cs SHOULD have defn by now;
+                                                                     // report early!
         } else {
           return Ok(Some(token));
         }
@@ -408,11 +429,7 @@ impl Gullet {
   // TODO: linearizing in a single loop{}, as in perl, may be faster
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
-  fn invoke_for_read_x_token(
-    &mut self,
-    defn: Rc<dyn Definition>,
-    state: &mut State,
-  ) -> Result<()> {
+  fn invoke_for_read_x_token(&mut self, defn: Rc<dyn Definition>, state: &mut State) -> Result<()> {
     let mut expansion = defn.invoke(self, false, state)?;
     if expansion.is_empty() {
       return Ok(());
@@ -638,7 +655,8 @@ impl Gullet {
           break;
         }
         match token.get_catcode() {
-          Catcode::MARKER => {// would have been handled by readToken, but we're bypassing
+          Catcode::MARKER => {
+            // would have been handled by readToken, but we're bypassing
             handle_marker(token, state);
           },
           Catcode::BEGIN => {
@@ -650,7 +668,9 @@ impl Gullet {
             }
             tokens.push(T_END!());
           },
-          _ =>  { tokens.push(token); }
+          _ => {
+            tokens.push(token);
+          },
         }
       }
     } else {
@@ -731,7 +751,10 @@ impl Gullet {
     }
   }
   /// reads and discards tokens, until it encounters a conditional, if any
-  pub fn read_next_conditional(&mut self, state: &mut State) -> Result<Option<(Token, ConditionalType)>> {
+  pub fn read_next_conditional(
+    &mut self,
+    state: &mut State,
+  ) -> Result<Option<(Token, ConditionalType)>> {
     while let Some(mut token) = self.read_token(state)? {
       if token.get_catcode() == Catcode::SmuggleTHE {
         token = token.without_dont_expand();
@@ -1370,8 +1393,15 @@ impl Gullet {
   /// Do something, while reading stuff from a specific Mouth.
   /// This reads ONLY from that mouth (or any mouth openned by code in that source),
   /// and the mouth should end up empty afterwards, and only be closed here.
-  pub fn reading_from_mouth<R, FnR>(&mut self, mouth: Mouth, state: &mut State, reader: FnR) -> Result<R>
-  where FnR: FnOnce(&mut Gullet, &mut State) -> Result<R> {
+  pub fn reading_from_mouth<R, FnR>(
+    &mut self,
+    mouth: Mouth,
+    state: &mut State,
+    reader: FnR,
+  ) -> Result<R>
+  where
+    FnR: FnOnce(&mut Gullet, &mut State) -> Result<R>,
+  {
     let mouth_source = mouth.get_source().to_string();
     self.open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
     let results: R = reader(self, state)?;
@@ -1540,17 +1570,23 @@ impl Gullet {
   }
 }
 
-pub fn is_column_end(token: &Token, state:&State) -> Option<(Token, &'static str, bool)> {
+pub fn is_column_end(token: &Token, state: &State) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
     Catcode::ALIGN => Some((token.clone(), "align", false)),
     Catcode::CS => {
       // Embedded version of Equals, knowing both are tokens
-      let defn = state.lookup_meaning(token).unwrap_or_else(|| Cow::Owned(Stored::Token(token.clone())));
+      let defn = state
+        .lookup_meaning(token)
+        .unwrap_or_else(|| Cow::Owned(Stored::Token(token.clone())));
       COLUMN_ENDS.with(|ends| {
         for end in ends {
           let e = &end.0;
           // Would be nice to cache the defns, but don't know when they're present & constant!
-          if defn == state.lookup_meaning(e).unwrap_or_else(|| Cow::Owned(Stored::Token(e.clone()))) {
+          if defn
+            == state
+              .lookup_meaning(e)
+              .unwrap_or_else(|| Cow::Owned(Stored::Token(e.clone())))
+          {
             return Some(end.clone());
           }
         }
@@ -1563,15 +1599,16 @@ pub fn is_column_end(token: &Token, state:&State) -> Option<(Token, &'static str
 
 fn handle_marker(marker_token: Token, state: &mut State) {
   marker_token.with_str(|arg| match arg {
-    "before-column" => { // Were in before-column template
+    "before-column" => {
+      // Were in before-column template
       // let alignment = state.lookup_alignment();
       // Debug("Halign $alignment: alignment state => 0") if $LaTeXML::DEBUG{halign};
       state.set_align_group_count(0);
     }, // switch to column proper!
-    "after-column" => {     // Were in before-column template
-      // let alignment = state.lookup_alignment();
-      // Debug("Halign $alignment: alignment state: after column") if $LaTeXML::DEBUG{halign};
-    }
-    _ => {}
-  } );
+    "after-column" => { // Were in before-column template
+       // let alignment = state.lookup_alignment();
+       // Debug("Halign $alignment: alignment state: after column") if $LaTeXML::DEBUG{halign};
+    },
+    _ => {},
+  });
 }

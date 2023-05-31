@@ -206,14 +206,14 @@ pub trait IntoResultArgWrap<T>: Sized {
 }
 
 impl<T> IntoResultArgWrap<Result<ArgWrap>> for Result<T>
-where T: Into<ArgWrap>+Sized {
-  fn into_result_argwrap(self) -> Result<ArgWrap> {
-    self.map(|v| v.into())
-  }
+where T: Into<ArgWrap> + Sized
+{
+  fn into_result_argwrap(self) -> Result<ArgWrap> { self.map(|v| v.into()) }
 }
 
 impl<T> IntoResultArgWrap<Result<ArgWrap>> for T
-where T: Into<ArgWrap>+Sized {
+where T: Into<ArgWrap> + Sized
+{
   fn into_result_argwrap(self) -> Result<ArgWrap> { Ok(self.into()) }
 }
 

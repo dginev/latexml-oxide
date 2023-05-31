@@ -413,9 +413,7 @@ impl Default for Register {
       name: String::from("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Rc::new(|_: Vec<ArgWrap>, _: &mut State| {
-        Some(RegisterValue::Number(Number::new(0)))
-      }),
+      getter: Rc::new(|_: Vec<ArgWrap>, _: &mut State| Some(RegisterValue::Number(Number::new(0)))),
       setter: Rc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
       readonly: false,
       internalcs: None,
@@ -459,9 +457,7 @@ impl Definition for Register {
   }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs.clone()) }
-  fn get_cs_name(&self) -> Cow<str> {
-    Cow::Owned(self.cs.with_cs_name(ToString::to_string))
-  }
+  fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
   // No before/after daemons ???
   // (other than afterassign)

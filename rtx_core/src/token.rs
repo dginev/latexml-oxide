@@ -901,9 +901,10 @@ impl Token {
   }
 }
 
-// A simple (constant!) auto-cast for &str to Token. Beware this will not respect the current catcodes in State (and @ is OTHER).
+// A simple (constant!) auto-cast for &str to Token. Beware this will not respect the current
+// catcodes in State (and @ is OTHER).
 impl From<&str> for Token {
-  fn from(text:&str) -> Token {
+  fn from(text: &str) -> Token {
     match text.chars().next() {
       Some('{') => T_BEGIN!(),
       Some('}') => T_END!(),
@@ -914,13 +915,15 @@ impl From<&str> for Token {
       Some('_') => T_SUB!(),
       Some('\\') => T_CS!(text),
       Some('%') => T_COMMENT!(text),
-      _ => if text.chars().all(|c| c.is_alphabetic()) {
-        T_LETTER!(text)
-      } else if text.chars().all(|c| c.is_whitespace()) {
-        T_SPACE!()
-      } else {
-        T_OTHER!(text)
-      }
+      _ => {
+        if text.chars().all(|c| c.is_alphabetic()) {
+          T_LETTER!(text)
+        } else if text.chars().all(|c| c.is_whitespace()) {
+          T_SPACE!()
+        } else {
+          T_OTHER!(text)
+        }
+      },
     }
   }
 }
