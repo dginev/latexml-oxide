@@ -40,6 +40,8 @@ pub struct XProps {
   pub id: Option<Cow<'static, str>>,
   /// a pointer to a different node, usually for `XMRef`
   pub idref: Option<Cow<'static, str>>,
+  /// an intermediate key to be fully realized as an id at a later time
+  pub xmkey: Option<Cow<'static,  str>>,
   /// an optional subtree-specific Font
   pub font: Option<Font>,
   /// usually associated with the internal `_font` attribute references
@@ -80,6 +82,9 @@ impl XProps {
     if let Some(idref) = self.idref.take() {
       attrs.insert(String::from("idref"), idref.into_owned());
     }
+    if let Some(xmkey) = self.xmkey.take() {
+      attrs.insert(String::from("_xmkey"), xmkey.into_owned());
+    }
     if let Some(fontref) = self.fontref.take() {
       attrs.insert(String::from("_font"), fontref.into_owned());
     }
@@ -99,7 +104,7 @@ pub enum XM {
   Token(XProps, Meta), // does this need Meta?
   Apply(Operator, Args, XProps, Meta),
   Dual(Box<XM>, Box<XM>, XProps, Meta),
-  Ref(String),
+  Ref(XProps),
   Wrap(Vec<XM>, XProps, Meta),
   Choices(Vec<XM>),
 }
@@ -653,9 +658,14 @@ impl XM {
         document.close_element_at(&mut wrap_node, state)?;
         Ok(wrap_node)
       },
-      XM::Ref(idref) => {
+      XM::Ref(refprops) => {
         let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
-        document.set_attribute(&mut ref_node, "idref", &idref, state)?;
+        if let Some(id) = refprops.id {
+          document.set_attribute(&mut ref_node, "idref", &id, state)?;
+        }
+        if let Some(xmkey) = refprops.xmkey {
+          document.set_attribute(&mut ref_node, "_xmkey", &xmkey, state)?;
+        }
         Ok(ref_node)
       },
       XM::Choices(mut choices) => {
@@ -705,8 +715,8 @@ impl XM {
           realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned(),
         ))
       },
-      XM::Ref(ref idref) => {
-        if let Some(node) = ctxt.document.lookup_id(idref) {
+      XM::Ref(ref refprops) => {
+        if let Some(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
           Ok(Some(node.clone()))
         } else {
           unimplemented!();
@@ -846,6 +856,7 @@ impl From<&Node> for XProps {
       idref,
       fontref,
       font: None,
+      xmkey: None
     }
   }
 }

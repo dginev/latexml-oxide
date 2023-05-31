@@ -1220,7 +1220,7 @@ pub fn def_environment(
 
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
-fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+pub fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
   step_counter_gullet("@XMARG", false, gullet, state)?;
   def_macro(
     T_CS!("\\@@XMARG@ID"),
@@ -1235,7 +1235,6 @@ fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     }),
     state,
   );
-
   gullet.do_expand(T_CS!("\\the@XMARG@ID"), state)
 }
 
