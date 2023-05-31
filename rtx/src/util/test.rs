@@ -12,7 +12,8 @@ use rtx_core::document::Document;
 use rtx_core::state::State;
 use rtx_core::{s, Core, CoreOptions};
 use rtx_math_parser::node_to_grammar_lexemes;
-use rtx_package::package;
+use rtx_package::{package,load_model};
+use rtx_codegen::LoadModel;
 
 pub fn rtx_tests(
   dirpath: &str,
@@ -173,22 +174,29 @@ fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
     .collect()
 }
 
-/// Simple tokenization of a single formula, without any custom preloads
-/// byond latex and amsmath
-pub fn lex_single_tex_formula(tex: &str) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
-  let mut latexml = Core::new(CoreOptions {
-    verbosity: Some(-2),
-    search_paths: None,
+/// Provide a default test `Core` engine for simple operations
+pub fn new_test_engine() -> Core {
+  let mut core_engine = Core::new(CoreOptions {
     preload: Some(
       ["article.cls", "amsmath.sty"]
         .map(|x| x.to_string())
         .to_vec(),
     ),
+    verbosity: Some(-2),
+    search_paths: None,
     nomathparse: Some(true),
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  latexml.get_state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
+  let state = core_engine.get_state_mut();
+  load_model!(state,"LaTeXML");
+  state.bindings_dispatch = Some(Rc::new(package::dispatch));
+  core_engine
+}
+
+/// Simple tokenization of a single formula, without any custom preloads
+/// beyond latex and amsmath
+pub fn lex_single_tex_formula(tex: &str, latexml: &mut Core) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
   let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
   assert!(xml_result.is_ok(), "{:?}", xml_result.err());
   let mut doc = xml_result.unwrap();

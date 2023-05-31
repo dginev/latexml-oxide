@@ -1,11 +1,12 @@
-use rtx::util::test::lex_single_tex_formula;
+use rtx::util::test::{lex_single_tex_formula, new_test_engine};
 use rtx_core::state::{State, StateOptions};
 use rtx_math_parser::MathParser;
 
 #[test]
 fn basic_1() {
   let tex = "1+1=2";
-  let (lexemes, mut nodes, xmath_opt, mut doc) = lex_single_tex_formula(tex);
+  let mut latexml = new_test_engine();
+  let (lexemes, mut nodes, xmath_opt, mut doc) = lex_single_tex_formula(tex, &mut latexml);
   assert!(!lexemes.is_empty());
   let expected_lexemes = &[
     "NUMBER:1:1",
