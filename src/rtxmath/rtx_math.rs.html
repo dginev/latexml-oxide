@@ -71,15 +71,17 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_use]
 </span><span class="kw">extern crate </span>rtx_core;
 <span class="kw">use </span>libxml::tree::SaveOptions;
-<span class="kw">use </span>rtx::util::test::lex_single_tex_formula;
-<span class="kw">use </span>rtx_core::common::error::Result;
-<span class="kw">use </span>rtx_core::state::{State, StateOptions};
-<span class="kw">use </span>rtx_math_parser::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::env;
 <span class="kw">use </span>std::process;
+
+<span class="kw">use </span>rtx::util::test::{new_test_engine,lex_single_tex_formula};
+<span class="kw">use </span>rtx_core::common::error::Result;
+<span class="kw">use </span>rtx_math_parser::<span class="kw-2">*</span>;
 
 <span class="kw">fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
@@ -107,22 +109,24 @@
       process::exit(<span class="number">1</span>);
     },
   };
-
-  <span class="kw">let </span>(lexemes, <span class="kw-2">mut </span>lex_nodes, xmath_opt, <span class="kw-2">mut </span>doc) = lex_single_tex_formula(<span class="kw-2">&amp;</span>source);
+  <span class="kw">let </span><span class="kw-2">mut </span>core_engine = new_test_engine();
+  <span class="kw">let </span>(lexemes, <span class="kw-2">mut </span>lex_nodes, xmath_opt, <span class="kw-2">mut </span>doc) = lex_single_tex_formula(<span class="kw-2">&amp;</span>source, <span class="kw-2">&amp;mut </span>core_engine);
   <span class="macro">assert!</span>(!lexemes.is_empty());
-  <span class="macro">eprintln!</span>(<span class="string">&quot;lexemes: {lexemes:?}&quot;</span>);
-  <span class="kw">let </span><span class="kw-2">mut </span>state = State::new(StateOptions::default());
-  <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
-  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) = parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc, <span class="kw-2">&amp;mut </span>state) {
+  <span class="macro">eprintln!</span>(<span class="string">&quot;\n\nlexemes: {lexemes:?}\n&quot;</span>);
+
+  <span class="kw">let </span>state = core_engine.get_state_mut();
+  state.nomathparse = <span class="bool-val">false</span>; <span class="comment">// nomathparse is &quot;true&quot; while lexing, but &quot;false&quot; while parsing
+  </span><span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
+  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) = parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc, state) {
     <span class="kw">let </span><span class="kw-2">mut </span>xmath = xmath_opt.unwrap();
     <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>xmath.get_child_nodes() {
       node.unlink();
     }
-    <span class="kw">let </span>xml_tree = parse_tree.into_xmath(<span class="kw-2">&amp;mut </span>xmath, <span class="kw-2">&amp;mut </span>lex_nodes, <span class="kw-2">&amp;mut </span>doc, <span class="kw-2">&amp;mut </span>state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>xml_tree = parse_tree.into_xmath(<span class="kw-2">&amp;mut </span>xmath, <span class="kw-2">&amp;mut </span>lex_nodes, <span class="kw-2">&amp;mut </span>doc, state)<span class="question-mark">?</span>;
     xmath
       .get_parent()
       .unwrap()
-      .set_attribute(<span class="string">&quot;text&quot;</span>, <span class="kw-2">&amp;</span>text_form(<span class="kw-2">&amp;</span>xml_tree, <span class="kw-2">&amp;mut </span>doc, <span class="kw-2">&amp;mut </span>state))
+      .set_attribute(<span class="string">&quot;text&quot;</span>, <span class="kw-2">&amp;</span>text_form(<span class="kw-2">&amp;</span>xml_tree, <span class="kw-2">&amp;mut </span>doc, state))
       .unwrap();
 
     <span class="macro">println!</span>(

@@ -860,6 +860,38 @@
 <a href="#860" id="860">860</a>
 <a href="#861" id="861">861</a>
 <a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rtx_core::common::font::Font;
 <span class="kw">use </span>rtx_core::common::xml::element_nodes;
@@ -968,6 +1000,7 @@
   Dual(Box&lt;XM&gt;, Box&lt;XM&gt;, XProps, Meta),
   Ref(XProps),
   Wrap(Vec&lt;XM&gt;, XProps, Meta),
+  Arg(Vec&lt;XM&gt;),
   Choices(Vec&lt;XM&gt;),
 }
 <span class="kw">impl </span>From&lt;XProps&gt; <span class="kw">for </span>XM {
@@ -1100,7 +1133,7 @@
       XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
       XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
       XM::Choices(cs) =&gt; cs[<span class="number">0</span>].get_meta(), <span class="comment">// Should we return a none type instead?
-      </span>XM::Ref(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      </span>XM::Ref(<span class="kw">_</span>) | XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">pub fn </span>get_meta_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Meta {
@@ -1111,7 +1144,7 @@
       XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
       XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
       XM::Choices(cs) =&gt; cs[<span class="number">0</span>].get_meta_mut(), <span class="comment">// Should we return a none type instead?
-      </span>XM::Ref(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      </span>XM::Ref(<span class="kw">_</span>)| XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
     }
   }
   <span class="kw">pub fn </span>get_inner_meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Meta&gt; {
@@ -1154,7 +1187,7 @@
           .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
           .join(<span class="string">&quot;&quot;</span>)
       )),
-      XM::Choices(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      XM::Choices(<span class="kw">_</span>)| XM::Arg(<span class="kw">_</span>)=&gt; <span class="macro">unimplemented!</span>(),
       XM::Dual(content, pres, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; Cow::Owned(<span class="macro">format!</span>(
         <span class="string">&quot;{}{}&quot;</span>,
         content.get_value(nodes).expect(<span class="string">&quot;inner&quot;</span>),
@@ -1270,6 +1303,7 @@
       },
       XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
       XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
       XM::Choices(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;can not specialize choices&quot;</span>.into()),
     }
   }
@@ -1340,6 +1374,7 @@
       },
       XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
       XM::Wrap(_inner, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
+      XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">unimplemented!</span>(),
       XM::Choices(args) =&gt; args.first().unwrap().get_baseline(),
     }
   }
@@ -1376,7 +1411,7 @@
           c.unconstrain_recursive();
         }
       },
-      XM::Choices(args) =&gt; {
+      XM::Choices(args) | XM::Arg(args) =&gt; {
         <span class="kw">for </span>tree <span class="kw">in </span>args {
           tree.unconstrain_recursive();
         }
@@ -1423,6 +1458,22 @@
         <span class="kw">let </span><span class="kw-2">mut </span>arg_level: Vec&lt;bool&gt; = level.to_vec();
         arg_level.push(<span class="bool-val">true</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>peekable = content.iter().peekable();
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(arg) = peekable.next() {
+          <span class="kw">if </span>peekable.peek().is_none() {
+            arg_level.pop();
+            arg_level.push(<span class="bool-val">false</span>);
+            arg.fmt_indented(<span class="kw-2">&amp;</span>arg_level, f)<span class="question-mark">?
+          </span>} <span class="kw">else </span>{
+            arg.fmt_indented(<span class="kw-2">&amp;</span>arg_level, f)<span class="question-mark">?
+          </span>}
+        }
+        <span class="macro">writeln!</span>(f)
+      },
+      XM::Arg(args) =&gt; {
+        <span class="macro">writeln!</span>(f, <span class="string">&quot;\n{indent}Arg&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>arg_level: Vec&lt;bool&gt; = level.to_vec();
+        arg_level.push(<span class="bool-val">true</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>peekable = args.iter().peekable();
         <span class="kw">while let </span><span class="prelude-val">Some</span>(arg) = peekable.next() {
           <span class="kw">if </span>peekable.peek().is_none() {
             arg_level.pop();
@@ -1529,6 +1580,14 @@
           document.set_attribute(<span class="kw-2">&amp;mut </span>ref_node, <span class="string">&quot;_xmkey&quot;</span>, <span class="kw-2">&amp;</span>xmkey, state)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(ref_node)
+      },
+      XM::Arg(inner_list) =&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>arg_node = Node::new(<span class="string">&quot;XMArg&quot;</span>, <span class="prelude-val">None</span>, document.get_document()).unwrap();
+        <span class="kw">for </span>inner_item <span class="kw">in </span>inner_list {
+          <span class="kw">let </span><span class="kw-2">mut </span>inner_node = inner_item.into_xmath(<span class="kw-2">&amp;mut </span>arg_node, nodes, document, state)<span class="question-mark">?</span>;
+          add_child_guard_xmarg(<span class="kw-2">&amp;mut </span>arg_node, <span class="kw-2">&amp;mut </span>inner_node)<span class="question-mark">?</span>;
+        }
+        <span class="prelude-val">Ok</span>(arg_node)
       },
       XM::Choices(<span class="kw-2">mut </span>choices) =&gt; {
         <span class="macro">Info!</span>(
@@ -1685,8 +1744,13 @@
         <span class="kw">let </span>args: Args = children.iter().map(XM::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().into();
         XM::Apply((<span class="kw-2">&amp;</span>op).into(), args, XProps::from(n), Meta::default())
       },
+      <span class="string">&quot;XMArg&quot; </span>=&gt; {
+        <span class="kw">let </span>children = element_nodes(n);
+        <span class="kw">let </span>inner_xm = children.iter().map(XM::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        XM::Arg(inner_xm)
+      },
       <span class="comment">// TODO: continue for the other cases
-      </span><span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
+      </span>missing_case =&gt; {<span class="macro">dbg!</span>(missing_case); <span class="macro">unimplemented!</span>()},
     }
   }
 }

@@ -229,6 +229,14 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
 </pre><pre class="rust"><code><span class="kw">use </span>glob::glob;
 <span class="kw">use </span>libxml::parser::Parser;
 <span class="kw">use </span>libxml::tree::Document <span class="kw">as </span>XmlDoc;
@@ -243,7 +251,8 @@
 <span class="kw">use </span>rtx_core::state::State;
 <span class="kw">use </span>rtx_core::{s, Core, CoreOptions};
 <span class="kw">use </span>rtx_math_parser::node_to_grammar_lexemes;
-<span class="kw">use </span>rtx_package::package;
+<span class="kw">use </span>rtx_package::{package,load_model};
+<span class="kw">use </span>rtx_codegen::LoadModel;
 
 <span class="kw">pub fn </span>rtx_tests(
   dirpath: <span class="kw-2">&amp;</span>str,
@@ -404,22 +413,29 @@
     .collect()
 }
 
-<span class="doccomment">/// Simple tokenization of a single formula, without any custom preloads
-/// byond latex and amsmath
-</span><span class="kw">pub fn </span>lex_single_tex_formula(tex: <span class="kw-2">&amp;</span>str) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
-  <span class="kw">let </span><span class="kw-2">mut </span>latexml = Core::new(CoreOptions {
-    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
-    search_paths: <span class="prelude-val">None</span>,
+<span class="doccomment">/// Provide a default test `Core` engine for simple operations
+</span><span class="kw">pub fn </span>new_test_engine() -&gt; Core {
+  <span class="kw">let </span><span class="kw-2">mut </span>core_engine = Core::new(CoreOptions {
     preload: <span class="prelude-val">Some</span>(
       [<span class="string">&quot;article.cls&quot;</span>, <span class="string">&quot;amsmath.sty&quot;</span>]
         .map(|x| x.to_string())
         .to_vec(),
     ),
+    verbosity: <span class="prelude-val">Some</span>(-<span class="number">2</span>),
+    search_paths: <span class="prelude-val">None</span>,
     nomathparse: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
     include_comments: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
     ..CoreOptions::default()
   });
-  latexml.get_state_mut().bindings_dispatch = <span class="prelude-val">Some</span>(Rc::new(package::dispatch));
+  <span class="kw">let </span>state = core_engine.get_state_mut();
+  <span class="macro">load_model!</span>(state,<span class="string">&quot;LaTeXML&quot;</span>);
+  state.bindings_dispatch = <span class="prelude-val">Some</span>(Rc::new(package::dispatch));
+  core_engine
+}
+
+<span class="doccomment">/// Simple tokenization of a single formula, without any custom preloads
+/// beyond latex and amsmath
+</span><span class="kw">pub fn </span>lex_single_tex_formula(tex: <span class="kw-2">&amp;</span>str, latexml: <span class="kw-2">&amp;mut </span>Core) -&gt; (Vec&lt;String&gt;, Vec&lt;Node&gt;, <span class="prelude-ty">Option</span>&lt;Node&gt;, Document) {
   <span class="kw">let </span>xml_result = latexml.convert_file(<span class="macro">format!</span>(<span class="string">&quot;literal:\\[ {tex} \\]&quot;</span>));
   <span class="macro">assert!</span>(xml_result.is_ok(), <span class="string">&quot;{:?}&quot;</span>, xml_result.err());
   <span class="kw">let </span><span class="kw-2">mut </span>doc = xml_result.unwrap();
