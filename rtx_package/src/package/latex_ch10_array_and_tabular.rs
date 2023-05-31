@@ -26,12 +26,16 @@ LoadDefinitions!(state, {
   DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
     sub[stomach, (template, attributes_opt), state] {
-    let mut attrs = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    let attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
+    let mut attrs = HashMap::default();
+    for (k,v) in attrs_stored {
+      attrs.insert(k, v.to_string());
+    }
     if let Some(va) = attrs.get("vattach") {
-      attrs.insert(String::from("vattach"), Stored::String(arena::pin_static(translate_attachment(va))));
+      attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
     let gullet = stomach.get_gullet_mut();
-    tabular_bindings(template, attrs, gullet, state)?;
+    tabular_bindings(template, HashMap::default(), attrs, gullet, state)?;
   });
 
   DefMacro!("\\@tabular@before", None);
@@ -59,11 +63,8 @@ LoadDefinitions!(state, {
           let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
           else { translate_attachment(String::new()) };
           let mut data_lock = data.borrow_mut();
-          let props = data_lock.get_properties_mut();
-          let attributes_stored = props.entry("attributes".to_string()).or_insert_with(|| Stored::HashStored(HashMap::default()));
-          if let Stored::HashStored(attributes) = attributes_stored {
-            attributes.insert(String::from("vattach"), Stored::String(arena::pin_static(attachment)));
-          }
+          let attributes = data_lock.get_xml_attributes_mut();
+          attributes.insert(String::from("vattach"), attachment.to_string());
         }
       }
     },

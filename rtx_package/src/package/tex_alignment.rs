@@ -351,7 +351,7 @@ LoadDefinitions!(outer_state, {
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
-pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, gullet: &mut Gullet, state: &mut State) {
+pub fn alignment_bindings(template: Template, mode: String, properties: HashMap<String,Stored>, xml_attributes: HashMap<String,String>, gullet: &mut Gullet, state: &mut State) {
   let mode = if mode.is_empty() { state.lookup_string("MODE") } else { mode };
   let is_math    = mode.ends_with("math");
   let (container,rowtype,coltype) = if is_math {
@@ -374,7 +374,8 @@ let alignment = Alignment::new(AlignmentConfig {
     close_column   : Rc::new(
       |document,state| document.close_element(coltype, state)),
     is_math,
-    properties
+    properties,
+    xml_attributes
   });
   state.assign_alignment(alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};

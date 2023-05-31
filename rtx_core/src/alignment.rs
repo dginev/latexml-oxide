@@ -73,6 +73,7 @@ pub struct AlignmentConfig {
   pub open_column: OpenColumnFn,
   pub close_column: CloseColumnFn,
   pub properties: HashMap<String, Stored>,
+  pub xml_attributes: HashMap<String, String>,
   pub is_math: bool,
 }
 
@@ -89,6 +90,7 @@ pub struct Alignment {
   content_reversion: Option<Tokens>,
   rows: VecDeque<Row>,
   properties: HashMap<String,Stored>,
+  xml_attributes: HashMap<String, String>,
   template: Template,
   open_container: OpenContainerFn,
   close_container: CloseContainerFn,
@@ -112,7 +114,8 @@ impl Alignment {
   ///    closeRow       = closes the row
   ///    openColumn     = sub($doc,%attrib); creates the column element with given attributes
   ///    closeColumn    = closes the column
-  ///    properties = hashref containing extra attributes for the container element.
+  ///    properties     = hashmap containing extra attributes for the container element.
+  ///    xml_attributes = hashmap containing attributes for the main XML node
   pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
     Alignment {
@@ -136,6 +139,7 @@ impl Alignment {
       in_tabular_head: false,
       is_normalized: false,
       properties: config.properties,
+      xml_attributes: config.xml_attributes,
       rows: VecDeque::new(),
       column_widths: Vec::new(),
       row_heights: Vec::new()
@@ -378,6 +382,9 @@ impl Alignment {
   pub fn get_properties_mut(&mut self) -> &mut HashMap<String,Stored> {
     &mut self.properties
   }
+  pub fn get_xml_attributes_mut(&mut self) -> &mut HashMap<String,String> {
+    &mut self.xml_attributes
+  }
 }
 
 //======================================================================
@@ -445,11 +452,8 @@ impl BoxOps for Alignment {
 
     // We _should_ attach boxes to the alignment and rows,
     // but (ATM) we"ve only got sensible boxes for the cells.
-      let attrs   = if let Some(Stored::HashString(attrs)) = self.properties.remove("attributes") {
-        attrs
-      } else {
-        HashMap::default()
-      };
+    let mut attrs = HashMap::default();
+    std::mem::swap(&mut attrs, &mut self.xml_attributes);
     // TODO: where are these used? We currently have a typed restriction for options passed to
     // construction closures to be a String value (for trivial insertion in attributes)
     // the values here are Dimensions and collections of Dimensions - where are they used ?

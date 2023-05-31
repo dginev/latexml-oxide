@@ -163,33 +163,33 @@ pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
   }
 }
 
-pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored>, gullet:&mut Gullet, state:&mut State) -> Result<()> {
+pub fn tabular_bindings(template:Template, mut properties: HashMap<String,Stored>, mut xml_attributes:HashMap<String,String>, gullet:&mut Gullet, state:&mut State) -> Result<()> {
   if !properties.contains_key("guess_headers") {
     if let Some(v) = state.lookup_value("GUESS_TABULAR_HEADERS") {
       properties.insert(String::from("guess_headers"), v.clone());
     }
   }
-  let attributes_entry = properties.entry(String::from("attributes")).or_insert_with(|| Stored::HashStored(HashMap::default()));
-  if let Stored::HashStored(ref mut attributes) = attributes_entry {
-    if ! attributes.contains_key("colsep") {
-      let sep = state.lookup_dimension("\\tabcolsep");
-      if sep.is_some() && (sep.unwrap().value_of() != state.lookup_dimension("\\lx@default@tabcolsep").unwrap().value_of()) {
-        attributes.insert(String::from("colsep"), sep.into());
-      }
-    }
-    if ! attributes.contains_key("rowsep") {
-      let astr = gullet.do_expand(T_CS!("\\arraystretch"), state)?.to_string();
-      if astr != "1" {
-        let astr_int = astr.parse::<i64>().expect(&astr);
-        attributes.insert(String::from("rowsep"), s!("{}em",Dimension::new(astr_int - 1)).into());
+  if !xml_attributes.contains_key("colsep") {
+    let sep_opt = state.lookup_dimension("\\tabcolsep");
+    if let Some(sep) = sep_opt {
+      if sep.value_of() != state.lookup_dimension("\\lx@default@tabcolsep").unwrap().value_of() {
+        xml_attributes.insert(String::from("colsep"), sep.to_attribute());
       }
     }
   }
+  if !xml_attributes.contains_key("rowsep") {
+    let astr = gullet.do_expand(T_CS!("\\arraystretch"), state)?.to_string();
+    if astr != "1" {
+      let astr_int = astr.parse::<i64>().expect(&astr);
+      xml_attributes.insert(String::from("rowsep"), Dimension::from_str(&s!("{}em", astr_int - 1),state)?.to_attribute());
+    }
+  }
+
   if !properties.contains_key("strut") {
     properties.insert(String::from("strut"), state.lookup_register("\\baselineskip", Vec::new())
       .unwrap().multiply(Float::new_f64(1.5)).into());
   }    // Account for html space
-  alignment_bindings(template, String::from("text"), properties, gullet, state);
+  alignment_bindings(template, String::from("text"), properties, xml_attributes, gullet, state);
   state.let_i(&T_CS!("\\\\"),T_CS!("\\@tabularcr"), None, gullet);
   state.let_i(&T_CS!("\\tabularnewline"), T_CS!("\\\\"), None, gullet);
   // NOTE: Fit this back in!!!!!!!
