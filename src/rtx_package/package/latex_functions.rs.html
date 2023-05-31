@@ -203,14 +203,48 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
-</pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<span class="kw">use </span>libxml::tree::Node;
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
+<span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 
-<span class="kw">use </span>rtx_core::alignment::template::Template;
-<span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::package::tex_alignment::alignment_bindings;
+<span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
+<span class="kw">use </span>rtx_core::alignment::template::Template;
 
 <span class="kw">static </span>NOTE_TEXT_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^(\\w+?)text$&quot;</span>).unwrap());
 <span class="kw">static </span>NOTE_MARK_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^(\\w+?)mark$&quot;</span>).unwrap());
@@ -368,7 +402,13 @@
   }
 }
 
-<span class="kw">pub fn </span>tabular_bindings(template:Template, <span class="kw-2">mut </span>properties: HashMap&lt;String,Stored&gt;, <span class="kw-2">mut </span>xml_attributes:HashMap&lt;String,String&gt;, gullet:<span class="kw-2">&amp;mut </span>Gullet, state:<span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>tabular_bindings(
+  template: Template,
+  <span class="kw-2">mut </span>properties: HashMap&lt;String, Stored&gt;,
+  <span class="kw-2">mut </span>xml_attributes: HashMap&lt;String, String&gt;,
+  gullet: <span class="kw-2">&amp;mut </span>Gullet,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state.lookup_value(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot;</span>) {
       properties.insert(String::from(<span class="string">&quot;guess_headers&quot;</span>), v.clone());
@@ -377,29 +417,57 @@
   <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;colsep&quot;</span>) {
     <span class="kw">let </span>sep_opt = state.lookup_dimension(<span class="string">&quot;\\tabcolsep&quot;</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sep) = sep_opt {
-      <span class="kw">if </span>sep.value_of() != state.lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>).unwrap().value_of() {
+      <span class="kw">if </span>sep.value_of()
+        != state
+          .lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>)
+          .unwrap()
+          .value_of()
+      {
         xml_attributes.insert(String::from(<span class="string">&quot;colsep&quot;</span>), sep.to_attribute());
       }
     }
   }
   <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;rowsep&quot;</span>) {
-    <span class="kw">let </span>astr = gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>), state)<span class="question-mark">?</span>.to_string();
+    <span class="kw">let </span>astr = gullet
+      .do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>), state)<span class="question-mark">?
+      </span>.to_string();
     <span class="kw">if </span>astr != <span class="string">&quot;1&quot; </span>{
       <span class="kw">let </span>astr_int = astr.parse::&lt;i64&gt;().expect(<span class="kw-2">&amp;</span>astr);
-      xml_attributes.insert(String::from(<span class="string">&quot;rowsep&quot;</span>), Dimension::from_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>, astr_int - <span class="number">1</span>),state)<span class="question-mark">?</span>.to_attribute());
+      xml_attributes.insert(
+        String::from(<span class="string">&quot;rowsep&quot;</span>),
+        Dimension::from_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>, astr_int - <span class="number">1</span>), state)<span class="question-mark">?</span>.to_attribute(),
+      );
     }
   }
 
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;strut&quot;</span>) {
-    properties.insert(String::from(<span class="string">&quot;strut&quot;</span>), state.lookup_register(<span class="string">&quot;\\baselineskip&quot;</span>, Vec::new())
-      .unwrap().multiply(Float::new_f64(<span class="number">1.5</span>)).into());
-  }    <span class="comment">// Account for html space
-  </span>alignment_bindings(template, String::from(<span class="string">&quot;text&quot;</span>), properties, xml_attributes, gullet, state);
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>),<span class="macro">T_CS!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>), <span class="prelude-val">None</span>, gullet);
+    properties.insert(
+      String::from(<span class="string">&quot;strut&quot;</span>),
+      state
+        .lookup_register(<span class="string">&quot;\\baselineskip&quot;</span>, Vec::new())
+        .unwrap()
+        .multiply(Float::new_f64(<span class="number">1.5</span>))
+        .into(),
+    );
+  } <span class="comment">// Account for html space
+  </span>alignment_bindings(
+    template,
+    String::from(<span class="string">&quot;text&quot;</span>),
+    properties,
+    xml_attributes,
+    gullet,
+    state,
+  );
+  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>), <span class="prelude-val">None</span>, gullet);
   state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\tabularnewline&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="prelude-val">None</span>, gullet);
   <span class="comment">// NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!
-  </span><span class="kw">for </span>name <span class="kw">in </span>[<span class="string">&quot;@row@before&quot;</span>, <span class="string">&quot;@row@after&quot;</span>, <span class="string">&quot;@column@before&quot;</span>, <span class="string">&quot;@column@after&quot;</span>] {
+  </span><span class="kw">for </span>name <span class="kw">in </span>[
+    <span class="string">&quot;@row@before&quot;</span>,
+    <span class="string">&quot;@row@after&quot;</span>,
+    <span class="string">&quot;@column@before&quot;</span>,
+    <span class="string">&quot;@column@after&quot;</span>,
+  ] {
     <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{name}&quot;</span>));
     <span class="kw">let </span>cs_def = state.lookup_definition(<span class="kw-2">&amp;</span>cs).unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>expansion = cs_def.get_expansion().cloned().unwrap_or_default();
@@ -407,5 +475,6 @@
     def_macro(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>, state);
   }
   <span class="prelude-val">Ok</span>(())
-}</code></pre></div>
+}
+</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

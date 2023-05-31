@@ -405,15 +405,20 @@
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
 //! These represent the control sequences for conditionals, as well as
 //! `\else`, `\or` and `\fi`.
 
 </span><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::cell::RefCell;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
@@ -655,7 +660,12 @@
   // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
   // # The inner \ifx should expand to &quot;XY junk&quot;, since A==A
   // # Return the token we&#39;ve skipped to, and the frame that this applies to.
-  </span><span class="kw">fn </span>skip_conditional_body(<span class="kw-2">&amp;</span><span class="self">self</span>, nskips: i64, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">fn </span>skip_conditional_body(
+    <span class="kw-2">&amp;</span><span class="self">self</span>,
+    nskips: i64,
+    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">1</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>n_ors = <span class="number">0</span>;
     <span class="kw">let </span>_start = gullet.get_locator();

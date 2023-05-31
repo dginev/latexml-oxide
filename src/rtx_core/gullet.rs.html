@@ -1575,20 +1575,55 @@
 <a href="#1575" id="1575">1575</a>
 <a href="#1576" id="1576">1576</a>
 <a href="#1577" id="1577">1577</a>
+<a href="#1578" id="1578">1578</a>
+<a href="#1579" id="1579">1579</a>
+<a href="#1580" id="1580">1580</a>
+<a href="#1581" id="1581">1581</a>
+<a href="#1582" id="1582">1582</a>
+<a href="#1583" id="1583">1583</a>
+<a href="#1584" id="1584">1584</a>
+<a href="#1585" id="1585">1585</a>
+<a href="#1586" id="1586">1586</a>
+<a href="#1587" id="1587">1587</a>
+<a href="#1588" id="1588">1588</a>
+<a href="#1589" id="1589">1589</a>
+<a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
+<a href="#1599" id="1599">1599</a>
+<a href="#1600" id="1600">1600</a>
+<a href="#1601" id="1601">1601</a>
+<a href="#1602" id="1602">1602</a>
+<a href="#1603" id="1603">1603</a>
+<a href="#1604" id="1604">1604</a>
+<a href="#1605" id="1605">1605</a>
+<a href="#1606" id="1606">1606</a>
+<a href="#1607" id="1607">1607</a>
+<a href="#1608" id="1608">1608</a>
+<a href="#1609" id="1609">1609</a>
+<a href="#1610" id="1610">1610</a>
+<a href="#1611" id="1611">1611</a>
+<a href="#1612" id="1612">1612</a>
+<a href="#1613" id="1613">1613</a>
+<a href="#1614" id="1614">1614</a>
 </pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
 <span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::cell::RefMut;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::mem;
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::cell::{RefMut};
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">use </span><span class="kw">crate</span>::DigestedData;
-<span class="kw">use </span><span class="kw">crate</span>::common::arena;
-<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
+<span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::float::Float;
@@ -1599,6 +1634,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+<span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
+<span class="kw">use </span><span class="kw">crate</span>::DigestedData;
 
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::ConditionalType;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{RegisterType, RegisterValue};
@@ -1618,7 +1655,7 @@
 }
 
 <span class="comment">// If it is a column ending token, Returns the token, a keyword and whether it is &quot;hidden&quot;
-</span><span class="macro">thread_local!</span>{
+</span><span class="macro">thread_local! </span>{
  <span class="kw">static </span>COLUMN_ENDS : [(Token,<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, bool); <span class="number">6</span>] = [    <span class="comment">// besides T_ALIGN
   </span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\cr&quot;</span>),           <span class="string">&quot;cr&quot;</span>,     <span class="bool-val">false</span>),
   (<span class="macro">T_CS!</span>(<span class="string">&quot;\\crcr&quot;</span>),         <span class="string">&quot;crcr&quot;</span>,   <span class="bool-val">false</span>),
@@ -1761,11 +1798,17 @@
   ///**********************************************************************
   /// Note that every char (token) comes through here (maybe even twice, through args parsing),
   /// So, be Fast &amp; Clean!  This method only reads from the current input stream (Mouth).
-  ///
 
-  </span><span class="kw">fn </span>handle_template(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>alignment: RefMut&lt;Alignment&gt;, token: Token, vtype: <span class="kw-2">&amp;</span>str, hidden: bool, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// eprintln!(&quot;Halign: ALIGNMENT Column ended at {} type {vtype} [{}]&quot;,token.stringify(), state.lookup_meaning(&amp;token).unwrap());
-    //     . &quot;@ &quot; . ToString($self-&gt;getLocator))
+  </span><span class="kw">fn </span>handle_template(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    <span class="kw-2">mut </span>alignment: RefMut&lt;Alignment&gt;,
+    token: Token,
+    vtype: <span class="kw-2">&amp;</span>str,
+    hidden: bool,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="comment">// eprintln!(&quot;Halign: ALIGNMENT Column ended at {} type {vtype} [{}]&quot;,token.stringify(),
+    // state.lookup_meaning(&amp;token).unwrap());     . &quot;@ &quot; . ToString($self-&gt;getLocator))
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
@@ -1773,15 +1816,21 @@
     <span class="kw">let </span>post = alignment.get_column_after();
     state.set_align_group_count(<span class="number">1000000</span>);
     <span class="comment">// ### NOTE: Truly fishy smuggling w/ \hidden@cr
-    </span><span class="kw">let </span>arg_opt = <span class="kw">if </span>(vtype == <span class="string">&quot;cr&quot;</span>) &amp;&amp; hidden {    <span class="comment">// \hidden@cr gets an argument as payload!!!!!
+    </span><span class="kw">let </span>arg_opt = <span class="kw">if </span>(vtype == <span class="string">&quot;cr&quot;</span>) &amp;&amp; hidden {
+      <span class="comment">// \hidden@cr gets an argument as payload!!!!!
       </span><span class="prelude-val">Some</span>(<span class="self">self</span>.read_arg(state)<span class="question-mark">?</span>)
     } <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>};
     <span class="comment">// eprintln!(&quot;Halign: column after {post}&quot;);// . ToString($post)) if $LaTeXML::DEBUG{halign};
-    </span><span class="kw">if </span>(vtype == <span class="string">&quot;cr&quot; </span>|| vtype == <span class="string">&quot;crcr&quot;</span>) &amp;&amp;
-      alignment.is_in_row() &amp;&amp; ! alignment.current_row().map(|v| v.is_pseudo()).unwrap_or(<span class="bool-val">false</span>) {
-        <span class="self">self</span>.unread_one(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@row@after&quot;</span>));
+    </span><span class="kw">if </span>(vtype == <span class="string">&quot;cr&quot; </span>|| vtype == <span class="string">&quot;crcr&quot;</span>)
+      &amp;&amp; alignment.is_in_row()
+      &amp;&amp; !alignment
+        .current_row()
+        .map(|v| v.is_pseudo())
+        .unwrap_or(<span class="bool-val">false</span>)
+    {
+      <span class="self">self</span>.unread_one(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@row@after&quot;</span>));
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = arg_opt {
       <span class="comment">// slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
@@ -1810,7 +1859,7 @@
         }
         <span class="kw">match </span>pushback_token.get_catcode() {
           Catcode::COMMENT =&gt; <span class="self">self</span>.pending_comments.push_back(pushback_token),
-          Catcode::MARKER =&gt;  handle_marker(pushback_token, state),
+          Catcode::MARKER =&gt; handle_marker(pushback_token, state),
           <span class="kw">_ </span>=&gt; {
             next_token = <span class="prelude-val">Some</span>(pushback_token);
             <span class="kw">break</span>;
@@ -1845,7 +1894,7 @@
       </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>nextt) = next_token {
         <span class="comment">// SHOULD count nesting of { }!!! when SCANNED (not digested)
         </span><span class="kw">if </span>(state.align_group_count() == <span class="number">0</span>) &amp;&amp; state.has_reading_alignment() {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>((atoken, atype, ahidden)) = is_column_end(nextt,state) {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>((atoken, atype, ahidden)) = is_column_end(nextt, state) {
             <span class="kw">let </span>reading_alignment = state.get_reading_alignment().unwrap();
             <span class="kw">if let </span>DigestedData::Alignment(data) = reading_alignment.data() {
               <span class="self">self</span>.handle_template(data.borrow_mut(), atoken, atype, ahidden, state)<span class="question-mark">?</span>;
@@ -1903,7 +1952,7 @@
               <span class="self">self</span>.pending_comments.push_back(token);
             }
           },
-          Catcode::MARKER =&gt; handle_marker(token,state),
+          Catcode::MARKER =&gt; handle_marker(token, state),
           <span class="kw">_ </span>=&gt; {
             next_token = <span class="prelude-val">Some</span>(token);
             <span class="kw">break</span>;
@@ -1921,7 +1970,7 @@
                 <span class="self">self</span>.pending_comments.push_back(token);
               }
             },
-            Catcode::MARKER =&gt; handle_marker(token,state),
+            Catcode::MARKER =&gt; handle_marker(token, state),
             <span class="kw">_ </span>=&gt; {
               next_token = <span class="prelude-val">Some</span>(token);
               <span class="kw">break</span>;
@@ -1950,15 +1999,23 @@
       <span class="comment">// --
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
-      </span><span class="kw">let </span>check_alignment_data = <span class="kw">if </span>(state.align_group_count() == <span class="number">0</span>) &amp;&amp; state.has_reading_alignment() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>((_atoken, atype, ahidden)) = is_column_end(<span class="kw-2">&amp;</span>token,state) {
-          <span class="kw">let </span>reading_alignment = state.get_reading_alignment().unwrap();
-          <span class="prelude-val">Some</span>((reading_alignment, atype, ahidden))
-        } <span class="kw">else </span>{ <span class="prelude-val">None </span>} } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+      </span><span class="kw">let </span>check_alignment_data =
+        <span class="kw">if </span>(state.align_group_count() == <span class="number">0</span>) &amp;&amp; state.has_reading_alignment() {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>((_atoken, atype, ahidden)) = is_column_end(<span class="kw-2">&amp;</span>token, state) {
+            <span class="kw">let </span>reading_alignment = state.get_reading_alignment().unwrap();
+            <span class="prelude-val">Some</span>((reading_alignment, atype, ahidden))
+          } <span class="kw">else </span>{
+            <span class="prelude-val">None
+          </span>}
+        } <span class="kw">else </span>{
+          <span class="prelude-val">None
+        </span>};
       <span class="kw">if let </span><span class="prelude-val">Some</span>((reading_alignment, atype, ahidden)) = check_alignment_data {
         <span class="kw">if let </span>DigestedData::Alignment(data) = reading_alignment.data() {
           <span class="self">self</span>.handle_template(data.borrow_mut(), token, atype, ahidden, state)<span class="question-mark">?</span>;
-        } <span class="kw">else </span>{ <span class="macro">panic!</span>(<span class="string">&quot;malformed alignmed was stored?&quot;</span>); }
+        } <span class="kw">else </span>{
+          <span class="macro">panic!</span>(<span class="string">&quot;malformed alignmed was stored?&quot;</span>);
+        }
         <span class="comment">// And *then* continue the main loop checks
       </span>} <span class="kw">else if </span>token.get_catcode().is_active_or_cs() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_meaning_iff_def(<span class="kw-2">&amp;</span>token) {
@@ -1971,7 +2028,8 @@
           }
         }
         <span class="kw">if </span>token.get_catcode() == Catcode::CS &amp;&amp; state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(state.generate_error_stub(<span class="self">self</span>, <span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now; report early!
+          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(state.generate_error_stub(<span class="self">self</span>, <span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>)); <span class="comment">// cs SHOULD have defn by now;
+                                                                     // report early!
         </span>} <span class="kw">else </span>{
           <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(token));
         }
@@ -1985,11 +2043,7 @@
   </span><span class="comment">// TODO: linearizing in a single loop{}, as in perl, may be faster
   //       but it is hard to convince the borrow checker that we can safely
   //       reborrow gullet mutably.
-  </span><span class="kw">fn </span>invoke_for_read_x_token(
-    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-    defn: Rc&lt;<span class="kw">dyn </span>Definition&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
-  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">fn </span>invoke_for_read_x_token(<span class="kw-2">&amp;mut </span><span class="self">self</span>, defn: Rc&lt;<span class="kw">dyn </span>Definition&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>expansion = defn.invoke(<span class="self">self</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
     <span class="kw">if </span>expansion.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -2215,7 +2269,8 @@
           <span class="kw">break</span>;
         }
         <span class="kw">match </span>token.get_catcode() {
-          Catcode::MARKER =&gt; {<span class="comment">// would have been handled by readToken, but we&#39;re bypassing
+          Catcode::MARKER =&gt; {
+            <span class="comment">// would have been handled by readToken, but we&#39;re bypassing
             </span>handle_marker(token, state);
           },
           Catcode::BEGIN =&gt; {
@@ -2227,7 +2282,9 @@
             }
             tokens.push(<span class="macro">T_END!</span>());
           },
-          <span class="kw">_ </span>=&gt;  { tokens.push(token); }
+          <span class="kw">_ </span>=&gt; {
+            tokens.push(token);
+          },
         }
       }
     } <span class="kw">else </span>{
@@ -2308,7 +2365,10 @@
     }
   }
   <span class="doccomment">/// reads and discards tokens, until it encounters a conditional, if any
-  </span><span class="kw">pub fn </span>read_next_conditional(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;(Token, ConditionalType)&gt;&gt; {
+  </span><span class="kw">pub fn </span>read_next_conditional(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;(Token, ConditionalType)&gt;&gt; {
     <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>token) = <span class="self">self</span>.read_token(state)<span class="question-mark">? </span>{
       <span class="kw">if </span>token.get_catcode() == Catcode::SmuggleTHE {
         token = token.without_dont_expand();
@@ -2947,8 +3007,15 @@
   <span class="doccomment">/// Do something, while reading stuff from a specific Mouth.
   /// This reads ONLY from that mouth (or any mouth openned by code in that source),
   /// and the mouth should end up empty afterwards, and only be closed here.
-  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
-  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
+  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    mouth: Mouth,
+    state: <span class="kw-2">&amp;mut </span>State,
+    reader: FnR,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+  <span class="kw">where
+    </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Gullet, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;,
+  {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     <span class="self">self</span>.open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
     </span><span class="kw">let </span>results: R = reader(<span class="self">self</span>, state)<span class="question-mark">?</span>;
@@ -3117,17 +3184,23 @@
   }
 }
 
-<span class="kw">pub fn </span>is_column_end(token: <span class="kw-2">&amp;</span>Token, state:<span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(Token, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, bool)&gt; {
+<span class="kw">pub fn </span>is_column_end(token: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(Token, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, bool)&gt; {
   <span class="kw">match </span>token.get_catcode() {
     Catcode::ALIGN =&gt; <span class="prelude-val">Some</span>((token.clone(), <span class="string">&quot;align&quot;</span>, <span class="bool-val">false</span>)),
     Catcode::CS =&gt; {
       <span class="comment">// Embedded version of Equals, knowing both are tokens
-      </span><span class="kw">let </span>defn = state.lookup_meaning(token).unwrap_or_else(|| Cow::Owned(Stored::Token(token.clone())));
+      </span><span class="kw">let </span>defn = state
+        .lookup_meaning(token)
+        .unwrap_or_else(|| Cow::Owned(Stored::Token(token.clone())));
       COLUMN_ENDS.with(|ends| {
         <span class="kw">for </span>end <span class="kw">in </span>ends {
           <span class="kw">let </span>e = <span class="kw-2">&amp;</span>end.<span class="number">0</span>;
           <span class="comment">// Would be nice to cache the defns, but don&#39;t know when they&#39;re present &amp; constant!
-          </span><span class="kw">if </span>defn == state.lookup_meaning(e).unwrap_or_else(|| Cow::Owned(Stored::Token(e.clone()))) {
+          </span><span class="kw">if </span>defn
+            == state
+              .lookup_meaning(e)
+              .unwrap_or_else(|| Cow::Owned(Stored::Token(e.clone())))
+          {
             <span class="kw">return </span><span class="prelude-val">Some</span>(end.clone());
           }
         }
@@ -3140,16 +3213,18 @@
 
 <span class="kw">fn </span>handle_marker(marker_token: Token, state: <span class="kw-2">&amp;mut </span>State) {
   marker_token.with_str(|arg| <span class="kw">match </span>arg {
-    <span class="string">&quot;before-column&quot; </span>=&gt; { <span class="comment">// Were in before-column template
+    <span class="string">&quot;before-column&quot; </span>=&gt; {
+      <span class="comment">// Were in before-column template
       // let alignment = state.lookup_alignment();
       // Debug(&quot;Halign $alignment: alignment state =&gt; 0&quot;) if $LaTeXML::DEBUG{halign};
       </span>state.set_align_group_count(<span class="number">0</span>);
     }, <span class="comment">// switch to column proper!
-    </span><span class="string">&quot;after-column&quot; </span>=&gt; {     <span class="comment">// Were in before-column template
-      // let alignment = state.lookup_alignment();
-      // Debug(&quot;Halign $alignment: alignment state: after column&quot;) if $LaTeXML::DEBUG{halign};
-    </span>}
-    <span class="kw">_ </span>=&gt; {}
-  } );
-}</code></pre></div>
+    </span><span class="string">&quot;after-column&quot; </span>=&gt; { <span class="comment">// Were in before-column template
+       // let alignment = state.lookup_alignment();
+       // Debug(&quot;Halign $alignment: alignment state: after column&quot;) if $LaTeXML::DEBUG{halign};
+    </span>},
+    <span class="kw">_ </span>=&gt; {},
+  });
+}
+</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

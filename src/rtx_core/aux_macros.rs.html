@@ -111,6 +111,8 @@
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Helper macros for quicker and more idiomatic construction and access to data structures.
 
 /// A flexary macro for constructing `HashMap&lt;&amp;&#39;static str, &amp;&#39;static str&gt;` maps
@@ -183,7 +185,9 @@
 <span class="doccomment">/// The `some!` macro transforms data in type S to Option&lt;Into&lt;T&gt;&gt; (always wrapping with Some)
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>some {
-  (<span class="macro-nonterminal">$arg</span>:expr) =&gt; { <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$arg</span>.into()) }
+  (<span class="macro-nonterminal">$arg</span>:expr) =&gt; {
+    <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$arg</span>.into())
+  };
 }
 
 <span class="doccomment">/// A variant on `vec!` where each argument receives an additional `.into()` call

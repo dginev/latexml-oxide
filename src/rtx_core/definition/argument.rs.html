@@ -463,12 +463,6 @@
 <a href="#463" id="463">463</a>
 <a href="#464" id="464">464</a>
 <a href="#465" id="465">465</a>
-<a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
-<a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
-<a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 
@@ -488,7 +482,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::Token;
-<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens,NO_BORROWED_TOKENS};
+<span class="kw">use </span><span class="kw">crate</span>::tokens::{Tokens, NO_BORROWED_TOKENS};
 <span class="kw">use </span><span class="kw">crate</span>::Locator;
 
 <span class="attr">#[derive(Debug, Clone, Default)]
@@ -506,8 +500,8 @@
   <span class="comment">// TODO: what do we do with this custom case? feels iffy
   </span>RegisterDefinition(Box&lt;(Token, Vec&lt;ArgWrap&gt;)&gt;),
   <span class="attr">#[default]
-  </span><span class="prelude-val">None
-</span>}
+  </span><span class="prelude-val">None</span>,
+}
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ArgWrap {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
@@ -522,8 +516,8 @@
       ArgWrap::MuDimension(mudim) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{mudim}&quot;</span>),
       ArgWrap::KV(kv) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{kv}&quot;</span>),
       ArgWrap::AlignmentTemplate(at) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{at}&quot;</span>),
-      ArgWrap::RegisterDefinition(dbox) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;({},{:?})&quot;</span>,dbox.<span class="number">0</span>,dbox.<span class="number">1</span>),
-      ArgWrap::None =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;None&quot;</span>)
+      ArgWrap::RegisterDefinition(dbox) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;({},{:?})&quot;</span>, dbox.<span class="number">0</span>, dbox.<span class="number">1</span>),
+      ArgWrap::None =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;None&quot;</span>),
     }
   }
 }
@@ -532,7 +526,7 @@
   <span class="kw">fn </span>get_locator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Locator&gt;&gt; {
     <span class="kw">use </span>ArgWrap::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
-      Token(<span class="kw">_</span>) | Tokens(<span class="kw">_</span>)  | Number(<span class="kw">_</span>) | Float(<span class="kw">_</span>)  | Dimension(<span class="kw">_</span>)  | AlignmentTemplate(<span class="kw">_</span>) =&gt; {
+      Token(<span class="kw">_</span>) | Tokens(<span class="kw">_</span>) | Number(<span class="kw">_</span>) | Float(<span class="kw">_</span>) | Dimension(<span class="kw">_</span>) | AlignmentTemplate(<span class="kw">_</span>) =&gt; {
         Option::None
       },
       Glue(t) =&gt; t.get_locator(),
@@ -581,15 +575,8 @@
 
 <span class="kw">impl </span>ArgWrap {
   <span class="kw">pub fn </span>is_some(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { !<span class="self">self</span>.is_none() }
-  <span class="kw">pub fn </span>is_none(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-    <span class="macro">matches!</span>(<span class="self">self</span>, ArgWrap::None)
-  }
-  <span class="kw">pub fn </span>is_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-    <span class="macro">matches!</span>(
-      <span class="self">self</span>,
-      ArgWrap::Tokens(<span class="kw">_</span>) | ArgWrap::Token(<span class="kw">_</span>)
-    )
-  }
+  <span class="kw">pub fn </span>is_none(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="macro">matches!</span>(<span class="self">self</span>, ArgWrap::None) }
+  <span class="kw">pub fn </span>is_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="macro">matches!</span>(<span class="self">self</span>, ArgWrap::Tokens(<span class="kw">_</span>) | ArgWrap::Token(<span class="kw">_</span>)) }
   <span class="kw">pub fn </span>mut_tokens(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Tokens&gt; {
     <span class="kw">match </span><span class="self">self </span>{
       ArgWrap::Tokens(tks) =&gt; <span class="prelude-val">Some</span>(tks),
@@ -816,8 +803,8 @@
     <span class="kw">match </span><span class="self">self </span>{
       <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
       Tokens(tks) =&gt; tks.is_empty(),
-      <span class="kw">_ </span>=&gt; <span class="bool-val">false
-    </span>}
+      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+    }
   }
 }
 
@@ -834,12 +821,13 @@
   }
 }
 
-<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>ArgWrap <span class="kw">where
-  </span>T: Into&lt;ArgWrap&gt; + Sized {
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>ArgWrap
+<span class="kw">where </span>T: Into&lt;ArgWrap&gt; + Sized
+{
   <span class="kw">fn </span>from(t: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
     <span class="kw">match </span>t {
       <span class="prelude-val">Some</span>(t) =&gt; t.into(),
-      <span class="prelude-val">None </span>=&gt; ArgWrap::None
+      <span class="prelude-val">None </span>=&gt; ArgWrap::None,
     }
   }
 }
@@ -927,8 +915,8 @@
   <span class="kw">fn </span>from(aw: ArgWrap) -&gt; <span class="prelude-ty">Option</span>&lt;KeyVals&gt; {
     <span class="kw">match </span>aw {
       ArgWrap::KV(kv) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>kv),
-      <span class="kw">_ </span>=&gt; <span class="prelude-val">None
-    </span>}
+      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    }
   }
 }
 
@@ -936,8 +924,9 @@
   <span class="kw">fn </span>from(aw: ArgWrap) -&gt; Template {
     <span class="kw">match </span>aw {
       ArgWrap::AlignmentTemplate(t) =&gt; <span class="kw-2">*</span>t,
-      other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;illegal auto-cast to alignment::Template on {other:?}&quot;</span>)
+      other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;illegal auto-cast to alignment::Template on {other:?}&quot;</span>),
     }
   }
-}</code></pre></div>
+}
+</code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

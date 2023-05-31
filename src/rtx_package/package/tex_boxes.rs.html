@@ -288,6 +288,7 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -501,7 +502,8 @@
   );
 
   <span class="macro">DefParameterType!</span>(RuleSpecification, reader=&gt;<span class="macro">reader!</span>(gullet, _inner, _extra, state, {
-    <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(KeyvalsConfig{ skip_missing: <span class="bool-val">true</span>, .. KeyvalsConfig::default()}, state);
+    <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
+      KeyvalsConfig{ skip_missing: <span class="bool-val">true</span>, .. KeyvalsConfig::default()}, state);
     <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>], state)<span class="question-mark">? </span>{
       keyvals.set_value(<span class="kw-2">&amp;</span>key, Stored::Dimension(gullet.read_dimension(state)<span class="question-mark">?</span>), <span class="bool-val">false</span>, state);
     }

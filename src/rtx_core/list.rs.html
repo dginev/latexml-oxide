@@ -155,6 +155,18 @@
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -184,7 +196,16 @@
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>List {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.boxes.iter().map(|d| d.stringify()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;, &quot;</span>))
+    <span class="macro">write!</span>(
+      f,
+      <span class="string">&quot;{}&quot;</span>,
+      <span class="self">self
+        </span>.boxes
+        .iter()
+        .map(|d| d.stringify())
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+        .join(<span class="string">&quot;, &quot;</span>)
+    )
   }
 }
 
@@ -224,7 +245,9 @@
   <span class="kw">fn </span>unlist(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Digested&gt; { <span class="self">self</span>.boxes.clone() }
   <span class="kw">fn </span>unlist_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Cow&lt;Digested&gt;&gt; { <span class="self">self</span>.boxes.iter().map(Cow::Borrowed).collect() }
   <span class="kw">fn </span>get_properties(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt; { <span class="kw-2">&amp;</span><span class="self">self</span>.properties }
-  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key:<span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; { <span class="self">self</span>.properties.get(key).map(Cow::Borrowed) }
+  <span class="kw">fn </span>get_property(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Cow&lt;Stored&gt;&gt; {
+    <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
+  }
   <span class="kw">fn </span>with_properties&lt;R, FnR&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: FnR) -&gt; R
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
     caller(<span class="kw-2">&amp;</span><span class="self">self</span>.properties)
@@ -293,9 +316,10 @@
 
   <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="comment">// 1. A space-like thing
-    </span><span class="self">self</span>.get_property_bool(<span class="string">&quot;isEmpty&quot;</span>) || <span class="self">self</span>.get_property_bool(<span class="string">&quot;isSpace&quot;</span>) ||
-    <span class="comment">// 2. empty contents
-    </span><span class="self">self</span>.boxes.iter().all(|item| item.is_empty())
+    // 2. empty contents
+    </span><span class="self">self</span>.get_property_bool(<span class="string">&quot;isEmpty&quot;</span>)
+      || <span class="self">self</span>.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)
+      || <span class="self">self</span>.boxes.iter().all(|item| item.is_empty())
   }
 }
 

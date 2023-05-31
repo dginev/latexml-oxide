@@ -642,6 +642,14 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::error::Error;
@@ -982,7 +990,11 @@
 
 <span class="doccomment">/// This is similar, but &quot;interprets&quot; a delimited list as being the
 /// application of some operator to the items in the list.
-</span><span class="kw">fn </span>interpret_delimited(op: XM, <span class="kw-2">mut </span>stuff: Vec&lt;XM&gt;, ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;XM, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+</span><span class="kw">fn </span>interpret_delimited(
+  op: XM,
+  <span class="kw-2">mut </span>stuff: Vec&lt;XM&gt;,
+  ctxt: ActionContext,
+) -&gt; <span class="prelude-ty">Result</span>&lt;XM, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
   <span class="kw">let </span>upto = stuff.len() - <span class="number">1</span>;
   <span class="kw">let </span>(_seps, <span class="kw-2">mut </span>args) = extract_separators(<span class="kw-2">&amp;mut </span>stuff[<span class="number">1</span>..upto]);
   <span class="kw">let </span>ref_args = create_xmrefs(<span class="kw-2">&amp;mut </span>args, ctxt)<span class="question-mark">?</span>;
@@ -1012,7 +1024,11 @@
   <span class="kw">let </span><span class="kw-2">mut </span>ref_arg = create_xmrefs(<span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>arg], ctxt)<span class="question-mark">?</span>;
   <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(XM::Dual(
     Box::new(ref_arg.remove(<span class="number">0</span>)),
-    Box::new(XM::Wrap(<span class="macro">vec!</span>[arg,trailer], XProps::default(), Meta::default())),
+    Box::new(XM::Wrap(
+      <span class="macro">vec!</span>[arg, trailer],
+      XProps::default(),
+      Meta::default(),
+    )),
     XProps::default(),
     Meta::default(),
   )))
@@ -1209,8 +1225,8 @@ got {:?}&quot;</span>,
     idref,
     fontref,
     font: <span class="prelude-val">Some</span>(font),
-    xmkey: <span class="prelude-val">None
-  </span>}
+    xmkey: <span class="prelude-val">None</span>,
+  }
 }
 
 <span class="kw">pub fn </span>new_list(<span class="kw-2">mut </span>pieces: Vec&lt;XM&gt;, ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;XM&gt;, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {

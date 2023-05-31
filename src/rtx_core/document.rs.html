@@ -3428,6 +3428,11 @@
 <a href="#3428" id="3428">3428</a>
 <a href="#3429" id="3429">3429</a>
 <a href="#3430" id="3430">3430</a>
+<a href="#3431" id="3431">3431</a>
+<a href="#3432" id="3432">3432</a>
+<a href="#3433" id="3433">3433</a>
+<a href="#3434" id="3434">3434</a>
+<a href="#3435" id="3435">3435</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3437,9 +3442,9 @@
 <span class="kw">use </span>libxml::tree::{Namespace, Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
-<span class="kw">use </span>string_interner::symbol::SymbolU32;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>rustc_hash::FxHashSet <span class="kw">as </span>HashSet;
+<span class="kw">use </span>string_interner::symbol::SymbolU32;
 
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
@@ -3452,10 +3457,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, FONT_TEXT_DEFAULT};
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
+<span class="kw">use </span><span class="kw">crate</span>::common::model::Model;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::common::model::Model;
-<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XML_NS,XPath};
+<span class="kw">use </span><span class="kw">crate</span>::common::xml::{<span class="self">self</span>, XPath, XML_NS};
 <span class="kw">use </span><span class="kw">crate</span>::definition::FontDirective;
 <span class="kw">use </span><span class="kw">crate</span>::ligature::Ligature;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
@@ -3587,16 +3592,20 @@
 
   <span class="doccomment">/// Find the nodes according to the given `xpath` expression,
   /// the xpath is relative to $node (if given), otherwise to the document node.
-  </span><span class="kw">pub fn </span>findnodes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;Node&gt; {
+  </span><span class="kw">pub fn </span>findnodes(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    xpath: <span class="kw-2">&amp;</span>str,
+    node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; Vec&lt;Node&gt; {
     <span class="kw">let </span>node = <span class="kw">match </span>node_opt {
       <span class="prelude-val">Some</span>(node) =&gt; Cow::Borrowed(node),
       <span class="prelude-val">None </span>=&gt; <span class="kw">match </span><span class="self">self</span>.document.get_root_element() {
         <span class="prelude-val">Some</span>(root) =&gt; Cow::Owned(root),
-        <span class="prelude-val">None </span>=&gt; {<span class="kw">return </span>Vec::new()}
-      }
+        <span class="prelude-val">None </span>=&gt; <span class="kw">return </span>Vec::new(),
+      },
     };
-    <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model)
-      .findnodes(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node))
+    <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model).findnodes(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node))
   }
 
   <span class="doccomment">/// Get an XPath context that knows about our namespace mappings.
@@ -3628,16 +3637,17 @@
   }
 
   <span class="doccomment">/// Like findnodes, but expects an xpath that evaluates to a literal value (e.g. for attributes)
-  </span><span class="kw">pub fn </span>findvalues(<span class="kw-2">&amp;mut </span><span class="self">self</span>, xpath: <span class="kw-2">&amp;</span>str, node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Vec&lt;String&gt; {
+  </span><span class="kw">pub fn </span>findvalues(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    xpath: <span class="kw-2">&amp;</span>str,
+    node_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Node&gt;,
+    state: <span class="kw-2">&amp;mut </span>State,
+  ) -&gt; Vec&lt;String&gt; {
     <span class="kw">match </span>node_opt {
-      <span class="prelude-val">Some</span>(node) =&gt; <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state
-        .model)
-        .findvalues(xpath, <span class="prelude-val">Some</span>(node)),
+      <span class="prelude-val">Some</span>(node) =&gt; <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model).findvalues(xpath, <span class="prelude-val">Some</span>(node)),
       <span class="prelude-val">None </span>=&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = <span class="self">self</span>.document.get_root_element() {
-          <span class="self">self
-            </span>.get_xpath(<span class="kw-2">&amp;</span>state.model)
-            .findvalues(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>root))
+          <span class="self">self</span>.get_xpath(<span class="kw-2">&amp;</span>state.model).findvalues(xpath, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>root))
         } <span class="kw">else </span>{
           Vec::new()
         }

@@ -2218,19 +2218,29 @@
 <a href="#2218" id="2218">2218</a>
 <a href="#2219" id="2219">2219</a>
 <a href="#2220" id="2220">2220</a>
+<a href="#2221" id="2221">2221</a>
+<a href="#2222" id="2222">2222</a>
+<a href="#2223" id="2223">2223</a>
+<a href="#2224" id="2224">2224</a>
+<a href="#2225" id="2225">2225</a>
+<a href="#2226" id="2226">2226</a>
+<a href="#2227" id="2227">2227</a>
+<a href="#2228" id="2228">2228</a>
+<a href="#2229" id="2229">2229</a>
+<a href="#2230" id="2230">2230</a>
+<a href="#2231" id="2231">2231</a>
 </pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display};
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">use crate</span>::{Digested,DigestedData};
-<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::alignment::template::Template;
+<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM, FONT_SYM, GLOBAL_DEFS_SYM, H_PCDATA_SYM, LTX_P_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -2252,11 +2262,12 @@
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::Resource;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagOptions;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
-<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::mouth;
+<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::util::pathname;
+<span class="kw">use crate</span>::{Digested, DigestedData};
 
 <span class="kw">static </span>CODE_TEX_EXT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;.code.tex&quot;</span>;
 
@@ -2441,7 +2452,7 @@
   <span class="kw">pub </span>current_token: Vec&lt;Token&gt;,
   <span class="kw">pub </span>align_group_count: Vec&lt;i32&gt;, <span class="comment">// was $LaTeXML::ALIGN_STATE
   </span><span class="kw">pub </span>reading_alignment: Vec&lt;Digested&gt;,
-  <span class="kw">pub </span>build_template: Vec&lt;Template&gt;
+  <span class="kw">pub </span>build_template: Vec&lt;Template&gt;,
 }
 
 <span class="doccomment">/// The State efficiently maintain the bindings in a TeX-like fashion.
@@ -3120,8 +3131,8 @@
       <span class="prelude-val">Some</span>(Stored::Token(v)) =&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[v.clone()])),
       <span class="prelude-val">Some</span>(Stored::String(sym)) =&gt; <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>arena::to_string(<span class="kw-2">*</span>sym))),
       <span class="prelude-val">Some</span>(Stored::VecDequeStored(v)) =&gt; Stored::VecDequeStored(v.clone()).into(),
-      <span class="kw">_ </span>=&gt; <span class="prelude-val">None
-    </span>}
+      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    }
   }
   <span class="doccomment">/// a variant of `lookup_value` that only recognizes a `Stored::Token`
   </span><span class="kw">pub fn </span>lookup_token(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Token&gt; {
@@ -3134,9 +3145,8 @@
   <span class="kw">pub fn </span>lookup_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
     <span class="comment">// Can only be a token or definition; we want defns!
     // is this the right logic here? don&#39;t expand unless digesting?
-    </span><span class="self">self
-      </span>.lookup_value(<span class="string">&quot;Alignment&quot;</span>)
-      .and_then(|v| <span class="kw">if let </span>Stored::Digested(d) = v {
+    </span><span class="self">self</span>.lookup_value(<span class="string">&quot;Alignment&quot;</span>).and_then(|v| {
+      <span class="kw">if let </span>Stored::Digested(d) = v {
         <span class="kw">if </span><span class="macro">matches!</span>(d.data(), DigestedData::Alignment(<span class="kw">_</span>)) {
           <span class="comment">// for now clone the Digested object (approx. an Rc&lt;_&gt; clone)
           // instead of returning &amp;Digested, to simplify lifetime checks
@@ -3144,7 +3154,10 @@
         } <span class="kw">else </span>{
           <span class="prelude-val">None
         </span>}
-      } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
+      } <span class="kw">else </span>{
+        <span class="prelude-val">None
+      </span>}
+    })
   }
 
   <span class="kw">pub fn </span>assign_alignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, alignment: Alignment, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;) {
@@ -4357,7 +4370,8 @@
   </span><span class="kw">pub fn </span>expire_ifframe(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.localized.if_frames.pop(); }
   <span class="doccomment">/// set special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
   </span><span class="kw">pub fn </span>set_smuggle_the(<span class="kw-2">&amp;mut </span><span class="self">self</span>, smuggle_the: bool) {
-    <span class="self">self</span>.localized.smuggle_the.push(smuggle_the); }
+    <span class="self">self</span>.localized.smuggle_the.push(smuggle_the);
+  }
   <span class="doccomment">/// get special (localized) flag for &quot;\the smuggling mode&quot;; useful for expanded definitions
   </span><span class="kw">pub fn </span>get_smuggle_the(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
     <span class="kw">match </span><span class="self">self</span>.localized.smuggle_the.last() {
@@ -4379,22 +4393,33 @@
   <span class="doccomment">/// expire (localized) flag for &quot;dual branch&quot;
   </span><span class="kw">pub fn </span>expire_dual_branch(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { <span class="self">self</span>.localized.dual_branch.pop(); }
   <span class="doccomment">/// get the current value for &quot;dual branch&quot;
-  </span><span class="kw">pub fn </span>get_dual_branch(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; { <span class="self">self</span>.localized.dual_branch.last().cloned() }
+  </span><span class="kw">pub fn </span>get_dual_branch(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="self">self</span>.localized.dual_branch.last().cloned()
+  }
 
   <span class="kw">pub fn </span>increment_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="kw">match </span><span class="self">self</span>.localized.align_group_count.last_mut() {
-      <span class="prelude-val">Some</span>(v) =&gt; {<span class="kw-2">*</span>v += <span class="number">1</span>},
-      <span class="prelude-val">None </span>=&gt; { <span class="self">self</span>.localized.align_group_count.push(<span class="number">1</span>); }
+      <span class="prelude-val">Some</span>(v) =&gt; <span class="kw-2">*</span>v += <span class="number">1</span>,
+      <span class="prelude-val">None </span>=&gt; {
+        <span class="self">self</span>.localized.align_group_count.push(<span class="number">1</span>);
+      },
     }
   }
   <span class="kw">pub fn </span>decrement_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
     <span class="kw">match </span><span class="self">self</span>.localized.align_group_count.last_mut() {
-      <span class="prelude-val">Some</span>(v) =&gt; {<span class="kw-2">*</span>v -= <span class="number">1</span>},
-      <span class="prelude-val">None </span>=&gt; { <span class="self">self</span>.localized.align_group_count.push(-<span class="number">1</span>); }
+      <span class="prelude-val">Some</span>(v) =&gt; <span class="kw-2">*</span>v -= <span class="number">1</span>,
+      <span class="prelude-val">None </span>=&gt; {
+        <span class="self">self</span>.localized.align_group_count.push(-<span class="number">1</span>);
+      },
     }
   }
   <span class="kw">pub fn </span>align_group_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i32 {
-    <span class="self">self</span>.localized.align_group_count.last().copied().unwrap_or_default()
+    <span class="self">self
+      </span>.localized
+      .align_group_count
+      .last()
+      .copied()
+      .unwrap_or_default()
   }
   <span class="kw">pub fn </span>set_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>, v: i32) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(gc) = <span class="self">self</span>.localized.align_group_count.last_mut() {
@@ -4403,9 +4428,7 @@
       <span class="self">self</span>.localized.align_group_count.push(v);
     }
   }
-  <span class="kw">pub fn </span>local_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>, v: i32) {
-    <span class="self">self</span>.localized.align_group_count.push(v);
-  }
+  <span class="kw">pub fn </span>local_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>, v: i32) { <span class="self">self</span>.localized.align_group_count.push(v); }
   <span class="kw">pub fn </span>expire_align_group_count(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; {
     <span class="self">self</span>.localized.align_group_count.pop()
   }
@@ -4413,9 +4436,7 @@
   <span class="kw">pub fn </span>get_reading_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Digested&gt; {
     <span class="self">self</span>.localized.reading_alignment.last().map(Clone::clone)
   }
-  <span class="kw">pub fn </span>has_reading_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-    !<span class="self">self</span>.localized.reading_alignment.is_empty()
-  }
+  <span class="kw">pub fn </span>has_reading_alignment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { !<span class="self">self</span>.localized.reading_alignment.is_empty() }
   <span class="kw">pub fn </span>local_reading_alignment(<span class="kw-2">&amp;mut </span><span class="self">self</span>, alignment: <span class="kw-2">&amp;</span>Digested) {
     <span class="self">self</span>.localized.reading_alignment.push(alignment.clone());
   }
@@ -4427,16 +4448,17 @@
     <span class="self">self</span>.localized.build_template.push(template);
   }
   <span class="kw">pub fn </span>set_build_template(<span class="kw-2">&amp;mut </span><span class="self">self</span>, template: Template) {
-    <span class="kw-2">*</span><span class="self">self</span>.localized.build_template.last_mut()
-    .expect(<span class="string">&quot;set_build_template should not be called before the first local_build_template&quot;</span>)
-    = template;
+    <span class="kw-2">*</span><span class="self">self
+      </span>.localized
+      .build_template
+      .last_mut()
+      .expect(<span class="string">&quot;set_build_template should not be called before the first local_build_template&quot;</span>) =
+      template;
   }
   <span class="kw">pub fn </span>current_build_template(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Template&gt; {
     <span class="self">self</span>.localized.build_template.last_mut()
   }
-  <span class="kw">pub fn </span>take_build_template(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Template&gt; {
-    <span class="self">self</span>.localized.build_template.pop()
-  }
+  <span class="kw">pub fn </span>take_build_template(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Template&gt; { <span class="self">self</span>.localized.build_template.pop() }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

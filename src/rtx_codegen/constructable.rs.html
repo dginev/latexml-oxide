@@ -585,6 +585,11 @@
 <a href="#585" id="585">585</a>
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
 </pre><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 
@@ -1033,7 +1038,11 @@
 <span class="doccomment">/// Parse a substitutable value from the constructor (in $_)
 /// Recognizes the #1, #prop, and also &amp;function(args,...)
 /// Note: signals an error if no recognizable value was found!
-</span><span class="kw">fn </span>translate_value(exclude_chars: <span class="kw-2">&amp;</span>str, for_test: bool, text: <span class="kw-2">&amp;mut </span>String) -&gt; proc_macro2::TokenStream {
+</span><span class="kw">fn </span>translate_value(
+  exclude_chars: <span class="kw-2">&amp;</span>str,
+  for_test: bool,
+  text: <span class="kw-2">&amp;mut </span>String,
+) -&gt; proc_macro2::TokenStream {
   <span class="kw">let </span><span class="kw-2">mut </span>val = <span class="macro">quote!</span>(<span class="string">&quot;&quot;</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>is_match = <span class="bool-val">false</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>fcn = String::new();
@@ -1089,11 +1098,12 @@
           <span class="comment">//|| (n_int &gt; *NARGS) {
           </span><span class="macro">panic!</span>(<span class="string">&quot;Illegal argument number {n_int:?} at &#39;{text:?}&#39;\n&quot;</span>);
         } <span class="kw">else </span>{
-          <span class="kw">let </span>n_lit_usize = n_int <span class="kw">as </span>usize;
-          <span class="kw">let </span>n_usize: usize = (n_int - <span class="number">1</span>) <span class="kw">as </span>usize; <span class="comment">// index starts at 0
+          <span class="comment">// index starts at 0
           // if we need the argument for a test such as `?#1(yes)(no)`
           // make sure we yield an Option&lt;T&gt; instead of T.
-          </span>val = <span class="kw">if </span>for_test {
+          </span><span class="kw">let </span>n_lit_usize = n_int <span class="kw">as </span>usize;
+          <span class="kw">let </span>n_usize: usize = (n_int - <span class="number">1</span>) <span class="kw">as </span>usize;
+          val = <span class="kw">if </span>for_test {
             <span class="macro">quote!</span>(<span class="kw">if </span>args.len() &lt; #n_lit_usize { <span class="kw-2">&amp;</span><span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="kw-2">&amp;</span>args[#n_usize] })
           } <span class="kw">else </span>{
             <span class="macro">quote!</span>(args[#n_usize])

@@ -137,15 +137,28 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
-</pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
-<span class="kw">use </span>std::error::Error;
-<span class="kw">use </span>std::borrow::Cow;
-<span class="kw">use </span>rtx_core::binding::def::dialect::get_xmarg_id;
-<span class="kw">use </span><span class="kw">crate</span>::data::{get_grammatical_role, get_token_meaning};
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::data::{get_grammatical_role, get_token_meaning};
 <span class="kw">use </span><span class="kw">crate</span>::semantics::tree::lookup_lex_node;
 <span class="kw">use </span><span class="kw">crate</span>::semantics::tree::XM;
-<span class="kw">use </span><span class="kw">crate</span>::semantics::XProps;
 <span class="kw">use </span><span class="kw">crate</span>::semantics::ActionContext;
+<span class="kw">use </span><span class="kw">crate</span>::semantics::XProps;
+<span class="kw">use </span>libxml::tree::Node;
+<span class="kw">use </span>rtx_core::binding::def::dialect::get_xmarg_id;
+<span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::error::Error;
 
 <span class="doccomment">/// Generate a textual token for each node; The parser operates on this encoded
 /// string.
@@ -223,7 +236,10 @@
     <span class="kw">match </span>arg {
       XM::Token(props, _meta) =&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-          refs.push(XM::Ref(XProps{id: <span class="prelude-val">Some</span>(id.clone()), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            id: <span class="prelude-val">Some</span>(id.clone()),
+            ..XProps::default()
+          }));
         }
       },
       XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
@@ -234,36 +250,46 @@
 
         </span><span class="kw">match </span>node.get_attribute(<span class="string">&quot;id&quot;</span>) {
           <span class="comment">//  already has id, so refer to it.
-          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps{id: <span class="prelude-val">Some</span>(Cow::Owned(id)), ..XProps::default()})),
+          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps {
+            id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
+            ..XProps::default()
+          })),
           <span class="prelude-val">None </span>=&gt; {
             <span class="comment">// If arg is already XML, it&#39;s too late to get automatic ID&#39;s
             </span>document.generate_id(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
-            refs.push(XM::Ref(
-              XProps{ id: <span class="prelude-val">Some</span>(Cow::Owned(
-                node .get_attribute(<span class="string">&quot;id&quot;</span>)
-                .expect(<span class="string">&quot;generate_id should always succeed in setting an id&quot;</span>))),
-                .. XProps::default()
-              }
-            ));
+            refs.push(XM::Ref(XProps {
+              id: <span class="prelude-val">Some</span>(Cow::Owned(
+                node
+                  .get_attribute(<span class="string">&quot;id&quot;</span>)
+                  .expect(<span class="string">&quot;generate_id should always succeed in setting an id&quot;</span>),
+              )),
+              ..XProps::default()
+            }));
           },
         }
       },
-      XM::Apply(_op,_args, <span class="kw-2">ref mut </span>props, _meta) =&gt; {
+      XM::Apply(_op, _args, <span class="kw-2">ref mut </span>props, _meta) =&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-          refs.push(XM::Ref(XProps{id: <span class="prelude-val">Some</span>(id.clone()), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            id: <span class="prelude-val">Some</span>(id.clone()),
+            ..XProps::default()
+          }));
         } <span class="kw">else </span>{
           <span class="comment">// not yet instanciated, so hasn&#39;t had chance to get auto-id; use _xmkey
           // DG: Interior mutability Trick to grab a gullet!
           </span><span class="kw">let </span>stomach = state.stomach.clone();
           <span class="kw">let </span>key = get_xmarg_id(stomach.borrow_mut().get_gullet_mut(), state)<span class="question-mark">?</span>.to_string();
           props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-          refs.push(XM::Ref(XProps{xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)), ..XProps::default()}));
+          refs.push(XM::Ref(XProps {
+            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+            ..XProps::default()
+          }));
         }
       },
       <span class="comment">// clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef
       </span>XM::Ref(props) =&gt; {
         refs.push(XM::Ref(props.clone()));
-      }
+      },
       <span class="comment">// TODO:
       //   # XMHint&#39;s are ephemeral, they may disappear; so just clone it w/o id
       //   if ($qname eq &#39;ltx:XMHint&#39;) {

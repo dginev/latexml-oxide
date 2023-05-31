@@ -805,6 +805,20 @@
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
 </pre><pre class="rust"><code><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
@@ -897,12 +911,17 @@
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self
       </span>.get_gullet_mut()
       .read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state)<span class="question-mark">?
-    </span>{ <span class="comment">// done if we run out of tokens
+    </span>{
+      <span class="comment">// done if we run out of tokens
       </span>found_token = <span class="bool-val">true</span>;
       <span class="comment">// first, check for alignment case
-      </span><span class="kw">if </span>alignment_opt.is_some() &amp;&amp; !<span class="self">self</span>.box_list.is_empty() &amp;&amp; (
-        token == <span class="macro">T_ALIGN!</span>() || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\cr&quot;</span>) ||
-        token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@cr&quot;</span>) || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@crcr&quot;</span>)) {
+      </span><span class="kw">if </span>alignment_opt.is_some()
+        &amp;&amp; !<span class="self">self</span>.box_list.is_empty()
+        &amp;&amp; (token == <span class="macro">T_ALIGN!</span>()
+          || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\cr&quot;</span>)
+          || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@cr&quot;</span>)
+          || token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\hidden@crcr&quot;</span>))
+      {
         <span class="comment">// at least \over calls in here without the intent to passing through the alignment.
         // So if we already have some digested boxes available, return them here.
         </span><span class="self">self</span>.get_gullet_mut().unread_one(token);
@@ -950,7 +969,9 @@
     outer_state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
     <span class="kw">let </span>tokens: Tokens = tokens.into();
-    <span class="kw">if </span>tokens.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default()) }
+    <span class="kw">if </span>tokens.is_empty() {
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(Digested::default());
+    }
     <span class="self">self</span>.reading_from_mouth(Mouth::default(), outer_state, <span class="kw">move </span>|stomach, state| {
       stomach.get_gullet_mut().unread(tokens);
       state.clear_prefixes(); <span class="comment">// prefixes shouldn&#39;t apply here.
@@ -1282,8 +1303,15 @@
   /// Stomach. the need comes from techniques that use a *Stomach* inside the inner reader
   /// function, as is done by `Stomach::raw_tex`. ideally `reading_from_mouth` should be used with
   /// a Gullet, and this variation should be removed.
-  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mouth: Mouth, state: <span class="kw-2">&amp;mut </span>State, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
-  <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
+  </span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(
+    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    mouth: Mouth,
+    state: <span class="kw-2">&amp;mut </span>State,
+    reader: FnR,
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+  <span class="kw">where
+    </span>FnR: FnOnce(<span class="kw-2">&amp;mut </span>Stomach, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;,
+  {
     <span class="kw">let </span>mouth_source = mouth.get_source().to_string();
     {
       <span class="kw">let </span>gullet = <span class="self">self</span>.get_gullet_mut();

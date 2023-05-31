@@ -546,8 +546,8 @@
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::convert::AsRef;
 <span class="kw">use </span>std::fmt::Display;
-<span class="kw">use </span>std::string::ToString;
 <span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::string::ToString;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -569,7 +569,7 @@
 <span class="doccomment">/// Use this to avoid reallocating a new empty Vec each time you need a placeholder Tokens return
 /// value
 </span><span class="kw">pub const </span>NO_TOKENS: Tokens = Tokens(Vec::new());
-<span class="kw">pub const </span>NO_BORROWED_TOKENS : <span class="kw-2">&amp;</span>Tokens = <span class="kw-2">&amp;</span>NO_TOKENS;
+<span class="kw">pub const </span>NO_BORROWED_TOKENS: <span class="kw-2">&amp;</span>Tokens = <span class="kw-2">&amp;</span>NO_TOKENS;
 <span class="doccomment">/// Tokens are a thin wrapper over a vector of Token objects
 /// usually read from a `Mouth`.
 /// They are usually treated as an immutable interface, an have to be consumed via `.unlist()`

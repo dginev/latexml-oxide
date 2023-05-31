@@ -1024,15 +1024,17 @@
 <a href="#1024" id="1024">1024</a>
 <a href="#1025" id="1025">1025</a>
 <a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
+<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::cell::RefCell;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 
+<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
@@ -1043,7 +1045,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::muglue::MuGlue;
 <span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
-<span class="kw">use </span><span class="kw">crate</span>::alignment::Alignment;
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{Conditional, IfFrame};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
@@ -1051,8 +1052,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::math_primitive::MathPrimitive; <span class="comment">//MathPrimitiveOptions
 </span><span class="kw">use </span><span class="kw">crate</span>::definition::primitive::Primitive;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::{Register, RegisterValue};
-<span class="kw">use </span><span class="kw">crate</span>::definition::{FontDirective, Definition};
 <span class="kw">use </span><span class="kw">crate</span>::definition::Reversion;
+<span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, FontDirective};
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::TagData;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::ligature::Ligature;
@@ -1702,12 +1703,13 @@
   <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Digested) -&gt; <span class="self">Self </span>{ <span class="kw">crate</span>::Stored::Digested(value.clone()) }
 }
 
-<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>Stored <span class="kw">where
-  </span>T: Into&lt;Stored&gt; + Sized {
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="prelude-ty">Option</span>&lt;T&gt;&gt; <span class="kw">for </span>Stored
+<span class="kw">where </span>T: Into&lt;Stored&gt; + Sized
+{
   <span class="kw">fn </span>from(value_opt: <span class="prelude-ty">Option</span>&lt;T&gt;) -&gt; <span class="self">Self </span>{
     <span class="kw">match </span>value_opt {
       <span class="prelude-val">None </span>=&gt; Stored::None,
-      <span class="prelude-val">Some</span>(v) =&gt; v.into()
+      <span class="prelude-val">Some</span>(v) =&gt; v.into(),
     }
   }
 }

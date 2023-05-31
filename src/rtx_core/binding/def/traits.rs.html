@@ -613,14 +613,14 @@
 }
 
 <span class="kw">impl</span>&lt;T&gt; IntoResultArgWrap&lt;<span class="prelude-ty">Result</span>&lt;ArgWrap&gt;&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;T&gt;
-<span class="kw">where </span>T: Into&lt;ArgWrap&gt;+Sized {
-  <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; {
-    <span class="self">self</span>.map(|v| v.into())
-  }
+<span class="kw">where </span>T: Into&lt;ArgWrap&gt; + Sized
+{
+  <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; { <span class="self">self</span>.map(|v| v.into()) }
 }
 
 <span class="kw">impl</span>&lt;T&gt; IntoResultArgWrap&lt;<span class="prelude-ty">Result</span>&lt;ArgWrap&gt;&gt; <span class="kw">for </span>T
-<span class="kw">where </span>T: Into&lt;ArgWrap&gt;+Sized {
+<span class="kw">where </span>T: Into&lt;ArgWrap&gt; + Sized
+{
   <span class="kw">fn </span>into_result_argwrap(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.into()) }
 }
 

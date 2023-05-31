@@ -231,29 +231,28 @@
 <span class="kw">pub use </span>std::borrow::Cow;
 <span class="kw">pub use </span>std::collections::VecDeque;
 <span class="kw">pub use </span>std::rc::Rc;
-<span class="kw">pub use </span>std::sync::{Arc};
+<span class="kw">pub use </span>std::sync::Arc;
 <span class="kw">pub use </span>string_interner::symbol::SymbolU32;
 
-<span class="kw">pub use </span>rtx_core::common::dimension::Dimension;
-<span class="kw">pub use </span>rtx_core::common::mudimension::MuDimension;
-<span class="kw">pub use </span>rtx_core::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>rtx_core::aux_macros::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>rtx_core::alignment::{Alignment,AlignmentConfig};
 <span class="kw">pub use </span>rtx_core::alignment::cell::Cell;
-<span class="kw">pub use </span>rtx_core::alignment::template::{Template,Align};
+<span class="kw">pub use </span>rtx_core::alignment::template::{Align, Template};
+<span class="kw">pub use </span>rtx_core::alignment::{Alignment, AlignmentConfig};
+<span class="kw">pub use </span>rtx_core::aux_macros::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::common::arena::{<span class="self">self</span>, EMPTY_SYM};
 <span class="kw">pub use </span>rtx_core::common::cleaners::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>rtx_core::common::def_parser::{parse_parameters, parse_prototype};
+<span class="kw">pub use </span>rtx_core::common::dimension::Dimension;
 <span class="kw">pub use </span>rtx_core::common::float::{floatformat, Float};
 <span class="kw">pub use </span>rtx_core::common::font;
 <span class="kw">pub use </span>rtx_core::common::font::Font;
 <span class="kw">pub use </span>rtx_core::common::glue::Glue;
 <span class="kw">pub use </span>rtx_core::common::locator::Locator;
+<span class="kw">pub use </span>rtx_core::common::mudimension::MuDimension;
 <span class="kw">pub use </span>rtx_core::common::muglue::MuGlue;
 <span class="kw">pub use </span>rtx_core::common::number::Number;
 <span class="kw">pub use </span>rtx_core::common::numeric_ops::NumericOps;
 <span class="kw">pub use </span>rtx_core::common::object::Object;
 <span class="kw">pub use </span>rtx_core::common::xml::XML_NS;
-<span class="kw">pub use </span>rtx_core::common::def_parser::{parse_prototype,parse_parameters};
 <span class="kw">pub use </span>rtx_core::definition::argument::ArgWrap;
 <span class="kw">pub use </span>rtx_core::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 <span class="kw">pub use </span>rtx_core::definition::constructor::ConstructorOptions;
@@ -272,8 +271,8 @@
 <span class="kw">pub use </span>rtx_core::document::tag::{TagOptionName, TagOptions};
 <span class="kw">pub use </span>rtx_core::document::Document;
 <span class="kw">pub use </span>rtx_core::gullet::Gullet;
-<span class="kw">pub use </span>rtx_core::keyvals::{KeyVals, KeyvalsConfig};
 <span class="kw">pub use </span>rtx_core::keyval::KeyvalConfig;
+<span class="kw">pub use </span>rtx_core::keyvals::{KeyVals, KeyvalsConfig};
 <span class="kw">pub use </span>rtx_core::ligature::{FontTestClosure, Ligature, LigatureMatcher, MathLigatureOptions};
 <span class="kw">pub use </span>rtx_core::list::List;
 <span class="kw">pub use </span>rtx_core::mouth;
@@ -288,6 +287,7 @@
 <span class="kw">pub use </span>rtx_core::util::pathname;
 <span class="kw">pub use </span>rtx_core::util::radix;
 <span class="kw">pub use </span>rtx_core::whatsit::Whatsit;
+<span class="kw">pub use </span>rtx_core::<span class="kw-2">*</span>;
 <span class="kw">pub use </span>rtx_core::{BoxOps, Core, TexMode};
 
 <span class="comment">// ------------------------------------------------------------------------------------------------

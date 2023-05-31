@@ -434,6 +434,31 @@
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
@@ -497,29 +522,24 @@
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 </span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
   <span class="kw">let </span>box_opt = <span class="kw">match </span>object.data() {
-    DigestedData::List(obj) =&gt; obj.borrow().boxes.last()
-      .map(|v| Cow::Owned(v.clone())),
+    DigestedData::List(obj) =&gt; obj.borrow().boxes.last().map(|v| Cow::Owned(v.clone())),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(object)),
   };
   <span class="kw">if let </span><span class="prelude-val">Some</span>(boxobj) = box_opt {
     <span class="kw">if let </span>DigestedData::Whatsit(<span class="kw-2">ref </span>obj) = boxobj.data() {
       <span class="comment">// careful w/alias in getCSName!
-      </span>obj
-        .borrow()
-        .get_definition()
-        .get_cs()
-        .with_cs_name(|name| {
-          SCRIPT_NAME_RE.captures(name).map(|cap| {
-            (
-              cap.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_owned(),
-              <span class="kw">if </span>cap.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()) == <span class="string">&quot;SUBSCRIPT&quot; </span>{
-                Catcode::SUB
-              } <span class="kw">else </span>{
-                Catcode::SUPER
-              },
-            )
-          })
+      </span>obj.borrow().get_definition().get_cs().with_cs_name(|name| {
+        SCRIPT_NAME_RE.captures(name).map(|cap| {
+          (
+            cap.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_owned(),
+            <span class="kw">if </span>cap.get(<span class="number">2</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()) == <span class="string">&quot;SUBSCRIPT&quot; </span>{
+              Catcode::SUB
+            } <span class="kw">else </span>{
+              Catcode::SUPER
+            },
+          )
         })
+      })
     } <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>}
@@ -721,28 +741,51 @@
 // can we do this before parsing? we can do the advance or something.... Hmmmm.
 // * Need to know scriptpos (mid or post) to determine position.
 // * need to know sub/super
-</span><span class="kw">fn </span>script_sizer(script: <span class="kw-2">&amp;</span>Digested, base_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;, prev_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;,
-  op: <span class="kw-2">&amp;</span>str, pos: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
+</span><span class="kw">fn </span>script_sizer(
+  script: <span class="kw-2">&amp;</span>Digested,
+  base_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;,
+  prev_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;,
+  op: <span class="kw-2">&amp;</span>str,
+  pos: <span class="kw-2">&amp;</span>str,
+  state: <span class="kw-2">&amp;mut </span>State,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
   <span class="macro">eprintln!</span>(<span class="string">&quot;SCRIPT SIZER IS ON!&quot;</span>);
   <span class="comment">// NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it&#39;s different from the &#39;expected&#39; style!!!]
-  </span><span class="kw">let </span>script_size = script.clone().get_size(<span class="prelude-val">None</span>,state)<span class="question-mark">?</span>;
-  <span class="kw">let </span>(<span class="kw-2">mut </span>ws, <span class="kw-2">mut </span>hs, <span class="kw-2">mut </span>ds) = (script_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64, script_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64, script_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64);
-  ws <span class="kw-2">*</span>= <span class="number">0.8</span>; hs <span class="kw-2">*</span>= <span class="number">0.8</span>; ds <span class="kw-2">*</span>= <span class="number">0.8</span>;    <span class="comment">// HACK!@!!
+  </span><span class="kw">let </span>script_size = script.clone().get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+  <span class="kw">let </span>(<span class="kw-2">mut </span>ws, <span class="kw-2">mut </span>hs, <span class="kw-2">mut </span>ds) = (
+    script_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
+    script_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
+    script_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64,
+  );
+  ws <span class="kw-2">*</span>= <span class="number">0.8</span>;
+  hs <span class="kw-2">*</span>= <span class="number">0.8</span>;
+  ds <span class="kw-2">*</span>= <span class="number">0.8</span>; <span class="comment">// HACK!@!!
   </span><span class="kw">let </span>(wb, hb, db) = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>base)) = base_opt {
     <span class="kw">let </span>base_size = base.clone().get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-    (base_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64, base_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64, base_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64)
+    (
+      base_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
+      base_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
+      base_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64,
+    )
   } <span class="kw">else </span>{
     <span class="kw">let </span>nominal_size = state.lookup_font().unwrap().get_nominal_size();
-    (nominal_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,nominal_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,nominal_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64)
+    (
+      nominal_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
+      nominal_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
+      nominal_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64,
+    )
   };
   <span class="kw">let </span>w;
   <span class="kw">let </span>(<span class="kw-2">mut </span>h, <span class="kw-2">mut </span>d) = (<span class="number">0.0</span>, <span class="number">0.0</span>);
   <span class="comment">// Fishing for the scriptpos on the base (if any)
   </span><span class="kw">let </span>inferred_pos = <span class="kw">if </span>pos.is_empty() {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>base)) = base_opt {
-      <span class="kw">let </span>base_pos = base.get_property(<span class="string">&quot;scriptpos&quot;</span>).map(|s| s.to_string()).unwrap_or_default();
+      <span class="kw">let </span>base_pos = base
+        .get_property(<span class="string">&quot;scriptpos&quot;</span>)
+        .map(|s| s.to_string())
+        .unwrap_or_default();
       <span class="kw">if </span>base_pos.is_empty() {
         Cow::Borrowed(<span class="string">&quot;post&quot;</span>)
       } <span class="kw">else </span>{
@@ -755,7 +798,7 @@
     Cow::Borrowed(<span class="string">&quot;post&quot;</span>)
   };
   <span class="kw">if </span>inferred_pos == <span class="string">&quot;mid&quot; </span>{
-    w = (ws - wb).max(<span class="number">0.0</span>);    <span class="comment">// as if max width of base &amp; script
+    w = (ws - wb).max(<span class="number">0.0</span>); <span class="comment">// as if max width of base &amp; script
     </span><span class="kw">if </span>op == <span class="string">&quot;SUPERSCRIPT&quot; </span>{
       h = hb + ds + hs;
     } <span class="kw">else </span>{
@@ -763,7 +806,11 @@
     }
   } <span class="kw">else </span>{
     <span class="comment">// as if max of width &amp; prev script&#39;s width
-    </span><span class="kw">let </span>wp = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>prev)) = prev_opt { prev.get_width(<span class="prelude-val">None</span>,state)<span class="question-mark">?</span>.unwrap_or_default().value_of() <span class="kw">as </span>f64 } <span class="kw">else </span>{ <span class="number">0.0 </span>};
+    </span><span class="kw">let </span>wp = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>prev)) = prev_opt {
+      prev.get_width(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>.unwrap_or_default().value_of() <span class="kw">as </span>f64
+    } <span class="kw">else </span>{
+      <span class="number">0.0
+    </span>};
     w = (ws - wp).max(<span class="number">0.0</span>);
     <span class="kw">if </span>op == <span class="string">&quot;SUPERSCRIPT&quot; </span>{
       h = hb + hs / <span class="number">2.0</span>;
@@ -771,9 +818,12 @@
       d = hs / <span class="number">2.0 </span>+ ds;
     }
   }
-  <span class="prelude-val">Ok</span>((Dimension::new_f64(w), Dimension::new_f64(h), Dimension::new_f64(d)))
+  <span class="prelude-val">Ok</span>((
+    Dimension::new_f64(w),
+    Dimension::new_f64(h),
+    Dimension::new_f64(d),
+  ))
 }
-
 
 <span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">// TODO: Should I add a special macro case that takes an arbitrary token as argument?

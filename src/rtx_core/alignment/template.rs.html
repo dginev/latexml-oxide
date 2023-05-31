@@ -300,26 +300,59 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Support for tabular/array environments
-</span><span class="kw">use </span><span class="kw">crate</span>::token::Token;
+</span><span class="kw">use </span><span class="kw">super</span>::cell::Cell;
+<span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
+<span class="kw">use </span><span class="kw">crate</span>::token::Token;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::Digested;
-<span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
-<span class="kw">use </span><span class="kw">super</span>::cell::Cell;
 
 <span class="kw">use </span>std::collections::VecDeque;
-<span class="kw">use </span>std::fmt::{<span class="self">self</span>, Display, Debug};
-
+<span class="kw">use </span>std::fmt::{<span class="self">self</span>, Debug, Display};
 
 <span class="comment">// ??
 </span><span class="kw">pub type </span>Row = Template;
-<span class="attr">#[derive(Debug,Copy,Clone,Default, PartialEq)]
+<span class="attr">#[derive(Debug, Copy, Clone, Default, PartialEq)]
 </span><span class="kw">pub enum </span>Align {
   <span class="attr">#[default]
   </span>Left,
   Center,
   Right,
-  Justify
+  Justify,
 }
 <span class="kw">impl </span>Align {
   <span class="kw">pub fn </span>char_code(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; char {
@@ -327,15 +360,15 @@
       Align::Right =&gt; <span class="string">&#39;r&#39;</span>,
       Align::Left =&gt; <span class="string">&#39;l&#39;</span>,
       Align::Center =&gt; <span class="string">&#39;c&#39;</span>,
-      Align::Justify =&gt; <span class="string">&#39;p&#39;
-    </span>}
+      Align::Justify =&gt; <span class="string">&#39;p&#39;</span>,
+    }
   }
   <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
     <span class="kw">match </span><span class="self">self </span>{
       Align::Right =&gt; <span class="string">&quot;right&quot;</span>,
       Align::Left =&gt; <span class="string">&quot;left&quot;</span>,
       Align::Center =&gt; <span class="string">&quot;center&quot;</span>,
-      Align::Justify =&gt; <span class="string">&quot;justify&quot; </span><span class="comment">// ?
+      Align::Justify =&gt; <span class="string">&quot;justify&quot;</span>, <span class="comment">// ?
     </span>}
   }
 }
@@ -346,16 +379,16 @@
       <span class="string">&#39;r&#39; </span>=&gt; Align::Right,
       <span class="string">&#39;c&#39; </span>=&gt; Align::Center,
       <span class="string">&#39;p&#39; </span>=&gt; Align::Justify,
-      <span class="kw">_ </span>=&gt; Align::default() <span class="comment">// fallback
+      <span class="kw">_ </span>=&gt; Align::default(), <span class="comment">// fallback
     </span>}
   }
 }
 
 <span class="doccomment">/// Two axes of tabular orientation
-</span><span class="attr">#[derive(Debug,Copy,Clone,PartialEq)]
+</span><span class="attr">#[derive(Debug, Copy, Clone, PartialEq)]
 </span><span class="kw">pub enum </span>Axis {
   Column,
-  Row
+  Row,
 }
 <span class="kw">impl </span>Axis {
   <span class="doccomment">/// The string name of a tabular axis
@@ -374,17 +407,16 @@
   }
 }
 
-
 <span class="attr">#[derive(Debug, Copy, Clone, PartialEq)]
 </span><span class="kw">pub enum </span>ColumnSpec {
   Integer, <span class="comment">// &#39;i&#39;
-  </span>Empty, <span class="comment">// &#39;_&#39;
+  </span>Empty,   <span class="comment">// &#39;_&#39;
   </span>Unknown, <span class="comment">// &#39;?&#39;
-  </span>Text, <span class="comment">// &#39;t&#39;
-  </span>Math, <span class="comment">// &#39;m&#39;
+  </span>Text,    <span class="comment">// &#39;t&#39;
+  </span>Math,    <span class="comment">// &#39;m&#39;
   </span><span class="doccomment">/// Math *and* Text, alternating
   </span>MathAltText, <span class="comment">// &#39;mx&#39;
-  </span>D, <span class="comment">// &#39;d&#39;
+  </span>D,       <span class="comment">// &#39;d&#39;
   </span>Graphics, <span class="comment">// &#39;g&#39;
 </span>}
 <span class="kw">impl </span>ColumnSpec {
@@ -393,21 +425,57 @@
     <span class="kw">use </span>ColumnSpec::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self </span>{
       Empty =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.0</span>, Math  =&gt; <span class="number">0.05</span>, Integer =&gt; <span class="number">0.05</span>, Text =&gt; <span class="number">0.05</span>, Unknown =&gt; <span class="number">0.05</span>, MathAltText =&gt; <span class="number">0.05</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
-      Math   =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.05</span>, Math =&gt; <span class="number">0.0</span>, Integer =&gt; <span class="number">0.1</span>, MathAltText =&gt; <span class="number">0.2</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
-      Integer   =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.05</span>,Math  =&gt; <span class="number">0.1</span>,  Integer  =&gt; <span class="number">0.0</span>, MathAltText =&gt; <span class="number">0.2</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
+        Empty =&gt; <span class="number">0.0</span>,
+        Math =&gt; <span class="number">0.05</span>,
+        Integer =&gt; <span class="number">0.05</span>,
+        Text =&gt; <span class="number">0.05</span>,
+        Unknown =&gt; <span class="number">0.05</span>,
+        MathAltText =&gt; <span class="number">0.05</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
+      Math =&gt; <span class="kw">match </span>other {
+        Empty =&gt; <span class="number">0.05</span>,
+        Math =&gt; <span class="number">0.0</span>,
+        Integer =&gt; <span class="number">0.1</span>,
+        MathAltText =&gt; <span class="number">0.2</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
+      Integer =&gt; <span class="kw">match </span>other {
+        Empty =&gt; <span class="number">0.05</span>,
+        Math =&gt; <span class="number">0.1</span>,
+        Integer =&gt; <span class="number">0.0</span>,
+        MathAltText =&gt; <span class="number">0.2</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
       Text =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.05</span>, Text =&gt; <span class="number">0.0</span>, MathAltText =&gt; <span class="number">0.2</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
+        Empty =&gt; <span class="number">0.05</span>,
+        Text =&gt; <span class="number">0.0</span>,
+        MathAltText =&gt; <span class="number">0.2</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
       Unknown =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.05</span>, Unknown =&gt; <span class="number">0.0</span>,  MathAltText =&gt; <span class="number">0.2</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
+        Empty =&gt; <span class="number">0.05</span>,
+        Unknown =&gt; <span class="number">0.0</span>,
+        MathAltText =&gt; <span class="number">0.2</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
       MathAltText =&gt; <span class="kw">match </span>other {
-        Empty =&gt; <span class="number">0.05</span>,Math  =&gt; <span class="number">0.2</span>,  Integer  =&gt; <span class="number">0.2</span>, Text =&gt; <span class="number">0.2</span>, Unknown =&gt; <span class="number">0.2</span>, MathAltText =&gt; <span class="number">0.0</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>}
+        Empty =&gt; <span class="number">0.05</span>,
+        Math =&gt; <span class="number">0.2</span>,
+        Integer =&gt; <span class="number">0.2</span>,
+        Text =&gt; <span class="number">0.2</span>,
+        Unknown =&gt; <span class="number">0.2</span>,
+        MathAltText =&gt; <span class="number">0.0</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
       D =&gt; <span class="kw">match </span>other {
-        D =&gt; <span class="number">0.0</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>},
+        D =&gt; <span class="number">0.0</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
       Graphics =&gt; <span class="kw">match </span>other {
-        Graphics =&gt; <span class="number">0.0</span>, <span class="kw">_ </span>=&gt; <span class="number">0.75 </span>}
+        Graphics =&gt; <span class="number">0.0</span>,
+        <span class="kw">_ </span>=&gt; <span class="number">0.75</span>,
+      },
     }
   }
 }
@@ -421,17 +489,17 @@
       ColumnSpec::Math =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;m&quot;</span>),
       ColumnSpec::MathAltText =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;mx&quot;</span>),
       ColumnSpec::D =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;d&quot;</span>),
-      ColumnSpec::Graphics =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;g&quot;</span>)
+      ColumnSpec::Graphics =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;g&quot;</span>),
     }
   }
 }
 
-<span class="attr">#[derive(Debug,Copy,Clone,PartialEq)]
+<span class="attr">#[derive(Debug, Copy, Clone, PartialEq)]
 </span><span class="kw">pub enum </span>BorderSpec {
   Top,
   Bottom,
   Left,
-  Right
+  Right,
 }
 
 <span class="attr">#[derive(Debug, Clone, Default)]
@@ -464,10 +532,10 @@
   save_before: VecDeque&lt;Token&gt;,
   save_between: VecDeque&lt;Token&gt;,
   <span class="kw">pub </span>cached_width: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>cached_height : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>cached_height: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
   <span class="kw">pub </span>cached_depth: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>x : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>y : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>x: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>y: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>Template {
@@ -540,7 +608,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>add_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>col:Cell) {
+  <span class="kw">pub fn </span>add_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>col: Cell) {
     <span class="kw">let </span><span class="kw-2">mut </span>before = Vec::new();
     <span class="kw">if </span>!<span class="self">self</span>.save_between.is_empty() {
       before.extend(<span class="self">self</span>.save_between.clone());
@@ -565,9 +633,9 @@
     </span>} <span class="kw">else </span>{
       <span class="prelude-val">Some</span>(Tokens::new(after))
     };
-    col.empty           = <span class="bool-val">true</span>;
-    <span class="self">self</span>.save_between   = VecDeque::new();
-    <span class="self">self</span>.save_before    = VecDeque::new();
+    col.empty = <span class="bool-val">true</span>;
+    <span class="self">self</span>.save_between = VecDeque::new();
+    <span class="self">self</span>.save_before = VecDeque::new();
 
     <span class="kw">if </span><span class="self">self</span>.repeating {
       <span class="self">self</span>.non_repeating = <span class="self">self</span>.columns.len();

@@ -51,10 +51,10 @@
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::template::{Align, BorderSpec, ColumnSpec};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
-<span class="kw">use </span><span class="kw">super</span>::template::{Align,ColumnSpec, BorderSpec};
+<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span>libxml::tree::Node;
 
 <span class="attr">#[derive(Debug, Clone, Default, PartialEq)]
@@ -90,8 +90,8 @@
   <span class="kw">pub </span>rowspan: <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>vattach: <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>cell: <span class="prelude-ty">Option</span>&lt;Node&gt;,
-  <span class="kw">pub </span>x : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
-  <span class="kw">pub </span>y : <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>x: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
+  <span class="kw">pub </span>y: <span class="prelude-ty">Option</span>&lt;Dimension&gt;,
   <span class="kw">pub </span>border: String,
 }
 <span class="kw">impl </span>Cell {

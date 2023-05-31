@@ -903,7 +903,7 @@
   <span class="doccomment">/// a pointer to a different node, usually for `XMRef`
   </span><span class="kw">pub </span>idref: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="doccomment">/// an intermediate key to be fully realized as an id at a later time
-  </span><span class="kw">pub </span>xmkey: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>,  str&gt;&gt;,
+  </span><span class="kw">pub </span>xmkey: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="doccomment">/// an optional subtree-specific Font
   </span><span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt;,
   <span class="doccomment">/// usually associated with the internal `_font` attribute references
@@ -1718,8 +1718,8 @@
       idref,
       fontref,
       font: <span class="prelude-val">None</span>,
-      xmkey: <span class="prelude-val">None
-    </span>}
+      xmkey: <span class="prelude-val">None</span>,
+    }
   }
 }
 </code></pre></div>

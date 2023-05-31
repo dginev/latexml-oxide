@@ -1219,6 +1219,10 @@
 <a href="#1219" id="1219">1219</a>
 <a href="#1220" id="1220">1220</a>
 <a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -2128,8 +2132,12 @@
   /// Probably should be using data from FontMetric ???
   </span><span class="kw">pub fn </span>get_nominal_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (Dimension, Dimension, Dimension) {
     <span class="kw">let </span>size = <span class="self">self</span>.get_size().unwrap_or(DEFSIZE);
-    <span class="kw">let </span>u    = size * UNITY_F64;
-    (Dimension::new_f64(<span class="number">0.75 </span>* u), Dimension::new_f64(<span class="number">0.7 </span>* u), Dimension::new_f64(<span class="number">0.2 </span>* u))
+    <span class="kw">let </span>u = size * UNITY_F64;
+    (
+      Dimension::new_f64(<span class="number">0.75 </span>* u),
+      Dimension::new_f64(<span class="number">0.7 </span>* u),
+      Dimension::new_f64(<span class="number">0.2 </span>* u),
+    )
   }
 
   <span class="comment">// Here&#39;s where I avoid trying to emulate Knuth&#39;s line-breaking...
@@ -2193,7 +2201,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>prevbox_opt: <span class="prelude-ty">Option</span>&lt;Digested&gt; = <span class="prelude-val">None</span>;
     <span class="kw">for </span><span class="kw-2">mut </span>thisbox <span class="kw">in </span>filtered_boxes {
       <span class="comment">// Should any `options` be inherited by the contained boxes?
-      </span><span class="kw">let </span>(w, h, d, <span class="kw">_</span>,<span class="kw">_</span>,<span class="kw">_</span>) = thisbox.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      </span><span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = thisbox.get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
 
       <span class="comment">// DG: TODO: We&#39;ll have to figure out how to rearrange this logic,
       //           now that every emitted result of get_size is a Dimension.

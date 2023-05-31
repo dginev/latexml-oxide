@@ -1051,7 +1051,6 @@
 <a href="#1051" id="1051">1051</a>
 <a href="#1052" id="1052">1052</a>
 <a href="#1053" id="1053">1053</a>
-<a href="#1054" id="1054">1054</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>rtx_core::keyvals::KeyvalsConfig;
@@ -1388,22 +1387,21 @@
   </span><span class="macro">unimplemented!</span>()
 }
 
-<span class="kw">pub fn </span>p_revert&lt;T&gt;(arg:T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
-<span class="kw">where </span>T: Sized+Object {
+<span class="kw">pub fn </span>p_revert&lt;T&gt;(arg: T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
+<span class="kw">where </span>T: Sized + Object {
   state.set_dual_branch(<span class="string">&quot;presentation&quot;</span>);
   <span class="kw">let </span>result = arg.revert(state);
   state.expire_dual_branch();
   result
 }
 
-<span class="kw">pub fn </span>c_revert&lt;T&gt;(arg:T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
-<span class="kw">where </span>T: Sized+Object {
+<span class="kw">pub fn </span>c_revert&lt;T&gt;(arg: T, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
+<span class="kw">where </span>T: Sized + Object {
   state.set_dual_branch(<span class="string">&quot;content&quot;</span>);
   <span class="kw">let </span>result = arg.revert(state);
   state.expire_dual_branch();
   result
 }
-
 
 <span class="doccomment">/// This attempts to be a generalize vbox construction;
 /// It tries to figure out whether an ltx:inline-block or ltx:para is needed,
@@ -2101,10 +2099,10 @@
   //  T: AsRef&lt;str&gt; would be more efficient than allocating a string every time
   //  but we first need `Stored` and `Digested` to be capable of that.
   </span><span class="kw">match </span>pos.to_string().as_str() {
-   <span class="string">&quot;t&quot; </span>=&gt; <span class="string">&quot;top&quot;</span>,
-   <span class="string">&quot;b&quot; </span>=&gt; <span class="string">&quot;bottom&quot;</span>,
-   <span class="kw">_ </span>=&gt; <span class="string">&quot;middle&quot;
-  </span>} <span class="comment">// undef meaning &#39;baseline&#39;
+    <span class="string">&quot;t&quot; </span>=&gt; <span class="string">&quot;top&quot;</span>,
+    <span class="string">&quot;b&quot; </span>=&gt; <span class="string">&quot;bottom&quot;</span>,
+    <span class="kw">_ </span>=&gt; <span class="string">&quot;middle&quot;</span>,
+  } <span class="comment">// undef meaning &#39;baseline&#39;
 </span>}
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

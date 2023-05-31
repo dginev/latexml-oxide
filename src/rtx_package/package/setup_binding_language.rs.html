@@ -2727,6 +2727,37 @@
 <a href="#2727" id="2727">2727</a>
 <a href="#2728" id="2728">2728</a>
 <a href="#2729" id="2729">2729</a>
+<a href="#2730" id="2730">2730</a>
+<a href="#2731" id="2731">2731</a>
+<a href="#2732" id="2732">2732</a>
+<a href="#2733" id="2733">2733</a>
+<a href="#2734" id="2734">2734</a>
+<a href="#2735" id="2735">2735</a>
+<a href="#2736" id="2736">2736</a>
+<a href="#2737" id="2737">2737</a>
+<a href="#2738" id="2738">2738</a>
+<a href="#2739" id="2739">2739</a>
+<a href="#2740" id="2740">2740</a>
+<a href="#2741" id="2741">2741</a>
+<a href="#2742" id="2742">2742</a>
+<a href="#2743" id="2743">2743</a>
+<a href="#2744" id="2744">2744</a>
+<a href="#2745" id="2745">2745</a>
+<a href="#2746" id="2746">2746</a>
+<a href="#2747" id="2747">2747</a>
+<a href="#2748" id="2748">2748</a>
+<a href="#2749" id="2749">2749</a>
+<a href="#2750" id="2750">2750</a>
+<a href="#2751" id="2751">2751</a>
+<a href="#2752" id="2752">2752</a>
+<a href="#2753" id="2753">2753</a>
+<a href="#2754" id="2754">2754</a>
+<a href="#2755" id="2755">2755</a>
+<a href="#2756" id="2756">2756</a>
+<a href="#2757" id="2757">2757</a>
+<a href="#2758" id="2758">2758</a>
+<a href="#2759" id="2759">2759</a>
+<a href="#2760" id="2760">2760</a>
 </pre><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3861,8 +3892,9 @@
   }};
   (<span class="macro-nonterminal">$accent</span>:literal, <span class="macro-nonterminal">$combiningchar</span>:expr, <span class="macro-nonterminal">$standalonechar</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$state</span>: ident) =&gt; {{
     <span class="kw">let </span><span class="kw-2">mut </span>options : HashMap&lt;String, Stored&gt; = <span class="macro-nonterminal">$options</span>;
-    <span class="kw">if </span>!options.contains_key(<span class="string">&quot;above&quot;</span>) &amp;&amp; !options.get(<span class="string">&quot;below&quot;</span>).map(|v| <span class="macro">matches!</span>(v, Stored::Bool(<span class="bool-val">true</span>))).unwrap_or(<span class="bool-val">false</span>) {
-      options.insert(<span class="string">&quot;above&quot;</span>.to_string(), Stored::Bool(<span class="bool-val">true</span>));
+    <span class="kw">if </span>!options.contains_key(<span class="string">&quot;above&quot;</span>) &amp;&amp;
+      !options.get(<span class="string">&quot;below&quot;</span>).map(|v| <span class="macro">matches!</span>(v, Stored::Bool(<span class="bool-val">true</span>))).unwrap_or(<span class="bool-val">false</span>) {
+        options.insert(<span class="string">&quot;above&quot;</span>.to_string(), Stored::Bool(<span class="bool-val">true</span>));
     }
     <span class="comment">// Used for converting a char used as an above-accent to a combining char (See \accent)
     </span><span class="kw">if </span>options.get(<span class="string">&quot;above&quot;</span>).map(|v| <span class="macro">matches!</span>(v, Stored::Bool(<span class="bool-val">true</span>))).unwrap_or(<span class="bool-val">false</span>) {
@@ -4557,8 +4589,9 @@
   (<span class="macro-nonterminal">$proto</span>:literal, sub[ <span class="macro-nonterminal">$gullet</span>:ident,<span class="macro-nonterminal">$args</span>:ident,<span class="macro-nonterminal">$inner_state</span>:ident ] <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="attr">#[allow(unused_mut)]
     </span><span class="kw">let </span>expansion_closure: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(
-      <span class="kw">move </span>|<span class="macro-nonterminal">$gullet</span>, <span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>, <span class="macro-nonterminal">$inner_state</span>|
-      <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, <span class="macro-nonterminal">$inner_state</span>).into_tokens_result()
+      <span class="kw">move </span>|<span class="macro-nonterminal">$gullet</span>, <span class="kw-2">mut </span><span class="macro-nonterminal">$args</span>, <span class="macro-nonterminal">$inner_state</span>| {
+        <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, <span class="macro-nonterminal">$inner_state</span>).into_tokens_result()
+      },
     )));
     <span class="macro">DefColumnType!</span>(<span class="macro-nonterminal">$proto</span>, expansion_closure)
   };
@@ -4571,11 +4604,23 @@
       }
       <span class="macro">bind_state_mut!</span>(st);
       <span class="kw">let </span>proto = parse_parameters(<span class="kw-2">&amp;</span>c_chars_peek.collect::&lt;String&gt;(), <span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>(), <span class="prelude-val">Some</span>(st))<span class="question-mark">?</span>;
-      def_macro(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{first_c}&quot;</span>)), proto, <span class="macro-nonterminal">$expansion_closure</span>, <span class="prelude-val">None</span>, st);
+      def_macro(
+        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{first_c}&quot;</span>)),
+        proto,
+        <span class="macro-nonterminal">$expansion_closure</span>,
+        <span class="prelude-val">None</span>,
+        st,
+      );
     } <span class="kw">else </span>{
-      <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;character&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Expected Column specifier&quot;</span>);
+      <span class="macro">Warn!</span>(
+        <span class="string">&quot;expected&quot;</span>,
+        <span class="string">&quot;character&quot;</span>,
+        <span class="prelude-val">None</span>,
+        <span class="prelude-val">None</span>,
+        <span class="string">&quot;Expected Column specifier&quot;
+      </span>);
     }
-  }
+  };
 }
 
 <span class="comment">// Reverts an object into TeX code, as a Tokens list, that would create it.
@@ -4621,29 +4666,46 @@
 </span><span class="macro">macro_rules! </span>DefKeyVal {
   (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr) =&gt; {{
     <span class="kw">let </span>prefix = <span class="string">&quot;KV&quot;</span>;
-    <span class="macro">bind_state_mut!</span>(stomach,st);
+    <span class="macro">bind_state_mut!</span>(stomach, st);
     <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    ::rtx_core::keyval::define(KeyvalConfig{
-      prefix, keyset:<span class="macro-nonterminal">$keyset</span>, key:<span class="macro-nonterminal">$key</span>, vtype:<span class="macro-nonterminal">$vtype</span>, default:<span class="prelude-val">None</span>,
-      ..KeyvalConfig::default()}, gullet, st)<span class="question-mark">?</span>;
+    ::rtx_core::keyval::define(
+      KeyvalConfig {
+        prefix,
+        keyset: <span class="macro-nonterminal">$keyset</span>,
+        key: <span class="macro-nonterminal">$key</span>,
+        vtype: <span class="macro-nonterminal">$vtype</span>,
+        default: <span class="prelude-val">None</span>,
+        ..KeyvalConfig::default()
+      },
+      gullet,
+      st,
+    )<span class="question-mark">?</span>;
   }};
-  (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr) =&gt;{{
-      <span class="comment">// extract the prefix
-      // my $prefix = $options{prefix} || &#39;KV&#39;;
-      </span><span class="kw">let </span>prefix = <span class="string">&quot;KV&quot;</span>;
-      <span class="macro">bind_state_mut!</span>(stomach,st);
-      <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-      ::rtx_core::keyval::define(KeyvalConfig{
-        prefix, keyset:<span class="macro-nonterminal">$keyset</span>, key:<span class="macro-nonterminal">$key</span>, vtype:<span class="macro-nonterminal">$vtype</span>, default:<span class="prelude-val">Some</span>(<span class="macro-nonterminal">$default</span>),
-        ..KeyvalConfig::default()}, st)<span class="question-mark">?</span>;
+  (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr) =&gt; {{
+    <span class="comment">// extract the prefix
+    // my $prefix = $options{prefix} || &#39;KV&#39;;
+    </span><span class="kw">let </span>prefix = <span class="string">&quot;KV&quot;</span>;
+    <span class="macro">bind_state_mut!</span>(stomach, st);
+    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+    ::rtx_core::keyval::define(
+      KeyvalConfig {
+        prefix,
+        keyset: <span class="macro-nonterminal">$keyset</span>,
+        key: <span class="macro-nonterminal">$key</span>,
+        vtype: <span class="macro-nonterminal">$vtype</span>,
+        default: <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$default</span>),
+        ..KeyvalConfig::default()
+      },
+      st,
+    )<span class="question-mark">?</span>;
   }};
-  (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr, <span class="macro-nonterminal">$options</span>:tt) =&gt;{
+  (<span class="macro-nonterminal">$keyset</span>:expr, <span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$vtype</span>:expr, <span class="macro-nonterminal">$default</span>:expr, <span class="macro-nonterminal">$options</span>:tt) =&gt; {
     <span class="comment">// TODO: explicit $options with prefix logic
     // should we tokenize the code?
     // let code_expansion = ExpansionBody::Tokens(tokenize(
     // code.unwrap_or(&quot;&quot;), Some(state)));
     </span><span class="macro">unimplemented!</span>();
-  }
+  };
 }
 
 <span class="attr">#[macro_export]
