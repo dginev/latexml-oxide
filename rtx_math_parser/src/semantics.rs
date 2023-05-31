@@ -338,9 +338,10 @@ pub fn fenced(
 
 /// This is similar, but "interprets" a delimited list as being the
 /// application of some operator to the items in the list.
-fn interpret_delimited(op: XM, stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM, Box<dyn Error>> {
-  let (_seps, args) = extract_separators(&stuff[1..stuff.len() - 1]);
-  let ref_args = create_xmrefs(&args, ctxt)?;
+fn interpret_delimited(op: XM, mut stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM, Box<dyn Error>> {
+  let upto = stuff.len() - 1;
+  let (_seps, mut args) = extract_separators(&mut stuff[1..upto]);
+  let ref_args = create_xmrefs(&mut args, ctxt)?;
   Ok(XM::Dual(
     Box::new(XM::Apply(
       op.into(),
@@ -354,6 +355,24 @@ fn interpret_delimited(op: XM, stuff: Vec<XM>, ctxt: ActionContext) -> Result<XM
   ))
 }
 
+/// A trailing presentational embellishment,
+/// represent by containing it in the presentation arm of an XMDual
+pub fn postfix_embellished(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let mut arg = args.remove(0).unwrap();
+  let trailer = args.remove(0).unwrap();
+  let mut ref_arg = create_xmrefs(&mut [&mut arg], ctxt)?;
+  Ok(Some(XM::Dual(
+    Box::new(ref_arg.remove(0)),
+    Box::new(XM::Wrap(vec![arg,trailer], XProps::default(), Meta::default())),
+    XProps::default(),
+    Meta::default(),
+  )))
+}
 /// remove start_/end_ wrappers
 pub fn faux_wrap(
   _rule_id: i32,
@@ -546,6 +565,7 @@ pub fn new_props(
     idref,
     fontref,
     font: Some(font),
+    xmkey: None
   }
 }
 
@@ -562,11 +582,11 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, 
   if pieces.len() == 1 {
     Ok(pieces.pop())
   } else {
-    let (_seps, items) = extract_separators(&pieces);
+    let (_seps, mut items) = extract_separators(&mut pieces);
     Ok(Some(XM::Dual(
       Box::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
-        create_xmrefs(&items, ctxt)?.into(),
+        create_xmrefs(&mut items, ctxt)?.into(),
         XProps::default(),
         Meta::default(),
       )),
@@ -581,11 +601,11 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, 
 /// extract the separators as a concatenated string,
 /// returning (separators, args...)
 /// But note that the separators are never used for anything!?
-fn extract_separators(items: &[XM]) -> (Vec<&XM>, Vec<&XM>) {
+fn extract_separators(items: &mut [XM]) -> (Vec<&mut XM>, Vec<&mut XM>) {
   // TODO: consider using the separators at some point, but not for now
   let punct = Vec::new();
   let mut args = Vec::new();
-  let mut items_iter = items.iter();
+  let mut items_iter = items.iter_mut();
   while let Some(arg) = items_iter.next() {
     args.push(arg);
     let _discard_punct = items_iter.next();

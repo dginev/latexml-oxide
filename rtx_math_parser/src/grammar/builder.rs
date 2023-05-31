@@ -93,7 +93,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     end_punct = punct | period;
     statements = statement
-      | statement end_punct
+      | statement end_punct => postfix_embellished
       | statement punct statement => infix_apply;
 
     // Extensions, now that we have more category variables defined
