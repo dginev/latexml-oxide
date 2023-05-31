@@ -1046,9 +1046,7 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
   //implementor note:
   //  T: AsRef<str> would be more efficient than allocating a string every time
   //  but we first need `Stored` and `Digested` to be capable of that.
-
-  let pos_str = pos.to_string();
-  match pos_str.as_str() {
+  match pos.to_string().as_str() {
    "t" => "top",
    "b" => "bottom",
    _ => "middle"
