@@ -1,7 +1,7 @@
 # rtx
 A Rust port of [LaTeXML](https://github.com/brucemiller/latexml)
 
-[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.0-orange.svg)
+[![CI](https://github.com/dginev/rtx/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/rtx/actions/workflows/CI.yml) ![version](https://img.shields.io/badge/version-0.3.1-orange.svg)
 
 ## Porting Progress
 

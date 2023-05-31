@@ -4,7 +4,6 @@ on:
     push:
         branches:
             - master
-            - alignment-coverage
 jobs:
     release:
         name: GitHub Pages
