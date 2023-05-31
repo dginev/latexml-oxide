@@ -849,6 +849,17 @@
 <a href="#849" id="849">849</a>
 <a href="#850" id="850">850</a>
 <a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
 </pre><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rtx_core::common::font::Font;
 <span class="kw">use </span>rtx_core::common::xml::element_nodes;
@@ -891,6 +902,8 @@
   </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="doccomment">/// a pointer to a different node, usually for `XMRef`
   </span><span class="kw">pub </span>idref: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
+  <span class="doccomment">/// an intermediate key to be fully realized as an id at a later time
+  </span><span class="kw">pub </span>xmkey: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>,  str&gt;&gt;,
   <span class="doccomment">/// an optional subtree-specific Font
   </span><span class="kw">pub </span>font: <span class="prelude-ty">Option</span>&lt;Font&gt;,
   <span class="doccomment">/// usually associated with the internal `_font` attribute references
@@ -931,6 +944,9 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = <span class="self">self</span>.idref.take() {
       attrs.insert(String::from(<span class="string">&quot;idref&quot;</span>), idref.into_owned());
     }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(xmkey) = <span class="self">self</span>.xmkey.take() {
+      attrs.insert(String::from(<span class="string">&quot;_xmkey&quot;</span>), xmkey.into_owned());
+    }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(fontref) = <span class="self">self</span>.fontref.take() {
       attrs.insert(String::from(<span class="string">&quot;_font&quot;</span>), fontref.into_owned());
     }
@@ -950,7 +966,7 @@
   Token(XProps, Meta), <span class="comment">// does this need Meta?
   </span>Apply(Operator, Args, XProps, Meta),
   Dual(Box&lt;XM&gt;, Box&lt;XM&gt;, XProps, Meta),
-  Ref(String),
+  Ref(XProps),
   Wrap(Vec&lt;XM&gt;, XProps, Meta),
   Choices(Vec&lt;XM&gt;),
 }
@@ -1504,9 +1520,14 @@
         document.close_element_at(<span class="kw-2">&amp;mut </span>wrap_node, state)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(wrap_node)
       },
-      XM::Ref(idref) =&gt; {
+      XM::Ref(refprops) =&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>ref_node = Node::new(<span class="string">&quot;XMRef&quot;</span>, <span class="prelude-val">None</span>, document.get_document()).unwrap();
-        document.set_attribute(<span class="kw-2">&amp;mut </span>ref_node, <span class="string">&quot;idref&quot;</span>, <span class="kw-2">&amp;</span>idref, state)<span class="question-mark">?</span>;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = refprops.id {
+          document.set_attribute(<span class="kw-2">&amp;mut </span>ref_node, <span class="string">&quot;idref&quot;</span>, <span class="kw-2">&amp;</span>id, state)<span class="question-mark">?</span>;
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(xmkey) = refprops.xmkey {
+          document.set_attribute(<span class="kw-2">&amp;mut </span>ref_node, <span class="string">&quot;_xmkey&quot;</span>, <span class="kw-2">&amp;</span>xmkey, state)<span class="question-mark">?</span>;
+        }
         <span class="prelude-val">Ok</span>(ref_node)
       },
       XM::Choices(<span class="kw-2">mut </span>choices) =&gt; {
@@ -1556,8 +1577,8 @@
           realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned(),
         ))
       },
-      XM::Ref(<span class="kw-2">ref </span>idref) =&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = ctxt.document.lookup_id(idref) {
+      XM::Ref(<span class="kw-2">ref </span>refprops) =&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
           <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(node.clone()))
         } <span class="kw">else </span>{
           <span class="macro">unimplemented!</span>();
@@ -1697,7 +1718,8 @@
       idref,
       fontref,
       font: <span class="prelude-val">None</span>,
-    }
+      xmkey: <span class="prelude-val">None
+    </span>}
   }
 }
 </code></pre></div>

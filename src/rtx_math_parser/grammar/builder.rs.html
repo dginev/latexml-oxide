@@ -244,7 +244,7 @@
 
     end_punct = punct | period;
     statements = statement
-      | statement end_punct
+      | statement end_punct =&gt; postfix_embellished
       | statement punct statement =&gt; infix_apply;
 
     <span class="comment">// Extensions, now that we have more category variables defined
