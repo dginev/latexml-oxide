@@ -380,8 +380,8 @@ impl Model {
         codeprefix,
         self,
         None,
-        "No namespace has been registered for prefix '$codeprefix' (in code)",
-        "Using '$ns' isntead"
+        s!("No namespace has been registered for prefix '{codeprefix}' (in code)"),
+        s!("Using '{example_namespace}' instead")
       );
     }
     ns

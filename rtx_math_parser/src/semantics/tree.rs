@@ -106,6 +106,7 @@ pub enum XM {
   Dual(Box<XM>, Box<XM>, XProps, Meta),
   Ref(XProps),
   Wrap(Vec<XM>, XProps, Meta),
+  Arg(Vec<XM>),
   Choices(Vec<XM>),
 }
 impl From<XProps> for XM {
@@ -238,7 +239,7 @@ impl XM {
       XM::Dual(_, _, _, ref meta) => meta,
       XM::Wrap(_, _, ref meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
-      XM::Ref(_) => unimplemented!(),
+      XM::Ref(_) | XM::Arg(_) => unimplemented!(),
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -249,7 +250,7 @@ impl XM {
       XM::Dual(_, _, _, ref mut meta) => meta,
       XM::Wrap(_, _, ref mut meta) => meta,
       XM::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
-      XM::Ref(_) => unimplemented!(),
+      XM::Ref(_)| XM::Arg(_) => unimplemented!(),
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
@@ -292,7 +293,7 @@ impl XM {
           .collect::<Vec<_>>()
           .join("")
       )),
-      XM::Choices(_) => unimplemented!(),
+      XM::Choices(_)| XM::Arg(_)=> unimplemented!(),
       XM::Dual(content, pres, _, _) => Cow::Owned(format!(
         "{}{}",
         content.get_value(nodes).expect("inner"),
@@ -408,6 +409,7 @@ impl XM {
       },
       XM::Dual(_, _, _, _) => unimplemented!(),
       XM::Wrap(_, _, _) => unimplemented!(),
+      XM::Arg(_) => unimplemented!(),
       XM::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -478,6 +480,7 @@ impl XM {
       },
       XM::Dual(_, _, _, _) => unimplemented!(),
       XM::Wrap(_inner, _, _) => unimplemented!(),
+      XM::Arg(_) => unimplemented!(),
       XM::Choices(args) => args.first().unwrap().get_baseline(),
     }
   }
@@ -514,7 +517,7 @@ impl XM {
           c.unconstrain_recursive();
         }
       },
-      XM::Choices(args) => {
+      XM::Choices(args) | XM::Arg(args) => {
         for tree in args {
           tree.unconstrain_recursive();
         }
@@ -561,6 +564,22 @@ impl XM {
         let mut arg_level: Vec<bool> = level.to_vec();
         arg_level.push(true);
         let mut peekable = content.iter().peekable();
+        while let Some(arg) = peekable.next() {
+          if peekable.peek().is_none() {
+            arg_level.pop();
+            arg_level.push(false);
+            arg.fmt_indented(&arg_level, f)?
+          } else {
+            arg.fmt_indented(&arg_level, f)?
+          }
+        }
+        writeln!(f)
+      },
+      XM::Arg(args) => {
+        writeln!(f, "\n{indent}Arg")?;
+        let mut arg_level: Vec<bool> = level.to_vec();
+        arg_level.push(true);
+        let mut peekable = args.iter().peekable();
         while let Some(arg) = peekable.next() {
           if peekable.peek().is_none() {
             arg_level.pop();
@@ -667,6 +686,14 @@ impl XM {
           document.set_attribute(&mut ref_node, "_xmkey", &xmkey, state)?;
         }
         Ok(ref_node)
+      },
+      XM::Arg(inner_list) => {
+        let mut arg_node = Node::new("XMArg", None, document.get_document()).unwrap();
+        for inner_item in inner_list {
+          let mut inner_node = inner_item.into_xmath(&mut arg_node, nodes, document, state)?;
+          add_child_guard_xmarg(&mut arg_node, &mut inner_node)?;
+        }
+        Ok(arg_node)
       },
       XM::Choices(mut choices) => {
         Info!(
@@ -823,8 +850,13 @@ impl From<&Node> for XM {
         let args: Args = children.iter().map(XM::from).collect::<Vec<_>>().into();
         XM::Apply((&op).into(), args, XProps::from(n), Meta::default())
       },
+      "XMArg" => {
+        let children = element_nodes(n);
+        let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
+        XM::Arg(inner_xm)
+      },
       // TODO: continue for the other cases
-      _ => unimplemented!(),
+      missing_case => {dbg!(missing_case); unimplemented!()},
     }
   }
 }
