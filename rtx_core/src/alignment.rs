@@ -108,15 +108,15 @@ pub struct Alignment {
 impl Alignment {
   /// Create a new Alignment.
   /// `config` can contain:
-  ///    template : an Alignment::Template object
-  ///    openContainer  = sub($doc,%attrib); creates the container element with given attributes
-  ///    closeContainer = sub($doc); closes the container
-  ///    openRow        = sub($doc,%attrib); creates the row element with given attributes
-  ///    closeRow       = closes the row
-  ///    openColumn     = sub($doc,%attrib); creates the column element with given attributes
-  ///    closeColumn    = closes the column
-  ///    properties     = hashmap containing extra attributes for the container element.
-  ///    xml_attributes = hashmap containing attributes for the main XML node
+  ///   - template: an Alignment::Template object
+  ///   - openContainer: creates the container element with given attributes
+  ///   - closeContainer = sub($doc); closes the container
+  ///   - openRow        = sub($doc,%attrib); creates the row element with given attributes
+  ///   - closeRow       = closes the row
+  ///   - openColumn     = sub($doc,%attrib); creates the column element with given attributes
+  ///   - closeColumn    = closes the column
+  ///   - properties     = hashmap containing extra attributes for the container element.
+  ///   - xml_attributes = hashmap containing attributes for the main XML node
   pub fn new(config: AlignmentConfig) -> Self {
     let template = config.template.unwrap_or_default();
     Alignment {

@@ -71,7 +71,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
     factor = factor_base;
     // Terms
     tight_term = factor
-      | tight_term factor => apply_invisible_times;
+      | tight_term factor => apply_invisible_times
+      // TODO: develop this further
+      | function factor => prefix_apply;
 
     term = tight_term
       | term mulop tight_term => infix_apply_nary
@@ -124,10 +126,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
 
     scripted_factor_r11 = factor_base postsuperarg => postfix_script
       | scripted_factor_l1 postsuperarg => postfix_script
-      | scripted_factor_l2 postsuperarg => postfix_script;
+      | scripted_factor_l2 postsuperarg => postfix_script
+      | fenced_factor postsuperarg => postfix_script;
     scripted_factor_r12 = factor_base postsubarg => postfix_script
       | scripted_factor_l1 postsubarg => postfix_script
-      | scripted_factor_l2 postsubarg => postfix_script;
+      | scripted_factor_l2 postsubarg => postfix_script
+      | fenced_factor postsubarg => postfix_script;
     scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
     scripted_factor_r2 = scripted_factor_r12 postsuperarg => postfix_script
       | scripted_factor_r11 postsubarg => postfix_script;
