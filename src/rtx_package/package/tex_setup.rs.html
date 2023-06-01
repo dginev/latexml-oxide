@@ -1077,6 +1077,14 @@
 <a href="#1077" id="1077">1077</a>
 <a href="#1078" id="1078">1078</a>
 <a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -2123,15 +2131,23 @@
   </span><span class="macro">DefParameterType!</span>(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_optional(<span class="prelude-val">None</span>, state)
     },
-    <span class="comment">// before_digest =&gt; sub [stomach,state] {
-    //   gullet.bgroup(state);
+    <span class="comment">// before_digest =&gt; sub[stomach,state] {
+    //   stomach.bgroup(state);
     //   MergeFont!(&quot;scripted&quot; =&gt; true);
     // },
     // after_digest =&gt; sub[stomach,state] {
     //   stomach.egroup(state); },
-    </span>optional =&gt; <span class="bool-val">true
-    </span><span class="comment">// reversion =&gt; sub { ($_[0] ? (T_OTHER(&#39;[&#39;), Revert($_[0]), T_OTHER(&#39;]&#39;)) : ()); }
-  </span>);
+    </span>optional =&gt; <span class="bool-val">true</span>,
+    reversion =&gt; <span class="macro">reversion!</span>(_gullet,arg,_inner,_extra,_state, {
+      <span class="kw">if </span>arg.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+      <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>tks = <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">&quot;[&quot;</span>)];
+        tks.extend(arg.into_iter().map(|t| t.revert()));
+        tks.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
+        <span class="prelude-val">Ok</span>(Tokens::new(tks))
+      }
+    })
+  );
   <span class="comment">// DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
   //     $_[0]-&gt;readArg; },
   //   beforeDigest =&gt; sub {

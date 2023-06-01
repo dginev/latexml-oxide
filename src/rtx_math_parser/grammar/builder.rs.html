@@ -149,6 +149,10 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::semantics::<span class="kw-2">*</span>;
 <span class="kw">use </span>marpa::grammar::Grammar <span class="kw">as </span>MarpaGrammar;
 <span class="kw">use </span>marpa::result::Result;
@@ -222,7 +226,9 @@
     factor = factor_base;
     <span class="comment">// Terms
     </span>tight_term = factor
-      | tight_term factor =&gt; apply_invisible_times;
+      | tight_term factor =&gt; apply_invisible_times
+      <span class="comment">// TODO: develop this further
+      </span>| function factor =&gt; prefix_apply;
 
     term = tight_term
       | term mulop tight_term =&gt; infix_apply_nary
@@ -275,10 +281,12 @@
 
     scripted_factor_r11 = factor_base postsuperarg =&gt; postfix_script
       | scripted_factor_l1 postsuperarg =&gt; postfix_script
-      | scripted_factor_l2 postsuperarg =&gt; postfix_script;
+      | scripted_factor_l2 postsuperarg =&gt; postfix_script
+      | fenced_factor postsuperarg =&gt; postfix_script;
     scripted_factor_r12 = factor_base postsubarg =&gt; postfix_script
       | scripted_factor_l1 postsubarg =&gt; postfix_script
-      | scripted_factor_l2 postsubarg =&gt; postfix_script;
+      | scripted_factor_l2 postsubarg =&gt; postfix_script
+      | fenced_factor postsubarg =&gt; postfix_script;
     scripted_factor_r1 = scripted_factor_r11 | scripted_factor_r12;
     scripted_factor_r2 = scripted_factor_r12 postsuperarg =&gt; postfix_script
       | scripted_factor_r11 postsubarg =&gt; postfix_script;

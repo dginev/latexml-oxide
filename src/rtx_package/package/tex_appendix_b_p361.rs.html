@@ -10,8 +10,6 @@
 <a href="#10" id="10">10</a>
 <a href="#11" id="11">11</a>
 <a href="#12" id="12">12</a>
-<a href="#13" id="13">13</a>
-<a href="#14" id="14">14</a>
 </pre><pre class="rust"><code><span class="doccomment">//! TeX Book, Appendix B. p. 361
 </span><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
@@ -20,10 +18,8 @@
   </span><span class="macro">DefConstructor!</span>(
     <span class="string">&quot;\\sqrt OptionalInScriptStyle Digested&quot;</span>,
     <span class="string">&quot;?#1(&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning=&#39;nth-root&#39;/&gt;\
-    &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;\
-    &lt;/ltx:XMApp&gt;)\
-    (&lt;ltx:XMApp&gt;&lt;ltx:XMTok meaning=&#39;square-root&#39;/&gt;\
-    &lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)&quot;
+    &lt;ltx:XMArg&gt;#1&lt;/ltx:XMArg&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)\
+    (&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;FUNCTION&#39; meaning=&#39;square-root&#39;/&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;)&quot;
   </span>);
 });
 </code></pre></div>
