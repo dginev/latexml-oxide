@@ -1044,14 +1044,22 @@ LoadDefinitions!(state, {
   DefParameterType!(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_optional(None, state)
     },
-    // before_digest => sub [stomach,state] {
-    //   gullet.bgroup(state);
+    // before_digest => sub[stomach,state] {
+    //   stomach.bgroup(state);
     //   MergeFont!("scripted" => true);
     // },
     // after_digest => sub[stomach,state] {
     //   stomach.egroup(state); },
-    optional => true
-    // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); }
+    optional => true,
+    reversion => reversion!(_gullet,arg,_inner,_extra,_state, {
+      if arg.is_empty() { Ok(Tokens!()) }
+      else {
+        let mut tks = vec![T_OTHER!("[")];
+        tks.extend(arg.into_iter().map(|t| t.revert()));
+        tks.push(T_OTHER!("]"));
+        Ok(Tokens::new(tks))
+      }
+    })
   );
   // DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
   //     $_[0]->readArg; },
