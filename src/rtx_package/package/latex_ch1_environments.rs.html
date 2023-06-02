@@ -167,7 +167,7 @@
         out_tokens.extend(afterend_toks.unlist())
       }
     } <span class="kw">else </span>{
-      out_tokens = before.map(|atend_tokens| atend_tokens.unlist()).unwrap_or_default();
+      out_tokens = before.map(Tokens::unlist).unwrap_or_default();
       t = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\end{name}&quot;</span>));
       <span class="kw">if </span>is_defined_token(<span class="kw-2">&amp;</span>t, state) {
         out_tokens.push(t);

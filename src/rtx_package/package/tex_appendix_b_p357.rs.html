@@ -176,6 +176,10 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -275,18 +279,22 @@
   //======================================================================
   // TeX Book, Appendix B. p. 357
 
-  // foreach my $op (&#39;\hrulefill&#39;, &#39;\dotfill&#39;, &#39;\rightarrowfill&#39;, &#39;\leftarrowfill&#39;,
-  //   &#39;\upbracefill&#39;, &#39;\downbracefill&#39;) {
-  //   DefPrimitive($op, undef); }
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\hrulefill&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\dotfill&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\rightarrowfill&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\leftarrowfill&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\upbracefill&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\downbracefil&quot;</span>, <span class="prelude-val">None</span>);
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\bye&quot;</span>, <span class="string">r&quot;\par\vfill\end&quot;</span>); <span class="comment">// \supereject
+  <span class="macro">Let!</span>(<span class="string">&quot;\\bye&quot;</span>, <span class="string">&quot;\\end&quot;</span>);
 
-  </span><span class="macro">Let!</span>(<span class="string">&quot;\\sp&quot;</span>, <span class="macro">T_SUPER!</span>());
+  <span class="macro">Let!</span>(<span class="string">&quot;\\sp&quot;</span>, <span class="macro">T_SUPER!</span>());
   <span class="macro">Let!</span>(<span class="string">&quot;\\sb&quot;</span>, <span class="macro">T_SUB!</span>());
 
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\,&quot;</span>,
-    <span class="string">&quot;\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi&quot;
+    <span class="string">r&quot;\ifmmode\lx@thinmuskip\else\lx@thinspace\fi&quot;</span>,
+    protected =&gt; <span class="bool-val">true
   </span>);
   <span class="comment">// DefConstructor!(&quot;\\@math@thinmuskip&quot;,
   //   &quot;&lt;ltx:XMHint name=&#39;thinspace&#39; width=&#39;#width&#39;/&gt;&quot;,

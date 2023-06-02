@@ -108,6 +108,7 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::{
   DIRTY_ID_IDIOM_RE, LEADING_PROTOCOL_RE, NON_ID_CHARSET_RE, SPACES_RE, TILDE_NOISE_RE,
   TRAILING_SLASH_RE,
@@ -123,6 +124,7 @@
 <span class="doccomment">/// auxiliary helper for `roman`
 </span><span class="kw">pub fn </span>roman_aux&lt;T: Into&lt;i64&gt;&gt;(stuff: T) -&gt; String {
   <span class="kw">let </span><span class="kw-2">mut </span>n: i64 = stuff.into();
+  <span class="kw">if </span>n &lt;= <span class="number">0  </span>{ <span class="kw">return </span>String::new(); }
   <span class="kw">let </span><span class="kw-2">mut </span>div = <span class="number">1000</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>s: String = <span class="kw">if </span>n &gt; div {
     String::from_utf8(<span class="macro">vec!</span>[<span class="string">b&#39;m&#39;</span>; (n / div) <span class="kw">as </span>usize]).unwrap()

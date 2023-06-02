@@ -120,8 +120,8 @@
       <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@load@latex@pool&quot;</span>), <span class="macro">T_CS!</span>(ltxtrigger))
     });
   }
-
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@load@latex@pool&quot;</span>, sub[stomach, (), state] {
+  <span class="comment">// TODO: Port and use `DefAutoload` instead of this single-purpose macro
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@load@latex@pool&quot;</span>, sub[stomach, (), state] {
     input_definitions(
       <span class="string">&quot;LaTeX&quot;</span>,
       InputDefinitionOptions {

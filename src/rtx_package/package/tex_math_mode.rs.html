@@ -145,7 +145,7 @@
       <span class="kw">let </span><span class="kw-2">mut </span>op = <span class="string">&quot;\\@@BEGININLINEMATH&quot;</span>;
       {
         <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-        <span class="kw">let </span>mode = <span class="macro">LookupString!</span>(<span class="string">&quot;MODE&quot;</span>);
+        <span class="kw">let </span>mode = state.lookup_string(<span class="string">&quot;MODE&quot;</span>);
         <span class="macro">Debug!</span>(<span class="string">&quot;T_MATH primitive current mode: {:?}&quot;</span>, mode);
         <span class="kw">if </span>mode == <span class="string">&quot;display_math&quot; </span>{
           <span class="kw">if </span>TOKEN_MATH.with(|tm| gullet.if_next(tm, state))<span class="question-mark">? </span>{

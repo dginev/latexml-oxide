@@ -410,6 +410,8 @@
 <a href="#410" id="410">410</a>
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Conditionals Control sequence definitions.
 //! These represent the control sequences for conditionals, as well as
 //! `\else`, `\or` and `\fi`.
@@ -537,8 +539,7 @@
     </span><span class="kw">use </span><span class="self">self</span>::ConditionalType::<span class="kw-2">*</span>;
     <span class="kw">match </span><span class="self">self</span>.conditional_type {
       If | Unless =&gt; <span class="self">self</span>.invoke_conditional(gullet, state),
-      Else =&gt; <span class="self">self</span>.invoke_else(gullet, state),
-      Or =&gt; <span class="self">self</span>.invoke_else(gullet, state),
+      Else | Or =&gt; <span class="self">self</span>.invoke_else(gullet, state),
       Fi =&gt; <span class="self">self</span>.invoke_fi(gullet, state),
       <span class="kw">_ </span>=&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
@@ -597,7 +598,11 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>ifid = state.lookup_int(<span class="string">&quot;if_count&quot;</span>);
     ifid += <span class="number">1</span>;
     state.assign_value(<span class="string">&quot;if_count&quot;</span>, ifid, <span class="prelude-val">Some</span>(Scope::Global));
-    <span class="kw">let </span>if_frame = Rc::new(RefCell::new(IfFrame {
+    <span class="comment">// TODO:
+    // if ($LaTeXML::IF_LIMIT and $ifid &gt; $LaTeXML::IF_LIMIT) {
+    //   Fatal(&#39;timeout&#39;, &#39;if_limit&#39;, $self,
+    //     &quot;Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?&quot;); }
+    </span><span class="kw">let </span>if_frame = Rc::new(RefCell::new(IfFrame {
       token: state.get_current_token().unwrap().clone(),
       start: gullet.get_locator().unwrap().into_owned(),
       parsing: <span class="bool-val">true</span>,
@@ -606,10 +611,9 @@
     }));
     state.set_ifframe(<span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>if_frame)));
     state.unshift_value(<span class="string">&quot;if_stack&quot;</span>, <span class="macro">vec!</span>[Rc::clone(<span class="kw-2">&amp;</span>if_frame)]);
-
     <span class="kw">let </span>args = <span class="self">self</span>.read_arguments(gullet, state)<span class="question-mark">?</span>;
 
-    if_frame.borrow_mut().parsing = <span class="bool-val">false</span>;
+    state.get_ifframe().unwrap().borrow_mut().parsing = <span class="bool-val">false</span>;
     <span class="kw">let </span>tracing = state.lookup_bool(<span class="string">&quot;TRACINGCOMMANDS&quot;</span>);
     <span class="comment">//   print STDERR &#39;{&#39; . $self-&gt;tracingCSName . &quot;} [#$ifid]\n&quot; if $tracing;
     //   print STDERR $self-&gt;tracingArgs(@args) . &quot;\n&quot; if $tracing &amp;&amp; @args;
@@ -636,30 +640,30 @@
     <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
   }
 
-  <span class="comment">// #======================================================================
-  // # Support for conditionals:
-
-  // # Skipping for conditionals
-  // #   0 : skip to \fi
-  // #  -1 : skip to \else, if any, or \fi
-  // #   n : skip to n-th \or, if any, or \else, if any, or \fi.
-
-  // # NOTE that there are 2 kinds of &quot;nested&quot; ifs.
-  // #  \if&#39;s inside the body of either the true or false branch
-  // # are easily skipped by tracking a level of if nesting and skipping over the
-  // # same number of \fi as you find \if.
-  // #  \if&#39;s that get expanded while evaluating the test clause itself
-  // # are considerably trickier. There&#39;s a frame on the if-stack for this \if
-  // # that&#39;s above the one we&#39;re currently processing; typically the \else &amp; \fi
-  // # may still remain, but we need to either evaluate them a normal
-  // # if we&#39;re continuing to follow the true branch, or skip oever them if
-  // # we&#39;re trying to find the \else for the false branch.
-  // # The danger is mistaking the \else that&#39;s associated with the test clause&#39;s \if
-  // # and taking it for the \else that we&#39;re skipping to!
-  // # Canonical example:
-  // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
-  // # The inner \ifx should expand to &quot;XY junk&quot;, since A==A
-  // # Return the token we&#39;ve skipped to, and the frame that this applies to.
+  <span class="comment">// =====================================================================
+  // Support for conditionals:
+  //
+  // Skipping for conditionals
+  //   0 : skip to \fi
+  //  -1 : skip to \else, if any, or \fi
+  //   n : skip to n-th \or, if any, or \else, if any, or \fi.
+  //
+  // NOTE that there are 2 kinds of &quot;nested&quot; ifs.
+  //  \if&#39;s inside the body of either the true or false branch
+  // are easily skipped by tracking a level of if nesting and skipping over the
+  // same number of \fi as you find \if.
+  //  \if&#39;s that get expanded while evaluating the test clause itself
+  // are considerably trickier. There&#39;s a frame on the if-stack for this \if
+  // that&#39;s above the one we&#39;re currently processing; typically the \else &amp; \fi
+  // may still remain, but we need to either evaluate them a normal
+  // if we&#39;re continuing to follow the true branch, or skip oever them if
+  // we&#39;re trying to find the \else for the false branch.
+  // The danger is mistaking the \else that&#39;s associated with the test clause&#39;s \if
+  // and taking it for the \else that we&#39;re skipping to!
+  // Canonical example:
+  //   \if\ifx AA XY junk \else blah \fi True \else False \fi
+  // The inner \ifx should expand to &quot;XY junk&quot;, since A==A
+  // Return the token we&#39;ve skipped to, and the frame that this applies to.
   </span><span class="kw">fn </span>skip_conditional_body(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     nskips: i64,
@@ -671,9 +675,7 @@
     <span class="kw">let </span>_start = gullet.get_locator();
     <span class="comment">// NOTE: Open-coded manipulation of if_stack!
     // [we&#39;re only reading tokens &amp; looking up, so State shouldn&#39;t change behind our backs]
-
-    </span><span class="kw">let </span>local_frame = state.get_ifframe();
-    <span class="kw">loop </span>{
+    </span><span class="kw">loop </span>{
       <span class="kw">let </span>(t, cond_type) = <span class="kw">match </span>gullet.read_next_conditional(state)<span class="question-mark">? </span>{
         <span class="prelude-val">Some</span>((tok, typ)) =&gt; (<span class="macro">Tokens!</span>(tok), <span class="prelude-val">Some</span>(typ)),
         <span class="prelude-val">None </span>=&gt; (<span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>),
@@ -683,7 +685,8 @@
         <span class="prelude-val">Some</span>(ConditionalType::If) =&gt; level += <span class="number">1</span>, <span class="comment">//  Found a \ifxx of some sort
         </span><span class="prelude-val">Some</span>(ConditionalType::Fi) =&gt; {
           <span class="comment">// Found a \fi
-          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value_mut(<span class="string">&quot;if_stack&quot;</span>) {
+          </span><span class="kw">let </span>local_frame = state.get_ifframe();
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value_mut(<span class="string">&quot;if_stack&quot;</span>) {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.pop_front() {
               <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() != <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
                 <span class="comment">// But is it for a condition nested in the test clause?
@@ -711,7 +714,8 @@
             }
           } <span class="kw">else if </span>other_type == ConditionalType::Else &amp;&amp; nskips != <span class="number">0 </span>{
             <span class="comment">// Found \else and we&#39;re looking for one?
-            // Make sure this \else is NOT for a nested \if that is part of the test clause!
+            </span><span class="kw">let </span>local_frame = state.get_ifframe();
+            <span class="comment">// Make sure this \else is NOT for a nested \if that is part of the test clause!
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = state.lookup_value(<span class="string">&quot;if_stack&quot;</span>) {
               <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(<span class="kw-2">ref </span>stack_frame)) = stack.front() {
                 <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() == <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {

@@ -353,7 +353,7 @@
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
     <span class="kw">if </span>state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) {
-      properties.insert(<span class="macro">s!</span>(<span class="string">&quot;mode&quot;</span>), String::from(<span class="string">&quot;math&quot;</span>).into());
+      properties.insert(<span class="macro">s!</span>(<span class="string">&quot;mode&quot;</span>), <span class="string">&quot;math&quot;</span>.into());
       <span class="kw">if </span>text != empty_sym {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(attr)) = state.lookup_value(<span class="kw-2">&amp;</span>arena::with(text, |text_str| {
           <span class="macro">s!</span>(<span class="string">&quot;math_token_attributes_{}&quot;</span>, text_str)

@@ -434,14 +434,14 @@
   //     $document-&gt;setAttribute($delim, stretchy =&gt; &#39;true&#39;);
   //     return; });
 
-  // # \unless someif
+  // \unless someif
   </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\unless Token&quot;</span>, sub[gullet, (if_token), state] {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Conditional(defn)) = state.lookup_definition_stored(<span class="kw-2">&amp;</span>if_token) {
       <span class="kw">if </span>defn.conditional_type == ConditionalType::If {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) = defn.test {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>test) = defn.test {
           <span class="comment">// Invert the if&#39;s test!
           </span><span class="kw">let </span>args = defn.read_arguments(gullet, state)<span class="question-mark">?</span>;
-          <span class="kw">return </span><span class="prelude-val">Ok</span>(!(closure(gullet, args, state)<span class="question-mark">?</span>));
+          <span class="kw">return </span><span class="prelude-val">Ok</span>(!(test(gullet, args, state)<span class="question-mark">?</span>));
         }
       }
     }

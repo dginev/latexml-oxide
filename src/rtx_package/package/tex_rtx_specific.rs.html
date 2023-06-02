@@ -474,6 +474,9 @@
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::xml::XML_NS;
 <span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::collections::hash_map::Entry;
@@ -949,5 +952,8 @@
   // DefConstructorI(&#39;\WildCardA&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
   // DefConstructorI(&#39;\WildCardB&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
   // DefConstructorI(&#39;\WildCardC&#39;, undef, &quot;&lt;_WildCard_/&gt;&quot;);
-</span>});
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\dump&quot;</span>, sub[gullet,_args,state] {
+    <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;dump&quot;</span>, gullet, state, <span class="string">&quot;Do not know how to \\dump yet, sorry&quot;</span>);
+  });
+});
 </code></pre></div></section></main></body></html>

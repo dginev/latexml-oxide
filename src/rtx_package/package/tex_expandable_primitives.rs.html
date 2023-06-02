@@ -435,6 +435,7 @@
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
 <a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap());
 <span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap());
@@ -789,7 +790,8 @@
     </span><span class="kw">if </span>!state.lookup_bool(<span class="string">&quot;LaTeX.pool_loaded&quot;</span>) {
       <span class="macro">LoadPool!</span>(<span class="string">&quot;LaTeX&quot;</span>);
     }
-    input(<span class="kw-2">&amp;</span>Tokens::new(tks).to_string(), InputOptions::default(), stomach, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>reloadable_opts = InputOptions { reloadable: <span class="bool-val">true</span>, ..InputOptions::default() };
+    input(<span class="kw-2">&amp;</span>Tokens::new(tks).to_string(), reloadable_opts, stomach, state)<span class="question-mark">?</span>;
   });
 
   <span class="comment">// Note that TeX doesn&#39;t actually close the mouth;

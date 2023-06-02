@@ -693,13 +693,13 @@
     getter =&gt; sub[args, state] {
       <span class="macro">unpack_opt!</span>(args =&gt; num);
       <span class="kw">let </span>refchar = (num.expect_number().value_of() <span class="kw">as </span>u8) <span class="kw">as </span>char;
-      <span class="kw">let </span>code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
+      <span class="kw">let </span>code = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
     setter =&gt; sub[value, args, state] {
       <span class="macro">unpack_opt!</span>(args =&gt; num);
       <span class="kw">let </span>c_char = (num.expect_number().value_of() <span class="kw">as </span>u8) <span class="kw">as </span>char;
-      <span class="kw">let </span>c_code = From::from(value.value_of() <span class="kw">as </span>u8);
+      <span class="kw">let </span>c_code : Catcode = From::from(value.value_of() <span class="kw">as </span>u8);
       state.assign_catcode(c_char, c_code, <span class="prelude-val">None</span>);
     }
   );

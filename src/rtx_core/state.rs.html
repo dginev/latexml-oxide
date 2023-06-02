@@ -3802,7 +3802,7 @@
   </span><span class="kw">pub fn </span>begin_semiverbatim(<span class="kw-2">&amp;mut </span><span class="self">self</span>, extraspecials: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[char]&gt;) {
     <span class="comment">// Is this a good/safe enough shorthand, or should we really be doing beginMode?
     </span><span class="self">self</span>.push_frame();
-    <span class="self">self</span>.assign_value(<span class="string">&quot;MODE&quot;</span>, Stored::String(arena::pin_static(<span class="string">&quot;text&quot;</span>)), <span class="prelude-val">None</span>);
+    <span class="self">self</span>.assign_value(<span class="string">&quot;MODE&quot;</span>, <span class="string">&quot;text&quot;</span>, <span class="prelude-val">None</span>);
     <span class="self">self</span>.assign_value(<span class="string">&quot;IN_MATH&quot;</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>all_specials: Vec&lt;char&gt; = Vec::new();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(extra) = extraspecials {
@@ -4220,7 +4220,7 @@
 
   <span class="doccomment">/// Initialize various stomach parameters, preload, etc.
   </span><span class="kw">pub fn </span>initialize_stomach(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-    <span class="self">self</span>.assign_value(<span class="string">&quot;MODE&quot;</span>, arena::pin_static(<span class="string">&quot;text&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global));
+    <span class="self">self</span>.assign_value(<span class="string">&quot;MODE&quot;</span>, <span class="string">&quot;text&quot;</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="self">self</span>.assign_value(<span class="string">&quot;IN_MATH&quot;</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
     <span class="self">self</span>.assign_value(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>, Stored::Int(<span class="number">1</span>), <span class="prelude-val">Some</span>(Scope::Global));
     <span class="self">self</span>.assign_value(

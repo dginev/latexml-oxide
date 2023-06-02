@@ -1635,12 +1635,12 @@
   } <span class="kw">else </span>{
     String::new()
   };
-  <span class="kw">if </span>cs.with_str(|cs_name| <span class="macro">matches!</span>(cs_name, <span class="string">&quot;\\fi&quot; </span>| <span class="string">&quot;\\else&quot; </span>| <span class="string">&quot;\\or&quot;</span>)) {
+  <span class="kw">if </span>cs.with_str(|cs_name| <span class="macro">matches!</span>(cs_name, <span class="string">&quot;\\fi&quot; </span>| <span class="string">&quot;\\else&quot; </span>| <span class="string">&quot;\\or&quot; </span>| <span class="string">&quot;\\unless&quot;</span>)) {
     state.install_definition(
       Conditional {
         cs: cs.clone(),
-        paramlist: <span class="prelude-val">None</span>,
-        test: <span class="prelude-val">None</span>,
+        paramlist,
+        test,
         conditional_type: cs.with_str(|cs_name| ConditionalType::from(cs_name)),
         skipper: options.skipper,
       },
