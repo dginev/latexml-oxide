@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["fontmap","map","mixvec","raw_char_map","raw_map","s","set","some","static_map","stored_map","string_map"]};
+window.SIDEBAR_ITEMS = {};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["init"],"macro":["print_stderr","println_stderr"]};
+window.SIDEBAR_ITEMS = {"fn":["init"]};

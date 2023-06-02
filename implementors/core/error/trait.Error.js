@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"rtx_core":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.69.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"struct\" href=\"rtx_core/common/error/struct.Error.html\" title=\"struct rtx_core::common::error::Error\">Error</a>"]]
+"rtx_core":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.70.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"struct\" href=\"rtx_core/common/error/struct.Error.html\" title=\"struct rtx_core::common::error::Error\">Error</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
