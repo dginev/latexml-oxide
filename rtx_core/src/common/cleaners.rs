@@ -13,6 +13,7 @@ static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
 /// auxiliary helper for `roman`
 pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {
   let mut n: i64 = stuff.into();
+  if n <= 0  { return String::new(); }
   let mut div = 1000;
   let mut s: String = if n > div {
     String::from_utf8(vec![b'm'; (n / div) as usize]).unwrap()
