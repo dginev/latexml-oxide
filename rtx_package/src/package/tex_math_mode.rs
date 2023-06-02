@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
       let mut op = "\\@@BEGININLINEMATH";
       {
         let gullet = stomach.get_gullet_mut();
-        let mode = LookupString!("MODE");
+        let mode = state.lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
           if TOKEN_MATH.with(|tm| gullet.if_next(tm, state))? {

@@ -352,7 +352,8 @@ LoadDefinitions!(outer_state, {
     if !state.lookup_bool("LaTeX.pool_loaded") {
       LoadPool!("LaTeX");
     }
-    input(&Tokens::new(tks).to_string(), InputOptions::default(), stomach, state)?;
+    let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
+    input(&Tokens::new(tks).to_string(), reloadable_opts, stomach, state)?;
   });
 
   // Note that TeX doesn't actually close the mouth;

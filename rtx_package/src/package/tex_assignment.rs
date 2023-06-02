@@ -303,13 +303,13 @@ LoadDefinitions!(outer_state, {
     getter => sub[args, state] {
       unpack_opt!(args => num);
       let refchar = (num.expect_number().value_of() as u8) as char;
-      let code : Catcode = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
+      let code = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
     setter => sub[value, args, state] {
       unpack_opt!(args => num);
       let c_char = (num.expect_number().value_of() as u8) as char;
-      let c_code = From::from(value.value_of() as u8);
+      let c_code : Catcode = From::from(value.value_of() as u8);
       state.assign_catcode(c_char, c_code, None);
     }
   );

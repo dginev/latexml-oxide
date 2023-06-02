@@ -125,12 +125,12 @@ pub fn def_conditional(
   } else {
     String::new()
   };
-  if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or")) {
+  if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
     state.install_definition(
       Conditional {
         cs: cs.clone(),
-        paramlist: None,
-        test: None,
+        paramlist,
+        test,
         conditional_type: cs.with_str(|cs_name| ConditionalType::from(cs_name)),
         skipper: options.skipper,
       },

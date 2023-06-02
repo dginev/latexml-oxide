@@ -156,14 +156,14 @@ LoadDefinitions!(outer_state, {
   //     $document->setAttribute($delim, stretchy => 'true');
   //     return; });
 
-  // # \unless someif
+  // \unless someif
   DefConditional!("\\unless Token", sub[gullet, (if_token), state] {
     if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token) {
       if defn.conditional_type == ConditionalType::If {
-        if let Some(ref closure) = defn.test {
+        if let Some(ref test) = defn.test {
           // Invert the if's test!
           let args = defn.read_arguments(gullet, state)?;
-          return Ok(!(closure(gullet, args, state)?));
+          return Ok(!(test(gullet, args, state)?));
         }
       }
     }

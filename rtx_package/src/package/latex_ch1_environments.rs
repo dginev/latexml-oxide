@@ -76,7 +76,7 @@ LoadDefinitions!(state, {
         out_tokens.extend(afterend_toks.unlist())
       }
     } else {
-      out_tokens = before.map(|atend_tokens| atend_tokens.unlist()).unwrap_or_default();
+      out_tokens = before.map(Tokens::unlist).unwrap_or_default();
       t = T_CS!(s!("\\end{name}"));
       if is_defined_token(&t, state) {
         out_tokens.push(t);

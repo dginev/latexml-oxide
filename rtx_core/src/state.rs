@@ -1571,7 +1571,7 @@ impl State {
   pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
     // Is this a good/safe enough shorthand, or should we really be doing beginMode?
     self.push_frame();
-    self.assign_value("MODE", Stored::String(arena::pin_static("text")), None);
+    self.assign_value("MODE", "text", None);
     self.assign_value("IN_MATH", false, None);
     let mut all_specials: Vec<char> = Vec::new();
     if let Some(extra) = extraspecials {
@@ -1989,7 +1989,7 @@ impl State {
 
   /// Initialize various stomach parameters, preload, etc.
   pub fn initialize_stomach(&mut self) {
-    self.assign_value("MODE", arena::pin_static("text"), Some(Scope::Global));
+    self.assign_value("MODE", "text", Some(Scope::Global));
     self.assign_value("IN_MATH", false, Some(Scope::Global));
     self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
     self.assign_value(

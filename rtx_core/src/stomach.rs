@@ -787,7 +787,7 @@ impl<'t> Stomach {
   /// currently in `mode`.  This also ends a level of grouping.
   pub fn end_mode(&mut self, mode: &str, state: &mut State) -> Result<()> {
     // Last stack frame was NOT a mode switch!?!?!
-    if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string("MODE") != mode) {
+    if !state.is_value_bound("MODE", Some(0)) || (state.lookup_string_sym("MODE") != arena::pin(mode)) {
       // Or was a mode switch to a different mode
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
