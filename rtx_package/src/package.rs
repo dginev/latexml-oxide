@@ -172,6 +172,8 @@ pub mod pdftex;
 // Supported package bindings
 pub mod alltt_sty;
 pub mod amsmath_sty;
+pub mod amsfonts_sty;
+pub mod amssymb_sty;
 pub mod amsthm_sty;
 pub mod article_cls;
 pub mod cite_sty;
@@ -206,6 +208,8 @@ pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Opt
     "article.cls" => article_cls::load_definitions(stomach, state),
     "alltt.sty" => alltt_sty::load_definitions(stomach, state),
     "amsmath.sty" => amsmath_sty::load_definitions(stomach, state),
+    "amsfonts.sty" => amsfonts_sty::load_definitions(stomach, state),
+    "amssymb.sty" => amssymb_sty::load_definitions(stomach, state),
     "amsthm.sty" => amsthm_sty::load_definitions(stomach, state),
     "comment.sty" => comment_sty::load_definitions(stomach, state),
     "IEEEtran.cls" => ieeetran_cls::load_definitions(stomach, state),
