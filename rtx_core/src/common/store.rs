@@ -568,6 +568,9 @@ impl<'a> From<bool> for &'a Stored {
   }
 }
 
+impl From<Cow<'_,str>> for Stored {
+  fn from(value: Cow<'_,str>) -> Self { Stored::String(arena::pin(value)) }
+}
 impl From<String> for Stored {
   fn from(value: String) -> Self { Stored::String(arena::pin(value)) }
 }

@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
   //TODO: RequirePackage!("kvoptions");
   //RequirePackage("intcalc");
   //RequirePackage("etexcmds");
-  //TODO: RequirePackage!("nameref");
+  RequirePackage!("nameref");
   RequirePackage!("url");
   //TODO: RequirePackage!("bitset");
   //RequirePackage("atbegshi");
