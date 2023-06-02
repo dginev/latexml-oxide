@@ -41,7 +41,7 @@ LoadDefinitions!(state, {
       Tokens!(T_CS!("\\@load@latex@pool"), T_CS!(ltxtrigger))
     });
   }
-
+  // TODO: Port and use `DefAutoload` instead of this single-purpose macro
   DefPrimitive!("\\@load@latex@pool", sub[stomach, (), state] {
     input_definitions(
       "LaTeX",

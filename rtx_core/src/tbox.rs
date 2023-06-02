@@ -109,7 +109,7 @@ impl Tbox {
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
     if state.lookup_bool("IN_MATH") {
-      properties.insert(s!("mode"), String::from("math").into());
+      properties.insert(s!("mode"), "math".into());
       if text != empty_sym {
         if let Some(Stored::HashString(attr)) = state.lookup_value(&arena::with(text, |text_str| {
           s!("math_token_attributes_{}", text_str)

@@ -473,4 +473,7 @@ LoadDefinitions!(state, {
   // DefConstructorI('\WildCardA', undef, "<_WildCard_/>");
   // DefConstructorI('\WildCardB', undef, "<_WildCard_/>");
   // DefConstructorI('\WildCardC', undef, "<_WildCard_/>");
+  DefMacro!("\\dump", sub[gullet,_args,state] {
+    Warn!("unexpected", "dump", gullet, state, "Do not know how to \\dump yet, sorry");
+  });
 });

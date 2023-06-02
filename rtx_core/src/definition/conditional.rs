@@ -125,8 +125,7 @@ impl Definition for Conditional {
     use self::ConditionalType::*;
     match self.conditional_type {
       If | Unless => self.invoke_conditional(gullet, state),
-      Else => self.invoke_else(gullet, state),
-      Or => self.invoke_else(gullet, state),
+      Else | Or => self.invoke_else(gullet, state),
       Fi => self.invoke_fi(gullet, state),
       _ => {
         let message = s!(
@@ -185,6 +184,10 @@ impl Conditional {
     let mut ifid = state.lookup_int("if_count");
     ifid += 1;
     state.assign_value("if_count", ifid, Some(Scope::Global));
+    // TODO:
+    // if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) {
+    //   Fatal('timeout', 'if_limit', $self,
+    //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
     let if_frame = Rc::new(RefCell::new(IfFrame {
       token: state.get_current_token().unwrap().clone(),
       start: gullet.get_locator().unwrap().into_owned(),
@@ -194,10 +197,9 @@ impl Conditional {
     }));
     state.set_ifframe(Some(Rc::clone(&if_frame)));
     state.unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
-
     let args = self.read_arguments(gullet, state)?;
 
-    if_frame.borrow_mut().parsing = false;
+    state.get_ifframe().unwrap().borrow_mut().parsing = false;
     let tracing = state.lookup_bool("TRACINGCOMMANDS");
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
@@ -224,30 +226,30 @@ impl Conditional {
     Ok(Tokens!())
   }
 
-  // #======================================================================
-  // # Support for conditionals:
-
-  // # Skipping for conditionals
-  // #   0 : skip to \fi
-  // #  -1 : skip to \else, if any, or \fi
-  // #   n : skip to n-th \or, if any, or \else, if any, or \fi.
-
-  // # NOTE that there are 2 kinds of "nested" ifs.
-  // #  \if's inside the body of either the true or false branch
-  // # are easily skipped by tracking a level of if nesting and skipping over the
-  // # same number of \fi as you find \if.
-  // #  \if's that get expanded while evaluating the test clause itself
-  // # are considerably trickier. There's a frame on the if-stack for this \if
-  // # that's above the one we're currently processing; typically the \else & \fi
-  // # may still remain, but we need to either evaluate them a normal
-  // # if we're continuing to follow the true branch, or skip oever them if
-  // # we're trying to find the \else for the false branch.
-  // # The danger is mistaking the \else that's associated with the test clause's \if
-  // # and taking it for the \else that we're skipping to!
-  // # Canonical example:
-  // #   \if\ifx AA XY junk \else blah \fi True \else False \fi
-  // # The inner \ifx should expand to "XY junk", since A==A
-  // # Return the token we've skipped to, and the frame that this applies to.
+  // =====================================================================
+  // Support for conditionals:
+  //
+  // Skipping for conditionals
+  //   0 : skip to \fi
+  //  -1 : skip to \else, if any, or \fi
+  //   n : skip to n-th \or, if any, or \else, if any, or \fi.
+  //
+  // NOTE that there are 2 kinds of "nested" ifs.
+  //  \if's inside the body of either the true or false branch
+  // are easily skipped by tracking a level of if nesting and skipping over the
+  // same number of \fi as you find \if.
+  //  \if's that get expanded while evaluating the test clause itself
+  // are considerably trickier. There's a frame on the if-stack for this \if
+  // that's above the one we're currently processing; typically the \else & \fi
+  // may still remain, but we need to either evaluate them a normal
+  // if we're continuing to follow the true branch, or skip oever them if
+  // we're trying to find the \else for the false branch.
+  // The danger is mistaking the \else that's associated with the test clause's \if
+  // and taking it for the \else that we're skipping to!
+  // Canonical example:
+  //   \if\ifx AA XY junk \else blah \fi True \else False \fi
+  // The inner \ifx should expand to "XY junk", since A==A
+  // Return the token we've skipped to, and the frame that this applies to.
   fn skip_conditional_body(
     &self,
     nskips: i64,
@@ -259,8 +261,6 @@ impl Conditional {
     let _start = gullet.get_locator();
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so State shouldn't change behind our backs]
-
-    let local_frame = state.get_ifframe();
     loop {
       let (t, cond_type) = match gullet.read_next_conditional(state)? {
         Some((tok, typ)) => (Tokens!(tok), Some(typ)),
@@ -271,6 +271,7 @@ impl Conditional {
         Some(ConditionalType::If) => level += 1, //  Found a \ifxx of some sort
         Some(ConditionalType::Fi) => {
           // Found a \fi
+          let local_frame = state.get_ifframe();
           if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
             if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
               if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
@@ -299,6 +300,7 @@ impl Conditional {
             }
           } else if other_type == ConditionalType::Else && nskips != 0 {
             // Found \else and we're looking for one?
+            let local_frame = state.get_ifframe();
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             if let Some(Stored::VecDequeStored(stack)) = state.lookup_value("if_stack") {
               if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {

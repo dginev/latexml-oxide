@@ -286,8 +286,13 @@ LoadDefinitions!(state, {
 
   // #======================================================================
   // # TeX Book, Appendix B, p. 347
-  // # \wlog ??
-  // # From plain.tex
+  DefPrimitive!("\\wlog{}", sub[stomach,(arg),state] {
+    let mut gullet = stomach.get_gullet_mut();
+    let message = Expand!(arg,gullet,state);
+    eprintln!("{message}");
+    Ok(Vec::new())
+  }, locked => true);
+  // From plain.tex
   DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
     DefRegister!(name, None, Number::new(0));
   });

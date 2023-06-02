@@ -412,6 +412,7 @@ fn before_input_handle_options(
 #[derive(Debug, Default, Clone)]
 pub struct InputOptions {
   pub noerror: bool,
+  pub reloadable: bool,
   pub file_type: Option<String>,
 }
 

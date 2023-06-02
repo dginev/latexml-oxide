@@ -97,18 +97,22 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B. p. 357
 
-  // foreach my $op ('\hrulefill', '\dotfill', '\rightarrowfill', '\leftarrowfill',
-  //   '\upbracefill', '\downbracefill') {
-  //   DefPrimitive($op, undef); }
+  DefPrimitive!("\\hrulefill", None);
+  DefPrimitive!("\\dotfill", None);
+  DefPrimitive!("\\rightarrowfill", None);
+  DefPrimitive!("\\leftarrowfill", None);
+  DefPrimitive!("\\upbracefill", None);
+  DefPrimitive!("\\downbracefil", None);
 
-  DefMacro!("\\bye", r"\par\vfill\end"); // \supereject
+  Let!("\\bye", "\\end");
 
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
   DefMacro!(
     "\\,",
-    "\\ifmmode\\@math@thinmuskip\\else\\@text@thinmuskip\\fi"
+    r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
+    protected => true
   );
   // DefConstructor!("\\@math@thinmuskip",
   //   "<ltx:XMHint name='thinspace' width='#width'/>",
