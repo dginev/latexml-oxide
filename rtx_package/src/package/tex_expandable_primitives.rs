@@ -255,29 +255,31 @@ LoadDefinitions!(outer_state, {
 
   DefParameterType!(CSName, reader => reader!(gullet, _inner, _extra, state, {
     let mut cs = escapechar(state);
-    let e_sym = arena::pin_static("\\endcsname");
+    let endcsname_token = T_CS!("\\endcsname");
     // keep newlines from having \n inside!
     while let Some(token) = gullet.read_x_token(Some(true), true, state)? {
-      if token.get_sym() == e_sym {
+      if token == endcsname_token {
         break;
       }
-      let cc = token.get_catcode();
-      if cc == Catcode::CS {
-        if let Some(defn) = state.lookup_definition(&token) {
-          let message =
-            s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
-              token);
-          Error!("unexpected", token, gullet, state, message);
-        } else {
-          let message = s!("The token {:?} is not defined", token);
-          Error!("undefined", token, gullet, state, message);
+      match token.get_catcode() {
+        Catcode::CS => {
+          if let Some(defn) = state.lookup_definition(&token) {
+            let message =
+              s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
+                token);
+            Error!("unexpected", token, gullet, state, message);
+          } else {
+            let message = s!("The token {:?} is not defined", token);
+            Error!("undefined", token, gullet, state, message);
+          }
+        },
+        Catcode::SPACE => {  // Keep newlines from having \n!
+          cs.push(' ');
+        },
+        _ => {
+          token.with_str(|s| cs.push_str(s));
         }
-      } else if cc == Catcode::SPACE {  // Keep newlines from having \n!
-        cs.push(' ');
-      } else {
-        token.with_str(|s|
-          cs.push_str(s));
-      }
+      };
     }
     T_CS!(cs)
   }));

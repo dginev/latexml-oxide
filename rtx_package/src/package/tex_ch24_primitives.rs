@@ -173,11 +173,13 @@ LoadDefinitions!(state, {
     }
   });
 
-  // DefRegister('\errhelp' => Tokens());
-  // DefPrimitive('\errmessage{}', sub {
-  //     my ($stomach, $stuff) = @_;
-  // print STDERR ToString(Expand($stuff)) . ": " . ToString(Expand(Tokens(T_CS('\the'),
-  // T_CS('\errhelp')))) . "\n";     return; });
+  DefRegister!("\\errhelp", Tokens!());
+  DefPrimitive!("\\errmessage{}", sub[stomach,(args),state] {
+    let mut gullet = stomach.get_gullet_mut();
+    let message = Expand!(args, gullet, state);
+    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")), gullet, state);
+    eprintln!("{}: {}", message, help);
+  });
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
