@@ -2758,6 +2758,11 @@
 <a href="#2758" id="2758">2758</a>
 <a href="#2759" id="2759">2759</a>
 <a href="#2760" id="2760">2760</a>
+<a href="#2761" id="2761">2761</a>
+<a href="#2762" id="2762">2762</a>
+<a href="#2763" id="2763">2763</a>
+<a href="#2764" id="2764">2764</a>
+<a href="#2765" id="2765">2765</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -4543,6 +4548,11 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>DefMath(
+  (<span class="macro-nonterminal">$proto</span>:literal,<span class="macro-nonterminal">$presentation</span>:literal) =&gt; {{
+    <span class="kw">let </span>(cs, paramlist) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
+    <span class="kw">let </span>defmath_options = MathPrimitiveOptions::default();
+    <span class="macro">defi_math!</span>(cs,paramlist, <span class="macro-nonterminal">$presentation</span>, defmath_options);
+  }};
   (<span class="macro-nonterminal">$proto</span>:literal,<span class="macro-nonterminal">$presentation</span>:literal, $(<span class="macro-nonterminal">$input</span>:tt)<span class="kw-2">*</span>) =&gt; {{
     <span class="kw">let </span>(cs, paramlist) = <span class="macro">parse_prototype!</span>(<span class="macro-nonterminal">$proto</span>);
     <span class="kw">let </span>defmath_options = <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$input</span>)<span class="kw-2">*</span>) -&gt; {MathPrimitiveOptions,});
