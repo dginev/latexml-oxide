@@ -15,6 +15,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\@compatibilityfalse", "");
 
   Let!("\\@currentlabel", "\\@empty");
+  DefMacro!("\\@currdir", "./");
 
   // Let's try just starting with this set (since we've loaded LaTeX)
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
