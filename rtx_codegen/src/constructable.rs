@@ -134,7 +134,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
   let mut floats: String = String::new();
   let mut has_floats: bool = false;
   let float_res = FLOAT_RE.replace(&replacement, |refs: &Captures| -> String {
-    floats = refs.get(1).map_or("", |m| m.as_str()).to_string();
+    floats = refs.get(1).map_or("", |m| m.as_str()).trim().to_string();
     has_floats = true;
     String::new()
   });
@@ -213,9 +213,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       if has_floats {
         let float_type = floats.len();
         if float_type == 1 {
-          operations.push(quote!(savenode = document.float_to_element(#current_tag, false);));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, false, state)?;));
         } else if float_type == 2 {
-          operations.push(quote!(savenode = document.float_to_element(#current_tag, true);));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, true, state)?;));
         }
         has_floats = false;
         floats = String::new();

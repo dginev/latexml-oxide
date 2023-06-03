@@ -116,7 +116,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\right@hidden@egroup", "",
     after_digest => sub[stomach,_args,state] {
       if state.is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || state.lookup_value("groupNonBoxing").is_some() { // or group was opened with \begingroup
+        || state.lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
         Error!("unexpected", "\\right", stomach, state, "Unbalanced \\right, no balancing \\left."); }
       else {
         stomach.egroup(state)?;

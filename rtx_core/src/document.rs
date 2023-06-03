@@ -1422,9 +1422,9 @@ impl Document {
     }
   }
 
-  pub fn can_contain_node_somehow(&self, tag: &Node, child: &str, state: &mut State) -> bool {
+  pub fn can_contain_node_somehow(&self, node: &Node, child: &str, state: &mut State) -> bool {
     let child_sym = arena::pin(child);
-    self.sym_can_contain_somehow(state.model.get_node_qname(tag), child_sym, state)
+    self.sym_can_contain_somehow(state.model.get_node_qname(node), child_sym, state)
   }
 
   pub fn can_contain_somehow(&self, tag: &str, child: &str, state: &mut State) -> bool {
@@ -3077,7 +3077,7 @@ impl Document {
 
   pub fn make_error(&mut self, error_class: &str, _content: &str, state: &mut State) -> Result<()> {
     let savenode_opt = if !self.is_openable("ltx:ERROR", state) {
-      self.float_to_element("ltx:ERROR", false)
+      self.float_to_element("ltx:ERROR", false, state)?
     } else {
       None
     };
@@ -3105,43 +3105,42 @@ impl Document {
   // to reset the insertion point to where it had been.
 
   /// Find a node in the document that can contain an element `qname`
-  pub fn float_to_element(&mut self, _qname: &str, _closeifpossible: bool) -> Option<Node> {
+  pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool, state: &mut State) -> Result<Option<Node>> {
     // TODO:
-
-    // let candidates = get_insertion_candidates(self.node);
-    // let mut closeable  = true;
-    // // If the current node can contain already, we're fine right here - just return
-    // if !candidates.is_empty() && self.can_contain(candidates[0], qname) {
-    //   // Edge case: Don't resume at a text node, if it is current. Don't append more to it after
-    // other insertions.   if self.node.get_type() == NodeType::TextNode {
-    //     self.set_node(candidates[0]);
-    //   }
-    //   return Some(candidates[0]);
-    // }
-    // while !candidates.is_empty() && !self.can_contain(candidates[0], qname) {
-    //   if closeable {
-    //     closeable = self.can_auto_close(candidates[0]);
-    //   }
-    //   candidates.pop_front();
-    // }
-    // if let Some(n) = candidates.pop_front() {
-    //   if closeifpossible && closeable {
-    //     self.close_to_node(n);
-    //   } else {
-    //     let savenode = self.node;
-    //     self.set_node(n);
-    //     // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for
-    // $qname")     //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
-    //     Some(savenode)
-    //   }
-    // } else {
-    //   if !self.can_contain_somehow(self.node, qname) {
-    //     Warn!("malformed", qname, self, "No open node can contain element '{}'", qname
-    //       $self->getInsertionContext())
-    //     }
-    //   None
-    // }
-    None
+    dbg!(qname);
+    dbg!(closeifpossible);
+    let mut candidates : VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
+    let mut closeable  = true;
+    // If the current node can contain already, we're fine right here - just return
+    if !candidates.is_empty() && self.can_contain(&candidates[0], qname, state) {
+      // Edge case: Don't resume at a text node, if it is current.
+      // Don't append more to it after other insertions.
+      if self.node.get_type() == Some(NodeType::TextNode) {
+        self.set_node(&candidates[0]);
+      }
+      return Ok(candidates.pop_front());
+    }
+    while !candidates.is_empty() && !self.can_contain(&candidates[0], qname, state) {
+      if closeable {
+        closeable = self.can_auto_close(&candidates[0], state);
+      }
+      candidates.pop_front();
+    }
+    if let Some(n) = candidates.pop_front() {
+      if closeifpossible && closeable {
+        self.close_to_node(&n, false, state)?;
+      } else {
+        let savenode = self.node.clone();
+        self.set_node(&n);
+        // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for $qname")
+        //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
+        return Ok(Some(savenode));
+      }
+    } else if !self.can_contain_node_somehow(&self.node, qname, state) {
+        Warn!("malformed", qname, self, state, s!("No open node can contain element '{}'", qname));
+        // self.get_insertion_context())
+    }
+    Ok(None)
   }
 
   // find a node that can accept a label.
