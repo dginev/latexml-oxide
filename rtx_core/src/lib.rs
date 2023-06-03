@@ -223,6 +223,9 @@ pub trait BoxOps: Object {
       }
     })
   }
+  fn get_property_string(&self, key: &str) -> String {
+    self.get_property(key).map(|v| v.to_string()).unwrap_or_default()
+  }
   /// get a mutable reference to a single named property (does NOT have the "isSpace" check)
   fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> {
     self.get_properties_mut().get_mut(key)

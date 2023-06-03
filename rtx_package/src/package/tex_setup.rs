@@ -1061,14 +1061,24 @@ LoadDefinitions!(state, {
       }
     })
   );
-  // DefParameterType!(InFractionStyle, sub[gullet, inner, _extra, state] {
-  //     $_[0]->readArg; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(fraction => 1); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
+  DefParameterType!(InFractionStyle, sub[gullet, _inner, _extra, state] {
+      gullet.read_arg(state)
+    },
+    // TODO
+    // before_digest => sub[gullet,state] {
+    //   gullet.bgroup(state);
+    //   MergeFont!("fraction" => true);
+    // },
+    // after_digest => sub[stomach,state] {
+    //   gullet.egroup(state)?;
+    // },
+    reversion => reversion!(_gullet,arg,_inner,_extra,_state, {
+      let mut reverted = vec![T_BEGIN!()];
+      reverted.extend(arg.into_iter().map(Token::revert));
+      reverted.push(T_END!());
+      Ok(Tokens::new(reverted))
+    })
+  );
 
   //**********************************************************************
   // LaTeX has a very particular notion of "Undefined",

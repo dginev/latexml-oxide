@@ -2168,6 +2168,10 @@ macro_rules! DeclareOption {
 
 #[macro_export]
 macro_rules! ProcessOptions {
+  () => {{
+    bind_state_mut!(stomach,st);
+    process_options(stomach, st)?;
+  }};
   ($stomach:ident) => {{
     bind_state_mut!(st);
     process_options($stomach, st)?;

@@ -5,6 +5,61 @@ use crate::package::*;
 // The meaning of OPEN/CLOSE tends to depend upon the pairing,
 // rather than the individual tokens.
 // This meaning is handled in MathParser (for now)
+
+/// A shorthand data structure for delimiter metadata
+pub struct DelimeterMeta {
+  char: char,
+  left_role: &'static str,
+  right_role: &'static str,
+  name: Option<&'static str>,
+
+}
+/// This duplicates in slightly different way what DefMath has put together.
+pub static DELIMITER_MAP : Lazy<HashMap<&'static str, DelimeterMeta>> = Lazy::new(|| raw_map!(
+  "(" => DelimeterMeta{char: '(', left_role: "OPEN", right_role: "CLOSE", name:None},
+  ")" => DelimeterMeta{char: ')', left_role: "OPEN", right_role: "CLOSE", name:None},
+  "[" => DelimeterMeta{char: '[', left_role: "OPEN", right_role: "CLOSE", name:None},
+  "]" => DelimeterMeta{ char: ']', left_role: "OPEN", right_role: "CLOSE", name:None},
+  "\\{" => DelimeterMeta{ char: '{', left_role: "OPEN", right_role: "CLOSE", name:None},
+  "\\}" => DelimeterMeta{ char: '}', left_role: "OPEN", right_role: "CLOSE", name:None},
+  "\\lfloor"=> DelimeterMeta{ char: '\u{230A}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("lfloor") },
+  "\\rfloor"=> DelimeterMeta{ char: '\u{230B}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("rfloor") },
+  "\\lceil" => DelimeterMeta{ char: '\u{2308}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("lceil") },
+  "\\rceil" => DelimeterMeta{ char: '\u{2309}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("rceil") },
+  "\\langle"=> DelimeterMeta{ char: '\u{27E8}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
+  "\\rangle"=> DelimeterMeta{ char: '\u{27E9}',
+                left_role: "OPEN",  right_role: "CLOSE", name: Some("rangle") },
+  "<"      => DelimeterMeta{ char: '\u{27E8}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("langle") },
+  ">"      => DelimeterMeta{ char: '\u{27E9}',
+                left_role: "OPEN", right_role: "CLOSE", name: Some("rangle") },
+  "/"      => DelimeterMeta{ char: '/', left_role: "MULOP",   right_role: "MULOP", name: None },
+  "\\backslash" => DelimeterMeta{ char: '\u{005C}',
+                left_role: "MULOP",   right_role: "MULOP", name: Some("backslash") },
+  "|"      => DelimeterMeta{ char: '|',
+                left_role: "VERTBAR", right_role: "VERTBAR", name: None },
+  "\\|"     => DelimeterMeta{ char: '\u{2225}',
+                left_role: "VERTBAR", right_role: "VERTBAR", name: None },
+  "\\uparrow"   => DelimeterMeta{ char: '\u{2191}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("uparrow") },
+  "\\Uparrow"   => DelimeterMeta{ char: '\u{21D1}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("Uparrow") },
+  "\\downarrow" => DelimeterMeta{ char: '\u{2193}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("downarrow") },
+  "\\Downarrow" =>  DelimeterMeta{ char: '\u{21D3}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("Downarrow") },
+  "\\updownarrow" => DelimeterMeta{ char: '\u{2195}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("updownarrow") },
+  "\\Updownarrow" => DelimeterMeta{ char: '\u{21D5}',
+                    left_role: "OPEN", right_role: "CLOSE", name: Some("Updownarrow") }
+));
+
+
 LoadDefinitions!(state, {
   DefMacro!("\\{", r"\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi", protected => true);
   DefMacro!("\\}", r"\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi", protected => true);
@@ -38,35 +93,6 @@ LoadDefinitions!(state, {
   // Short of setting up TeX's complicated encoding machinery, I need an explicit
   // mapping.  Unfortunately, this doesn't (yet) support people declaring thier own delimiters!
 
-  // # This duplicates in slightly different way what DefMath has put together.
-  // our %DELIMITER_MAP =
-  //   ('(' => { char => "(", lrole => 'OPEN', rrole => 'CLOSE' },
-  //   ')'          => { char => ")",        lrole => 'OPEN',    rrole => 'CLOSE' },
-  //   '['          => { char => "[",        lrole => 'OPEN',    rrole => 'CLOSE' },
-  //   ']'          => { char => "]",        lrole => 'OPEN',    rrole => 'CLOSE' },
-  //   '\{'         => { char => "{",        lrole => 'OPEN',    rrole => 'CLOSE' },
-  //   '\}'         => { char => "}",        lrole => 'OPEN',    rrole => 'CLOSE' },
-  //   '\lfloor'    => { char => "\u{230A}", lrole => 'OPEN',    rrole => 'CLOSE', name => 'lfloor'
-  // },   '\rfloor'    => { char => "\u{230B}", lrole => 'OPEN',    rrole => 'CLOSE', name =>
-  // 'rfloor' },   '\lceil'     => { char => "\u{2308}", lrole => 'OPEN',    rrole => 'CLOSE',
-  // name => 'lceil' },   '\rceil'     => { char => "\u{2309}", lrole => 'OPEN',    rrole =>
-  // 'CLOSE', name => 'rceil' },   '\langle'    => { char => "\u{27E8}", lrole => 'OPEN',    rrole
-  // => 'CLOSE', name => 'langle' },   '\rangle'    => { char => "\u{27E9}", lrole => 'OPEN',
-  // rrole => 'CLOSE', name => 'rangle' },   '<'          => { char => "\u{27E8}", lrole =>
-  // 'OPEN',    rrole => 'CLOSE', name => 'langle' },   '>'          => { char => "\u{27E9}",
-  // lrole => 'OPEN',    rrole => 'CLOSE', name => 'rangle' },   '/'          => { char => "/",
-  // lrole => 'MULOP',   rrole => 'MULOP' },   '\backslash' => { char => UTF(0x5C),  lrole =>
-  // 'MULOP',   rrole => 'MULOP', name => 'backslash' },   '|'          => { char => "|",
-  // lrole => 'VERTBAR', rrole => 'VERTBAR' },   '\|'         => { char => "\u{2225}", lrole =>
-  // 'VERTBAR', rrole => 'VERTBAR' },   '\uparrow'   => { char => "\u{2191}", lrole => 'OPEN',
-  // rrole => 'CLOSE', name => 'uparrow' },   # ??   '\Uparrow'   => { char => "\u{21D1}", lrole
-  // => 'OPEN', rrole => 'CLOSE', name => 'Uparrow' },   # ??   '\downarrow' => { char =>
-  // "\u{2193}", lrole => 'OPEN', rrole => 'CLOSE', name => 'downarrow' }, # ??   '\Downarrow' =>
-  // { char => "\u{21D3}", lrole => 'OPEN', rrole => 'CLOSE', name => 'Downarrow' }, # ??
-  //   '\updownarrow' => { char => "\u{2195}", lrole => 'OPEN', rrole => 'CLOSE', name =>
-  // 'updownarrow' }, # ??   '\Updownarrow' => { char => "\u{21D5}", lrole => 'OPEN', rrole =>
-  // 'CLOSE', name => 'Updownarrow' }, # ??   );
-
   // # With new treatment of Simple Symbols as just Box's with assigned attributes,
   // # we're not getting whatsits, and so we're not looking them up the same way!!!
   // # TEMPORARILY (?) hack the Delimiter map
@@ -86,61 +112,72 @@ LoadDefinitions!(state, {
   // HOWEVER, an additional complication is that it is a common mistake to omit the balancing
   // \right! Using an \egroup (or hidden) makes it hard to recover, so use a special egroup
   DefMacro!("\\left XToken", r"\@left #1\@hidden@bgroup");
-  // # Like \@hidden@egroup, but softer about missing \left
-  // DefConstructor('\right@hidden@egroup', '',
-  //   afterDigest => sub {
-  //     my ($stomach) = @_;
-  //     if ($STATE->isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
-  //       || $STATE->lookupValue('groupNonBoxing')) {    # or group was opened with \begingroup
-  //       Error('unexpected', '\right', undef, "Unbalanced \\right, no balancing \\left."); }
-  //     else {
-  //       $stomach->egroup; } },
-  //   reversion => '');
+  // Like \@hidden@egroup, but softer about missing \left
+  DefConstructor!("\\right@hidden@egroup", "",
+    after_digest => sub[stomach,_args,state] {
+      if state.is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
+        || state.lookup_value("groupNonBoxing").is_some() { // or group was opened with \begingroup
+        Error!("unexpected", "\\right", stomach, state, "Unbalanced \\right, no balancing \\left."); }
+      else {
+        stomach.egroup(state)?;
+      }
+    },
+    reversion => None);
 
   DefMacro!("\\right XToken", r"\right@hidden@egroup\@right #1");
 
-  // DefConstructor('\@left Token',
-  //   "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)"
-  //     . "(?#hint(<ltx:XMHint/>)(#1))",
-  //   afterDigest => sub { my ($stomach, $whatsit) = @_;
-  //     my $arg   = $whatsit->getArg(1);
-  //     my $delim = ToString($arg);
-  //     if ($delim eq '.') {
-  //       $whatsit->setProperty(hint => 1); }
-  //     elsif (my $entry = $DELIMITER_MAP{$delim}) {
-  //       $whatsit->setProperties(role => $$entry{lrole},
-  //         char     => $$entry{char},
-  //         name     => $$entry{name},
-  //         stretchy => 'true');
-  //       $whatsit->setFont($arg->getFont()); }
-  //     elsif (($arg->getProperty('role') || '') eq 'OPEN') {
-  //       $arg->setProperty(stretchy => 'true'); }
-  //     else {
-  //       Warn('unexpected', $delim, $stomach,
-  //         "Missing delimiter; '.' inserted"); }
-  //     return; },
-  //   alias => '\left');
-  // DefConstructor('\@right Token',
-  //   "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)"
-  //     . "(?#hint(<ltx:XMHint/>)(#1))",
-  //   afterDigest => sub { my ($stomach, $whatsit) = @_;
-  //     my $arg   = $whatsit->getArg(1);
-  //     my $delim = ToString($arg);
-  //     if ($delim eq '.') {
-  //       $whatsit->setProperty(hint => 1); }
-  //     elsif (my $entry = $DELIMITER_MAP{$delim}) {
-  //       $whatsit->setProperties(role => $$entry{rrole},
-  //         char     => $$entry{char},
-  //         name     => $$entry{name},
-  //         stretchy => 'true');
-  //       $whatsit->setFont($arg->getFont()); }
-  //     elsif (($arg->getProperty('role') || '') eq 'CLOSE') {
-  //       $arg->setProperty(stretchy => 'true'); }
-  //     else {
-  //       Warn('unexpected', $delim, $stomach,
-  //         "Missing delimiter; '.' inserted)"); }
-  //     return; },
-  //   alias => '\right');
+  DefConstructor!("\\@left Token",
+    "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
+      (?#hint(<ltx:XMHint/>)(#1))",
+    after_digest => sub[stomach,whatsit,state] {
+      let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+      if delim == "." {
+        whatsit.set_property("hint", true); }
+      else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
+        whatsit.set_property("role", entry.left_role);
+        whatsit.set_property("char", entry.char);
+        whatsit.set_property("name", entry.name);
+        whatsit.set_property("stretchy", true);
+        // TODO: Should we have more Rc<> wrappers over Font?
+        whatsit.set_font(Rc::new(
+          whatsit.get_arg(1).unwrap().get_font(state)?.unwrap().into_owned()
+        ));
+      }
+      else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
+        whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
+      } else {
+        Warn!("unexpected", delim, stomach, state,
+          "Missing delimiter; '.' inserted");
+      }
+      Ok(Vec::new())
+    },
+    alias => "\\left");
+  DefConstructor!("\\@right Token",
+    "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
+      (?#hint(<ltx:XMHint/>)(#1))",
+    after_digest => sub[stomach,whatsit,state] {
+      let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+      if delim == "." {
+        whatsit.set_property("hint", true); }
+      else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
+        whatsit.set_property("role", entry.right_role);
+        whatsit.set_property("char", entry.char);
+        whatsit.set_property("name", entry.name);
+        whatsit.set_property("stretchy", true);
+        // TODO: Should we have more Rc<> wrappers over Font?
+        whatsit.set_font(Rc::new(
+          whatsit.get_arg(1).unwrap().get_font(state)?.unwrap().into_owned()
+        ));
+      }
+      else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
+        whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
+      } else {
+        Warn!("unexpected", delim, stomach, state,
+          "Missing delimiter; '.' inserted");
+      }
+      Ok(Vec::new())
+    },
+    alias => "\\right");
 
   // These originally had Token as parameter, rather than {}..... Why?
   // Note that in TeX, \big{((} will only enlarge the 1st paren!!!
