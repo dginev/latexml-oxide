@@ -44,7 +44,7 @@ LoadDefinitions!(stomach, state, {
   // }); DeclareOption!("fleqn", || { state.assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
   // });
 
-  ProcessOptions!(stomach);
+  ProcessOptions!();
 
   //**********************************************************************
   // Document structure.

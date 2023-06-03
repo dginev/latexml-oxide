@@ -213,6 +213,7 @@ impl fmt::Display for Stored {
       Token(ref s) => write!(f, "{s}"),
       Conditional(ref s) => write!(f, "{s}"),
       Constructor(ref c) => write!(f, "Constructor[{}]", c.get_cs_name()),
+      None => write!(f, "Stored::None"),
       ref variant => {
         panic!("TODO: implement Display for Stored variant {variant:?}");
         // write!(f, "{:?}", self)

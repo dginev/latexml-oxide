@@ -18,8 +18,8 @@ LoadDefinitions!(state, {
   );
 
   // TODO: ^
-  // DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
-  //   alias => "\\thanks".into_option(), mode => "text".into_option());
+  DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
+    alias => "\\thanks", mode => "text");
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
     before_digest => { Let!("\\thanks", "\\person@thanks"); },
     bounded => true,
@@ -120,7 +120,7 @@ LoadDefinitions!(state, {
   );
 
   DefMacro!("\\@thanks", "\\@empty");
-  DefMacro!("\\thanks{}", "\\def\\@thanks{#1}\\lx@make@thanks{#1}");
+  DefMacro!("\\thanks{}", r"\def\@thanks{#1}\lx@make@thanks{#1}");
   DefConstructor!(
     "\\lx@make@thanks{}",
     "<ltx:note role='thanks'>#1</ltx:note>"
