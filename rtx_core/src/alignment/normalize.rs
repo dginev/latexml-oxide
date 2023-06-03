@@ -367,8 +367,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
         rowd = rowd.max(d);
         rowt = rowt.max(t as i64);
         rowb = rowb.max(b as i64);
-      } else {
-      } // Ditto spanned rows
+      } //else {} // Ditto spanned rows
       colwidths.push(colwidths_j);
       collefts.push(collefts_j);
       colrights.push(colrights_j);

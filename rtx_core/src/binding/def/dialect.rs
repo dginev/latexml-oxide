@@ -486,22 +486,21 @@ pub fn def_math_dual(
         dtks.push(T_BEGIN!());
         dtks.push(captured_cont_cs.clone());
         dtks.push(T_BEGIN!());
-        for carg_opt in cargs.into_iter() {
-          if let Some(carg) = carg_opt {
+        for carg in cargs.into_iter().flatten() {
+          // if let Some(carg) = carg_opt {
             dtks.extend(carg.unlist());
-          } else {
-          } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+          //} else {}
+          // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
         dtks.push(T_END!());
         dtks.push(T_END!());
         dtks.push(T_BEGIN!());
         dtks.push(captured_pres_cs.clone());
         dtks.push(T_BEGIN!());
-        for parg_opt in pargs.into_iter() {
-          if let Some(parg) = parg_opt {
+        for parg in pargs.into_iter().flatten() {
+          // if let Some(parg) = parg_opt {
             dtks.extend(parg.unlist());
-          } else {
-          } // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
+          //} else {} // TODO: we can't push an empty tokens in the flat setup. Is this a problem?
         }
         dtks.push(T_END!());
         dtks.push(T_END!());
