@@ -62,9 +62,9 @@ LoadDefinitions!(state, {
   //       Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
   //       Box(ToString($letter), undef, undef, $reversion); } });
 
-  // // Note that these two apparently work in Math? BUT the argument is treated as text!!!
-  // DefMacro('\d{}', '\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi');
-  // DefMacro('\b{}', '\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi');
+  // Note that these two apparently work in Math? BUT the argument is treated as text!!!
+  DefMacro!("\\d{}", r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi");
+  DefMacro!("\\b{}", r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi");
 
   // DefConstructor('\@math@daccent {}',
   //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\x{22c5}</ltx:XMTok>"
@@ -109,39 +109,38 @@ LoadDefinitions!(state, {
   Let!("\\sp", T_SUPER!());
   Let!("\\sb", T_SUB!());
 
+  DefPrimitive!("\\lx@thinmuskip", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
+      stored_map!("name"  => "thinspace", "isSpace" => true,
+      "width" => state.lookup_value("\\thinmuskip")), state)
+  });
+  DefPrimitive!("\\lx@thinspace", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
+      stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em",state)?,
+       "isSpace" => true), state)
+  });
   DefMacro!(
     "\\,",
     r"\ifmmode\lx@thinmuskip\else\lx@thinspace\fi",
     protected => true
   );
-  // DefConstructor!("\\@math@thinmuskip",
-  //   "<ltx:XMHint name='thinspace' width='#width'/>",
-  //   alias => '\,',
-  //   properties => { isSpace => 1, width => sub { LookupValue('\thinmuskip'); } });
-  // DefPrimitiveI('\@text@thinmuskip', undef, "\x{2009}", alias => '\,');
 
   DefMacro!(
     "\\!",
     "\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi"
   );
-  // DefConstructor('\@math@negthinmuskip', undef,
-  //   "<ltx:XMHint name='negthinspace' width='#width'/>",
-  //   alias => '\!',
-  //   properties => { isSpace => 1,
-  //     width => sub { LookupValue('\thinmuskip')->negate; } });
-  // DefPrimitiveI('\@text@negthinmuskip', undef, "", alias => '\!');
 
-  DefMacro!(
-    "\\>",
-    "\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi"
-  );
-  // DefConstructor('\@math@medmuskip', undef,
-  //   "<ltx:XMHint name='medspace' width='#width'/>",
-  //   alias => '\>',
-  //   properties => { isSpace => 1,
-  //     width => sub { LookupValue('\medmuskip'); } });
-  // DefPrimitiveI('\@text@medmuskip', undef, "", alias => '\>');
+  DefPrimitive!("\\!", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{200B}"), None, None, Tokens!(T_CS!("\\!")),  // zero width space
+      stored_map!("name"  => "negthinspace", "isSpace" => true,
+      "width" => state.lookup_dimension("\\thinmuskip").unwrap().negate()), state)
+  });
 
+  DefPrimitive!("\\>", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{2005}"), None, None, Tokens!(T_CS!("\\>")),
+      stored_map!("name"  => "medspace", "isSpace" => true,
+      "width" => state.lookup_value("\\medmuskip")), state)
+  });
   DefPrimitive!("\\;", sub[stomach, (), state] {
     Tbox::new(arena::pin_static("\u{2004}"), None, None, Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
@@ -149,34 +148,21 @@ LoadDefinitions!(state, {
   });
 
   Let!("\\:", "\\>");
-  DefMacro!("\\ ", "\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi");
-  // DefConstructor('\@math@nbspace', undef,
-  //   "<ltx:XMHint name='medspace' width='#width'/>",
-  //   alias => '\ ',
-  //   properties => { isSpace => 1,
-  //     width => sub { Dimension('0.5em'); } });
-  DefMacro!(T_CS!("\\@text@nbspace"), None, T_OTHER!("\u{00A0}"), alias => "\\ ");
 
-  DefMacro!("\\\t", "\\ifmmode\\@math@tab\\else\\@text@tab\\fi");
-  // DefConstructor('\@math@tab', undef,    # Tab!!
-  //   "<ltx:XMHint name='medspace' width='#width'/>",
-  //   alias => "\\\t",                      # TAB
-  //   properties => { isSpace => 1,
-  //     width => sub { Dimension('1em'); } });
-  // DefPrimitiveI('\@text@tab', undef, UTF(0xA0), alias => "\\\t");    # TAB!!! What else?
+  DefPrimitive!("\\ ", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\ ")),
+      stored_map!("name" => "space", "isSpace" => true,
+      "width" => Dimension::from_str("0.5em", state)?), state)
+  });
 
-  DefMacro!(
-    "\\/",
-    "\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi"
-  );
-  // DefConstructor("\@math@italiccorr", undef,
-  //   "<ltx:XMHint name='italiccorr'/>",
-  //   alias => '\/',
-  //   properties => { isSpace => 1 });
-  // DefPrimitiveI('\@text@italiccorr', undef, "", alias => '\/');
+  DefPrimitive!("\\\t", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static("\u{00A0}"), None, None, Tokens!(T_CS!("\\\t")),
+      stored_map!("isSpace" => true, "width" => Dimension::from_str("1em",state)?), state)
+  });
 
-  // // What kind of magic might allow \mskip to translate these back into the above?
-  // DefRegister!("\\thinmuskip"  , MuGlue::new("3mu"));
-  // DefRegister!("\\medmuskip"   , MuGlue::new("4mu plus 2mu minus 4mu"));
-  // DefRegister!("\\thickmuskip" , MuGlue::new("5mu plus 5mu"));
+  DefPrimitive!("\\/", sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(""), None, None, Tokens!(T_CS!("\\/")),
+      stored_map!("isSpace" => true, "name" => "italiccorr", "width" => Dimension::default()),state)
+  });
+
 });
