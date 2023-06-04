@@ -81,11 +81,14 @@ static MERGE_ATTRIBUTE_SUMLENGTH: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
-thread_local! {
-  pub static FONT_ELEMENT_SYM: SymbolU32 = arena::pin_static("ltx:text");
-  pub static MATH_TOKEN_SYM: SymbolU32 = arena::pin_static("ltx:XMTok");
-  pub static MATH_HINT_SYM: SymbolU32 = arena::pin_static("ltx:XMHint");
-}
+
+#[thread_local]
+pub static FONT_ELEMENT_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:text"));
+#[thread_local]
+pub static MATH_TOKEN_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:XMTok"));
+#[thread_local]
+pub static MATH_HINT_SYM: Lazy<SymbolU32> = Lazy::new(|| arena::pin_static("ltx:XMHint"));
+
 pub struct Document {
   pub document: XmlDoc,
   pub pending: Vec<Node>,
@@ -987,8 +990,7 @@ impl Document {
       .clone();
     // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
-    let all_hash = LTX_STAR_SYM
-      .with(|sym| state.tag_properties.entry(*sym))
+    let all_hash = state.tag_properties.entry(*LTX_STAR_SYM)
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -1115,7 +1117,7 @@ impl Document {
           let node_qname = self.get_node_qname(node, state);
           state
             .model
-            .can_contain_sym(node_qname, H_PCDATA_SYM.with(|sym| *sym))
+            .can_contain_sym(node_qname, *H_PCDATA_SYM)
         };
 
         if !noindent {
@@ -1226,7 +1228,7 @@ impl Document {
     } else {
       text
     };
-    if qname == MATH_TOKEN_NAME && cur_qname == MATH_TOKEN_SYM.with(|sym| *sym) {
+    if qname == MATH_TOKEN_NAME && cur_qname == *MATH_TOKEN_SYM {
       // Already INSIDE a token!
       if !text.is_empty() {
         self.open_math_text_internal(text, state)?;
@@ -1513,15 +1515,15 @@ impl Document {
   /// a single FONT_ELEMENT_NAME node; pull it up.
   fn auto_collapse_children(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
     let qname = state.model.get_node_qname(node);
-    if CAPTURE_SYM.with(|sym| qname != *sym) {
+    if qname != *CAPTURE_SYM {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
-        && (state.model.get_node_qname(&c[0]) == FONT_ELEMENT_SYM.with(|sym| *sym))
+        && (state.model.get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
         && state
           .model
-          .can_have_attribute(qname, FONT_SYM.with(|sym| *sym))
+          .can_have_attribute(qname, *FONT_SYM)
         && c[0]
           .get_attributes()
           .keys()
@@ -1871,7 +1873,7 @@ impl Document {
       while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node, state) {
         let parent_opt = node.get_parent();
         let parent_name = match parent_opt {
-          None => EMPTY_SYM.with(|sym| *sym),
+          None => *EMPTY_SYM,
           Some(ref p) => state.model.get_node_qname(p),
         };
         if self.sym_can_contain_somehow(parent_name, qsym, state) {
@@ -2769,7 +2771,7 @@ impl Document {
               .model
               .get_document_namespace_prefix(&ns_uri, false, false)
             {
-              if prefix != EMPTY_SYM.with(|sym| *sym) {
+              if prefix != *EMPTY_SYM {
                 let mut root = self.document.get_root_element().unwrap();
                 match arena::with(prefix, |prefix_str| {
                   Namespace::new(prefix_str, &ns_uri, &mut root)
@@ -3247,8 +3249,8 @@ impl Document {
     let model = &state.model;
     let qname = model.get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model.can_have_attribute(qname, XML_ID_SYM.with(|sym| *sym))
-      && (qname != CAPTURE_SYM.with(|sym| *sym))
+      && model.can_have_attribute(qname, *XML_ID_SYM)
+      && (qname != *CAPTURE_SYM)
     {
       let mut ancestor = self
         .findnode("ancestor::*[@xml:id][1]", Some(node), state)

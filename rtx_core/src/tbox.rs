@@ -82,7 +82,7 @@ impl Tbox {
     };
     // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
-    let empty_sym = EMPTY_SYM.with(|sym| *sym);
+    let empty_sym = *EMPTY_SYM;
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
       Tokens!(Token {
         text,

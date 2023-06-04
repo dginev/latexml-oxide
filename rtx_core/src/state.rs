@@ -336,16 +336,17 @@ impl Default for State {
   }
 }
 
-thread_local! {
-  pub static STY_STATE: RefCell<State> = RefCell::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Style),
-    ..StateOptions::default()
-  }));
-  pub static STD_STATE: RefCell<State> = RefCell::new(State::new(StateOptions {
-    catcodes: Some(Catcodes::Standard),
-    ..StateOptions::default()
-  }));
-}
+#[thread_local]
+pub static STY_STATE: Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+  catcodes: Some(Catcodes::Style),
+  ..StateOptions::default()
+})));
+#[thread_local]
+pub static STD_STATE: Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+  catcodes: Some(Catcodes::Standard),
+  ..StateOptions::default()
+})));
+
 
 /// State fields allowed for customization during construction
 #[derive(Default)]
@@ -505,7 +506,7 @@ impl State {
   ) {
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized
-    if let Some(globaldefs) = GLOBAL_DEFS_SYM.with(|sym| self.value.get(sym)) {
+    if let Some(globaldefs) = self.value.get(&GLOBAL_DEFS_SYM) {
       if let Some(global_value) = globaldefs.front() {
         // magic TeX register override: \globaldefs
         match *global_value {
@@ -802,7 +803,7 @@ impl State {
   ///  (`EMPTY_SYM` if None)
   pub fn lookup_string_sym(&self, key: &str) -> SymbolU32 {
     match self.lookup_value(key) {
-      None => EMPTY_SYM.with(|sym| *sym),
+      None => *EMPTY_SYM,
       Some(Stored::String(v)) => *v,
       Some(other) => arena::pin(other.to_string()),
     }
@@ -844,7 +845,7 @@ impl State {
   }
   /// convenience method to lookup the current value at the "font" key
   pub fn lookup_font(&self) -> Option<Rc<Font>> {
-    match self.lookup_value_sym(&FONT_SYM.with(|sym| *sym)) {
+    match self.lookup_value_sym(&FONT_SYM) {
       None | Some(Stored::None) => None,
       Some(f) => f.into(),
     }
@@ -964,7 +965,7 @@ impl State {
     // (but not \let to a token)
     if token.get_catcode().is_active_or_cs() {
       let lookupname = token.text;
-      if lookupname != EMPTY_SYM.with(|sym| *sym) {
+      if lookupname != *EMPTY_SYM {
         match self.meaning.get(&lookupname) {
           Some(entry) => {
             if let Some(def) = entry.front() {
@@ -1277,7 +1278,7 @@ impl State {
   pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
     if token.get_catcode().is_active_or_cs()
       && !token.has_smuggled()
-      && token.text != EMPTY_SYM.with(|sym| *sym)
+      && token.text != *EMPTY_SYM
     {
       match self.meaning.get(&token.text) {
         Some(entry) => match entry.front() {
@@ -1315,7 +1316,7 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymbolU32> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == EMPTY_SYM.with(|sym| *sym) {
+      if name == *EMPTY_SYM {
         None
       } else {
         Some(name)
@@ -1416,7 +1417,7 @@ impl State {
     };
     // Debug!("Looking up digestable {:?}", lookupname);
     let entry_opt = self.meaning.get(&lookup_sym);
-    if lookup_sym != EMPTY_SYM.with(|sym| *sym)
+    if lookup_sym != *EMPTY_SYM
       && entry_opt.is_some()
       && !entry_opt.as_ref().unwrap().is_empty()
     {
@@ -1902,7 +1903,7 @@ impl State {
       imodel
         .entry(arena::pin_static("#Document"))
         .or_insert_with(HashMap::default)
-        .insert(H_PCDATA_SYM.with(|sym| *sym), LTX_P_SYM.with(|sym| *sym));
+        .insert(*H_PCDATA_SYM, *LTX_P_SYM);
     }
 
     imodel
@@ -1918,7 +1919,7 @@ impl State {
   ) {
     let start = match start_opt {
       Some(s) => s,
-      None => EMPTY_SYM.with(|sym| *sym),
+      None => *EMPTY_SYM,
     };
 
     // A bit tricky here, we need to release the state.model borrow immediately, which is why we
@@ -1935,15 +1936,15 @@ impl State {
         continue;
       } // Already solved
 
-      if start != EMPTY_SYM.with(|sym| *sym) {
+      if start != *EMPTY_SYM {
         desc
           .entry(kid)
           .or_insert_with(HashMap::default)
           .insert(start, desirability);
       }
 
-      if kid != H_PCDATA_SYM.with(|sym| *sym) && openable.contains(&kid) {
-        let inner = if start != EMPTY_SYM.with(|sym| *sym) {
+      if kid != *H_PCDATA_SYM && openable.contains(&kid) {
+        let inner = if start != *EMPTY_SYM {
           start
         } else {
           kid

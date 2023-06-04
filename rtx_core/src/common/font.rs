@@ -1156,7 +1156,7 @@ pub fn decode_string(
   stomach: &mut Stomach,
   state: &mut State,
 ) -> SymbolU32 {
-  let empty_sym = EMPTY_SYM.with(|sym| *sym);
+  let empty_sym = *EMPTY_SYM;
   if string == empty_sym {
     return empty_sym;
   }

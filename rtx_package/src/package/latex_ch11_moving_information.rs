@@ -158,7 +158,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // It's ignorable for latexml anyway, so we'll just read it if its there.
       let gullet = stomach.get_gullet_mut();
       gullet.skip_spaces(state)?;
-      if TOKEN_BEGIN.with(|tb| gullet.if_next(tb, state))? {
+      if gullet.if_next(&TOKEN_BEGIN, state)? {
         gullet.read_arg(state)?;
       }
       begin_bibliography(stomach, whatsit, state)?;

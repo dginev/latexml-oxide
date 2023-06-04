@@ -370,7 +370,7 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\char Number", sub[stomach, (number), p_state] {
     let number_tks = number.revert(p_state).unwrap_or_default().unlist();
     let decoded = match font::decode(number.value_of() as u8, None, false, stomach, p_state) {
-      None => EMPTY_SYM.with(|sym| *sym),
+      None => *EMPTY_SYM,
       Some(c) => arena::pin_char(c)
     };
     Tbox::new(
@@ -386,15 +386,14 @@ LoadDefinitions!(outer_state, {
   // (including the preassignment to \relax!)
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
       let decoded = font::decode(value.value_of() as u8, None, false, stomach, i_state)
-        .map(arena::pin_char).unwrap_or_else(|| EMPTY_SYM.with(|sym| *sym));
+        .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
       let gullet = stomach.get_gullet_mut();
       Tbox::new(decoded,
         None,
@@ -448,8 +447,7 @@ LoadDefinitions!(outer_state, {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(), None);
+    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
