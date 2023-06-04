@@ -289,6 +289,7 @@
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -345,24 +346,24 @@
     }
   });
 
-  <span class="macro">DefParameterType!</span>(BoxSpecification,  reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+  <span class="macro">DefParameterType!</span>(BoxSpecification, sub[gullet, _inner, _extra, state] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;to&quot;</span>, <span class="string">&quot;spread&quot;</span>], state)<span class="question-mark">? </span>{
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(key)))
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
       }
-    }),
+    },
     <span class="comment">// The predigest closure is new for rtx, as it was a single closure in Perl
     // The key problem is that in rtx the parameter type interfaces are well-typed,
     // so it is not possible to remain elegant while at the same time
     // have access to the stomach AND digest.
     // Hence, the `reader` is exclusively responsible for using the gullet to obtain tokens,
     // while early/immediate digestion via the stomach can be achieved
-    // by using the separate `reader_predigest` interface
-    // Importantly, reader_predigest forces the parameter to be usable
+    // by using the separate `predigest` interface
+    // Importantly, predigest forces the parameter to be usable
     // only for stomach-capable bindings,
     // namely DefConstructor, DefPrimitive or DefEnvironment
-    </span>reader_predigest =&gt; <span class="macro">reader_predigest!</span>(stomach, key, state, {
+    </span>predigest =&gt; sub[stomach, key, state] {
       <span class="kw">if </span>!key.is_empty() {
         <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
           KeyvalsConfig{skip_missing: <span class="bool-val">true</span>, ..KeyvalsConfig::default()}, state);
@@ -372,22 +373,22 @@
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
       }
-    }),
+    },
     optional =&gt; <span class="bool-val">true</span>);
 
-  <span class="macro">DefParameterType!</span>(HBoxContents, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+  <span class="macro">DefParameterType!</span>(HBoxContents, sub[gullet, _inner, _extra, state] {
       read_box_contents(gullet, state.lookup_tokens(<span class="string">&quot;\\everyhbox&quot;</span>), state)
-    }),
-    reader_predigest=&gt;<span class="macro">reader_predigest!</span>(stomach, arg, state, {
-      predigest_box_contents(stomach, arg, state) })
-  );
+    },
+    predigest =&gt; sub[stomach, arg, state] {
+      predigest_box_contents(stomach, arg, state)
+    });
 
-  <span class="macro">DefParameterType!</span>(VBoxContents, reader=&gt;<span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+  <span class="macro">DefParameterType!</span>(VBoxContents, sub[gullet, _inner, _extra, state] {
       read_box_contents(gullet, state.lookup_tokens(<span class="string">&quot;\\everyvbox&quot;</span>), state)
-    }),
-    reader_predigest=&gt;<span class="macro">reader_predigest!</span>(stomach, arg, state, {
-      predigest_box_contents(stomach, arg, state) })
-  );
+    },
+    predigest =&gt; sub[stomach, arg, state] {
+      predigest_box_contents(stomach, arg, state)
+    });
 
   <span class="comment">// This re-binds a number of important control sequences to their default text binding.
   // This is useful within common boxing or footnote macros that can appear within
@@ -501,15 +502,16 @@
     }
   );
 
-  <span class="macro">DefParameterType!</span>(RuleSpecification, reader=&gt;<span class="macro">reader!</span>(gullet, _inner, _extra, state, {
-    <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
-      KeyvalsConfig{ skip_missing: <span class="bool-val">true</span>, .. KeyvalsConfig::default()}, state);
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>], state)<span class="question-mark">? </span>{
-      keyvals.set_value(<span class="kw-2">&amp;</span>key, Stored::Dimension(gullet.read_dimension(state)<span class="question-mark">?</span>), <span class="bool-val">false</span>, state);
-    }
-    keyvals }),
+  <span class="macro">DefParameterType!</span>(RuleSpecification, sub[gullet, _inner, _extra, state] {
+      <span class="kw">let </span><span class="kw-2">mut </span>keyvals = KeyVals::new(
+        KeyvalsConfig{ skip_missing: <span class="bool-val">true</span>, .. KeyvalsConfig::default()}, state);
+      <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;width&quot;</span>, <span class="string">&quot;height&quot;</span>, <span class="string">&quot;depth&quot;</span>], state)<span class="question-mark">? </span>{
+        keyvals.set_value(<span class="kw-2">&amp;</span>key, Stored::Dimension(gullet.read_dimension(state)<span class="question-mark">?</span>), <span class="bool-val">false</span>, state);
+      }
+      keyvals
+    },
     optional =&gt; <span class="bool-val">true</span>,
-    reader_predigest =&gt; <span class="macro">undigested!</span>()
+    predigest =&gt; sub[_stomach,arg,_state] { <span class="prelude-val">Ok</span>(arg.undigested()) }
   );
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vrule RuleSpecification&quot;</span>,<span class="string">&quot;&quot;</span>,

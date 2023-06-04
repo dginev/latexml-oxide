@@ -231,6 +231,12 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(unreachable_code)]
 </span><span class="kw">pub use </span>libxml::tree::{Namespace, Node};
 <span class="kw">pub use </span>log;
@@ -405,9 +411,12 @@
 <span class="comment">// Supported package bindings
 </span><span class="kw">pub mod </span>alltt_sty;
 <span class="kw">pub mod </span>amsmath_sty;
+<span class="kw">pub mod </span>amsbsy_sty;
+<span class="kw">pub mod </span>amsgen_sty;
 <span class="kw">pub mod </span>amsfonts_sty;
 <span class="kw">pub mod </span>amssymb_sty;
 <span class="kw">pub mod </span>amsthm_sty;
+<span class="kw">pub mod </span>fullpage_sty;
 <span class="kw">pub mod </span>article_cls;
 <span class="kw">pub mod </span>cite_sty;
 <span class="kw">pub mod </span>comment_sty;
@@ -444,6 +453,9 @@
     <span class="string">&quot;amsfonts.sty&quot; </span>=&gt; amsfonts_sty::load_definitions(stomach, state),
     <span class="string">&quot;amssymb.sty&quot; </span>=&gt; amssymb_sty::load_definitions(stomach, state),
     <span class="string">&quot;amsthm.sty&quot; </span>=&gt; amsthm_sty::load_definitions(stomach, state),
+    <span class="string">&quot;amsbsy.sty&quot; </span>=&gt; amsbsy_sty::load_definitions(stomach, state),
+    <span class="string">&quot;amsgen.sty&quot; </span>=&gt; amsgen_sty::load_definitions(stomach, state),
+    <span class="string">&quot;fullpage.sty&quot; </span>=&gt; fullpage_sty::load_definitions(stomach, state),
     <span class="string">&quot;comment.sty&quot; </span>=&gt; comment_sty::load_definitions(stomach, state),
     <span class="string">&quot;IEEEtran.cls&quot; </span>=&gt; ieeetran_cls::load_definitions(stomach, state),
     <span class="string">&quot;url.sty&quot; </span>=&gt; url_sty::load_definitions(stomach, state),

@@ -166,20 +166,6 @@
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -244,11 +230,11 @@
   //       Warn(&#39;unexpected&#39;, &quot;accent$n&quot;, $stomach, &quot;Accent &#39;$n&#39; not recognized&quot;);
   //       Box(ToString($letter), undef, undef, $reversion); } });
 
-  // // Note that these two apparently work in Math? BUT the argument is treated as text!!!
-  // DefMacro(&#39;\d{}&#39;, &#39;\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi&#39;);
-  // DefMacro(&#39;\b{}&#39;, &#39;\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi&#39;);
+  // Note that these two apparently work in Math? BUT the argument is treated as text!!!
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\d{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\b{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi&quot;</span>);
 
-  // DefConstructor(&#39;\@math@daccent {}&#39;,
+  <span class="comment">// DefConstructor(&#39;\@math@daccent {}&#39;,
   //   &quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;UNDERACCENT&#39;&gt;\x{22c5}&lt;/ltx:XMTok&gt;&quot;
   //     . &quot;?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)&quot;
   //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
@@ -291,75 +277,60 @@
   <span class="macro">Let!</span>(<span class="string">&quot;\\sp&quot;</span>, <span class="macro">T_SUPER!</span>());
   <span class="macro">Let!</span>(<span class="string">&quot;\\sb&quot;</span>, <span class="macro">T_SUB!</span>());
 
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@thinmuskip&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{2009}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\,&quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;name&quot;  </span>=&gt; <span class="string">&quot;thinspace&quot;</span>, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>,
+      <span class="string">&quot;width&quot; </span>=&gt; state.lookup_value(<span class="string">&quot;\\thinmuskip&quot;</span>)), state)
+  });
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@thinspace&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{2009}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\,&quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;name&quot; </span>=&gt; <span class="string">&quot;thinspace&quot;</span>, <span class="string">&quot;width&quot; </span>=&gt; Dimension::from_str(<span class="string">&quot;0.16667em&quot;</span>,state)<span class="question-mark">?</span>,
+       <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>), state)
+  });
   <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\,&quot;</span>,
     <span class="string">r&quot;\ifmmode\lx@thinmuskip\else\lx@thinspace\fi&quot;</span>,
     protected =&gt; <span class="bool-val">true
   </span>);
-  <span class="comment">// DefConstructor!(&quot;\\@math@thinmuskip&quot;,
-  //   &quot;&lt;ltx:XMHint name=&#39;thinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
-  //   alias =&gt; &#39;\,&#39;,
-  //   properties =&gt; { isSpace =&gt; 1, width =&gt; sub { LookupValue(&#39;\thinmuskip&#39;); } });
-  // DefPrimitiveI(&#39;\@text@thinmuskip&#39;, undef, &quot;\x{2009}&quot;, alias =&gt; &#39;\,&#39;);
 
-  </span><span class="macro">DefMacro!</span>(
+  <span class="macro">DefMacro!</span>(
     <span class="string">&quot;\\!&quot;</span>,
     <span class="string">&quot;\\ifmmode\\@math@negthinmuskip\\else\\@text@negthinmuskip\\fi&quot;
   </span>);
-  <span class="comment">// DefConstructor(&#39;\@math@negthinmuskip&#39;, undef,
-  //   &quot;&lt;ltx:XMHint name=&#39;negthinspace&#39; width=&#39;#width&#39;/&gt;&quot;,
-  //   alias =&gt; &#39;\!&#39;,
-  //   properties =&gt; { isSpace =&gt; 1,
-  //     width =&gt; sub { LookupValue(&#39;\thinmuskip&#39;)-&gt;negate; } });
-  // DefPrimitiveI(&#39;\@text@negthinmuskip&#39;, undef, &quot;&quot;, alias =&gt; &#39;\!&#39;);
 
-  </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\&gt;&quot;</span>,
-    <span class="string">&quot;\\ifmmode\\@math@medmuskip\\else\\@text@medmuskip\\fi&quot;
-  </span>);
-  <span class="comment">// DefConstructor(&#39;\@math@medmuskip&#39;, undef,
-  //   &quot;&lt;ltx:XMHint name=&#39;medspace&#39; width=&#39;#width&#39;/&gt;&quot;,
-  //   alias =&gt; &#39;\&gt;&#39;,
-  //   properties =&gt; { isSpace =&gt; 1,
-  //     width =&gt; sub { LookupValue(&#39;\medmuskip&#39;); } });
-  // DefPrimitiveI(&#39;\@text@medmuskip&#39;, undef, &quot;&quot;, alias =&gt; &#39;\&gt;&#39;);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\!&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{200B}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\!&quot;</span>)),  <span class="comment">// zero width space
+      </span><span class="macro">stored_map!</span>(<span class="string">&quot;name&quot;  </span>=&gt; <span class="string">&quot;negthinspace&quot;</span>, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>,
+      <span class="string">&quot;width&quot; </span>=&gt; state.lookup_dimension(<span class="string">&quot;\\thinmuskip&quot;</span>).unwrap().negate()), state)
+  });
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\;&quot;</span>, sub[stomach, (), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\&gt;&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{2005}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\&gt;&quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;name&quot;  </span>=&gt; <span class="string">&quot;medspace&quot;</span>, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>,
+      <span class="string">&quot;width&quot; </span>=&gt; state.lookup_value(<span class="string">&quot;\\medmuskip&quot;</span>)), state)
+  });
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\;&quot;</span>, sub[stomach, (), state] {
     Tbox::new(arena::pin_static(<span class="string">&quot;\u{2004}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\;&quot;</span>)),
       <span class="macro">stored_map!</span>(<span class="string">&quot;name&quot;  </span>=&gt; <span class="string">&quot;thickspace&quot;</span>, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>,
       <span class="string">&quot;width&quot; </span>=&gt; state.lookup_value(<span class="string">&quot;\\thickmuskip&quot;</span>)), state)
   });
 
   <span class="macro">Let!</span>(<span class="string">&quot;\\:&quot;</span>, <span class="string">&quot;\\&gt;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\ &quot;</span>, <span class="string">&quot;\\ifmmode\\@math@nbspace\\else\\@text@nbspace\\fi&quot;</span>);
-  <span class="comment">// DefConstructor(&#39;\@math@nbspace&#39;, undef,
-  //   &quot;&lt;ltx:XMHint name=&#39;medspace&#39; width=&#39;#width&#39;/&gt;&quot;,
-  //   alias =&gt; &#39;\ &#39;,
-  //   properties =&gt; { isSpace =&gt; 1,
-  //     width =&gt; sub { Dimension(&#39;0.5em&#39;); } });
-  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@text@nbspace&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">T_OTHER!</span>(<span class="string">&quot;\u{00A0}&quot;</span>), alias =&gt; <span class="string">&quot;\\ &quot;</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\\t&quot;</span>, <span class="string">&quot;\\ifmmode\\@math@tab\\else\\@text@tab\\fi&quot;</span>);
-  <span class="comment">// DefConstructor(&#39;\@math@tab&#39;, undef,    # Tab!!
-  //   &quot;&lt;ltx:XMHint name=&#39;medspace&#39; width=&#39;#width&#39;/&gt;&quot;,
-  //   alias =&gt; &quot;\\\t&quot;,                      # TAB
-  //   properties =&gt; { isSpace =&gt; 1,
-  //     width =&gt; sub { Dimension(&#39;1em&#39;); } });
-  // DefPrimitiveI(&#39;\@text@tab&#39;, undef, UTF(0xA0), alias =&gt; &quot;\\\t&quot;);    # TAB!!! What else?
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ &quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{00A0}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\ &quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;name&quot; </span>=&gt; <span class="string">&quot;space&quot;</span>, <span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>,
+      <span class="string">&quot;width&quot; </span>=&gt; Dimension::from_str(<span class="string">&quot;0.5em&quot;</span>, state)<span class="question-mark">?</span>), state)
+  });
 
-  </span><span class="macro">DefMacro!</span>(
-    <span class="string">&quot;\\/&quot;</span>,
-    <span class="string">&quot;\\ifmmode\\@math@italiccorr\\else\\@text@italiccorr\\fi&quot;
-  </span>);
-  <span class="comment">// DefConstructor(&quot;\@math@italiccorr&quot;, undef,
-  //   &quot;&lt;ltx:XMHint name=&#39;italiccorr&#39;/&gt;&quot;,
-  //   alias =&gt; &#39;\/&#39;,
-  //   properties =&gt; { isSpace =&gt; 1 });
-  // DefPrimitiveI(&#39;\@text@italiccorr&#39;, undef, &quot;&quot;, alias =&gt; &#39;\/&#39;);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\\t&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;\u{00A0}&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\\t&quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>, <span class="string">&quot;width&quot; </span>=&gt; Dimension::from_str(<span class="string">&quot;1em&quot;</span>,state)<span class="question-mark">?</span>), state)
+  });
 
-  // // What kind of magic might allow \mskip to translate these back into the above?
-  // DefRegister!(&quot;\\thinmuskip&quot;  , MuGlue::new(&quot;3mu&quot;));
-  // DefRegister!(&quot;\\medmuskip&quot;   , MuGlue::new(&quot;4mu plus 2mu minus 4mu&quot;));
-  // DefRegister!(&quot;\\thickmuskip&quot; , MuGlue::new(&quot;5mu plus 5mu&quot;));
-</span>});
-</code></pre></div></section></main></body></html>
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\/&quot;</span>, sub[stomach,(),state] {
+    Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\/&quot;</span>)),
+      <span class="macro">stored_map!</span>(<span class="string">&quot;isSpace&quot; </span>=&gt; <span class="bool-val">true</span>, <span class="string">&quot;name&quot; </span>=&gt; <span class="string">&quot;italiccorr&quot;</span>, <span class="string">&quot;width&quot; </span>=&gt; Dimension::default()),state)
+  });
+
+});</code></pre></div></section></main></body></html>

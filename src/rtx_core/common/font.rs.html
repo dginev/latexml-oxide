@@ -1223,6 +1223,12 @@
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
 <a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::binding::content::{load_font_map, preload_font_map};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, EMPTY_SYM};
 <span class="kw">use </span><span class="kw">crate</span>::common::dimension::Dimension;
@@ -1492,11 +1498,13 @@
   <span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
   <span class="kw">pub </span>emph: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>scripted: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>fraction: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="comment">// Note: forcefamily, forceseries, forceshape (&amp; forcebold for compatibility)
   // are only useful for fonts in math; See the specialize method below.
   </span><span class="kw">pub </span>forceseries: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>forcefamily: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>forceshape: <span class="prelude-ty">Option</span>&lt;bool&gt;,
+  <span class="kw">pub </span>forcebold: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>scale: <span class="prelude-ty">Option</span>&lt;f64&gt;,
   <span class="kw">pub </span>flags: <span class="prelude-ty">Option</span>&lt;u8&gt;,
 }
@@ -1610,9 +1618,11 @@
       emph: <span class="prelude-val">None</span>,
       name: <span class="prelude-val">None</span>,
       scripted: <span class="prelude-val">None</span>,
+      fraction: <span class="prelude-val">None</span>,
       forceseries: <span class="prelude-val">None</span>,
       forcefamily: <span class="prelude-val">None</span>,
       forceshape: <span class="prelude-val">None</span>,
+      forcebold: <span class="prelude-val">None</span>,
       scale: <span class="prelude-val">None</span>,
       flags: <span class="prelude-val">None</span>,
     }
@@ -1633,9 +1643,11 @@
       emph: <span class="prelude-val">None</span>,
       name: <span class="prelude-val">None</span>,
       scripted: <span class="prelude-val">None</span>,
+      fraction: <span class="prelude-val">None</span>,
       forceseries: <span class="prelude-val">None</span>,
       forcefamily: <span class="prelude-val">None</span>,
       forceshape: <span class="prelude-val">None</span>,
+      forcebold: <span class="prelude-val">None</span>,
       scale: <span class="prelude-val">None</span>,
       flags: <span class="prelude-val">None</span>,
     }

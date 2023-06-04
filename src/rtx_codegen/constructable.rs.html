@@ -726,7 +726,7 @@
   </span><span class="kw">let </span><span class="kw-2">mut </span>floats: String = String::new();
   <span class="kw">let </span><span class="kw-2">mut </span>has_floats: bool = <span class="bool-val">false</span>;
   <span class="kw">let </span>float_res = FLOAT_RE.replace(<span class="kw-2">&amp;</span>replacement, |refs: <span class="kw-2">&amp;</span>Captures| -&gt; String {
-    floats = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).to_string();
+    floats = refs.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()).trim().to_string();
     has_floats = <span class="bool-val">true</span>;
     String::new()
   });
@@ -805,9 +805,9 @@
       <span class="kw">if </span>has_floats {
         <span class="kw">let </span>float_type = floats.len();
         <span class="kw">if </span>float_type == <span class="number">1 </span>{
-          operations.push(<span class="macro">quote!</span>(savenode = document.float_to_element(#current_tag, <span class="bool-val">false</span>);));
+          operations.push(<span class="macro">quote!</span>(savenode = document.float_to_element(#current_tag, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;));
         } <span class="kw">else if </span>float_type == <span class="number">2 </span>{
-          operations.push(<span class="macro">quote!</span>(savenode = document.float_to_element(#current_tag, <span class="bool-val">true</span>);));
+          operations.push(<span class="macro">quote!</span>(savenode = document.float_to_element(#current_tag, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;));
         }
         has_floats = <span class="bool-val">false</span>;
         floats = String::new();

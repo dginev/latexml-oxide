@@ -3429,10 +3429,6 @@
 <a href="#3429" id="3429">3429</a>
 <a href="#3430" id="3430">3430</a>
 <a href="#3431" id="3431">3431</a>
-<a href="#3432" id="3432">3432</a>
-<a href="#3433" id="3433">3433</a>
-<a href="#3434" id="3434">3434</a>
-<a href="#3435" id="3435">3435</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -4857,9 +4853,9 @@
     }
   }
 
-  <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
+  <span class="kw">pub fn </span>can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
     <span class="kw">let </span>child_sym = arena::pin(child);
-    <span class="self">self</span>.sym_can_contain_somehow(state.model.get_node_qname(tag), child_sym, state)
+    <span class="self">self</span>.sym_can_contain_somehow(state.model.get_node_qname(node), child_sym, state)
   }
 
   <span class="kw">pub fn </span>can_contain_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: <span class="kw-2">&amp;</span>str, child: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; bool {
@@ -6512,8 +6508,8 @@
 
   <span class="kw">pub fn </span>make_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, error_class: <span class="kw-2">&amp;</span>str, _content: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">let </span>savenode_opt = <span class="kw">if </span>!<span class="self">self</span>.is_openable(<span class="string">&quot;ltx:ERROR&quot;</span>, state) {
-      <span class="self">self</span>.float_to_element(<span class="string">&quot;ltx:ERROR&quot;</span>, <span class="bool-val">false</span>)
-    } <span class="kw">else </span>{
+      <span class="self">self</span>.float_to_element(<span class="string">&quot;ltx:ERROR&quot;</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?
+    </span>} <span class="kw">else </span>{
       <span class="prelude-val">None
     </span>};
     <span class="self">self</span>.open_element(
@@ -6540,44 +6536,40 @@
   // to reset the insertion point to where it had been.
 
   </span><span class="doccomment">/// Find a node in the document that can contain an element `qname`
-  </span><span class="kw">pub fn </span>float_to_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _qname: <span class="kw-2">&amp;</span>str, _closeifpossible: bool) -&gt; <span class="prelude-ty">Option</span>&lt;Node&gt; {
-    <span class="comment">// TODO:
-
-    // let candidates = get_insertion_candidates(self.node);
-    // let mut closeable  = true;
-    // // If the current node can contain already, we&#39;re fine right here - just return
-    // if !candidates.is_empty() &amp;&amp; self.can_contain(candidates[0], qname) {
-    //   // Edge case: Don&#39;t resume at a text node, if it is current. Don&#39;t append more to it after
-    // other insertions.   if self.node.get_type() == NodeType::TextNode {
-    //     self.set_node(candidates[0]);
-    //   }
-    //   return Some(candidates[0]);
-    // }
-    // while !candidates.is_empty() &amp;&amp; !self.can_contain(candidates[0], qname) {
-    //   if closeable {
-    //     closeable = self.can_auto_close(candidates[0]);
-    //   }
-    //   candidates.pop_front();
-    // }
-    // if let Some(n) = candidates.pop_front() {
-    //   if closeifpossible &amp;&amp; closeable {
-    //     self.close_to_node(n);
-    //   } else {
-    //     let savenode = self.node;
-    //     self.set_node(n);
-    //     // Debug!(&quot;Floating from &quot; . Stringify($savenode) . &quot; to &quot; . Stringify($n) . &quot; for
-    // $qname&quot;)     //   if ($$savenode ne $$n) &amp;&amp; $LaTeXML::DEBUG{document};
-    //     Some(savenode)
-    //   }
-    // } else {
-    //   if !self.can_contain_somehow(self.node, qname) {
-    //     Warn!(&quot;malformed&quot;, qname, self, &quot;No open node can contain element &#39;{}&#39;&quot;, qname
-    //       $self-&gt;getInsertionContext())
-    //     }
-    //   None
-    // }
-    </span><span class="prelude-val">None
-  </span>}
+  </span><span class="kw">pub fn </span>float_to_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>, qname: <span class="kw-2">&amp;</span>str, closeifpossible: bool, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>candidates : VecDeque&lt;Node&gt; = VecDeque::from(<span class="self">self</span>.get_insertion_candidates(<span class="kw-2">&amp;</span><span class="self">self</span>.node));
+    <span class="kw">let </span><span class="kw-2">mut </span>closeable  = <span class="bool-val">true</span>;
+    <span class="comment">// If the current node can contain already, we&#39;re fine right here - just return
+    </span><span class="kw">if </span>!candidates.is_empty() &amp;&amp; <span class="self">self</span>.can_contain(<span class="kw-2">&amp;</span>candidates[<span class="number">0</span>], qname, state) {
+      <span class="comment">// Edge case: Don&#39;t resume at a text node, if it is current.
+      // Don&#39;t append more to it after other insertions.
+      </span><span class="kw">if </span><span class="self">self</span>.node.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode) {
+        <span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>candidates[<span class="number">0</span>]);
+      }
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(candidates.pop_front());
+    }
+    <span class="kw">while </span>!candidates.is_empty() &amp;&amp; !<span class="self">self</span>.can_contain(<span class="kw-2">&amp;</span>candidates[<span class="number">0</span>], qname, state) {
+      <span class="kw">if </span>closeable {
+        closeable = <span class="self">self</span>.can_auto_close(<span class="kw-2">&amp;</span>candidates[<span class="number">0</span>], state);
+      }
+      candidates.pop_front();
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(n) = candidates.pop_front() {
+      <span class="kw">if </span>closeifpossible &amp;&amp; closeable {
+        <span class="self">self</span>.close_to_node(<span class="kw-2">&amp;</span>n, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
+      } <span class="kw">else </span>{
+        <span class="kw">let </span>savenode = <span class="self">self</span>.node.clone();
+        <span class="self">self</span>.set_node(<span class="kw-2">&amp;</span>n);
+        <span class="comment">// Debug!(&quot;Floating from &quot; . Stringify($savenode) . &quot; to &quot; . Stringify($n) . &quot; for $qname&quot;)
+        //   if ($$savenode ne $$n) &amp;&amp; $LaTeXML::DEBUG{document};
+        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(savenode));
+      }
+    } <span class="kw">else if </span>!<span class="self">self</span>.can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>.node, qname, state) {
+        <span class="macro">Warn!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, <span class="macro">s!</span>(<span class="string">&quot;No open node can contain element &#39;{}&#39;&quot;</span>, qname));
+        <span class="comment">// self.get_insertion_context())
+    </span>}
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+  }
 
   <span class="comment">// find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but

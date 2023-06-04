@@ -1028,6 +1028,7 @@
 <a href="#1028" id="1028">1028</a>
 <a href="#1029" id="1029">1029</a>
 <a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1243,6 +1244,7 @@
       Token(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Conditional(<span class="kw-2">ref </span>s) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{s}&quot;</span>),
       Constructor(<span class="kw-2">ref </span>c) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Constructor[{}]&quot;</span>, c.get_cs_name()),
+      <span class="prelude-val">None </span>=&gt; <span class="macro">write!</span>(f, <span class="string">&quot;Stored::None&quot;</span>),
       <span class="kw-2">ref </span>variant =&gt; {
         <span class="macro">panic!</span>(<span class="string">&quot;TODO: implement Display for Stored variant {variant:?}&quot;</span>);
         <span class="comment">// write!(f, &quot;{:?}&quot;, self)
