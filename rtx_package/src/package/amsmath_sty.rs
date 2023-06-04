@@ -1,7 +1,25 @@
 use crate::package::*;
 use rtx_core::state::State;
+//**********************************************************************
+// See amsldoc
+//
+// Currently only a random collection of things I (Bruce) need for DLMF chapters.
+// Eventually, go through the doc and implement it all.
+//**********************************************************************
+
+// DG:
+// TODO: Most of this binding is not ported yet.
 
 LoadDefinitions!(state, {
+  Let!("\\@xp", "\\expandafter");
+  Let!("\\@nx", "\\noexpand");
+  // sub-packages:
+  RequirePackage!("amsbsy");
+  // RequirePackage!("amstext");
+  // RequirePackage!("amsopn");
+
+
+
   //======================================================================
   // Section 4.2 Math spacing commands
   // \, == \thinspace
