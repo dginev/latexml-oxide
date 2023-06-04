@@ -272,6 +272,7 @@ pub struct Font {
   pub forceseries: Option<bool>,
   pub forcefamily: Option<bool>,
   pub forceshape: Option<bool>,
+  pub forcebold: Option<bool>,
   pub scale: Option<f64>,
   pub flags: Option<u8>,
 }
@@ -388,6 +389,7 @@ impl Font {
       forceseries: None,
       forcefamily: None,
       forceshape: None,
+      forcebold: None,
       scale: None,
       flags: None,
     }
@@ -411,6 +413,7 @@ impl Font {
       forceseries: None,
       forcefamily: None,
       forceshape: None,
+      forcebold: None,
       scale: None,
       flags: None,
     }
