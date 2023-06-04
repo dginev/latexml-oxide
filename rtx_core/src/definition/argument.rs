@@ -149,6 +149,13 @@ impl ArgWrap {
       Err(e) => panic!("{e}"),
     }
   }
+  pub fn undigested(self) -> Option<Digested> {
+    if self.is_none() {
+      None
+    } else {
+      Some(Digested::from(self.owned_tokens().unwrap_or_default()))
+    }
+  }
 
   pub fn as_tokens<'a>(&'a self, state: &mut State) -> Result<Option<Cow<'a, Tokens>>> {
     use ArgWrap::*;

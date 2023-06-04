@@ -52,7 +52,7 @@ pub struct Parameter {
   pub extra: Vec<Tokens>,
   pub inner: Option<Parameters>,
   pub reader: ReaderClosure,
-  pub reader_predigest: Option<ReaderPredigestClosure>,
+  pub predigest: Option<ReaderPredigestClosure>,
   pub reversion: Option<ReversionClosure>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
@@ -78,7 +78,7 @@ impl Default for Parameter {
         );
         Ok(ArgWrap::None)
       }),
-      reader_predigest: None,
+      predigest: None,
       reversion: None,
       before_digest: Vec::new(),
       after_digest: Vec::new(),
@@ -213,7 +213,7 @@ impl Parameter {
         self.reversion = descriptor.reversion.clone();
         self.before_digest = descriptor.before_digest.clone();
         self.after_digest = descriptor.after_digest.clone();
-        self.reader_predigest = descriptor.reader_predigest.clone();
+        self.predigest = descriptor.predigest.clone();
         self.pack_parameters = descriptor.pack_parameters;
       },
       None => fatal!(
@@ -309,7 +309,7 @@ impl Parameter {
 
     let checked_value = if !self.optional
       && !self.novalue
-      && (value_arg.is_none() && self.reader_predigest.is_none())
+      && (value_arg.is_none() && self.predigest.is_none())
     {
       // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens> in
       // the long-run        Until *may* have a value, but it also may *not*, both OK. So...
@@ -376,7 +376,7 @@ impl Parameter {
       // Done for effect only.
       pre(stomach, state)?; // maybe pass extras?
     }
-    let digested_value = if let Some(ref closure) = &self.reader_predigest {
+    let digested_value = if let Some(ref closure) = &self.predigest {
       closure(stomach, value_arg, state)?
     } else {
       // Note: we have an open question for the type interface.
@@ -498,7 +498,7 @@ impl Parameters {
     gullet.setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(gullet, fordefn, state)?;
-      if parameter.reader_predigest.is_some() {
+      if parameter.predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
         // closure... so this shouldn't be an error, not even an info -- but leaving it here
         // if something changes in the future. error!(

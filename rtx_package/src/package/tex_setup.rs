@@ -94,7 +94,7 @@ LoadDefinitions!(state, {
       }
       Ok(value)
     },
-    reversion => reversion!(gullet, arg, inner, _extra, state, {
+    reversion => sub[gullet, arg, inner, _extra, state] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       if let Some(inner_ps) = inner {
@@ -106,8 +106,7 @@ LoadDefinitions!(state, {
       }
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
-    })
-  );
+    });
 
   DefParameterType!(DefPlain, sub[gullet, inner, _extra, state] {
       let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
@@ -117,7 +116,7 @@ LoadDefinitions!(state, {
       Ok(value)
     },
     pack_parameters => true,
-    reversion => reversion!(gullet, arg, inner, _extra, state, {
+    reversion => sub[gullet, arg, inner, _extra, state] {
      // let mut reverted_inner;
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      if let Some(inner_ps) = inner {
@@ -129,8 +128,7 @@ LoadDefinitions!(state, {
      }
      read_tokens.push(T_END!());
      Ok(Tokens::new(read_tokens))
-    })
-  );
+    });
 
   DefParameterType!(Optional, sub[gullet, inner, default, state] {
       let value = gullet.read_optional(None, state)?;
@@ -149,7 +147,7 @@ LoadDefinitions!(state, {
       Ok(value_2)
     },
     optional => true,
-    reversion => reversion!(gullet, arg, inner, _extra, state, {
+    reversion => sub[gullet, arg, inner, _extra, state] {
       if !arg.is_empty() {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!("[")];
         let mut reverted_arg = match inner {
@@ -162,8 +160,7 @@ LoadDefinitions!(state, {
       } else {
         Ok(Tokens!())
       }
-    })
-  );
+    });
 
   // This is a peculiar type of argument of the form
   //   <general text> = <filler>{<balanced text><right brace>
@@ -187,7 +184,7 @@ LoadDefinitions!(state, {
     // TODO: how many tokens are in extra?
     gullet.read_until(&until_extra[0], state)
   },
-  reversion => reversion!(gullet, arg, _inner, until, _state, {
+  reversion => sub[gullet, arg, _inner, until, _state] {
     let mut rev = Vec::new();
     for t in arg.into_iter() {
       rev.push(t.revert());
@@ -196,7 +193,7 @@ LoadDefinitions!(state, {
       rev.extend(ts.clone().revert());
     }
     Ok(Tokens::new(rev))
-  }));
+  });
 
   // Skip any spaces, but don't contribute an argument.
   DefParameterType!(SkipSpaces, sub[gullet, _inner, _extra, state] {
@@ -316,14 +313,13 @@ LoadDefinitions!(state, {
       Ok(Tokens!())
     }
   },
-  reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
     let arg_rev : Vec<Token> = arg.into_iter().map(Token::revert).collect();
     let mut tks = vec![T_BEGIN!()];
     tks.extend(arg_rev);
     tks.push(T_END!());
     Ok(Tokens::new(tks))
-  })
-  );
+  });
 
   // Set state.smuggle_the=true whenever you want to handle special TeX neutralization of
   // tokens created by \the-like primitives.
@@ -350,8 +346,8 @@ LoadDefinitions!(state, {
       Ok(expanded)
     },
     pack_parameters => true,
-    reversion      => reversion!(gullet, arg, _inner, _extra, _state, {
-      Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) })
+    reversion      => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }
   );
 
   // Read a matching keyword, eg. Match:=
@@ -383,7 +379,7 @@ LoadDefinitions!(state, {
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!(Semiverbatim,
     sub[gullet, _inner, _extra, state] { gullet.read_arg(state) },
-    reversion => reversion!(gullet, arg, inner, _extra, state, {
+    reversion => sub[gullet, arg, inner, _extra, state] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       if let Some(inner_ps) = inner {
@@ -395,7 +391,7 @@ LoadDefinitions!(state, {
       }
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
-    }),
+    },
     semiverbatim => Some(Vec::new()));
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
@@ -403,7 +399,7 @@ LoadDefinitions!(state, {
     sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
     semiverbatim => Some(Vec::new()),
     optional => true,
-    reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
        let mut reverted_arg = arg.into_iter().map(Token::revert).collect();
@@ -413,7 +409,7 @@ LoadDefinitions!(state, {
      } else {
        Ok(Tokens!())
      }
-    })
+    }
   );
 
   // Be careful here: if % appears before the initial {, it's still a comment!
@@ -426,20 +422,20 @@ LoadDefinitions!(state, {
       state.end_semiverbatim()?;
       Ok(arg)
     },
-    before_digest => before_digest!(stomach, state, {
+    before_digest => sub[stomach, state] {
       stomach.bgroup(state);
       MergeFont!(family => "typewriter", state);
-    }),
-    after_digest => after_digest!(stomach, _args, state, {
+    },
+    after_digest => sub[stomach, _args, state] {
       stomach.egroup(state)?;
-    }),
-    reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+    },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
       let mut reverted = vec![T_BEGIN!()];
       let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
-    })
+    }
   );
 
   // Read Verbatim, but allows expanding command sequences
@@ -460,23 +456,23 @@ LoadDefinitions!(state, {
       state.end_semiverbatim()?;
       arg
     },
-    before_digest => before_digest!(stomach, state, {
+    before_digest => sub[stomach, state] {
       stomach.bgroup(state);
-      MergeFont!(family => "typewriter", state); }),
-    after_digest => after_digest!(stomach, _args, state, {
-      stomach.egroup(state)?; }),
-    reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+      MergeFont!(family => "typewriter", state); },
+    after_digest => sub[stomach, _args, state] {
+      stomach.egroup(state)?; },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
       let mut reverted = vec![T_BEGIN!()];
       let reverted_arg : Vec<Token> = arg.into_iter().map(Token::revert).collect();
       reverted.extend(reverted_arg);
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
-    })
+    }
   );
   // Read an argument that will not be digested.
   DefParameterType!(Undigested, sub[gullet, _inner, _extra, state] { gullet.read_arg(state)},
-  reader_predigest => undigested!(),
-  reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) }
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
     if arg.is_empty() {
       Ok(Tokens!())
     } else {
@@ -486,14 +482,14 @@ LoadDefinitions!(state, {
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     }
-  }));
+  });
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
   DefParameterType!(OptionalUndigested,
     sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
-    reader_predigest => undigested!(),
+    predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) }
     optional => true,
-    reversion => reversion!(gullet, arg, _inner, _extra, _state, {
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
       if arg.is_empty() {
         Ok(Tokens!())
       } else {
@@ -503,13 +499,13 @@ LoadDefinitions!(state, {
         read_tokens.push(T_OTHER!("]"));
         Ok(Tokens::new(read_tokens))
       }
-  }));
+  });
 
   // Read a keyword value (KeyVals), that will not be digested.
   DefParameterType!(UndigestedKey, sub[gullet, _inner, _extra, state] {
     gullet.read_arg(state)
   },
-  reader_predigest => undigested!());
+  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) });
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   DefParameterType!(DefToken, sub[gullet, _inner, _extra, state] {
@@ -536,7 +532,8 @@ LoadDefinitions!(state, {
         Ok(Tokens!())
       }
     }
-  }, reader_predigest => undigested!());
+  },
+  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) });
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
   DefParameterType!(Variable, sub[gullet, _inner, _extra, state] {
@@ -564,7 +561,7 @@ LoadDefinitions!(state, {
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   },
-  reversion => reversion!(gullet,args, _inner, _extra, _state, {
+  reversion => sub[gullet,args, _inner, _extra, _state] {
     let _defn = args.remove(0);
     // my ($defn, @args) = @$var;
     unimplemented!()
@@ -577,7 +574,7 @@ LoadDefinitions!(state, {
     // };
     // reverted.extend(reverted_args);
     // Ok(Tokens::new(reverted))
-  }));
+  });
 
   // Same, but not necessarily writable
   DefParameterType!(Register, sub[gullet, _inner, _extra, state] {
@@ -602,13 +599,13 @@ LoadDefinitions!(state, {
     }
     Ok(Tokens!())
   },
-  reversion => reversion!(gullet, _arg, _inner, _extra, _state, {
+  reversion => sub[gullet, _arg, _inner, _extra, _state] {
     // my ($var) = @_;
     // my ($defn, @args) = @$var;
     // my $params = $defn->getParameters;
     // return Tokens($defn->getCS, ($params ? $params->revertArguments(@args) : ()));
     Ok(Tokens!())
-  }));
+  });
 
   DefParameterType!(TeXFileName, sub[gullet, _inner, _extra, state] {
     use Catcode::*;
@@ -684,7 +681,7 @@ LoadDefinitions!(state, {
     } else {
       Tokens!()
     }
-  }, reader_predigest => reader_predigest!(stomach, arg, state, {
+  }, predigest => sub[stomach, arg, state] {
     let token = arg.unlist().remove(0);
     let mut stuff = stomach.invoke_token(&token, state)?;
     if !stuff.is_empty() {
@@ -706,7 +703,7 @@ LoadDefinitions!(state, {
       Error!("expected","<box>", stomach, state, message);
       None
     }
-  }));
+  });
 
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
@@ -725,11 +722,11 @@ LoadDefinitions!(state, {
       Ok(None)
     }
   },
-  reversion => reversion!(gullet, args, _inner, _extra, _state, {
+  reversion => sub[gullet, args, _inner, _extra, _state] {
     Ok(Tokens!(
       T_OTHER!("("), Tokens::new(args).revert(), T_OTHER!(")")
     ))
-  }));
+  });
 
   // Read a digested argument, digesting as it is being read.
   // The usual macro parameter (generally written as {}) gets tokenized and digested
@@ -743,7 +740,7 @@ LoadDefinitions!(state, {
       gullet.skip_spaces(state)?;
       Ok(Tokens!())
     }),
-    reader_predigest => reader_predigest!(stomach, _arg, state, {
+    predigest => predigest!(stomach, _arg, state, {
       let ismath = state.lookup_bool("IN_MATH");
       let mut list = Vec::new();
       let mut next_token = None;
@@ -797,7 +794,7 @@ LoadDefinitions!(state, {
   DefParameterType!(DigestedBody, reader => reader!(_gullet, _inner, _extra, _state, {
       Ok(Tokens!()) // all done in predigestion
     }),
-    reader_predigest => reader_predigest!(stomach, _arg, state, {
+    predigest => predigest!(stomach, _arg, state, {
       let ismath   = state.lookup_bool("IN_MATH");
       let mut list     = stomach.digest_next_body(None, state)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
@@ -1030,28 +1027,31 @@ LoadDefinitions!(state, {
   // current.
   DefParameterType!(InScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_arg(state) },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(scripted => 1); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-      reversion => reversion!(gullet, arg, _inner, _extra, _state, {
-        Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!())) })
-    );
+    before_digest => sub[stomach,state] {
+      stomach.bgroup(state);
+      MergeFont!(scripted => true);
+    },
+    after_digest => sub[stomach,_args,state] {
+      stomach.egroup(state)?;
+    },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
+        Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
   DefParameterType!(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_optional(None, state)
     },
-    // before_digest => sub[stomach,state] {
-    //   stomach.bgroup(state);
-    //   MergeFont!("scripted" => true);
-    // },
-    // after_digest => sub[stomach,state] {
-    //   stomach.egroup(state); },
+    before_digest => sub[stomach,state] {
+      stomach.bgroup(state);
+      MergeFont!(scripted => true);
+    },
+    after_digest => sub[stomach,_args,state] {
+      stomach.egroup(state)?;
+    },
     optional => true,
-    reversion => reversion!(_gullet,arg,_inner,_extra,_state, {
+    reversion => sub[_gullet,arg,_inner,_extra,_state] {
       if arg.is_empty() { Ok(Tokens!()) }
       else {
         let mut tks = vec![T_OTHER!("[")];
@@ -1059,26 +1059,23 @@ LoadDefinitions!(state, {
         tks.push(T_OTHER!("]"));
         Ok(Tokens::new(tks))
       }
-    })
-  );
+    });
   DefParameterType!(InFractionStyle, sub[gullet, _inner, _extra, state] {
       gullet.read_arg(state)
     },
-    // TODO
-    // before_digest => sub[gullet,state] {
-    //   gullet.bgroup(state);
-    //   MergeFont!("fraction" => true);
-    // },
-    // after_digest => sub[stomach,state] {
-    //   gullet.egroup(state)?;
-    // },
-    reversion => reversion!(_gullet,arg,_inner,_extra,_state, {
+    before_digest => sub[stomach,state] {
+      stomach.bgroup(state);
+      MergeFont!(fraction => true);
+    },
+    after_digest => sub[stomach,_args,state] {
+      stomach.egroup(state)?;
+    },
+    reversion => sub[_gullet,arg,_inner,_extra,_state] {
       let mut reverted = vec![T_BEGIN!()];
       reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
       Ok(Tokens::new(reverted))
-    })
-  );
+    });
 
   //**********************************************************************
   // LaTeX has a very particular notion of "Undefined",
