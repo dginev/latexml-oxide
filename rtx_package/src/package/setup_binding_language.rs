@@ -1803,30 +1803,25 @@ macro_rules! DefMath(
 
 #[macro_export]
 macro_rules! DefParameterType {
-  ($name:ident) => (DefParameterTypeWO!($name,
-    NewDefault!(Parameter, name => stringify!($name).to_string())));
-  ($name:ident, $state_arg:ident) => (DefParameterTypeWO!($name,
-    NewDefault!(Parameter, name => stringify!($name.to_string())), $state_arg));
   ($name:ident, $($key:ident => $value:expr),*)=>(
     DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
     $($key=>$value),*)));
-  ($name:ident, $($key:ident => $value:expr),*, $state_arg:ident)=>
-    (DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
-    $($key=>$value),*), $state_arg));
   // with reader as explicit sub
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident] $body:block) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
       reader!($gullet, $inner, $extra, $inner_state, $body))));
+  // ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident]
+  //   $body:block, $($key:ident => $value:expr),*) => (
+  //     DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
+  //       reader!($gullet, $inner, $extra, $inner_state, $body),
+  //     name => Cow::Borrowed(stringify!($name)),  $($key=>$value),*)));
+  // fully advanced version, including e.g. inner sub[] patterns for before_digest, after_digest,...
   ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident]
-    $body:block, $($key:ident => $value:expr),*) => (
-      DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
-        reader!($gullet, $inner, $extra, $inner_state, $body),
-      name => Cow::Borrowed(stringify!($name)),  $($key=>$value),*)));
-  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident, $inner_state:ident]
-    $body:block, $($key:ident => $value:expr),*) => (
-    DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
-      reader!($gullet, $inner, $extra, $inner_state, $body),
-      name => Cow::Borrowed($name),  $($key=>$value),*), $state_arg));
+    $body:block, $($input:tt)+) => (
+      let mut paramtype_options = defi_opts!(@munch ($($input)*) -> {Parameter,});
+      paramtype_options.reader = reader!($gullet, $inner, $extra, $inner_state, $body);
+      paramtype_options.name = Cow::Borrowed(stringify!($name));
+      DefParameterTypeWO!($name, paramtype_options));
 }
 
 #[macro_export]
@@ -2532,6 +2527,34 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]})
   };
 
+  // DefParameterType options
+  // predigest: Vec<ReaderPredigestClosure>
+  (@munch ( $(,)? predigest $(:)?$(=>)? sub $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@predigest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? predigest $(:)?$(=>)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@predigest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  // reversion
+
+  // semiverbatim
+  (@munch ( $(,)? semiverbatim $(:)?$(=>)? Some($value:expr))
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch () -> {$kind, $( [ $key @ $val ] )*
+      [ semiverbatim @ Some($value) ] })
+  };
+  (@munch ( $(,)? semiverbatim $(:)?$(=>)? None)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch () -> {$kind, $( [ $key @ $val ] )*
+      [ semiverbatim @ None ] })
+  };
+  (@munch ( $(,)? semiverbatim $(:)?$(=>)? $value:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ semiverbatim @ $value ] })
+};
   // ligature options
   // role: literal string
   (@munch ( $(,)? role $(:)?$(=>)? $literal:literal, $($next:tt)*)
@@ -2765,5 +2788,21 @@ macro_rules! defi_opts {
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [reversion @ reversion_digested!($stomach, $args, $state_arg, $body)]})
+  };
+  (@reversion (sub [$gullet:ident, $args:ident, $inner:ident, $extra:ident, $state_arg: ident] $body:block $($next:tt)*)
+                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [reversion @ reversion!($gullet, $args, $inner, $extra, $state_arg, $body)]})
+  };
+  (@predigest (
+    sub[$stomach_arg:ident, $whatsit:ident, $state_arg: ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [predigest @ predigest!($stomach_arg, $whatsit, $state_arg, $body)]})
+  };
+  (@predigest (
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [predigest @ predigest!(_stomach, _whatsit, _state, $body)]})
   };
 }

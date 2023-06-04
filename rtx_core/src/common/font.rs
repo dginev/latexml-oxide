@@ -267,6 +267,7 @@ pub struct Font {
   pub name: Option<Cow<'static, str>>,
   pub emph: Option<bool>,
   pub scripted: Option<bool>,
+  pub fraction: Option<bool>,
   // Note: forcefamily, forceseries, forceshape (& forcebold for compatibility)
   // are only useful for fonts in math; See the specialize method below.
   pub forceseries: Option<bool>,
@@ -386,6 +387,7 @@ impl Font {
       emph: None,
       name: None,
       scripted: None,
+      fraction: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,
@@ -410,6 +412,7 @@ impl Font {
       emph: None,
       name: None,
       scripted: None,
+      fraction: None,
       forceseries: None,
       forcefamily: None,
       forceshape: None,

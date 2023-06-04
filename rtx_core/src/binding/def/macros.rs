@@ -262,7 +262,7 @@ macro_rules! reader {
 }
 
 #[macro_export]
-macro_rules! reader_predigest {
+macro_rules! predigest {
   ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
     Some(Rc::new(
       |$stomach: &mut Stomach, $arg: ArgWrap, $state: &mut State| -> Result<Option<Digested>> {
@@ -290,21 +290,6 @@ macro_rules! setter {
     Some(Rc::new(
       move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
         WithInnerState!($body, $state)
-      },
-    ))
-  };
-}
-
-#[macro_export]
-macro_rules! undigested {
-  () => {
-    Some(Rc::new(
-      |stomach: &mut Stomach, arg: ArgWrap, state: &mut State| -> Result<Option<Digested>> {
-        if arg.is_none() {
-          Ok(None)
-        } else {
-          Ok(Some(Digested::from(arg.owned_tokens().unwrap_or_default())))
-        }
       },
     ))
   };
