@@ -228,10 +228,8 @@ impl fmt::Debug for Whatsit {
 
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    STD_STATE.with(|state_rw| {
-      let state = state_rw.borrow(); // TODO: is this really the way?
-      write!(f, "{}", self.revert(&state).unwrap())
-    }) // What else??
+    let state = STD_STATE.borrow(); // TODO: is this really the way?
+    write!(f, "{}", self.revert(&state).unwrap())
   }
 }
 

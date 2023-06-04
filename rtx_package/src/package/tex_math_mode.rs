@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
         let mode = state.lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
-          if TOKEN_MATH.with(|tm| gullet.if_next(tm, state))? {
+          if gullet.if_next(&TOKEN_MATH, state)? {
             gullet.read_token(state)?;
             op = "\\@@ENDDISPLAYMATH";
           } else {
@@ -40,7 +40,7 @@ LoadDefinitions!(state, {
           }
         } else if mode == "inline_math" {
           op = "\\@@ENDINLINEMATH";
-        } else if TOKEN_MATH.with(|tm| gullet.if_next(tm, state))? {
+        } else if gullet.if_next(&TOKEN_MATH, state)? {
           gullet.read_token(state)?;
           op = "\\@@BEGINDISPLAYMATH";
         }

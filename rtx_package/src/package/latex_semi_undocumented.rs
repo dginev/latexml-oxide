@@ -10,7 +10,7 @@ LoadDefinitions!(outer_stomach, state, {
     // use \egroup for $next, if we've fallen off end?
     let next_test = match next {
       Some(ref n) => XEquals!(&token, n),
-      None => TOKEN_END.with(|te| XEquals!(&token, te))
+      None => XEquals!(&token, &*TOKEN_END)
     };
     let which = if next_test {
       t_if

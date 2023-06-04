@@ -335,8 +335,7 @@ LoadDefinitions!(outer_state, {
 });
 
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue, stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-    state.lookup_meaning(tr)).unwrap().into_owned(),None);
+  state.assign_meaning(&cs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(),None);
   let num = stomach.get_gullet_mut().read_number(state)?;
   let name = s!("{address_type}{}", num.value_of());
   def_register(cs, None, init,

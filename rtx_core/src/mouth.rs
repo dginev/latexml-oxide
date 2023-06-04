@@ -804,12 +804,12 @@ pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
     return NO_TOKENS;
   }
   match state_opt {
-    None => STD_STATE.with(|state_rw| {
-      let mut state = state_rw.borrow_mut();
+    None => {
+      let mut state = STD_STATE.borrow_mut();
       Mouth::new(text, None, &mut state)
         .unwrap()
         .read_tokens(&mut state)
-    }),
+    },
     Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
   }
 }
@@ -818,10 +818,8 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   if text.is_empty() {
     return NO_TOKENS;
   }
-  STY_STATE.with(|state_rw| {
-    let mut state = state_rw.borrow_mut();
-    Mouth::new(text, None, &mut state)
-      .unwrap()
-      .read_tokens(&mut state)
-  })
+  let mut state = STY_STATE.borrow_mut();
+  Mouth::new(text, None, &mut state)
+    .unwrap()
+    .read_tokens(&mut state)
 }

@@ -447,7 +447,7 @@ impl KeyVals {
     let value = if use_default {
       headset
         .get_default(state)
-        .unwrap_or_else(|| Stored::String(EMPTY_SYM.with(|sym| *sym)))
+        .unwrap_or_else(|| Stored::String(*EMPTY_SYM))
     } else {
       value
     };

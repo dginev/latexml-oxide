@@ -75,7 +75,7 @@ impl Model {
 
   pub fn set_doc_type(&mut self, roottag: &str, publicid: &str, systemid: &str) {
     self.schema_data = Some(vec![
-      DTD_SYM.with(|sym| *sym),
+      *DTD_SYM,
       arena::pin(roottag),
       arena::pin(publicid),
       arena::pin(systemid),
@@ -83,7 +83,7 @@ impl Model {
   }
 
   pub fn set_relaxng_schema(&mut self, schema: &str) {
-    self.schema_data = Some(vec![RELAXNG_SYM.with(|sym| *sym), arena::pin(schema)]);
+    self.schema_data = Some(vec![*RELAXNG_SYM, arena::pin(schema)]);
   }
   pub fn add_schema_declaration(&self, document: &mut Document) {
     if let Some(ref schema) = self.schema {
@@ -112,12 +112,12 @@ impl Model {
       self.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml"));
       self.permissive = true;
     } // Actually, they could have declared all sorts of Tags....
-    let mut schema_type = EMPTY_SYM.with(|sym| *sym);
+    let mut schema_type = *EMPTY_SYM;
     match self.schema_data {
       None => {},
       Some(ref data) => {
         schema_type = data[0];
-        if schema_type == DTD_SYM.with(|sym| *sym) {
+        if schema_type == *DTD_SYM {
           // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
           // ($roottag, $publicid, $systemid) = @data;
           name = arena::with(*data.last().unwrap(), |data_str| {
@@ -128,7 +128,7 @@ impl Model {
             ..Relaxng::default()
           });
           // $systemid);
-        } else if schema_type == RELAXNG_SYM.with(|sym| *sym) {
+        } else if schema_type == *RELAXNG_SYM {
           name = arena::to_string(data[1]);
           self.schema = Some(Relaxng {
             name: name.clone(),
@@ -195,7 +195,7 @@ impl Model {
     namespace_opt: Option<SymbolU32>,
   ) {
     // double-check empty strings are None
-    let namespace_opt_checked = namespace_opt.filter(|val| *val != EMPTY_SYM.with(|sym| *sym));
+    let namespace_opt_checked = namespace_opt.filter(|val| *val != *EMPTY_SYM);
     match namespace_opt_checked {
       Some(namespace) => {
         self.code_namespace_prefixes.insert(namespace, codeprefix);
@@ -212,7 +212,7 @@ impl Model {
   }
 
   pub fn register_document_namespace(&mut self, docprefix: &str, namespace_opt: Option<&str>) {
-    let default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    let default_sym = *H_DEFAULT_SYM;
     let docprefix_sym = if docprefix.is_empty() {
       default_sym
     } else {
@@ -284,12 +284,12 @@ impl Model {
         message2
       );
     }
-    let default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    let default_sym = *H_DEFAULT_SYM;
     docprefix.filter(|p| p != &default_sym)
   }
 
   pub fn get_document_namespace(&mut self, docprefix: &str, probe: bool) -> Option<String> {
-    let h_default_sym = H_DEFAULT_SYM.with(|sym| *sym);
+    let h_default_sym = *H_DEFAULT_SYM;
     let docprefix_sym = if docprefix.is_empty() {
       h_default_sym
     } else {
@@ -462,7 +462,7 @@ impl Model {
       NamespaceDecl => arena::pin_static("xmlns"),
 
       ElementNode | AttributeNode => {
-        let empty_sym = EMPTY_SYM.with(|sym| *sym);
+        let empty_sym = *EMPTY_SYM;
         let mut prefix = empty_sym;
         if let Some(ns) = node.get_namespace() {
           let href = ns.get_href();
@@ -518,12 +518,12 @@ impl Model {
 
   pub fn can_contain_sym(&mut self, tag: SymbolU32, child: SymbolU32) -> bool {
     // Handle obvious cases explicitly.
-    if H_PCDATA_SYM.with(|sym| tag == *sym)
-      || H_COMMENT_SYM.with(|sym| tag == *sym)
-      || EMPTY_SYM.with(|sym| tag == *sym)
+    if tag == *H_PCDATA_SYM
+      || tag == *H_COMMENT_SYM
+      || tag == *EMPTY_SYM
     {
       return false;
-    } else if WILD_CARD_SYM.with(|sym| tag == *sym) {
+    } else if tag == *WILD_CARD_SYM {
       return true;
     };
     if arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
@@ -533,17 +533,17 @@ impl Model {
       return true;
     }
 
-    if WILD_CARD_SYM.with(|sym| child == *sym)
-      || H_COMMENT_SYM.with(|sym| child == *sym)
-      || H_PI_SYM.with(|sym| child == *sym)
-      || H_DTD_SYM.with(|sym| child == *sym)
+    if child == *WILD_CARD_SYM
+      || child == *H_COMMENT_SYM
+      || child == *H_PI_SYM
+      || child == *H_DTD_SYM
     {
       return true;
     }
 
     if self.permissive
-      && H_DOC_SYM.with(|sym| tag == *sym)
-      && H_PCDATA_SYM.with(|sym| child != *sym)
+      && tag == *H_DOC_SYM
+      && child != *H_PCDATA_SYM
     {
       return true; // No DTD? Punt!
     }
@@ -554,7 +554,7 @@ impl Model {
       .entry(tag)
       .or_insert_with(TagFrame::default)
       .model;
-    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(&child)
+    model.contains(&ANY_SYM) || model.contains(&child)
   }
 
   /// Can an element with (qualified name) `tag` contain a `child` element?
@@ -584,7 +584,7 @@ impl Model {
       .get(&arena::pin(tag))
       .unwrap_or(&*DEFAULT_TAG_FRAME)
       .model;
-    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(&arena::pin(child))
+    model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
   }
 
   pub fn can_have_attribute(&self, tag: SymbolU32, attrib: SymbolU32) -> bool {
