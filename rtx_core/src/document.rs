@@ -3106,9 +3106,6 @@ impl Document {
 
   /// Find a node in the document that can contain an element `qname`
   pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool, state: &mut State) -> Result<Option<Node>> {
-    // TODO:
-    dbg!(qname);
-    dbg!(closeifpossible);
     let mut candidates : VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
     let mut closeable  = true;
     // If the current node can contain already, we're fine right here - just return
