@@ -113,6 +113,7 @@ mod tex_math_style;
 mod tex_para;
 mod tex_registers;
 mod tex_rtx_specific;
+mod rtx_math_macros;
 mod tex_scripts;
 mod tex_setup;
 mod tex_special_chars;

@@ -2,74 +2,73 @@ use crate::package::*;
 use rtx_core::state::State;
 
 LoadDefinitions!(state, {
-  // TeX.pool.ltxml
-  //   commit 22db863d7358d56e197a3845375775714577cc82
-  //   Author: bruce miller <bruce.miller@nist.gov>
-  //   Date:   Wed Nov 28 10:47:09 2018 -0500
-
-  // lines 1-695
-  InnerPool!(tex_setup);
-  // lines 695-949
-  InnerPool!(tex_expandable_primitives);
-  // lines 950-1102
-  InnerPool!(tex_registers);
-  // lines 1102-1408
-  InnerPool!(tex_assignment);
-  // lines 1408-1773
-  InnerPool!(tex_fonts);
-  // lines 1773-2085
-  InnerPool!(tex_boxes);
+  // port of TeX.pool.ltxml
+  // commit 6b748e367af3b15c11f41454bfe79bfc27763577
+  // Author: Deyan Ginev <deyan.ginev@gmail.com>
+  // Date:   Wed May 10 16:36:04 2023 -0400
 
   // -----------------------------------------
-  //  29.01.2019:
+  //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 2086-2335
+  // lines 1-758
+  InnerPool!(tex_setup);
+  // lines 758-1075
+  InnerPool!(tex_expandable_primitives);
+  // lines 1076-1102
+  InnerPool!(tex_registers);
+  // lines 1102-1524
+  InnerPool!(tex_assignment);
+  // lines 1524-1888
+  InnerPool!(tex_fonts);
+  // lines 1889-2416
+  InnerPool!(tex_boxes);
+  // lines 2417-2785
   InnerPool!(tex_ch24_primitives);
-  // lines 2335-2985
+  // lines 2786-3523
   InnerPool!(tex_alignment);
-  // lines 2985-3070
+  // lines 3524-3660
   InnerPool!(tex_para);
-  // lines 3070-3158
+  // lines 3661-3783
   InnerPool!(tex_ch25_primitives);
-  // lines 3158-3728
+  // lines 3784-4006
   InnerPool!(tex_math_mode);
-  // lines 3729-4001
-  // InnerPool!(tex_math_display);
-  // lines 4002-4228
+  // lines 4007-4279
+  // InnerPool!(tex_math_fork);
+  // lines 4280-4510
   InnerPool!(tex_scripts);
-  // lines 4229-4414
+  // lines 4511-4894
   InnerPool!(tex_math_style);
-  // lines 4415-4759
+  // lines 4895-5041
   InnerPool!(tex_appendix_b_to_p349);
-  // lines 4760-4660
+  // lines 5042-5290
   InnerPool!(tex_appendix_b_p350_to_p355);
-  // lines 4660-4932
+  // lines 5291-5620
   InnerPool!(tex_frontmatter);
-  // lines 4932-4965
+  // lines 5621-5655
   InnerPool!(tex_appendix_b_p356);
-  // lines 4965-5086
+  // lines 5656-5783
   InnerPool!(tex_accents);
-  // lines 5086-5159
+  // lines 5784-5832
   InnerPool!(tex_appendix_b_p357);
-  // lines 5159-5607
+  // lines 5833-6278
   InnerPool!(tex_appendix_b_p358);
-  // lines 5607-5653
+  // lines 6279-6329
   InnerPool!(tex_appendix_b_p359);
-  // lines 5653-5701
+  // lines 6330-6377
   InnerPool!(tex_math_accents);
-  // lines 5701-5898
+  // lines 6378-6574
   InnerPool!(latex_delimiters);
-  // lines 5898-5952
+  // lines 6575-6629
   InnerPool!(tex_appendix_b_p360);
-  // lines 5952-6037
+  // lines 6630-6714
   InnerPool!(tex_appendix_b_p361);
-  // lines 6037-6225
+  // lines 6715-6960
   InnerPool!(tex_appendix_b_p362);
-  // lines 6225-6254
+  // lines 6961-6998
   InnerPool!(tex_appendix_b_p363);
-  // lines 6254-6261
+  // lines 6999-7010
   InnerPool!(tex_appendix_b_p364);
 
   //======================================================================
@@ -79,15 +78,19 @@ LoadDefinitions!(state, {
   //**********************************************************************
   // Stray stuff .... where to ?
   //**********************************************************************
-  // lines 6269-6291
+  // lines 7013-7036
   InnerPool!(tex_stray_math_style);
-  // lines 6005-6392
+  // lines 7037-7140
   InnerPool!(tex_special_chars);
-  // lines 6392-6434
+  // lines 7141-7203
   InnerPool!(latex_hook);
-  // lines 6434-6752
+  // lines 7204-7221
   InnerPool!(tex_rtx_specific);
-  // lines 6753-END
+  // lines 7222-7545
+  InnerPool!(rtx_math_macros);
+  // lines 7545-7720
+  // InnerPool!(tex_lx_misc_tweaks);
+  // lines 7721 - 7725
   InnerPool!(etex);
   InnerPool!(pdftex);
 });
