@@ -403,7 +403,7 @@ impl<'t> Stomach {
       );
 
       let gullet = self.get_gullet_mut();
-      state.let_i(token, T_CS!("\\iffalse"), None, gullet);
+      state.let_i(token, &T_CS!("\\iffalse"), None, gullet);
       gullet.unread_one(token.clone()); // Retry
       Ok(Vec::new())
     } else {

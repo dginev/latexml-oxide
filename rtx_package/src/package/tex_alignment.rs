@@ -399,7 +399,7 @@ pub fn alignment_bindings(
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
   state.let_i(
     &T_MATH!(),
-    if is_math {
+    &if is_math {
       T_CS!("\\@dollar@in@mathmode")
     } else {
       T_CS!("\\@dollar@in@textmode")

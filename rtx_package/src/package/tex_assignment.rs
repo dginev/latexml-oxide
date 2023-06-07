@@ -76,12 +76,9 @@ LoadDefinitions!(outer_state, {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
-
-      // TODO: add this back when we have the fonts, too loud now
-
-      // let message = s!("Unrecognized font name {:?} Font switch macro {:?}
-      // will have no effect", name, cs.stringify());
-      // Info!("unexpected", name, gullet, state, message);
+      let message = s!("Unrecognized font name {:?} Font switch macro {:?}
+      will have no effect", name, cs.stringify());
+      Info!("unexpected", name, gullet, state, message);
       None
     };
     gullet.skip_spaces(state)?;
@@ -116,7 +113,7 @@ LoadDefinitions!(outer_state, {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
-      if defn_token_str != "missing" {
+      if !defn_token_str.is_empty() && defn_token_str != "missing" {
         let defn_opt = state.lookup_register_definition(&defn_token);
         state.local_current_token(defn_token);
         if let Some(defn) = defn_opt {
@@ -138,11 +135,10 @@ LoadDefinitions!(outer_state, {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      let defn_args : Vec<ArgWrap> = inner.clone();
       if let Some(defn) = state.lookup_register_definition(&varname) {
+        let defn_args : Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
-        let scale_value = scale.value_of();
-        defn.set_value(defn_value.multiply(Number::new(scale_value)), defn_args, state);
+        defn.set_value(defn_value.multiply(scale), defn_args, state);
       } else {
         let message =
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
@@ -181,15 +177,13 @@ LoadDefinitions!(outer_state, {
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
   DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, (token1, token2), state] {
-    Let!(&token1, token2);
-    Ok(Vec::new())
+    Let!(&token1, &token2);
   });
 
   DefPrimitive!("\\futurelet Token Token Token", sub[stomach, (cs, token1, token2), state] {
     // NOT expandable, but puts tokens back
     stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone()));
-    Let!(&cs, token2);
-    Ok(Vec::new())
+    Let!(&cs, &token2);
   });
 
   // <shorthand definition> = \chardef<control sequence><equals><8bit>

@@ -430,11 +430,11 @@ LoadDefinitions!(state, {
       DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
-      state.let_i(&T_CS!("\\_"), T_CS!("\\textunderscore"), None, gullet);
+      state.let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None, gullet);
       DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
-      state.let_i(&T_CS!("\\~"), T_CS!("\\hyper@tilde"), None, gullet);
-      state.let_i(&T_CS!("\\textasciitilde"), T_CS!("\\hyper@tilde"), None, gullet);
-      state.let_i(&T_CS!("\\\\"), T_CS!("\\@backslashchar"), None, gullet);
+      state.let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None, gullet);
+      state.let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None, gullet);
+      state.let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None, gullet);
       // Having prepared, read in the argument, expanding as we go
       let arg = gullet.read_balanced(true, state)?;
       state.end_semiverbatim()?;
@@ -573,18 +573,19 @@ LoadDefinitions!(state, {
     match defn {
       Some(register) => {
         let args = register.read_arguments(gullet, state)?;
-        return Ok(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))));
+        Ok(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))))
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
         Error!("expected","<register>", gullet, state, message);
-        // if isDefinable!(token) {
-        //   DefRegister!(token, None, Tokens!(), state);
-        //   return Tokens!(defn);
-        // }
+        if let Some(t) = token {
+          if is_definable(&t, state) {
+            def_register(t, None, Tokens!(), None, state);
+          }
+        }
+        Ok(ArgWrap::Tokens(Tokens!()))
       }
     }
-    Ok(Tokens!())
   },
   // TODO: If we want to revert "arg" in an honest manner, it needs to be an ArgWrap type.
   reversion => sub[gullet, _arg, _inner, _extra, _state] {
@@ -1073,7 +1074,7 @@ LoadDefinitions!(state, {
     if IsDefined!(&cs, inner_state) {
       Ok(else_token)
     } else {
-      inner_state.let_i(&cs,T_RELAX!(), None, gullet); // Yuck, but traditional!
+      inner_state.let_i(&cs, &T_RELAX!(), None, gullet); // Yuck, but traditional!
       Ok(if_token)
     }
   });

@@ -738,7 +738,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   for option in declared_options.iter() {
     state.let_i(
       &T_CS!(s!("\\ds@{}", option)),
-      T_RELAX!(),
+      &T_RELAX!(),
       None,
       stomach.get_gullet_mut(),
     );
@@ -805,7 +805,7 @@ fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
   } else {
     "\\@unknownoptionerror"
   };
-  state.let_i(&T_CS!("\\default@ds"), T_CS!(opt_unused_cs), None, gullet);
+  state.let_i(&T_CS!("\\default@ds"), &T_CS!(opt_unused_cs), None, gullet);
   Ok(())
 }
 

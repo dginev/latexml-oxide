@@ -642,31 +642,31 @@ LoadDefinitions!(outer_stomach, outer_state, {
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem(state: &mut State, gullet: &mut Gullet) {
-  state.let_i(&T_CS!("\\save@bibitem"), T_CS!("\\bibitem"), None, gullet);
-  state.let_i(&T_CS!("\\save@par"), T_CS!("\\par"), None, gullet);
+  state.let_i(&T_CS!("\\save@bibitem"), &T_CS!("\\bibitem"), None, gullet);
+  state.let_i(&T_CS!("\\save@par"), &T_CS!("\\par"), None, gullet);
   state.let_i(
     &T_CS!("\\bibitem"),
-    T_CS!("\\restoring@bibitem"),
+    &T_CS!("\\restoring@bibitem"),
     None,
     gullet,
   );
   state.let_i(
     &T_CS!("\\par"),
-    T_CS!("\\par@in@bibliography"),
+    &T_CS!("\\par@in@bibliography"),
     None,
     gullet,
   );
   // Moreover some people use \item instead of \bibitem
   state.let_i(
     &T_CS!("\\item"),
-    T_CS!("\\item@in@bibliography"),
+    &T_CS!("\\item@in@bibliography"),
     None,
     gullet,
   );
   // And protect from redefinitions.
   state.let_i(
     &T_CS!("\\newblock"),
-    T_CS!("\\lx@bibnewblock"),
+    &T_CS!("\\lx@bibnewblock"),
     None,
     gullet,
   );

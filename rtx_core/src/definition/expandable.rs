@@ -82,6 +82,13 @@ impl Definition for Expandable {
       None => Cow::Owned(self.cs.with_cs_name(ToString::to_string)),
     }
   }
+  // fn with_cs_name<R, FnR>(&self, caller: FnR) -> R
+  // where FnR: FnOnce(&str) -> R {
+  //   match self.alias {
+  //     Some(ref alias) => caller(alias),
+  //     None => self.cs.with_cs_name(caller),
+  //   }
+  // }
   fn get_expansion(&self) -> Option<&ExpansionBody> { self.expansion.as_ref() }
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
 
