@@ -4,6 +4,17 @@ use rtx_core::keyvals::KeyvalsConfig;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 use std::collections::VecDeque;
 
+
+// TODO:
+// sub isDefinable {
+//   my ($token) = @_;
+//   return unless $token;
+//   my $meaning = LookupMeaning($token);
+//   my $name    = $token->getString; $name =~ s/^\\//;
+//   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax')))
+//         || LookupValue('2.09_COMPATIBILITY'))    # Let redefinitions happen in compatibility mode.
+//       && (($name ne 'relax') && ($name !~ /^end/))); }
+
 pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
   let mut bindings: VecDeque<Stored> = match state.lookup_value(if vertical_mode {
     "VTEXT_MODE_BINDINGS"

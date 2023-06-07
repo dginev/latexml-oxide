@@ -455,7 +455,7 @@ impl State {
     };
     // TODO: should these be *fields* in state, or really as in Perl - globally assigned values?
     state.assign_value(
-      "DOCUMENT_ID",
+      "DOCUMENTID",
       options.documentid.unwrap_or_default(),
       Some(Scope::Global),
     );
