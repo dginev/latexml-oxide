@@ -292,9 +292,12 @@ LoadDefinitions!(outer_state, {
     ()
   });
 
-  //DefRegister('\inputlineno',Number(0),
-  //            readonly=>1,
-  //            getter=>{ Number($stomach->getGullet->getMouth????? ->lineno); });
+  DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=>sub[_args,state] {
+    let stomach = state.stomach.clone();
+    let stomach_mut = stomach.borrow_mut();
+    let locator = stomach_mut.get_gullet().get_locator();
+    Number::new(locator.map(|l| l.from_line as i64).unwrap_or(0))
+  });
 
   DefRegister!("\\badness", Number::new(0), readonly => true);
 

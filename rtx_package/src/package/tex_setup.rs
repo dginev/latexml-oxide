@@ -766,14 +766,14 @@ LoadDefinitions!(state, {
     },
     // TODO: To implement this natively, we need "untils" i.e.
     // "extra" passed into "predigest" as well.
-    predigest => sub[_stomach, arg, _state] {
+    predigest => sub[_stomach, _arg, _state] {
       unimplemented!();
       //   let ismath = state.lookup_bool("IN_MATH");
       //   stomach.digest_next_body(Some(until), state)?
     //   my @list   = $STATE->getStomach->digestNextBody($until);
     //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
     //   List(@list, mode => ($ismath ? 'math' : 'text'));
-      arg.undigested()
+      _arg.undigested()
     },
     reversion => sub[gullet,args,_inner,_extra,_state] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
@@ -886,59 +886,44 @@ LoadDefinitions!(state, {
   //   RequiredKeyVals[*][+]: $prefix|$keysets|$skip
   //   OptionalKeyVals[*][+]: $prefix|$keysets|$skip
 
-  // function to handle all the
-  // sub KeyVals_aux {
-  //   my ($gullet, $until, $spec, %options) = @_;
-  //   my ($star, $plus, $prefix, $keysets, $skip) = @{$spec};
+  pub fn required_key_vals(
+    star:bool, plus:bool, keysets: Option<&Parameters>,
+    gullet:&mut Gullet, state:&mut State) -> Result<KeyVals> {
+    if gullet.if_next(&T_BEGIN!(), state)? {
+      keyvals_aux(gullet, Some(T_END!()), KVSpec {
+        star, plus,
+        keysets: vec![keysets.cloned()],
+        ..KVSpec::default()
+      }, state)
+    } else {
+      Error!("Expected","{", gullet, state, "Missing keyval arguments");
+      Ok(KeyVals::default())
+    }
+  }
 
-  //   # support both "keysets" and "prefix|keysets"
-  //   unless (defined($keysets)) {
-  //     $keysets = $prefix;
-  //     $prefix  = undef;
-
-  //     # to emulate old behaviour, throw no errors
-  //     # when we have a single keyset and no prefix (or no keyset at all)
-  //     $star = 1 if (!defined($keysets) || index(',', $keysets) == -1); }
-
-  //   # create a new set of Key-Value arguments
-  //   my $keyvals = LaTeXML::Core::KeyVals->new(
-  //     $prefix, $keysets,
-  //     setAll => $plus, setInternals => 1,
-  //     skip   => $skip, skipMissing  => $star);
-
-  //   # and read it from the gullet
-  //   $keyvals->readFrom($gullet, $until) if defined($until);
-
-  //   # we still want to make use of the hash
-  //   return $keyvals; }
-
-  // sub RequiredKeyVals {
-  //   my ($star, $plus, $gullet, @keyspec) = @_;
-  //   my $until;
-
-  //   if ($gullet->ifNext(T_BEGIN)) {
-  //     $until = T_END; }
-  //   else {
-  //     Error('expected', '{', $gullet, "Missing keyval arguments"); }
-
-  //   return (KeyVals_aux($gullet, $until, [$star, $plus, @keyspec])); }
-
-  // DefParameterType!(RequiredKeyVals, sub[gullet, inner, _extra, state] {
-  //   // RequiredKeyVals(0, 0, @_); },
-  // });
-  // //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(RequiredKeyValsStar, sub[gullet, inner, _extra, state] {
-  //   // RequiredKeyVals(1, 0, @_); },
-  // });
-  // //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(RequiredKeyValsPlus, sub[gullet, inner, _extra, state] {
-  //   // RequiredKeyVals(0, 1, @_); },
-  // });
-  // //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(RequiredKeyValsStarPlus, sub[gullet, inner, _extra, state] {
-  //   // RequiredKeyVals(1, 1, @_); },
-  // });
-  // //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
+  DefParameterType!(RequiredKeyVals, sub[gullet, inner, _extra, state] {
+      required_key_vals(false, false, inner, gullet, state)
+    },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
+  DefParameterType!(RequiredKeyValsStar, sub[gullet, inner, _extra, state] {
+      required_key_vals(true, false, inner, gullet, state)
+    },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
+  DefParameterType!(RequiredKeyValsPlus, sub[gullet, inner, _extra, state] {
+      required_key_vals(false, true, inner, gullet, state)
+    },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
+  DefParameterType!(RequiredKeyValsStarPlus, sub[gullet, inner, _extra, state] {
+      required_key_vals(true, true, inner, gullet, state)
+    }, reversion => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
 
   pub fn optional_key_vals(
     star: bool,
@@ -967,31 +952,41 @@ LoadDefinitions!(state, {
 
   DefParameterType!(OptionalKeyVals, sub[gullet, inner, _extra, state] {
     optional_key_vals(false, false, inner, gullet, state)
-  }, optional=>true);
-  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  }, optional=>true,
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
+    Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
+  });
   DefParameterType!(OptionalKeyValsStar, sub[gullet, inner, _extra, state] {
     optional_key_vals(true, false, inner, gullet, state)
-  }, optional=>true);
-  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  }, optional=>true,
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
+    Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
+  });
   DefParameterType!(OptionalKeyValsPlus, sub[gullet, inner, _extra, state] {
     optional_key_vals(false, true, inner, gullet, state)
-  }, optional=>true);
-  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  }, optional=>true,
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
+    Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
+  });
   DefParameterType!(OptionalKeyValsPlusStar, sub[gullet, inner, _extra, state] {
     optional_key_vals(true, true, inner, gullet, state)
-  }, optional=>true);
-  // reversion => sub { ($_[0] ? (T_OTHER('['), Revert($_[0]), T_OTHER(']')) : ()); });
+  }, optional=>true,
+  reversion => sub[gullet, arg, _inner, _extra, _state] {
+    Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
+  });
 
-  // # Not sure that this is the most elegant solution, but...
-  // # What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  // DefParameterType!(DisplayStyle, sub[gullet, inner, _extra, state] {
-  //     $_[0]->readArg; },
-  //   beforeDigest => sub {
-  //     $_[0]->bgroup;
-  //     MergeFont(mathstyle => 'display'); },
-  //   afterDigest => sub {
-  //     $_[0]->egroup; },
-  //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
+  // Not sure that this is the most elegant solution, but...
+  // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
+  DefParameterType!(DisplayStyle, sub[gullet, _inner, _extra, state] { gullet.read_arg(state) },
+    before_digest => sub[stomach,state] {
+      stomach.bgroup(state);
+      MergeFont!(mathstyle => "display");
+    },
+    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
+    reversion => sub[gullet, arg, _inner, _extra, _state] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
+    });
+  // TODO: Add when needed
   // DefParameterType!(TextStyle, sub[gullet, inner, _extra, state] {
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
@@ -1024,9 +1019,7 @@ LoadDefinitions!(state, {
       stomach.bgroup(state);
       MergeFont!(scripted => true);
     },
-    after_digest => sub[stomach,_args,state] {
-      stomach.egroup(state)?;
-    },
+    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
     reversion => sub[gullet, arg, _inner, _extra, _state] {
         Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
