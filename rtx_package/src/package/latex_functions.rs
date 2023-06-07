@@ -219,8 +219,8 @@ pub fn tabular_bindings(
     gullet,
     state,
   );
-  state.let_i(&T_CS!("\\\\"), T_CS!("\\@tabularcr"), None, gullet);
-  state.let_i(&T_CS!("\\tabularnewline"), T_CS!("\\\\"), None, gullet);
+  state.let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None, gullet);
+  state.let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None, gullet);
   // NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!
   for name in [

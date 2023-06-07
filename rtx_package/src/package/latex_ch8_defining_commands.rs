@@ -76,7 +76,7 @@ LoadDefinitions!(state, {
     // only if defined but not yet robust
     if LookupDefinition!(&cs).is_some() &&
        LookupDefinition!(&mungedcs).is_none() {
-      Let!(&mungedcs, cs.clone());
+      Let!(&mungedcs, &cs);
       DefMacro!(cs, None, Tokens!(T_CS!("\\protect"),mungedcs));
     }
   });
@@ -148,11 +148,13 @@ LoadDefinitions!(state, {
     //           . '\else\csname\cf@encoding\string' . $css . '\endcsname\fi'); }
     //     my $ecs = T_CS('\\' . $encoding . $css);
     //     DefPrimitiveI($ecs, undef, FontDecode($code, $encoding));
+    unimplemented!();
+    Ok(Vec::new())
   });
 
   // hmmm... what needs doing here; basically it means use this encoding as the default for the
   // symbol
-  DefMacro!("\\DeclareTextSymbolDefault DefToken {}", "");
+  DefMacro!("\\DeclareTextSymbolDefault DefToken {}", None);
 
   //------------------------------------------------------------
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None);

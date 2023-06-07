@@ -76,14 +76,13 @@ pub fn is_defined(name: &str, state: &State) -> bool {
 
 /// Token variant of `is_defined`. Defined in the LaTeX-y sense of also not being let to \relax.
 pub fn is_defined_token(cs: &Token, state: &State) -> bool {
-  let meaning = state.lookup_meaning(cs);
-  match meaning {
+  match state.lookup_meaning(cs) {
     Some(store) => match store.as_ref() {
       Stored::Token(_) => true,
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
       Stored::Constructor(ref m) => m.get_cs_name() != "\\relax",
-      _ => false,
+      other => panic!("TODO: unexpected case for is_defined_token, got: {other:?}")
     },
     _ => false,
   }
@@ -93,7 +92,8 @@ pub fn is_defined_token(cs: &Token, state: &State) -> bool {
 pub fn is_definable(token: &Token, state: &State) -> bool {
   let meaning = state.lookup_meaning(token);
   token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == TOKEN_RELAX.with(|tr| state.lookup_meaning(tr))))
+    && (meaning.is_none() || (meaning == TOKEN_RELAX.with(|tr| state.lookup_meaning(tr)))
+        || state.lookup_bool("2.09_COMPATIBILITY"))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -165,7 +165,7 @@ pub fn def_conditional(
           None,
           state,
         );
-        state.let_i(&cs, T_CS!("\\iffalse"), None, gullet);
+        state.let_i(&cs, &T_CS!("\\iffalse"), None, gullet);
       } else {
         //  For \ifcase, the parameter list better be a single Number !!
         state.install_definition(

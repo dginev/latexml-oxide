@@ -4,37 +4,34 @@ use rtx_core::keyvals::KeyvalsConfig;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 use std::collections::VecDeque;
 
-
-// TODO:
-// sub isDefinable {
-//   my ($token) = @_;
-//   return unless $token;
-//   my $meaning = LookupMeaning($token);
-//   my $name    = $token->getString; $name =~ s/^\\//;
-//   return (((!defined $meaning) || ($meaning eq LookupMeaning(T_CS('\relax')))
-//         || LookupValue('2.09_COMPATIBILITY'))    # Let redefinitions happen in compatibility mode.
-//       && (($name ne 'relax') && ($name !~ /^end/))); }
-
 pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
-  let mut bindings: VecDeque<Stored> = match state.lookup_value(if vertical_mode {
+  let mode_key = if vertical_mode {
     "VTEXT_MODE_BINDINGS"
   } else {
     "HTEXT_MODE_BINDINGS"
-  }) {
-    Some(Stored::VecDequeStored(ref vdq)) => vdq.clone(),
+  };
+  let text_key = "TEXT_MODE_BINDINGS";
+  let mode_bindings = state.checkout_value(mode_key);
+  let text_bindings = state.checkout_value(text_key);
+  let mut bindings: VecDeque<&Stored> = match mode_bindings {
+    Some(Stored::VecDequeStored(ref vdq)) => vdq.iter().collect::<VecDeque<&Stored>>(),
     _ => VecDeque::new(),
   };
-  if let Some(Stored::VecDequeStored(ref text_mode_bindings)) =
-    state.lookup_value("TEXT_MODE_BINDINGS")
+  if let Some(Stored::VecDequeStored(ref vdq)) = text_bindings
   {
-    bindings.extend(text_mode_bindings.clone());
+    bindings.extend(vdq.iter().collect::<Vec<_>>());
   }
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
-      let mut vec = tks.unlist();
-      let new = vec.remove(1);
-      state.let_i(&vec[0], new, None, gullet);
+      let vec = tks.unlist_ref();
+      state.let_i(&vec[0], &vec[1], None, gullet);
     }
+  }
+  if let Some(value) = mode_bindings {
+    state.checkin_value(mode_key, value);
+  }
+  if let Some(value) = text_bindings {
+    state.checkin_value(text_key, value);
   }
 }
 
@@ -1012,13 +1009,13 @@ pub fn make_generic_message(
   stomach.bgroup(state);
   state.let_i(
     &T_CS!("\\protect"),
-    T_CS!("\\string"),
+    &T_CS!("\\string"),
     None,
     stomach.get_gullet_mut(),
   );
   state.let_i(
     &T_CS!("\\MessageBreak"),
-    T_CS!("\\ltx@hard@MessageBreak"),
+    &T_CS!("\\ltx@hard@MessageBreak"),
     None,
     stomach.get_gullet_mut(),
   ); // tricky, we need Expand() to execute it

@@ -1441,7 +1441,7 @@ macro_rules! Let {
     bind_state_mut!(stmch, st);
     st.let_i(
       &T_CS!($token1),
-      T_CS!($token2),
+      &T_CS!($token2),
       None,
       stmch.get_gullet_mut(),
     );
@@ -1449,20 +1449,20 @@ macro_rules! Let {
   // half-packaged args
   ($token1:literal, $token2:expr) => {{
     bind_state_mut!(stmch, st);
-    st.let_i(&T_CS!($token1), $token2, None, stmch.get_gullet_mut());
+    st.let_i(&T_CS!($token1), &$token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:literal) => {{
     bind_state_mut!(stmch, st);
-    st.let_i($token1, T_CS!($token2), None, stmch.get_gullet_mut());
+    st.let_i(&$token1, &T_CS!($token2), None, stmch.get_gullet_mut());
   }};
   // internal form, pre-packaged arguments
   ($token1:expr, $token2:expr) => {{
     bind_state_mut!(stmch, st);
-    st.let_i($token1, $token2, None, stmch.get_gullet_mut());
+    st.let_i(&$token1, &$token2, None, stmch.get_gullet_mut());
   }};
   ($token1:expr, $token2:expr, $scope:expr) => {{
     bind_state_mut!(stmch, st);
-    st.let_i($token1, $token2, $scope, stmch.get_gullet_mut());
+    st.let_i(&$token1, &$token2, $scope, stmch.get_gullet_mut());
   }};
 }
 

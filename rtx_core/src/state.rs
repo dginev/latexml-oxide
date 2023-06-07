@@ -2013,15 +2013,15 @@ impl State {
   pub fn let_i(
     &mut self,
     token1: &Token,
-    token2: Token,
+    token2: &Token,
     scope: Option<Scope>,
     gullet: &mut Gullet,
   ) {
     let meaning = if token2.get_dont_expand().is_some() {
-      Cow::Owned(Stored::Token(token2))
+      Cow::Owned(Stored::Token(token2.clone()))
     } else {
       self
-        .lookup_meaning(&token2)
+        .lookup_meaning(token2)
         .unwrap_or(Cow::Owned(Stored::None))
     };
     self.assign_meaning(token1, meaning.into_owned(), scope);
@@ -2077,7 +2077,7 @@ impl State {
         ),
         Some(Scope::Global),
       );
-      self.let_i(token, T_CS!("\\iffalse"), Some(Scope::Global), caller);
+      self.let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global), caller);
     } else {
       Error!(
         "undefined",

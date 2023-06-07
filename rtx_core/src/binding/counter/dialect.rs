@@ -461,7 +461,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &
     if !norefnum && state.lookup_meaning(&hj_refnum).is_some() {
       state.let_i(
         &T_CS!(s!("\\the{ctr}")),
-        hj_refnum,
+        &hj_refnum,
         Some(Scope::Global),
         gullet,
       );
@@ -469,7 +469,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool, gullet: &mut Gullet, state: &
     if state.lookup_meaning(&hj_id).is_some() {
       state.let_i(
         &T_CS!(s!("\\the{ctr}@ID")),
-        hj_id,
+        &hj_id,
         Some(Scope::Global),
         gullet,
       );
@@ -741,10 +741,10 @@ pub fn begin_itemize(
   let gullet = stomach.get_gullet_mut();
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));
-    state.let_i(&T_CS!("\\item"), itype_cs, None, gullet);
+    state.let_i(&T_CS!("\\item"), &itype_cs, None, gullet);
   }
   // In case within odd environment.
-  state.let_i(&T_CS!("\\par"), T_CS!("\\normal@par"), None, gullet);
+  state.let_i(&T_CS!("\\par"), &T_CS!("\\normal@par"), None, gullet);
   def_macro(
     T_CS!("\\@listctr"),
     None,

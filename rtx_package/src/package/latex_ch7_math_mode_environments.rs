@@ -53,13 +53,13 @@ fn before_equation(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let gullet = stomach.get_gullet_mut();
   state.let_i(
     &T_CS!("\\@@ENDDISPLAYMATH"),
-    T_CS!("\\lx@eDM@in@equation"),
+    &T_CS!("\\lx@eDM@in@equation"),
     None,
     gullet,
   );
   state.let_i(
     &T_CS!("\\@@BEGINDISPLAYMATH"),
-    T_CS!("\\lx@bDM@in@equation"),
+    &T_CS!("\\lx@bDM@in@equation"),
     None,
     gullet,
   );

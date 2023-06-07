@@ -115,7 +115,7 @@ LoadDefinitions!(outer_stomach, state, {
   Let!("\\@@ifdefinable", "\\@ifdefinable");
 
   DefMacro!("\\@rc@ifdefinable DefToken {}", sub[gullet, (token, iftoken), state] {
-    state.let_i(&T_CS!("\\@ifdefinable"), T_CS!("\\@@ifdefinable"), None, gullet);
+    state.let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None, gullet);
     iftoken.unlist()
   });
 
