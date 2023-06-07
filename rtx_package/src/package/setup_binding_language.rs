@@ -885,6 +885,10 @@ macro_rules! RegisterNamespace(
     bind_state_mut!(st);
     RegisterNamespace!($prefix, $namespace, st)
   }};
+  ($prefix:expr => $namespace:expr) => {{
+    bind_state_mut!(st);
+    RegisterNamespace!($prefix, $namespace, st)
+  }};
   ($prefix:expr, $namespace:expr,$state_arg:ident) =>
     ($state_arg.model.register_namespace($prefix, Some($namespace)))
 );

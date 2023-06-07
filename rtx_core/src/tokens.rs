@@ -94,7 +94,7 @@ impl From<Token> for Vec<Token> {
 impl From<Tokens> for Token {
   fn from(mut ts: Tokens) -> Token {
     if ts.0.is_empty() {
-      unimplemented!();
+      panic!("Tried to cast an empty Tokens object into a single Token");
     } else if ts.0.len() == 1 {
       ts.0.remove(0)
     } else {
