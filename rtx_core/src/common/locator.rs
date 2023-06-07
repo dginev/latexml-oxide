@@ -16,11 +16,11 @@ use std::fmt::Write as _;
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Locator {
-  source: String,
-  from_line: usize,
-  to_line: usize,
-  from_column: usize,
-  to_column: usize,
+  pub source: String,
+  pub from_line: usize,
+  pub to_line: usize,
+  pub from_column: usize,
+  pub to_column: usize,
 }
 
 // elide Locator debugging until we get to implementing them faithfully

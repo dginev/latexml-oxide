@@ -93,12 +93,15 @@ impl Object for Gullet {
 
 impl Gullet {
   /// This flushes a mouth so that it will be automatically closed, next time it's read
-  /// Corresponds (I think) to TeX's \endinput
+  /// Corresponds to TeX's \endinput
   pub fn flush_mouth(&mut self, state: &mut State) {
     if let Some(ref mut runtime) = self.mouth {
-      runtime.mouth.finish(state); // but not close!
-      runtime.pushback.drain(..); // And don't read anytyhing more from it.
-      runtime.autoclose = true;
+      while !runtime.mouth.is_eol(state) {
+        if let Some(token) = runtime.mouth.read_token(state) {
+          runtime.pushback.push_back(token);
+        }
+      }
+      runtime.mouth.finish(state); // then finish the mouth (it'll get closed on next read)
     }
   }
 
@@ -177,6 +180,15 @@ impl Gullet {
       None => None,
       Some(ref mut runtime) => Some(&mut runtime.mouth),
     }
+  }
+
+  pub fn mouth_is_open(&self, mouth: &Mouth) -> bool {
+    if let Some(ref runtime) = self.mouth {
+      if mouth == &runtime.mouth {
+        return true;
+      }
+    }
+    self.mouthstack.iter().any(|runtime| &runtime.mouth == mouth)
   }
 
   ///**********************************************************************

@@ -79,9 +79,10 @@ LoadDefinitions!(state, {
     "\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\\tracingpages=1 \\tracingoutput=1\\tracinglostchars=1\\tracingmacros=2 %\
 \\tracingparagraphs=1 \\tracingrestores=1\\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode"
   );
+  DefMacro!("\\tracingnone", None);
+  DefMacro!("\\hideoutput", None);
 
   let dt = Local::now();
-
   AssignValue!("\\day", Number!(dt.day()), Scope::Global);
   AssignValue!("\\month", Number!(dt.month()), Scope::Global);
   AssignValue!("\\year", Number!(dt.year()), Scope::Global);
@@ -93,7 +94,6 @@ LoadDefinitions!(state, {
 
   // Read-only Integer registers
   DefRegister!("\\lastpenalty",Number!(0), readonly => true);
-  DefRegister!("\\inputlineno",Number!(0), readonly => true);
   DefRegister!("\\badness",Number!(0), readonly => true);
 
   // Special integer registers (?)

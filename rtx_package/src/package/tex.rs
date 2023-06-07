@@ -7,18 +7,19 @@ LoadDefinitions!(state, {
   // Author: Deyan Ginev <deyan.ginev@gmail.com>
   // Date:   Wed May 10 16:36:04 2023 -0400
 
+  // lines 1-758
+  InnerPool!(tex_setup);
+  // lines 758-1075
+  InnerPool!(tex_expandable_primitives);
+  // lines 1076-1216
+  InnerPool!(tex_registers);
+
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 1-758
-  InnerPool!(tex_setup);
-  // lines 758-1075
-  InnerPool!(tex_expandable_primitives);
-  // lines 1076-1102
-  InnerPool!(tex_registers);
-  // lines 1102-1524
+  // lines 1217-1524
   InnerPool!(tex_assignment);
   // lines 1524-1888
   InnerPool!(tex_fonts);

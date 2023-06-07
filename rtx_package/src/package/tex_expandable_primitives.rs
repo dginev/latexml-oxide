@@ -14,14 +14,13 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifcase Number");
 
   DefConditional!("\\ifnum Number Token Number", sub[gullet, (u,rel,v), state] {
-    compare(u, rel, v)
+    compare(u.value_of(), rel, v.value_of())
   });
   DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, (u,rel,v), state] {
-    compare(Number::new(u.value_of()), rel, Number::new(v.value_of()))
+    compare(u.value_of(), rel, v.value_of())
   });
   DefConditional!("\\ifodd Number", sub[gullet, (u), state] {
-    let uint = u.value_of();
-    uint % 2 == 1
+    u.value_of() % 2 == 1
   });
 
   // NOTE: We don't KNOW if we're in vertical, horizontal or inner mode!!!!!!!
@@ -39,13 +38,10 @@ LoadDefinitions!(outer_state, {
       } else {
         t
       }});
-    let token = match token_opt {
-      None => {
-        Error!("expected", "ExpandedIfToken", gullet, state,
-          "conditional expected a token argument, came back empty. Falling back to \\@empty");
-        T_CS!("\\@empty") },
-      Some(t) => t
-    };
+    let token = token_opt.unwrap_or_else(|| {
+      Error!("expected", "ExpandedIfToken", gullet, state,
+        "conditional expected a token argument, came back empty. Falling back to \\@empty");
+      T_CS!("\\@empty") });
     if token.has_smuggled() {    // marked dont_expand
       let smuggled = token.get_dont_expand().as_ref().unwrap();
       if smuggled.get_catcode() == Catcode::ACTIVE {
@@ -59,16 +55,16 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[gullet, (token1,token2), state] {
-    token1.get_charcode() == token2.get_charcode()
+  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[gullet, (left,right), state] {
+    left.get_charcode() == right.get_charcode()
   });
 
-  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[gullet, (token1,token2), state] {
-    token1.get_catcode() == token2.get_catcode()
+  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[gullet, (left,right), state] {
+    left.get_catcode() == right.get_catcode()
   });
 
-  DefConditional!("\\ifx Token Token", sub[gullet, (token1,token2), state] {
-    state.x_equals(&token1, &token2)
+  DefConditional!("\\ifx Token Token", sub[gullet, (left,right), state] {
+    state.x_equals(&left, &right)
   });
 
   DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
@@ -82,10 +78,6 @@ LoadDefinitions!(outer_state, {
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
   DefPrimitive!("\\relax", None);
-  //// However, this keeps a box, so it can appear in UnTeX
-  ////// DefPrimitive('\relax',undef);
-  //// But if you do that, you've got to watch out since it usually
-  //// shouldn't be a box; See the isRelax code in handleScripts, below
 
   DefMacro!("\\number Number", sub[gullet, (num), state] { Explode!(num.value_of()) });
 
@@ -94,8 +86,8 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\romannumeral Number", sub[gullet, (num), state] { roman!(num.value_of()) });
 
-  // # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
-  // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
+  // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
+  // suggests all characters except spaces are returned in category code Other, i.e. Explode()
   DefMacro!("\\string Token", sub[gullet, (token), state] {
     let mut s = token.to_string();
     if s.starts_with('\\') {
@@ -286,8 +278,8 @@ LoadDefinitions!(outer_state, {
 
   DefMacro!("\\csname CSName", sub[gullet, (token), state] {
     if state.lookup_meaning(&token).is_none() {
-      state.assign_meaning(&token, TOKEN_RELAX.with(|tr|
-        state.lookup_meaning(tr)).unwrap().into_owned(), None);
+      state.assign_meaning(&token, TOKEN_RELAX.with(|t_relax|
+        state.lookup_meaning(t_relax)).unwrap().into_owned(), None);
     }
     token
   });
@@ -347,10 +339,10 @@ LoadDefinitions!(outer_state, {
       && tks.last().unwrap().get_catcode() == Catcode::END {
       tks.remove(0);
       tks.pop();
-    }
-    // and load LaTeX.pool if not already
-    if !state.lookup_bool("LaTeX.pool_loaded") {
-      LoadPool!("LaTeX");
+      // and load LaTeX.pool if not already
+      if !state.lookup_bool("LaTeX.pool_loaded") {
+        LoadPool!("LaTeX");
+      }
     }
     let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
     input(&Tokens::new(tks).to_string(), reloadable_opts, stomach, state)?;
@@ -359,16 +351,7 @@ LoadDefinitions!(outer_state, {
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
   DefMacro!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
-    let mut mouth = gullet.get_mouth_mut().unwrap();
-    let line_opt = if !mouth.is_eol(state) {
-      gullet.read_raw_line(state)
-    } else {
-      None
-    };
     gullet.flush_mouth(state);
-    if let Some(line) = line_opt {
-      gullet.unread(Tokenize!(&line));
-    }
   });
 
   // \the<internal quantity>
@@ -412,20 +395,18 @@ fn escapechar(state: &mut State) -> String {
   }
 }
 
-fn compare(u: Number, rel: Token, v: Number) -> Result<bool> {
-  let u = u.value_of();
-  let v = v.value_of();
+fn compare(u: i64, rel: Token, v: i64) -> bool {
   // NOTE: One would expect this to be best written as an advanced match statement
   // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
   // Cow::Owned("<") variants will NOT be equal via a destructuring match.
   // However, since we've defined our own PartialEq trait over Token, an equality comparison
   // will produce the right behavior
   if rel == T_OTHER!("<") || rel == T_CS!("\\@@<") {
-    Ok(u < v)
+    u < v
   } else if rel == T_OTHER!("=") {
-    Ok(u == v)
+    u == v
   } else if rel == T_OTHER!(">") || rel == T_CS!("\\@@>") {
-    Ok(u > v)
+    u > v
   } else {
     let message = s!(
       "Expected a relational token for comparision. Got {:?} (cc {:?})",
@@ -433,6 +414,6 @@ fn compare(u: Number, rel: Token, v: Number) -> Result<bool> {
       rel.get_catcode()
     );
     Error!("expected", "<relationaltoken>", None, None, message);
-    Ok(false)
+    false
   }
 }
