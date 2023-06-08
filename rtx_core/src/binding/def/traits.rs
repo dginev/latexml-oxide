@@ -241,6 +241,9 @@ pub trait IntoDigestedResult<T>: Sized {
 impl IntoDigestedResult<Result<Vec<Digested>>> for () {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
 }
+impl IntoDigestedResult<Result<Vec<Digested>>> for Result<()> {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { self.map(|_| Vec::new()) }
+}
 impl IntoDigestedResult<Result<Vec<Digested>>> for Tbox {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(vec![self.into()]) }
 }
