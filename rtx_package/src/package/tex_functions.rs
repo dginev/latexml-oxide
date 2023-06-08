@@ -69,11 +69,8 @@ pub fn parse_def_parameters(
   params_in: Tokens,
   state: &mut State,
 ) -> Result<Option<Parameters>> {
-  let mut tokens: VecDeque<Token> = if params_in.is_empty() {
-    VecDeque::new()
-  } else {
-    VecDeque::from(params_in.pack_parameters().unlist())
-  };
+  let mut tokens: VecDeque<Token> =
+    VecDeque::from(params_in.pack_parameters().unlist());
   // Now, recognize parameters and delimiters.
   let mut params = Vec::new();
   let mut n = 0;
