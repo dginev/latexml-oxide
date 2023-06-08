@@ -13,14 +13,14 @@ LoadDefinitions!(state, {
   InnerPool!(tex_expandable_primitives);
   // lines 1076-1216
   InnerPool!(tex_registers);
+  // lines 1217-1524
+  InnerPool!(tex_assignment);
 
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 1217-1524
-  InnerPool!(tex_assignment);
   // lines 1524-1888
   InnerPool!(tex_fonts);
   // lines 1889-2416

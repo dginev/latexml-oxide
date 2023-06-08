@@ -177,13 +177,13 @@ LoadDefinitions!(outer_state, {
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
   DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[stomach, (token1, token2), state] {
-    Let!(&token1, &token2);
+    Let!(token1, token2);
   });
 
   DefPrimitive!("\\futurelet Token Token Token", sub[stomach, (cs, token1, token2), state] {
     // NOT expandable, but puts tokens back
     stomach.get_gullet_mut().unread(Tokens!(token1,token2.clone()));
-    Let!(&cs, &token2);
+    Let!(cs, token2);
   });
 
   // <shorthand definition> = \chardef<control sequence><equals><8bit>
@@ -193,78 +193,26 @@ LoadDefinitions!(outer_state, {
 
   // See below for \chardef & \mathchardef
 
-  // NOTE: We are not porting `shorthandDef` from the original perl,
-  // as the generic types it would impose are not worth our while.
-  // specifically for the getter/setter routines.
-  // instead, here is the same pattern of definition, with different concrete value types.
+  // DG: it's just RegisterValue actually.
 
   DefPrimitive!("\\countdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(),None);
-    let num = stomach.get_gullet_mut().read_number(state)?;
-    let reg = s!("\\count{}", num.value_of());
-    let setter_count = reg.clone();
-    DefRegister!(cs, None, Number::new(0),
-      name   => reg,
-      getter => sub[args, state] { state.lookup_number(&reg).unwrap_or_default() },
-      setter => sub[value, args, state] { state.assign_value(&setter_count, value, None); });
-    AfterAssignment!();
-    Ok(Vec::new())
+    shorthand_def(cs, "\\count", Number::new(0).into(), stomach,state)
   });
 
   DefPrimitive!("\\dimendef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(),None);
-    let num = stomach.get_gullet_mut().read_number(state)?;
-    let dimen = s!("\\dimen{}", num.value_of());
-    let dimen2 = dimen.clone();
-    DefRegister!(cs, None, Dimension::new(0),
-      getter => sub[args, state] { state.lookup_dimension(&dimen).unwrap_or_default() },
-      setter => sub[value, args, state] { state.assign_value(&dimen2, value, None); }
-    );
-    AfterAssignment!();
-    Ok(Vec::new())
+    shorthand_def(cs, "\\dimen", Dimension::new(0).into(), stomach,state)
   });
 
   DefPrimitive!("\\skipdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(),None);
-    let num = stomach.get_gullet_mut().read_number(state)?;
-    let skip = s!("\\skip{}", num.value_of());
-    let skip2 = skip.clone();
-    DefRegister!(cs, None, Glue::new(0),
-      getter => sub[args, state] { state.lookup_glue(&skip).unwrap_or_default() },
-      setter => sub[value, args, state] { state.assign_value(&skip2, value, None); }
-    );
-    AfterAssignment!();
-    Ok(Vec::new())
+    shorthand_def(cs, "\\skip", Glue::new(0).into(), stomach,state)
   });
 
   DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(),None);
-    let num = stomach.get_gullet_mut().read_number(state)?;
-    let muglue = s!("\\muskip{}",num.value_of());
-    let muglue_setter = muglue.clone();
-    DefRegister!(cs, None, MuGlue::new(0),
-      getter => sub[args,state] { state.lookup_muglue(&muglue).unwrap_or_default() },
-      setter => sub[value,args,state] { state.assign_value(&muglue_setter, value, None); }
-    );
-    AfterAssignment!();
-    Ok(Vec::new())
+    shorthand_def(cs, "\\muskip", MuGlue::new(0).into(), stomach,state)
   });
 
   DefPrimitive!("\\toksdef Token SkipMatch:=", sub[stomach, (cs), state] {
-    state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
-      state.lookup_meaning(tr)).unwrap().into_owned(),None);
-    let num = stomach.get_gullet_mut().read_number(state)?;
-    let toks = s!("\\toks{}", num.value_of() as usize);
-    let toks_setter = toks.clone();
-    DefRegister!(cs, None, Tokens!(),
-      getter => sub[args, state] { state.lookup_tokens(&toks).unwrap_or_default() },
-      setter => sub[value, args, state] { state.assign_value(&toks_setter, value, None); }
-    );
-    Ok(Vec::new())
+    shorthand_def(cs, "\\toks", Tokens!().into(), stomach,state)
   });
 
   // NOTE: Get all these handled as registers
@@ -277,13 +225,13 @@ LoadDefinitions!(outer_state, {
 
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[stomach, (n), state] {
-    // $n = $n->valueOf;
-    // my $gullet = $stomach->getGullet;
-    // for (my $i = 0 ; $i < $n ; $i++) {
-    //   $gullet->readDimension; $gullet->readDimension; }
-    // // we _could_ conceivably store this somewhere for some attempt at stylistic purpose...
-    unimplemented!();
-    ()
+    let gullet = stomach.get_gullet_mut();
+    for i in 0..n.value_of() {
+      gullet.read_dimension(state)?;
+      gullet.read_dimension(state)?;
+    }
+    // we _could_ conceivably store this somewhere for some attempt at stylistic purpose...
+    Ok(Vec::new())
   });
 
   DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=>sub[_args,state] {
@@ -385,3 +333,14 @@ LoadDefinitions!(outer_state, {
   DefMacro!("\\hyphenation GeneralText", None);
   DefMacro!("\\patterns{}", None);
 });
+
+pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  state.assign_meaning(&cs, TOKEN_RELAX.with(|tr|
+    state.lookup_meaning(tr)).unwrap().into_owned(),None);
+  let num = stomach.get_gullet_mut().read_number(state)?;
+  let name = s!("{address_type}{}", num.value_of());
+  def_register(cs, None, init,
+      Some(RegisterOptions{name: Some(name), ..RegisterOptions::default()}), state);
+  state.after_assignment(stomach.get_gullet_mut());
+  Ok(())
+}
