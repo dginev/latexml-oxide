@@ -416,7 +416,7 @@ impl Gullet {
         }
         // And *then* continue the main loop checks
       } else if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state.lookup_meaning_iff_def(&token) {
+        if let Some(defn) = state.lookup_definition(&token) {
           if (toplevel || !defn.is_protected()) && defn.is_expandable() {
             // is this the right logic here? don't expand unless digesting?
             state.local_current_token(token);

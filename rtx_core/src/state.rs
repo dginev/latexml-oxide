@@ -1291,30 +1291,6 @@ impl State {
     }
   }
 
-  /// Get the `Meaning' of a token IFF it implements Definition.
-  pub fn lookup_meaning_iff_def(&self, token: &Token) -> Option<Rc<dyn Definition>> {
-    if token.get_catcode().is_active_or_cs()
-      && !token.has_smuggled()
-      && token.text != EMPTY_SYM.with(|sym| *sym)
-    {
-      match self.meaning.get(&token.text) {
-        Some(entry) => match entry.front() {
-          Some(Stored::Conditional(entry)) => Some(entry.clone()),
-          Some(Stored::Constructor(entry)) => Some(entry.clone()),
-          Some(Stored::Expandable(entry)) => Some(entry.clone()),
-          Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
-          Some(Stored::Primitive(entry)) => Some(entry.clone()),
-          Some(Stored::Register(entry)) => Some(entry.clone()),
-          // None | Some(Stored::None) | Some(Stored::Bool(_)) | ...
-          _ => None,
-        },
-        None => None,
-      }
-    } else {
-      None
-    }
-  }
-
   /// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
   pub fn assign_meaning<T: Into<Stored>>(
@@ -1368,16 +1344,7 @@ impl State {
         Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
         Some(Stored::Primitive(entry)) => Some(entry.clone()),
         Some(Stored::Register(entry)) => Some(entry.clone()),
-        // TODO: Is this take on reframing a Token definition as an Expandable acceptable?
-        //      Does it have unintended side-effects? Are we missing useful code paths that
-        // specifically deal with a Token      in Gullet, etc?
-        Some(Stored::Token(entry)) => Some(Rc::new(Expandable {
-          cs: key.as_cs(),
-          paramlist: None,
-          expansion: entry.clone().into(),
-          ..Expandable::default()
-        })),
-        Some(Stored::None) | None => None,
+        Some(Stored::None) | Some(Stored::Token(_)) | None => None,
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
           Error!("unexpected", "value", None, self, message);
