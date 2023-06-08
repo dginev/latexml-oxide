@@ -9,6 +9,10 @@ LoadDefinitions!(state, {
 
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
+  DefPrimitive!("\\lastbox", sub[stomach,(),state] {// Hopefully, the correct box got seen!
+    stomach.box_list.pop().map(|b| vec![b]).unwrap_or_default()
+  });
+
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[stomach, (number), state] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = state.remove_value("afterAssignment") {
@@ -53,6 +57,18 @@ LoadDefinitions!(state, {
       Ok(Vec::new())
     }
   });
+
+  DefPrimitive!("\\vsplit Number Match:to Dimension", sub[stomach,(number,_to,dimension),state] {
+    // analog to \box for now.
+    let box_key   = s!("box{}", number.value_of());
+    if let Some(Stored::Digested(ref stuff)) = state.lookup_value(&box_key) {
+      adjust_box_color(stuff, state)?;
+      if stuff.is_empty() { Digested::from(List::default()) } else { stuff.clone() }
+    } else {
+      Digested::from(List::default())
+    }
+  });
+
 
   DefParameterType!(BoxSpecification, sub[gullet, _inner, _extra, state] {
       if let Some(key) = gullet.read_keyword(&["to", "spread"], state)? {
@@ -106,6 +122,12 @@ LoadDefinitions!(state, {
   AssignValue!("VTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
   PushValue!("HTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@textmode")));
   PushValue!("VTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@normalmode")));
+
+  // TODO: collapseSVGGroup
+  Tag!("svg:g", after_close => sub[_document, _node, _state] {
+    unimplemented!();
+    // collapse_svg_group(document, node, state)
+  });
 
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props, state] {
       // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
@@ -171,6 +193,9 @@ LoadDefinitions!(state, {
       }
     }
   );
+
+  // TODO:
+  // Tag('svg:foreignObject', autoOpen => 1, autoClose => 1, ...
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props, state] {
       let contents = args[1].as_ref().unwrap();
@@ -290,3 +315,19 @@ LoadDefinitions!(state, {
   //       $whatsit->setProperty(color => $color); } }
   //   return; });
 });
+
+
+fn adjust_box_color(tbox: &Digested, state: &State) -> Result<()> {
+  let color_opt = state.lookup_font().and_then(|f| f.get_color()
+    .map(|c| c.clone().into_owned()));
+  if let Some(color) = color_opt {
+    if color != "black" {
+       adjust_box_color_rec(&color, HashMap::default(), tbox, state);
+    }
+  }
+  Ok(())
+}
+
+fn adjust_box_color_rec(_color: &str, _props: HashMap<String,String>, _tbox: &Digested, _state: &State) {
+  unimplemented!();
+}
