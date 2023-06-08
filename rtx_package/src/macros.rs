@@ -143,6 +143,7 @@ macro_rules! parameter_rust_type {
   (Semiverbatim) => {Tokens};
   (UntilBrace) => {Tokens};
   (TeXFileName) => {Tokens};
+  (Match) => {Tokens};
   (AlignmentTemplate) => {Template};
   (DefPlain) => {Tokens};
   (DefExpanded) => {Tokens};

@@ -111,51 +111,54 @@ LoadDefinitions!(outer_state, {
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
-  DefParameterType!(FontToken, reader => reader!(gullet, _inner, _extra, state, {
+  DefParameterType!(FontToken, sub[gullet, _inner, _extra, state] {
     let token = gullet.read_token(state)?.unwrap();
     if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
       gullet.read_number(state)?;
     }
     token
-  })); // ?
+  }); // ?
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
-    getter => {unimplemented!(); () }
-    // my $p = ToString($_[0]);
-  //     if    ($p == 2) { Dimension('0.5em'); }    # interword space
-  //     elsif ($p == 5) { Dimension('1ex'); }      # x-height
-  //     elsif ($p == 6) { Dimension('1em'); }      # quad width
-  //     else { Dimension(0); }
+    getter => sub[args, state] {
+      let p = args.remove(0).expect_number().value_of();
+      match p {
+        2 => Dimension::from_str("0.5em",state).ok()?,    // interword space
+        5 => Dimension::from_str("1ex",state).ok()?,      // x-height
+        6 => Dimension::from_str("1em",state).ok()?,      // quad width
+        _ => Dimension::new(0)
+      }
+    }
   );
 
-  //   Could be handled by setting dimensions whenever the box itself is set?
+  // Could be handled by setting dimensions whenever the box itself is set?
 
   // <internal glue> = <glue parameter> | \lastskip | <skipdef token> | \skip<8bit>
 
   DefRegister!("\\lastskip", Glue::new(0), readonly => true);
 
-  // # <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
+  // <internal muglue> = <muglue parameter> | \lastskip | <muskipdef token> | \muskip<8bit>
 
-  // # <family assignment> = <family member><equals><font>
-  // # <shape assignment> = \parshape<equals><number><shape dimensions>
-  // #  <shape dimensions> is 2n <dimen>
+  // <family assignment> = <family member><equals><font>
+  // <shape assignment> = \parshape<equals><number><shape dimensions>
+  //  <shape dimensions> is 2n <dimen>
 
-  // # <global assignment> = <font assignment> | <hyphenation assignment>
-  // #   | <box size assignment> | <interaction mode assignment>
-  // #   | <intimate assignment>
-  // # <font assignment> = \fontdimen <number><font><equals><dimen>
-  // #   | \hyphenchar<font><equals><number> | \skewchar<font><equals><number>
-  // # <hyphenation assignment> = \hyphenation<general text>
-  // #   | \patterns<general text>
-  // # <box size assignment> = <box dimension><8bit><equals><dimen>
-  // # <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
-  // # These are no-ops; Basically, LaTeXML runs in scrollmode
+  // <global assignment> = <font assignment> | <hyphenation assignment>
+  //   | <box size assignment> | <interaction mode assignment>
+  //   | <intimate assignment>
+  // <font assignment> = \fontdimen <number><font><equals><dimen>
+  //   | \hyphenchar<font><equals><number> | \skewchar<font><equals><number>
+  // <hyphenation assignment> = \hyphenation<general text>
+  //   | \patterns<general text>
+  // <box size assignment> = <box dimension><8bit><equals><dimen>
+  // <interaction mode assignment> = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
+  // These are no-ops; Basically, LaTeXML runs in scrollmode
   DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
   DefPrimitive!(T_CS!("\\scrollmode"), None, None);
   DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
   DefPrimitive!(T_CS!("\\batchmode"), None, None);
 
-  // # <intimate assignment> = <special integer><equals><number>
-  // #   | <special dimension><equals><dimen>
+  // <intimate assignment> = <special integer><equals><number>
+  //   | <special dimension><equals><dimen>
 
   DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
 
@@ -364,30 +367,29 @@ LoadDefinitions!(outer_state, {
     ]
   );
 
-  DefPrimitive!("\\char Number", sub[stomach, args, p_state] {
-    let token = args.remove(0);
-    let number = token.clone().try_to_number()?;
+  DefPrimitive!("\\char Number", sub[stomach, (number), p_state] {
+    let number_tks = number.revert(p_state).unwrap_or_default().unlist();
     let decoded = match font::decode(number.value_of() as u8, None, false, stomach, p_state) {
       None => EMPTY_SYM.with(|sym| *sym),
       Some(c) => arena::pin_char(c)
     };
-    let gullet = stomach.get_gullet_mut();
-    let invoked = Invocation!(T_CS!("\\char"), vec![token], gullet)?;
     Tbox::new(
      decoded,
      None,
      None,
-     invoked,
+     Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
      HashMap::default(),
      p_state)
   });
 
-  // Almost like a register, but different...
+  // Almost like a register (and \countdef), but different...
+  // (including the preassignment to \relax!)
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
     state.assign_meaning(&newcs, TOKEN_RELAX.with(|tr|
       state.lookup_meaning(tr)).unwrap().into_owned(), None);
     let value = stomach.get_gullet_mut().read_number(state)?;
+    // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
     DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
@@ -404,7 +406,6 @@ LoadDefinitions!(outer_state, {
         HashMap::default(),
         i_state)
     });
-
     state.install_definition(
       Register::new_chardef(newcs, Some(value.into()), Some(internalcs)), None);
     AfterAssignment!();
@@ -427,6 +428,23 @@ LoadDefinitions!(outer_state, {
     }
   );
 
+  DefConstructor!("\\delimiter Number",
+  "?#glyph(?#isMath(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)(#glyph))",
+  sizer       => "#glyph",
+  after_digest => sub[stomach,whatsit,state] {
+    let mut n = whatsit.get_arg(1).unwrap().value_of();
+    n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
+    let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state);
+    if let Some(glyph) = glyph_opt {
+      whatsit.set_property("glyph",glyph);
+      whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
+    }
+    if let Some(role) = role_opt {
+      whatsit.set_property("role", role);
+    }
+    Ok(Vec::new())
+  });
+
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
     // Let w/o AfterAssignment
@@ -436,6 +454,7 @@ LoadDefinitions!(outer_state, {
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
+    // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_opt = glyph.map(|_|
       T_CS!(newcs.with_cs_name(|csname| s!("\\@mathchardef@{csname}"))));
     let internalcs_2 = internalcs_opt.clone();
