@@ -24,12 +24,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("{", sub[stomach, (), state] {
     stomach.bgroup(state);
     let open = Tbox::new(arena::pin_static(""), None, None,
-        Tokens!(T_BEGIN!()), HashMap::default(), state);
-    let mode = if state.lookup_bool("IN_MATH") {
-      Some(TexMode::Math)
-    } else {
-      Some(TexMode::Text)
-    };
+        Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true), state);
+    let mode = Some(if state.lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
     let body = stomach.digest_next_body(None, state)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
@@ -54,19 +50,23 @@ LoadDefinitions!(state, {
     sub[stomach, (), state] {
       let f = LookupFont!();
       stomach.egroup(state)?;
-      Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), HashMap::default(), state)
+      Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true), state)
     }
   );
 
-  // // These are for those screwy cases where you need to create a group like box,
-  // // more than just bgroup, egroup,
-  // // BUT you DON'T want extra {, } showing up in any untex-ing.
+  // These are for those screwy cases where you need to create a group like box,
+  // more than just bgroup, egroup,
+  // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     capture_body => true,
-    reversion=>"" //TODO
-    // reversion => sub[whatsit, state] {
-    //   whatsit.get_body().revert()
+    reversion => ""
+    // TODO: The reversion below seems correct, but it is printed out *double* for the \verb test
+    //       maybe re-check this after we are usre capture_body works as expected???
+    // reversion=> sub[whatsit, _args,state] {
+    //   if let Some(body) = whatsit.get_body() {
+    //     body.revert(state)
+    //   } else { Ok(Tokens!()) }
     // }
   );
   DefConstructor!("\\@hidden@egroup", "",
@@ -83,7 +83,7 @@ LoadDefinitions!(state, {
     stomach.endgroup(state)?;
   });
 
-  // // Debugging aids; Ignored!
+  // Debugging aids; Ignored!
   DefPrimitive!("\\show Token", sub[stomach,(arg),state] {
     let mut gullet = stomach.get_gullet_mut();
     let lhs = if arg.get_catcode() == Catcode::CS {
@@ -154,16 +154,16 @@ LoadDefinitions!(state, {
 
   // Note that these are NOT expandable, even though the "return" tokens!
   DefPrimitive!("\\uppercase GeneralText", sub[stomach,(tokens), state] {
-    let result = tokens.unlist().into_iter()
-    .map(|t| uppercase_token(t, state))
-    .collect::<Vec<Token>>();
-    stomach.get_gullet_mut().unread(Tokens::new(result));
+    stomach.get_gullet_mut().unread_vec(
+      tokens.unlist().into_iter()
+        .map(|t| uppercase_token(t, state))
+        .collect());
   });
   DefPrimitive!("\\lowercase GeneralText", sub[stomach,(tokens), state] {
-    let result = tokens.unlist().into_iter()
-    .map(|t| lowercase_token(t, state))
-    .collect::<Vec<Token>>();
-    stomach.get_gullet_mut().unread(Tokens::new(result));
+    stomach.get_gullet_mut().unread_vec(
+      tokens.unlist().into_iter()
+        .map(|t| lowercase_token(t, state))
+        .collect::<Vec<Token>>());
   });
 
   DefPrimitive!("\\message{}", sub [stomach, (message), state] {
