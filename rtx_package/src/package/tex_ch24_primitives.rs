@@ -2,6 +2,7 @@ use crate::package::*;
 use rtx_core::list::List;
 use rtx_core::tbox::Tbox;
 use rtx_core::TexMode;
+// use super::tex_boxes::adjust_box_color;
 
 //**********************************************************************
 // Primitives
@@ -60,14 +61,11 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@hidden@bgroup", "#body",
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     capture_body => true,
-    reversion => ""
-    // TODO: The reversion below seems correct, but it is printed out *double* for the \verb test
-    //       maybe re-check this after we are usre capture_body works as expected???
-    // reversion=> sub[whatsit, _args,state] {
-    //   if let Some(body) = whatsit.get_body() {
-    //     body.revert(state)
-    //   } else { Ok(Tokens!()) }
-    // }
+    reversion=> sub[whatsit, _args,state] {
+      if let Some(body) = whatsit.get_body() {
+        body.revert(state)
+      } else { Ok(Tokens!()) }
+    }
   );
   DefConstructor!("\\@hidden@egroup", "",
     after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
@@ -347,25 +345,36 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\xleaders", None);
 
   // # \moveleft<dimen><box>, \moveright<dimen><box>
-  // DefConstructor('\moveleft Dimension MoveableBox',
-  //   "<ltx:text xoffset='#x' _noautoclose='1'>#2</ltx:text>",
-  //   afterDigest => sub {
-  //     $_[1]->setProperty(x => $_[1]->getArg(1)->multiply(-1)); });
-  // DefConstructor('\moveright Dimension MoveableBox',
-  //   "<ltx:text xoffset='#x' _noautoclose='1'>#2</ltx:text>",
-  //   afterDigest => sub {
-  //     $_[1]->setProperty(x => $_[1]->getArg(1)); });
+  DefConstructor!("\\moveleft Dimension MoveableBox",
+    "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+    after_digest => sub[_stomach,whatsit,_state] {
+      if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
+        whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
+      }});
+  DefConstructor!("\\moveright Dimension MoveableBox",
+    "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
+    after_digest => sub[_stomach,whatsit,_state] {
+      if let Some(dimension) = whatsit.get_arg(1) {
+        whatsit.set_property("x", dimension.clone());
+      }});
 
+  // DG: TODO: We need tests+examples here, a bit lost in the typing interface...
+  //
   // # \unvbox<8bit>, \unvcopy<8bit>
-  // DefPrimitive('\unvbox Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     AssignValue($box, undef);
-  //     (defined $stuff ? $stuff->unlist : ()); });
-  // DefPrimitive('\unvcopy Number', sub {
-  //     my $box   = 'box' . $_[1]->valueOf;
-  //     my $stuff = LookupValue($box);
-  //     (defined $stuff ? $stuff->unlist : ()); });
+  // DefPrimitive!("\\unvbox Number", sub[stomach,(number),state] {
+  //   let box_key   = s!("box{}",number.value_of());
+  //   let stuff = state.lookup_tokens(&box_key);
+  //   adjust_box_color(stuff, state);
+  //   AssignValue!(&box_key, None);
+  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
+  // });
+  // DefPrimitive!("\\unvcopy Number", sub[stomach,(number),state] {
+  //   let box_key   = s!("box{}",number.value_of());
+  //   let stuff = state.lookup_tokens(&box_key);
+  //   adjust_box_color(stuff, state);
+  //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
+  // });
+
 
   //======================================================================
   // If this is the right solution...

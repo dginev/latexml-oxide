@@ -34,7 +34,7 @@ pub struct Whatsit {
   ///  (note that the "reversion" _property_ is currently also used)
   pub reversion: Option<Tokens>,
   /// special-case reversion tokens for whatsits representing Dual math structures
-  pub dual_reversion: Option<Tokens>,
+  pub dual_reversion: Option<HashMap<String,Tokens>>,
   /// point of origin in the source file
   pub locator: Locator,
 }
@@ -242,94 +242,110 @@ impl Object for Whatsit {
 
   fn revert(&self, state: &State) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
-    // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
-    //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if state.get_dual_branch().is_some() {
-      // TODO, also alignment case
-      Some(Tokens!(T_OTHER!("ALIGNMENT REVERSION TODO")))
-      // self.dual_reversion.get(DUAL_BRANCH)
+    let saved_opt = if let Some(this_branch) = state.get_dual_branch() {
+      if let Some(ref dual_reversion) = self.dual_reversion {
+        dual_reversion.get(this_branch).cloned()
+      } else {
+        self.reversion.clone()
+      }
     } else {
       self.reversion.clone()
     };
     if let Some(saved) = saved_opt {
-      Ok(saved)
-    } else {
-      let mut tokens = Vec::new();
-      let defn = &self.definition;
-      let spec_opt = if let Some(rev) = self.properties.get("reversion") {
-        match rev {
-          Stored::Tokens(tks) => Some(Cow::Owned(Reversion::Tokens(tks.clone()))),
-          Stored::Reversion(rev) => Some(Cow::Borrowed(rev)),
-          other => panic!("TODO: Unexpected reversion directive {other:?}"),
+      return Ok(saved);
+    }
+
+    let mut tokens = Vec::new();
+    let defn = &self.definition;
+    if defn.get_reversion_spec().is_none() {
+      if let Some(Stored::Digested(digested)) = self.properties.get("alignment") {
+        if let DigestedData::Alignment(alignment) = digested.data() {
+          return alignment.borrow().revert(state);
         }
-      } else {
-        defn.get_reversion_spec().map(Cow::Owned)
-      };
-      match spec_opt.as_deref() {
-        Some(Reversion::Closure(spec)) => {
-          let spec_tokens = spec(self, self.get_args(), state).unwrap();
-          tokens = self.substitute_parameters(spec_tokens, state)?;
-        },
-        Some(Reversion::Tokens(spec)) => {
-          if !spec.is_empty() {
-            tokens = self.substitute_parameters(spec.clone(), state)?;
+      }
+    }
+    // Find the appropriate reversion spec;
+    // content_reversion or presntation_reversion if on dual branch
+    // or (general) reversion, or the reversion from the definition
+    let spec_opt = if let Some(rev) = self.properties.get("reversion") {
+      match rev {
+        Stored::Tokens(tks) => Some(Cow::Owned(Reversion::Tokens(tks.clone()))),
+        Stored::Reversion(rev) => Some(Cow::Borrowed(rev)),
+        other => panic!("TODO: Unexpected reversion directive {other:?}"),
+      }
+    } else {
+      defn.get_reversion_spec().map(Cow::Owned)
+    };
+    let mut is_closure = false;
+    match spec_opt.as_deref() {
+      Some(Reversion::Closure(spec)) => {
+        is_closure = true;
+        let spec_tokens = spec(self, self.get_args(), state).unwrap();
+        tokens = self.substitute_parameters(spec_tokens, state)?;
+      },
+      Some(Reversion::Tokens(spec)) => {
+        if !spec.is_empty() {
+          tokens = self.substitute_parameters(spec.clone(), state)?;
+        }
+      },
+      None => {
+        if let Some(alias) = defn.get_alias() {
+          if !alias.is_empty() {
+            tokens.push(T_CS!(alias));
           }
-        },
-        None => {
-          if let Some(alias) = defn.get_alias() {
-            if !alias.is_empty() {
-              tokens.push(T_CS!(alias));
-            }
-          } else {
-            tokens.push(defn.get_cs().into_owned());
-          }
-          if let Some(parameters) = defn.get_parameters() {
-            // TODO: This is a sticking point. Both in terms of type mismatch between
-            // revert_arguments and get_args, but much worse with the expectation of
-            // passing in a gullet and state for the parameter reversion
-            // for now approximate this with some slight of hand ...
-            // tokens.extend(parameters.revert_arguments(self.get_args())?);
-            //
-            // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky
-            // workaround so maybe worth taking some time and aligning the idea here
-            // with `.revert_arguments` to avoid the insanity?
-            //
-            // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
-            let args = self
-              .get_args()
-              .iter()
-              .map(|opt| match opt {
-                Some(arg) => Some(arg.revert(state).ok()?),
-                None => None,
-              })
-              .collect();
-            tokens.extend(parameters.revert_arguments(args, state)?)
-          }
-        },
-      };
+        } else {
+          tokens.push(defn.get_cs().into_owned());
+        }
+        if let Some(parameters) = defn.get_parameters() {
+          // TODO: This is a sticking point. Both in terms of type mismatch between
+          // revert_arguments and get_args, but much worse with the expectation of
+          // passing in a gullet and state for the parameter reversion
+          // for now approximate this with some slight of hand ...
+          // tokens.extend(parameters.revert_arguments(self.get_args())?);
+          //
+          // Note 2: I've already had to dance around the T_BEGIN/T_END wrappers with my hacky
+          // workaround so maybe worth taking some time and aligning the idea here
+          // with `.revert_arguments` to avoid the insanity?
+          //
+          // GOAL: push(@tokens, $parameters->revertArguments($self->getArgs)); } }
+          let args = self
+            .get_args()
+            .iter()
+            .map(|opt| match opt {
+              Some(arg) => Some(arg.revert(state).ok()?),
+              None => None,
+            })
+            .collect();
+          dbg!(&args);
+          tokens.extend(dbg!(parameters.revert_arguments(args, state)?))
+        }
+      },
+    };
+
+    if !is_closure {
       if let Some(body) = self.get_body() {
         tokens.extend(body.revert(state)?.unlist());
         if let Some(trailer) = self.get_trailer() {
           tokens.extend(trailer.revert(state)?.unlist());
         }
       }
-
-      // Now cache it, in case it's needed again
-      // TODO: This causes a lot of mutability issues for arguable performance benefit.
-      // Maybe we are safe not using caching at all, and simply recomputing the reversion?
-      //
-
-      //if !REVERT_RAW {
-      //   // don't cache when RAW
-      //   if DUAL_BRANCH {
-      //     // self.dual_reversion = Some(Tokens::new(tokens.clone()));
-      //   } else {
-      //     self.reversion = Some(Tokens::new(tokens.clone()));
-      //   }
-      // }
-      Ok(Tokens::new(tokens))
     }
+
+    // Now cache it, in case it's needed again
+    // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
+    //       should we reorganize? is it worth it?
+    //
+    // if let Some(this_branch) = state.get_dual_branch() {
+    //   if self.dual_reversion.is_none() {
+    //     self.dual_reversion = Some(HashMap::default());
+    //   }
+    //   self.dual_reversion.as_mut().unwrap()
+    //     .insert(this_branch.to_string(), Tokens::new(tokens.clone()));
+    // } else {
+    //   self.reversion = Some(Tokens::new(tokens.clone()));
+    // }
+    Ok(Tokens::new(tokens))
   }
 }
 
