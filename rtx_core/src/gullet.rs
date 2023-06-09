@@ -505,11 +505,7 @@ impl Gullet {
   }
   /// Push the `tokens` back into the input stream to be re-read.
   pub fn unread(&mut self, tokens: Tokens) {
-    if let Some(ref mut runtime) = self.mouth {
-      for token in tokens.unlist().into_iter().rev() {
-        runtime.pushback.push_front(token);
-      }
-    };
+    self.unread_vec(tokens.unlist());
   }
   /// same as `unread`, but drains the `tokens` from its contents
   pub fn unread_mut(&mut self, tokens: &mut Tokens) {
@@ -523,6 +519,14 @@ impl Gullet {
   pub fn unread_one(&mut self, token: Token) {
     if let Some(ref mut runtime) = self.mouth {
       runtime.pushback.push_front(token);
+    };
+  }
+  /// same as `unread`, but does not require the Tokens wrapper
+  pub fn unread_vec(&mut self, tokens: Vec<Token>) {
+    if let Some(ref mut runtime) = self.mouth {
+      for token in tokens.into_iter().rev() {
+        runtime.pushback.push_front(token);
+      }
     };
   }
 

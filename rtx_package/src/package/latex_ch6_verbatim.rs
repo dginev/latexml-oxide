@@ -2,7 +2,7 @@ use crate::package::*;
 
 static END_VERBATIM_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(.*?)\\end\{verbatim\}(.*?)$").unwrap());
-static SEMIVERBATIM_CHARS: Lazy<Vec<char>> = Lazy::new(|| vec!['%', '\\', '{', '}']);
+static SEMIVERBATIM_CHARS: [char;4] = ['%', '\\', '{', '}'];
 static T_OTHER_STAR: Lazy<Token> = Lazy::new(|| T_OTHER!("*"));
 
 //**********************************************************************
@@ -99,20 +99,33 @@ LoadDefinitions!(outer_state, {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
   });
+  DefMacro!("\\@xobeysp", "\\nobreakspace");
 
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", sub[gullet, _args, state] {
-    let active_chars = &['%', '\\', '{', '}'];
-    state.begin_semiverbatim(Some(active_chars));
+    state.begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     // Do NOT (necessarily) skip spaces after \verb!!!
     state.assign_catcode(' ', Catcode::ACTIVE, None);
-    let mut init = gullet.read_token(state)?;
+    let mut init = None;
+    // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
+    let space_sym = arena::pin_static(" ");
+    while let Some(maybe_init) =  gullet.read_token(state)? {
+      if maybe_init.get_sym() != space_sym {
+        init = Some(maybe_init);
+        break;
+      }
+    }
     let mut starred = false;
     if let Some(ref init_token) = init {
-      if init_token == &(*T_OTHER_STAR) {
+      if *init_token == *T_OTHER_STAR {
         starred = true;
-        init = gullet.read_token(state)?;
+        while let Some(maybe_init) =  gullet.read_token(state)? {
+          if maybe_init.get_sym() != space_sym {
+            init = Some(maybe_init);
+            break;
+          }
+        }
       }
     }
     if let Some(init_token) = init {
@@ -126,15 +139,11 @@ LoadDefinitions!(outer_state, {
       if starred {
         result.push(T_CS!("\\lx@use@visiblespace"));
       }
-      let mut inv_args = Vec::new();
-      if starred {
-        inv_args.push(Tokens!(T_OTHER!("*")));
-      } else {
-        inv_args.push(Tokens!());
-      }
-      inv_args.push(Tokens!(init_token));
-      inv_args.push(body);
-      result.extend(Invocation!(T_CS!("\\@internal@verb"), inv_args, gullet, state)?.unlist());
+      result.extend(Invocation!(T_CS!("\\@internal@verb"), vec![
+        if starred { Tokens!(T_OTHER!("*")) } else { Tokens!() },
+        Tokens!(init_token),
+        body
+      ], gullet, state)?.unlist());
       result.push(T_CS!("\\@hidden@egroup"));
       Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
@@ -152,40 +161,24 @@ LoadDefinitions!(outer_state, {
     Let!(&T_ACTIVE!(' '), T_OTHER!("\u{2423}"));
   });
 
-  DefConstructor!("\\@internal@verb{} Undigested {}",
-    "?#isMath(<ltx:XMTok font='#font'>#text</ltx:XMTok>)(<ltx:verbatim font='#font'>#text</ltx:verbatim>)",
-    properties => sub[_stomach, args, _state] {
-      Ok(stored_map!("text" => args[2].as_ref().unwrap().to_string()))
+  // Arrange to digest the body in text mode, to keep (eg) "_" from turning to "\_"
+  DefMacro!("\\@internal@verb{}{}{}",
+      r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi");
+  DefConstructor!("\\@internal@math@verb{} Undigested {}",
+    "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
+    mode      => "text",
+    font      => { family => "typewriter", series => "medium", shape => "upright" },
+    reversion => "\\verb#1#2#3#2");
+  DefConstructor!("\\@internal@text@verb{} Undigested {}",
+    "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
+    font            => { family => "typewriter", series => "medium", shape => "upright" },
+    before_construct => sub[doc,_whatsit,state] {
+      if !doc.can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA", state) {
+        doc.open_element("ltx:p", None, None, state)?;
+      }
     },
-  font => { family => "typewriter", series => "medium", shape => "upright" },
-  before_construct => sub[doc, whatsit, state] {
-    if !whatsit.is_math() && !doc.can_contain(&doc.get_element().unwrap(), "#PCDATA", state) {
-      doc.open_element("ltx:p", None, None, state)?;
-    }
-  },
-  reversion => "\\verb#1#2#3#2");
+    reversion => "\\verb#1#2#3#2");
 
-  DefConstructor!("\\@text@verb{}{}", "<ltx:verbatim font='#font'>#2</ltx:verbatim>",
-    before_digest => sub[stomach, state] {
-      stomach.bgroup(state);
-      MergeFont!(family => "typewriter");
-    },
-    after_digest => sub[stomach,_whatsit,state] { stomach.egroup(state)?; },
-    // Since ltx:verbatim is both inline & block, we have to fudge inline mode
-    before_construct => sub[document, _args, state] {
-      if !document.can_contain(&document.get_element().unwrap(), "#PCDATA", state) {
-        document.open_element("ltx:p", None, None, state)?;
-      }},
-    reversion => "\\verb#1#2#1"
-  );
-  DefConstructor!("\\@math@verb{}{}", "#2",
-   before_digest => sub[stomach, state] {
-     stomach.bgroup(state);
-     MergeFont!(family => "typewriter");
-   },
-   after_digest => sub[stomach,_whatsit,state] { stomach.egroup(state)?; },
-   reversion => "\\verb#1#2#1"
-  );
 
   // Actually, latex sets catcode to 13 ... is this close enough?
   DefPrimitive!("\\obeycr", {
