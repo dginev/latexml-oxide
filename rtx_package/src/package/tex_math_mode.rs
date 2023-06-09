@@ -99,15 +99,16 @@ LoadDefinitions!(state, {
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
         if let Some(body) = tbox.get_body() {
-          Some(body.untex(state)?)
-        // local $LaTeXML::DUAL_BRANCH = 'presentation';
-        // let tex = untex(body, state);
-        // $LaTeXML::DUAL_BRANCH = 'content';
-        // let ctex = untex(body, state);
-
-        // if ctex != tex {
-        //   document.set_attribute(node, "content-tex", ctex);
-        // }
+          state.set_dual_branch("presentation");
+          let tex = body.untex(state)?;
+          state.expire_dual_branch();
+          state.set_dual_branch("content");
+          let ctex = body.untex(state)?;
+          state.expire_dual_branch();
+          if ctex != tex {
+            document.set_attribute(node, "content-tex", &ctex, state)?;
+          }
+          Some(tex)
         } else {
           None
         }

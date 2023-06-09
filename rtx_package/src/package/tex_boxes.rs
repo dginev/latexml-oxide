@@ -317,7 +317,7 @@ LoadDefinitions!(state, {
 });
 
 
-fn adjust_box_color(tbox: &Digested, state: &State) -> Result<()> {
+pub fn adjust_box_color(tbox: &Digested, state: &State) -> Result<()> {
   let color_opt = state.lookup_font().and_then(|f| f.get_color()
     .map(|c| c.clone().into_owned()));
   if let Some(color) = color_opt {
