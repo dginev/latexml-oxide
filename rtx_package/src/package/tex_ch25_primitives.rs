@@ -57,7 +57,7 @@ LoadDefinitions!(state, {
   // OR something that expands into one!!
 
   DefConstructor!("\\lower Dimension MoveableBox",
-  // TODO:
+  // TODO: SVG
   // "?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)\
   // (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
@@ -65,17 +65,25 @@ LoadDefinitions!(state, {
     after_digest => sub[_stomach, whatsit, _state] {
       let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
       let ypx       = y.px_value(None);
-      let transform = if ypx > 0.0 { s!("translate(0,{ypx})") } else { String::new() };
+      let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
       whatsit.set_property("y", y);
       whatsit.set_property("transform", transform);
     }
   );
 
-
-  // DefConstructor('\raise Dimension MoveableBox',
-  //   "<ltx:text yoffset='#y' _noautoclose='1'>#2</ltx:text>",
-  //   afterDigest => sub {
-  //     $_[1]->setProperty(y => $_[1]->getArg(1)); });
+  DefConstructor!("\\raise Dimension MoveableBox",
+  // TODO: SVG
+  // "?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)"
+  //   . "(<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
+  "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
+  //sizer       => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
+  after_digest => sub[_stomach,whatsit,_state] {
+    let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
+    let ypx       = y.px_value(None);
+    let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
+    whatsit.set_property("y", y);
+    whatsit.set_property("transform", transform);
+  });
 
   // \unhbox<8bit>, \unhcopy<8bit>
   // DefPrimitive('\unhbox Number', sub {
@@ -88,7 +96,8 @@ LoadDefinitions!(state, {
   //     my $stuff = LookupValue($box);
   //     (defined $stuff ? $stuff->unlist : ()); });
 
-  // \vrule
+  // Implement ???
+  // DefMacro('\vrule','\relax');
   DefMacro!("\\valign", None);
 
   DefMacro!("\\vspace{}", "\\vskip#1\\relax");

@@ -25,18 +25,18 @@ LoadDefinitions!(state, {
   InnerPool!(tex_alignment);
   // lines 3524-3660
   InnerPool!(tex_para);
+  // lines 3661-3783
+  InnerPool!(tex_ch25_primitives);
+  // lines 3784-4006
+  InnerPool!(tex_math_mode);
+  // lines 4007-4279
+  InnerPool!(tex_math_fork);
 
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 3661-3783
-  InnerPool!(tex_ch25_primitives);
-  // lines 3784-4006
-  InnerPool!(tex_math_mode);
-  // lines 4007-4279
-  // InnerPool!(tex_math_fork);
   // lines 4280-4510
   InnerPool!(tex_scripts);
   // lines 4511-4894
