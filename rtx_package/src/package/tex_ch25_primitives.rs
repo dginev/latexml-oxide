@@ -10,28 +10,37 @@ LoadDefinitions!(state, {
   //    | \hskip | \hfil | \hfill | \hss | \hfilneg
   //    | \accent | \discretionary | \- | \<space> | $
 
-  // DefPrimitiveI('\noboundary', undef, undef);
-  // DefMacro('\hskip Glue',   '\ifmmode\@math@hskip #1\relax\else\@text@hskip #1\relax\fi');
-  // DefMacro('\mskip MuGlue', '\ifmmode\@math@mskip #1\relax\else\@text@mskip #1\relax\fi');
+  DefPrimitive!("\\noboundary", None);
 
-  // DefConstructor('\@math@hskip Glue',
-  //   "<ltx:XMHint width='#1'/>",
-  //   alias => '\hskip',
-  //   properties => sub { (width => $_[1], isSpace => 1); }
-  // );
-  // DefPrimitive('\@text@hskip Glue', sub {
+  // \hskip handled similarly to \kern
+  // \hskip can be ignored in certain situations...
+
+  // DefConstructor!("\\hskip Glue", sub[document, (length), state] {
+  //     let parent = document.get_node();
+  //     if ($document->getNodeQName($parent) eq 'svg:g') {
+  //       if (my $x = $length->pxValue) {
+  //         # HACK HACK HACK
+  //         my $transform = $parent->getAttribute('transform');
+  //         $parent->setAttribute(transform => ($transform ? $transform . ' ' : '') . "translate($x,0)");
+  //     } }
+  //     elsif (inSVG()) {
+  //       Warn('unexpected', 'kern', $_[0], "Lost hskip in SVG " . ToString($length)); }
+  //     else {
+  //       $document->absorb(DimensionToSpaces($length)); } },
+  //   properties => sub {
   //     my ($stomach, $length) = @_;
-  //     DimensionToSpaces($length); },
-  //   alias => '\hskip');
-  // DefConstructor('\@math@mskip MuGlue',
-  //   "<ltx:XMHint width='#1'/>",
-  //   alias => '\mskip',
-  //   properties => sub { (width => $_[1], isSpace => 1); }
-  // );
-  // DefPrimitive('\@text@mskip MuGlue', sub {
+  //     (width => $length, isSpace => 1); });
+
+  // DefPrimitive('\mskip MuGlue', sub {
   //     my ($stomach, $length) = @_;
-  //     DimensionToSpaces($length); },
-  //   alias => '\mskip');
+  //     my $s = DimensionToSpaces($length);
+  //     Box($s, undef, undef, Invocation(T_CS('\mskip'), $length),
+  //       width => $length, isSpace => 1); });
+  // DefPrimitive('\mkern MuGlue', sub {
+  //     my ($stomach, $length) = @_;
+  //     my $s = DimensionToSpaces($length);
+  //     Box($s, undef, undef, Invocation(T_CS('\mkern'), $length),
+  //       width => $length, isSpace => 1); });
 
   DefPrimitive!("\\hss", None);
   DefPrimitive!("\\hfilneg", None);
@@ -48,14 +57,21 @@ LoadDefinitions!(state, {
   // OR something that expands into one!!
 
   DefConstructor!("\\lower Dimension MoveableBox",
-    "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
+  // TODO:
+  // "?&inSVG()(<svg:g transform='#transform' _noautoclose='1'>#2</svg:g>)\
+  // (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
+  "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
+    // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
     after_digest => sub[_stomach, whatsit, _state] {
-      whatsit.set_property("y",
-        // can the ergonomics of this Dimension cast be improved?
-        Dimension(-whatsit.get_arg(1).unwrap().value_of())
-      );
+      let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
+      let ypx       = y.px_value(None);
+      let transform = if ypx > 0.0 { s!("translate(0,{ypx})") } else { String::new() };
+      whatsit.set_property("y", y);
+      whatsit.set_property("transform", transform);
     }
   );
+
+
   // DefConstructor('\raise Dimension MoveableBox',
   //   "<ltx:text yoffset='#y' _noautoclose='1'>#2</ltx:text>",
   //   afterDigest => sub {

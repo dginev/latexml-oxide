@@ -69,6 +69,14 @@ pub trait NumericOps {
   where Self: Sized {
     round_to(self.value_of() as f64 / UNITY_F64, prec)
   }
+  fn px_value(self, prec: Option<u8>) -> f64
+  where Self: Sized {
+    // TODO: continue...
+    // let dpi = state.lookup_int("DPI") || 100
+    let dpi = 100.0;
+    round_to((self.value_f64() / UNITY_F64) * (dpi / 72.27), prec)
+  }
+
   fn absolute(self) -> Self
   where Self: Sized {
     Self::new(self.value_of().abs())

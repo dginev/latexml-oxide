@@ -394,8 +394,8 @@ LoadDefinitions!(state, {
         |qname| qname == "svg:g");
     let parent = document.get_node_mut();
     if is_svg_g {
-      let x = length.px_value();
-      if x>0 {
+      let x = length.px_value(None);
+      if x > 0.0 {
         // HACK HACK HACK
         let mut transform = parent.get_attribute("transform").unwrap_or_default();
         if !transform.is_empty() {

@@ -23,14 +23,14 @@ LoadDefinitions!(state, {
   InnerPool!(tex_ch24_primitives);
   // lines 2786-3523
   InnerPool!(tex_alignment);
+  // lines 3524-3660
+  InnerPool!(tex_para);
 
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 3524-3660
-  InnerPool!(tex_para);
   // lines 3661-3783
   InnerPool!(tex_ch25_primitives);
   // lines 3784-4006
