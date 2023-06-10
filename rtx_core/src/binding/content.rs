@@ -813,6 +813,7 @@ pub struct RequireOptions {
   pub options: Vec<String>,
   pub withoptions: Option<Vec<String>>,
   pub extension: Option<Cow<'static, str>>,
+  pub searchpaths_only: bool,
   pub as_class: bool,
   pub noltxml: Option<bool>,
   pub notex: Option<bool>,
@@ -824,9 +825,10 @@ impl Default for RequireOptions {
       options: Vec::new(),
       withoptions: None,
       extension: None,
-      as_class: false,
-      noltxml: None,
       notex: None,
+      noltxml: None,
+      as_class: false,
+      searchpaths_only: false,
       after: Tokens!(),
     }
   }

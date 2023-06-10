@@ -4,6 +4,8 @@ use rtx_core::tbox::Tbox;
 use rtx_core::TexMode;
 // use super::tex_boxes::adjust_box_color;
 
+static PSFILE_REGEX : Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
+
 //**********************************************************************
 // Primitives
 // See The TeXBook, Chapter 24, Summary of Vertical Mode
@@ -283,16 +285,129 @@ LoadDefinitions!(state, {
     }
   });
 
-  // # Since we don't paginate, we're effectively always "shipping out",
-  // # so all operations are \immediate
+  // Since we don't paginate, we're effectively always "shipping out",
+  // so all operations are \immediate
   DefPrimitive!("\\immediate", None);
 
-  // #======================================================================
-  // # Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
+  //======================================================================
+  // Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  DefPrimitive!("\\special {}", None);
+  DefPrimitive!("\\special {}", sub[stomach,(arg),state] {
+    let special_str = arg.to_string();
+    // recognize one special graphics inclusion case
+    if let Some(cap) = PSFILE_REGEX.captures(&special_str) {
+      let graphic = cap.get(1).unwrap().as_str();
+      RequirePackage!("graphicx", searchpaths_only => true);
+      let mut kv = Vec::new();
+      for prop in ["voffset","hoffset","hscale","vscale","hsize","vsize","angle"] {
+        let prop_regex = Regex::new(&s!("\\b{prop}=(.+?)(?:\\s|\\}})")).unwrap();
+        if let Some(cap) = prop_regex.captures(&special_str) {
+          let prop_val = cap.get(1).unwrap().as_str();
+          if !kv.is_empty() {
+            kv.push(T_OTHER!(","));
+          }
+          kv.push(T_OTHER!(prop));
+          kv.push(T_OTHER!("="));
+          kv.push(T_OTHER!(prop_val));
+        }
+      }
+      if !kv.is_empty() {
+        let mut wrapped = vec![T_OTHER!("[")];
+        wrapped.extend(kv);
+        wrapped.push(T_OTHER!("]"));
+        kv = wrapped;
+      }
+      let mut gullet = stomach.get_gullet_mut();
+      gullet.unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
+      gullet.unread_vec(kv);
+      gullet.unread_one(T_CS!("\\ltx@special@graphics"));
+    } else {
+      Info!("ignored", "special", stomach, state, s!("Unrecognized TeX Special: {arg}"));
+    }
+  });
+
+  // # adapted from graphicx.sty.ltxml
+  // DefKeyVal('SpecialPS', 'angle',   '');
+  // DefKeyVal('SpecialPS', 'voffset', '');
+  // DefKeyVal('SpecialPS', 'hoffset', '');
+  // DefKeyVal('SpecialPS', 'hsize',   '');
+  // DefKeyVal('SpecialPS', 'vsize',   '');
+  // DefKeyVal('SpecialPS', 'hscale',  '');
+  // DefKeyVal('SpecialPS', 'vscale',  '');
+  // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
+  //   "<ltx:graphics graphic='#path' candidates='#candidates' options='#options'/>",
+  //   sizer      => \&image_graphicx_sizer,
+  //   properties => sub {
+  //     my ($stomach, $kv, $path) = @_;
+  //     $path = ToString($path); $path =~ s/^\s+//; $path =~ s/\s+$//;
+  //     $path =~ s/("+)(.+)\g1/$2/;
+  //     my $searchpaths = LookupValue('GRAPHICSPATHS');
+  //     my @candidates  = pathname_findall($path, types => ['*'], paths => $searchpaths);
+  //     if (my $base = LookupValue('SOURCEDIRECTORY')) {
+  //       @candidates = map { pathname_relative($_, $base) } @candidates; }
+  //     my $options = '';
+  //     if ($kv) {    # remap psfile options to includegraphics options:
+  //       if (my $hscale = $kv->getValue('hscale')) {
+  //         $hscale = $hscale && int(ToString($hscale)) / 100;
+  //         $options .= ',' if $options;
+  //         $options .= "xscale=$hscale"; }
+  //       if (my $vscale = $kv->getValue('vscale')) {
+  //         $vscale = $vscale && int(ToString($vscale)) / 100;
+  //         $options .= ',' if $options;
+  //         $options .= "yscale=$vscale"; }
+  //       if (my $hsize = $kv->getValue('hsize')) {
+  //         $hsize = ToString($hsize);
+  //         $options .= ',' if $options;
+  //         $options .= "width=$hsize"; }
+  //       if (my $vsize = $kv->getValue('vsize')) {
+  //         $vsize = ToString($vsize);
+  //         $options .= ',' if $options;
+  //         $options .= "height=$vsize"; }
+  //       if (my $angle = $kv->getValue('angle')) {
+  //         $angle = ToString($angle);
+  //         $options .= ',' if $options;
+  //         $options .= "angle=$angle"; }
+  //       my $voffset = $kv->getValue('voffset') || 0;
+  //       $voffset = $voffset && int(ToString($voffset));
+  //       my $hoffset = $kv->getValue('hoffset') || 0;
+  //       $hoffset = $hoffset && int(ToString($hoffset));
+  //       if ($voffset || $hoffset) {
+  //         my $left   = -$hoffset;
+  //         my $bottom = -$voffset;
+  //         $options .= "," if $options;
+  //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
+  //     (options => $options, path => $path, candidates => join(',', @candidates)); },
+  //   mode => 'text');
+  // # Since these ultimately generate external resources, it can be useful to have a handle on them.
+  // Tag('ltx:graphics', afterOpen => sub { GenerateID(@_, 'g'); });
+
   DefPrimitive!("\\penalty Number", None);
-  DefPrimitive!("\\kern Dimension", None);
+  // \kern is heavily used by xy.
+  // Completely HACK version for the moment
+  // Note that \kern should add vertical spacing in vertical modes!
+  DefConstructor!("\\kern Dimension", sub[document,args,state] {
+    let length = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
+      args[0].as_ref().unwrap().data() {
+        *d
+      } else { Dimension::default() };
+      let is_svg_g = document.with_node_qname(document.get_node(), state,
+        |qname| qname == "svg:g");
+    let parent = document.get_node_mut();
+    if is_svg_g {
+      let x = length.px_value();
+      if x>0 {
+        // HACK HACK HACK
+        let mut transform = parent.get_attribute("transform").unwrap_or_default();
+        if !transform.is_empty() {
+          transform.push(' ');
+        }
+        transform.push_str(&s!("translate({x},0)"));
+        parent.set_attribute("transform", &transform)?;
+      }
+    } else if in_svg(document,state) {
+      Warn!("unexpected", "kern", document, state, s!("Lost kern in SVG {length}"));
+    }
+  });
   DefMacro!(
     "\\mkern MuGlue",
     "\\ifmmode\\@math@mskip #1\\relax\\else\\@text@mskip #1\\relax\\fi"

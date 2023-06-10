@@ -1056,3 +1056,10 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
     _ => "middle",
   } // undef meaning 'baseline'
 }
+
+pub fn in_svg(document: &Document, state: &State) -> bool {
+  if let Some(context) = document.get_element() {
+    document.with_node_qname(&context, state,
+      |qname| qname.starts_with("svg:"))
+  } else { false }
+}

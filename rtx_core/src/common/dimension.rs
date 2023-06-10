@@ -82,6 +82,13 @@ impl Dimension {
       Some(state),
     )?))
   }
+
+  pub fn px_value(&self) -> i64 {
+    unimplemented!();
+    // TODO: continue...
+    // let DPI = state.lookup_int("DPI") || 100
+    // self.round_to(self.value_f64() / UNITY_F64 * dpi) / 72.27, $prec);
+  }
 }
 // Dimension!() macro is in setup.rs, since it binds state
 
