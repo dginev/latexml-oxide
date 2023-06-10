@@ -31,20 +31,20 @@ LoadDefinitions!(state, {
   InnerPool!(tex_math_mode);
   // lines 4007-4279
   InnerPool!(tex_math_fork);
+  // lines 4280-4510
+  InnerPool!(tex_scripts);
+  // lines 4511-4688
+  InnerPool!(tex_math_style);
+  // lines 4689-5041
+  InnerPool!(tex_appendix_b_to_p349);
+  // lines 5042-5290
+  InnerPool!(tex_appendix_b_p350_to_p355);
 
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 4280-4510
-  InnerPool!(tex_scripts);
-  // lines 4511-4894
-  InnerPool!(tex_math_style);
-  // lines 4895-5041
-  InnerPool!(tex_appendix_b_to_p349);
-  // lines 5042-5290
-  InnerPool!(tex_appendix_b_p350_to_p355);
   // lines 5291-5620
   InnerPool!(tex_frontmatter);
   // lines 5621-5655

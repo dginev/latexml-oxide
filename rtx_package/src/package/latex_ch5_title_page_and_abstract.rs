@@ -76,6 +76,9 @@ LoadDefinitions!(state, {
     "\\lx@author{}",
     r"\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}"
   );
+  DefConstructor!("\\lx@@@contact{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
+  DefMacro!("\\lx@contact{}{}",
+  r"\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}");
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
   DefConstructor!("\\lx@author@prefix", sub[document, _args, _props, state] {
@@ -86,6 +89,7 @@ LoadDefinitions!(state, {
     else if i == nauthors {
       let author_conj = Digest!(T_CS!("\\lx@author@conj"), state)?;
       document.set_attribute(&mut node, "before", &author_conj.to_string(), state)?;
+
     } else {
       let author_sep = Digest!(T_CS!("\\lx@author@sep"), state)?;
       document.set_attribute(&mut node, "before", &author_sep.to_string(), state)?;
