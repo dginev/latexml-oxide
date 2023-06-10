@@ -19,16 +19,16 @@ LoadDefinitions!(state, {
   InnerPool!(tex_fonts);
   // lines 1889-2416
   InnerPool!(tex_boxes);
+  // lines 2417-2785
+  InnerPool!(tex_ch24_primitives);
+  // lines 2786-3523
+  InnerPool!(tex_alignment);
 
   // -----------------------------------------
   //  06.2023:
   //  updated upto (and including) here
   // -----------------------------------------
 
-  // lines 2417-2785
-  InnerPool!(tex_ch24_primitives);
-  // lines 2786-3523
-  InnerPool!(tex_alignment);
   // lines 3524-3660
   InnerPool!(tex_para);
   // lines 3661-3783

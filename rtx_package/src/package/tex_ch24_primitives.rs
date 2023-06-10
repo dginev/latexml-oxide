@@ -414,43 +414,37 @@ LoadDefinitions!(state, {
   );
   DefPrimitive!("\\unpenalty", None);
   DefPrimitive!("\\unkern", None);
-  // ## Worrisome, but...
-  // DefPrimitiveI("\unskip", None, sub {
-  //     my ($stomach) = @_;
-  //     my $box;
-  //     while (($box = $LaTeXML::LIST[-1]) && IsEmpty($box)) {
-  //       pop(@LaTeXML::LIST); }
-  //     return; });
+  // Worrisome, but...
+  DefPrimitive!("\\unskip", sub[stomach,(),state] {
+    // pop until a non-empty box is found
+    while let Some(last_box) = stomach.box_list.pop() {
+      if !last_box.is_empty() {
+        stomach.box_list.push(last_box);
+        break;
+      }
+    }
+  });
 
-  // DefPrimitive!("\\mark{}", None);
-  // # \insert<8bit><filler>{<vertical mode material>}
+  DefPrimitive!("\\mark{}", None);
+  // \insert<8bit><filler>{<vertical mode material>}
   DefPrimitive!("\\insert Number", None);
-
-  // Just let the insertion get processed(?)
   // \vadjust<filler>{<vertical mode material>}
   // Note: \vadjust ignores in vertical mode...
-  // is it sufficient to just clear the macro to avoid recursion?
-  // (we don't track horizontal/vertical mode)
-  DefMacro!("\\LTX@vadjust@afterpar", "\\def\\LTX@vadjust@afterpar{}");
-  DefMacro!(
-    "\\LTX@clear@vadjust@afterpar",
-    "\\def\\LTX@vadjust@afterpar{\\def\\LTX@vadjust@afterpar{}}"
-  );
   DefPrimitive!("\\vadjust {}", sub[stomach,(arg),state] {
     state.push_tokens("vAdjust", arg);
   });
 
-  // #======================================================================
-  // # Remaining Vertical Mode primitives in Ch.24, pp.281--283
-  // # \vskip<glue>, \vfil, \vfill, \vss, \vfilneg
-  // # <leaders> = \leaders | \cleaders | \xleaders
-  // # <box or rule> = <box> | <vertical rule> | <horizontal rule>
-  // # <vertical rule> = \vrule<rule specification>
-  // # <horizontal rule> = \hrule<rule specification>
-  // # <rule specification> = <optional spaces> | <rule dimension><rule specification>
-  // # <rule dimension> = width <dimen> | height <dimen> | depth <dimen>
+  //======================================================================
+  // Remaining Vertical Mode primitives in Ch.24, pp.281--283
+  // \vskip<glue>, \vfil, \vfill, \vss, \vfilneg
+  // <leaders> = \leaders | \cleaders | \xleaders
+  // <box or rule> = <box> | <vertical rule> | <horizontal rule>
+  // <vertical rule> = \vrule<rule specification>
+  // <horizontal rule> = \hrule<rule specification>
+  // <rule specification> = <optional spaces> | <rule dimension><rule specification>
+  // <rule dimension> = width <dimen> | height <dimen> | depth <dimen>
 
-  // # Stuff to ignore for now...
+  // Stuff to ignore for now...
   DefPrimitive!("\\vfil", None);
   DefPrimitive!("\\vfill", None);
   DefPrimitive!("\\vss", None);
@@ -459,7 +453,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\cleaders", None);
   DefPrimitive!("\\xleaders", None);
 
-  // # \moveleft<dimen><box>, \moveright<dimen><box>
+  // \moveleft<dimen><box>, \moveright<dimen><box>
   DefConstructor!("\\moveleft Dimension MoveableBox",
     "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
     after_digest => sub[_stomach,whatsit,_state] {
@@ -505,6 +499,7 @@ LoadDefinitions!(state, {
         document.insert_element("ltx:break", Vec::new(), None, state)?;
       }
     }},
-    properties => {map!("isSpace" => true.into(), "isVerticalSpace" => true.into())}
+     // TODO: "height" property
+    properties => {stored_map!("isSpace" => true, "isVerticalSpace" => true, "isBreak" => true)}
   );
 });
