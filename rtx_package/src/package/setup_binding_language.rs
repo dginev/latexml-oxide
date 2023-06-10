@@ -231,6 +231,11 @@ macro_rules! RequirePackage {
     bind_state_mut!(stomach, st);
     require_package($package, $options, stomach, st)?
   }};
+  ($package:expr, $($key:ident => $val:expr),*) => {{
+    bind_state_mut!(stomach, st);
+    let require_package_options = NewDefault!(RequireOptions, $($key=>$val),*);
+    require_package($package, require_package_options, stomach, st)?
+  }};
 }
 #[macro_export]
 macro_rules! LoadClass {
