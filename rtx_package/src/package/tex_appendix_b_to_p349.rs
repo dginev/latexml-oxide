@@ -13,6 +13,13 @@ static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
 );
 
 LoadDefinitions!(state, {
+  //======================================================================
+  // Alignments
+  //
+  // & gives an error except within the right context
+  // (which should redefine it!)
+  DefConstructor!("&", sub[doc,_a,state] { Error!("unexpected", "&", doc, state, "Stray alignment \"&\""); });
+
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
   //**********************************************************************
@@ -20,7 +27,9 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B, p. 344
   //======================================================================
-  // \dospecials ??
+  RawTeX!(r"\outer\def^^L{\par}");
+  DefMacro!("\\dospecials", r"\do\ \do\\\do\{\do\}\do\$\do\&\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~");
+
   //
   // Normally, the content branch contains the pure structure and meaning of a construct,
   // and the presentation is generated from lower level TeX macros that only concern
@@ -32,14 +41,13 @@ LoadDefinitions!(state, {
   // The following constructor (see how it's used in DefMath), adds meaning attributes
   // whereever it seems sensible on the presentation branch, after it has been generated.
 
-  // DefConstructor('\@ASSERT@MEANING{}{}', '#2',
-  //   reversion      => '#2',
-  //   afterConstruct => sub {
-  //     my ($document, $whatsit) = @_;
-  //     let node    = $document->getNode;              # This should be the wrapper just added.
-  //     my $meaning = ToString($whatsit->getArg(1));
-  //     addMeaningRec($document, $node, $meaning);
-  //     $node; });
+  DefConstructor!("\\@ASSERT@MEANING{}{}", "#2",
+    reversion      => "#2",
+    after_construct => sub[document,whatsit,_state] {
+      let node    = document.get_node().clone(); // This should be the wrapper just added.
+      let meaning = whatsit.get_arg(1).unwrap().to_string();
+      add_meaning_rec(document, node, meaning)?;
+    });
 
   //======================================================================
   // Properties for plain characters.
@@ -61,6 +69,23 @@ LoadDefinitions!(state, {
   DefMath!(':', None, ':', role => "METARELOP", name => "colon"); // Seems like good default role
   DefMath!('<', None, '<', role => "RELOP", meaning => "less-than");
   DefMath!('>', None, '>', role => "RELOP", meaning => "greater-than");
+
+  // NOTE: Need to evolve Ligatures to be easier to write.
+  // rough draft of tool to make ligatures more sane to write...
+  // It is tempting to handle these with macros,
+  // But that tends to run afoul of tricky packages like babel that make : active as well!
+  // Even using mathactive doesn't help.
+  // sub TestNode {
+  //   my ($node, $qname, $content, %attrib) = @_;
+  //   return $node
+  //     && ($LaTeXML::DOCUMENT->getModel->getNodeQName($node) eq $qname)
+  //     && ((!defined $content) || (($node->textContent || '') eq $content))
+  //     && !grep { $node->getAttribute($_) ne $attrib{$_} } keys %attrib; }
+
+  // Recognize !!
+  DefMathLigature!("!!", "!!", role => "POSTFIX", meaning => "double-factorial");
+  // Recognize :=
+  DefMathLigature!(":=", ":=", role => "RELOP", meaning => "assign");
 
   //======================================================================
   // Combine digits in math.
@@ -180,11 +205,6 @@ LoadDefinitions!(state, {
   //     $document->getNode->appendChild($frac);
   //     $document->closeElement('ltx:XMApp'); });
 
-  // Recognize !!
-  DefMathLigature!("!!", "!!", role => "POSTFIX", meaning => "double-factorial");
-  // Recognize :=
-  DefMathLigature!(":=", ":=", role => "RELOP", meaning => "assign");
-
   //======================================================================
   // Combine letters, when the fonts are right. (sorta related to mathcode)
   // well, maybe a letter followed by letters & digits?
@@ -284,8 +304,8 @@ LoadDefinitions!(state, {
   );
   // Various \count's are set; should we?
 
-  // #======================================================================
-  // # TeX Book, Appendix B, p. 347
+  //======================================================================
+  // TeX Book, Appendix B, p. 347
   DefPrimitive!("\\wlog{}", sub[stomach,(arg),state] {
     let mut gullet = stomach.get_gullet_mut();
     let message = Expand!(arg,gullet,state);
@@ -306,17 +326,18 @@ LoadDefinitions!(state, {
     DefRegister!(name, None, MuGlue::new(0));
   });
   AssignValue!("allocated_boxes" => false);
-  DefPrimitive!("\\newbox Token", sub[stomach, (t), state] {
+  DefPrimitive!("\\newbox DefToken", sub[stomach, (t), state] {
     let n = state.lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     let empty_list = List::new(Vec::new(), state);
     AssignValue!(&s!("box{}",n), empty_list);
     DefRegister!(t, None, Number(n));
   });
-  // DefPrimitive('\newhelp Token {}', sub { AssignValue(ToString($_[1]) => $_[2]); });
-  // DefPrimitive('\newtoks Token', sub { DefRegisterI($_[1], undef, Tokens()); });
-  // # the next 4 actually work by doing a \chardef instead of \countdef, etc.
-  // # which means they actually work quite differently
+  DefPrimitive!("\\newhelp Token {}", sub[stomach,(token,arg),state] { unimplemented!(); ()});// AssignValue(ToString($_[1]) => $_[2]); });
+  DefPrimitive!("\\newtoks Token", sub[stomach,(token),state] { unimplemented!(); ()});//DefRegisterI($_[1], undef, Tokens()); });
+
+  // the next 4 actually work by doing a \chardef instead of \countdef, etc.
+  // which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
   DefMacro!("\\alloc@@ {}", sub[gullet, (atype_tokens), state] {
     let atype = atype_tokens.to_string();
@@ -341,12 +362,27 @@ LoadDefinitions!(state, {
     "\\newlanguage Token",
     r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   );
+  DefMacro!("\\e@alloc{}{}{}{}{}{}",
+  r"\global\advance#3\@ne
+  \allocationnumber#3\relax
+  \global#2#6\allocationnumber");
+  DefMacro!("\\alloc@{}{}{}{}", r"\e@alloc#2#3{\count1#1}#4\float@count");
+  DefMacro!("\\newread",        r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n");
+  DefMacro!("\\newwrite", r"\e@alloc\write
+                    {\ifnum\allocationnumber=18
+                      \advance\count17\@ne
+                      \allocationnumber\count17 %
+                      \fi
+                      \global\chardef}%
+                    {\count17}%
+                    \m@ne
+                    {128}");
 
-  // # This implementation is quite wrong
+  // This implementation is quite wrong
   DefPrimitive!("\\newinsert Token", sub[_stomach, (t), state] {
     DefRegister!(t, None, Number::new(0));
   });
-  // # \alloc@, \ch@ck
+  // \alloc@, \ch@ck
 
   // TeX plain uses \newdimen, etc. for these.
   // Is there any advantage to that?
@@ -358,19 +394,19 @@ LoadDefinitions!(state, {
   DefRegister!("\\z@", Dimension::new(0));
   DefRegister!("\\z@skip", Glue::new(0));
 
-  // # First approximation. till I figure out \newbox
+  // First approximation. till I figure out \newbox
   // RawTeX('\newbox\voidb@x');
-  // #======================================================================
-  // # TeX Book, Appendix B, p. 348
+  //======================================================================
+  // TeX Book, Appendix B, p. 348
 
   DefMacro!("\\newif DefToken", sub[gullet, (cs), state] {
     def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state);
   });
 
-  // # See the section Registers & Parameters, above for setting default values.
-  // #======================================================================
-  // # TeX Book, Appendix B, p. 349
-  // # See the section Registers & Parameters, above for setting default values.
+  // See the section Registers & Parameters, above for setting default values.
+  //======================================================================
+  // TeX Book, Appendix B, p. 349
+  // See the section Registers & Parameters, above for setting default values.
 
   // These are originally defined with \newskip, etc
   DefRegister!("\\smallskipamount", Glue!("3pt plus1pt minus1pt"));
@@ -397,287 +433,19 @@ LoadDefinitions!(state, {
     })
   });
 
-  // #======================================================================
-  // # TeX Book, Appendix B, p. 350
-
-  // # Font stuff ...
-  RawTeX!(
-    r###"
-  \font\tenrm=cmr10
-  \font\sevenrm=cmr7
-  \font\fiverm=cmr5
-  \font\teni=cmmi10
-  \font\seveni=cmmi7
-  \font\fivei=cmmi7
-  \font\tensy=cmsy10
-  \font\sevensy=cmsy7
-  \font\fivesy=cmsy5
-  \font\tenex=cmex10
-  \font\tenbf=cmbx10
-  \font\sevenbf=cmbx7
-  \font\fivebf=cmbx5
-  \font\tensl=cmsl10
-  \font\tentt=cmtt10
-  \font\tenit=cmti10
-  \newfam\itfam
-  \newfam\slfam
-  \newfam\bffam
-  \newfam\ttfam
-  \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
-  \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
-  \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
-  \textfont3=\tenex
-"###
-  );
-
-  // # Note: \newfam in math should be font switching(?)
-
-  //======================================================================
-  // TeX Book, Appendix B, p. 351
-
-  // Old style font styles.
-  // The trick is to create an empty Whatsit preserved till assimilation (for reversion'ing)
-  // but to change the current font used in boxes.
-  // (some of these were defined on different pages? or even latex...)
-  Tag!("ltx:text", auto_open => true, auto_close => true);
-
-  // Note that these, unlike \rmfamily, should set the other attributes to the defaults!
-  DefPrimitive!("\\rm", None,
-    font => {family => "serif", series => "medium", shape => "upright"});
-  DefPrimitive!("\\sf", None,
-    font => {family => "sansserif", series => "medium", shape => "upright"});
-  DefPrimitive!("\\bf", None,
-    font => {series => "bold", family => "serif", shape => "upright"});
-  DefPrimitive!("\\it", None,
-    font => {shape => "italic", family => "serif", series => "medium" });
-  DefPrimitive!("\\tt", None,
-    font => {family => "typewriter", series => "medium", shape => "upright" });
-  // No effect in math for the following 2 ?
-  DefPrimitive!("\\sl", None,
-    font => {shape => "slanted", family => "serif", series => "medium" });
-  DefPrimitive!("\\sc", None,
-    font => {shape => "smallcaps", family => "serif", series => "medium" });
-
-  // Ideally, we should set these sizes from class files
-  AssignValue!("NOMINAL_FONT_SIZE", 10);
-  DefPrimitive!("\\tiny",         None, font => {size => 5 });
-  DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
-  DefPrimitive!("\\footnotesize", None, font => {size => 8 });
-  DefPrimitive!("\\small",        None, font => {size => 9 });
-  DefPrimitive!("\\normalsize",   None, font => {size => 10 });
-  DefPrimitive!("\\large",        None, font => {size => 12 });
-  DefPrimitive!("\\Large",        None, font => {size => 14.4 });
-  DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
-  DefPrimitive!("\\huge",         None, font => {size => 20.74 });
-  DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
-
-  DefPrimitive!("\\mit", None, require_math => true, font => {family => "italic"});
-
-  DefPrimitive!("\\frenchspacing", None);
-  DefPrimitive!("\\nonfrenchspacing", None);
-  // DefMacro!("\\normalbaselines", undef,
-  //   '\lineskip=\normallineskip\baselineskip=\normalbaselineskip\lineskiplimit=\
-  // normallineskiplimit');
-  DefMacro!(T_CS!("\\space"), None, T_SPACE!());
-  DefMacro!(T_CS!("\\lq"), None, T_OTHER!("`"));
-  DefMacro!(T_CS!("\\rq"), None, T_OTHER!("'"));
-  Let!("\\empty", "\\@empty");
-  //DefMacro!("\\null", "\hbox{}");
-  Let!("\\bgroup", T_BEGIN!());
-  Let!("\\egroup", T_END!());
-  Let!("\\endgraf", "\\par");
-  Let!("\\endline", "\\cr");
-
-  DefPrimitive!("\\endline", None);
-
-  // Use \r for the newline from TeX!!!
-  DefMacro!(T_CS!("\\\r"), None, T_CS!("\\ ")); // \<cr> == \<space> Interesting (see latex.ltx)
-  Let!(&T_ACTIVE!('\r'), T_CS!("\\par")); // (or is this just LaTeX?)
-
-  Let!("\\\t", "\\\r"); // \<tab> == \<space>, also
-
-  //======================================================================
-  // TeX Book, Appendix B, p. 352
-
-  DefPrimitive!("\\obeyspaces", {
-    AssignCatcode!(' ', Catcode::ACTIVE);
-    Let!(&T_ACTIVE!(' '), T_CS!("\\space"));
-  });
-  // Curiously enough, " " (a space) is ALREADY defined to be the same as "\space"
-  // EVEN before it is made active. (see p.380)
-  Let!(&T_ACTIVE!(' '), T_CS!("\\space"));
-
-  DefPrimitive!("\\obeylines", {
-    AssignCatcode!('\r', Catcode::ACTIVE);
-    Let!(&T_ACTIVE!('\r'), T_CS!("\\@break")); // More appropriate than \par, I think?
-  });
-
-  DefConstructor!("\\@break", "<ltx:break/>");
-
-  RawTeX!(
-    r###"
-  \def\loop#1\repeat{\def\body{#1}\iterate}
-  \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
-  \let\repeat=\fi
-  "###
-  );
-
-  DefMacro!(
-    "\\enskip",
-    "\\ifmmode\\@math@enskip\\else\\@text@enskip\\fi"
-  );
-  // DefConstructor('\@math@enskip', undef,
-  //   "<ltx:XMHint name='enskip' width='#width'/>",
-  //   alias => '\enskip',
-  //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
-  // DefPrimitiveI('\@text@enskip', undef, "\x{2002}", alias => '\enskip');
-
-  DefMacro!(
-    "\\enspace",
-    "\\ifmmode\\@math@enspace\\else\\@text@enspace\\fi"
-  );
-  // DefConstructor('\@math@enspace', undef,
-  //   "<ltx:XMHint name='enskip' width='#width'/>",
-  //   alias => '\enspace',
-  //   properties => { isSpace => 1, width => sub { Dimension('0.5em'); } });
-  // DefPrimitiveI('\@text@enspace', undef, "\x{2002}", alias => '\enspace');
-
-  DefMacro!("\\quad", "\\ifmmode\\@math@quad\\else\\@text@quad\\fi");
-  // DefConstructor('\@math@quad', undef,
-  //   "<ltx:XMHint name='quad' width='#width'/>",
-  //   alias => '\quad',
-  //   properties => { isSpace => 1, width => sub { Dimension('1em'); } });
-  // DefPrimitiveI('\@text@quad', undef, "\x{2003}", alias => '\quad');
-
-  // # Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
-  DefPrimitive!(T_CS!("\\qquad"), None, sub[_stomach,_args,state] {
-    Tbox::new(arena::pin_static("\u{2003}\u{2003}"), None, None, Tokens!(T_CS!("\\qquad")),
-      stored_map!("name" => "qquad", "width" => Dimension::from_str("2em", state)?,
-      "is_space" => true, "as_hint" => true
-    ), state)
-  });
-
-  DefMacro!(
-    "\\thinspace",
-    "\\ifmmode\\@math@thinspace\\else\\@text@thinspace\\fi"
-  );
-  // DefConstructor('\@math@thinspace', undef,
-  //   "<ltx:XMHint name='thinspace' width='#width'/>",
-  //   alias => '\thinspace',
-  //   properties => { isSpace => 1, width => sub { Dimension('0.16667em'); } });
-  // DefPrimitiveI('\@text@thinspace', undef, "\x{2009}", alias => '\thinspace');
-
-  DefMacro!(
-    "\\negthinspace",
-    "\\ifmmode\\@math@negthinspace\\else\\@text@negthinspace\\fi"
-  );
-  // DefConstructor('\@math@negthinspace', undef,
-  //   "<ltx:XMHint name='negthinspace' width='#width'/>",
-  //   alias => '\negthinspace',
-  //   properties => { isSpace => 1, width => sub { Dimension('-0.16667em'); } });
-  // DefPrimitiveI('\@text@negthinspace', undef, "", alias => '\negthinspace');
-
-  // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
-  //   properties => sub { (isSpace => 1, width => $_[1]); });
-  DefPrimitive!("\\vglue Glue", None);
-  DefPrimitive!("\\topglue", None);
-  DefPrimitive!("\\nointerlineskip", None);
-  DefPrimitive!("\\offinterlineskip", None);
-
-  DefMacro!("\\smallskip", "\\vskip\\smallskipamount");
-  DefMacro!("\\medskip", "\\vskip\\medskipamount");
-  DefMacro!("\\bigskip", "\\vskip\\bigskipamount");
-
-  //======================================================================
-  // TeX Book, Appendix B, p. 353
-
-  DefPrimitive!("\\break", None);
-  DefPrimitive!("\\nobreak", None);
-  DefPrimitive!("\\allowbreak", None);
-  DefMacro!(
-    "\\nobreakspace",
-    "\\ifmmode\\math@nobreakspace\\else\\text@nobreakspace\\fi"
-  );
-
-  DefPrimitive!("\\text@nobreakspace", sub[stomach, (), state] {
-    Tbox::new(arena::pin_static("\u{00A0}"), None, None,
-      Tokens!(T_CS!("~")), map!("isSpace" => Stored::Bool(true)), state)
-  });
-
-  // DefConstructor!("\\math@nobreakspace", "<ltx:XMHint name='nobreakspace' width='#width'/>",
-  //   properties => { isSpace => 1, width => sub { Dimension('0.333em'); } },
-  //   alias => '~');
-  DefMacro!("~", "\\nobreakspace{}");
-
-  DefMacro!("\\slash", "/");
-  DefPrimitive!("\\filbreak", None);
-  DefMacro!("\\goodbreak", "\\par");
-  DefMacro!("\\eject", "\\par\\LTX@newpage");
-  Let!("\\newpage", "\\eject");
-
-  DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
-  before_digest=>sub[stomach,state] {
-    state.after_assignment(stomach.get_gullet_mut());
-    Ok(Vec::new())
-  });
-  DefMacro!("\\supereject", "\\par\\LTX@newpage");
-  DefPrimitive!("\\removelastskip", None);
-  DefMacro!("\\smallbreak", "\\par");
-  DefMacro!("\\medbreak", "\\par");
-  DefMacro!("\\bigbreak", "\\par");
-  DefMacro!("\\line", "\\hbox to \\hsize");
-  // DefConstructor('\leftline{}', sub {
-  //     alignLine($_[0], $_[1], 'left'); },
-  //   bounded => 1);
-  // DefConstructor('\rightline{}', sub {
-  //     alignLine($_[0], $_[1], 'right'); },
-  //   bounded => 1);
-  // DefConstructor('\centerline{}', sub {
-  //     alignLine($_[0], $_[1], 'center'); },
-  //   bounded => 1);
-
-  // sub alignLine {
-  //   my ($document, $line, $alignment) = @_;
-  //   if ($document->isOpenable('ltx:p')) {
-  //     $document->insertElement('ltx:p', $line, class => 'ltx_align_' . $alignment); }
-  //   elsif ($document->isOpenable('ltx:text')) {
-  //     $document->insertElement('ltx:text', $line, class => 'ltx_align_' . $alignment);
-  //     $document->insertElement('ltx:break'); }
-  //   else {
-  //     $document->absorb($line); }
-  //   return; }
-
-  // # These should be 0 width, but perhaps also shifted?
-  DefMacro!("\\llap{}", "\\hbox to 0pt{#1}");
-  DefMacro!("\\rlap{}", "\\hbox to 0pt{#1}");
-  DefMacro!("\\m@th", "\\mathsurround=0pt ");
-
-  // # \strutbox
-  DefMacro!("\\strut", "");
-  RawTeX!("\\newbox\\strutbox");
-
-  // #======================================================================
-  // # TeX Book, Appendix B. p. 354
-
-  // # TODO: Not yet done!!
-  // # tabbing stuff!!!
-
-  DefMacro!("\\settabs", "");
-
-  // #======================================================================
-  // # TeX Book, Appendix B. p. 355
-
-  DefPrimitive!("\\hang", None);
-
-  // # TODO: \item, \itemitem not done!
-  // # This could probably be adopted from LaTeX, if the <itemize> could auto-open
-  // # and close!
-  DefConstructor!("\\item{}", "#1");
-  DefConstructor!("\\itemitem{}", "#1");
-
-  // DefMacro('\textindent{}', '#1');
-
-  // # Conceivably this should enclose the next para in a block?
-  // # Or add attribute to it? Or...
-  // DefPrimitiveI('\narrower', undef, undef);
 });
+
+pub fn add_meaning_rec(_document: &mut Document, _node: Node, _meaning: String) -> Result<()> {
+  // if ($node->nodeType == XML_ELEMENT_NODE) {
+  //   my $qname = $document->getModel->getNodeQName($node);
+  //   if    ($qname eq 'ltx:XMArg') { }              # DONT cross through into arguments!
+  //   elsif ($qname eq 'ltx:XMTok') {
+  //     if ((($node->getAttribute('role') || 'UNKNOWN') eq 'UNKNOWN')
+  //       && !$node->getAttribute('meaning')) {
+  //       $document->setAttribute($node, meaning => $meaning); } }
+  //   else {
+  //     foreach my $c ($node->childNodes) {
+        // addMeaningRec($document, $c, $meaning); } } }
+    unimplemented!();
+    Ok(())
+}

@@ -25,37 +25,8 @@ static SCRIPT_NAME_RE: Lazy<Regex> =
 // This may combine, in the parser, with the following object to generate
 // a prescript.
 
-// Note that this is also being used by alignment.
-//
-// TODO: We may want to rename the auxiliary function - there is a standard
-// rust `.is_empty()` call that implies a very strict "no elements" semantics
-// for e.g. vectors and strings.
-// Maybe "is_invisible" or "without_ink" or ...
-pub fn is_empty(digested: &Digested, state: &State) -> bool {
-  use DigestedData::*;
-  if digested.get_property_bool("isEmpty") || digested.get_property_bool("isSpace") {
-    // A space-like thing
-    true
-  } else {
-    match digested.data() {
-      TBox(tbox) => match tbox.borrow().get_string(state) {
-        Ok(s) => s.trim().is_empty(),
-        _ => true,
-      },
-      List(list) => list.borrow().boxes.iter().all(|b| is_empty(b, state)),
-      Whatsit(ws_arc) => {
-        let ws = ws_arc.borrow();
-        *(*ws).get_definition() == *state.lookup_definition(&T_BEGIN!()).unwrap()
-          && ws
-            .get_body()
-            .unwrap_or_default()
-            .all(|b| is_empty(b, state))
-      },
-      Comment(_) => true,
-      _ => unimplemented!(),
-    }
-  }
-}
+// DG: Note: TeX.pool's isEmpty seems best reorganized as Digested::is_empty
+// implemented by each concrete data structure. That should now be the case.
 
 // Remember a "safe" way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
@@ -91,8 +62,8 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
 // Digested here, we keep having to *clone* incorrectly. The Perl expectation
 // was for something Rust deems highly illegal/unsafe: multiple owners of a
 // mutable reference to a Digested object. This needs to be disentangled
-// in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested
-// object from multiple unrelated pieces of code.
+// in the new codebase, so as to avoid both 1) cloning and
+// 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
 fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Vec<Digested>> {
   //   let mut gullet = stomach.get_gullet_mut();
@@ -119,7 +90,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         prevspace = true; // a space avoids double-scripts
         putback.push_front(prev); // put back? assuming it will add rpadding to previous???
         continue;
-      } else if is_empty(&prev, state) {
+      } else if prev.is_empty() {
         // If empty, the script floats, can't conflict, but don't put back
         break;
       } else if let Some(prevop) = is_script(&prev, state) {
@@ -200,7 +171,8 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       stuff.push(Digested::default());
     }
     let script = stuff.remove(0); // ONLY the first box is the script!
-    if !is_empty(&script, state) {
+
+    if !script.is_empty() {
       let mut properties = stored_map!(
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b) }
@@ -458,4 +430,31 @@ LoadDefinitions!(state, {
     Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
   },
   mathactive => true); // Only in math!
+
+  DefMacro!("\\active@math@prime", sub[gullet,(),state] {
+    let mut sup = vec![T_CS!("\\prime")];
+    // Collect up all ', convering to \prime
+    let prime_token = T_OTHER!("\'");
+    while gullet.if_next(&prime_token, state)? {
+      gullet.read_token(state)?;
+      sup.push(T_CS!("\\prime"));
+    }
+    // Combine with any following superscript!
+    // However, this is semantically screwed up!
+    // We really need to set up separate superscripts, but at same level!
+    if gullet.if_next(&T_SUPER!(), state)? {
+      gullet.read_token(state)?;
+      let arg = gullet.read_arg(state)?;
+      let arg_tks = arg.unlist();
+      sup.extend(arg_tks);
+    }
+    let mut activated = vec![T_SUPER!(), T_BEGIN!()];
+    activated.extend(sup);
+    activated.push(T_END!());
+    activated
+  },
+  locked => true);    // Only in math!
+  // TODO
+  // AssignMathcode!("'" => 0x8000);
+  Let!("'", "\\active@math@prime");
 });

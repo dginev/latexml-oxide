@@ -317,8 +317,7 @@ impl Object for Whatsit {
               None => None,
             })
             .collect();
-          dbg!(&args);
-          tokens.extend(dbg!(parameters.revert_arguments(args, state)?))
+          tokens.extend(parameters.revert_arguments(args, state)?)
         }
       },
     };
