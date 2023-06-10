@@ -65,7 +65,16 @@ LoadDefinitions!(state, {
     </ltx:Math>\
   </ltx:equation>",
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => sub[stomach, state] { stomach.begin_mode("display_math", state)?; },
+    before_digest => sub[stomach, state] {
+      stomach.begin_mode("display_math", state)?;
+      // TODO:
+      // if let Some(everymath_toks) = state.lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
+      //   stomach.get_gullet_mut().unread(everymath_toks);
+      // }
+      // if let Some(everydisplay_toks) = state.lookup_definition(T_CS!("\\everydisplay")).value_of().unlist() {
+      //   stomach.get_gullet_mut().unread(everydisplay_toks);
+      // }
+    },
     capture_body  => true
   );
 
