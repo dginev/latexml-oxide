@@ -39,12 +39,6 @@ LoadDefinitions!(state, {
   InnerPool!(tex_appendix_b_to_p349);
   // lines 5042-5290
   InnerPool!(tex_appendix_b_p350_to_p355);
-
-  // -----------------------------------------
-  //  06.2023:
-  //  updated upto (and including) here
-  // -----------------------------------------
-
   // lines 5291-5620
   InnerPool!(tex_frontmatter);
   // lines 5621-5655
@@ -79,6 +73,7 @@ LoadDefinitions!(state, {
   //**********************************************************************
   // Stray stuff .... where to ?
   //**********************************************************************
+
   // lines 7013-7036
   InnerPool!(tex_stray_math_style);
   // lines 7037-7140
@@ -87,10 +82,11 @@ LoadDefinitions!(state, {
   InnerPool!(latex_hook);
   // lines 7204-7221
   InnerPool!(tex_rtx_specific);
-  // lines 7222-7545
+  // lines 7222-7544
   InnerPool!(rtx_math_macros);
   // lines 7545-7720
-  // InnerPool!(tex_lx_misc_tweaks);
+  InnerPool!(tex_misc_tweaks);
+
   // lines 7721 - 7725
   InnerPool!(etex);
   InnerPool!(pdftex);

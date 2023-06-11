@@ -31,12 +31,14 @@ LoadDefinitions!(state, {
     Some(Scope::Global)
   );
 
-  // // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
-  // // The content is the result of digesting $tokens.
-  // // \\@add@frontmatter[keys]{tag}[attributes]{content}
-  // // keys can have
-  // //   replace (to replace the current entry, if any)
-  // //   ifnew   (only add if no previous entry)//
+  DefConditional!("\\if@in@preamble", sub[_s,_args,state] { state.lookup_bool("inPreamble") });
+
+  // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
+  // The content is the result of digesting $tokens.
+  // \\@add@frontmatter[keys]{tag}[attributes]{content}
+  // keys can have
+  //   replace (to replace the current entry, if any)
+  //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
     sub[stomach, (_keys_tks,tag,attrs_opt,tokens), state] {
@@ -74,13 +76,12 @@ LoadDefinitions!(state, {
     AssignValue!("inPreamble", inpreamble);
   });
 
-  // // Append a piece of data to an existing frontmatter item that is contained in <$tag>
-  // // If $label is given, look for an item which has label=>$label,
-  // // otherwise, just append to the last item in $tag.
+  // Append a piece of data to an existing frontmatter item that is contained in <$tag>
+  // If $label is given, look for an item which has label=>$label,
+  // otherwise, just append to the last item in $tag.
 
-  // // \@add@to@frontmatter{tag}[label]{content}
-  // DefPrimitive('\@add@to@frontmatter {} [] {}', sub {
-  //     my ($stomach, $tag, $label, $tokens) = @_;
+  // \@add@to@frontmatter{tag}[label]{content}
+  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[stomach,(tag,label,tokens), state] {
   //     $tag = ToString($tag);
   //     $label = ToString($label) if $label;
   //     my $frontmatter = LookupValue('frontmatter');
@@ -100,7 +101,9 @@ LoadDefinitions!(state, {
   //       push(@{ $$list[-1] }, $datum);
   //       return; }
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label => $label } : undef), $datum]);
-  //     return; });
+    unimplemented!();
+    Ok(())
+  });
 
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
@@ -127,12 +130,11 @@ LoadDefinitions!(state, {
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
-        // TODO:
-        //local $LaTeXML::BOX = Box('', $STATE->lookupValue('font'), '', T_SPACE);
         document.set_box_to_absorb(Tbox::new(arena::pin_static(""), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default(), state).into());
         for (tag, attr, stuff) in list {
-          document.open_element(&tag, attr, None, state)?; // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
-                                                           //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
+          document.open_element(&tag, attr, None, state)?;
+          // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
+          //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
           document.absorb(&stuff, None, state)?;
 
           document.close_element(&tag, state)?;
@@ -142,6 +144,12 @@ LoadDefinitions!(state, {
     }
   });
 
+  // Request Frontmatter to appear HERE (if not already done),
+  // deferring it from document begin.
+  DefConstructor!("\\lx@frontmatterhere", sub[doc,_args,state] { insert_frontmatter(doc,state)? },
+    after_digest => sub[stomach,_args,state] { state.assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+
+  // TeX.pool.ltxml, line 5421
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root, state] {
@@ -151,21 +159,24 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefConstructor!(
-    "\\beginsection Until:\\par",
-    "<ltx:section><ltx:title>#1</ltx:title>"
-  );
+  // If folks start using plain TeX macros, and never load LaTeX.pool,
+  // they might benefit from a ltx-plain.css?
+  DefMacro!("\\beginsection Until:\\par", r"\@beginsection{{\bf #1}}");
+  DefConstructor!("\\@beginsection {}",
+    "<ltx:section><ltx:title>#1</ltx:title>");
 
-  // // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
-  // //  If so, how do know when the theorem ends?
-  // DefConstructor('\proclaim', parseDefParameters('\proclaim', Tokenize('#1. #2\par')),
-  //   "<ltx:theorem>"
-  //     . "<ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>"
-  //     . "#2"
-  //     . "</ltx:theorem>",
-  //   properties => sub {
-  //     my $title = $_[1];
-  //     (title => $title, titlefont => $title->getFont); });
+
+  // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
+  //  If so, how do know when the theorem ends?
+  // TODO:
+  // DefMacro!("\\proclaim", parse_def_parameters("\\proclaim", Tokenize!("#1. #2\\par"),state),
+  //   r"\@proclaim{{\bf #1}}{{\sl #2}}");
+  // DefConstructor!("\\@proclaim{}{}",
+  //   "<ltx:theorem><ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>\
+  //     #2",
+  //   after_construct => sub[doc,_args,state] { doc.maybe_close_element("ltx:theorem", state)?; },
+  //   properties     => sub[stomach,title,state] {
+  //     stored_map!("title" => title, "titlefont" => title.get_font()) });
 
   //======================================================================
   // Tags & Titles
@@ -378,3 +389,10 @@ LoadDefinitions!(state, {
   // NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.
 });
+
+
+pub fn insert_frontmatter(_document: &mut Document, _state: &mut State) -> Result<()> {
+  // TODO: update and port over
+  unimplemented!();
+  Ok(())
+}

@@ -93,9 +93,9 @@ LoadDefinitions!(state, {
   // Short of setting up TeX's complicated encoding machinery, I need an explicit
   // mapping.  Unfortunately, this doesn't (yet) support people declaring thier own delimiters!
 
-  // # With new treatment of Simple Symbols as just Box's with assigned attributes,
-  // # we're not getting whatsits, and so we're not looking them up the same way!!!
-  // # TEMPORARILY (?) hack the Delimiter map
+  // With new treatment of Simple Symbols as just Box's with assigned attributes,
+  // we're not getting whatsits, and so we're not looking them up the same way!!!
+  // TEMPORARILY (?) hack the Delimiter map
   // foreach my $entry (values %DELIMITER_MAP) {
   //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
 
@@ -199,7 +199,8 @@ LoadDefinitions!(state, {
   //     $document->setAttribute($delim, role => $role); }
   //   return; }
 
-  // # The "m" versions are defined in e-Tex and other places.
+  // TODO:
+  // The "m" versions are defined in e-Tex and other places.
   // DefConstructor('\bigl {}', '#1', bounded => true, font => { size => 'big' },
   //   afterConstruct => sub { addDelimiterRole($_[0], 'OPEN'); });
   // DefConstructor('\bigm {}', '#1', bounded => true, font => { size => 'big' },

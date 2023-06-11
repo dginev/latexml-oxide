@@ -8,13 +8,17 @@ LoadDefinitions!(state, {
   RelaxNGSchema!("LaTeXML");
   Tag!("ltx:section", auto_close => true);
   Tag!("ltx:document", auto_close => true, auto_open => true);
-  // TODO:
-  // Tag("ltx:document", after_open => sub {
-  //     my ($document, $root) = @_;
-  //     if (my $font = $document->getNodeFont($root)) {
-  //       if (my $bg = $font->getBackground) {
-  //         if ($bg ne 'white') {
-  //           $document->setAttribute($root, backgroundcolor => $bg); } } } });
+  Tag!("ltx:document", after_open => sub[document,root,state] {
+    let mut bg_to_set = None;
+    if let Some(bg) = document.get_node_font(root).get_background() {
+      if bg != "white" {
+        bg_to_set = Some(bg.clone().into_owned());
+      }
+    }
+    if let Some(bg) = bg_to_set {
+      document.set_attribute(root, "backgroundcolor", &bg, state)?;
+    }
+  });
 
   // No, \documentclass isn't really a primitive -- It's not even TeX!
   // But we define a number of stubs here that will automatically load
@@ -57,6 +61,24 @@ LoadDefinitions!(state, {
     )?;
   });
 
+  for _ltx3trigger in ["\\ExplSyntaxOn","\\ProvidesExplClass","\\ProvidesExplPackage"] {
+    // DG: note that these auto-loads are not perfect --
+    //     if they are triggered with a raw .sty file for example,
+    //     the expl3 support will "expire" at the end of the current scope,
+    //     and e.g. \ExplSyntaxOn will once again be undefined.
+    // TODO:
+    // DefAutoload!(ltx3trigger, "expl3.pool.ltxml");
+  }
+
+  // # Darn; we need to be even more clever, since we need to simulate an amstex command, as well.
+  // # For example \documentstyle[...]{amsppt} must switch to AMSTeX mode, _NOT_ LaTeX mode!!!!
+  // DefMacro('\documentstyle OptionalSemiverbatim SkipSpaces Semiverbatim', sub {
+  //   my ($gullet, $options, $class) = @_;
+  //   LoadPool((ToString($class) =~ /^amsppt$/ ? "AmSTeX" : "LaTeX"));
+  //   (T_CS('\\documentstyle'),
+  //     ($options ? (T_OTHER('['), $options->unlist, T_OTHER(']')) : ()),
+  //     T_BEGIN, $class->unlist, T_END); });
+
   // Technically should be in LaTeX.pool, but we try to maintain the bookkeeping from the very
   // start, in order to avoid partially defined behavior when --preload directives are mixed with
   // \usepackage{} loads
@@ -76,4 +98,7 @@ LoadDefinitions!(state, {
       \gdef\@currnamestack{#4}"
   );
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
+  Let!("\\@currname", "\\@empty");
+  Let!("\\@currext",  "\\@empty");
+
 });

@@ -24,7 +24,7 @@ LoadDefinitions!(outer_state, {
   // of \unexpanded are not expanded further (this is the same behaviour as is
   // exhibited by the tokens resulting from the expansion of
   // \the〈token variable〉in both TEX and ε-TEX).
-  DefMacro!("\\unexpanded GeneralText", sub[gullet, (text), state] { text });
+  DefMacro!("\\unexpanded GeneralText", "#1");
 
   // ======================================================================
   // 3.2. Provision for re-scanning already read text
@@ -57,11 +57,11 @@ LoadDefinitions!(outer_state, {
     Tokens!()
   });
 
-  // #======================================================================
-  // # 3.3 Environmental enquiries
+  //======================================================================
+  // 3.3 Environmental enquiries
 
-  DefMacro!("\\eTeXrevision", sub[_gullet,_args,_state] { Explode!(".2") });
-  DefRegister!("\\eTeXversion" => Number!(2));
+  DefMacro!("\\eTeXrevision", { Explode!(".2") });
+  DefRegister!("\\eTeXversion" => Number::new(2));
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
@@ -112,10 +112,10 @@ LoadDefinitions!(outer_state, {
   // By leaving this 0, we're saying "Don't use these features"!
   DefRegister!("\\TeXXeTstate" => Number::new(0));
 
-  DefMacro!("\\beginL", "");
-  DefMacro!("\\beginR", "");
-  DefMacro!("\\endL", "");
-  DefMacro!("\\endR", "");
+  DefMacro!("\\beginL", None);
+  DefMacro!("\\beginR", None);
+  DefMacro!("\\endL", None);
+  DefMacro!("\\endR", None);
 
   DefRegister!("\\predisplaydirection" => Number::new(0)); // ???
 
@@ -147,6 +147,7 @@ LoadDefinitions!(outer_state, {
   // # NOTE: These tokens are NOT used anywhere (yet?)
   DefRegister!("\\everyeof", Tokens!());
 
+  // TODO:
   // DefConstructor('\middle Token', '#1',
   //   afterConstruct => sub {
   //     my ($document) = @_;
@@ -186,7 +187,7 @@ LoadDefinitions!(outer_state, {
     let value = etex_readexpr_i(gullet, rtype, 0, state)?;
     if let Some(token) = gullet.read_token(state)? {
       // Skip \relax
-      if !TOKEN_RELAX.with(|tr| token == *tr) {
+      if TOKEN_RELAX.with(|tr| token != *tr) {
         gullet.unread_one(token);
       }
     }
