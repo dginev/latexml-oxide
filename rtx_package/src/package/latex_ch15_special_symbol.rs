@@ -94,7 +94,5 @@ LoadDefinitions!(state, {
   // DefMathI('\mapstochar', undef, "\u{21A6}", role => 'ARROW', meaning => 'maps-to');
   // DefMathI('\owns',       undef, "\u{220B}", role => 'RELOP', meaning => 'contains');
 
-  // \skew{}{}{} ????
-
   // \symbol lookup symbol in font by index?
 });

@@ -35,16 +35,32 @@ LoadDefinitions!(state, {
   DefRegister!("\\pdfgamma"                       => Number::new(0));
   DefRegister!("\\pdfimagegamma"                  => Number::new(0));
   DefRegister!("\\pdfdraftmode"                   => Number::new(0));
+  DefRegister!("\\pdfadjustinterwordglue"          => Number::new(0));
+  DefRegister!("\\pdfappendkern"                   => Number::new(0));
+  DefRegister!("\\pdfgentounicode"                 => Number::new(0));
+  DefRegister!("\\pdfinclusioncopyfonts"           => Number::new(0));
+  DefRegister!("\\pdfinfoomitdate"                 => Number::new(0));
+  DefRegister!("\\pdfpagebox"                      => Number::new(0));
+  DefRegister!("\\pdfprependkern"                  => Number::new(0));
+  DefRegister!("\\pdfsuppressptexinfo"             => Number::new(0));
+  DefRegister!("\\pdfsuppresswarningdupdest"       => Number::new(0));
+  DefRegister!("\\pdfsuppresswarningdupmap"        => Number::new(0));
+  DefRegister!("\\pdfsuppresswarningpagegroup"     => Number::new(0));
 
   // Dimen Registers
-  DefRegister!("\\pdfhorigin"      => Dimension!("1in"));
-  DefRegister!("\\pdfvorigin"      => Dimension!("1in"));
-  DefRegister!("\\pdfpagewidth"    => Dimension!("0pt"));
-  DefRegister!("\\pdfpageheight"   => Dimension!("0pt"));
-  DefRegister!("\\pdflinkmargin"   => Dimension!("0pt"));
-  DefRegister!("\\pdfdestmargin"   => Dimension!("0pt"));
-  DefRegister!("\\pdfthreadmargin" => Dimension!("0pt"));
-  DefRegister!("\\pdfpxdimen"      => Dimension!("0pt"));
+  DefRegister!("\\pdfhorigin"         => Dimension!("1in"));
+  DefRegister!("\\pdfvorigin"         => Dimension!("1in"));
+  DefRegister!("\\pdfpagewidth"       => Dimension!("0pt"));
+  DefRegister!("\\pdfpageheight"      => Dimension!("0pt"));
+  DefRegister!("\\pdflinkmargin"      => Dimension!("0pt"));
+  DefRegister!("\\pdfdestmargin"      => Dimension!("0pt"));
+  DefRegister!("\\pdfthreadmargin"    => Dimension!("0pt"));
+  DefRegister!("\\pdfpxdimen"         => Dimension!("0pt"));
+  DefRegister!("\\pdfeachlinedepth"   => Dimension!("0pt"));
+  DefRegister!("\\pdfeachlineheight"  => Dimension!("0pt"));
+  DefRegister!("\\pdffirstlineheight" => Dimension!("0pt"));
+  DefRegister!("\\pdfignoreddimen"    => Dimension!("0pt"));
+  DefRegister!("\\pdflastlinedepth"   => Dimension!("0pt"));
 
   // Token Registers
   DefRegister!("\\pdfpagesattr"     => Tokens!());
@@ -53,51 +69,67 @@ LoadDefinitions!(state, {
   DefRegister!("\\pdfpkmode"        => Tokens!());
 
   // Expandable Commands
-  DefMacro!("\\pdftexrevision", "");
-  DefMacro!("\\pdftexbanner", "");
-  DefMacro!("\\pdfcreationdate", "");
-  DefMacro!("\\pdfpageref Number", "");
-  DefMacro!("\\pdfxformname Number", "");
-  DefMacro!("\\pdffontname Token", "");
-  DefMacro!("\\pdffontobjnum Token", "");
-  DefMacro!("\\pdffontsize Token", "");
-  DefMacro!("\\pdfincludechars Token {}", "");
-  DefMacro!("\\leftmarginkern Number", "");
-  DefMacro!("\\rightmarginkern Number", "");
-  DefMacro!("\\pdfescapestring {}", "");
-  DefMacro!("\\pdfescapename {}", "");
-  DefMacro!("\\pdfescapehex {}", "");
-  DefMacro!("\\pdfunescapehex {}", "");
-  // DefMacro!("\\ifpdfprimitive {}","");
-  // DefMacro!("\\ifpdfabsnum Number"","");
-  // DefMacro!("\\ifpdfabsdim Dimension"","");
-  DefMacro!("\\pdfuniformdeviate Number Token", "");
-  DefMacro!("\\pdfnormaldeviate Token", "");
-  DefMacro!("\\pdfmdfivesum Number {}", "");
-  DefMacro!("\\pdffilemoddate {}", "");
-  // DefMacro(""\pdffiledump {}","");
-  // DefMacro(""\pdfcolorstackinit {}","");
+  DefMacro!("\\pdftexrevision", "19");
+  DefMacro!("\\pdftexbanner", None);
+  DefMacro!("\\pdfcreationdate", None);
+  DefMacro!("\\pdfpageref Number", None);
+  DefMacro!("\\pdfxformname Number", None);
+  DefMacro!("\\pdffontname Token", None);
+  DefMacro!("\\pdffontobjnum Token", None);
+  DefMacro!("\\pdffontsize Token", None);
+  DefMacro!("\\pdfincludechars Token {}", None);
+  DefMacro!("\\leftmarginkern Number", None);
+  DefMacro!("\\rightmarginkern Number", None);
+  DefMacro!("\\pdfescapestring {}", None);
+  DefMacro!("\\pdfescapename {}", None);
+  DefMacro!("\\pdfescapehex {}", None);
+  DefMacro!("\\pdfunescapehex {}", None);
+  // DefMacro!("\\ifpdfprimitive {}",None);
+  // DefMacro!("\\ifpdfabsnum Number"",None);
+  // DefMacro!("\\ifpdfabsdim Dimension"",None);
+  DefMacro!("\\pdfuniformdeviate Number Token", None);
+  DefMacro!("\\pdfnormaldeviate Token", None);
+  DefMacro!("\\pdfmdfivesum Number {}", None);
+  DefMacro!("\\pdf@mdfivesum Number {}", None);
+  DefMacro!("\\pdf@filemdfivesum Number {}", None);
+  DefMacro!("\\pdffilesize{}", sub[gullet,(file),state] {
+    // used in expl3's \__file_full_name:n , among others
+    let filepath = Expand!(file,gullet,state).to_string();
+    if let Some(path) = find_file(&filepath,None,state) {
+      unimplemented!();
+      // let stat = stat $path;
+      // (defined $stat[7]) ? Explode($stat[7]) : ();
+    } else {
+      Tokens!() } });
+  DefMacro!("\\pdffilemoddate {}", None);
+  DefMacro!("\\pdffiledump {}",None);
+  // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
-  DefRegister!("\\pdftexversion"      => Number::new(0));
-  DefRegister!("\\pdflastobj"         => Number::new(0));
-  DefRegister!("\\pdflastxform"       => Number::new(0));
-  DefRegister!("\\pdflastximage"      => Number::new(0));
-  DefRegister!("\\pdflastximagepages" => Number::new(0));
-  DefRegister!("\\pdflastannot"       => Number::new(0));
-  DefRegister!("\\pdflastlink"        => Number::new(0));
-  DefRegister!("\\pdflastxpos"        => Number::new(0));
-  DefRegister!("\\pdflastypos"        => Number::new(0));
-  DefRegister!("\\pdflastdemerits"    => Number::new(0));
-  DefRegister!("\\pdfelapsedtime"     => Number::new(0));
-  DefRegister!("\\pdfrandomseed"      => Number::new(0));
-  DefRegister!("\\pdfshellescape"     => Number::new(0));
+  DefRegister!("\\pdftexversion"           => Number::new(0));
+  DefRegister!("\\pdflastobj"              => Number::new(0));
+  DefRegister!("\\pdflastxform"            => Number::new(0));
+  DefRegister!("\\pdflastximage"           => Number::new(0));
+  DefRegister!("\\pdflastximagepages"      => Number::new(0));
+  DefRegister!("\\pdflastannot"            => Number::new(0));
+  DefRegister!("\\pdflastlink"             => Number::new(0));
+  DefRegister!("\\pdflastxpos"             => Number::new(0));
+  DefRegister!("\\pdflastypos"             => Number::new(0));
+  DefRegister!("\\pdflastdemerits"         => Number::new(0));
+  DefRegister!("\\pdfelapsedtime"          => Number::new(0));
+  DefRegister!("\\pdfrandomseed"           => Number::new(0));
+  DefRegister!("\\pdfshellescape"          => Number::new(0));
+  DefRegister!("\\pdflastximagecolordepth" => Number::new(0));
+  DefRegister!("\\pdfretval"               => Number::new(0));
+
 
   // \pdfximage [ image attr spec ] general text (h, v, m)
   // \pdfrefximage object number (h, v, m)
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
+  DefPrimitive!("\\pdfstartlink", None);
   // \pdfendlink (h, m)
+  DefPrimitive!("\\pdfendlink", None);
   // \pdfoutline outline spec (h, v, m)
   // \pdfdest dest spec (h, v, m)
   // \pdfthread thread spec (h, v, m)
@@ -106,7 +138,7 @@ LoadDefinitions!(state, {
   // \pdfsavepos (h, v, m)
 
   // See lxRDFa for ideas how this info might be used!
-  DefMacro!("\\pdfinfo{}", "");
+  DefMacro!("\\pdfinfo{}", None);
 
   // Ugh, what a mess of ugly syntax....
   DefParameterType!(OpenActionSpecification, reader => reader!(_gullet, _args, _extra, _state, {
@@ -129,12 +161,28 @@ LoadDefinitions!(state, {
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   DefMacro!("\\quitvmode", "");
   // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
+  DefPrimitive!("\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText", None);
   // \special pdfspecial spec
   // \pdfresettimer
+  DefPrimitive!("\\pdfresettimer",           None);
+  DefPrimitive!("\\pdfresettimerresettimer", None);
   // \pdfsetrandomseed number
   // \pdfnoligatures font
   // \pdfprimitive control sequence
+  // TODO: https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
+  DefMacro!("\\pdfprimitive DefToken", "#1"); // we can just ignore the advanced effects for now.
+
   // \pdfcolorstack stack number stack action general text
+  //TODO:
+  // DefPrimitive('\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current', sub {
+  //   # for now, carefully read and discard all arguments
+  //   my ($stomach, $number, $set, $push, $pop, $current) = @_;
+  //   return if ($pop);
+  //   my $gullet = $stomach->getGullet;
+  //   $gullet->skipSpaces;
+  //   my $general_text_param = LookupMapping('PARAMETER_TYPES', 'GeneralText');
+  //   my $discard            = &{ $$general_text_param{reader} }($gullet);
+  //   return; });
   DefMacro!("\\pdfsetmatrix", "");
   DefMacro!("\\pdfsave", "");
   DefMacro!("\\pdfrestore", "");
@@ -187,9 +235,8 @@ LoadDefinitions!(state, {
   // pdfspecial modifier → direct:
   // stack action → set | push | pop | current
 
-  DefMacro!("\\pdfglyphtounicode{}{}", "");
-
   DefMacro!("\\expanded Expanded", "#1");
+
   DefMacro!("\\pdfstrcmp Expanded Expanded", sub[gullet, (first,second), state] {
     match first.to_string().cmp(&second.to_string()) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
@@ -197,4 +244,6 @@ LoadDefinitions!(state, {
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
     }
   });
+  DefMacro!("\\pdfglyphtounicode{}{}", "");
+
 });

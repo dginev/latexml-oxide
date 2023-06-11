@@ -86,7 +86,7 @@ LoadDefinitions!(state, {
   DefMath!("\\top",      None, "\u{22A4}", role => "ADDOP",    meaning => "top");
   DefMath!("\\bot",      None, "\u{22A5}", role => "ADDOP",    meaning => "bottom");
   DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
-  // should get meaning => 'parallel-to' when used as infix, but NOT when for OPEN|CLOSE
+  // should get meaning => "parallel"to' when used as infix, but NOT when for OPEN|CLOSE
   DefMath!("\\angle", None, "\u{2220}");
 
   // NOTE: This is probably the wrong role.
@@ -113,7 +113,7 @@ LoadDefinitions!(state, {
   //----------------------------------------------------------------------
   // TODO:
   // DefMath!("\\smallint", None, "\u{222B}", meaning => "integral", role => "INTOP",
-  //   font => { size => 9 }, scriptpos => \&doScriptpos, mathstyle => "text");    // INTEGRAL
+  //   font => { size => 9 }, scriptpos => do_scriptpos, mathstyle => "text");    // INTEGRAL
   // #----------------------------------------------------------------------
   // # Actually LaTeX; Table 3.8. Variable-sized Symbols, p.44.
   // #----------------------------------------------------------------------
@@ -124,94 +124,96 @@ LoadDefinitions!(state, {
   //   return (LookupValue('font')->getMathstyle eq 'display' ? 'display' : 'text'); }
 
   // DefMathI('\sum', undef, "\x{2211}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'sum',
+  //   meaning   => "sum",
   //   mathstyle => \&doVariablesizeOp);
   // DefMathI('\prod', undef, "\x{220F}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'product',
+  //   meaning   => "product",
   //   mathstyle => \&doVariablesizeOp);
   // DefMathI('\coprod', undef, "\x{2210}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'coproduct',
+  //   meaning   => "coproduct",
   //   mathstyle => \&doVariablesizeOp);
   // DefMathI('\int', undef, "\x{222B}",
-  //   role      => 'INTOP',
-  //   meaning   => 'integral',
+  //   role      => "INTOP",
+  //   meaning   => "integral",
   //   mathstyle => \&doVariablesizeOp);
   // DefMathI('\oint', undef, "\x{222E}",
-  //   role      => 'INTOP',
-  //   meaning   => 'contour-integral',
+  //   role      => "INTOP",
+  //   meaning   => "contour"integral',
   //   mathstyle => \&doVariablesizeOp);
   // DefMathI('\bigcap', undef, "\x{22C2}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'intersection',
+  //   meaning   => "intersection",
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigcup', undef, "\x{22C3}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'union',
+  //   meaning   => "union",
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigsqcup', undef, "\x{2294}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'square-union',
+  //   meaning   => "square"union',
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigvee', undef, "\x{22C1}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'or',
+  //   meaning   => "or",
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigwedge', undef, "\x{22C0}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'and',
+  //   meaning   => "and",
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigodot', undef, "\x{2299}",
-  //   role      => 'SUMOP',              #meaning=> ?
+  //   role      => "SUMOP",              #meaning=> ?
   //   scriptpos => \&doScriptpos,
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigotimes', undef, "\x{2297}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'tensor-product',
+  //   meaning   => "tensor"product',
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\bigoplus', undef, "\x{2295}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'direct-sum',
+  //   meaning   => "direct"sum',
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefMathI('\biguplus', undef, "\x{228E}",
-  //   role      => 'SUMOP',
+  //   role      => "SUMOP",
   //   scriptpos => \&doScriptpos,
-  //   meaning   => 'symmetric-difference',
+  //   meaning   => "symmetric"difference',
   //   mathstyle => \&doVariablesizeOp,
-  //   font      => { size => 'Big' });
+  //   font      => { size => "Big" });
   // DefConstructor('\limits', undef, sub {
   //     my $node = $_[0]->getElement;
-  //     $_[0]->setAttribute($_[0]->getLastChildElement($node) || $node, scriptpos => 'mid'); });
+  //     $_[0]->setAttribute($_[0]->getLastChildElement($node) || $node, scriptpos => "mid"); });
   // DefConstructor('\nolimits', undef, sub {
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;
   //     $node->removeAttribute('scriptpos'); });    # default is 'post', so we can just remove the
-  // attrib. DefConstructor('\displaylimits', undef, sub {
+  // attrib.
+  //
+  // DefConstructor('\displaylimits', undef, sub {
   //     my ($document, %props) = @_;
   //     my $node = $_[0]->getElement;
   //     $node = $_[0]->getLastChildElement($node) || $node;
   //     if (($props{mathstyle} || 'text') eq 'display') {
-  //       $document->setAttribute($node, scriptpos => 'mid'); }
+  //       $document->setAttribute($node, scriptpos => "mid"); }
   //     else {
   //       $node->removeAttribute('scriptpos'); } },
   //   properties => sub { (mathstyle => LookupValue('font')->getMathstyle); });
@@ -385,4 +387,109 @@ LoadDefinitions!(state, {
       }   // ? Hopefully this is safe.
     }
   });
+
+
+  //----------------------------------------------------------------------
+  // \joinrel
+  DefMath!("\\relbar", None, "-", role => "RELOP");    // ???
+  DefMath!("\\Relbar", None, "=", role => "RELOP");    // ???
+
+  // \joinrel is \mathrel{\mkern-3\mu}
+  // Ah, but the Effect is to join 2 "relations" into one!
+  DefPrimitive!("\\joinrel", sub[stomach,(),state] {
+    stomach.get_gullet_mut().skip_spaces(state)?;
+    if let Some(left) = stomach.box_list.pop() {
+      let mut stuff = Vec::new();
+      while let Some(tok) = stomach.get_gullet_mut().read_x_token(Some(false),false,state)? {
+        stuff = stomach.invoke_token(&tok,state)?;
+        if !stuff.is_empty() {
+          break;
+        }
+      }
+      if stuff.is_empty() {
+        return Ok(Vec::new()); // no-op ????
+      }
+      let right = stuff.remove(0);
+      unimplemented!(); // TODO:
+      // stuff.push(
+      //   Whatsit::new(state.lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
+      //     // locator => $gullet->getLocator,
+      //     font => right.get_font(), is_math => true));
+      Ok(stuff)
+    } else {
+      // Nothing there?...
+      Ok(Vec::new()) // I guess this becomes a no-op???
+    }
+  });
+
+  DefConstructor!("\\@@joinrel{}{}", sub[document,args,state] {
+    let left = args[0].as_ref().unwrap();
+    let right = &args[1].as_ref().unwrap();
+    document.absorb(left,None,state)?;
+    document.absorb(right,None,state)?;
+    // Now if last 2 items are XMTok, replace by a single token with joined content (& attr?)
+    let node  = document.get_node();
+    unimplemented!(); // TODO:
+    // let nodes = document.get_child_elements(node);
+    // if nodes.len() >= 2 {
+      // let rels = (nodes[-2], nodes[-1]);
+      // if (grep { $document->getNodeQName($_) eq 'ltx:XMTok' } @rels) {
+      //   my %roles = ();
+      //   map { $roles{ $_->getAttribute('role') } = 1 } @rels;
+      //   my $role = (scalar(keys %roles) == 1 ? [keys %roles]->[0] : ($roles{ARROW} ? 'ARROW' : 'RELOP'));
+      //   map { $node->removeChild($_) } @rels;
+      //   $document->insertElement('ltx:XMTok', [map { $_->textContent } @rels], role => $role);
+    // }
+    },
+    reversion => "#1\\joinrel #2");
+
+  //----------------------------------------------------------------------
+  // LaTeX; Table 3.6. Arrow Symbols, p.43
+  //----------------------------------------------------------------------
+  // Arrows get treated somewhat like relations (or meta-relations),
+  // but it's hard to associate any particular "meaning" to them.
+
+  DefMath!("\\leftarrow",      "\u{2190}", role => "ARROW");         // LEFTWARDS ARROW
+  DefMath!("\\Leftarrow",      "\u{21D0}", role => "ARROW");         // LEFTWARDS DOUBLE ARROW
+  DefMath!("\\rightarrow",     "\u{2192}", role => "ARROW");         // RIGHTWARDS ARROW
+  DefMath!("\\Rightarrow",     "\u{21D2}", role => "ARROW");         // RIGHTWARDS DOUBLE ARROW
+  DefMath!("\\leftrightarrow", "\u{2194}", role => "METARELOP");     // LEFT RIGHT ARROW
+  DefMath!("\\Leftrightarrow", "\u{21D4}", role => "METARELOP");     // LEFT RIGHT DOUBLE ARROW
+  DefMath!("\\iff", "\u{21D4}", role => "METARELOP", meaning => "iff"); // LEFT RIGHT DOUBLE ARROW
+  DefMath!("\\mapsto",        "\u{21A6}", role => "ARROW", meaning => "maps-to");
+  DefMath!("\\hookleftarrow", "\u{21A9}", role => "ARROW");    // LEFTWARDS ARROW WITH HOOK
+  DefMath!("\\leftharpoonup", "\u{21BC}", role => "ARROW"); // LEFTWARDS HARPOON WITH BARB UPWARDS
+  DefMath!("\\leftharpoondown", "\u{21BD}", role => "ARROW"); // LEFTWARDS HARPOON WITH BARB DOWNWARDS
+  DefMath!("\\rightleftharpoons", "\u{21CC}", role => "METARELOP"); // RIGHTWARDS HARPOON OVER LEFTWARDS HARPOON
+  DefMath!("\\longleftarrow",      "\u{27F5}", role => "ARROW");  // LONG LEFTWARDS ARROW
+  DefMath!("\\Longleftarrow",      "\u{27F8}", role => "ARROW");  // LONG LEFTWARDS DOUBLE ARROW
+  DefMath!("\\longrightarrow",     "\u{27F6}", role => "ARROW");  // LONG RIGHTWARDS ARROW
+  DefMath!("\\Longrightarrow",     "\u{27F9}", role => "ARROW");  // LONG RIGHTWARDS DOUBLE ARROW
+  DefMath!("\\longleftrightarrow", "\u{27F7}", role => "METARELOP");    // LONG LEFT RIGHT ARROW
+  DefMath!("\\Longleftrightarrow", "\u{27FA}", role => "METARELOP"); // LONG LEFT RIGHT DOUBLE ARROW
+  DefMath!("\\longmapsto",     "\u{27FC}", role => "ARROW");    // LONG RIGHTWARDS ARROW FROM BAR
+  DefMath!("\\hookrightarrow", "\u{21AA}", role => "ARROW");    // RIGHTWARDS ARROW WITH HOOK
+  DefMath!("\\rightharpoonup", "\u{21C0}", role => "ARROW"); // RIGHTWARDS HARPOON WITH BARB UPWARDS
+  DefMath!("\\rightharpoondown", "\u{21C1}", role => "ARROW"); // RIGHTWARDS HARPOON WITH BARB DOWNWARDS
+  DefMath!("\\leadsto",          "\u{219D}", role => "ARROW", meaning => "leads-to");
+
+  DefMath!("\\uparrow",     "\u{2191}", role => "ARROW");      // UPWARDS ARROW
+  DefMath!("\\Uparrow",     "\u{21D1}", role => "ARROW");      // UPWARDS DOUBLE ARROW
+  DefMath!("\\downarrow",   "\u{2193}", role => "ARROW");      // DOWNWARDS ARROW
+  DefMath!("\\Downarrow",   "\u{21D3}", role => "ARROW");      // DOWNWARDS DOUBLE ARROW
+  DefMath!("\\updownarrow", "\u{2195}", role => "ARROW");      // UP DOWN ARROW
+  DefMath!("\\Updownarrow", "\u{21D5}", role => "ARROW");      // UP DOWN DOUBLE ARROW
+  DefMath!("\\nearrow",     "\u{2197}", role => "ARROW");      // NORTH EAST ARROW
+  DefMath!("\\searrow",     "\u{2198}", role => "ARROW");      // SOUTH EAST ARROW
+  DefMath!("\\swarrow",     "\u{2199}", role => "ARROW");      // SOUTH WEST ARROW
+  DefMath!("\\nwarrow",     "\u{2196}", role => "ARROW");      // NORTH WEST ARROW
+
+  // \mapstochar (3237), \lhook(312C), \rhook(312D)
+  // These are really wrong; I can't find the right Unicode Glyphs.
+  // These are only fragments intended to be assembled into meaningful(?) symbols.
+  DefMath!("\\mapstochar", "\u{2E20}");    // TeX 3237
+  DefMath!("\\lhook",      "\u{2E26}");    // TeX 312C
+  DefMath!("\\rhook",      "\u{2E27}");    // TeX 312D
+
+
 });

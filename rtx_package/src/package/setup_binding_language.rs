@@ -2617,7 +2617,33 @@ macro_rules! defi_opts {
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
-
+  // operator_role: string
+  (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal, $($next:tt)*)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ operator_role @ Some($flag.to_string()) ] })
+  };
+  (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ operator_role @ Some($flag.to_string()) ] })
+  };
+  // operator_stretchy: bool
+  (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ operator_stretchy @ Some($flag) ] })
+  };
+  (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ operator_stretchy @ Some($flag) ] })
+  };
+  // scriptpos: string
+  (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal, $($next:tt)*)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ scriptpos @ Some($flag.to_string()) ] })
+  };
+  (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scriptpos @ Some($flag.to_string()) ] })
+  };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {

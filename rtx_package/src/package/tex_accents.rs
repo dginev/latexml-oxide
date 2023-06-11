@@ -84,24 +84,68 @@ LoadDefinitions!(state, {
   DefAccent!("\\r", '\u{030A}', "o"); // COMBINING RING ABOVE & non-combining
   DefAccent!("\\H", '\u{030B}', "\u{02DD}"); // COMBINING DOUBLE ACUTE ACCENT & non-combining
   DefAccent!("\\c", '\u{0327}', "\u{00B8}", below => true); // COMBINING CEDILLA & CEDILLA
-
   // NOTE: The next two get define for math, as well; See below
-
   DefAccent!("\\@text@daccent", '\u{0323}', ".",       below => true); // COMBINING DOT BELOW & DOT (?)
   DefAccent!("\\@text@baccent", '\u{0331}', "\u{00AF}", below => true); // COMBINING MACRON BELOW  & MACRON
-
   // COMBINING DOUBLE INVERTED BREVE & ???? What????
   DefAccent!("\\t", '\u{0361}', "-");
   // this one"s actually defined in mathscinet.sty, but just stick it here!
-
   // COMBINING COMMA BELOW
   DefAccent!("\\lfhook", '\u{0326}', ",", below => true);
-
-  // I doubt that latter covers multiple chars...? DefAccent("\\bar","\u{0304}", ?);  // COMBINING
-  // MACRON or is this the longer overbar?
 
   // This will fail if there really are "assignments" after the number!
   // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above & below cases!  We'll prefer the above case.
+  DefPrimitive!("\\accent Number Expanded", sub[stomach,(num,letter),state] {
+    unimplemented!();
+    // my $n        = $num->valueOf;
+    // my $fam      = 0;                                            # ?
+    // my $font     = LookupValue('fontinfo_' . $fam . '_text');
+    // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
+    // my $acc      = ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
+    // my $reversion = Invocation(T_CS('\accent'), $num, $letter);
+    // # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
+    // # BUT, \accent always (?) makes an above type accent... doesn't it?
+    // if (my $combiner = LookupMapping('accent_combiner_above', $acc)
+    //   || LookupMapping('accent_combiner_below', $acc)) {
+    //   applyAccent($stomach, $letter, $combiner, $acc, $reversion); }
+    // else {
+    //   Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
+    //   Box(ToString($letter), undef, undef, $reversion); }
+    Ok(())
+  });
+  // Note that these two apparently work in Math? BUT the argument is treated as text!!!
+  DefMacro!("\\d{}", r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi");
+  DefMacro!("\\b{}", r"\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi");
+
+  //   DefConstructor('\@math@daccent {}',
+  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>\x{22c5}</ltx:XMTok>"
+  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
+  //     . "</ltx:XMApp>",
+  //   mode        => 'text', alias => '\d',
+  //   afterDigest => sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $arg = $whatsit->getArg(1);
+  //     if ($arg->isMath) {
+  //       $whatsit->setProperty(matharg => $arg->getBody); }
+  //     else {
+  //       $whatsit->setProperty(textarg => $arg); }
+  //     return; });
+
+  // DefConstructor('\@math@baccent {}',
+  //   "<ltx:XMApp><ltx:XMTok role='UNDERACCENT'>" . UTF(0xAF) . "</ltx:XMTok>"
+  //     . "?#textarg(<ltx:XMText>#textarg</ltx:XMText>)(<ltx:XMArg>#matharg</ltx:XMArg>)"
+  //     . "</ltx:XMApp>",
+  //   mode        => 'text', alias => '\b',
+  //   afterDigest => sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $arg = $whatsit->getArg(1);
+  //     if ($arg->isMath) {
+  //       $whatsit->setProperty(matharg => $arg->getBody); }
+  //     else {
+  //       $whatsit->setProperty(textarg => $arg); }
+  //     return; });
+
+
 });

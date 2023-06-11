@@ -111,6 +111,7 @@ mod tex_math_accents;
 mod tex_math_mode;
 mod tex_math_fork;
 mod tex_math_style;
+mod tex_misc_tweaks;
 mod tex_para;
 mod tex_registers;
 mod tex_rtx_specific;

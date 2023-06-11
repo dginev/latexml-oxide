@@ -69,7 +69,7 @@ pub struct MathPrimitiveOptions {
   pub reorder: bool,
   pub dual: bool,
   pub mathstyle: Option<String>,
-  pub scriptpos: Option<usize>,
+  pub scriptpos: Option<String>,
   pub operator_scriptpos: Option<usize>,
   pub stretchy: Option<bool>,
   pub operator_stretchy: Option<bool>,
@@ -154,7 +154,7 @@ impl MathPrimitiveOptions {
       h.insert("mathstyle".to_string(), mathstyle.into());
     }
     if let Some(ref scriptpos) = self.scriptpos {
-      h.insert("scriptpos".to_string(), Stored::Int(*scriptpos as i64));
+      h.insert("scriptpos".to_string(), scriptpos.into());
     }
     if let Some(ref operator_scriptpos) = self.operator_scriptpos {
       h.insert(
