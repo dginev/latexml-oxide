@@ -1585,14 +1585,13 @@
 
 <span class="doccomment">/// Token variant of `is_defined`. Defined in the LaTeX-y sense of also not being let to \relax.
 </span><span class="kw">pub fn </span>is_defined_token(cs: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
-  <span class="kw">let </span>meaning = state.lookup_meaning(cs);
-  <span class="kw">match </span>meaning {
+  <span class="kw">match </span>state.lookup_meaning(cs) {
     <span class="prelude-val">Some</span>(store) =&gt; <span class="kw">match </span>store.as_ref() {
       Stored::Token(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
       Stored::Expandable(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
       Stored::Primitive(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
       Stored::Constructor(<span class="kw-2">ref </span>m) =&gt; m.get_cs_name() != <span class="string">&quot;\\relax&quot;</span>,
-      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+      other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;TODO: unexpected case for is_defined_token, got: {other:?}&quot;</span>)
     },
     <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
   }
@@ -1602,7 +1601,8 @@
 </span><span class="kw">pub fn </span>is_definable(token: <span class="kw-2">&amp;</span>Token, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
   <span class="kw">let </span>meaning = state.lookup_meaning(token);
   token.with_str(|name| name != <span class="string">&quot;\\relax&quot; </span>&amp;&amp; !name.starts_with(<span class="string">&quot;\\end&quot;</span>))
-    &amp;&amp; (meaning.is_none() || (meaning == TOKEN_RELAX.with(|tr| state.lookup_meaning(tr))))
+    &amp;&amp; (meaning.is_none() || (meaning == TOKEN_RELAX.with(|tr| state.lookup_meaning(tr)))
+        || state.lookup_bool(<span class="string">&quot;2.09_COMPATIBILITY&quot;</span>))
 }
 
 <span class="doccomment">/// unconditionally wraps a CS token around a string
@@ -1674,7 +1674,7 @@
           <span class="prelude-val">None</span>,
           state,
         );
-        state.let_i(<span class="kw-2">&amp;</span>cs, <span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">None</span>, gullet);
+        state.let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">None</span>, gullet);
       } <span class="kw">else </span>{
         <span class="comment">//  For \ifcase, the parameter list better be a single Number !!
         </span>state.install_definition(

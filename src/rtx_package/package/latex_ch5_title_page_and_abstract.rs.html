@@ -237,6 +237,10 @@
 <a href="#237" id="237">237</a>
 <a href="#238" id="238">238</a>
 <a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::NodeType;
 
@@ -315,6 +319,9 @@
     <span class="string">&quot;\\lx@author{}&quot;</span>,
     <span class="string">r&quot;\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}&quot;
   </span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@@@contact{}{}&quot;</span>, <span class="string">&quot;^ &lt;ltx:contact role=&#39;#1&#39;&gt;#2&lt;/ltx:contact&gt;&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@contact{}{}&quot;</span>,
+  <span class="string">r&quot;\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>, <span class="string">&quot;\\qquad&quot;</span>);
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@author@prefix&quot;</span>, sub[document, _args, _props, state] {
@@ -325,6 +332,7 @@
     <span class="kw">else if </span>i == nauthors {
       <span class="kw">let </span>author_conj = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@author@conj&quot;</span>), state)<span class="question-mark">?</span>;
       document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">&quot;before&quot;</span>, <span class="kw-2">&amp;</span>author_conj.to_string(), state)<span class="question-mark">?</span>;
+
     } <span class="kw">else </span>{
       <span class="kw">let </span>author_sep = <span class="macro">Digest!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@author@sep&quot;</span>), state)<span class="question-mark">?</span>;
       document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">&quot;before&quot;</span>, <span class="kw-2">&amp;</span>author_sep.to_string(), state)<span class="question-mark">?</span>;

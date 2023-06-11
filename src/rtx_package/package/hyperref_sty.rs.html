@@ -1082,7 +1082,7 @@
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@Url Token&quot;</span>, sub[gullet,(cmd),state] {
     <span class="kw">let </span>open = gullet.read_token(state)<span class="question-mark">?</span>.unwrap();
     state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
-    state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// Needs special protection?
+    state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// Needs special protection?
     </span><span class="kw">let </span>(open,close,url) = <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
       ( <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>),
         gullet.read_balanced(<span class="bool-val">true</span>, state)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!

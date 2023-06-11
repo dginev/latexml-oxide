@@ -415,6 +415,21 @@
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -451,7 +466,7 @@
   ///  (note that the &quot;reversion&quot; _property_ is currently also used)
   </span><span class="kw">pub </span>reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
   <span class="doccomment">/// special-case reversion tokens for whatsits representing Dual math structures
-  </span><span class="kw">pub </span>dual_reversion: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+  </span><span class="kw">pub </span>dual_reversion: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String,Tokens&gt;&gt;,
   <span class="doccomment">/// point of origin in the source file
   </span><span class="kw">pub </span>locator: Locator,
 }
@@ -659,94 +674,109 @@
 
   <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// WARNING: Forbidden knowledge?
-    // (1) provide a means to get the RAW, internal markup that can (hopefully) be RE-digested
-    //     this is needed for getting the numerator of \over into textstyle!
     // (2) caching the reversion (which is a big performance boost)
-    </span><span class="kw">let </span>saved_opt = <span class="kw">if </span>state.get_dual_branch().is_some() {
-      <span class="comment">// TODO, also alignment case
-      </span><span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;ALIGNMENT REVERSION TODO&quot;</span>)))
-      <span class="comment">// self.dual_reversion.get(DUAL_BRANCH)
-    </span>} <span class="kw">else </span>{
+    </span><span class="kw">let </span>saved_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(this_branch) = state.get_dual_branch() {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dual_reversion) = <span class="self">self</span>.dual_reversion {
+        dual_reversion.get(this_branch).cloned()
+      } <span class="kw">else </span>{
+        <span class="self">self</span>.reversion.clone()
+      }
+    } <span class="kw">else </span>{
       <span class="self">self</span>.reversion.clone()
     };
     <span class="kw">if let </span><span class="prelude-val">Some</span>(saved) = saved_opt {
-      <span class="prelude-val">Ok</span>(saved)
-    } <span class="kw">else </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
-      <span class="kw">let </span>defn = <span class="kw-2">&amp;</span><span class="self">self</span>.definition;
-      <span class="kw">let </span>spec_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(rev) = <span class="self">self</span>.properties.get(<span class="string">&quot;reversion&quot;</span>) {
-        <span class="kw">match </span>rev {
-          Stored::Tokens(tks) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Reversion::Tokens(tks.clone()))),
-          Stored::Reversion(rev) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(rev)),
-          other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;TODO: Unexpected reversion directive {other:?}&quot;</span>),
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(saved);
+    }
+
+    <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
+    <span class="kw">let </span>defn = <span class="kw-2">&amp;</span><span class="self">self</span>.definition;
+    <span class="kw">if </span>defn.get_reversion_spec().is_none() {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(digested)) = <span class="self">self</span>.properties.get(<span class="string">&quot;alignment&quot;</span>) {
+        <span class="kw">if let </span>DigestedData::Alignment(alignment) = digested.data() {
+          <span class="kw">return </span>alignment.borrow().revert(state);
         }
-      } <span class="kw">else </span>{
-        defn.get_reversion_spec().map(Cow::Owned)
-      };
-      <span class="kw">match </span>spec_opt.as_deref() {
-        <span class="prelude-val">Some</span>(Reversion::Closure(spec)) =&gt; {
-          <span class="kw">let </span>spec_tokens = spec(<span class="self">self</span>, <span class="self">self</span>.get_args(), state).unwrap();
-          tokens = <span class="self">self</span>.substitute_parameters(spec_tokens, state)<span class="question-mark">?</span>;
-        },
-        <span class="prelude-val">Some</span>(Reversion::Tokens(spec)) =&gt; {
-          <span class="kw">if </span>!spec.is_empty() {
-            tokens = <span class="self">self</span>.substitute_parameters(spec.clone(), state)<span class="question-mark">?</span>;
+      }
+    }
+    <span class="comment">// Find the appropriate reversion spec;
+    // content_reversion or presntation_reversion if on dual branch
+    // or (general) reversion, or the reversion from the definition
+    </span><span class="kw">let </span>spec_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(rev) = <span class="self">self</span>.properties.get(<span class="string">&quot;reversion&quot;</span>) {
+      <span class="kw">match </span>rev {
+        Stored::Tokens(tks) =&gt; <span class="prelude-val">Some</span>(Cow::Owned(Reversion::Tokens(tks.clone()))),
+        Stored::Reversion(rev) =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(rev)),
+        other =&gt; <span class="macro">panic!</span>(<span class="string">&quot;TODO: Unexpected reversion directive {other:?}&quot;</span>),
+      }
+    } <span class="kw">else </span>{
+      defn.get_reversion_spec().map(Cow::Owned)
+    };
+    <span class="kw">let </span><span class="kw-2">mut </span>is_closure = <span class="bool-val">false</span>;
+    <span class="kw">match </span>spec_opt.as_deref() {
+      <span class="prelude-val">Some</span>(Reversion::Closure(spec)) =&gt; {
+        is_closure = <span class="bool-val">true</span>;
+        <span class="kw">let </span>spec_tokens = spec(<span class="self">self</span>, <span class="self">self</span>.get_args(), state).unwrap();
+        tokens = <span class="self">self</span>.substitute_parameters(spec_tokens, state)<span class="question-mark">?</span>;
+      },
+      <span class="prelude-val">Some</span>(Reversion::Tokens(spec)) =&gt; {
+        <span class="kw">if </span>!spec.is_empty() {
+          tokens = <span class="self">self</span>.substitute_parameters(spec.clone(), state)<span class="question-mark">?</span>;
+        }
+      },
+      <span class="prelude-val">None </span>=&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(alias) = defn.get_alias() {
+          <span class="kw">if </span>!alias.is_empty() {
+            tokens.push(<span class="macro">T_CS!</span>(alias));
           }
-        },
-        <span class="prelude-val">None </span>=&gt; {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(alias) = defn.get_alias() {
-            <span class="kw">if </span>!alias.is_empty() {
-              tokens.push(<span class="macro">T_CS!</span>(alias));
-            }
-          } <span class="kw">else </span>{
-            tokens.push(defn.get_cs().into_owned());
-          }
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(parameters) = defn.get_parameters() {
-            <span class="comment">// TODO: This is a sticking point. Both in terms of type mismatch between
-            // revert_arguments and get_args, but much worse with the expectation of
-            // passing in a gullet and state for the parameter reversion
-            // for now approximate this with some slight of hand ...
-            // tokens.extend(parameters.revert_arguments(self.get_args())?);
-            //
-            // Note 2: I&#39;ve already had to dance around the T_BEGIN/T_END wrappers with my hacky
-            // workaround so maybe worth taking some time and aligning the idea here
-            // with `.revert_arguments` to avoid the insanity?
-            //
-            // GOAL: push(@tokens, $parameters-&gt;revertArguments($self-&gt;getArgs)); } }
-            </span><span class="kw">let </span>args = <span class="self">self
-              </span>.get_args()
-              .iter()
-              .map(|opt| <span class="kw">match </span>opt {
-                <span class="prelude-val">Some</span>(arg) =&gt; <span class="prelude-val">Some</span>(arg.revert(state).ok()<span class="question-mark">?</span>),
-                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-              })
-              .collect();
-            tokens.extend(parameters.revert_arguments(args, state)<span class="question-mark">?</span>)
-          }
-        },
-      };
+        } <span class="kw">else </span>{
+          tokens.push(defn.get_cs().into_owned());
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(parameters) = defn.get_parameters() {
+          <span class="comment">// TODO: This is a sticking point. Both in terms of type mismatch between
+          // revert_arguments and get_args, but much worse with the expectation of
+          // passing in a gullet and state for the parameter reversion
+          // for now approximate this with some slight of hand ...
+          // tokens.extend(parameters.revert_arguments(self.get_args())?);
+          //
+          // Note 2: I&#39;ve already had to dance around the T_BEGIN/T_END wrappers with my hacky
+          // workaround so maybe worth taking some time and aligning the idea here
+          // with `.revert_arguments` to avoid the insanity?
+          //
+          // GOAL: push(@tokens, $parameters-&gt;revertArguments($self-&gt;getArgs)); } }
+          </span><span class="kw">let </span>args = <span class="self">self
+            </span>.get_args()
+            .iter()
+            .map(|opt| <span class="kw">match </span>opt {
+              <span class="prelude-val">Some</span>(arg) =&gt; <span class="prelude-val">Some</span>(arg.revert(state).ok()<span class="question-mark">?</span>),
+              <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+            })
+            .collect();
+          tokens.extend(parameters.revert_arguments(args, state)<span class="question-mark">?</span>)
+        }
+      },
+    };
+
+    <span class="kw">if </span>!is_closure {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = <span class="self">self</span>.get_body() {
         tokens.extend(body.revert(state)<span class="question-mark">?</span>.unlist());
         <span class="kw">if let </span><span class="prelude-val">Some</span>(trailer) = <span class="self">self</span>.get_trailer() {
           tokens.extend(trailer.revert(state)<span class="question-mark">?</span>.unlist());
         }
       }
-
-      <span class="comment">// Now cache it, in case it&#39;s needed again
-      // TODO: This causes a lot of mutability issues for arguable performance benefit.
-      // Maybe we are safe not using caching at all, and simply recomputing the reversion?
-      //
-
-      //if !REVERT_RAW {
-      //   // don&#39;t cache when RAW
-      //   if DUAL_BRANCH {
-      //     // self.dual_reversion = Some(Tokens::new(tokens.clone()));
-      //   } else {
-      //     self.reversion = Some(Tokens::new(tokens.clone()));
-      //   }
-      // }
-      </span><span class="prelude-val">Ok</span>(Tokens::new(tokens))
     }
+
+    <span class="comment">// Now cache it, in case it&#39;s needed again
+    // TODO: DG: We can&#39;t yet cache reversions, because we lack mutability on .revert()
+    //       should we reorganize? is it worth it?
+    //
+    // if let Some(this_branch) = state.get_dual_branch() {
+    //   if self.dual_reversion.is_none() {
+    //     self.dual_reversion = Some(HashMap::default());
+    //   }
+    //   self.dual_reversion.as_mut().unwrap()
+    //     .insert(this_branch.to_string(), Tokens::new(tokens.clone()));
+    // } else {
+    //   self.reversion = Some(Tokens::new(tokens.clone()));
+    // }
+    </span><span class="prelude-val">Ok</span>(Tokens::new(tokens))
   }
 }
 

@@ -379,7 +379,7 @@
   <span class="kw">pub </span>reorder: bool,
   <span class="kw">pub </span>dual: bool,
   <span class="kw">pub </span>mathstyle: <span class="prelude-ty">Option</span>&lt;String&gt;,
-  <span class="kw">pub </span>scriptpos: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+  <span class="kw">pub </span>scriptpos: <span class="prelude-ty">Option</span>&lt;String&gt;,
   <span class="kw">pub </span>operator_scriptpos: <span class="prelude-ty">Option</span>&lt;usize&gt;,
   <span class="kw">pub </span>stretchy: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>operator_stretchy: <span class="prelude-ty">Option</span>&lt;bool&gt;,
@@ -464,7 +464,7 @@
       h.insert(<span class="string">&quot;mathstyle&quot;</span>.to_string(), mathstyle.into());
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>scriptpos) = <span class="self">self</span>.scriptpos {
-      h.insert(<span class="string">&quot;scriptpos&quot;</span>.to_string(), Stored::Int(<span class="kw-2">*</span>scriptpos <span class="kw">as </span>i64));
+      h.insert(<span class="string">&quot;scriptpos&quot;</span>.to_string(), scriptpos.into());
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>operator_scriptpos) = <span class="self">self</span>.operator_scriptpos {
       h.insert(

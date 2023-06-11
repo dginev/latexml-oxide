@@ -276,6 +276,7 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(outer_state, {
@@ -302,7 +303,7 @@
   // of \unexpanded are not expanded further (this is the same behaviour as is
   // exhibited by the tokens resulting from the expansion of
   // \the〈token variable〉in both TEX and ε-TEX).
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\unexpanded GeneralText&quot;</span>, sub[gullet, (text), state] { text });
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\unexpanded GeneralText&quot;</span>, <span class="string">&quot;#1&quot;</span>);
 
   <span class="comment">// ======================================================================
   // 3.2. Provision for re-scanning already read text
@@ -335,11 +336,11 @@
     <span class="macro">Tokens!</span>()
   });
 
-  <span class="comment">// #======================================================================
-  // # 3.3 Environmental enquiries
+  <span class="comment">//======================================================================
+  // 3.3 Environmental enquiries
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\eTeXrevision&quot;</span>, sub[_gullet,_args,_state] { <span class="macro">Explode!</span>(<span class="string">&quot;.2&quot;</span>) });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\eTeXversion&quot; </span>=&gt; <span class="macro">Number!</span>(<span class="number">2</span>));
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\eTeXrevision&quot;</span>, { <span class="macro">Explode!</span>(<span class="string">&quot;.2&quot;</span>) });
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\eTeXversion&quot; </span>=&gt; Number::new(<span class="number">2</span>));
 
   <span class="comment">// \currentgrouplevel
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\currentgrouplevel&quot;</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>,
@@ -390,10 +391,10 @@
   // By leaving this 0, we&#39;re saying &quot;Don&#39;t use these features&quot;!
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\TeXXeTstate&quot; </span>=&gt; Number::new(<span class="number">0</span>));
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginL&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginR&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endL&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endR&quot;</span>, <span class="string">&quot;&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginL&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginR&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endL&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\endR&quot;</span>, <span class="prelude-val">None</span>);
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\predisplaydirection&quot; </span>=&gt; Number::new(<span class="number">0</span>)); <span class="comment">// ???
 
@@ -425,7 +426,8 @@
   // # NOTE: These tokens are NOT used anywhere (yet?)
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\everyeof&quot;</span>, <span class="macro">Tokens!</span>());
 
-  <span class="comment">// DefConstructor(&#39;\middle Token&#39;, &#39;#1&#39;,
+  <span class="comment">// TODO:
+  // DefConstructor(&#39;\middle Token&#39;, &#39;#1&#39;,
   //   afterConstruct =&gt; sub {
   //     my ($document) = @_;
   //     my $current = $document-&gt;getNode;
@@ -464,7 +466,7 @@
     <span class="kw">let </span>value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state)<span class="question-mark">? </span>{
       <span class="comment">// Skip \relax
-      </span><span class="kw">if </span>!TOKEN_RELAX.with(|tr| token == <span class="kw-2">*</span>tr) {
+      </span><span class="kw">if </span>TOKEN_RELAX.with(|tr| token != <span class="kw-2">*</span>tr) {
         gullet.unread_one(token);
       }
     }

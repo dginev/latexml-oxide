@@ -189,18 +189,11 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>END_VERBATIM_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^(.*?)\\end\{verbatim\}(.*?)$&quot;</span>).unwrap());
-<span class="kw">static </span>SEMIVERBATIM_CHARS: Lazy&lt;Vec&lt;char&gt;&gt; = Lazy::new(|| <span class="macro">vec!</span>[<span class="string">&#39;%&#39;</span>, <span class="string">&#39;\\&#39;</span>, <span class="string">&#39;{&#39;</span>, <span class="string">&#39;}&#39;</span>]);
+<span class="kw">static </span>SEMIVERBATIM_CHARS: [char;<span class="number">4</span>] = [<span class="string">&#39;%&#39;</span>, <span class="string">&#39;\\&#39;</span>, <span class="string">&#39;{&#39;</span>, <span class="string">&#39;}&#39;</span>];
 <span class="kw">static </span>T_OTHER_STAR: Lazy&lt;Token&gt; = Lazy::new(|| <span class="macro">T_OTHER!</span>(<span class="string">&quot;*&quot;</span>));
 
 <span class="comment">//**********************************************************************
@@ -297,20 +290,33 @@
     <span class="macro">AssignCatcode!</span>(<span class="string">&#39; &#39;</span>, Catcode::ACTIVE);
     <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39; &#39;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\nobreakspace&quot;</span>));
   });
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@xobeysp&quot;</span>, <span class="string">&quot;\\nobreakspace&quot;</span>);
 
   <span class="comment">// WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\verb&quot;</span>, sub[gullet, _args, state] {
-    <span class="kw">let </span>active_chars = <span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>, <span class="string">&#39;\\&#39;</span>, <span class="string">&#39;{&#39;</span>, <span class="string">&#39;}&#39;</span>];
-    state.begin_semiverbatim(<span class="prelude-val">Some</span>(active_chars));
+    state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>SEMIVERBATIM_CHARS));
     <span class="comment">// Do NOT (necessarily) skip spaces after \verb!!!
     </span>state.assign_catcode(<span class="string">&#39; &#39;</span>, Catcode::ACTIVE, <span class="prelude-val">None</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>init = gullet.read_token(state)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>init = <span class="prelude-val">None</span>;
+    <span class="comment">// As of texlive 2021, DO skip spaces before delimiter (even tho we&#39;ve changed catcodes)
+    </span><span class="kw">let </span>space_sym = arena::pin_static(<span class="string">&quot; &quot;</span>);
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(maybe_init) =  gullet.read_token(state)<span class="question-mark">? </span>{
+      <span class="kw">if </span>maybe_init.get_sym() != space_sym {
+        init = <span class="prelude-val">Some</span>(maybe_init);
+        <span class="kw">break</span>;
+      }
+    }
     <span class="kw">let </span><span class="kw-2">mut </span>starred = <span class="bool-val">false</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>init_token) = init {
-      <span class="kw">if </span>init_token == <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>T_OTHER_STAR) {
+      <span class="kw">if </span><span class="kw-2">*</span>init_token == <span class="kw-2">*</span>T_OTHER_STAR {
         starred = <span class="bool-val">true</span>;
-        init = gullet.read_token(state)<span class="question-mark">?</span>;
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(maybe_init) =  gullet.read_token(state)<span class="question-mark">? </span>{
+          <span class="kw">if </span>maybe_init.get_sym() != space_sym {
+            init = <span class="prelude-val">Some</span>(maybe_init);
+            <span class="kw">break</span>;
+          }
+        }
       }
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(init_token) = init {
@@ -324,15 +330,11 @@
       <span class="kw">if </span>starred {
         result.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@use@visiblespace&quot;</span>));
       }
-      <span class="kw">let </span><span class="kw-2">mut </span>inv_args = Vec::new();
-      <span class="kw">if </span>starred {
-        inv_args.push(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;*&quot;</span>)));
-      } <span class="kw">else </span>{
-        inv_args.push(<span class="macro">Tokens!</span>());
-      }
-      inv_args.push(<span class="macro">Tokens!</span>(init_token));
-      inv_args.push(body);
-      result.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@internal@verb&quot;</span>), inv_args, gullet, state)<span class="question-mark">?</span>.unlist());
+      result.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@internal@verb&quot;</span>), <span class="macro">vec!</span>[
+        <span class="kw">if </span>starred { <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;*&quot;</span>)) } <span class="kw">else </span>{ <span class="macro">Tokens!</span>() },
+        <span class="macro">Tokens!</span>(init_token),
+        body
+      ], gullet, state)<span class="question-mark">?</span>.unlist());
       result.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>));
       <span class="prelude-val">Ok</span>(Tokens::new(result))
     } <span class="kw">else </span>{ <span class="comment">// typically something read too far got \verb and the content is somewhere else..?
@@ -350,40 +352,24 @@
     </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">&#39; &#39;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;\u{2423}&quot;</span>));
   });
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@internal@verb{} Undigested {}&quot;</span>,
-    <span class="string">&quot;?#isMath(&lt;ltx:XMTok font=&#39;#font&#39;&gt;#text&lt;/ltx:XMTok&gt;)(&lt;ltx:verbatim font=&#39;#font&#39;&gt;#text&lt;/ltx:verbatim&gt;)&quot;</span>,
-    properties =&gt; sub[_stomach, args, _state] {
-      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;text&quot; </span>=&gt; args[<span class="number">2</span>].as_ref().unwrap().to_string()))
+  <span class="comment">// Arrange to digest the body in text mode, to keep (eg) &quot;_&quot; from turning to &quot;\_&quot;
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@internal@verb{}{}{}&quot;</span>,
+      <span class="string">r&quot;\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi&quot;</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@internal@math@verb{} Undigested {}&quot;</span>,
+    <span class="string">&quot;&lt;ltx:XMTok font=&#39;#font&#39;&gt;#3&lt;/ltx:XMTok&gt;&quot;</span>,
+    mode      =&gt; <span class="string">&quot;text&quot;</span>,
+    font      =&gt; { family =&gt; <span class="string">&quot;typewriter&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot; </span>},
+    reversion =&gt; <span class="string">&quot;\\verb#1#2#3#2&quot;</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@internal@text@verb{} Undigested {}&quot;</span>,
+    <span class="string">&quot;&lt;ltx:verbatim font=&#39;#font&#39;&gt;#3&lt;/ltx:verbatim&gt;&quot;</span>,
+    font            =&gt; { family =&gt; <span class="string">&quot;typewriter&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot; </span>},
+    before_construct =&gt; sub[doc,_whatsit,state] {
+      <span class="kw">if </span>!doc.can_contain(doc.get_element().as_ref().unwrap(), <span class="string">&quot;#PCDATA&quot;</span>, state) {
+        doc.open_element(<span class="string">&quot;ltx:p&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      }
     },
-  font =&gt; { family =&gt; <span class="string">&quot;typewriter&quot;</span>, series =&gt; <span class="string">&quot;medium&quot;</span>, shape =&gt; <span class="string">&quot;upright&quot; </span>},
-  before_construct =&gt; sub[doc, whatsit, state] {
-    <span class="kw">if </span>!whatsit.is_math() &amp;&amp; !doc.can_contain(<span class="kw-2">&amp;</span>doc.get_element().unwrap(), <span class="string">&quot;#PCDATA&quot;</span>, state) {
-      doc.open_element(<span class="string">&quot;ltx:p&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-    }
-  },
-  reversion =&gt; <span class="string">&quot;\\verb#1#2#3#2&quot;</span>);
+    reversion =&gt; <span class="string">&quot;\\verb#1#2#3#2&quot;</span>);
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@text@verb{}{}&quot;</span>, <span class="string">&quot;&lt;ltx:verbatim font=&#39;#font&#39;&gt;#2&lt;/ltx:verbatim&gt;&quot;</span>,
-    before_digest =&gt; sub[stomach, state] {
-      stomach.bgroup(state);
-      <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>);
-    },
-    after_digest =&gt; sub[stomach,_whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
-    <span class="comment">// Since ltx:verbatim is both inline &amp; block, we have to fudge inline mode
-    </span>before_construct =&gt; sub[document, _args, state] {
-      <span class="kw">if </span>!document.can_contain(<span class="kw-2">&amp;</span>document.get_element().unwrap(), <span class="string">&quot;#PCDATA&quot;</span>, state) {
-        document.open_element(<span class="string">&quot;ltx:p&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-      }},
-    reversion =&gt; <span class="string">&quot;\\verb#1#2#1&quot;
-  </span>);
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@math@verb{}{}&quot;</span>, <span class="string">&quot;#2&quot;</span>,
-   before_digest =&gt; sub[stomach, state] {
-     stomach.bgroup(state);
-     <span class="macro">MergeFont!</span>(family =&gt; <span class="string">&quot;typewriter&quot;</span>);
-   },
-   after_digest =&gt; sub[stomach,_whatsit,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
-   reversion =&gt; <span class="string">&quot;\\verb#1#2#1&quot;
-  </span>);
 
   <span class="comment">// Actually, latex sets catcode to 13 ... is this close enough?
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\obeycr&quot;</span>, {

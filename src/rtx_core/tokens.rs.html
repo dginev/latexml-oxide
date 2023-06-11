@@ -633,7 +633,7 @@
 <span class="kw">impl </span>From&lt;Tokens&gt; <span class="kw">for </span>Token {
   <span class="kw">fn </span>from(<span class="kw-2">mut </span>ts: Tokens) -&gt; Token {
     <span class="kw">if </span>ts.<span class="number">0</span>.is_empty() {
-      <span class="macro">unimplemented!</span>();
+      <span class="macro">panic!</span>(<span class="string">&quot;Tried to cast an empty Tokens object into a single Token&quot;</span>);
     } <span class="kw">else if </span>ts.<span class="number">0</span>.len() == <span class="number">1 </span>{
       ts.<span class="number">0</span>.remove(<span class="number">0</span>)
     } <span class="kw">else </span>{

@@ -288,6 +288,8 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="macro">LoadDefinitions!</span>(state, {
   <span class="comment">//**********************************************************************
@@ -366,7 +368,7 @@
     <span class="comment">// only if defined but not yet robust
     </span><span class="kw">if </span><span class="macro">LookupDefinition!</span>(<span class="kw-2">&amp;</span>cs).is_some() &amp;&amp;
        <span class="macro">LookupDefinition!</span>(<span class="kw-2">&amp;</span>mungedcs).is_none() {
-      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span>mungedcs, cs.clone());
+      <span class="macro">Let!</span>(<span class="kw-2">&amp;</span>mungedcs, <span class="kw-2">&amp;</span>cs);
       <span class="macro">DefMacro!</span>(cs, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\protect&quot;</span>),mungedcs));
     }
   });
@@ -438,11 +440,13 @@
     //           . &#39;\else\csname\cf@encoding\string&#39; . $css . &#39;\endcsname\fi&#39;); }
     //     my $ecs = T_CS(&#39;\\&#39; . $encoding . $css);
     //     DefPrimitiveI($ecs, undef, FontDecode($code, $encoding));
-  </span>});
+    </span><span class="macro">unimplemented!</span>();
+    <span class="prelude-val">Ok</span>(Vec::new())
+  });
 
   <span class="comment">// hmmm... what needs doing here; basically it means use this encoding as the default for the
   // symbol
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareTextSymbolDefault DefToken {}&quot;</span>, <span class="string">&quot;&quot;</span>);
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\DeclareTextSymbolDefault DefToken {}&quot;</span>, <span class="prelude-val">None</span>);
 
   <span class="comment">//------------------------------------------------------------
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\DeclareTextAccent DefToken {}{}&quot;</span>, <span class="prelude-val">None</span>);

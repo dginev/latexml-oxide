@@ -201,11 +201,11 @@
 
 </span><span class="attr">#[derive(Clone, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>Locator {
-  source: String,
-  from_line: usize,
-  to_line: usize,
-  from_column: usize,
-  to_column: usize,
+  <span class="kw">pub </span>source: String,
+  <span class="kw">pub </span>from_line: usize,
+  <span class="kw">pub </span>to_line: usize,
+  <span class="kw">pub </span>from_column: usize,
+  <span class="kw">pub </span>to_column: usize,
 }
 
 <span class="comment">// elide Locator debugging until we get to implementing them faithfully

@@ -256,9 +256,10 @@
     <span class="string">&quot;\\tracingonline=1 \\tracingcommands=2 \\tracingstats=2\\tracingpages=1 \\tracingoutput=1\\tracinglostchars=1\\tracingmacros=2 %\
 \\tracingparagraphs=1 \\tracingrestores=1\\showboxbreadth=\\maxdimen \\showboxdepth=\\maxdimen \\errorstopmode&quot;
   </span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\tracingnone&quot;</span>, <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\hideoutput&quot;</span>, <span class="prelude-val">None</span>);
 
   <span class="kw">let </span>dt = Local::now();
-
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\day&quot;</span>, <span class="macro">Number!</span>(dt.day()), Scope::Global);
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\month&quot;</span>, <span class="macro">Number!</span>(dt.month()), Scope::Global);
   <span class="macro">AssignValue!</span>(<span class="string">&quot;\\year&quot;</span>, <span class="macro">Number!</span>(dt.year()), Scope::Global);
@@ -270,7 +271,6 @@
 
   <span class="comment">// Read-only Integer registers
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\lastpenalty&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\inputlineno&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\badness&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// Special integer registers (?)

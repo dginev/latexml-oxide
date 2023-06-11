@@ -417,25 +417,6 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap());
 <span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap());
@@ -452,14 +433,13 @@
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcase Number&quot;</span>);
 
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifnum Number Token Number&quot;</span>, sub[gullet, (u,rel,v), state] {
-    compare(u, rel, v)
+    compare(u.value_of(), rel, v.value_of())
   });
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdim Dimension Token Dimension&quot;</span>, sub[gullet, (u,rel,v), state] {
-    compare(Number::new(u.value_of()), rel, Number::new(v.value_of()))
+    compare(u.value_of(), rel, v.value_of())
   });
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifodd Number&quot;</span>, sub[gullet, (u), state] {
-    <span class="kw">let </span>uint = u.value_of();
-    uint % <span class="number">2 </span>== <span class="number">1
+    u.value_of() % <span class="number">2 </span>== <span class="number">1
   </span>});
 
   <span class="comment">// NOTE: We don&#39;t KNOW if we&#39;re in vertical, horizontal or inner mode!!!!!!!
@@ -477,13 +457,10 @@
       } <span class="kw">else </span>{
         t
       }});
-    <span class="kw">let </span>token = <span class="kw">match </span>token_opt {
-      <span class="prelude-val">None </span>=&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet, state,
-          <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
-        <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>) },
-      <span class="prelude-val">Some</span>(t) =&gt; t
-    };
+    <span class="kw">let </span>token = token_opt.unwrap_or_else(|| {
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet, state,
+        <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
+      <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>) });
     <span class="kw">if </span>token.has_smuggled() {    <span class="comment">// marked dont_expand
       </span><span class="kw">let </span>smuggled = token.get_dont_expand().as_ref().unwrap();
       <span class="kw">if </span>smuggled.get_catcode() == Catcode::ACTIVE {
@@ -497,16 +474,16 @@
     }
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (token1,token2), state] {
-    token1.get_charcode() == token2.get_charcode()
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (left,right), state] {
+    left.get_charcode() == right.get_charcode()
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcat ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (token1,token2), state] {
-    token1.get_catcode() == token2.get_catcode()
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcat ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (left,right), state] {
+    left.get_catcode() == right.get_catcode()
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifx Token Token&quot;</span>, sub[gullet, (token1,token2), state] {
-    state.x_equals(<span class="kw-2">&amp;</span>token1, <span class="kw-2">&amp;</span>token2)
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifx Token Token&quot;</span>, sub[gullet, (left,right), state] {
+    state.x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right)
   });
 
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvoid Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
@@ -520,20 +497,16 @@
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\relax&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="comment">//// However, this keeps a box, so it can appear in UnTeX
-  ////// DefPrimitive(&#39;\relax&#39;,undef);
-  //// But if you do that, you&#39;ve got to watch out since it usually
-  //// shouldn&#39;t be a box; See the isRelax code in handleScripts, below
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\number Number&quot;</span>, sub[gullet, (num), state] { <span class="macro">Explode!</span>(num.value_of()) });
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\number Number&quot;</span>, sub[gullet, (num), state] { <span class="macro">Explode!</span>(num.value_of()) });
 
   <span class="comment">// define it here (only approxmiately), since it&#39;s already useful.
   </span><span class="macro">Let!</span>(<span class="string">&quot;\\protect&quot;</span>, <span class="string">&quot;\\relax&quot;</span>);
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\romannumeral Number&quot;</span>, sub[gullet, (num), state] { <span class="macro">roman!</span>(num.value_of()) });
 
-  <span class="comment">// # 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
-  // # suggests all characters except spaces are returned in category code Other, i.e. Explode()
+  <span class="comment">// 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
+  // suggests all characters except spaces are returned in category code Other, i.e. Explode()
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\string Token&quot;</span>, sub[gullet, (token), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>s = token.to_string();
     <span class="kw">if </span>s.starts_with(<span class="string">&#39;\\&#39;</span>) {
@@ -724,8 +697,8 @@
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\csname CSName&quot;</span>, sub[gullet, (token), state] {
     <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-      state.assign_meaning(<span class="kw-2">&amp;</span>token, TOKEN_RELAX.with(|tr|
-        state.lookup_meaning(tr)).unwrap().into_owned(), <span class="prelude-val">None</span>);
+      state.assign_meaning(<span class="kw-2">&amp;</span>token, TOKEN_RELAX.with(|t_relax|
+        state.lookup_meaning(t_relax)).unwrap().into_owned(), <span class="prelude-val">None</span>);
     }
     token
   });
@@ -785,10 +758,10 @@
       &amp;&amp; tks.last().unwrap().get_catcode() == Catcode::END {
       tks.remove(<span class="number">0</span>);
       tks.pop();
-    }
-    <span class="comment">// and load LaTeX.pool if not already
-    </span><span class="kw">if </span>!state.lookup_bool(<span class="string">&quot;LaTeX.pool_loaded&quot;</span>) {
-      <span class="macro">LoadPool!</span>(<span class="string">&quot;LaTeX&quot;</span>);
+      <span class="comment">// and load LaTeX.pool if not already
+      </span><span class="kw">if </span>!state.lookup_bool(<span class="string">&quot;LaTeX.pool_loaded&quot;</span>) {
+        <span class="macro">LoadPool!</span>(<span class="string">&quot;LaTeX&quot;</span>);
+      }
     }
     <span class="kw">let </span>reloadable_opts = InputOptions { reloadable: <span class="bool-val">true</span>, ..InputOptions::default() };
     input(<span class="kw-2">&amp;</span>Tokens::new(tks).to_string(), reloadable_opts, stomach, state)<span class="question-mark">?</span>;
@@ -797,16 +770,7 @@
   <span class="comment">// Note that TeX doesn&#39;t actually close the mouth;
   // it just flushes it so that it will close the next time it&#39;s read!
   </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endinput&quot;</span>), <span class="prelude-val">None</span>, sub[gullet, _args, state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>mouth = gullet.get_mouth_mut().unwrap();
-    <span class="kw">let </span>line_opt = <span class="kw">if </span>!mouth.is_eol(state) {
-      gullet.read_raw_line(state)
-    } <span class="kw">else </span>{
-      <span class="prelude-val">None
-    </span>};
     gullet.flush_mouth(state);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(line) = line_opt {
-      gullet.unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span>line));
-    }
   });
 
   <span class="comment">// \the&lt;internal quantity&gt;
@@ -850,20 +814,18 @@
   }
 }
 
-<span class="kw">fn </span>compare(u: Number, rel: Token, v: Number) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-  <span class="kw">let </span>u = u.value_of();
-  <span class="kw">let </span>v = v.value_of();
+<span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
   <span class="comment">// NOTE: One would expect this to be best written as an advanced match statement
   // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed(&quot;&lt;&quot;) and
   // Cow::Owned(&quot;&lt;&quot;) variants will NOT be equal via a destructuring match.
   // However, since we&#39;ve defined our own PartialEq trait over Token, an equality comparison
   // will produce the right behavior
   </span><span class="kw">if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">&quot;&lt;&quot;</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@&lt;&quot;</span>) {
-    <span class="prelude-val">Ok</span>(u &lt; v)
+    u &lt; v
   } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>) {
-    <span class="prelude-val">Ok</span>(u == v)
+    u == v
   } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">&quot;&gt;&quot;</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@&gt;&quot;</span>) {
-    <span class="prelude-val">Ok</span>(u &gt; v)
+    u &gt; v
   } <span class="kw">else </span>{
     <span class="kw">let </span>message = <span class="macro">s!</span>(
       <span class="string">&quot;Expected a relational token for comparision. Got {:?} (cc {:?})&quot;</span>,
@@ -871,7 +833,7 @@
       rel.get_catcode()
     );
     <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, message);
-    <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
-  }
+    <span class="bool-val">false
+  </span>}
 }
 </code></pre></div></section></main></body></html>

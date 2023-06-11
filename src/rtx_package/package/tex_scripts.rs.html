@@ -458,7 +458,6 @@
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
 <a href="#460" id="460">460</a>
-<a href="#461" id="461">461</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
@@ -486,39 +485,10 @@
 // This may combine, in the parser, with the following object to generate
 // a prescript.
 
-// Note that this is also being used by alignment.
-//
-// TODO: We may want to rename the auxiliary function - there is a standard
-// rust `.is_empty()` call that implies a very strict &quot;no elements&quot; semantics
-// for e.g. vectors and strings.
-// Maybe &quot;is_invisible&quot; or &quot;without_ink&quot; or ...
-</span><span class="kw">pub fn </span>is_empty(digested: <span class="kw-2">&amp;</span>Digested, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
-  <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
-  <span class="kw">if </span>digested.get_property_bool(<span class="string">&quot;isEmpty&quot;</span>) || digested.get_property_bool(<span class="string">&quot;isSpace&quot;</span>) {
-    <span class="comment">// A space-like thing
-    </span><span class="bool-val">true
-  </span>} <span class="kw">else </span>{
-    <span class="kw">match </span>digested.data() {
-      TBox(tbox) =&gt; <span class="kw">match </span>tbox.borrow().get_string(state) {
-        <span class="prelude-val">Ok</span>(s) =&gt; s.trim().is_empty(),
-        <span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
-      },
-      List(list) =&gt; list.borrow().boxes.iter().all(|b| is_empty(b, state)),
-      Whatsit(ws_arc) =&gt; {
-        <span class="kw">let </span>ws = ws_arc.borrow();
-        <span class="kw-2">*</span>(<span class="kw-2">*</span>ws).get_definition() == <span class="kw-2">*</span>state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>()).unwrap()
-          &amp;&amp; ws
-            .get_body()
-            .unwrap_or_default()
-            .all(|b| is_empty(b, state))
-      },
-      Comment(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
-      <span class="kw">_ </span>=&gt; <span class="macro">unimplemented!</span>(),
-    }
-  }
-}
+// DG: Note: TeX.pool&#39;s isEmpty seems best reorganized as Digested::is_empty
+// implemented by each concrete data structure. That should now be the case.
 
-<span class="comment">// Remember a &quot;safe&quot; way to test a script Whatsit.
+// Remember a &quot;safe&quot; way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
 </span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
   <span class="kw">let </span>box_opt = <span class="kw">match </span>object.data() {
@@ -552,8 +522,8 @@
 // Digested here, we keep having to *clone* incorrectly. The Perl expectation
 // was for something Rust deems highly illegal/unsafe: multiple owners of a
 // mutable reference to a Digested object. This needs to be disentangled
-// in the new codebase, so as to avoid both 1) cloning and 2) mutably referencing the same Digested
-// object from multiple unrelated pieces of code.
+// in the new codebase, so as to avoid both 1) cloning and
+// 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
 </span><span class="kw">fn </span>script_handler(stomach: <span class="kw-2">&amp;mut </span>Stomach, cc: Catcode, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
   <span class="comment">//   let mut gullet = stomach.get_gullet_mut();
@@ -580,7 +550,7 @@
         prevspace = <span class="bool-val">true</span>; <span class="comment">// a space avoids double-scripts
         </span>putback.push_front(prev); <span class="comment">// put back? assuming it will add rpadding to previous???
         </span><span class="kw">continue</span>;
-      } <span class="kw">else if </span>is_empty(<span class="kw-2">&amp;</span>prev, state) {
+      } <span class="kw">else if </span>prev.is_empty() {
         <span class="comment">// If empty, the script floats, can&#39;t conflict, but don&#39;t put back
         </span><span class="kw">break</span>;
       } <span class="kw">else if let </span><span class="prelude-val">Some</span>(prevop) = is_script(<span class="kw-2">&amp;</span>prev, state) {
@@ -661,7 +631,8 @@
       </span>stuff.push(Digested::default());
     }
     <span class="kw">let </span>script = stuff.remove(<span class="number">0</span>); <span class="comment">// ONLY the first box is the script!
-    </span><span class="kw">if </span>!is_empty(<span class="kw-2">&amp;</span>script, state) {
+
+    </span><span class="kw">if </span>!script.is_empty() {
       <span class="kw">let </span><span class="kw-2">mut </span>properties = <span class="macro">stored_map!</span>(
         <span class="string">&quot;isMath&quot; </span>=&gt; <span class="bool-val">true</span>,
         <span class="string">&quot;base&quot;        </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base { Stored::Digested(b) }
@@ -919,5 +890,32 @@
     <span class="macro">Tokens!</span>(<span class="macro">T_SUPER!</span>(), <span class="macro">T_BEGIN!</span>(), sup, <span class="macro">T_END!</span>())
   },
   mathactive =&gt; <span class="bool-val">true</span>); <span class="comment">// Only in math!
-</span>});
+
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\active@math@prime&quot;</span>, sub[gullet,(),state] {
+    <span class="kw">let </span><span class="kw-2">mut </span>sup = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>)];
+    <span class="comment">// Collect up all &#39;, convering to \prime
+    </span><span class="kw">let </span>prime_token = <span class="macro">T_OTHER!</span>(<span class="string">&quot;\&#39;&quot;</span>);
+    <span class="kw">while </span>gullet.if_next(<span class="kw-2">&amp;</span>prime_token, state)<span class="question-mark">? </span>{
+      gullet.read_token(state)<span class="question-mark">?</span>;
+      sup.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>));
+    }
+    <span class="comment">// Combine with any following superscript!
+    // However, this is semantically screwed up!
+    // We really need to set up separate superscripts, but at same level!
+    </span><span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>(), state)<span class="question-mark">? </span>{
+      gullet.read_token(state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>arg = gullet.read_arg(state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>arg_tks = arg.unlist();
+      sup.extend(arg_tks);
+    }
+    <span class="kw">let </span><span class="kw-2">mut </span>activated = <span class="macro">vec!</span>[<span class="macro">T_SUPER!</span>(), <span class="macro">T_BEGIN!</span>()];
+    activated.extend(sup);
+    activated.push(<span class="macro">T_END!</span>());
+    activated
+  },
+  locked =&gt; <span class="bool-val">true</span>);    <span class="comment">// Only in math!
+  // TODO
+  // AssignMathcode!(&quot;&#39;&quot; =&gt; 0x8000);
+  </span><span class="macro">Let!</span>(<span class="string">&quot;&#39;&quot;</span>, <span class="string">&quot;\\active@math@prime&quot;</span>);
+});
 </code></pre></div></section></main></body></html>

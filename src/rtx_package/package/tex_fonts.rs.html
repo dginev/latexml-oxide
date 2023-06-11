@@ -480,6 +480,25 @@
 <a href="#480" id="480">480</a>
 <a href="#481" id="481">481</a>
 <a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>FONT_TOKEN_RE: Lazy&lt;Regex&gt; =
@@ -593,51 +612,54 @@
   <span class="comment">// # 2nd arg is &lt;font&gt; = &lt;fontdef token&gt; | \font | &lt;family member&gt;
   // #  &lt;family member&gt; = &lt;font range&gt;&lt;4bit number&gt;
   // #  &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
-  </span><span class="macro">DefParameterType!</span>(FontToken, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
+  </span><span class="macro">DefParameterType!</span>(FontToken, sub[gullet, _inner, _extra, state] {
     <span class="kw">let </span>token = gullet.read_token(state)<span class="question-mark">?</span>.unwrap();
     <span class="kw">if </span>token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
       gullet.read_number(state)<span class="question-mark">?</span>;
     }
     token
-  })); <span class="comment">// ?
+  }); <span class="comment">// ?
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\fontdimen Number FontToken&quot;</span>, Dimension::new(<span class="number">0</span>),
-    getter =&gt; {<span class="macro">unimplemented!</span>(); () }
-    <span class="comment">// my $p = ToString($_[0]);
-  //     if    ($p == 2) { Dimension(&#39;0.5em&#39;); }    # interword space
-  //     elsif ($p == 5) { Dimension(&#39;1ex&#39;); }      # x-height
-  //     elsif ($p == 6) { Dimension(&#39;1em&#39;); }      # quad width
-  //     else { Dimension(0); }
-  </span>);
+    getter =&gt; sub[args, state] {
+      <span class="kw">let </span>p = args.remove(<span class="number">0</span>).expect_number().value_of();
+      <span class="kw">match </span>p {
+        <span class="number">2 </span>=&gt; Dimension::from_str(<span class="string">&quot;0.5em&quot;</span>,state).ok()<span class="question-mark">?</span>,    <span class="comment">// interword space
+        </span><span class="number">5 </span>=&gt; Dimension::from_str(<span class="string">&quot;1ex&quot;</span>,state).ok()<span class="question-mark">?</span>,      <span class="comment">// x-height
+        </span><span class="number">6 </span>=&gt; Dimension::from_str(<span class="string">&quot;1em&quot;</span>,state).ok()<span class="question-mark">?</span>,      <span class="comment">// quad width
+        </span><span class="kw">_ </span>=&gt; Dimension::new(<span class="number">0</span>)
+      }
+    }
+  );
 
-  <span class="comment">//   Could be handled by setting dimensions whenever the box itself is set?
+  <span class="comment">// Could be handled by setting dimensions whenever the box itself is set?
 
   // &lt;internal glue&gt; = &lt;glue parameter&gt; | \lastskip | &lt;skipdef token&gt; | \skip&lt;8bit&gt;
 
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\lastskip&quot;</span>, Glue::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
-  <span class="comment">// # &lt;internal muglue&gt; = &lt;muglue parameter&gt; | \lastskip | &lt;muskipdef token&gt; | \muskip&lt;8bit&gt;
+  <span class="comment">// &lt;internal muglue&gt; = &lt;muglue parameter&gt; | \lastskip | &lt;muskipdef token&gt; | \muskip&lt;8bit&gt;
 
-  // # &lt;family assignment&gt; = &lt;family member&gt;&lt;equals&gt;&lt;font&gt;
-  // # &lt;shape assignment&gt; = \parshape&lt;equals&gt;&lt;number&gt;&lt;shape dimensions&gt;
-  // #  &lt;shape dimensions&gt; is 2n &lt;dimen&gt;
+  // &lt;family assignment&gt; = &lt;family member&gt;&lt;equals&gt;&lt;font&gt;
+  // &lt;shape assignment&gt; = \parshape&lt;equals&gt;&lt;number&gt;&lt;shape dimensions&gt;
+  //  &lt;shape dimensions&gt; is 2n &lt;dimen&gt;
 
-  // # &lt;global assignment&gt; = &lt;font assignment&gt; | &lt;hyphenation assignment&gt;
-  // #   | &lt;box size assignment&gt; | &lt;interaction mode assignment&gt;
-  // #   | &lt;intimate assignment&gt;
-  // # &lt;font assignment&gt; = \fontdimen &lt;number&gt;&lt;font&gt;&lt;equals&gt;&lt;dimen&gt;
-  // #   | \hyphenchar&lt;font&gt;&lt;equals&gt;&lt;number&gt; | \skewchar&lt;font&gt;&lt;equals&gt;&lt;number&gt;
-  // # &lt;hyphenation assignment&gt; = \hyphenation&lt;general text&gt;
-  // #   | \patterns&lt;general text&gt;
-  // # &lt;box size assignment&gt; = &lt;box dimension&gt;&lt;8bit&gt;&lt;equals&gt;&lt;dimen&gt;
-  // # &lt;interaction mode assignment&gt; = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
-  // # These are no-ops; Basically, LaTeXML runs in scrollmode
+  // &lt;global assignment&gt; = &lt;font assignment&gt; | &lt;hyphenation assignment&gt;
+  //   | &lt;box size assignment&gt; | &lt;interaction mode assignment&gt;
+  //   | &lt;intimate assignment&gt;
+  // &lt;font assignment&gt; = \fontdimen &lt;number&gt;&lt;font&gt;&lt;equals&gt;&lt;dimen&gt;
+  //   | \hyphenchar&lt;font&gt;&lt;equals&gt;&lt;number&gt; | \skewchar&lt;font&gt;&lt;equals&gt;&lt;number&gt;
+  // &lt;hyphenation assignment&gt; = \hyphenation&lt;general text&gt;
+  //   | \patterns&lt;general text&gt;
+  // &lt;box size assignment&gt; = &lt;box dimension&gt;&lt;8bit&gt;&lt;equals&gt;&lt;dimen&gt;
+  // &lt;interaction mode assignment&gt; = \errorstopmode | \scrollmode | \nonstopmode | \batchmode
+  // These are no-ops; Basically, LaTeXML runs in scrollmode
   </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\errorstopmode&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\scrollmode&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\nonstopmode&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\batchmode&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
 
-  <span class="comment">// # &lt;intimate assignment&gt; = &lt;special integer&gt;&lt;equals&gt;&lt;number&gt;
-  // #   | &lt;special dimension&gt;&lt;equals&gt;&lt;dimen&gt;
+  <span class="comment">// &lt;intimate assignment&gt; = &lt;special integer&gt;&lt;equals&gt;&lt;number&gt;
+  //   | &lt;special dimension&gt;&lt;equals&gt;&lt;dimen&gt;
 
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\fontencoding{}&quot;</span>, <span class="string">&quot;\\@@@fontencoding{#1}&quot;</span>);
 
@@ -846,31 +868,30 @@
     </span>]
   );
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\char Number&quot;</span>, sub[stomach, args, p_state] {
-    <span class="kw">let </span>token = args.remove(<span class="number">0</span>);
-    <span class="kw">let </span>number = token.clone().try_to_number()<span class="question-mark">?</span>;
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\char Number&quot;</span>, sub[stomach, (number), p_state] {
+    <span class="kw">let </span>number_tks = number.revert(p_state).unwrap_or_default().unlist();
     <span class="kw">let </span>decoded = <span class="kw">match </span>font::decode(number.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, p_state) {
       <span class="prelude-val">None </span>=&gt; EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym),
       <span class="prelude-val">Some</span>(c) =&gt; arena::pin_char(c)
     };
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    <span class="kw">let </span>invoked = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), <span class="macro">vec!</span>[token], gullet)<span class="question-mark">?</span>;
     Tbox::new(
      decoded,
      <span class="prelude-val">None</span>,
      <span class="prelude-val">None</span>,
-     invoked,
+     <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), number_tks, <span class="macro">T_RELAX!</span>()),
      HashMap::default(),
      p_state)
   });
 
-  <span class="comment">// Almost like a register, but different...
+  <span class="comment">// Almost like a register (and \countdef), but different...
+  // (including the preassignment to \relax!)
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\chardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
     </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, TOKEN_RELAX.with(|tr|
       state.lookup_meaning(tr)).unwrap().into_owned(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>value = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
-    <span class="kw">let </span>internalcs_str = newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
+    <span class="comment">// TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
+    </span><span class="kw">let </span>internalcs_str = newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
     <span class="kw">let </span>internalcs = <span class="macro">T_CS!</span>(internalcs_str);
     <span class="macro">DefPrimitive!</span>(internalcs.clone(), <span class="prelude-val">None</span>, sub[stomach,args,i_state] {
       <span class="kw">let </span>decoded = font::decode(value.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, i_state)
@@ -886,7 +907,6 @@
         HashMap::default(),
         i_state)
     });
-
     state.install_definition(
       Register::new_chardef(newcs, <span class="prelude-val">Some</span>(value.into()), <span class="prelude-val">Some</span>(internalcs)), <span class="prelude-val">None</span>);
     <span class="macro">AfterAssignment!</span>();
@@ -909,6 +929,23 @@
     }
   );
 
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\delimiter Number&quot;</span>,
+  <span class="string">&quot;?#glyph(?#isMath(&lt;ltx:XMTok role=&#39;#role&#39;&gt;#glyph&lt;/ltx:XMTok&gt;)(#glyph))&quot;</span>,
+  sizer       =&gt; <span class="string">&quot;#glyph&quot;</span>,
+  after_digest =&gt; sub[stomach,whatsit,state] {
+    <span class="kw">let </span><span class="kw-2">mut </span>n = whatsit.get_arg(<span class="number">1</span>).unwrap().value_of();
+    n &gt;&gt;= <span class="number">12</span>;    <span class="comment">// Ignore 3 rightmost digits and treat as \mathchar
+    </span><span class="kw">let </span>(role_opt, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16, stomach, state);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(glyph) = glyph_opt {
+      whatsit.set_property(<span class="string">&quot;glyph&quot;</span>,glyph);
+      whatsit.set_property(<span class="string">&quot;font&quot;</span>, state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph.to_string()));
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = role_opt {
+      whatsit.set_property(<span class="string">&quot;role&quot;</span>, role);
+    }
+    <span class="prelude-val">Ok</span>(Vec::new())
+  });
+
   <span class="comment">// Almost like a register, but different...
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\mathchardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
     <span class="comment">// Let w/o AfterAssignment
@@ -918,6 +955,7 @@
     <span class="comment">// eprintln!(&quot; ** {} + {}&quot;, value,csname);
     </span><span class="kw">let </span>(role, glyph) = decode_math_char(value.value_of() <span class="kw">as </span>u16, stomach, state);
     <span class="comment">// eprintln!(&quot;    role: {:?} + glyph: {:?}&quot;, role, glyph);
+    // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     </span><span class="kw">let </span>internalcs_opt = glyph.map(|<span class="kw">_</span>|
       <span class="macro">T_CS!</span>(newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@mathchardef@{csname}&quot;</span>))));
     <span class="kw">let </span>internalcs_2 = internalcs_opt.clone();

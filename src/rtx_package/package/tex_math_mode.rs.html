@@ -124,6 +124,16 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -179,7 +189,7 @@
     }
   );
   <span class="comment">// Let this be the default, conventional $
-  </span><span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@dollar@in@normalmode&quot;</span>), <span class="macro">T_MATH!</span>());
+  </span><span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@dollar@in@normalmode&quot;</span>), <span class="macro">T_MATH!</span>());
 
   <span class="comment">// Effectively these are the math hooks
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@BEGINDISPLAYMATH&quot;</span>,
@@ -191,7 +201,16 @@
     &lt;/ltx:Math&gt;\
   &lt;/ltx:equation&gt;&quot;</span>,
     reversion         =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(),<span class="macro">T_MATH!</span>()),
-    before_digest =&gt; sub[stomach, state] { stomach.begin_mode(<span class="string">&quot;display_math&quot;</span>, state)<span class="question-mark">?</span>; },
+    before_digest =&gt; sub[stomach, state] {
+      stomach.begin_mode(<span class="string">&quot;display_math&quot;</span>, state)<span class="question-mark">?</span>;
+      <span class="comment">// TODO:
+      // if let Some(everymath_toks) = state.lookup_definition(T_CS!(&quot;\\everymath&quot;)).value_of().unlist() {
+      //   stomach.get_gullet_mut().unread(everymath_toks);
+      // }
+      // if let Some(everydisplay_toks) = state.lookup_definition(T_CS!(&quot;\\everydisplay&quot;)).value_of().unlist() {
+      //   stomach.get_gullet_mut().unread(everydisplay_toks);
+      // }
+    </span>},
     capture_body  =&gt; <span class="bool-val">true
   </span>);
 
@@ -225,16 +244,17 @@
 
       </span><span class="kw">let </span>tex_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>tbox) = document.get_node_box(node) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = tbox.get_body() {
-          <span class="prelude-val">Some</span>(body.untex(state)<span class="question-mark">?</span>)
-        <span class="comment">// local $LaTeXML::DUAL_BRANCH = &#39;presentation&#39;;
-        // let tex = untex(body, state);
-        // $LaTeXML::DUAL_BRANCH = &#39;content&#39;;
-        // let ctex = untex(body, state);
-
-        // if ctex != tex {
-        //   document.set_attribute(node, &quot;content-tex&quot;, ctex);
-        // }
-        </span>} <span class="kw">else </span>{
+          state.set_dual_branch(<span class="string">&quot;presentation&quot;</span>);
+          <span class="kw">let </span>tex = body.untex(state)<span class="question-mark">?</span>;
+          state.expire_dual_branch();
+          state.set_dual_branch(<span class="string">&quot;content&quot;</span>);
+          <span class="kw">let </span>ctex = body.untex(state)<span class="question-mark">?</span>;
+          state.expire_dual_branch();
+          <span class="kw">if </span>ctex != tex {
+            document.set_attribute(node, <span class="string">&quot;content-tex&quot;</span>, <span class="kw-2">&amp;</span>ctex, state)<span class="question-mark">?</span>;
+          }
+          <span class="prelude-val">Some</span>(tex)
+        } <span class="kw">else </span>{
           <span class="prelude-val">None
         </span>}
       } <span class="kw">else </span>{

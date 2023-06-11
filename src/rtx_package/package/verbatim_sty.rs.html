@@ -232,7 +232,7 @@
   </span>);
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@verbatim@&quot;</span>, <span class="string">&quot;&lt;ltx:verbatim font=&#39;#font&#39;&gt;&quot;</span>,
-    before_digest =&gt; { <span class="macro">Let!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CR!</span>()); },
+    before_digest =&gt; { <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>), <span class="macro">T_CR!</span>()); },
     before_construct =&gt; sub[document, _whatsit, inner_state] {
       document.maybe_close_element(<span class="string">&quot;ltx:p&quot;</span>, inner_state)<span class="question-mark">?</span>; }
   );

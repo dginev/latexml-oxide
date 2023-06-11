@@ -77,6 +77,31 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -87,15 +112,19 @@
   </span><span class="macro">RelaxNGSchema!</span>(<span class="string">&quot;LaTeXML&quot;</span>);
   <span class="macro">Tag!</span>(<span class="string">&quot;ltx:section&quot;</span>, auto_close =&gt; <span class="bool-val">true</span>);
   <span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, auto_close =&gt; <span class="bool-val">true</span>, auto_open =&gt; <span class="bool-val">true</span>);
-  <span class="comment">// TODO:
-  // Tag(&quot;ltx:document&quot;, after_open =&gt; sub {
-  //     my ($document, $root) = @_;
-  //     if (my $font = $document-&gt;getNodeFont($root)) {
-  //       if (my $bg = $font-&gt;getBackground) {
-  //         if ($bg ne &#39;white&#39;) {
-  //           $document-&gt;setAttribute($root, backgroundcolor =&gt; $bg); } } } });
+  <span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open =&gt; sub[document,root,state] {
+    <span class="kw">let </span><span class="kw-2">mut </span>bg_to_set = <span class="prelude-val">None</span>;
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(bg) = document.get_node_font(root).get_background() {
+      <span class="kw">if </span>bg != <span class="string">&quot;white&quot; </span>{
+        bg_to_set = <span class="prelude-val">Some</span>(bg.clone().into_owned());
+      }
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(bg) = bg_to_set {
+      document.set_attribute(root, <span class="string">&quot;backgroundcolor&quot;</span>, <span class="kw-2">&amp;</span>bg, state)<span class="question-mark">?</span>;
+    }
+  });
 
-  // No, \documentclass isn&#39;t really a primitive -- It&#39;s not even TeX!
+  <span class="comment">// No, \documentclass isn&#39;t really a primitive -- It&#39;s not even TeX!
   // But we define a number of stubs here that will automatically load
   // the LaTeX pool (or AmSTeX.pool) (which will presumably redefine them), and then
   // stuff the token back to be reexecuted.
@@ -136,7 +165,25 @@
     )<span class="question-mark">?</span>;
   });
 
-  <span class="comment">// Technically should be in LaTeX.pool, but we try to maintain the bookkeeping from the very
+  <span class="kw">for </span>_ltx3trigger <span class="kw">in </span>[<span class="string">&quot;\\ExplSyntaxOn&quot;</span>,<span class="string">&quot;\\ProvidesExplClass&quot;</span>,<span class="string">&quot;\\ProvidesExplPackage&quot;</span>] {
+    <span class="comment">// DG: note that these auto-loads are not perfect --
+    //     if they are triggered with a raw .sty file for example,
+    //     the expl3 support will &quot;expire&quot; at the end of the current scope,
+    //     and e.g. \ExplSyntaxOn will once again be undefined.
+    // TODO:
+    // DefAutoload!(ltx3trigger, &quot;expl3.pool.ltxml&quot;);
+  </span>}
+
+  <span class="comment">// # Darn; we need to be even more clever, since we need to simulate an amstex command, as well.
+  // # For example \documentstyle[...]{amsppt} must switch to AMSTeX mode, _NOT_ LaTeX mode!!!!
+  // DefMacro(&#39;\documentstyle OptionalSemiverbatim SkipSpaces Semiverbatim&#39;, sub {
+  //   my ($gullet, $options, $class) = @_;
+  //   LoadPool((ToString($class) =~ /^amsppt$/ ? &quot;AmSTeX&quot; : &quot;LaTeX&quot;));
+  //   (T_CS(&#39;\\documentstyle&#39;),
+  //     ($options ? (T_OTHER(&#39;[&#39;), $options-&gt;unlist, T_OTHER(&#39;]&#39;)) : ()),
+  //     T_BEGIN, $class-&gt;unlist, T_END); });
+
+  // Technically should be in LaTeX.pool, but we try to maintain the bookkeeping from the very
   // start, in order to avoid partially defined behavior when --preload directives are mixed with
   // \usepackage{} loads
   </span><span class="macro">DefMacro!</span>(
@@ -155,5 +202,8 @@
       \gdef\@currnamestack{#4}&quot;
   </span>);
   <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currnamestack&quot;</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@currname&quot;</span>, <span class="string">&quot;\\@empty&quot;</span>);
+  <span class="macro">Let!</span>(<span class="string">&quot;\\@currext&quot;</span>,  <span class="string">&quot;\\@empty&quot;</span>);
+
 });
 </code></pre></div></section></main></body></html>

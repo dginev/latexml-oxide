@@ -145,6 +145,14 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::common::glue::Glue;
 <span class="kw">use </span><span class="kw">crate</span>::definition::register::RegisterType;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
@@ -216,6 +224,14 @@
   <span class="kw">where </span><span class="self">Self</span>: Sized {
     round_to(<span class="self">self</span>.value_of() <span class="kw">as </span>f64 / UNITY_F64, prec)
   }
+  <span class="kw">fn </span>px_value(<span class="self">self</span>, prec: <span class="prelude-ty">Option</span>&lt;u8&gt;) -&gt; f64
+  <span class="kw">where </span><span class="self">Self</span>: Sized {
+    <span class="comment">// TODO: continue...
+    // let dpi = state.lookup_int(&quot;DPI&quot;) || 100
+    </span><span class="kw">let </span>dpi = <span class="number">100.0</span>;
+    round_to((<span class="self">self</span>.value_f64() / UNITY_F64) * (dpi / <span class="number">72.27</span>), prec)
+  }
+
   <span class="kw">fn </span>absolute(<span class="self">self</span>) -&gt; <span class="self">Self
   </span><span class="kw">where </span><span class="self">Self</span>: Sized {
     <span class="self">Self</span>::new(<span class="self">self</span>.value_of().abs())

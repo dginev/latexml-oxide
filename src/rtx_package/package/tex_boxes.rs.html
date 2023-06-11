@@ -290,6 +290,47 @@
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -301,7 +342,11 @@
 
   // \setbox&lt;number&gt;=\hbox to &lt;dimen&gt;{&lt;horizontal mode material&gt;}
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\setbox Number SkipMatch:=&quot;</span>, sub[stomach, (number), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lastbox&quot;</span>, sub[stomach,(),state] {<span class="comment">// Hopefully, the correct box got seen!
+    </span>stomach.box_list.pop().map(|b| <span class="macro">vec!</span>[b]).unwrap_or_default()
+  });
+
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\setbox Number SkipMatch:=&quot;</span>, sub[stomach, (number), state] {
     <span class="comment">// If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(after_token) = state.remove_value(<span class="string">&quot;afterAssignment&quot;</span>) {
       state.assign_value(<span class="string">&quot;BeforeNextBox&quot;</span>, after_token, <span class="prelude-val">None</span>);
@@ -345,6 +390,18 @@
       <span class="prelude-val">Ok</span>(Vec::new())
     }
   });
+
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\vsplit Number Match:to Dimension&quot;</span>, sub[stomach,(number,_to,dimension),state] {
+    <span class="comment">// analog to \box for now.
+    </span><span class="kw">let </span>box_key   = <span class="macro">s!</span>(<span class="string">&quot;box{}&quot;</span>, number.value_of());
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>stuff)) = state.lookup_value(<span class="kw-2">&amp;</span>box_key) {
+      adjust_box_color(stuff, state)<span class="question-mark">?</span>;
+      <span class="kw">if </span>stuff.is_empty() { Digested::from(List::default()) } <span class="kw">else </span>{ stuff.clone() }
+    } <span class="kw">else </span>{
+      Digested::from(List::default())
+    }
+  });
+
 
   <span class="macro">DefParameterType!</span>(BoxSpecification, sub[gullet, _inner, _extra, state] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;to&quot;</span>, <span class="string">&quot;spread&quot;</span>], state)<span class="question-mark">? </span>{
@@ -398,6 +455,12 @@
   <span class="macro">AssignValue!</span>(<span class="string">&quot;VTEXT_MODE_BINDINGS&quot; </span>=&gt; Stored::VecDequeStored(VecDeque::new()));
   <span class="macro">PushValue!</span>(<span class="string">&quot;HTEXT_MODE_BINDINGS&quot; </span>=&gt; <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@dollar@in@textmode&quot;</span>)));
   <span class="macro">PushValue!</span>(<span class="string">&quot;VTEXT_MODE_BINDINGS&quot; </span>=&gt; <span class="macro">Tokens!</span>(<span class="macro">T_MATH!</span>(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\@dollar@in@normalmode&quot;</span>)));
+
+  <span class="comment">// TODO: collapseSVGGroup
+  </span><span class="macro">Tag!</span>(<span class="string">&quot;svg:g&quot;</span>, after_close =&gt; sub[_document, _node, _state] {
+    <span class="macro">unimplemented!</span>();
+    <span class="comment">// collapse_svg_group(document, node, state)
+  </span>});
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\hbox BoxSpecification HBoxContents&quot;</span>, sub[document, args, props, state] {
       <span class="comment">// &quot;&lt;ltx:text width=&#39;#width&#39; _noautoclose=&#39;1&#39;&gt;#2&lt;/ltx:text&gt;&quot;,
@@ -464,7 +527,10 @@
     }
   );
 
-  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vbox BoxSpecification VBoxContents&quot;</span>, sub[document, args, _props, state] {
+  <span class="comment">// TODO:
+  // Tag(&#39;svg:foreignObject&#39;, autoOpen =&gt; 1, autoClose =&gt; 1, ...
+
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vbox BoxSpecification VBoxContents&quot;</span>, sub[document, args, _props, state] {
       <span class="kw">let </span>contents = args[<span class="number">1</span>].as_ref().unwrap();
       <span class="kw">let </span>_block = insert_block(document, contents, <span class="macro">string_map!</span>(<span class="string">&quot;vattach&quot; </span>=&gt; <span class="string">&quot;bottom&quot;</span>), state);
     },
@@ -582,4 +648,19 @@
   //       $whatsit-&gt;setProperty(color =&gt; $color); } }
   //   return; });
 </span>});
-</code></pre></div></section></main></body></html>
+
+
+<span class="kw">pub fn </span>adjust_box_color(tbox: <span class="kw-2">&amp;</span>Digested, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span>color_opt = state.lookup_font().and_then(|f| f.get_color()
+    .map(|c| c.clone().into_owned()));
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(color) = color_opt {
+    <span class="kw">if </span>color != <span class="string">&quot;black&quot; </span>{
+       adjust_box_color_rec(<span class="kw-2">&amp;</span>color, HashMap::default(), tbox, state);
+    }
+  }
+  <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn </span>adjust_box_color_rec(_color: <span class="kw-2">&amp;</span>str, _props: HashMap&lt;String,String&gt;, _tbox: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) {
+  <span class="macro">unimplemented!</span>();
+}</code></pre></div></section></main></body></html>

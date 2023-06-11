@@ -55,24 +55,6 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="macro">LoadDefinitions!</span>(state, {
@@ -96,26 +78,27 @@
       }
   });
 
-  <span class="comment">// DefConstructor(&#39;\vdots&#39;, undef,
-  //   &quot;?#isMath(&lt;ltx:XMTok name=&#39;vdots&#39; font=&#39;#font&#39; role=&#39;ID&#39;&gt;\x{22EE}&lt;/ltx:XMTok&gt;)(\x{22EE})&quot;,
-  //   properties =&gt; sub {
-  //     (LookupValue(&#39;IN_MATH&#39;)
-  //       ? (font =&gt; LookupValue(&#39;font&#39;)-&gt;merge(family =&gt; &#39;serif&#39;,
-  //           series =&gt; &#39;medium&#39;, shape =&gt; &#39;upright&#39;)-&gt;specialize(&quot;\x{22EE}&quot;))
-  //       : ()); });    # Since not DefMath!
-  //                     # But not these!
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vdots&quot;</span>,
+    <span class="string">&quot;?#isMath(&lt;ltx:XMTok name=&#39;vdots&#39; font=&#39;#font&#39; role=&#39;ID&#39;&gt;\u{22EE}&lt;/ltx:XMTok&gt;)(\u{22EE})&quot;</span>);
+    <span class="comment">// TODO:
+    // properties =&gt; sub {
+    //   (LookupValue(&#39;IN_MATH&#39;)
+    //     ? (font =&gt; LookupValue(&#39;font&#39;)-&gt;merge(family =&gt; &#39;serif&#39;,
+    //         series =&gt; &#39;medium&#39;, shape =&gt; &#39;upright&#39;)-&gt;specialize(&quot;\u{22EE}&quot;))
+    //     : ()); });    # Since not DefMath!
+    //                   # But not these!
   </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\cdots&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22EF}&quot;</span>, role =&gt; <span class="string">&quot;ELIDEOP&quot;</span>); <span class="comment">// MIDLINE HORIZONTAL ELLIPSIS
-
-  // DefMathI(&#39;\ddots&#39;, undef, &quot;\x{22F1}&quot;, role =&gt; &#39;ID&#39;);           # DOWN RIGHT DIAGONAL ELLIPSIS
-  // DefMathI(&#39;\colon&#39;, undef, &#39;:&#39;,        role =&gt; &#39;METARELOP&#39;);    # Seems like good default role
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\ddots&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;\u{22F1}&quot;</span>, role =&gt; <span class="string">&quot;ID&quot;</span>);           <span class="comment">// DOWN RIGHT DIAGONAL ELLIPSIS
+  </span><span class="macro">DefMath!</span>(<span class="string">&quot;\\colon&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;:&quot;</span>,        role =&gt; <span class="string">&quot;METARELOP&quot;</span>);    <span class="comment">// Seems like good default role
   //         # Note that amsmath redefines \dots to be `smart&#39;.
   //         # Aha, also can be in text...
-  // DefConstructor(&#39;\dots&#39;, undef,
-  //   &quot;?#isMath(&lt;ltx:XMTok name=&#39;dots&#39; font=&#39;#font&#39; role=&#39;ID&#39;&gt;\x{2026}&lt;/ltx:XMTok&gt;)(\x{2026})&quot;,
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\dots&quot;</span>,
+    <span class="string">&quot;?#isMath(&lt;ltx:XMTok name=&#39;dots&#39; font=&#39;#font&#39; role=&#39;ID&#39;&gt;\u{2026}&lt;/ltx:XMTok&gt;)(\u{2026})&quot;</span>);
+    <span class="comment">// TODO:
   //   properties =&gt; sub {
   //     (LookupValue(&#39;IN_MATH&#39;)
   //       ? (font =&gt; LookupValue(&#39;font&#39;)-&gt;merge(family =&gt; &#39;serif&#39;,
-  //           series =&gt; &#39;medium&#39;, shape =&gt; &#39;upright&#39;)-&gt;specialize(&quot;\x{2026}&quot;))
+  //           series =&gt; &#39;medium&#39;, shape =&gt; &#39;upright&#39;)-&gt;specialize(&quot;\u{2026}&quot;))
   //       : ()); });    # Since not DefMath!
 
   // And while we&#39;re at it...
@@ -128,24 +111,5 @@
 
   </span><span class="macro">DefMathLigature!</span>(<span class="string">&quot;...&quot;</span>, <span class="string">&quot;\u{2026}&quot;</span>, role =&gt; <span class="string">&quot;ID&quot;</span>, name =&gt; <span class="string">&quot;ldots&quot;</span>);
 
-  <span class="macro">DefLigature!</span>(<span class="string">r&quot;--&quot;</span>, <span class="string">&quot;\u{2013}&quot;</span>, <span class="comment">// EN DASH (NOTE: With digits before &amp;
-    </span>fontTest =&gt; sub[arg] { arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>)) != <span class="string">&quot;typewriter&quot; </span>});
-  <span class="comment">// TODO
-  //, aft =&gt; \N{FIGURE DASH})
-
-  // EM DASH
-  </span><span class="macro">DefLigature!</span>(<span class="string">r&quot;---&quot;</span>, <span class="string">&quot;\u{2014}&quot;</span>, fontTest =&gt; sub[arg] {arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>)) != <span class="string">&quot;typewriter&quot; </span>});
-  <span class="comment">// Ligatures for doubled single left &amp; right quotes to convert to double quotes
-  // [should ligatures be part of a font, in the first place? (it is in TeX!)
-  </span><span class="macro">DefLigature!</span>(<span class="string">&quot;\u{2018}\u{2018}&quot;</span>, <span class="string">&quot;\u{201C}&quot;</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>));
-    <span class="kw">if </span>family != <span class="string">&quot;typewriter&quot; </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;OT1&quot;</span>));
-      encoding == <span class="string">&quot;OT1&quot; </span>|| encoding == <span class="string">&quot;T1&quot; </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
-  <span class="macro">DefLigature!</span>(<span class="string">&quot;\u{2019}\u{2019}&quot;</span>, <span class="string">&quot;\u{201D}&quot;</span>, fontTest =&gt; sub[arg] {
-    <span class="kw">let </span>family = arg.get_family().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;&quot;</span>));
-    <span class="kw">if </span>family != <span class="string">&quot;typewriter&quot; </span>{
-      <span class="kw">let </span>encoding = arg.get_encoding().unwrap_or(<span class="kw-2">&amp;</span>Cow::Borrowed(<span class="string">&quot;OT1&quot;</span>));
-      encoding == <span class="string">&quot;OT1&quot; </span>|| encoding == <span class="string">&quot;T1&quot; </span>} <span class="kw">else </span>{<span class="bool-val">false</span>} });
 });
 </code></pre></div></section></main></body></html>

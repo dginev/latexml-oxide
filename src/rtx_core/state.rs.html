@@ -2196,39 +2196,6 @@
 <a href="#2196" id="2196">2196</a>
 <a href="#2197" id="2197">2197</a>
 <a href="#2198" id="2198">2198</a>
-<a href="#2199" id="2199">2199</a>
-<a href="#2200" id="2200">2200</a>
-<a href="#2201" id="2201">2201</a>
-<a href="#2202" id="2202">2202</a>
-<a href="#2203" id="2203">2203</a>
-<a href="#2204" id="2204">2204</a>
-<a href="#2205" id="2205">2205</a>
-<a href="#2206" id="2206">2206</a>
-<a href="#2207" id="2207">2207</a>
-<a href="#2208" id="2208">2208</a>
-<a href="#2209" id="2209">2209</a>
-<a href="#2210" id="2210">2210</a>
-<a href="#2211" id="2211">2211</a>
-<a href="#2212" id="2212">2212</a>
-<a href="#2213" id="2213">2213</a>
-<a href="#2214" id="2214">2214</a>
-<a href="#2215" id="2215">2215</a>
-<a href="#2216" id="2216">2216</a>
-<a href="#2217" id="2217">2217</a>
-<a href="#2218" id="2218">2218</a>
-<a href="#2219" id="2219">2219</a>
-<a href="#2220" id="2220">2220</a>
-<a href="#2221" id="2221">2221</a>
-<a href="#2222" id="2222">2222</a>
-<a href="#2223" id="2223">2223</a>
-<a href="#2224" id="2224">2224</a>
-<a href="#2225" id="2225">2225</a>
-<a href="#2226" id="2226">2226</a>
-<a href="#2227" id="2227">2227</a>
-<a href="#2228" id="2228">2228</a>
-<a href="#2229" id="2229">2229</a>
-<a href="#2230" id="2230">2230</a>
-<a href="#2231" id="2231">2231</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -2686,7 +2653,7 @@
     };
     <span class="comment">// TODO: should these be *fields* in state, or really as in Perl - globally assigned values?
     </span>state.assign_value(
-      <span class="string">&quot;DOCUMENT_ID&quot;</span>,
+      <span class="string">&quot;DOCUMENTID&quot;</span>,
       options.documentid.unwrap_or_default(),
       <span class="prelude-val">Some</span>(Scope::Global),
     );
@@ -3522,30 +3489,6 @@
     }
   }
 
-  <span class="doccomment">/// Get the `Meaning&#39; of a token IFF it implements Definition.
-  </span><span class="kw">pub fn </span>lookup_meaning_iff_def(<span class="kw-2">&amp;</span><span class="self">self</span>, token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;<span class="kw">dyn </span>Definition&gt;&gt; {
-    <span class="kw">if </span>token.get_catcode().is_active_or_cs()
-      &amp;&amp; !token.has_smuggled()
-      &amp;&amp; token.text != EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym)
-    {
-      <span class="kw">match </span><span class="self">self</span>.meaning.get(<span class="kw-2">&amp;</span>token.text) {
-        <span class="prelude-val">Some</span>(entry) =&gt; <span class="kw">match </span>entry.front() {
-          <span class="prelude-val">Some</span>(Stored::Conditional(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="prelude-val">Some</span>(Stored::Constructor(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="prelude-val">Some</span>(Stored::Expandable(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="prelude-val">Some</span>(Stored::MathPrimitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="prelude-val">Some</span>(Stored::Primitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="prelude-val">Some</span>(Stored::Register(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-          <span class="comment">// None | Some(Stored::None) | Some(Stored::Bool(_)) | ...
-          </span><span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-        },
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-      }
-    } <span class="kw">else </span>{
-      <span class="prelude-val">None
-    </span>}
-  }
-
   <span class="doccomment">/// $meaning should be a definition (for defining active control sequences)
   /// or another token, for \let
   </span><span class="kw">pub fn </span>assign_meaning&lt;T: Into&lt;Stored&gt;&gt;(
@@ -3599,16 +3542,7 @@
         <span class="prelude-val">Some</span>(Stored::MathPrimitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
         <span class="prelude-val">Some</span>(Stored::Primitive(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
         <span class="prelude-val">Some</span>(Stored::Register(entry)) =&gt; <span class="prelude-val">Some</span>(entry.clone()),
-        <span class="comment">// TODO: Is this take on reframing a Token definition as an Expandable acceptable?
-        //      Does it have unintended side-effects? Are we missing useful code paths that
-        // specifically deal with a Token      in Gullet, etc?
-        </span><span class="prelude-val">Some</span>(Stored::Token(entry)) =&gt; <span class="prelude-val">Some</span>(Rc::new(Expandable {
-          cs: key.as_cs(),
-          paramlist: <span class="prelude-val">None</span>,
-          expansion: entry.clone().into(),
-          ..Expandable::default()
-        })),
-        <span class="prelude-val">Some</span>(Stored::None) | <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+        <span class="prelude-val">Some</span>(Stored::None) | <span class="prelude-val">Some</span>(Stored::Token(<span class="kw">_</span>)) | <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
         <span class="prelude-val">Some</span>(v) =&gt; {
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;in lookup_definition for {:?}. Value was: {:?}&quot;</span>, key, v);
           <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;value&quot;</span>, <span class="prelude-val">None</span>, <span class="self">self</span>, message);
@@ -4244,15 +4178,15 @@
   </span><span class="kw">pub fn </span>let_i(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     token1: <span class="kw-2">&amp;</span>Token,
-    token2: Token,
+    token2: <span class="kw-2">&amp;</span>Token,
     scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;,
     gullet: <span class="kw-2">&amp;mut </span>Gullet,
   ) {
     <span class="kw">let </span>meaning = <span class="kw">if </span>token2.get_dont_expand().is_some() {
-      Cow::Owned(Stored::Token(token2))
+      Cow::Owned(Stored::Token(token2.clone()))
     } <span class="kw">else </span>{
       <span class="self">self
-        </span>.lookup_meaning(<span class="kw-2">&amp;</span>token2)
+        </span>.lookup_meaning(token2)
         .unwrap_or(Cow::Owned(Stored::None))
     };
     <span class="self">self</span>.assign_meaning(token1, meaning.into_owned(), scope);
@@ -4308,7 +4242,7 @@
         ),
         <span class="prelude-val">Some</span>(Scope::Global),
       );
-      <span class="self">self</span>.let_i(token, <span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global), caller);
+      <span class="self">self</span>.let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">Some</span>(Scope::Global), caller);
     } <span class="kw">else </span>{
       <span class="macro">Error!</span>(
         <span class="string">&quot;undefined&quot;</span>,

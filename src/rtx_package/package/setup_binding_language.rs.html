@@ -2806,6 +2806,41 @@
 <a href="#2806" id="2806">2806</a>
 <a href="#2807" id="2807">2807</a>
 <a href="#2808" id="2808">2808</a>
+<a href="#2809" id="2809">2809</a>
+<a href="#2810" id="2810">2810</a>
+<a href="#2811" id="2811">2811</a>
+<a href="#2812" id="2812">2812</a>
+<a href="#2813" id="2813">2813</a>
+<a href="#2814" id="2814">2814</a>
+<a href="#2815" id="2815">2815</a>
+<a href="#2816" id="2816">2816</a>
+<a href="#2817" id="2817">2817</a>
+<a href="#2818" id="2818">2818</a>
+<a href="#2819" id="2819">2819</a>
+<a href="#2820" id="2820">2820</a>
+<a href="#2821" id="2821">2821</a>
+<a href="#2822" id="2822">2822</a>
+<a href="#2823" id="2823">2823</a>
+<a href="#2824" id="2824">2824</a>
+<a href="#2825" id="2825">2825</a>
+<a href="#2826" id="2826">2826</a>
+<a href="#2827" id="2827">2827</a>
+<a href="#2828" id="2828">2828</a>
+<a href="#2829" id="2829">2829</a>
+<a href="#2830" id="2830">2830</a>
+<a href="#2831" id="2831">2831</a>
+<a href="#2832" id="2832">2832</a>
+<a href="#2833" id="2833">2833</a>
+<a href="#2834" id="2834">2834</a>
+<a href="#2835" id="2835">2835</a>
+<a href="#2836" id="2836">2836</a>
+<a href="#2837" id="2837">2837</a>
+<a href="#2838" id="2838">2838</a>
+<a href="#2839" id="2839">2839</a>
+<a href="#2840" id="2840">2840</a>
+<a href="#2841" id="2841">2841</a>
+<a href="#2842" id="2842">2842</a>
+<a href="#2843" id="2843">2843</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3038,6 +3073,11 @@
   (<span class="macro-nonterminal">$package</span>:expr, <span class="macro-nonterminal">$options</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(stomach, st);
     require_package(<span class="macro-nonterminal">$package</span>, <span class="macro-nonterminal">$options</span>, stomach, st)<span class="question-mark">?
+  </span>}};
+  (<span class="macro-nonterminal">$package</span>:expr, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$val</span>:expr),<span class="kw-2">*</span>) =&gt; {{
+    <span class="macro">bind_state_mut!</span>(stomach, st);
+    <span class="kw">let </span>require_package_options = <span class="macro">NewDefault!</span>(RequireOptions, $(<span class="macro-nonterminal">$key</span>=&gt;<span class="macro-nonterminal">$val</span>),<span class="kw-2">*</span>);
+    require_package(<span class="macro-nonterminal">$package</span>, require_package_options, stomach, st)<span class="question-mark">?
   </span>}};
 }
 <span class="attr">#[macro_export]
@@ -3693,6 +3733,10 @@
     <span class="macro">bind_state_mut!</span>(st);
     <span class="macro">RegisterNamespace!</span>(<span class="macro-nonterminal">$prefix</span>, <span class="macro-nonterminal">$namespace</span>, st)
   }};
+  (<span class="macro-nonterminal">$prefix</span>:expr =&gt; <span class="macro-nonterminal">$namespace</span>:expr) =&gt; {{
+    <span class="macro">bind_state_mut!</span>(st);
+    <span class="macro">RegisterNamespace!</span>(<span class="macro-nonterminal">$prefix</span>, <span class="macro-nonterminal">$namespace</span>, st)
+  }};
   (<span class="macro-nonterminal">$prefix</span>:expr, <span class="macro-nonterminal">$namespace</span>:expr,<span class="macro-nonterminal">$state_arg</span>:ident) =&gt;
     (<span class="macro-nonterminal">$state_arg</span>.model.register_namespace(<span class="macro-nonterminal">$prefix</span>, <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$namespace</span>)))
 );
@@ -4245,7 +4289,7 @@
     <span class="macro">bind_state_mut!</span>(stmch, st);
     st.let_i(
       <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>),
-      <span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>),
+      <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>),
       <span class="prelude-val">None</span>,
       stmch.get_gullet_mut(),
     );
@@ -4253,20 +4297,20 @@
   <span class="comment">// half-packaged args
   </span>(<span class="macro-nonterminal">$token1</span>:literal, <span class="macro-nonterminal">$token2</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(stmch, st);
-    st.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>), <span class="macro-nonterminal">$token2</span>, <span class="prelude-val">None</span>, stmch.get_gullet_mut());
+    st.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token1</span>), <span class="kw-2">&amp;</span><span class="macro-nonterminal">$token2</span>, <span class="prelude-val">None</span>, stmch.get_gullet_mut());
   }};
   (<span class="macro-nonterminal">$token1</span>:expr, <span class="macro-nonterminal">$token2</span>:literal) =&gt; {{
     <span class="macro">bind_state_mut!</span>(stmch, st);
-    st.let_i(<span class="macro-nonterminal">$token1</span>, <span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>), <span class="prelude-val">None</span>, stmch.get_gullet_mut());
+    st.let_i(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$token1</span>, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$token2</span>), <span class="prelude-val">None</span>, stmch.get_gullet_mut());
   }};
   <span class="comment">// internal form, pre-packaged arguments
   </span>(<span class="macro-nonterminal">$token1</span>:expr, <span class="macro-nonterminal">$token2</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(stmch, st);
-    st.let_i(<span class="macro-nonterminal">$token1</span>, <span class="macro-nonterminal">$token2</span>, <span class="prelude-val">None</span>, stmch.get_gullet_mut());
+    st.let_i(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$token1</span>, <span class="kw-2">&amp;</span><span class="macro-nonterminal">$token2</span>, <span class="prelude-val">None</span>, stmch.get_gullet_mut());
   }};
   (<span class="macro-nonterminal">$token1</span>:expr, <span class="macro-nonterminal">$token2</span>:expr, <span class="macro-nonterminal">$scope</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(stmch, st);
-    st.let_i(<span class="macro-nonterminal">$token1</span>, <span class="macro-nonterminal">$token2</span>, <span class="macro-nonterminal">$scope</span>, stmch.get_gullet_mut());
+    st.let_i(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$token1</span>, <span class="kw-2">&amp;</span><span class="macro-nonterminal">$token2</span>, <span class="macro-nonterminal">$scope</span>, stmch.get_gullet_mut());
   }};
 }
 
@@ -5416,7 +5460,33 @@
     -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
     <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ stretchy @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>) ] })
   };
-
+  <span class="comment">// operator_role: string
+  </span>(@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  };
+  (@munch ( $(,)<span class="question-mark">? </span>operator_role $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_role @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  };
+  <span class="comment">// operator_stretchy: bool
+  </span>(@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_stretchy @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>) ] })
+  };
+  (@munch ( $(,)<span class="question-mark">? </span>operator_stretchy $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ operator_stretchy @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>) ] })
+  };
+  <span class="comment">// scriptpos: string
+  </span>(@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal, $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ($(<span class="macro-nonterminal">$next</span>)<span class="kw-2">*</span>)  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ scriptpos @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  };
+  (@munch ( $(,)<span class="question-mark">? </span>scriptpos $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$flag</span>:literal)
+  -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {
+  <span class="macro">defi_opts!</span>(@munch ()  -&gt; {<span class="macro-nonterminal">$kind</span>, $( [ <span class="macro-nonterminal">$key </span>@ <span class="macro-nonterminal">$val </span>] )* [ scriptpos @ <span class="prelude-val">Some</span>(<span class="macro-nonterminal">$flag</span>.to_string()) ] })
+  };
   <span class="comment">// misc ident with literal value
   </span>(@munch ( $(,)<span class="question-mark">? </span><span class="macro-nonterminal">$id</span>:ident $(:)<span class="question-mark">?</span>$(=&gt;)<span class="question-mark">? </span><span class="macro-nonterminal">$lit</span>:literal $(<span class="macro-nonterminal">$next</span>:tt)<span class="kw-2">*</span>)
     -&gt; {<span class="macro-nonterminal">$kind</span>:ident, $([<span class="macro-nonterminal">$key</span>:ident @ <span class="macro-nonterminal">$val</span>:expr])<span class="kw-2">*</span>}) =&gt; {

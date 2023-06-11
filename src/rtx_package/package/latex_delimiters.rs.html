@@ -231,6 +231,7 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="comment">//----------------------------------------------------------------------
 // LaTeX; Table 3.10. Delimiters, p.47
@@ -326,9 +327,9 @@
   // Short of setting up TeX&#39;s complicated encoding machinery, I need an explicit
   // mapping.  Unfortunately, this doesn&#39;t (yet) support people declaring thier own delimiters!
 
-  // # With new treatment of Simple Symbols as just Box&#39;s with assigned attributes,
-  // # we&#39;re not getting whatsits, and so we&#39;re not looking them up the same way!!!
-  // # TEMPORARILY (?) hack the Delimiter map
+  // With new treatment of Simple Symbols as just Box&#39;s with assigned attributes,
+  // we&#39;re not getting whatsits, and so we&#39;re not looking them up the same way!!!
+  // TEMPORARILY (?) hack the Delimiter map
   // foreach my $entry (values %DELIMITER_MAP) {
   //   $DELIMITER_MAP{ $$entry{char} } = $entry; }
 
@@ -432,7 +433,8 @@
   //     $document-&gt;setAttribute($delim, role =&gt; $role); }
   //   return; }
 
-  // # The &quot;m&quot; versions are defined in e-Tex and other places.
+  // TODO:
+  // The &quot;m&quot; versions are defined in e-Tex and other places.
   // DefConstructor(&#39;\bigl {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },
   //   afterConstruct =&gt; sub { addDelimiterRole($_[0], &#39;OPEN&#39;); });
   // DefConstructor(&#39;\bigm {}&#39;, &#39;#1&#39;, bounded =&gt; true, font =&gt; { size =&gt; &#39;big&#39; },

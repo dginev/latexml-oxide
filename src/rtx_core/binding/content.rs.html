@@ -1285,6 +1285,8 @@
 <a href="#1285" id="1285">1285</a>
 <a href="#1286" id="1286">1286</a>
 <a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
@@ -2025,7 +2027,7 @@
   </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
     state.let_i(
       <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, option)),
-      <span class="macro">T_RELAX!</span>(),
+      <span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>(),
       <span class="prelude-val">None</span>,
       stomach.get_gullet_mut(),
     );
@@ -2092,7 +2094,7 @@
   </span>} <span class="kw">else </span>{
     <span class="string">&quot;\\@unknownoptionerror&quot;
   </span>};
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>), <span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>, gullet);
+  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>, gullet);
   <span class="prelude-val">Ok</span>(())
 }
 
@@ -2100,6 +2102,7 @@
   <span class="kw">pub </span>options: Vec&lt;String&gt;,
   <span class="kw">pub </span>withoptions: <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt;,
   <span class="kw">pub </span>extension: <span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;&gt;,
+  <span class="kw">pub </span>searchpaths_only: bool,
   <span class="kw">pub </span>as_class: bool,
   <span class="kw">pub </span>noltxml: <span class="prelude-ty">Option</span>&lt;bool&gt;,
   <span class="kw">pub </span>notex: <span class="prelude-ty">Option</span>&lt;bool&gt;,
@@ -2111,9 +2114,10 @@
       options: Vec::new(),
       withoptions: <span class="prelude-val">None</span>,
       extension: <span class="prelude-val">None</span>,
-      as_class: <span class="bool-val">false</span>,
-      noltxml: <span class="prelude-val">None</span>,
       notex: <span class="prelude-val">None</span>,
+      noltxml: <span class="prelude-val">None</span>,
+      as_class: <span class="bool-val">false</span>,
+      searchpaths_only: <span class="bool-val">false</span>,
       after: <span class="macro">Tokens!</span>(),
     }
   }

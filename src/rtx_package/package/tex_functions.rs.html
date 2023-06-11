@@ -1051,6 +1051,18 @@
 <a href="#1051" id="1051">1051</a>
 <a href="#1052" id="1052">1052</a>
 <a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>rtx_core::keyvals::KeyvalsConfig;
@@ -1058,25 +1070,33 @@
 <span class="kw">use </span>std::collections::VecDeque;
 
 <span class="kw">pub fn </span>reenter_text_mode(vertical_mode: bool, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) {
-  <span class="kw">let </span><span class="kw-2">mut </span>bindings: VecDeque&lt;Stored&gt; = <span class="kw">match </span>state.lookup_value(<span class="kw">if </span>vertical_mode {
+  <span class="kw">let </span>mode_key = <span class="kw">if </span>vertical_mode {
     <span class="string">&quot;VTEXT_MODE_BINDINGS&quot;
   </span>} <span class="kw">else </span>{
     <span class="string">&quot;HTEXT_MODE_BINDINGS&quot;
-  </span>}) {
-    <span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) =&gt; vdq.clone(),
+  </span>};
+  <span class="kw">let </span>text_key = <span class="string">&quot;TEXT_MODE_BINDINGS&quot;</span>;
+  <span class="kw">let </span>mode_bindings = state.checkout_value(mode_key);
+  <span class="kw">let </span>text_bindings = state.checkout_value(text_key);
+  <span class="kw">let </span><span class="kw-2">mut </span>bindings: VecDeque&lt;<span class="kw-2">&amp;</span>Stored&gt; = <span class="kw">match </span>mode_bindings {
+    <span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) =&gt; vdq.iter().collect::&lt;VecDeque&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt;(),
     <span class="kw">_ </span>=&gt; VecDeque::new(),
   };
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>text_mode_bindings)) =
-    state.lookup_value(<span class="string">&quot;TEXT_MODE_BINDINGS&quot;</span>)
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>vdq)) = text_bindings
   {
-    bindings.extend(text_mode_bindings.clone());
+    bindings.extend(vdq.iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
   }
   <span class="kw">for </span>binding <span class="kw">in </span>bindings {
     <span class="kw">if let </span>Stored::Tokens(tks) = binding {
-      <span class="kw">let </span><span class="kw-2">mut </span>vec = tks.unlist();
-      <span class="kw">let </span>new = vec.remove(<span class="number">1</span>);
-      state.let_i(<span class="kw-2">&amp;</span>vec[<span class="number">0</span>], new, <span class="prelude-val">None</span>, gullet);
+      <span class="kw">let </span>vec = tks.unlist_ref();
+      state.let_i(<span class="kw-2">&amp;</span>vec[<span class="number">0</span>], <span class="kw-2">&amp;</span>vec[<span class="number">1</span>], <span class="prelude-val">None</span>, gullet);
     }
+  }
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = mode_bindings {
+    state.checkin_value(mode_key, value);
+  }
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = text_bindings {
+    state.checkin_value(text_key, value);
   }
 }
 
@@ -1114,11 +1134,8 @@
   params_in: Tokens,
   state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
-  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; = <span class="kw">if </span>params_in.is_empty() {
-    VecDeque::new()
-  } <span class="kw">else </span>{
-    VecDeque::from(params_in.pack_parameters().unlist())
-  };
+  <span class="kw">let </span><span class="kw-2">mut </span>tokens: VecDeque&lt;Token&gt; =
+    VecDeque::from(params_in.pack_parameters().unlist());
   <span class="comment">// Now, recognize parameters and delimiters.
   </span><span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>n = <span class="number">0</span>;
@@ -2054,13 +2071,13 @@
   stomach.bgroup(state);
   state.let_i(
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\protect&quot;</span>),
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\string&quot;</span>),
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\string&quot;</span>),
     <span class="prelude-val">None</span>,
     stomach.get_gullet_mut(),
   );
   state.let_i(
     <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\MessageBreak&quot;</span>),
-    <span class="macro">T_CS!</span>(<span class="string">&quot;\\ltx@hard@MessageBreak&quot;</span>),
+    <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\ltx@hard@MessageBreak&quot;</span>),
     <span class="prelude-val">None</span>,
     stomach.get_gullet_mut(),
   ); <span class="comment">// tricky, we need Expand() to execute it
@@ -2104,4 +2121,11 @@
     <span class="kw">_ </span>=&gt; <span class="string">&quot;middle&quot;</span>,
   } <span class="comment">// undef meaning &#39;baseline&#39;
 </span>}
+
+<span class="kw">pub fn </span>in_svg(document: <span class="kw-2">&amp;</span>Document, state: <span class="kw-2">&amp;</span>State) -&gt; bool {
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(context) = document.get_element() {
+    document.with_node_qname(<span class="kw-2">&amp;</span>context, state,
+      |qname| qname.starts_with(<span class="string">&quot;svg:&quot;</span>))
+  } <span class="kw">else </span>{ <span class="bool-val">false </span>}
+}
 </code></pre></div></section></main></body></html>

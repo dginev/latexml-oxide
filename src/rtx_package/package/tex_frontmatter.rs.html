@@ -378,6 +378,24 @@
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="comment">//----------------------------------------------------------------------
 // General support for Front Matter.
 // Not (yet) used by TeX (finish plain?)
@@ -411,12 +429,14 @@
     <span class="prelude-val">Some</span>(Scope::Global)
   );
 
-  <span class="comment">// // Add a new frontmatter item that will be enclosed in &lt;$tag %attr&gt;...&lt;/$tag&gt;
-  // // The content is the result of digesting $tokens.
-  // // \\@add@frontmatter[keys]{tag}[attributes]{content}
-  // // keys can have
-  // //   replace (to replace the current entry, if any)
-  // //   ifnew   (only add if no previous entry)//
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if@in@preamble&quot;</span>, sub[_s,_args,state] { state.lookup_bool(<span class="string">&quot;inPreamble&quot;</span>) });
+
+  <span class="comment">// Add a new frontmatter item that will be enclosed in &lt;$tag %attr&gt;...&lt;/$tag&gt;
+  // The content is the result of digesting $tokens.
+  // \\@add@frontmatter[keys]{tag}[attributes]{content}
+  // keys can have
+  //   replace (to replace the current entry, if any)
+  //   ifnew   (only add if no previous entry)//
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}&quot;</span>,
     sub[stomach, (_keys_tks,tag,attrs_opt,tokens), state] {
@@ -454,14 +474,13 @@
     <span class="macro">AssignValue!</span>(<span class="string">&quot;inPreamble&quot;</span>, inpreamble);
   });
 
-  <span class="comment">// // Append a piece of data to an existing frontmatter item that is contained in &lt;$tag&gt;
-  // // If $label is given, look for an item which has label=&gt;$label,
-  // // otherwise, just append to the last item in $tag.
+  <span class="comment">// Append a piece of data to an existing frontmatter item that is contained in &lt;$tag&gt;
+  // If $label is given, look for an item which has label=&gt;$label,
+  // otherwise, just append to the last item in $tag.
 
-  // // \@add@to@frontmatter{tag}[label]{content}
-  // DefPrimitive(&#39;\@add@to@frontmatter {} [] {}&#39;, sub {
-  //     my ($stomach, $tag, $label, $tokens) = @_;
-  //     $tag = ToString($tag);
+  // \@add@to@frontmatter{tag}[label]{content}
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@add@to@frontmatter {} [] {}&quot;</span>, sub[stomach,(tag,label,tokens), state] {
+  <span class="comment">//     $tag = ToString($tag);
   //     $label = ToString($label) if $label;
   //     my $frontmatter = LookupValue(&#39;frontmatter&#39;);
 
@@ -480,9 +499,11 @@
   //       push(@{ $$list[-1] }, $datum);
   //       return; }
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label =&gt; $label } : undef), $datum]);
-  //     return; });
+    </span><span class="macro">unimplemented!</span>();
+    <span class="prelude-val">Ok</span>(())
+  });
 
-  // This is called by afterOpen (by default on &lt;ltx:document&gt;) to
+  <span class="comment">// This is called by afterOpen (by default on &lt;ltx:document&gt;) to
   // output any frontmatter that was accumulated.
 
   </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, _node, state] {
@@ -507,12 +528,11 @@
     <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>all_keys {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(list) = frontmatter.remove(key) {
         <span class="comment">// Dubious, but assures that frontmatter appears in text mode...
-        // TODO:
-        //local $LaTeXML::BOX = Box(&#39;&#39;, $STATE-&gt;lookupValue(&#39;font&#39;), &#39;&#39;, T_SPACE);
         </span>document.set_box_to_absorb(Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), state.lookup_font(), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_SPACE!</span>()), HashMap::default(), state).into());
         <span class="kw">for </span>(tag, attr, stuff) <span class="kw">in </span>list {
-          document.open_element(<span class="kw-2">&amp;</span>tag, attr, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>; <span class="comment">// TODO:  (scalar(@stuff) &amp;&amp; $document-&gt;canHaveAttribute($tag, &#39;font&#39;)
-                                                           //        ? (font =&gt; $stuff[0]-&gt;getFont, _force_font =&gt; &#39;true&#39;) : ()));
+          document.open_element(<span class="kw-2">&amp;</span>tag, attr, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          <span class="comment">// TODO:  (scalar(@stuff) &amp;&amp; $document-&gt;canHaveAttribute($tag, &#39;font&#39;)
+          //        ? (font =&gt; $stuff[0]-&gt;getFont, _force_font =&gt; &#39;true&#39;) : ()));
           </span>document.absorb(<span class="kw-2">&amp;</span>stuff, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
 
           document.close_element(<span class="kw-2">&amp;</span>tag, state)<span class="question-mark">?</span>;
@@ -522,7 +542,13 @@
     }
   });
 
-  <span class="comment">// Maintain a list of classes that apply to the document root.
+  <span class="comment">// Request Frontmatter to appear HERE (if not already done),
+  // deferring it from document begin.
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@frontmatterhere&quot;</span>, sub[doc,_args,state] { insert_frontmatter(doc,state)<span class="question-mark">? </span>},
+    after_digest =&gt; sub[stomach,_args,state] { state.assign_value(<span class="string">&quot;frontmatter_deferred&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global)); });
+
+  <span class="comment">// TeX.pool.ltxml, line 5421
+  // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   </span><span class="macro">Tag!</span>(<span class="string">&quot;ltx:document&quot;</span>, after_open_late =&gt; sub[document, root, state] {
     <span class="kw">let </span>classes = <span class="macro">LookupMappingKeys!</span>(<span class="string">&quot;DOCUMENT_CLASSES&quot;</span>).join(<span class="string">&quot; &quot;</span>);
@@ -531,21 +557,24 @@
     }
   });
 
-  <span class="macro">DefConstructor!</span>(
-    <span class="string">&quot;\\beginsection Until:\\par&quot;</span>,
-    <span class="string">&quot;&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;&quot;
-  </span>);
+  <span class="comment">// If folks start using plain TeX macros, and never load LaTeX.pool,
+  // they might benefit from a ltx-plain.css?
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\beginsection Until:\\par&quot;</span>, <span class="string">r&quot;\@beginsection{{\bf #1}}&quot;</span>);
+  <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@beginsection {}&quot;</span>,
+    <span class="string">&quot;&lt;ltx:section&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;&quot;</span>);
 
-  <span class="comment">// // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
-  // //  If so, how do know when the theorem ends?
-  // DefConstructor(&#39;\proclaim&#39;, parseDefParameters(&#39;\proclaim&#39;, Tokenize(&#39;#1. #2\par&#39;)),
-  //   &quot;&lt;ltx:theorem&gt;&quot;
-  //     . &quot;&lt;ltx:title font=&#39;#titlefont&#39; _force_font=&#39;true&#39; &gt;#title&lt;/ltx:title&gt;&quot;
-  //     . &quot;#2&quot;
-  //     . &quot;&lt;/ltx:theorem&gt;&quot;,
-  //   properties =&gt; sub {
-  //     my $title = $_[1];
-  //     (title =&gt; $title, titlefont =&gt; $title-&gt;getFont); });
+
+  <span class="comment">// POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
+  //  If so, how do know when the theorem ends?
+  // TODO:
+  // DefMacro!(&quot;\\proclaim&quot;, parse_def_parameters(&quot;\\proclaim&quot;, Tokenize!(&quot;#1. #2\\par&quot;),state),
+  //   r&quot;\@proclaim{{\bf #1}}{{\sl #2}}&quot;);
+  // DefConstructor!(&quot;\\@proclaim{}{}&quot;,
+  //   &quot;&lt;ltx:theorem&gt;&lt;ltx:title font=&#39;#titlefont&#39; _force_font=&#39;true&#39; &gt;#title&lt;/ltx:title&gt;\
+  //     #2&quot;,
+  //   after_construct =&gt; sub[doc,_args,state] { doc.maybe_close_element(&quot;ltx:theorem&quot;, state)?; },
+  //   properties     =&gt; sub[stomach,title,state] {
+  //     stored_map!(&quot;title&quot; =&gt; title, &quot;titlefont&quot; =&gt; title.get_font()) });
 
   //======================================================================
   // Tags &amp; Titles
@@ -758,4 +787,10 @@
   <span class="comment">// NOTE that a 3rd form seems desirable: an concise form that cannot rely on context for the type.
   // This would be useful for the titles in links; thus can be plain (unicode) text.
 </span>});
-</code></pre></div></section></main></body></html>
+
+
+<span class="kw">pub fn </span>insert_frontmatter(_document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="comment">// TODO: update and port over
+  </span><span class="macro">unimplemented!</span>();
+  <span class="prelude-val">Ok</span>(())
+}</code></pre></div></section></main></body></html>

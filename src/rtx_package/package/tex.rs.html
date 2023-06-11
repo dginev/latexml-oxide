@@ -95,74 +95,68 @@
 <span class="kw">use </span>rtx_core::state::State;
 
 <span class="macro">LoadDefinitions!</span>(state, {
-  <span class="comment">// TeX.pool.ltxml
-  //   commit 22db863d7358d56e197a3845375775714577cc82
-  //   Author: bruce miller &lt;bruce.miller@nist.gov&gt;
-  //   Date:   Wed Nov 28 10:47:09 2018 -0500
+  <span class="comment">// port of TeX.pool.ltxml
+  // commit 6b748e367af3b15c11f41454bfe79bfc27763577
+  // Author: Deyan Ginev &lt;deyan.ginev@gmail.com&gt;
+  // Date:   Wed May 10 16:36:04 2023 -0400
 
-  // lines 1-695
+  // lines 1-758
   </span><span class="macro">InnerPool!</span>(tex_setup);
-  <span class="comment">// lines 695-949
+  <span class="comment">// lines 758-1075
   </span><span class="macro">InnerPool!</span>(tex_expandable_primitives);
-  <span class="comment">// lines 950-1102
+  <span class="comment">// lines 1076-1216
   </span><span class="macro">InnerPool!</span>(tex_registers);
-  <span class="comment">// lines 1102-1408
+  <span class="comment">// lines 1217-1524
   </span><span class="macro">InnerPool!</span>(tex_assignment);
-  <span class="comment">// lines 1408-1773
+  <span class="comment">// lines 1524-1888
   </span><span class="macro">InnerPool!</span>(tex_fonts);
-  <span class="comment">// lines 1773-2085
+  <span class="comment">// lines 1889-2416
   </span><span class="macro">InnerPool!</span>(tex_boxes);
-
-  <span class="comment">// -----------------------------------------
-  //  29.01.2019:
-  //  updated upto (and including) here
-  // -----------------------------------------
-
-  // lines 2086-2335
+  <span class="comment">// lines 2417-2785
   </span><span class="macro">InnerPool!</span>(tex_ch24_primitives);
-  <span class="comment">// lines 2335-2985
+  <span class="comment">// lines 2786-3523
   </span><span class="macro">InnerPool!</span>(tex_alignment);
-  <span class="comment">// lines 2985-3070
+  <span class="comment">// lines 3524-3660
   </span><span class="macro">InnerPool!</span>(tex_para);
-  <span class="comment">// lines 3070-3158
+  <span class="comment">// lines 3661-3783
   </span><span class="macro">InnerPool!</span>(tex_ch25_primitives);
-  <span class="comment">// lines 3158-3728
+  <span class="comment">// lines 3784-4006
   </span><span class="macro">InnerPool!</span>(tex_math_mode);
-  <span class="comment">// lines 3729-4001
-  // InnerPool!(tex_math_display);
-  // lines 4002-4228
+  <span class="comment">// lines 4007-4279
+  </span><span class="macro">InnerPool!</span>(tex_math_fork);
+  <span class="comment">// lines 4280-4510
   </span><span class="macro">InnerPool!</span>(tex_scripts);
-  <span class="comment">// lines 4229-4414
+  <span class="comment">// lines 4511-4688
   </span><span class="macro">InnerPool!</span>(tex_math_style);
-  <span class="comment">// lines 4415-4759
+  <span class="comment">// lines 4689-5041
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_to_p349);
-  <span class="comment">// lines 4760-4660
+  <span class="comment">// lines 5042-5290
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p350_to_p355);
-  <span class="comment">// lines 4660-4932
+  <span class="comment">// lines 5291-5620
   </span><span class="macro">InnerPool!</span>(tex_frontmatter);
-  <span class="comment">// lines 4932-4965
+  <span class="comment">// lines 5621-5655
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p356);
-  <span class="comment">// lines 4965-5086
+  <span class="comment">// lines 5656-5783
   </span><span class="macro">InnerPool!</span>(tex_accents);
-  <span class="comment">// lines 5086-5159
+  <span class="comment">// lines 5784-5832
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p357);
-  <span class="comment">// lines 5159-5607
+  <span class="comment">// lines 5833-6278
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p358);
-  <span class="comment">// lines 5607-5653
+  <span class="comment">// lines 6279-6329
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p359);
-  <span class="comment">// lines 5653-5701
+  <span class="comment">// lines 6330-6377
   </span><span class="macro">InnerPool!</span>(tex_math_accents);
-  <span class="comment">// lines 5701-5898
+  <span class="comment">// lines 6378-6574
   </span><span class="macro">InnerPool!</span>(latex_delimiters);
-  <span class="comment">// lines 5898-5952
+  <span class="comment">// lines 6575-6629
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p360);
-  <span class="comment">// lines 5952-6037
+  <span class="comment">// lines 6630-6714
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p361);
-  <span class="comment">// lines 6037-6225
+  <span class="comment">// lines 6715-6960
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p362);
-  <span class="comment">// lines 6225-6254
+  <span class="comment">// lines 6961-6998
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p363);
-  <span class="comment">// lines 6254-6261
+  <span class="comment">// lines 6999-7010
   </span><span class="macro">InnerPool!</span>(tex_appendix_b_p364);
 
   <span class="comment">//======================================================================
@@ -172,15 +166,21 @@
   //**********************************************************************
   // Stray stuff .... where to ?
   //**********************************************************************
-  // lines 6269-6291
+
+  // lines 7013-7036
   </span><span class="macro">InnerPool!</span>(tex_stray_math_style);
-  <span class="comment">// lines 6005-6392
+  <span class="comment">// lines 7037-7140
   </span><span class="macro">InnerPool!</span>(tex_special_chars);
-  <span class="comment">// lines 6392-6434
+  <span class="comment">// lines 7141-7203
   </span><span class="macro">InnerPool!</span>(latex_hook);
-  <span class="comment">// lines 6434-6752
+  <span class="comment">// lines 7204-7221
   </span><span class="macro">InnerPool!</span>(tex_rtx_specific);
-  <span class="comment">// lines 6753-END
+  <span class="comment">// lines 7222-7544
+  </span><span class="macro">InnerPool!</span>(rtx_math_macros);
+  <span class="comment">// lines 7545-7720
+  </span><span class="macro">InnerPool!</span>(tex_misc_tweaks);
+
+  <span class="comment">// lines 7721 - 7725
   </span><span class="macro">InnerPool!</span>(etex);
   <span class="macro">InnerPool!</span>(pdftex);
 });

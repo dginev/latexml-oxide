@@ -105,6 +105,50 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>unicode_normalization::char::compose;
 <span class="kw">use </span>unicode_normalization::UnicodeNormalization;
@@ -191,25 +235,69 @@
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\r&quot;</span>, <span class="string">&#39;\u{030A}&#39;</span>, <span class="string">&quot;o&quot;</span>); <span class="comment">// COMBINING RING ABOVE &amp; non-combining
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\H&quot;</span>, <span class="string">&#39;\u{030B}&#39;</span>, <span class="string">&quot;\u{02DD}&quot;</span>); <span class="comment">// COMBINING DOUBLE ACUTE ACCENT &amp; non-combining
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\c&quot;</span>, <span class="string">&#39;\u{0327}&#39;</span>, <span class="string">&quot;\u{00B8}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING CEDILLA &amp; CEDILLA
-
   // NOTE: The next two get define for math, as well; See below
-
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@daccent&quot;</span>, <span class="string">&#39;\u{0323}&#39;</span>, <span class="string">&quot;.&quot;</span>,       below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING DOT BELOW &amp; DOT (?)
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\@text@baccent&quot;</span>, <span class="string">&#39;\u{0331}&#39;</span>, <span class="string">&quot;\u{00AF}&quot;</span>, below =&gt; <span class="bool-val">true</span>); <span class="comment">// COMBINING MACRON BELOW  &amp; MACRON
-
   // COMBINING DOUBLE INVERTED BREVE &amp; ???? What????
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\t&quot;</span>, <span class="string">&#39;\u{0361}&#39;</span>, <span class="string">&quot;-&quot;</span>);
   <span class="comment">// this one&quot;s actually defined in mathscinet.sty, but just stick it here!
-
   // COMBINING COMMA BELOW
   </span><span class="macro">DefAccent!</span>(<span class="string">&quot;\\lfhook&quot;</span>, <span class="string">&#39;\u{0326}&#39;</span>, <span class="string">&quot;,&quot;</span>, below =&gt; <span class="bool-val">true</span>);
 
-  <span class="comment">// I doubt that latter covers multiple chars...? DefAccent(&quot;\\bar&quot;,&quot;\u{0304}&quot;, ?);  // COMBINING
-  // MACRON or is this the longer overbar?
-
-  // This will fail if there really are &quot;assignments&quot; after the number!
+  <span class="comment">// This will fail if there really are &quot;assignments&quot; after the number!
   // We&#39;re given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above &amp; below cases!  We&#39;ll prefer the above case.
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\accent Number Expanded&quot;</span>, sub[stomach,(num,letter),state] {
+    <span class="macro">unimplemented!</span>();
+    <span class="comment">// my $n        = $num-&gt;valueOf;
+    // my $fam      = 0;                                            # ?
+    // my $font     = LookupValue(&#39;fontinfo_&#39; . $fam . &#39;_text&#39;);
+    // my $fontinfo = LookupValue(&#39;fontinfo_&#39; . ToString($font));
+    // my $acc      = ($fontinfo &amp;&amp; $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
+    // my $reversion = Invocation(T_CS(&#39;\accent&#39;), $num, $letter);
+    // # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
+    // # BUT, \accent always (?) makes an above type accent... doesn&#39;t it?
+    // if (my $combiner = LookupMapping(&#39;accent_combiner_above&#39;, $acc)
+    //   || LookupMapping(&#39;accent_combiner_below&#39;, $acc)) {
+    //   applyAccent($stomach, $letter, $combiner, $acc, $reversion); }
+    // else {
+    //   Warn(&#39;unexpected&#39;, &quot;accent$n&quot;, $stomach, &quot;Accent &#39;$n&#39; not recognized&quot;);
+    //   Box(ToString($letter), undef, undef, $reversion); }
+    </span><span class="prelude-val">Ok</span>(())
+  });
+  <span class="comment">// Note that these two apparently work in Math? BUT the argument is treated as text!!!
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\d{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi&quot;</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\b{}&quot;</span>, <span class="string">r&quot;\ifmmode\@math@baccent{#1}\else\@text@baccent{#1}\fi&quot;</span>);
+
+  <span class="comment">//   DefConstructor(&#39;\@math@daccent {}&#39;,
+  //   &quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;UNDERACCENT&#39;&gt;\x{22c5}&lt;/ltx:XMTok&gt;&quot;
+  //     . &quot;?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)&quot;
+  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  //   mode        =&gt; &#39;text&#39;, alias =&gt; &#39;\d&#39;,
+  //   afterDigest =&gt; sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $arg = $whatsit-&gt;getArg(1);
+  //     if ($arg-&gt;isMath) {
+  //       $whatsit-&gt;setProperty(matharg =&gt; $arg-&gt;getBody); }
+  //     else {
+  //       $whatsit-&gt;setProperty(textarg =&gt; $arg); }
+  //     return; });
+
+  // DefConstructor(&#39;\@math@baccent {}&#39;,
+  //   &quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;UNDERACCENT&#39;&gt;&quot; . UTF(0xAF) . &quot;&lt;/ltx:XMTok&gt;&quot;
+  //     . &quot;?#textarg(&lt;ltx:XMText&gt;#textarg&lt;/ltx:XMText&gt;)(&lt;ltx:XMArg&gt;#matharg&lt;/ltx:XMArg&gt;)&quot;
+  //     . &quot;&lt;/ltx:XMApp&gt;&quot;,
+  //   mode        =&gt; &#39;text&#39;, alias =&gt; &#39;\b&#39;,
+  //   afterDigest =&gt; sub {
+  //     my ($stomach, $whatsit) = @_;
+  //     my $arg = $whatsit-&gt;getArg(1);
+  //     if ($arg-&gt;isMath) {
+  //       $whatsit-&gt;setProperty(matharg =&gt; $arg-&gt;getBody); }
+  //     else {
+  //       $whatsit-&gt;setProperty(textarg =&gt; $arg); }
+  //     return; });
+
+
 </span>});
 </code></pre></div></section></main></body></html>
