@@ -33,7 +33,6 @@ LoadDefinitions!(state, {
               "expected",
               "$",
               stomach,
-              state,
               "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
             );
             op = "";
@@ -87,7 +86,7 @@ LoadDefinitions!(state, {
     reversion    => Tokens!(T_MATH!()),
     before_digest => sub[stomach, state] {
       stomach.begin_mode("inline_math", state)?;
-      if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new()) {
+      if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new())? {
         let everymath_toks = everymath_toks.unlist();
         if !everymath_toks.is_empty() {
           stomach.get_gullet_mut().unread(Tokens::new(everymath_toks));
@@ -107,7 +106,7 @@ LoadDefinitions!(state, {
       // only do this once.
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
-        if let Some(body) = tbox.get_body() {
+        if let Some(body) = tbox.get_body()? {
           state.set_dual_branch("presentation");
           let tex = body.untex(state)?;
           state.expire_dual_branch();
@@ -115,7 +114,7 @@ LoadDefinitions!(state, {
           let ctex = body.untex(state)?;
           state.expire_dual_branch();
           if ctex != tex {
-            document.set_attribute(node, "content-tex", &ctex, state)?;
+            document.set_attribute(node, "content-tex", &ctex)?;
           }
           Some(tex)
         } else {
@@ -125,7 +124,7 @@ LoadDefinitions!(state, {
         None
       };
       if let Some(tex_string) = tex_opt {
-        document.set_attribute(node, "tex", &tex_string, state)?;
+        document.set_attribute(node, "tex", &tex_string)?;
       }
     }
   });

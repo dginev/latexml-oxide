@@ -83,7 +83,7 @@ LoadDefinitions!(state, {
       Some('\\') => arg_chars.next().unwrap(),
       Some(other) => other,
       None => {
-        Warn!("expected","character",gullet,state,"\\@makeother called on empty argument?");
+        Warn!("expected","character",gullet ,"\\@makeother called on empty argument?");
         return Ok(Tokens!());
       }};
     state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
@@ -143,7 +143,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
 
   DefPrimitive!("\\@onlypreamble{}", sub[stomach,(arg),state] {
-    only_preamble("\\@onlypreamble", stomach, state); }); // Don't bother enforcing this.
+    only_preamble("\\@onlypreamble", stomach, state)?; }); // Don't bother enforcing this.
   DefPrimitive!("\\GenericError{}{}{}{}", sub[stomach,(arg1,arg2,arg3,arg4),state] {
     make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error", stomach, state)?;
   });

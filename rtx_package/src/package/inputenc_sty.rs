@@ -33,8 +33,7 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
     encoding_tokenized,
     None,
     state,
-  );
-  Ok(())
+  )
 }
 
 LoadDefinitions!(outer_stomach, state, {
@@ -56,7 +55,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@inpenc@undefined", sub[gullet, (), state] {
     let message = s!("Keyboard character used is undefined in inputencoding {}",
       state.input_encoding.as_ref().unwrap());
-    Error!("unexpected", "<char>", gullet, state, message);
+    Error!("unexpected", "<char>", gullet,  message);
   });
 
   DefPrimitive!("\\inputencoding{}", sub[stomach, (encoding), state] {

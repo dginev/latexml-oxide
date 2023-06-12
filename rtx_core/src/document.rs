@@ -187,7 +187,7 @@ impl Document {
         // alternative
         arena::with(*prefix, |p_str| {
           arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
-        });
+        }).unwrap();
       }
       self.context = Some(context);
       self.context.as_mut().unwrap()
@@ -311,7 +311,7 @@ impl Document {
           }
           arena::with(key, |key_str| {
             arena::with(value, |value_str| {
-              self.set_attribute(node, key_str, value_str, state)
+              self.set_attribute(node, key_str, value_str)
             })
           })?;
         }
@@ -372,7 +372,7 @@ impl Document {
           // Too late to do wrapNodes?
           if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
             for (key, (value, _properties)) in &pending_declaration {
-              self.set_attribute(&mut text, key, value, state)?;
+              self.set_attribute(&mut text, key, value)?;
             }
             self.finalize_rec(&mut text, state)?; // Now have to clean up the new node!
           }
@@ -716,9 +716,9 @@ impl Document {
       let message = s!(
         "Attempt to close {}, which isn't open. Currently in {}",
         qname_msg,
-        self.get_insertion_context(None, state)
+        self.get_insertion_context(None, state)?
       );
-      Error!("malformed", qname, self, state, message);
+      Error!("malformed", qname, self, message);
       Ok(None)
     } else {
       // Found node.
@@ -733,7 +733,7 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        Error!("malformed", qname, self, state, message);
+        Error!("malformed", qname, self, message);
       }
       // So, now close up to the desired node.
       self.close_node_internal(&node, state)?;
@@ -833,9 +833,9 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str| {
-        Error!("malformed", qname_str, self, state, message)
-      });
+      arena::with(state.model.get_node_qname(node), |qname_str| Ok({
+        Error!("malformed", qname_str, self, message)
+      }))?;
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
     } else {
       // Found node.
@@ -851,9 +851,9 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        arena::with(qname, |qname_str| {
-          Error!("malformed", qname_str, self, state, message)
-        });
+        arena::with(qname, |qname_str| Ok({
+          Error!("malformed", qname_str, self, message)
+        }))?;
       }
       if let Some(lastopen_node) = lastopen {
         self.close_node_internal(&lastopen_node, state)?;
@@ -893,14 +893,14 @@ impl Document {
       // Didn't find $qname at all!!
       if strict {
         let qname = state.model.get_node_qname(node);
-        arena::with(qname, |qname_str| {
+        arena::with(qname, |qname_str| Ok({
           let message = s!(
             "Attempt to close {}, which isn't open. Currently in {:?}",
             qname_str,
-            self.get_insertion_context(None, state)
+            self.get_insertion_context(None, state)?
           );
-          Error!("malformed", qname_str, self, state, message)
-        });
+          Error!("malformed", qname_str, self, message)
+        }))?;
       }
     } else {
       // Found node.
@@ -917,11 +917,12 @@ impl Document {
               .join(", ")
           );
           if strict {
-            Error!("malformed", qname, self, state, message);
+            Error!("malformed", qname, self, message);
           } else {
-            Info!("malformed", qname, self, state, message);
+            Info!("malformed", qname, self, message);
           }
-        });
+          Ok(())
+        })?;
       }
       self.close_node_internal(node, state)?;
     }
@@ -1781,7 +1782,7 @@ impl Document {
 
   /// Return a string indicating the path to the current insertion point in the document.
   /// if $levels is defined, show only that many levels
-  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &mut State) -> String {
+  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &mut State) -> Result<String> {
     let mut levels = match levels_opt {
       None => {
         // Default depth is based on verbosity
@@ -1803,8 +1804,8 @@ impl Document {
         "Insertion point is not an element, document or text: {:?}",
         self.document.node_to_string(&node)
       );
-      Error!("internal", "context", self, state, message);
-      return String::new();
+      Error!("internal", "context", self, message);
+      return Ok(String::new());
     }
     let mut path = s!("TODO"); //TODO: Stringify($node);
     while let Some(parent_node) = node.get_parent() {
@@ -1818,7 +1819,7 @@ impl Document {
       }
       // TODO: $path = Stringify($node) . $path; }
     }
-    path
+    Ok(path)
   }
 
   /// Find the node where an element with qualified name $qname can be inserted.
@@ -1853,17 +1854,16 @@ impl Document {
 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
-      let message = arena::with(has_opened, |has_opened_str| {
-        arena::with(cur_qname, |cur_qname_str| {
-          s!(
+      let message: String = arena::with(has_opened, |has_opened_str|
+        arena::with(cur_qname, |cur_qname_str| Ok::<String,crate::common::error::Error>(
+          format!(
             "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
             has_opened_str,
             cur_qname_str,
-            self.get_insertion_context(None, state)
-          )
-        })
-      });
-      Error!("malformed", qname, self, state, message);
+            self.get_insertion_context(None, state)?
+          ))
+      ))?;
+      Error!("malformed", qname, self, message);
       Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
@@ -1894,7 +1894,7 @@ impl Document {
           s!("{:?} isn't allowed in <{}>", qname, cur_qname_str)
         });
         //"Currently in " self.getInsertionContext());
-        Error!("malformed", qname, self, state, message);
+        Error!("malformed", qname, self, message);
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
@@ -2033,7 +2033,6 @@ impl Document {
     node: &mut Node,
     key: &str,
     value: &str,
-    state: &State,
   ) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
@@ -2041,7 +2040,7 @@ impl Document {
     if key == "xml:id" || key == "id" {
       // If it's an ID attribute
       // Do id book keeping
-      self.record_id_with_node(value, node, state);
+      self.record_id_with_node(value, node);
       // TODO: Need to improve Namespace ergonomics, also in rust-libxml
       // let node_ns = self
       //   .document
@@ -2105,7 +2104,6 @@ impl Document {
     node: &mut Node,
     key: &str,
     values_str: &str,
-    state: &State,
   ) -> Result<()> {
     // $values = $values->toAttribute if ref $values;
     if !values_str.is_empty() {
@@ -2120,17 +2118,17 @@ impl Document {
           }
         }
         old.sort_unstable();
-        self.set_attribute(node, key, &old.join(" "), state)?;
+        self.set_attribute(node, key, &old.join(" "))?;
       } else {
         values.sort_unstable();
-        self.set_attribute(node, key, &values.join(" "), state)?;
+        self.set_attribute(node, key, &values.join(" "))?;
       }
     }
     Ok(())
   }
 
-  pub fn add_class(&mut self, node: &mut Node, class: &str, state: &State) -> Result<()> {
-    self.add_ss_values(node, "class", class, state)
+  pub fn add_class(&mut self, node: &mut Node, class: &str) -> Result<()> {
+    self.add_ss_values(node, "class", class)
   }
 
   //**********************************************************************
@@ -2161,7 +2159,7 @@ impl Document {
   /// which should be the `xml:id` attribute of the `node`.
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
-  fn record_id_with_node(&mut self, id: &str, node: &Node, state: &State) -> String {
+  fn record_id_with_node(&mut self, id: &str, node: &Node) -> String {
     let prev_opt = if let Some(prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
       // Can we recover?
@@ -2183,7 +2181,7 @@ impl Document {
         badid,
         self.document.node_to_string(&prev)
       );
-      Info!("malformed", "id", self, state, message);
+      Info!("malformed", "id", self, message);
     }
     self.idstore.insert(id.to_string(), node.clone());
     id.to_string()
@@ -2195,7 +2193,7 @@ impl Document {
   pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
     for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
-        let newid = self.record_id_with_node(&id, &idnode, state);
+        let newid = self.record_id_with_node(&id, &idnode);
         if newid != id {
           idnode.set_attribute("xml:id", &newid)?;
         }
@@ -2305,7 +2303,6 @@ impl Document {
             "expected",
             "id",
             self,
-            state,
             "Missing idref on ltx:XMRef",
             s!("_xmkey is `{}`", key.unwrap_or_default())
           );
@@ -2316,7 +2313,6 @@ impl Document {
               "expected",
               "node",
               self,
-              state,
               s!("No node found with id='{id}' (referred to from ltx:XMRef)")
             );
           },
@@ -2456,7 +2452,7 @@ impl Document {
         } // Change dualid refs to branchid
       } else {
         branch.set_attribute("xml:id", &dualid)?; // Just use same ID on the branch
-        self.record_id_with_node(&dualid, &branch, state);
+        self.record_id_with_node(&dualid, &branch);
       }
     }
     self.replace_tree(branch, dual, state)?;
@@ -2663,7 +2659,7 @@ impl Document {
         }
       }
     }
-    let (decoded_ns, tag) = state.model.decode_qname(qname);
+    let (decoded_ns, tag) = state.model.decode_qname(qname)?;
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
     // If this will be the document root node, things are slightly more involved.
@@ -2716,7 +2712,7 @@ impl Document {
         if key == "font" || key == "locator" {
           continue;
         }
-        self.set_attribute(&mut newnode, key, &attrs[key], state)?;
+        self.set_attribute(&mut newnode, key, &attrs[key])?;
       }
     }
     if let Some(font) = font_opt {
@@ -2779,7 +2775,7 @@ impl Document {
                   Ok(ns) => Some(ns),
                   Err(_) => {
                     let message = s!("failed to create namespace: {:?}", prefix);
-                    Error!("document", "open_element_internal", self, state, message);
+                    Error!("document", "open_element_internal", self, message);
                     None
                   },
                 }
@@ -2799,7 +2795,7 @@ impl Document {
                 Ok(ns) => Some(ns),
                 Err(_) => {
                   let message = s!("failed to create namespace: {:?}", prefix);
-                  Error!("document", "open_element_internal", self, state, message);
+                  Error!("document", "open_element_internal", self, message);
                   None
                 },
               }
@@ -2921,7 +2917,7 @@ impl Document {
               "xml:id" | "id" => {
                 // Use the replacement id
                 let mapped_id = id_map.get(&val).unwrap();
-                let newid = self.record_id_with_node(mapped_id, &new, state);
+                let newid = self.record_id_with_node(mapped_id, &new);
                 new.set_attribute(&key, &newid)?;
               },
               "idref" => {
@@ -2966,7 +2962,7 @@ impl Document {
     }
     let first_node = &nodes[0];
     let mut parent = first_node.get_parent().unwrap();
-    let (ns, tag) = state.model.decode_qname(qname);
+    let (ns, tag) = state.model.decode_qname(qname)?;
     let mut new = self.open_element_internal(&mut parent, ns, &tag, state)?;
     self.after_open(&mut new, state)?;
     parent.replace_child_node(new.clone(), first_node.clone())?;
@@ -3136,7 +3132,7 @@ impl Document {
         return Ok(Some(savenode));
       }
     } else if !self.can_contain_node_somehow(&self.node, qname, state) {
-        Warn!("malformed", qname, self, state, s!("No open node can contain element '{}'", qname));
+        Warn!("malformed", qname, self, s!("No open node can contain element '{}'", qname));
         // self.get_insertion_context())
     }
     Ok(None)
@@ -3190,7 +3186,7 @@ impl Document {
       Some(savenode)
     } else {
       let message = s!("No open node with an xml:id can get attribute {:?}", key);
-      Warn!("malformed", key, self, state, message);
+      Warn!("malformed", key, self, message);
       //  $self->getInsertionContext());
       None
     }
@@ -3204,7 +3200,7 @@ impl Document {
     self.box_to_absorb = self.localized_boxes.pop().unwrap();
   }
 
-  pub fn load_labels_for_rewrite(&mut self, state: &mut State) {
+  pub fn load_labels_for_rewrite(&mut self, state: &mut State) -> Result<()> {
     for node in self.findnodes("//*[@labels]", None, state) {
       if let Some(labels) = node.get_attribute("labels") {
         if let Some(id) = node.get_attribute("id") {
@@ -3218,12 +3214,12 @@ impl Document {
             "malformed",
             "label",
             None,
-            None,
             format!("Node {} has labels but no xml:id", node.get_name())
           );
         }
       }
     }
+    Ok(())
   }
 
   fn set_local_font(&mut self, arg: Rc<Font>) { self.localized_fonts.push(arg); }
@@ -3278,7 +3274,7 @@ impl Document {
         + &ctr;
 
       ancestor.set_attribute(&ctrkey, &ctr)?;
-      self.set_attribute(node, "xml:id", &id, state)?;
+      self.set_attribute(node, "xml:id", &id)?;
     }
     Ok(())
   }

@@ -128,7 +128,7 @@ impl<'t> Stomach {
           terminal,
           start_location
         );
-        Warn!("expected", terminal, self, state, message);
+        Warn!("expected", terminal, self, message);
       }
     }
     // and add a Dummy `trailer' if none explicit.
@@ -280,7 +280,7 @@ impl<'t> Stomach {
               token,
               cc
             );
-            Error!("misdefined", token, self, state, &message);
+            Error!("misdefined", token, self, &message);
             if let Some(digested) = self.invoke_token_simple(meaning, state)? {
               result.push(digested);
             }
@@ -365,7 +365,7 @@ impl<'t> Stomach {
     state: &mut State,
   ) -> Result<Vec<Digested>> {
     let cs = token.with_cs_name(|cs| String::from(cs));
-    state.note_status("undefined", &cs);
+    note_status(LogStatus::Undefined, Some( &cs));
 
     // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
@@ -376,7 +376,6 @@ impl<'t> Stomach {
         "undefined",
         token,
         self,
-        state,
         &message,
         "Defining it now as with \\newif"
       );
@@ -388,7 +387,7 @@ impl<'t> Stomach {
           Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iftrue")),
           None,
           state,
-        ),
+        )?,
         None,
       );
       state.install_definition(
@@ -398,7 +397,7 @@ impl<'t> Stomach {
           Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")),
           None,
           state,
-        ),
+        )?,
         None,
       );
 
@@ -412,7 +411,6 @@ impl<'t> Stomach {
         "undefined",
         token,
         self,
-        state,
         &message,
         "Defining it now as <ltx:ERROR/>"
       );
@@ -511,7 +509,6 @@ impl<'t> Stomach {
             "unexpected",
             "runtime",
             self,
-            state,
             "TODO: gullet had no active runtime"
           );
           break;
@@ -525,7 +522,6 @@ impl<'t> Stomach {
           "unexpected",
           "<closed>",
           self,
-          state,
           "TODO: Mouth is unexpectedly already closed"
         );
         // Error('unexpected', '<closed>', $gullet, "Mouth is unexpectedly already closed",
@@ -550,7 +546,7 @@ impl<'t> Stomach {
             "Finished reading from {}, but it still has input.",
             stringify_mouth
           );
-          Error!("unexpected", "next", gullet, state, message, detail);
+          Error!("unexpected", "next", gullet, message, detail);
           {
             if let Some(ref mut runtime) = gullet.mouth {
               runtime.mouth.finish(state);
@@ -690,7 +686,6 @@ impl<'t> Stomach {
         "unexpected",
         state.get_current_token().unwrap(),
         self,
-        state,
         "Attempt to close boxing group"
       );
     } else {
@@ -711,7 +706,6 @@ impl<'t> Stomach {
         "unexpected",
         state.get_current_token().unwrap().to_string(),
         self,
-        state,
         s!(
           "Attempt to close non-boxing group; {}",
           self.current_frame_message(state)
@@ -798,7 +792,7 @@ impl<'t> Stomach {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
       };
-      Error!("unexpected", category, self, state, &message); // self.currentFrameMessage);
+      Error!("unexpected", category, self, &message); // self.currentFrameMessage);
     } else {
       // Don"t pop if there"s an error; maybe we'll recover?
       self.pop_stack_frame(false, state)?;

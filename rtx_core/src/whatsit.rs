@@ -78,17 +78,18 @@ impl Whatsit {
   }
 
   /// A Whatsit is empty if it is marked empty, or space-like, or has an empty body.
-  pub fn is_empty(&self) -> bool {
+  pub fn is_empty(&self) -> Result<bool> {
+    Ok(
     // 1. A space-like thing
     // 2. An environment-like structure with an empty body
     // TODO: For now it is difficult to pass in a State with an initialized TeX.pool.
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
       || (self.get_definition().get_cs_name() == "Begin"
-        && match self.get_body() {
-          Some(b) => b.unlist_ref().iter().all(|inner| inner.is_empty()),
-          None => true,
-        })
+        && match self.get_body()? {
+            Some(b) => b.unlist_ref().iter().all(|inner| inner.is_empty().unwrap_or(false)),
+            None => true,
+        }))
   }
   /// sets a pre-assembled HashMap of properties
   pub fn set_properties(&mut self, props: HashMap<String, Stored>) {
@@ -321,7 +322,7 @@ impl Object for Whatsit {
     };
 
     if !is_closure {
-      if let Some(body) = self.get_body() {
+      if let Some(body) = self.get_body()? {
         tokens.extend(body.revert(state)?.unlist());
         if let Some(trailer) = self.get_trailer() {
           tokens.extend(trailer.revert(state)?.unlist());
@@ -373,11 +374,11 @@ impl BoxOps for Whatsit {
     self.definition.do_absorbtion(document, self, state)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
   }
-  fn get_body(&self) -> Option<Digested> {
-    match self.properties.get("body") {
+  fn get_body(&self) -> Result<Option<Digested>> {
+    Ok(match self.properties.get("body") {
       Some(Stored::Digested(body)) => Some(body.clone()),
       _ => None,
-    }
+    })
   }
 
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {

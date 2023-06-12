@@ -79,7 +79,7 @@ fn unit_examples() {
     T_END!(),
     T_LETTER!("z")
   )
-  .pack_parameters();
+  .pack_parameters().unwrap();
   let subst = pattern.substitute_parameters(&[
     T_LETTER!("u").into(),
     T_LETTER!("v").into(),

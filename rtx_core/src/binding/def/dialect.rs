@@ -119,7 +119,7 @@ pub fn def_conditional(
   options: ConditionalOptions,
   gullet: &mut Gullet,
   state: &mut State,
-) {
+) -> Result<()> {
   let locked_key = if let Some(true) = options.locked {
     arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked"))
   } else {
@@ -157,14 +157,14 @@ pub fn def_conditional(
           Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")),
           None,
           state,
-        );
+        )?;
         def_macro(
           T_CS!(s!("\\{}false", name)),
           None,
           Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
           None,
           state,
-        );
+        )?;
         state.let_i(&cs, &T_CS!("\\iffalse"), None, gullet);
       } else {
         //  For \ifcase, the parameter list better be a single Number !!
@@ -184,13 +184,14 @@ pub fn def_conditional(
         "The conditional {} is being defined but doesn't start with \\if",
         cs
       );
-      Error!("misdefined", cs, None, state, message);
+      Error!("misdefined", cs, None, message);
     }
   }
 
   if let Some(true) = options.locked {
     state.assign_value(&locked_key, true, None);
   }
+  Ok(())
 }
 
 /// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
@@ -202,7 +203,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   expansion: T,
   options_opt: Option<ExpandableOptions>,
   state: &mut State,
-) {
+) -> Result<()> {
   let expansion_opt: Option<ExpansionBody> = expansion.into();
   // TODO: The None case could be refactored to feel much cleaner.
   // For now it's equivalent to Tokens!()
@@ -222,17 +223,18 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     None
   };
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone(), state)
+    def_robust_cs(cs, options.locked, options.scope.clone(), state)?
   } else {
     cs
   };
   state.install_definition(
-    Expandable::new(defcs, paramlist, expansion, Some(options), state),
+    Expandable::new(defcs, paramlist, expansion, Some(options), state)?,
     scope,
   );
   if let Some(locked_key) = locked_key_opt {
     state.assign_value(&locked_key, true, Some(Scope::Global));
   }
+  Ok(())
 }
 
 /// configuration for creating a new Register
@@ -294,9 +296,9 @@ pub fn def_register<T: Into<RegisterValue>>(
     Some(setter) => setter.clone(),
     None => {
       if readonly {
-        Rc::new(move |_value, _args, state| {
+        Rc::new(move |_value, _args, _state| {
           let message = s!("Can't assign to register {}", setter_name);
-          Warn!("unexpected", setter_name, None, state, message);
+          Warn!("unexpected", setter_name, None, message);
         })
       } else {
         Rc::new(move |value, args, state| {
@@ -347,7 +349,7 @@ pub fn def_primitive(
   compiled_replacement: Option<PrimitiveClosure>,
   options: PrimitiveOptions,
   state: &mut State,
-) {
+) -> Result<()> {
   let options_locked = options.locked;
   let scope = options.scope;
   let mut before_digest_env: Vec<BeforeDigestClosure> = Vec::new();
@@ -403,7 +405,7 @@ pub fn def_primitive(
   }
   //  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
   let defcs = if options.robust {
-    def_robust_cs(cs, options.locked, scope.clone(), state)
+    def_robust_cs(cs, options.locked, scope.clone(), state)?
   } else {
     cs
   };
@@ -425,6 +427,7 @@ pub fn def_primitive(
   if options_locked {
     state.assign_value(&s!("{}:locked", cs_name), true, None);
   }
+  Ok(())
 }
 
 /// Advanced math replacements require a XMDual representation
@@ -434,13 +437,13 @@ pub fn def_math_dual(
   presentation: String,
   options: MathPrimitiveOptions,
   state: &mut State,
-) {
+) -> Result<()> {
   let (cont_cs_str, pres_cs_str) =
     cs.with_str(|csname| (s!("{csname}@content"), s!("{csname}@presentation")));
   let cont_cs = T_CS!(cont_cs_str);
   let pres_cs = T_CS!(pres_cs_str);
   let defcs = if options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)?
   } else {
     cs.clone()
   };
@@ -512,7 +515,7 @@ pub fn def_math_dual(
         ..ExpandableOptions::default()
       }),
       state,
-    ),
+    )?,
     options.scope.clone(),
   );
 
@@ -527,7 +530,7 @@ pub fn def_math_dual(
         ..ExpandableOptions::default()
       }),
       state,
-    ),
+    )?,
     options.scope.clone(),
   );
 
@@ -598,6 +601,7 @@ pub fn def_math_dual(
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
   state.install_definition(content_constructor, scope);
+  Ok(())
 }
 
 /// EXPERIMENT: Introduce an intermediate case for simple symbols
@@ -654,7 +658,7 @@ pub fn def_math_constructor(
   presentation: String,
   mut options: MathPrimitiveOptions,
   state: &mut State,
-) {
+) -> Result<()> {
   // TODO: do we need to do anything about digesting the presentation?
   let nargs = paramlist
     .as_ref()
@@ -666,7 +670,7 @@ pub fn def_math_constructor(
   //   None
   // };
   let defcs = if options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)?
   } else {
     cs.clone()
   };
@@ -829,6 +833,7 @@ pub fn def_math_constructor(
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut constructor);
   state.install_definition(constructor, scope);
+  Ok(())
 }
 
 fn infer_sizer(
@@ -844,7 +849,7 @@ fn infer_sizer(
   }
 }
 
-fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut State) -> Token {
+fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut State) -> Result<Token> {
   let cs_str = cs.with_str(|cstr| format!("{} ", cstr));
   let defcs = T_CS!(cs_str);
   let return_cs = defcs.clone();
@@ -855,10 +860,10 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>, state: &mut Stat
   };
   // scope should be \x@protect?
   state.install_definition(
-    Expandable::new(cs, None, expansion, Some(options), state),
+    Expandable::new(cs, None, expansion, Some(options), state)?,
     scope,
   );
-  return_cs
+  Ok(return_cs)
 }
 
 /// The Constructor is where LaTeXML really starts getting interesting;
@@ -1037,7 +1042,7 @@ pub fn def_environment(
       Some(ExpansionBody::Tokens(Tokens!(body))),
       None,
       state,
-    );
+    )?;
   });
   before_digest_env.push(current_environment_closure);
 
@@ -1112,7 +1117,6 @@ pub fn def_environment(
         "unexpected",
         end_name_clone,
         stomach,
-        state,
         message1,
         message2
       );
@@ -1225,7 +1229,7 @@ pub fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
     T_CS!("\\@@XMARG@ID"),
     None,
     Tokens!(Explode!(state
-      .lookup_register("\\c@@XMARG", Vec::new())
+      .lookup_register("\\c@@XMARG", Vec::new())?
       .unwrap()
       .value_of())),
     Some(ExpandableOptions {
@@ -1233,7 +1237,7 @@ pub fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
   gullet.do_expand(T_CS!("\\the@XMARG@ID"), state)
 }
 
@@ -1339,7 +1343,7 @@ pub fn def_math(
   presentation: String,
   mut options: MathPrimitiveOptions,
   state: &mut State,
-) {
+) -> Result<()> {
   // Can't defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist && !ref $paramlist;
 
@@ -1412,18 +1416,19 @@ pub fn def_math(
     //((ref presentation eq "CODE")
     // || ((ref presentation) && grep { $_->equals(T_PARAM) } presentation->unlist)
     // || ((ref presentation) && (grep { $_->isExecutable } presentation->unlist)))
-    def_math_dual(cs, paramlist, presentation, options, state);
+    def_math_dual(cs, paramlist, presentation, options, state)?;
   }
   // EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
   else if nargs == 0 && !options.has_complex_option() {
     def_math_primitive(cs, paramlist, presentation, options, state);
   } else {
-    def_math_constructor(cs, paramlist, presentation, options, state);
+    def_math_constructor(cs, paramlist, presentation, options, state)?;
   }
   if locked {
     state.assign_value(&format!("{csname}:locked"), true, None);
   }
+  Ok(())
 }
 
 /// Transfers the common MathPrimitive options to a (ideally freshly instantiated) Constructor.

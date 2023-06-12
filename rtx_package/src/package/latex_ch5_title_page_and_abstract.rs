@@ -88,11 +88,11 @@ LoadDefinitions!(state, {
     if i <= 1 { }
     else if i == nauthors {
       let author_conj = Digest!(T_CS!("\\lx@author@conj"), state)?;
-      document.set_attribute(&mut node, "before", &author_conj.to_string(), state)?;
+      document.set_attribute(&mut node, "before", &author_conj.to_string())?;
 
     } else {
       let author_sep = Digest!(T_CS!("\\lx@author@sep"), state)?;
-      document.set_attribute(&mut node, "before", &author_sep.to_string(), state)?;
+      document.set_attribute(&mut node, "before", &author_sep.to_string())?;
     }
   });
 
@@ -164,7 +164,7 @@ LoadDefinitions!(state, {
       let regurgitated = List::new(stomach.box_list.clone(), state);
       let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => Fatal!(TexPool, Expected, stomach, state,
+        _ => Fatal!(TexPool, Expected, stomach,
              "Global TeX Frontmatter hash was not available, should never happen"),
       };
       let abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);

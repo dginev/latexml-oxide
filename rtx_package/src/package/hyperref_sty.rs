@@ -440,7 +440,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\lx@autorefnum@@{}", sub[gullet,(ttype),state] {
     let type_s  = ttype.unwrap().to_string();
-    let mut tokens = if state.lookup_definition(&T_CS!(s!("\\{type_s}autorefname"))).is_some() {
+    let mut tokens = if state.lookup_definition(&T_CS!(s!("\\{type_s}autorefname")))?.is_some() {
       vec![T_CS!(format!("\\{type_s}autorefname")), T_CS!("\\nobreakspace")]
     } else {
       Vec::new()
@@ -453,7 +453,7 @@ LoadDefinitions!(state, {
     };
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
-    if state.lookup_definition(&pcounter).is_some() {
+    if state.lookup_definition(&pcounter)?.is_some() {
       tokens.push(pcounter);
     }
     tokens.push(thecounter);

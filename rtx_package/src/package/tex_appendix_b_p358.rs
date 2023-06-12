@@ -352,7 +352,7 @@ LoadDefinitions!(state, {
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         not_node.remove_attribute("xml:id")?;
         document.unrecord_id(&id);
-        document.set_attribute(&mut strike, "xml:id", &id, state)?;
+        document.set_attribute(&mut strike, "xml:id", &id)?;
         document.get_node_mut().add_child(thing)?;
         document.close_element("ltx:XMApp", state)?;
       }
@@ -364,11 +364,11 @@ LoadDefinitions!(state, {
       }
 
       if let Some(meaning) = thing.get_attribute("meaning") {
-        document.set_attribute(thing, "meaning",  &format!("not-{meaning}"), state)?; }
+        document.set_attribute(thing, "meaning",  &format!("not-{meaning}"))?; }
       if let Some(name) = thing.get_attribute("name") {
-        document.set_attribute(thing, "name", &format!("not-{name}"), state)?; }
+        document.set_attribute(thing, "name", &format!("not-{name}"))?; }
       else if !text.is_empty() {
-        document.set_attribute(thing, "name", &format!("not-{text}"), state)?; }
+        document.set_attribute(thing, "name", &format!("not-{text}"))?; }
 
       let known_c = MATH_CHAR_NEGATIONS.get(&text);
       let new : Cow<'_, str> = match known_c {

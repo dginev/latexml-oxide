@@ -51,7 +51,7 @@ LoadDefinitions!(state, {
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
             arena::with(class_sym, |class_str|
-              document.set_attribute(&mut node, "class", class_str, state))?;
+              document.set_attribute(&mut node, "class", class_str))?;
           } else if qname == arena::pin_static("ltx:figure") {
             // insert breaks in figures, for vertically separating subfigures
             document.insert_element("ltx:break",Vec::new(), None, state)?;
@@ -72,7 +72,7 @@ LoadDefinitions!(state, {
           state.assign_value("next_para_class", Stored::None, None);
         }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if state.lookup_register("\\parindent",Vec::new()).unwrap().value_of() == 0 {
+        if state.lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
           state.assign_value("next_para_class", "ltx_noindent", None);
         }

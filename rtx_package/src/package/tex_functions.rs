@@ -42,7 +42,7 @@ pub fn neutralize_font(state: &mut State) {
   state.assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
-pub fn today(state: &mut State) -> String {
+pub fn today(state: &mut State) -> Result<String> {
   let month_names = [
     "January",
     "February",
@@ -58,10 +58,10 @@ pub fn today(state: &mut State) -> String {
     "December",
   ];
   let month =
-    month_names[state.lookup_register("\\month", vec![]).unwrap().value_of() as usize - 1];
-  let day = state.lookup_register("\\day", vec![]).unwrap().value_of();
-  let year = state.lookup_register("\\year", vec![]).unwrap().value_of();
-  s!("{} {}, {}", month, day, year)
+    month_names[state.lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
+  let day = state.lookup_register("\\day", vec![])?.unwrap().value_of();
+  let year = state.lookup_register("\\year", vec![])?.unwrap().value_of();
+  Ok(s!("{} {}, {}", month, day, year))
 }
 
 pub fn parse_def_parameters(
@@ -70,7 +70,7 @@ pub fn parse_def_parameters(
   state: &mut State,
 ) -> Result<Option<Parameters>> {
   let mut tokens: VecDeque<Token> =
-    VecDeque::from(params_in.pack_parameters().unlist());
+    VecDeque::from(params_in.pack_parameters()?.unlist());
   // Now, recognize parameters and delimiters.
   let mut params = Vec::new();
   let mut n = 0;
@@ -212,7 +212,7 @@ pub fn do_def(
         ..ExpandableOptions::default()
       }),
       state,
-    ),
+    )?,
     scope,
   );
   state.after_assignment(stomach.get_gullet_mut());
@@ -222,18 +222,18 @@ pub fn do_def(
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
-pub fn classify_box(boxnum: Number, state: &State) -> &'static str {
+pub fn classify_box(boxnum: Number, state: &State) -> Result<&'static str> {Ok(
   match state.lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match d.data() {
       DigestedData::Whatsit(ref w)
-        if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox")).unwrap() =>
+        if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
       {
         "vbox"
       },
       _ => "hbox",
     },
     _ => "",
-  }
+  })
 }
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
@@ -412,7 +412,6 @@ pub fn insert_block(
     &mut document.get_element().unwrap(),
     "_vertical_mode_",
     "true",
-    state,
   )?; // HACK!!!! (see \hbox)
 
   document.absorb(contents, None, state)?;
@@ -478,7 +477,7 @@ pub fn insert_block(
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
       let mut cfirst = crows.pop_front().unwrap();
       for (key, val) in blockattr {
-        document.set_attribute(&mut cfirst, &key, &val, state)?;
+        document.set_attribute(&mut cfirst, &key, &val)?;
       }
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
@@ -493,7 +492,7 @@ pub fn insert_block(
     {
       let mut first = rows.remove(0);
       for (key, val) in blockattr {
-        document.set_attribute(&mut first, &key, &val, state)?;
+        document.set_attribute(&mut first, &key, &val)?;
       }
       document.unwrap_nodes(blocknode)?;
     }
@@ -531,7 +530,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
         document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
       };
       // Now record that it originally was marked as math
-      document.add_class(&mut text, "ltx_markedasmath", state)?;
+      document.add_class(&mut text, "ltx_markedasmath")?;
       texts.push(text)
     }
     document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
@@ -991,7 +990,7 @@ pub fn set_align_or_class(
       .model
       .can_have_attribute(qname, arena::pin_static("class"))
   {
-    document.add_class(node, class, state)?;
+    document.add_class(node, class)?;
   }
   Ok(())
 }
@@ -1029,13 +1028,13 @@ pub fn make_generic_message(
   //   return ('latex', $cmd, $stomach, $message);
   match kind {
     "error" => {
-      Error!("latex", cmd, stomach, state, message);
+      Error!("latex", cmd, stomach, message);
     },
     "warn" => {
-      Warn!("latex", cmd, stomach, state, message);
+      Warn!("latex", cmd, stomach, message);
     },
     "info" => {
-      Info!("latex", cmd, stomach, state, message);
+      Info!("latex", cmd, stomach, message);
     },
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };

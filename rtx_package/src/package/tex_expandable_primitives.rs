@@ -38,10 +38,13 @@ LoadDefinitions!(outer_state, {
       } else {
         t
       }});
-    let token = token_opt.unwrap_or_else(|| {
-      Error!("expected", "ExpandedIfToken", gullet, state,
-        "conditional expected a token argument, came back empty. Falling back to \\@empty");
-      T_CS!("\\@empty") });
+    let token = match token_opt {
+      Some(t) => t,
+      None => {
+        Error!("expected", "ExpandedIfToken", gullet,
+          "conditional expected a token argument, came back empty. Falling back to \\@empty");
+        T_CS!("\\@empty")
+      }};
     if token.has_smuggled() {    // marked dont_expand
       let smuggled = token.get_dont_expand().as_ref().unwrap();
       if smuggled.get_catcode() == Catcode::ACTIVE {
@@ -67,9 +70,9 @@ LoadDefinitions!(outer_state, {
     state.x_equals(&left, &right)
   });
 
-  DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
-  DefConditional!("\\ifhbox Number", sub[_g, (arg), state] { classify_box(arg, state) == "hbox" });
-  DefConditional!("\\ifvbox Number", sub[_g, (arg), state] { classify_box(arg, state) == "vbox" });
+  DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state)?.is_empty() });
+  DefConditional!("\\ifhbox Number", sub[_g, (arg), state] { classify_box(arg, state)? == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[_g, (arg), state] { classify_box(arg, state)? == "vbox" });
 
   DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
@@ -255,14 +258,14 @@ LoadDefinitions!(outer_state, {
       }
       match token.get_catcode() {
         Catcode::CS => {
-          if let Some(defn) = state.lookup_definition(&token) {
+          if let Some(defn) = state.lookup_definition(&token)? {
             let message =
               s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
                 token);
-            Error!("unexpected", token, gullet, state, message);
+            Error!("unexpected", token, gullet, message);
           } else {
             let message = s!("The token {:?} is not defined", token);
-            Error!("undefined", token, gullet, state, message);
+            Error!("undefined", token, gullet, message);
           }
         },
         Catcode::SPACE => {  // Keep newlines from having \n!
@@ -285,12 +288,12 @@ LoadDefinitions!(outer_state, {
   });
 
   DefPrimitive!("\\endcsname", sub[stomach, (), state] {
-    Error!("unexpected" ,"\\endcsname", stomach, state, "Extra \\endcsname");
+    Error!("unexpected" ,"\\endcsname", stomach, "Extra \\endcsname");
   });
 
   DefMacro!("\\expandafter Token Token", sub[gullet, (tok, xtok), state] {
     let mut tokens : Vec<Token> = vec![tok];
-    if let Some(defn) = state.lookup_expandable(&xtok, false) {
+    if let Some(defn) = state.lookup_expandable(&xtok, false)? {
       state.local_current_token(xtok);
       let invoked = defn.invoke(gullet, true, state)?;
       if !invoked.is_empty() {
@@ -375,7 +378,7 @@ LoadDefinitions!(outer_state, {
       };
       tokens
     } else {
-      Error!("expected", "<register>", gullet, state, "a register was expected to be here");
+      Error!("expected", "<register>", gullet, "a register was expected to be here");
       Vec::new()
     }
   });
@@ -383,7 +386,7 @@ LoadDefinitions!(outer_state, {
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 fn escapechar(state: &mut State) -> String {
-  let code: i64 = match state.lookup_register("\\escapechar", Vec::new()) {
+  let code: i64 = match state.lookup_register("\\escapechar", Vec::new()).unwrap() {
     Some(RegisterValue::Number(v)) => v.value_of(),
     _ => -1,
   };
@@ -413,7 +416,8 @@ fn compare(u: i64, rel: Token, v: i64) -> bool {
       rel,
       rel.get_catcode()
     );
-    Error!("expected", "<relationaltoken>", None, None, message);
+    let err = || {Error!("expected", "<relationaltoken>", None, message); Ok(())};
+    err().ok();
     false
   }
 }

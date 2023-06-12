@@ -13,13 +13,14 @@ use std::result::Result;
 
 fn main() -> Result<(), Box<dyn Error>> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {
+    let err = || {
     Error!(
       "rtx",
       "logger",
       None,
-      None,
       "Failed to load logger. Please check rtx_core::util::logger installed correctly."
-    );
+    ); Ok(()) };
+    err().ok();
   }
   let mut argv = env::args();
   argv.next();
@@ -27,13 +28,13 @@ fn main() -> Result<(), Box<dyn Error>> {
   let source = match argv.next() {
     Some(s) => s,
     None => {
-      Error!(
+      let err = || {Error!(
         "rtx",
         "",
         None,
-        None,
         "Please provide a source document! Exiting..."
-      );
+      ); Ok(()) };
+      err().ok();
       process::exit(1);
     },
   };
@@ -53,7 +54,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
     let message = s!("Could not prepare converter session! : {}", e);
-    Error!("rtx", "session", None, None, message);
+    let err = || {Error!("rtx", "session", None, message); Ok(())};
+    err().ok();
     process::exit(1);
   }
   // Perform the conversion:

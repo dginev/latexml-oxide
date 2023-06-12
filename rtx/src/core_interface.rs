@@ -187,7 +187,7 @@ impl DigestionAPI for Core {
         load_model!(state, "LaTeXML");
       } else {
         // Eager-load at runtime
-        state.model.load_schema(schema_paths.as_slice()); // If needed?
+        state.model.load_schema(schema_paths.as_slice())?; // If needed?
       }
 
       if !state.search_paths.is_empty() {
@@ -234,7 +234,7 @@ impl DigestionAPI for Core {
     if has_rewrites {
       note_begin("Rewriting");
       document.mark_xmnode_visibility(state)?;
-      document.load_labels_for_rewrite(state);
+      document.load_labels_for_rewrite(state)?;
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
@@ -324,7 +324,7 @@ impl DigestionAPI for Core {
       // ext = pathname::extension(&request);
       } else {
         let message = s!("Can't find {} file {} ", mode, request);
-        fatal!(Core, MissingFile, self, None, message);
+        fatal!(Core, MissingFile, self, message);
       }
     }
     note_begin(&s!("Digesting {} {}", mode, name));

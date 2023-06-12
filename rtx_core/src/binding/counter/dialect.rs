@@ -132,9 +132,9 @@ pub fn new_counter(
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
   let p_ctr_cs = T_CS!(&s!("\\p@{}", ctr));
-  if state.lookup_definition(&p_ctr_cs).is_none() {
+  if state.lookup_definition(&p_ctr_cs)?.is_none() {
     def_macro(
       p_ctr_cs,
       None,
@@ -144,7 +144,7 @@ pub fn new_counter(
         ..ExpandableOptions::default()
       }),
       state,
-    );
+    )?;
   }
 
   let mut prefix = match options_opt {
@@ -201,7 +201,7 @@ pub fn new_counter(
           ..ExpandableOptions::default()
         }),
         state,
-      )
+      )?;
     } else {
       def_macro(
         T_CS!(thectrid),
@@ -220,7 +220,7 @@ pub fn new_counter(
           ..ExpandableOptions::default()
         }),
         state,
-      );
+      )?;
     }
     def_macro(
       T_CS!(s!("\\@{}@ID", ctr)),
@@ -231,7 +231,7 @@ pub fn new_counter(
         ..ExpandableOptions::default()
       }),
       state,
-    );
+    )?;
   }
 
   Ok(())
@@ -241,14 +241,14 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Number {
   match state.lookup_number(&s!("\\c@{}", ctr)) {
     None => {
       let message = s!("Counter {} was not defined; assuming 0", ctr);
-      Warn!("undefined", ctr, None, state, message);
+      Warn!("undefined", ctr, None, message);
       Number::new(0)
     },
     Some(value) => value,
   }
 }
 /// increments a named counter by a `Number`
-pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) {
+pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) -> Result<()> {
   let v = counter_value(ctr, state).add(value);
   state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
   state.after_assignment(gullet);
@@ -262,7 +262,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )
 }
 
 /// Analog of `\stepcounter`, steps the counter and returns the expansion of
@@ -293,13 +293,13 @@ pub fn step_counter(
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
 
   // and reset any within counters!
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        reset_counter(&c, state);
+        reset_counter(&c, state)?;
       }
     }
   }
@@ -335,13 +335,13 @@ pub fn step_counter_gullet(
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
 
   // and reset any within counters!
   if !noreset {
     if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
       for c in nested.unlist() {
-        reset_counter(&c, state);
+        reset_counter(&c, state)?;
       }
     }
   }
@@ -367,7 +367,7 @@ pub fn ref_step_counter(
   step_counter(&ctr, noreset, stomach, state)?;
   maybe_preempt_refnum(&ctr, false, stomach.get_gullet_mut(), state);
 
-  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{ctr}@ID"))) {
+  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{ctr}@ID")))? {
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
@@ -388,7 +388,7 @@ pub fn ref_step_counter(
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
   if has_id {
     def_macro(
       T_CS!("\\@currentID"),
@@ -399,7 +399,7 @@ pub fn ref_step_counter(
         ..ExpandableOptions::default()
       }),
       state,
-    );
+    )?;
   }
 
   let id = if has_id {
@@ -565,16 +565,16 @@ pub fn ref_step_id(
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
 
   let thectr = s!("\\the{ctr}@ID");
-  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state);
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state)?;
   Ok(stored_map!("id" =>
     clean_id(&digest_literal(T_CS!(thectr), stomach, state)?.to_string())))
 }
 
 /// Resets the counter `ctr` to zero.
-pub fn reset_counter(ctr: &Token, state: &mut State) {
+pub fn reset_counter(ctr: &Token, state: &mut State) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{}@ID", ctr)));
   state.assign_value(&c_ctr, Number::new(0), Some(Scope::Global));
@@ -591,12 +591,13 @@ pub fn reset_counter(ctr: &Token, state: &mut State) {
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )?;
   // and reset any within counters!
   let nested = state.lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
   for c in nested.unlist() {
-    reset_counter(&c, state);
+    reset_counter(&c, state)?;
   }
+  Ok(())
 }
 
 /// Create id, and tags for an itemize type \item
@@ -673,7 +674,7 @@ pub fn ref_step_item_counter(
     tag_tokens.push(T_END!());
 
     let tags = stomach.digest(tag_tokens, state)?;
-    if !tags.is_empty() {
+    if !tags.is_empty()? {
       props.insert("tags".to_string(), tags.into());
     }
     props
@@ -751,7 +752,7 @@ pub fn begin_itemize(
     Tokens!(Explode!(usecounter)),
     None,
     state,
-  );
+  )?;
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
   state.assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
@@ -771,7 +772,7 @@ pub fn begin_itemize(
       mouth::tokenize_internal(&theexpansion),
       None,
       state,
-    );
+    )?;
 
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
@@ -787,7 +788,7 @@ pub fn begin_itemize(
   }
   // format the id of \item's relative to the id of this list
   let useexp = mouth::tokenize_internal(&s!("\\the{listcounter}@ID.i\\@{usecounter}@ID"));
-  def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None, state);
+  def_macro(T_CS!(s!("\\the{usecounter}@ID")), None, useexp, None, state)?;
 
   let mut series = if let Some(s) = options.series {
     s.to_string()
@@ -797,7 +798,7 @@ pub fn begin_itemize(
   if let Some(start) = options.start {
     SetCounter!(usecounter, start, stomach, state);
     let gullet = stomach.get_gullet_mut();
-    add_to_counter(&usecounter, Number(-1), gullet, state);
+    add_to_counter(&usecounter, Number(-1), gullet, state)?;
   } else if let Some(s) = match options.resume {
     Some(s) => Some(s),
     None => options.resume_star,
@@ -810,7 +811,7 @@ pub fn begin_itemize(
       //   state);
     }
   } else {
-    reset_counter(&T_OTHER!(&usecounter), state);
+    reset_counter(&T_OTHER!(&usecounter), state)?;
   }
 
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false, stomach, state)?;

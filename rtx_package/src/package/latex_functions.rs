@@ -143,24 +143,24 @@ fn relocate_footnote_aux(
   // textnote.get_parent().unwrap().remove_child(textnote);
   textnote.unlink();
   document.append_clone(marknote, textnote.get_child_nodes(), state)?;
-  document.set_attribute(marknote, "role", notetype, state)?;
+  document.set_attribute(marknote, "role", notetype)?;
   if let Some(labels) = textnote.get_attribute("labels") {
     document.generate_id(marknote, "", state)?;
-    document.set_attribute(marknote, "labels", &labels, state)?;
+    document.set_attribute(marknote, "labels", &labels)?;
   }
   Ok(())
 }
 
-pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) {
+pub fn only_preamble(cs: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
   if !state.lookup_bool("inPreamble") {
     Error!(
       "unexpected",
       cs,
       stomach,
-      state,
       "The current command '{cs}' can only appear in the preamble"
     );
   }
+  Ok(())
 }
 
 pub fn tabular_bindings(
@@ -205,7 +205,7 @@ pub fn tabular_bindings(
     properties.insert(
       String::from("strut"),
       state
-        .lookup_register("\\baselineskip", Vec::new())
+        .lookup_register("\\baselineskip", Vec::new())?
         .unwrap()
         .multiply(Float::new_f64(1.5))
         .into(),
@@ -230,10 +230,10 @@ pub fn tabular_bindings(
     "@column@after",
   ] {
     let cs = T_CS!(s!("\\{name}"));
-    let cs_def = state.lookup_definition(&cs).unwrap();
+    let cs_def = state.lookup_definition(&cs)?.unwrap();
     let mut expansion = cs_def.get_expansion().cloned().unwrap_or_default();
     expansion.push(T_CS!(s!("\\@tabular{name}")));
-    def_macro(cs, None, expansion, None, state);
+    def_macro(cs, None, expansion, None, state)?;
   }
   Ok(())
 }

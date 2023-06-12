@@ -169,7 +169,6 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
         "unexpected",
         "keyval",
         None,
-        state,
         s!(
           "No parameters in keyval {key} (in set {keyset} with prefix {prefix}) taking only first"
         )
@@ -181,7 +180,6 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
           "unexpected",
           "keyval",
           None,
-          state,
           "Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
           taking only first"
         );
@@ -214,7 +212,7 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
       )),
       None,
       state,
-    );
+    )?;
   }
 
   // figure out the kind of key-val parameter we are defining
@@ -257,7 +255,6 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
       "unknown",
       "undef",
       None,
-      state,
       s!(
         "Unknown KeyVals kind {kind} should be one of\
      'ordinary', 'command', 'choice', 'boolean'. "
@@ -275,8 +272,7 @@ fn define_ordinary(
 ) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
   let plain_params = parse_parameters("{}", &qname_cs, Some(state))?;
-  def_macro(qname_cs, plain_params, code_expansion, None, state);
-  Ok(())
+  def_macro(qname_cs, plain_params, code_expansion, None, state)
 }
 
 /// Helper function to define state neccesary for a command key.
@@ -292,7 +288,7 @@ fn define_command(
   let orig = s!("\\ltxml@orig@{qname}");
   let macroname_cs = s!("\\{macroname}");
   let closure: ExpansionClosure = Rc::new(move |_gullet, value: Vec<ArgWrap>, istate| {
-    def_macro(T_CS!(&orig), plainp.clone(), code.clone(), None, istate);
+    def_macro(T_CS!(&orig), plainp.clone(), code.clone(), None, istate)?;
     let value_tks: Vec<Token> = value
       .into_iter()
       .flat_map(|v| {
@@ -321,8 +317,7 @@ fn define_command(
     ExpansionBody::Closure(closure),
     None,
     state,
-  );
-  Ok(())
+  )
 }
 
 /// Helper function to define state neccesary for an choice key.
@@ -359,7 +354,7 @@ fn define_choice(
         ExpansionBody::Tokens(Tokens::new(Explode!(nvalue))),
         None,
         istate,
-      );
+      )?;
     }
     // iterate over the possible choices and store them
     let mut index = 0;
@@ -374,7 +369,7 @@ fn define_choice(
             ExpansionBody::Tokens(Tokens::new(Explode!(index))),
             None,
             istate,
-          );
+          )?;
         }
         index += 1;
       }
@@ -390,7 +385,7 @@ fn define_choice(
           code.clone(),
           None,
           istate,
-        );
+        )?;
         tokens.push(orig.clone());
         tokens.push(T_BEGIN!());
         tokens.extend(value.unlist());
@@ -404,7 +399,7 @@ fn define_choice(
         mismatch.clone(),
         None,
         istate,
-      );
+      )?;
       tokens.push(orig.clone());
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());
@@ -418,8 +413,7 @@ fn define_choice(
     ExpansionBody::Closure(closure),
     None,
     state,
-  );
-  Ok(())
+  )
 }
 
 /// Helper function to define state neccesary for a boolean key.
@@ -438,7 +432,7 @@ fn define_boolean(
     ConditionalOptions::default(),
     gullet,
     state,
-  ); // We might need to $scope here
+  )?; // We might need to $scope here
   let orig = s!("\\ltxml@@rig@{qname}");
   let orig_cs = T_CS!(orig);
   let plain_params = parse_parameters("{}", &orig_cs, Some(state))?;
@@ -462,7 +456,7 @@ fn define_boolean(
         code.clone(),
         None,
         istate,
-      );
+      )?;
       tokens.push(orig_cs.clone());
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());

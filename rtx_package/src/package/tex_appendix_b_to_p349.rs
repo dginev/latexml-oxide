@@ -18,7 +18,7 @@ LoadDefinitions!(state, {
   //
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", sub[doc,_a,state] { Error!("unexpected", "&", doc, state, "Stray alignment \"&\""); });
+  DefConstructor!("&", sub[doc,_a,state] { Error!("unexpected", "&", doc, "Stray alignment \"&\""); });
 
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
@@ -400,7 +400,7 @@ LoadDefinitions!(state, {
   // TeX Book, Appendix B, p. 348
 
   DefMacro!("\\newif DefToken", sub[gullet, (cs), state] {
-    def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state);
+    def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state)
   });
 
   // See the section Registers & Parameters, above for setting default values.

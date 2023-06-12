@@ -26,16 +26,16 @@ LoadDefinitions!(state, {
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
   DefPrimitive!("\\@check@length DefToken", sub[stomach, (cs), state] {
-    match state.lookup_definition(&cs) {
+    match state.lookup_definition(&cs)? {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
-        Warn!("undefined", cs, stomach, state, message);
+        Warn!("undefined", cs, stomach, message);
         DefRegister!(cs, None, Dimension::new(0));
       },
       Some(defn) => if !defn.is_register() {
         let message = s!("'{}' length was expected, got {:?} instead of register.",
           cs.to_string(), defn.register_type());
-        Error!("misdefined", cs, stomach, state, message);
+        Error!("misdefined", cs, stomach, message);
       }
     };
   });

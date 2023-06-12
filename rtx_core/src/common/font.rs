@@ -946,7 +946,7 @@ impl Font {
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),
-      None => match state.lookup_definition(&T_CS!("\\textwidth")) {
+      None => match state.lookup_definition(&T_CS!("\\textwidth"))? {
         Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
         None => None,
       },
@@ -955,13 +955,13 @@ impl Font {
     let _maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
     let _baseline = state
-      .lookup_definition(&T_CS!("\\baselineskip"))
+      .lookup_definition(&T_CS!("\\baselineskip"))?
       .expect("baseline skip should aways be defined")
       .value_of(Vec::new(), state)
       .expect("\\baselineskip should always have a value.")
       .value_of();
     let _lineskip = state
-      .lookup_definition(&T_CS!("\\lineskip"))
+      .lookup_definition(&T_CS!("\\lineskip"))?
       .expect("lineskip should always be defined")
       .value_of(Vec::new(), state)
       .expect("\\lineskip should always have a value.")

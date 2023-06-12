@@ -154,13 +154,13 @@ LoadDefinitions!(state, {
   alias        => "$$",
   before_digest => sub[stomach, state] {
     stomach.begin_mode("display_math", state)?;
-    if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new()) {
+    if let Some(RegisterValue::Tokens(everymath_toks)) = state.lookup_register("\\everymath", Vec::new())? {
       let everymath_toks = everymath_toks.unlist();
       if !everymath_toks.is_empty() {
         stomach.get_gullet_mut().unread(Tokens::new(everymath_toks));
       }
     }
-    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state.lookup_register("\\everydisplay", Vec::new()) {
+    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state.lookup_register("\\everydisplay", Vec::new())? {
       let everydisplay_toks = everydisplay_toks.unlist();
       if !everydisplay_toks.is_empty() {
         stomach.get_gullet_mut().unread(Tokens::new(everydisplay_toks));

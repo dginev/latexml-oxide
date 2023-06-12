@@ -147,7 +147,7 @@ LoadDefinitions!(outer_state, {
       result.push(T_CS!("\\@hidden@egroup"));
       Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
-      Error!("expected", "delimiter", gullet, state,
+      Error!("expected", "delimiter", gullet,
         "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state.end_semiverbatim()?;
       Ok(Tokens!())

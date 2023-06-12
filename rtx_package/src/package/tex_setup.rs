@@ -171,11 +171,11 @@ LoadDefinitions!(state, {
       if open.get_catcode() == Catcode::BEGIN {
         gullet.read_balanced(false, state)?.unwrap_or_default()
       } else {
-        Error!("expected","{", gullet, state, "Expected <general text> here");
+        Error!("expected","{", gullet, "Expected <general text> here");
         Tokens!(open)
       }
     } else {
-      Error!("expected","{", gullet, state, "Expected <general text> here");
+      Error!("expected","{", gullet, "Expected <general text> here");
       Tokens!()
     }
   });
@@ -209,7 +209,7 @@ LoadDefinitions!(state, {
     match gullet.read_token(state)? {
       Some(t) => Ok(ArgWrap::Token(t)),
       None => {
-        Error!("expected", "Token", gullet, state, "Paramater <Token> found None.");
+        Error!("expected", "Token", gullet, "Paramater <Token> found None.");
         Ok(ArgWrap::Tokens(Tokens!()))
       }
     }
@@ -220,7 +220,7 @@ LoadDefinitions!(state, {
     if let Some(t) = gullet.read_x_token(None, false, state)? {
       Ok(ArgWrap::Token(t))
     } else {
-      Error!("expected","XToken", gullet, state, "Paramater <XToken> found None.");
+      Error!("expected","XToken", gullet,"Paramater <XToken> found None.");
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   });
@@ -263,7 +263,8 @@ LoadDefinitions!(state, {
     gullet.read_token(state)?.map(|tok| {
       gullet.unread_one(tok.clone());
       if tok.get_catcode() != Catcode::BEGIN {
-        Error!("expected","{", gullet, state, "Expected a {{ here.");
+        let err = || {Error!("expected","{", gullet,"Expected a {{ here."); Ok(())};
+        err().ok();
       }
       tok
     })
@@ -281,7 +282,7 @@ LoadDefinitions!(state, {
         tokens.push(token);
         tokens.extend(gullet.read_balanced(false, state)?.unwrap_or_default().unlist());
         tokens.push(T_END!());
-      } else if let Some(defn) = state.lookup_definition_stored(&token) {
+      } else if let Some(defn) = state.lookup_definition_stored(&token)? {
         let args = defn.read_arguments(gullet, state)?;
         tokens.extend(Invocation!(token, args, gullet, state)?.unlist());
       } else {
@@ -302,7 +303,7 @@ LoadDefinitions!(state, {
         Tokens!(token)
       }
     } else {
-      Error!("expected","expanded", gullet, state,
+      Error!("expected","expanded", gullet,
         "was expecting an Expanded parameter value, found nothing.");
       Tokens!()
     }
@@ -331,8 +332,7 @@ LoadDefinitions!(state, {
           Tokens!(token)
         }
       } else {
-        Error!("Expected", "DefExpanded", gullet, state,
-          "Expected <DefExpanded> here");
+        Error!("Expected", "DefExpanded", gullet, "Expected <DefExpanded> here");
         Tokens!()
       };
       state.expire_smuggle_the();
@@ -511,7 +511,7 @@ LoadDefinitions!(state, {
     match token {
       Some(t) => Ok(ArgWrap::Token(t)),
       None => {
-        Error!("expected","DefToken", gullet, state,
+        Error!("expected","DefToken", gullet,
           "Expected a DefToken parameter, found nothing.");
         Ok(ArgWrap::Tokens(Tokens!()))
       }
@@ -539,12 +539,12 @@ LoadDefinitions!(state, {
           Ok(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))
         } else {
           let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
-          Error!("expected","<variable>", gullet, state, message);
+          Error!("expected","<variable>", gullet,message);
           Ok(ArgWrap::Tokens(Tokens!()))
         }
     } else {
       let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
-      Error!("expected","<variable>", gullet, state, message);
+      Error!("expected","<variable>", gullet,message);
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   },
@@ -577,7 +577,7 @@ LoadDefinitions!(state, {
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
-        Error!("expected","<register>", gullet, state, message);
+        Error!("expected","<register>", gullet,message);
         if let Some(t) = token {
           if is_definable(&t, state) {
             def_register(t, None, Tokens!(), None, state);
@@ -682,14 +682,14 @@ LoadDefinitions!(state, {
       };
       if csname != "\\hbox" && csname != "\\vbox" && csname != "\\vtop" {
         let message = s!("A <box> was supposed to be here.\nGot {}", csname);
-        Error!("expected","<box>", stomach, state, message);
+        Error!("expected","<box>", stomach,message);
         None
       } else {
         Some(tbox)
       }
     } else {
       let message = s!("A <box> was supposed to be here.\nGot none.");
-      Error!("expected","<box>", stomach, state, message);
+      Error!("expected","<box>", stomach,message);
       None
     }
   });
@@ -785,10 +785,10 @@ LoadDefinitions!(state, {
   // particularly alignments (which may or may not be actual environments),
   // but which need special treatment of some of their content
   // as the expansion is carried out.
-  DefParameterType!(DigestedBody, reader => reader!(_gullet, _inner, _extra, _state, {
+  DefParameterType!(DigestedBody, sub[_gullet, _inner, _extra, _state] {
       Ok(Tokens!()) // all done in predigestion
-    }),
-    predigest => predigest!(stomach, _arg, state, {
+    },
+    predigest => sub[stomach, _arg, state] {
       let ismath   = state.lookup_bool("IN_MATH");
       let mut list     = stomach.digest_next_body(None, state)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
@@ -796,7 +796,7 @@ LoadDefinitions!(state, {
       let mut digested = List::new(list, state);
       digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
       digested
-    })
+    }
   );
 
   // In addition to the standard TeX Dimension, there are various LaTeX constructs
@@ -897,7 +897,7 @@ LoadDefinitions!(state, {
         ..KVSpec::default()
       }, state)
     } else {
-      Error!("Expected","{", gullet, state, "Missing keyval arguments");
+      Error!("Expected","{", gullet, "Missing keyval arguments");
       Ok(KeyVals::default())
     }
   }

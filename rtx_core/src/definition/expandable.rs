@@ -221,12 +221,12 @@ impl Expandable {
     expansion: T,
     traits: Option<ExpandableOptions>,
     state: &State,
-  ) -> Self {
+  ) -> Result<Self> {
     let mut expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
       if let ExpansionBody::Tokens(expansion_tokens) = expansion {
-        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens));
+        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens)?);
       }
     }
     // simplify: treat empty tokens as None
@@ -234,7 +234,7 @@ impl Expandable {
       ExpansionBody::Tokens(tks) if tks.is_empty() => None,
       other => Some(other),
     };
-    Expandable {
+    Ok(Expandable {
       cs,
       paramlist,
       expansion,
@@ -243,6 +243,6 @@ impl Expandable {
       is_outer: traits.outer || state.get_prefix("outer"),
       is_long: traits.long || state.get_prefix("long"),
       ..Expandable::default()
-    }
+    })
   }
 }

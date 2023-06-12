@@ -144,7 +144,7 @@ fn assign_lookup_arrays() {
     "empty_key",
     vec![Stored::String(arena::pin_static("mydir"))],
   );
-  let shifted = state.shift_value("empty_key");
+  let shifted = state.shift_value("empty_key").unwrap();
   if let Some(Stored::String(shifted)) = shifted {
     arena::with(shifted, |shifted_str| {
       assert_eq!(shifted_str, "mydir", "shift/unshift new key")
@@ -165,31 +165,31 @@ fn assign_lookup_arrays() {
   }
 
   assert_eq!(
-    state.shift_value("SEARCHPATHS"),
+    state.shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("d"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS"),
+    state.pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("c"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS"),
+    state.shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("a"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS"),
+    state.pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("b"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS"),
+    state.shift_value("SEARCHPATHS").unwrap(),
     None,
     "shift searchpaths None"
   );
-  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
     Some(&Stored::VecDequeStored(VecDeque::new())),
@@ -202,7 +202,7 @@ fn assign_lookup_arrays() {
     .collect::<VecDeque<Stored>>();
   state.assign_value("SEARCHPATHS", Stored::VecDequeStored(vdq.clone()), None);
   let new_d = Stored::String(arena::pin_static("d"));
-  state.push_value("SEARCHPATHS", new_d.clone());
+  assert!(state.push_value("SEARCHPATHS", new_d.clone()).is_ok());
   vdq.push_back(new_d.clone());
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
@@ -210,31 +210,31 @@ fn assign_lookup_arrays() {
     "push works as intended"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS"),
+    state.pop_value("SEARCHPATHS").unwrap(),
     Some(new_d),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS"),
+    state.shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("a"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS"),
+    state.pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("c"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS"),
+    state.pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("b"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS"),
+    state.shift_value("SEARCHPATHS").unwrap(),
     None,
     "shift searchpaths None"
   );
-  assert_eq!(state.pop_value("SEARCHPATHS"), None, "pop searchpaths None");
+  assert_eq!(state.pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
   assert_eq!(
     state.lookup_value("SEARCHPATHS"),
     Some(&Stored::VecDequeStored(VecDeque::new())),
@@ -257,7 +257,7 @@ fn install_definition_and_meaning() {
   };
   // Install a Definition
   state.install_definition(job_definition.clone(), None);
-  if let Some(stored_definition) = state.lookup_definition(&T_CS!("\\jobname")) {
+  if let Ok(Some(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname")) {
     assert_eq!(stored_definition.get_cs().into_owned(), T_CS!("\\jobname"));
   } else {
     panic!("Failed to lookup installed definition!");

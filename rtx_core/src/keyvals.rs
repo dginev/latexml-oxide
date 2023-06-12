@@ -89,7 +89,6 @@ impl Object for KeyVals {
         "ignore",
         "keyvals",
         stomach,
-        state,
         "Skipping digestion of \\setkeys as requested (did you digest a KeyVals twice?) "
       );
     } else {
@@ -564,7 +563,7 @@ impl KeyVals {
           until.stringify()
         );
         let message2 = s!("key started at {}", startloc.to_string());
-        Error!("expected", until, gullet, state, message, message2);
+        Error!("expected", until, gullet, message, message2);
       }
 
       // turn the key tokens into a string and normalize

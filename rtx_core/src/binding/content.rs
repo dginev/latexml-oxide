@@ -77,13 +77,13 @@ pub fn input_definitions(
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   let prevname =
-    if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname")).is_some() {
+    if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname"))?.is_some() {
       let gullet = stomach.get_gullet_mut();
       gullet.do_expand(T_CS!("\\@currname"), state)?.to_string()
     } else {
       String::new()
     };
-  let prevext = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currext")).is_some()
+  let prevext = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currext"))?.is_some()
   {
     let gullet = stomach.get_gullet_mut();
     gullet.do_expand(T_CS!("\\@currext"), state)?.to_string()
@@ -136,7 +136,7 @@ pub fn input_definitions(
           current_options,
           prevoptions
         );
-        Info!("unexpected", "options", stomach, state, message);
+        Info!("unexpected", "options", stomach, message);
       }
     }
   }
@@ -152,14 +152,14 @@ pub fn input_definitions(
     Tokens!(Explode!(name)),
     None,
     state,
-  );
+  )?;
   def_macro(
     T_CS!("\\@currext"),
     None,
     Tokens!(Explode!(as_type)),
     None,
     state,
-  );
+  )?;
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
   // them *always*, as a matter of course TODO: This *IS* inaccurate with the Package.pm
@@ -181,7 +181,7 @@ pub fn input_definitions(
       options.after,
       None,
       state,
-    );
+    )?;
   }
 
   if !current_options.is_empty() {
@@ -226,7 +226,6 @@ pub fn input_definitions(
         "missing_file",
         name,
         stomach,
-        state,
         s!("Can't find file for {name}")
       );
       // STATE.note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
@@ -252,7 +251,7 @@ pub fn input_definitions(
         Tokens!(Explode!(prevname)),
         None,
         state,
-      );
+      )?;
     }
     if !prevext.is_empty() {
       def_macro(
@@ -261,7 +260,7 @@ pub fn input_definitions(
         Tokens!(Explode!(prevext)),
         None,
         state,
-      );
+      )?;
     }
     stomach.digest(T_CS!("\\@popfilename"), state)?;
     reset_options(stomach.get_gullet_mut(), state)?; // And reset options afterwards, too.
@@ -356,7 +355,7 @@ fn before_input_handle_options(
           }
         }
         if !topass.is_empty() {
-          pass_options(name, as_type, topass, state)
+          pass_options(name, as_type, topass, state)?;
         }
       }
     }
@@ -367,22 +366,22 @@ fn before_input_handle_options(
     Tokens!(Explode!(name)),
     None,
     state,
-  );
+  )?;
   def_macro(
     T_CS!("\\@currext"),
     None,
     Tokens!(Explode!(as_type)),
     None,
     state,
-  );
+  )?;
   // reset options (Note reset & pass were in opposite order in LoadClass ????)
   let gullet = stomach.get_gullet_mut();
   reset_options(gullet, state)?;
-  pass_options(name, as_type, options.options.clone(), state);
+  pass_options(name, as_type, options.options.clone(), state)?;
 
   // Note which packages are pretending to be classes.
   if options.as_class {
-    state.push_value("@masquerading@as@class", arena::pin(name));
+    state.push_value("@masquerading@as@class", arena::pin(name))?;
   }
   let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
     Some(vdq) => {
@@ -404,7 +403,7 @@ fn before_input_handle_options(
     Tokens!(Explode!(current_opt_val)),
     None,
     state,
-  );
+  )?;
   Ok(())
 }
 
@@ -509,7 +508,7 @@ pub fn input(
   //   }
   } else {
     // Couldn't find anything?
-    state.note_status("missing", request);
+    note_status(LogStatus::Missing, Some(request));
 
     // We presumably are trying to input Content; an error if we can't find it (contrast to
     // Definitions)
@@ -518,7 +517,6 @@ pub fn input(
       "missing_file",
       request,
       gullet,
-      state,
       s!("Can't find TeX file {}", request)
     );
     //  maybeReportSearchPaths());
@@ -639,20 +637,20 @@ pub fn load_tex_content(
 
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
-fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) {
-  state.push_value(&s!("opt@{}.{}", name, ext), options);
+fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) -> Result<()> {
+  state.push_value(&s!("opt@{}.{}", name, ext), options)
 }
 
 pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
   let gullet = stomach.get_gullet_mut();
-  let name = if state.lookup_definition(&currname_token).is_some() {
+  let name = if state.lookup_definition(&currname_token)?.is_some() {
     do_expand(currname_token, gullet, state)?.to_string()
   } else {
     String::new()
   };
-  let ext = if state.lookup_definition(&currext_token).is_some() {
+  let ext = if state.lookup_definition(&currext_token)?.is_some() {
     do_expand(currext_token, gullet, state)?.to_string()
   } else {
     String::new()
@@ -748,14 +746,14 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
 
 fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
   let cs = T_CS!(s!("\\ds@{}", option));
-  if state.lookup_definition(&cs).is_some() {
+  if state.lookup_definition(&cs)?.is_some() {
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
       Tokens!(T_OTHER!(option)),
       None,
       state,
-    );
+    )?;
 
     let unused = match state.remove_vecdeque("@unusedoptionlist") {
       Some(list) => list
@@ -789,7 +787,7 @@ fn execute_default_option_internal(
     Tokens!(T_OTHER!(option)),
     None,
     state,
-  );
+  )?;
   stomach.digest(T_CS!("\\default@ds"), state)?;
   Ok(true)
 }
@@ -885,7 +883,6 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
       "expected",
       "resource",
       None,
-      state,
       "Resource must have a resource pathname or content; skipping"
     );
     return;
@@ -899,7 +896,6 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
       "expected",
       "mime-type",
       None,
-      state,
       "Resource must have a mime-type; skipping"
     );
     return;
@@ -1155,7 +1151,7 @@ pub fn digest_if(
   stomach: &mut Stomach,
   state: &mut State,
 ) -> Result<Option<Digested>> {
-  if let Some(_defn) = state.lookup_definition(&token) {
+  if state.lookup_definition(&token)?.is_some() {
     match stomach.digest(Tokens!(token), state) {
       Ok(t) => Ok(Some(t)),
       Err(e) => Err(e),
@@ -1173,7 +1169,7 @@ pub fn build_invocation<T: Into<Token>>(
 ) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
-  if let Some(defn) = state.lookup_definition(&token) {
+  if let Some(defn) = state.lookup_definition(&token)? {
     let mut invoked_tokens = vec![token];
     let mut reverted_args = if let Some(params) = defn.get_parameters() {
       params.revert_arguments(args, state)?
@@ -1184,7 +1180,7 @@ pub fn build_invocation<T: Into<Token>>(
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    token.with_cs_name(|csname| Error!("undefined", csname, gullet, state, message));
+    token.with_cs_name(|csname| { Error!("undefined", csname, gullet, message); Ok(()) })?;
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });

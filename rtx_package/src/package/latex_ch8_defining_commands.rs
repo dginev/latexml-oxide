@@ -16,7 +16,7 @@ LoadDefinitions!(state, {
     if !IsDefinable!(&cs_token) {
       if !state.has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
-        Info!("ignore", cs_token, stomach, state, message);
+        Info!("ignore", cs_token, stomach, message);
       }
       return Ok(vec![]);
     }

@@ -132,7 +132,7 @@ impl Definition for Conditional {
           "Unknown conditional control sequence {}",
           state.get_current_token().unwrap().stringify()
         );
-        Error!("unexpected", self.cs, gullet, state, message);
+        Error!("unexpected", self.cs, gullet, message);
         Ok(Tokens!())
       },
     }
@@ -319,7 +319,6 @@ impl Conditional {
       "expected",
       "\\fi",
       self,
-      state,
       "Missing \\fi or \\else, conditional fell off end"
     );
     Ok(Tokens!())
@@ -351,7 +350,7 @@ impl Conditional {
           stack_frame.borrow().start
         );
         let local_token_str = local_token.to_string();
-        Error!("unexpected", local_token_str, gullet, state, message);
+        Error!("unexpected", local_token_str, gullet, message);
         Ok(Tokens!())
       } else {
         state.set_ifframe(Some(Rc::clone(&stack_frame)));
@@ -370,7 +369,7 @@ impl Conditional {
         local_token.stringify()
       );
       let local_token_str = local_token.to_string();
-      Error!("unexpected", local_token_str, gullet, state, message);
+      Error!("unexpected", local_token_str, gullet, message);
       Ok(Tokens!())
     }
   }
@@ -394,7 +393,7 @@ impl Conditional {
       } else {
         // "expand" by removing the stack entry for this level
         state.set_ifframe(Some(stack_frame));
-        state.shift_value("if_stack"); // Done with this frame
+        state.shift_value("if_stack")?; // Done with this frame
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
@@ -407,7 +406,7 @@ impl Conditional {
         "Didn't expect a {:?} since we seem not to be in a conditional",
         state.get_current_token().unwrap().stringify()
       );
-      Error!("unexpected", "fi", gullet, state, message);
+      Error!("unexpected", "fi", gullet, message);
       Ok(Tokens!())
     }
   }

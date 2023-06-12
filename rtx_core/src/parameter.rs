@@ -73,7 +73,6 @@ impl Default for Parameter {
           "Parameter",
           "mock_reader",
           None,
-          None,
           "Please define a real reader, this is a mock fallback!"
         );
         Ok(ArgWrap::None)
@@ -282,7 +281,7 @@ impl Parameter {
             value = value.neutralize(semi_chars, state);
           }
           if self.pack_parameters {
-            value = value.pack_parameters();
+            value = value.pack_parameters()?;
           }
           if wants_option {
             if value.is_empty() {
@@ -320,7 +319,6 @@ impl Parameter {
           "expected",
           self,
           gullet,
-          state,
           s!("Missing argument {} for {}", self.stringify(), fordefn_str)
         );
         ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))

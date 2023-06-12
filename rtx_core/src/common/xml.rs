@@ -1,6 +1,7 @@
 use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use rustc_hash::FxHashMap as HashMap;
+use crate::common::error::Result;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -16,7 +17,7 @@ impl XPath {
     XPath { context }
   }
 
-  pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) {
+  pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) -> Result<()> {
     match self.context.register_namespace(codeprefix, namespace) {
       Ok(()) => {},
       Err(_) => {
@@ -25,9 +26,10 @@ impl XPath {
           codeprefix,
           namespace
         );
-        Error!("expected", "XPath", None, None, message);
+        Error!("expected", "XPath", None, message);
       },
     };
+    Ok(())
   }
 
   pub fn findnodes(&mut self, xpath: &str, node: Option<&Node>) -> Vec<Node> {
@@ -35,7 +37,8 @@ impl XPath {
       Ok(nodes) => nodes,
       Err(e) => {
         let message = s!("{:?}", e);
-        Error!("xpath", "findnodes", None, None, message);
+        let err = || {Error!("xpath", "findnodes", None, message); Ok(()) };
+        err().ok();
         panic!("this is an external libxml2 error; unwinding...");
       },
     }
@@ -46,7 +49,8 @@ impl XPath {
       Ok(vals) => vals,
       Err(e) => {
         let message = s!("{:?}", e);
-        Error!("xpath", "findvalues", None, None, message);
+        let err = || {Error!("xpath", "findvalues", None, message); Ok(())};
+        err().ok();
         Vec::new()
       },
     }

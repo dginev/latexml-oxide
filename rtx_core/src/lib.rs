@@ -239,15 +239,14 @@ pub trait BoxOps: Object {
     self.with_properties(|props| matches!(props.get(key), Some(Stored::Bool(true))))
   }
   /// obtains the "body" of a digested object which captured it
-  fn get_body(&self) -> Option<Digested> {
+  fn get_body(&self) -> Result<Option<Digested>> {
     Error!(
       "boxops",
       "get_body",
       self,
-      None,
       "Generic BoxOps::get_body should never be called!"
     );
-    None
+    Ok(None)
   }
   /// gets the associated font, if any
   fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;

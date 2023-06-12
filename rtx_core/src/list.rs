@@ -150,7 +150,7 @@ impl List {
     // 2. empty contents
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
-      || self.boxes.iter().all(|item| item.is_empty())
+      || self.boxes.iter().all(|item| item.is_empty().unwrap_or(false))
   }
 }
 
