@@ -51,7 +51,7 @@ There is demonstrable need for LaTeXML in the domain of academic writing, as wel
 
 ### Installation
 
-Requires Rust `stable` v1.32, and newer.
+Requires Rust `nightly` v1.72, and newer.
 
 ### Sample use
 
