@@ -833,9 +833,10 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str| Ok({
-        Error!("malformed", qname_str, self, message)
-      }))?;
+      arena::with(state.model.get_node_qname(node), |qname_str| {
+        {Error!("malformed", qname_str, self, message)};
+        Ok(())
+      })?;
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
     } else {
       // Found node.
@@ -851,9 +852,10 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        arena::with(qname, |qname_str| Ok({
-          Error!("malformed", qname_str, self, message)
-        }))?;
+        arena::with(qname, |qname_str| {
+          {Error!("malformed", qname_str, self, message)};
+          Ok(())
+        })?;
       }
       if let Some(lastopen_node) = lastopen {
         self.close_node_internal(&lastopen_node, state)?;
@@ -893,14 +895,15 @@ impl Document {
       // Didn't find $qname at all!!
       if strict {
         let qname = state.model.get_node_qname(node);
-        arena::with(qname, |qname_str| Ok({
+        arena::with(qname, |qname_str| {
           let message = s!(
             "Attempt to close {}, which isn't open. Currently in {:?}",
             qname_str,
             self.get_insertion_context(None, state)?
           );
-          Error!("malformed", qname_str, self, message)
-        }))?;
+          {Error!("malformed", qname_str, self, message)};
+          Ok(())
+        })?;
       }
     } else {
       // Found node.

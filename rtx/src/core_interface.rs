@@ -5,7 +5,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use rtx_core::common::arena;
-use rtx_core::common::error::{note_begin, note_end, Result};
+use rtx_core::common::error::{self, note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::digested::Digested;
@@ -58,6 +58,9 @@ pub trait DigestionAPI {
 
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
+    // first, reset the error REPORT singleton
+    error::init_report();
+    // now handle state
     let state = &mut self.state;
     state.initialize_stomach();
     // let paths = state.search_paths;
@@ -167,6 +170,7 @@ impl DigestionAPI for Core {
     }
   }
 
+  /// Restriction: convert_document runs on a single thread, and should never try branching out.
   fn convert_document(&mut self, digested: Digested) -> Result<Document> {
     note_begin("Building");
     let mut document = Document::new();
@@ -288,6 +292,7 @@ impl DigestionAPI for Core {
   //    preamble = names a tex file (or standard_preamble.tex)
   //    postamble = names a tex file (or standard_postamble.tex)
 
+  /// Restriction: `digest_file` runs on a single thread, and should never try branching out.
   fn digest_file(&mut self, mut request: String, options: DigestionOptions) -> Result<Digested> {
     let mut dir = String::new();
     let name;

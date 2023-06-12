@@ -68,6 +68,11 @@ pub fn get_status(status: LogStatus) -> usize {
   }
 }
 
+pub fn init_report() {
+  let mut report = REPORT.borrow_mut();
+  *report = LogState::default();
+}
+
 #[macro_export]
 macro_rules! Debug {
   ($category:expr, $object:expr, $where:ident, $message:expr) => {{
