@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/model.rs`."><title>model.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -784,7 +784,7 @@
 
   <span class="kw">pub fn </span>set_doc_type(<span class="kw-2">&amp;mut </span><span class="self">self</span>, roottag: <span class="kw-2">&amp;</span>str, publicid: <span class="kw-2">&amp;</span>str, systemid: <span class="kw-2">&amp;</span>str) {
     <span class="self">self</span>.schema_data = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
-      DTD_SYM.with(|sym| <span class="kw-2">*</span>sym),
+      <span class="kw-2">*</span>DTD_SYM,
       arena::pin(roottag),
       arena::pin(publicid),
       arena::pin(systemid),
@@ -792,7 +792,7 @@
   }
 
   <span class="kw">pub fn </span>set_relaxng_schema(<span class="kw-2">&amp;mut </span><span class="self">self</span>, schema: <span class="kw-2">&amp;</span>str) {
-    <span class="self">self</span>.schema_data = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[RELAXNG_SYM.with(|sym| <span class="kw-2">*</span>sym), arena::pin(schema)]);
+    <span class="self">self</span>.schema_data = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="kw-2">*</span>RELAXNG_SYM, arena::pin(schema)]);
   }
   <span class="kw">pub fn </span>add_schema_declaration(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>schema) = <span class="self">self</span>.schema {
@@ -821,12 +821,12 @@
       <span class="self">self</span>.register_namespace(<span class="string">&quot;xhtml&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;http://www.w3.org/1999/xhtml&quot;</span>));
       <span class="self">self</span>.permissive = <span class="bool-val">true</span>;
     } <span class="comment">// Actually, they could have declared all sorts of Tags....
-    </span><span class="kw">let </span><span class="kw-2">mut </span>schema_type = EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>schema_type = <span class="kw-2">*</span>EMPTY_SYM;
     <span class="kw">match </span><span class="self">self</span>.schema_data {
       <span class="prelude-val">None </span>=&gt; {},
       <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) =&gt; {
         schema_type = data[<span class="number">0</span>];
-        <span class="kw">if </span>schema_type == DTD_SYM.with(|sym| <span class="kw-2">*</span>sym) {
+        <span class="kw">if </span>schema_type == <span class="kw-2">*</span>DTD_SYM {
           <span class="comment">// NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
           // ($roottag, $publicid, $systemid) = @data;
           </span>name = arena::with(<span class="kw-2">*</span>data.last().unwrap(), |data_str| {
@@ -837,7 +837,7 @@
             </span>..Relaxng::default()
           });
           <span class="comment">// $systemid);
-        </span>} <span class="kw">else if </span>schema_type == RELAXNG_SYM.with(|sym| <span class="kw-2">*</span>sym) {
+        </span>} <span class="kw">else if </span>schema_type == <span class="kw-2">*</span>RELAXNG_SYM {
           name = arena::to_string(data[<span class="number">1</span>]);
           <span class="self">self</span>.schema = <span class="prelude-val">Some</span>(Relaxng {
             name: name.clone(),
@@ -904,7 +904,7 @@
     namespace_opt: <span class="prelude-ty">Option</span>&lt;SymbolU32&gt;,
   ) {
     <span class="comment">// double-check empty strings are None
-    </span><span class="kw">let </span>namespace_opt_checked = namespace_opt.filter(|val| <span class="kw-2">*</span>val != EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym));
+    </span><span class="kw">let </span>namespace_opt_checked = namespace_opt.filter(|val| <span class="kw-2">*</span>val != <span class="kw-2">*</span>EMPTY_SYM);
     <span class="kw">match </span>namespace_opt_checked {
       <span class="prelude-val">Some</span>(namespace) =&gt; {
         <span class="self">self</span>.code_namespace_prefixes.insert(namespace, codeprefix);
@@ -921,7 +921,7 @@
   }
 
   <span class="kw">pub fn </span>register_document_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, docprefix: <span class="kw-2">&amp;</span>str, namespace_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) {
-    <span class="kw">let </span>default_sym = H_DEFAULT_SYM.with(|sym| <span class="kw-2">*</span>sym);
+    <span class="kw">let </span>default_sym = <span class="kw-2">*</span>H_DEFAULT_SYM;
     <span class="kw">let </span>docprefix_sym = <span class="kw">if </span>docprefix.is_empty() {
       default_sym
     } <span class="kw">else </span>{
@@ -993,12 +993,12 @@
         message2
       );
     }
-    <span class="kw">let </span>default_sym = H_DEFAULT_SYM.with(|sym| <span class="kw-2">*</span>sym);
+    <span class="kw">let </span>default_sym = <span class="kw-2">*</span>H_DEFAULT_SYM;
     docprefix.filter(|p| p != <span class="kw-2">&amp;</span>default_sym)
   }
 
   <span class="kw">pub fn </span>get_document_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, docprefix: <span class="kw-2">&amp;</span>str, probe: bool) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-    <span class="kw">let </span>h_default_sym = H_DEFAULT_SYM.with(|sym| <span class="kw-2">*</span>sym);
+    <span class="kw">let </span>h_default_sym = <span class="kw-2">*</span>H_DEFAULT_SYM;
     <span class="kw">let </span>docprefix_sym = <span class="kw">if </span>docprefix.is_empty() {
       h_default_sym
     } <span class="kw">else </span>{
@@ -1171,7 +1171,7 @@
       </span>NamespaceDecl =&gt; arena::pin_static(<span class="string">&quot;xmlns&quot;</span>),
 
       ElementNode | AttributeNode =&gt; {
-        <span class="kw">let </span>empty_sym = EMPTY_SYM.with(|sym| <span class="kw-2">*</span>sym);
+        <span class="kw">let </span>empty_sym = <span class="kw-2">*</span>EMPTY_SYM;
         <span class="kw">let </span><span class="kw-2">mut </span>prefix = empty_sym;
         <span class="kw">if let </span><span class="prelude-val">Some</span>(ns) = node.get_namespace() {
           <span class="kw">let </span>href = ns.get_href();
@@ -1227,12 +1227,12 @@
 
   </span><span class="kw">pub fn </span>can_contain_sym(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tag: SymbolU32, child: SymbolU32) -&gt; bool {
     <span class="comment">// Handle obvious cases explicitly.
-    </span><span class="kw">if </span>H_PCDATA_SYM.with(|sym| tag == <span class="kw-2">*</span>sym)
-      || H_COMMENT_SYM.with(|sym| tag == <span class="kw-2">*</span>sym)
-      || EMPTY_SYM.with(|sym| tag == <span class="kw-2">*</span>sym)
+    </span><span class="kw">if </span>tag == <span class="kw-2">*</span>H_PCDATA_SYM
+      || tag == <span class="kw-2">*</span>H_COMMENT_SYM
+      || tag == <span class="kw-2">*</span>EMPTY_SYM
     {
       <span class="kw">return </span><span class="bool-val">false</span>;
-    } <span class="kw">else if </span>WILD_CARD_SYM.with(|sym| tag == <span class="kw-2">*</span>sym) {
+    } <span class="kw">else if </span>tag == <span class="kw-2">*</span>WILD_CARD_SYM {
       <span class="kw">return </span><span class="bool-val">true</span>;
     };
     <span class="kw">if </span>arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
@@ -1242,17 +1242,17 @@
       </span><span class="kw">return </span><span class="bool-val">true</span>;
     }
 
-    <span class="kw">if </span>WILD_CARD_SYM.with(|sym| child == <span class="kw-2">*</span>sym)
-      || H_COMMENT_SYM.with(|sym| child == <span class="kw-2">*</span>sym)
-      || H_PI_SYM.with(|sym| child == <span class="kw-2">*</span>sym)
-      || H_DTD_SYM.with(|sym| child == <span class="kw-2">*</span>sym)
+    <span class="kw">if </span>child == <span class="kw-2">*</span>WILD_CARD_SYM
+      || child == <span class="kw-2">*</span>H_COMMENT_SYM
+      || child == <span class="kw-2">*</span>H_PI_SYM
+      || child == <span class="kw-2">*</span>H_DTD_SYM
     {
       <span class="kw">return </span><span class="bool-val">true</span>;
     }
 
     <span class="kw">if </span><span class="self">self</span>.permissive
-      &amp;&amp; H_DOC_SYM.with(|sym| tag == <span class="kw-2">*</span>sym)
-      &amp;&amp; H_PCDATA_SYM.with(|sym| child != <span class="kw-2">*</span>sym)
+      &amp;&amp; tag == <span class="kw-2">*</span>H_DOC_SYM
+      &amp;&amp; child != <span class="kw-2">*</span>H_PCDATA_SYM
     {
       <span class="kw">return </span><span class="bool-val">true</span>; <span class="comment">// No DTD? Punt!
     </span>}
@@ -1263,7 +1263,7 @@
       .entry(tag)
       .or_insert_with(TagFrame::default)
       .model;
-    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(<span class="kw-2">&amp;</span>child)
+    model.contains(<span class="kw-2">&amp;</span>ANY_SYM) || model.contains(<span class="kw-2">&amp;</span>child)
   }
 
   <span class="doccomment">/// Can an element with (qualified name) `tag` contain a `child` element?
@@ -1293,7 +1293,7 @@
       .get(<span class="kw-2">&amp;</span>arena::pin(tag))
       .unwrap_or(<span class="kw-2">&amp;*</span>DEFAULT_TAG_FRAME)
       .model;
-    ANY_SYM.with(|sym| model.contains(sym)) || model.contains(<span class="kw-2">&amp;</span>arena::pin(child))
+    model.contains(<span class="kw-2">&amp;</span>ANY_SYM) || model.contains(<span class="kw-2">&amp;</span>arena::pin(child))
   }
 
   <span class="kw">pub fn </span>can_have_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>, tag: SymbolU32, attrib: SymbolU32) -&gt; bool {

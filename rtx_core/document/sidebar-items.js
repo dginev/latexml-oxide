@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["FONT_ELEMENT_SYM","MATH_HINT_SYM","MATH_TOKEN_SYM"],"mod":["helpers","resource","tag"],"static":["FONT_ELEMENT_NAME","MATH_HINT_NAME","MATH_TOKEN_NAME"],"struct":["Document"],"trait":["IntoVDQS"]};
+window.SIDEBAR_ITEMS = {"mod":["helpers","resource","tag"],"static":["FONT_ELEMENT_NAME","FONT_ELEMENT_SYM","MATH_HINT_NAME","MATH_HINT_SYM","MATH_TOKEN_NAME","MATH_TOKEN_SYM"],"struct":["Document"],"trait":["IntoVDQS"]};

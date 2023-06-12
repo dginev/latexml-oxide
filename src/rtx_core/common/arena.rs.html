@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/arena.rs`."><title>arena.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/common/arena.rs`."><title>arena.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -103,6 +103,16 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! An arena for interning strings
 //!  (global, mutable, single thread only)
 //!
@@ -117,54 +127,71 @@
 <span class="kw">use </span>string_interner::backend::BufferBackend;
 <span class="kw">use </span>string_interner::symbol::SymbolU32;
 <span class="kw">use </span>string_interner::StringInterner;
+<span class="kw">use </span>once_cell::sync::Lazy;
 
-<span class="macro">thread_local! </span>{
-  <span class="kw">static </span>T: RefCell&lt;StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;&gt; = RefCell::new(
-    StringInterner::with_capacity_and_hasher(<span class="number">32_768</span>, BuildHasherDefault::&lt;FxHasher&gt;::default()));
-  <span class="doccomment">/// the unique symbol for str value &quot;ANY&quot;
-  </span><span class="kw">pub static </span>ANY_SYM: SymbolU32 = pin_static(<span class="string">&quot;ANY&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#PCDATA&quot;
-  </span><span class="kw">pub static </span>H_PCDATA_SYM: SymbolU32 = pin_static(<span class="string">&quot;#PCDATA&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#COMMENT&quot;
-  </span><span class="kw">pub static </span>H_COMMENT_SYM: SymbolU32 = pin_static(<span class="string">&quot;#Comment&quot;</span>);
-  <span class="doccomment">/// the unique symbol for the empty str value &quot;&quot;
-  </span><span class="kw">pub static </span>EMPTY_SYM: SymbolU32 = pin_static(<span class="string">&quot;&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;ltx:*&quot;
-  </span><span class="kw">pub static </span>LTX_STAR_SYM: SymbolU32 = pin_static(<span class="string">&quot;ltx:*&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;ltx:p&quot;
-  </span><span class="kw">pub static </span>LTX_P_SYM: SymbolU32 = pin_static(<span class="string">&quot;ltx:p&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;\globaldefs&quot;
-  </span><span class="kw">pub static </span>GLOBAL_DEFS_SYM : SymbolU32 = pin_static(<span class="string">&quot;\\globaldefs&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;_WildCard_&quot;
-  </span><span class="kw">pub static </span>WILD_CARD_SYM : SymbolU32 = pin_static(<span class="string">&quot;_WildCard_&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#ProcessingInstruction&quot;
-  </span><span class="kw">pub static </span>H_PI_SYM : SymbolU32 = pin_static(<span class="string">&quot;#ProcessingInstruction&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#DTD&quot;
-  </span><span class="kw">pub static </span>H_DTD_SYM : SymbolU32 = pin_static(<span class="string">&quot;#DTD&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#Document&quot;
-  </span><span class="kw">pub static </span>H_DOC_SYM : SymbolU32 = pin_static(<span class="string">&quot;#Document&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;#default&quot;
-  </span><span class="kw">pub static </span>H_DEFAULT_SYM : SymbolU32 = pin_static(<span class="string">&quot;#default&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;ltx:_Capture_&quot;
-  </span><span class="kw">pub static </span>CAPTURE_SYM : SymbolU32 = pin_static(<span class="string">&quot;ltx:_Capture_&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;font&quot;
-  </span><span class="kw">pub static </span>FONT_SYM : SymbolU32 = pin_static(<span class="string">&quot;font&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;xml:id&quot;
-  </span><span class="kw">pub static </span>XML_ID_SYM : SymbolU32 = pin_static(<span class="string">&quot;xml:id&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;DTD&quot;
-  </span><span class="kw">pub static </span>DTD_SYM : SymbolU32 = pin_static(<span class="string">&quot;DTD&quot;</span>);
-  <span class="doccomment">/// the unique symbol for str value &quot;RelaxNG&quot;
-  </span><span class="kw">pub static </span>RELAXNG_SYM : SymbolU32 = pin_static(<span class="string">&quot;RelaxNG&quot;</span>);
-}
+<span class="attr">#[thread_local]
+</span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;&gt;&gt; = Lazy::new(|| RefCell::new(
+  StringInterner::with_capacity_and_hasher(<span class="number">32_768</span>, BuildHasherDefault::&lt;FxHasher&gt;::default())));
+<span class="doccomment">/// the unique symbol for str value &quot;ANY&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>ANY_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;ANY&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#PCDATA&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_PCDATA_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#PCDATA&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#COMMENT&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_COMMENT_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#Comment&quot;</span>));
+<span class="doccomment">/// the unique symbol for the empty str value &quot;&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>EMPTY_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;ltx:*&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>LTX_STAR_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;ltx:*&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;ltx:p&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>LTX_P_SYM: Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;ltx:p&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;\globaldefs&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>GLOBAL_DEFS_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;\\globaldefs&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;_WildCard_&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>WILD_CARD_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;_WildCard_&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#ProcessingInstruction&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_PI_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#ProcessingInstruction&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#DTD&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_DTD_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#DTD&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#Document&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_DOC_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#Document&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;#default&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>H_DEFAULT_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;#default&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;ltx:_Capture_&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>CAPTURE_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;ltx:_Capture_&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;font&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>FONT_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;font&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;xml:id&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>XML_ID_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;xml:id&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;DTD&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>DTD_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;DTD&quot;</span>));
+<span class="doccomment">/// the unique symbol for str value &quot;RelaxNG&quot;
+</span><span class="attr">#[thread_local]
+</span><span class="kw">pub static </span>RELAXNG_SYM : Lazy&lt;SymbolU32&gt; = Lazy::new(|| pin_static(<span class="string">&quot;RelaxNG&quot;</span>));
 
 <span class="doccomment">/// Assign a static str into the arena, returning a unique symbol associated with it
 </span><span class="kw">pub fn </span>pin_static(text: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; SymbolU32 {
-  T.with(|arena| arena.borrow_mut().get_or_intern_static(text))
+  ARENA.borrow_mut().get_or_intern_static(text)
 }
 
 <span class="doccomment">/// Assign a string into the arena, returning a unique symbol associated with it
 </span><span class="kw">pub fn </span>pin&lt;S: AsRef&lt;str&gt;&gt;(text: S) -&gt; SymbolU32 {
-  T.with(|arena| arena.borrow_mut().get_or_intern(text))
+  ARENA.borrow_mut().get_or_intern(text)
 }
 
 <span class="kw">pub fn </span>pin_char(c: char) -&gt; SymbolU32 {
@@ -175,37 +202,30 @@
 
 <span class="kw">pub fn </span>with&lt;R, FnR&gt;(sym: SymbolU32, caller: FnR) -&gt; R
 <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>str) -&gt; R {
-  T.with(|arena| {
     caller(
-      arena
+      ARENA
         .borrow()
         .resolve(sym)
         .expect(<span class="string">&quot;arena::with should only be called when the string is guaranteed to be allocated.&quot;</span>),
     )
-  })
 }
 
 <span class="kw">pub fn </span>to_string(sym: SymbolU32) -&gt; String {
-  T.with(|arena| {
-    arena
-      .borrow()
-      .resolve(sym)
-      .expect(
-        <span class="string">&quot;arena::to_string should only be called when the string is guaranteed to be allocated.&quot;</span>,
-      )
-      .to_owned()
-  })
+  ARENA.borrow()
+    .resolve(sym)
+    .expect(
+      <span class="string">&quot;arena::to_string should only be called when the string is guaranteed to be allocated.&quot;</span>,
+    )
+    .to_owned()
 }
 
 <span class="comment">// TODO: Is this needed? The tighter call would guarantee the T lock is released early.
 </span><span class="kw">pub fn </span>chars(sym: SymbolU32) -&gt; Vec&lt;char&gt; {
-  T.with(|arena| {
-    arena
-      .borrow()
-      .resolve(sym)
-      .expect(<span class="string">&quot;arena::chars should only be called when the string is guaranteed to be allocated.&quot;</span>)
-      .chars()
-      .collect()
-  })
+  ARENA
+    .borrow()
+    .resolve(sym)
+    .expect(<span class="string">&quot;arena::chars should only be called when the string is guaranteed to be allocated.&quot;</span>)
+    .chars()
+    .collect()
 }
 </code></pre></div></section></main></body></html>

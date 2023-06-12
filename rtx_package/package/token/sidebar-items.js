@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["TOKEN_ALIGN","TOKEN_BEGIN","TOKEN_CR","TOKEN_END","TOKEN_MATH","TOKEN_PARAM","TOKEN_RELAX","TOKEN_SPACE","TOKEN_SUB","TOKEN_SUPER"],"enum":["Catcode"],"struct":["Token"]};
+window.SIDEBAR_ITEMS = {"enum":["Catcode"],"static":["TOKEN_ALIGN","TOKEN_BEGIN","TOKEN_CR","TOKEN_END","TOKEN_MATH","TOKEN_PARAM","TOKEN_RELAX","TOKEN_SPACE","TOKEN_SUB","TOKEN_SUPER"],"struct":["Token"]};

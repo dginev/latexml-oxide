@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["STD_STATE","STY_STATE"],"enum":["Catcodes","Scope","TableName"],"static":["UNITS"],"struct":["Localized","State","StateOptions","UndoFrame"],"type":["AssignmentCount","StashTable","Table"]};
+window.SIDEBAR_ITEMS = {"enum":["Catcodes","Scope","TableName"],"static":["STD_STATE","STY_STATE","UNITS"],"struct":["Localized","State","StateOptions","UndoFrame"],"type":["AssignmentCount","StashTable","Table"]};
