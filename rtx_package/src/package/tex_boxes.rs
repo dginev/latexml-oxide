@@ -63,7 +63,7 @@ LoadDefinitions!(state, {
     let box_key   = s!("box{}", number.value_of());
     if let Some(Stored::Digested(ref stuff)) = state.lookup_value(&box_key) {
       adjust_box_color(stuff, state)?;
-      if stuff.is_empty() { Digested::from(List::default()) } else { stuff.clone() }
+      if stuff.is_empty()? { Digested::from(List::default()) } else { stuff.clone() }
     } else {
       Digested::from(List::default())
     }

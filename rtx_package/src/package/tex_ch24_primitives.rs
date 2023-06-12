@@ -64,7 +64,7 @@ LoadDefinitions!(state, {
     before_digest => sub[stomach,state] { stomach.bgroup(state); },
     capture_body => true,
     reversion=> sub[whatsit, _args,state] {
-      if let Some(body) = whatsit.get_body() {
+      if let Some(body) = whatsit.get_body()? {
         body.revert(state)
       } else { Ok(Tokens!()) }
     }
@@ -147,7 +147,7 @@ LoadDefinitions!(state, {
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }
   DefPrimitive!("\\aftergroup Token", sub[stomach, (t), state] {
-    state.push_value("afterGroup", t);
+    state.push_value("afterGroup", t)
   });
 
   // \uppercase<general text>, \lowercase<general text>
@@ -322,7 +322,7 @@ LoadDefinitions!(state, {
       gullet.unread_vec(kv);
       gullet.unread_one(T_CS!("\\ltx@special@graphics"));
     } else {
-      Info!("ignored", "special", stomach, state, s!("Unrecognized TeX Special: {arg}"));
+      Info!("ignored", "special", stomach, s!("Unrecognized TeX Special: {arg}"));
     }
   });
 
@@ -405,7 +405,7 @@ LoadDefinitions!(state, {
         parent.set_attribute("transform", &transform)?;
       }
     } else if in_svg(document,state) {
-      Warn!("unexpected", "kern", document, state, s!("Lost kern in SVG {length}"));
+      Warn!("unexpected", "kern", document, s!("Lost kern in SVG {length}"));
     }
   });
   DefMacro!(
@@ -418,7 +418,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\unskip", sub[stomach,(),state] {
     // pop until a non-empty box is found
     while let Some(last_box) = stomach.box_list.pop() {
-      if !last_box.is_empty() {
+      if !last_box.is_empty()? {
         stomach.box_list.push(last_box);
         break;
       }

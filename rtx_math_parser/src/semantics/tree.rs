@@ -2,6 +2,7 @@ use libxml::tree::Node;
 use rtx_core::common::font::Font;
 use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
+use rtx_core::common::object::Object;
 use rtx_core::state::State;
 use rtx_core::Info;
 use rustc_hash::FxHashMap as HashMap;
@@ -680,10 +681,10 @@ impl XM {
       XM::Ref(refprops) => {
         let mut ref_node = Node::new("XMRef", None, document.get_document()).unwrap();
         if let Some(id) = refprops.id {
-          document.set_attribute(&mut ref_node, "idref", &id, state)?;
+          document.set_attribute(&mut ref_node, "idref", &id)?;
         }
         if let Some(xmkey) = refprops.xmkey {
-          document.set_attribute(&mut ref_node, "_xmkey", &xmkey, state)?;
+          document.set_attribute(&mut ref_node, "_xmkey", &xmkey)?;
         }
         Ok(ref_node)
       },
@@ -696,10 +697,13 @@ impl XM {
         Ok(arg_node)
       },
       XM::Choices(mut choices) => {
-        Info!(
-          "to_xmath handler discarded {} parse choices.",
-          choices.len() - 1
-        );
+        {
+          let stomach = &state.stomach.borrow();
+          Info!("math_parser","choices", stomach,
+            "to_xmath handler discarded {} parse choices.",
+            choices.len() - 1
+          );
+        }
         choices.remove(0).into_xmath(owner, nodes, document, state)
       },
     }

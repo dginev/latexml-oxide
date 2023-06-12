@@ -127,7 +127,7 @@ impl PartialEq for Reversion {
 }
 
 impl From<&str> for Reversion {
-  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters()) }
+  fn from(t: &str) -> Reversion { Reversion::Tokens(mouth::tokenize_internal(t).pack_parameters().ok().unwrap()) }
 }
 impl From<Tokens> for Reversion {
   fn from(ts: Tokens) -> Reversion { Reversion::Tokens(ts) }

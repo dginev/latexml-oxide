@@ -155,7 +155,7 @@ LoadDefinitions!(state, {
   Tag!("ltx:document", after_open_late => sub[document, root, state] {
     let classes = LookupMappingKeys!("DOCUMENT_CLASSES").join(" ");
     if !classes.is_empty()  {
-      document.add_class(root, &classes, state)?;
+      document.add_class(root, &classes)?;
     }
   });
 

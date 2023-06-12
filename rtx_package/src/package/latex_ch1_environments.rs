@@ -46,8 +46,8 @@ LoadDefinitions!(state, {
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
         let message = s!("The environment {} is not defined.", undef);
-        Error!("undefined", undef, gullet, state, message);
-        state.note_status("undefined", &undef);
+        Error!("undefined", undef, gullet, message);
+        note_status(LogStatus::Undefined, Some(&undef));
         // TODO:
         // state.install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }

@@ -23,7 +23,7 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-    before_digest => sub[stomach, state] { only_preamble("\\usepackage", stomach, state); },
+    before_digest => sub[stomach, state] { only_preamble("\\usepackage", stomach, state) },
     after_digest => sub[stomach, whatsit, state] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
@@ -48,7 +48,7 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
   "<?latexml package='#2' ?#1(options='#1')?>",
-  before_digest =>  sub[stomach, state] { only_preamble("\\RequirePackage", stomach, state); },
+  before_digest =>  sub[stomach, state] { only_preamble("\\RequirePackage", stomach, state) },
   after_digest => sub[stomach, whatsit, state] {
     let options  = whatsit.get_arg(1);
     let packages = whatsit.get_arg(2).unwrap();
@@ -164,7 +164,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefPrimitive!("\\ExecuteOptions{}", sub[gullet, (options), state] {
     // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
-    Info!("TODO","\\ExecuteOptions",gullet,state,"implement fully, it's an empty stub.");
+    Info!("TODO","\\ExecuteOptions",gullet,"implement fully, it's an empty stub.");
     Ok(Vec::new())
   });
 
@@ -174,7 +174,7 @@ LoadDefinitions!(outer_stomach, state, {
     //   "inorder"
     // }
     // ProcessOptions!(($star ? (inorder => 1) : ()));
-    Info!("TODO","\\ProcessOptions",stomach,state,"implement fully, missing 'inorder'");
+    Info!("TODO","\\ProcessOptions",stomach,"implement fully, missing 'inorder'");
     process_options(stomach, state)?;
     Ok(Vec::new())
   });

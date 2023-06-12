@@ -487,7 +487,7 @@ macro_rules! requireMath {
   ($cs_name:expr, $state_arg:ident) => {
     if !$state_arg.lookup_bool("IN_MATH") {
       let message = s!("{} should only appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, $state_arg, message);
+      Warn!("unexpected", "mode", None, message);
     }
   };
 }
@@ -500,7 +500,7 @@ macro_rules! forbidMath {
   ($cs_name:expr, $state_arg:ident) => {
     if $state_arg.lookup_bool("IN_MATH") {
       let message = s!("{} should not appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, $state_arg, message);
+      Warn!("unexpected", "mode", None, message);
     }
   };
 }
@@ -517,7 +517,7 @@ macro_rules! AssignRegister {
       (*defn).set_value($value, $args, $state_arg);
     } else {
       let message = s!("The control sequence {} is not a register", $cs);
-      Warn!("expected", "register", None, $state_arg, message);
+      Warn!("expected", "register", None, message);
     }
   }};
   ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
@@ -547,6 +547,6 @@ macro_rules! SetCounter {
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
       Tokens::new(Explode!($value.value_of())),
       Some(ExpandableOptions{ scope: Some(Scope::Global),
-         ..ExpandableOptions::default()}), $state_arg);
+         ..ExpandableOptions::default()}), $state_arg)?;
   }
 }

@@ -11,7 +11,7 @@ use rtx_core::common::error::{note_begin, note_end, note_progress, Result};
 use rtx_core::common::xml::*;
 use rtx_core::document::Document;
 use rtx_core::state::State;
-use rtx_core::{fatal, map, raw_map, s, static_map, Error};
+use rtx_core::{map, raw_map, s, static_map, Error, Fatal, fatal};
 
 use crate::grammar::builder::init_grammar;
 use crate::pragmatics::ValidationPragmatics;
@@ -375,7 +375,7 @@ impl MathParser {
           }
           // TODO: is the array/XM case still relevant?
           // if ($isarr) { $$result[1]{$key} = $value; } else {
-          document.set_attribute(&mut result, &key, &value, state)?;
+          document.set_attribute(&mut result, &key, &value)?;
           // }
         }
         result = document
@@ -883,7 +883,8 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document, state: &State)
         // LaTeXML::MathParser::IDREFS{$idref}
         // ? "Previously bound to " .
         // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        Error!("expected", "id", None, state, message);
+        let err = || {Error!("expected", "id", None, message); Ok(()) };
+        err().ok();
         //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
       }
     }

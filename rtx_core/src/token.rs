@@ -811,7 +811,7 @@ impl Token {
            Illegal: {}",
           &self.stringify()
         );
-        Fatal!(Parameter, Unexpected, None, state, msg);
+        Fatal!(Parameter, Unexpected, None, msg);
       },
       Catcode::CS | Catcode::ACTIVE => {
         if state.is_dont_expandable(&self) {

@@ -203,20 +203,20 @@ impl Alignment {
     }
   }
 
-  pub fn next_column(&mut self) -> Option<&mut Cell> {
-    self.current_row?;
+  pub fn next_column(&mut self) -> Result<Option<&mut Cell>> {
+    if self.current_row.is_none() { return Ok(None); }
     self.current_column += 1;
     let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
     if let Some(colspec) = current_row.get_column_mut(self.current_column) {
-      Some(colspec)
+      Ok(Some(colspec))
     } else {
-      Error!("unexpected", "&", None, None, "Extra alignment tab '&'");
+      Error!("unexpected", "&", None, "Extra alignment tab '&'");
       // DG: Mutability issue, should we do an alternative recovery?
       //     or change the call interface?
       //
       // let fallback_cell = Cell{align: Some(Align::Center),..Cell::default()};
       // current_row.add_column(fallback_cell);
-      None
+      Ok(None)
     }
   }
 
@@ -511,7 +511,7 @@ impl BoxOps for Alignment {
             }
           }
         }
-        let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        let empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty()?;
         let open_column_fn = &self.open_column;
         let mut cell_attrs = HashMap::default();
         if let Some(align) = cell.align {
@@ -676,7 +676,7 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         break;
       }
       gullet.unread_one(last_op);
-    } else if let Some(defn) = state.lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true) {
+    } else if let Some(defn) = state.lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
       let invoked = defn.invoke(gullet, true, state)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {
@@ -688,7 +688,6 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
         "unexpected",
         op,
         gullet,
-        state,
         s!("Unrecognized tabular template {op:?}")
       );
     }
@@ -766,7 +765,7 @@ fn guess_alignment_headers(
     if rows.is_empty() {
       return Ok(());
     }
-    alignment_characterize_lines(document, Axis::Row, false, rows.as_mut_slice(), state)?;
+    alignment_characterize_lines(document, Axis::Row, false, rows.as_mut_slice())?;
   }
   // Flip the rows around to produce a column view.
   {
@@ -775,7 +774,7 @@ fn guess_alignment_headers(
       return Ok(());
     }
     // This usually does something unpleasant
-    alignment_characterize_lines(document, Axis::Column, false, cols.as_mut_slice(), state)?;
+    alignment_characterize_lines(document, Axis::Column, false, cols.as_mut_slice())?;
   }
 
   // Did we go overboard?
@@ -813,7 +812,7 @@ fn guess_alignment_headers(
   }
   if n_h > 0 {
     // Found some headers?
-    document.add_class(table, "ltx_guessed_headers", state)?;
+    document.add_class(table, "ltx_guessed_headers")?;
   }
 
   //   # Debugging report!
@@ -1238,8 +1237,7 @@ fn alignment_characterize_lines(
   document: &mut Document,
   axis: Axis,
   reversed: bool,
-  lines: &mut [Vec<&mut Cell>],
-  state: &State,
+  lines: &mut [Vec<&mut Cell>]
 ) -> Result<()> {
   let n = lines.len();
   if n < 2 {
@@ -1323,7 +1321,7 @@ fn alignment_characterize_lines(
                   })))
             {
             } else {
-              document.add_ss_values(xcell, "thead", axis.marker_name(), state)?;
+              document.add_ss_values(xcell, "thead", axis.marker_name())?;
             }
           }
         }

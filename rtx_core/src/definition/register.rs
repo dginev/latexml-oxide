@@ -113,12 +113,12 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuGlue(v) => v.value_of(),
       RegisterValue::Token(v) => {
         let message = s!(".value_of called on Token {:?}", v);
-        Warn!("register", "value_of", None, None, message);
+        Warn!("register", "value_of", None, message);
         -1
       },
       RegisterValue::Tokens(v) => {
         let message = s!(".value_of called on Tokens {:?}", v);
-        Warn!("register", "value_of", None, None, message);
+        Warn!("register", "value_of", None, message);
         -1
       },
     }
@@ -274,7 +274,10 @@ impl<'a> From<&'a RegisterValue> for Dimension {
           "Token register can not be cast into a dimension: {:?}",
           other
         );
-        Error!("expected", "dimension", None, None, message);
+        // silence a potential Fatal from 100 errors,
+        // until a better place is reached in the high-level conversion logic
+        let err = || {Error!("expected", "dimension", None, message); Ok(()) };
+        err().ok();
         Dimension::new(0)
       },
     }
@@ -290,8 +293,11 @@ impl<'a> From<&'a RegisterValue> for Glue {
       RegisterValue::MuGlue(other) => Glue::new(other.value_of()),
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
-        let message = s!("Token register can not be cast into a Glue: {:?}", other);
-        Error!("expected", "dimension", None, None, message);
+        let message = s!("Token register can not be cast into a Glue: {other:?}");
+        // silence a potential Fatal from 100 errors,
+        // until a better place is reached in the high-level conversion logic
+        let err = || { Error!("expected", "dimension", None, message); Ok(()) };
+        err().ok();
         Glue::new(0)
       },
     }
@@ -315,7 +321,8 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a Glue: {:?}", other);
-        Error!("expected", "dimension", None, None, message);
+        let err = || {Error!("expected", "dimension", None, message); Ok(())};
+        err().ok();
         MuGlue::new(0)
       },
     }
@@ -529,7 +536,8 @@ impl Register {
       let message = self
         .cs
         .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
-      Error!("unexpected", "chardef", None, state, message);
+      let err = || {Error!("unexpected", "chardef", None, message); Ok(()) };
+      err().ok();
     } else {
       (self.setter)(value, args, state);
     }

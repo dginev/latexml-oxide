@@ -78,7 +78,7 @@ LoadDefinitions!(outer_state, {
     } else { // Failed?
       let message = s!("Unrecognized font name {:?} Font switch macro {:?}
       will have no effect", name, cs.stringify());
-      Info!("unexpected", name, gullet, state, message);
+      Info!("unexpected", name, gullet, message);
       None
     };
     gullet.skip_spaces(state)?;
@@ -124,7 +124,7 @@ LoadDefinitions!(outer_state, {
         } else {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition",
           defn_token_str);
-          Error!("expected","definition", stomach, state, message);
+          Error!("expected","definition", stomach, message);
         }
         state.expire_current_token();
       }
@@ -142,11 +142,11 @@ LoadDefinitions!(outer_state, {
       } else {
         let message =
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
-        Error!("expected","definition", stomach, state, message);
+        Error!("expected","definition", stomach, message);
       }
     } else {
       let message = s!("\\multiply expected a Variable argument, but got nothing.");
-      Error!("expected","variable", stomach, state, message);
+      Error!("expected","variable", stomach, message);
     }
   });
 
@@ -159,18 +159,18 @@ LoadDefinitions!(outer_state, {
         let defn_value = defn.value_of(inner, state).unwrap_or_default();
         let mut denominator = scale.value_f64();
         if denominator == 0.0 {
-          Error!("misdefined", scale, stomach, state, "Illegal \\divide by 0; assuming 1");
+          Error!("misdefined", scale, stomach, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
         defn.set_value(defn_value.divide(Float::new_f64(denominator)), defn_args, state);
       } else {
         let message =
           s!("\\divide expected a defined variable for {:?}, found no definition", varname);
-        Error!("expected","definition", stomach, state, message);
+        Error!("expected","definition", stomach, message);
       }
     } else {
       let message = s!("\\divide expected a Variable argument, but got nothing.");
-      Error!("expected","variable", stomach, state, message);
+      Error!("expected","variable", stomach, message);
     }
   });
 

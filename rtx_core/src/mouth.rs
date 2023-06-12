@@ -320,7 +320,7 @@ impl Mouth {
           Ok(count) => count,
           Err(e) => {
             let message = s!("BufReader::read_to_end returned an error: {:?}", e);
-            Warn!("mouth", "io", self, state, message);
+            Warn!("mouth", "io", self, message);
             0
           },
         };
@@ -345,7 +345,7 @@ impl Mouth {
             Ok(fstr) => fstr,
             Err(e) => {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
-              Info!("misdefined", "utf8", self, state, message);
+              Info!("misdefined", "utf8", self, message);
               unsafe { str::from_utf8_unchecked(&file_bytes) }
             },
           };
@@ -426,7 +426,7 @@ impl Mouth {
         let line_opt = self.get_next_line(state);
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = state.lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = if let Some(defn) = state.lookup_definition(&CS_ENDLINECHAR) {
+        let eolch = if let Some(defn) = state.lookup_definition(&CS_ENDLINECHAR).unwrap() {
           if defn.is_register() {
             if let Some(eol) = defn.value_of(Vec::new(), state) {
               let eol = eol.value_of() as i16;

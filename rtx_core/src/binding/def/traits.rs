@@ -69,7 +69,7 @@ impl IntoOption<Option<Reversion>> for &str {
       Some(Reversion::Tokens(Tokens!()))
     } else {
       Some(Reversion::Tokens(
-        mouth::tokenize_internal(self).pack_parameters(),
+        mouth::tokenize_internal(self).pack_parameters().ok().unwrap(),
       ))
     }
   }
@@ -181,6 +181,15 @@ impl IntoTokensResult<Result<Tokens>> for Tokens {
 
 impl IntoTokensResult<Result<Tokens>> for Result<Tokens> {
   fn into_tokens_result(self) -> Result<Tokens> { self }
+}
+
+impl IntoTokensResult<Result<Tokens>> for Result<()> {
+  fn into_tokens_result(self) -> Result<Tokens> {
+    match self {
+      Ok(()) => Ok(Tokens!()),
+      Err(e) => Err(e)
+    }
+  }
 }
 
 impl IntoTokensResult<Result<Tokens>> for () {

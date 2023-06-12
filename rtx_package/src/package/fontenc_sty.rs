@@ -137,7 +137,7 @@ LoadDefinitions!(stomach, state, {
             "Only strings should be stored as font encoding names, at: {:?}",
             encoding_stored
           );
-          Error!("fontenc", "font_encodings", stomach, state, message);
+          Error!("fontenc", "font_encodings", stomach, message);
         }
       }
     }

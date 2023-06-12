@@ -438,7 +438,7 @@ impl Tokens {
   // Collapses PARAM+PARAM token pair into a single PARAM
   // B book suggests running this
   // and remove dont_expand markers.
-  pub fn pack_parameters(self) -> Self {
+  pub fn pack_parameters(self) -> Result<Self> {
     let mut rescanned = Vec::new();
     let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
     while let Some(mut t) = toks.pop_front() {
@@ -462,7 +462,6 @@ impl Tokens {
             "misdefined",
             "expansion",
             None,
-            None,
             "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );
@@ -477,7 +476,7 @@ impl Tokens {
         rescanned.push(t);
       }
     }
-    Tokens::new(rescanned)
+    Ok(Tokens::new(rescanned))
   }
 }
 

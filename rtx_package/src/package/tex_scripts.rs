@@ -90,7 +90,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         prevspace = true; // a space avoids double-scripts
         putback.push_front(prev); // put back? assuming it will add rpadding to previous???
         continue;
-      } else if prev.is_empty() {
+      } else if prev.is_empty()? {
         // If empty, the script floats, can't conflict, but don't put back
         break;
       } else if let Some(prevop) = is_script(&prev, state) {
@@ -107,7 +107,6 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
               "unexpected",
               s!("double-{}", lcode),
               stomach,
-              state,
               s!("Double {}", lcode)
             );
           }
@@ -165,14 +164,13 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         "expected",
         "{",
         stomach,
-        state,
         "Missing sub/superscript argument"
       ); //$gullet->showUnexpected);
       stuff.push(Digested::default());
     }
     let script = stuff.remove(0); // ONLY the first box is the script!
 
-    if !script.is_empty() {
+    if !script.is_empty()? {
       let mut properties = stored_map!(
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b) }
@@ -187,7 +185,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         properties.insert("font".to_string(), font.into());
       }
       let mut with_script = vec![Digested::from(Whatsit {
-        definition: state.lookup_definition(&T_CS!(cs)).unwrap(),
+        definition: state.lookup_definition(&T_CS!(cs))?.unwrap(),
         args: vec![Some(script)],
         properties,
         // TODO:
@@ -205,7 +203,6 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       "Unexpected",
       c,
       stomach,
-      state,
       format!("Script {} can only appear in math mode", c)
     );
     let placeholder = if cc == Catcode::SUPER {
@@ -349,7 +346,7 @@ LoadDefinitions!(state, {
     )),
     PrimitiveOptions::default(),
     state,
-  );
+  )?;
   def_primitive(
     T_SUB!(),
     None,
@@ -360,7 +357,7 @@ LoadDefinitions!(state, {
     )),
     PrimitiveOptions::default(),
     state,
-  );
+  )?;
 
   // NOTE: The When reverting these, the
   DefConstructor!("\\@@POSTSUPERSCRIPT InScriptStyle",r###"

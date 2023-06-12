@@ -42,7 +42,7 @@ LoadDefinitions!(outer_state, {
     if inner_state.lookup_bool("IN_MATH") {
       let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
-      Warn!("unexpected", c, stomach, inner_state, message);
+      Warn!("unexpected", c, stomach, message);
     }
     Ok(vec![])
   });
@@ -106,15 +106,15 @@ LoadDefinitions!(outer_state, {
     if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh.clone()); }
     else {
       let message = s!("Unrecognized font family {:?}.", family);
-      Info!("unexpected", family, stomach, inner_state, message); }
+      Info!("unexpected", family, stomach, message); }
     if let Some(sh) = font::lookup_font_series(&series) { MergeFont!(sh.clone()); }
     else {
       let message = s!("Unrecognized font series {:?}.", series);
-      Info!("unexpected", series, stomach, inner_state, message); }
+      Info!("unexpected", series, stomach, message); }
     if let Some(sh) = font::lookup_font_shape(&shape) { MergeFont!(sh.clone()); }
     else {
       let message = s!("Unrecognized font shape {:?}.", shape);
-      Info!("unexpected",shape, stomach, inner_state, message); }
+      Info!("unexpected",shape, stomach, message); }
     Ok(Vec::new())
   });
 

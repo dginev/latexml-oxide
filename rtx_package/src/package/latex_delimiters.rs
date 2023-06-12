@@ -117,7 +117,7 @@ LoadDefinitions!(state, {
     after_digest => sub[stomach,_args,state] {
       if state.is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
         || state.lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
-        Error!("unexpected", "\\right", stomach, state, "Unbalanced \\right, no balancing \\left."); }
+        Error!("unexpected", "\\right", stomach, "Unbalanced \\right, no balancing \\left."); }
       else {
         stomach.egroup(state)?;
       }
@@ -146,7 +146,7 @@ LoadDefinitions!(state, {
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach, state,
+        Warn!("unexpected", delim, stomach,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())
@@ -172,7 +172,7 @@ LoadDefinitions!(state, {
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach, state,
+        Warn!("unexpected", delim, stomach,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())

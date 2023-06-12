@@ -54,7 +54,7 @@ pub fn parse_prototype(
       "Definition prototype doesn't have proper control sequence: \"{}\"",
       proto
     );
-    fatal!(Prototype, Misdefined, None, state, message);
+    fatal!(Prototype, Misdefined, None, message);
   };
   let final_proto = normalized_proto.trim();
   let paramlist = parse_parameters(final_proto, &cs, state_opt)?;

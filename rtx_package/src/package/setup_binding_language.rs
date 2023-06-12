@@ -459,7 +459,7 @@ macro_rules! TypedConditional {
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
-              Error!("expected", "argument", $gullet, None, e);
+              Error!("expected", "argument", $gullet, e);
               <parameter_rust_type!($ptype)>::default()
             }
           };
@@ -479,7 +479,7 @@ macro_rules! defi_conditional {
     defi_conditional!($cs, $paramlist, $test, $options, gullet, st);
   }};
   ($cs:expr, $paramlist:expr, $test:expr, $options:expr, $gullet:ident, $state_arg:ident) => {{
-    def_conditional($cs, $paramlist, $test, $options, $gullet, $state_arg);
+    def_conditional($cs, $paramlist, $test, $options, $gullet, $state_arg)?;
   }};
 }
 
@@ -610,7 +610,7 @@ macro_rules! TypedPrimitive {
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
-              Error!("expected", "argument", $stomach_arg, None, e);
+              Error!("expected", "argument", $stomach_arg, e);
               <parameter_rust_type!($ptype)>::default()
             }
           };
@@ -628,7 +628,7 @@ macro_rules! defi_primitive(
     defi_primitive!($cs, $params, $compiled_replacement, $options, st)
   }};
   ($cs:expr, $params:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {{
-    def_primitive($cs, $params, $compiled_replacement, $options, $state_arg);
+    def_primitive($cs, $params, $compiled_replacement, $options, $state_arg)?;
   }};
 );
 
@@ -646,7 +646,7 @@ macro_rules! LookupRegister {
       defn.value_of($parameters, $state_arg).unwrap_or_default()
     } else {
       let message = s!("The control sequence {:?} is not a register", $cs);
-      Warn!("expected", "register", None, $state_arg, message);
+      Warn!("expected", "register", None, message);
       RegisterValue::default()
     }
   };
@@ -927,7 +927,7 @@ macro_rules! defi_math {
     let cs = T_CS!($cstext.to_string());
     let presentation = $presentation.to_string();
     let paramlist: Option<Parameters> = $paramlist;
-    def_math(cs, paramlist, presentation, options, $state_arg);
+    def_math(cs, paramlist, presentation, options, $state_arg)?;
   }};
 }
 
@@ -986,7 +986,7 @@ macro_rules! CounterValue {
 macro_rules! AddToCounter {
   ($ctr:expr, $value:expr, $gullet:ident) => {{
     bind_state_mut!(st);
-    add_to_counter($ctr, $value, $gullet, st)
+    add_to_counter($ctr, $value, $gullet, st)?
   }};
   ($ctr:expr, $value:expr, $gullet:ident, $state_arg:ident) => {
     add_to_counter($ctr, $value, $gullet, $state_arg)
@@ -1034,14 +1034,14 @@ macro_rules! RefStepID {
 macro_rules! ResetCounter {
   ($ctr:literal) => {{
     bind_state_mut!(st);
-    reset_counter(&T_OTHER!($ctr), st)
+    reset_counter(&T_OTHER!($ctr), st)?
   }};
   ($ctr:expr) => {{
     bind_state_mut!(st);
-    reset_counter($ctr, st)
+    reset_counter($ctr, st)?
   }};
   ($ctr:expr, $state_arg: ident) => {
-    reset_counter($ctr, $state_arg)
+    reset_counter($ctr, $state_arg)?
   };
 }
 
@@ -1159,7 +1159,7 @@ macro_rules! DefAccent {
         T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
         T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),
         T_BEGIN!(), T_ARG!(1), T_END!())),
-      Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}), $state);
+      Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}), $state)?;
   }};
 }
 
@@ -1261,14 +1261,14 @@ macro_rules! RemoveValue {
 macro_rules! PushValue {
   ($name:expr => $values:expr) => {{
     bind_state_mut!(st);
-    st.push_value($name, $values)
+    st.push_value($name, $values)?
   }};
   ($name:expr, $values:expr) => {{
     bind_state_mut!(st);
-    st.push_value($name, $values)
+    st.push_value($name, $values)?
   }};
   ($name:expr, $values:expr, $state_arg:ident) => {
-    $state_arg.push_value($name, $values)
+    $state_arg.push_value($name, $values)?
   };
 }
 #[macro_export]
@@ -1389,7 +1389,7 @@ macro_rules! LookupDefinition {
     LookupDefinition!($name, st)
   }};
   ($name:expr, $state_arg:ident) => {
-    $state_arg.lookup_definition($name)
+    $state_arg.lookup_definition($name)?
   };
 }
 #[macro_export]
@@ -1613,7 +1613,7 @@ macro_rules! DefMacro {
   }};
   // explicit state, for nested macro factories
   ($cs:expr, None, $expansion:expr, $state_arg:ident) => {{
-    def_macro($cs, None, $expansion, None, $state_arg);
+    def_macro($cs, None, $expansion, None, $state_arg)?;
   }};
   ($cs:expr, None, $expansion:literal, $($input:tt)+) => {{
     let compiled_expansion;
@@ -1656,7 +1656,7 @@ macro_rules! TypedMacro {
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
-              Error!("expected", "argument", $gullet, None, e);
+              Error!("expected", "argument", $gullet, e);
               <parameter_rust_type!($ptype)>::default()
             }
           };
@@ -1677,7 +1677,7 @@ macro_rules! defi_macro {
     defi_macro!($cs, $paramlist, $compiled_replacement, $options, st);
   }};
   ($cs:expr, $paramlist:expr, $compiled_replacement:expr, $options:expr, $state_arg:ident) => {
-    def_macro($cs, $paramlist, $compiled_replacement, $options, $state_arg);
+    def_macro($cs, $paramlist, $compiled_replacement, $options, $state_arg)?;
   };
 }
 
@@ -1859,12 +1859,11 @@ macro_rules! DefColumnType {
         $expansion_closure,
         None,
         st,
-      );
+      )?;
     } else {
       Warn!(
         "expected",
         "character",
-        None,
         None,
         "Expected Column specifier"
       );
@@ -2085,7 +2084,7 @@ macro_rules! DocType {
 macro_rules! Today {
   () => {{
     bind_state_mut!(st);
-    today(st)
+    today(st)?
   }};
 }
 
@@ -2105,7 +2104,7 @@ macro_rules! DeclareOption {
   };
   (None, $tokenized:ident, $outer_state: ident) => {
     let cs = String::from("\\default@ds");
-    def_macro(T_CS!(cs), None, $tokenized, None, $outer_state);
+    def_macro(T_CS!(cs), None, $tokenized, None, $outer_state)?;
   };
   (None, sub $body:block) => {
     bind_state_mut!(st);
@@ -2125,7 +2124,7 @@ macro_rules! DeclareOption {
     let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     );
-    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
+    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state)?;
   };
   ($option:expr, None) => {
     bind_state_mut!(st);
@@ -2135,17 +2134,17 @@ macro_rules! DeclareOption {
     bind_state_mut!(st);
     let tokenized;
     compile_tokenize_internal!(tokenized, $tex);
-    st.push_value("@declaredoptions", $option);
+    st.push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
-    def_macro(T_CS!(cs),None,tokenized,None,st);
+    def_macro(T_CS!(cs),None,tokenized,None,st)?;
   };
   ($option:expr, $tokenized:ident) => {
     bind_state_mut!(st);
-    st.push_value("@declaredoptions", $option.to_string());
+    st.push_value("@declaredoptions", $option.to_string())?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
-    def_macro(T_CS!(cs),None, $tokenized, None, st);
+    def_macro(T_CS!(cs),None, $tokenized, None, st)?;
   };
   ($option:expr, sub $body:block) => {
     bind_state_mut!(st);
@@ -2160,13 +2159,13 @@ macro_rules! DeclareOption {
     DeclareOption!($option, sub[$stomach, $state] $body, st)
   };
   ($option:expr, sub[$stomach:ident, $inner_state:ident] $body:block, $outer_state: ident) => {
-    $outer_state.push_value("@declaredoptions", $option);
+    $outer_state.push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
     let code: PrimitiveClosure = Rc::new(move |$stomach, _args, $inner_state|
       WithInnerState!($body, $stomach, $inner_state).into_digested_result()
     );
-    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state);
+    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default(), $outer_state)?;
   }
 }
 
@@ -2192,11 +2191,11 @@ macro_rules! AddToMacro {
   }};
   ($cs:ident, $tokens:ident, $organ:ident, $state:ident) => {{
     // Needs error checking!
-    let defn = $state.lookup_definition(&$cs);
+    let defn = $state.lookup_definition(&$cs)?;
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       let message = s!("{} is not an expandable control sequence", $cs);
       let message2 = "Ignoring addition";
-      Warn!("unexpected", $cs, $organ, $state, message, message2);
+      Warn!("unexpected", $cs, $organ, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using
@@ -2213,7 +2212,6 @@ macro_rules! AddToMacro {
             "unexpected",
             "ExpandableBody::Closure",
             $organ,
-            $state,
             message
           );
           Vec::new()
@@ -2231,7 +2229,7 @@ macro_rules! AddToMacro {
           ..ExpandableOptions::default()
         }),
         $state,
-      );
+      )?;
     }
   }};
 }

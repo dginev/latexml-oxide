@@ -3,35 +3,90 @@ use std::fmt;
 use std::io;
 use std::num::{ParseFloatError, ParseIntError};
 use std::result;
+use std::cell::RefCell;
+use once_cell::sync::Lazy;
+use crate::common::arena::{self,EMPTY_SYM};
+
+use rustc_hash::{FxHashMap as HashMap};
+use string_interner::symbol::SymbolU32;
+
+#[derive(Debug,Clone,Default)]
+pub struct LogState {
+  pub undefined: HashMap<SymbolU32,usize>,
+  pub missing: HashMap<SymbolU32,usize>,
+  pub debug: usize,
+  pub info: usize,
+  pub warning: usize,
+  pub error: usize,
+  pub fatal: bool,
+}
+pub enum LogStatus {
+  Debug,
+  Info,
+  Warning,
+  Error,
+  Fatal,
+  Undefined,
+  Missing,
+}
+
+#[thread_local]
+pub static REPORT : Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
+
+pub fn note_status(status: LogStatus, what:Option<&str>) {
+  let mut state = REPORT.borrow_mut();
+  use LogStatus::*;
+  match status {
+    Debug => {state.debug += 1},
+    Info => {state.info += 1},
+    Warning => {state.warning += 1},
+    Error => {state.error += 1},
+    Fatal => {state.fatal = true},
+    Undefined => {
+      let entry = state.undefined.entry(
+        what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
+      *entry +=1;
+    },
+    Missing => {
+      let entry = state.missing.entry(
+        what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
+      *entry +=1;
+    },
+  }
+}
+
+pub fn get_status(status: LogStatus) -> usize {
+  let state = REPORT.borrow();
+  use LogStatus::*;
+  match status {
+    Debug => state.debug,
+    Info => state.info,
+    Warning => state.warning,
+    Error => state.error,
+    Fatal => if state.fatal {1} else {0},
+    _ => unimplemented!()
+  }
+}
 
 #[macro_export]
 macro_rules! Debug {
-  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
-    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
+      $crate::generate_message!($where, $message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
-    // $state.note_status("debug"); // TODO: We're losing the debug count this way...
+ ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
-  }};
-  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    use log::debug;
-    $state.note_status("debug","");
-    debug!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
-  }};
- ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    use log::debug;
-    $state.note_status("debug","");
-    debug!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
+      $crate::generate_message!($where, $message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
-    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!($($simple),*);
   }};
@@ -40,108 +95,78 @@ macro_rules! Debug {
 
 #[macro_export]
 macro_rules! Info {
-  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
+  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Info, None);
     use log::info;
-    // $state.note_status("info"); // TODO: We're losing the info count this way...
-    info!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
+    info!(target: &format!("{}:{}", $category, $object), "{}",
+      $crate::generate_message!($where, $message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
-    // $state.note_status("info"); // TODO: We're losing the info count this way...
+ ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+  $crate::common::error::note_status(
+    $crate::common::error::LogStatus::Info, None);
     use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}",
-       generate_message!($where, $message, -1, $($details),*))
-  }};
-  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("info","");
-    use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
-  }};
- ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("info","");
-    use log::info;
-    info!(target: &s!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
+    info!(target: &format!("{}:{}", $category, $object), "{}",
+    $crate::generate_message!($where, $message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
-    // $state.note_status("debug"); // TODO: We're losing the info count this way...
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!($($simple),*);
   }};
+
 }
 
 #[macro_export]
 macro_rules! Warn {
-  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
-    // $state.note_status("warn"); // TODO: We're losing the warn count this way...
+  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
+      $crate::generate_message!($where, $message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
-    // $state.note_status("warn"); // TODO: We're losing the warn count this way...
+ ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
-  }};
-  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    $state.note_status("warn","");
-    use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
-  }};
- ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    $state.note_status("warn","");
-    use log::warn;
-    warn!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
+      $crate::generate_message!($where, $message, -1, $($details),*))
   }}
 }
 
 #[macro_export]
 macro_rules! Error {
-  ($category:expr, $object:expr, $where:ident, None, $message:expr) => {{
-    // $state.note_status("error"); // TODO: We're losing the error count this way...
-    use log::error;
-    use $crate::generate_message;
-    error!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
+  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+    $crate::Error!($category,$object,$where,$message,"")
   }};
- ($category:expr, $object:expr, $where:ident, None, $message:expr, $($details:expr),*) => {{
-    // $state.note_status("error"); // TODO: We're losing the error count this way...
+ ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Error, None);
     use log::error;
-    use $crate::generate_message;
     error!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
-  }};
-  ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr) => {{
-    use log::error;
-    use $crate::generate_message;
-    $state.note_status("error","");
-    error!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1))
-  }};
- ($category:expr, $object:expr, $where:ident, $state:expr, $message:expr, $($details:expr),*) => {{
-    use log::error;
-    use $crate::generate_message;
-    $state.note_status("error","");
-    error!(target: &format!("{}:{}", $category, $object), "{}",
-      generate_message!($where, $message, -1, $($details),*))
+      $crate::generate_message!($where, $message, -1, $($details),*));
+    let maxerrors = 100; //TODO: ($state ? $state->lookupValue('MAX_ERRORS') : 100);
+    if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
+      Fatal!(TooManyErrors, MaxLimit(maxerrors), $where, format!("Too many errors (> {maxerrors})!"));
+    }
   }}
 }
 
 // TODO: flesh out the messages
 #[macro_export]
 macro_rules! Fatal {
-  ($target:tt, $category:tt, $where:expr, $state: expr, $message:expr) => {{
+  ($target:expr, $category:expr, $where:expr, $message:expr) => {{
+    $crate::common::error::note_status(
+      $crate::common::error::LogStatus::Fatal, None);
     fatal!($target, $category, $message);
   }};
 }
 
 #[macro_export]
 macro_rules! fatal {
-  ($target:tt, $category:tt, $message:expr) => {{
+  ($target:expr, $category:expr, $message:expr) => {{
     use $crate::common::error::Error as RtxError;
     use $crate::common::error::ErrorCategory::*;
     use $crate::common::error::ErrorTarget::*;
@@ -151,7 +176,7 @@ macro_rules! fatal {
       message: $message.to_string(),
     });
   }};
-  ($target:tt, $category:expr, $where: ident, $state: ident, $message:expr) => {{
+  ($target:tt, $category:expr, $where: ident, $message:expr) => {{
     use $crate::common::error::Error as RtxError;
     use $crate::common::error::ErrorCategory::*;
     use $crate::common::error::ErrorTarget::*;
@@ -199,6 +224,18 @@ macro_rules! generate_message {
       column!()
     )
   };
+  ($where:ident, $message:expr, $level:literal, $detail:expr, $detail2:expr) => {
+    format!(
+      "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      $message,
+      $where.get_location(),
+      $detail,
+      $detail2,
+      file!(),
+      line!(),
+      column!()
+    )
+  };
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -230,6 +267,7 @@ pub enum ErrorCategory {
   EoF,
   Endgroup,
   FailedParse,
+  MaxLimit(usize),
   Generic(Box<dyn ErrorTrait>),
   Filename(String),
 }
@@ -255,6 +293,7 @@ pub enum ErrorTarget {
   Internal,
   TargetUnexpected,
   SmuggledCatcode,
+  TooManyErrors,
 }
 
 impl fmt::Display for Error {
@@ -276,6 +315,7 @@ impl fmt::Display for Error {
       Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
       FailedParse => write!(f, "failed to parse"),
+      MaxLimit(num) => write!(f, "{}", num),
       Generic(ref err) => err.fmt(f),
       Filename(ref name) => write!(f, "file:{name}"),
     }

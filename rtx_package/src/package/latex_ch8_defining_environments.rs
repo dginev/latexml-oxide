@@ -16,7 +16,7 @@ LoadDefinitions!(outer_state, {
        state.lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
-        Info!("ignore", name, stomach, state, message);
+        Info!("ignore", name, stomach, message);
       }
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state?

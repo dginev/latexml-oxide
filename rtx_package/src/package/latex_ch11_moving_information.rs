@@ -244,7 +244,6 @@ LoadDefinitions!(outer_stomach, outer_state, {
     let mut tokens = Vec::new();
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
-      Info!("\nDamn! We're in a list {}; try to close it!", tag);
       tokens.extend(Invocation!("\\end", vec![env], gullet)?.unlist());
       tokens.extend(vec![
         T_CS!("\\let"),

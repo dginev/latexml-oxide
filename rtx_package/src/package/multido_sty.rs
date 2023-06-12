@@ -50,7 +50,7 @@ LoadDefinitions!(state, {
         if let Some(cap) = DNIR_REX.captures(&csname) {
           let vtype = cap.get(1).map_or(String::new(), |m| m.as_str().to_lowercase());
           if gullet.read_keyword(&["="], state)?.is_none() {
-            Error!("expected", "=", gullet, state, "Missing = in multido variables");
+            Error!("expected", "=", gullet, "Missing = in multido variables");
           }
           let init = match vtype.as_str() {
             "d" => Tokens!(Explode!(s!("{}sp", gullet.read_dimension(state)?.value_of()))),
@@ -65,7 +65,7 @@ LoadDefinitions!(state, {
           inits.extend(init.unlist());
           inits.push(T_END!());
           if gullet.read_keyword(&["+"], state)?.is_none() {
-            Error!("expected", "+", gullet, state, "Missing + in multido variables");
+            Error!("expected", "+", gullet, "Missing + in multido variables");
           }
           let needs_negate = state.lookup_int("\\multido@count") < 0;
           let step = match vtype.as_str() {
@@ -100,7 +100,7 @@ LoadDefinitions!(state, {
             break;
           }
         }  else {
-          Error!("unexpected", var, gullet, state,
+          Error!("unexpected", var, gullet,
             format!("Wrong format for multido variable {var:?}"));
         }
         gullet.skip_spaces(state)?;

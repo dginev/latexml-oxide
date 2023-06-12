@@ -715,7 +715,7 @@ impl State {
   }
 
   /// manage a (global) list of values
-  pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) {
+  pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) -> Result<()> {
     let key_sym = arena::pin(key);
     let value = value.into();
     if !self.value.contains_key(&key_sym) {
@@ -737,13 +737,14 @@ impl State {
       other => {
         let message =
           s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
-        Error!("state", "Stored", None, self, message);
+        Error!("state", "Stored", None, message);
       },
     }
+    Ok(())
   }
 
   /// pops the last value in a named `Stored::VecDequeStored` queue, if any
-  pub fn pop_value(&mut self, key: &str) -> Option<Stored> {
+  pub fn pop_value(&mut self, key: &str) -> Result<Option<Stored>> {
     let key_sym = arena::pin(key);
     if !self.value.contains_key(&key_sym) {
       self.assign_internal(
@@ -756,16 +757,15 @@ impl State {
     if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(&key_sym).unwrap().front_mut()
     {
-      front.pop_back()
+      Ok(front.pop_back())
     } else {
       Error!(
         "state",
         "Stored",
         None,
-        self,
         "BUG: Tried to pop_value from a non-vecdeque value key!"
       );
-      None
+      Ok(None)
     }
   }
 
@@ -934,29 +934,30 @@ impl State {
     self.assign_value("Alignment", alignment, scope);
   }
 
-  pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Option<RegisterValue> {
+  pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
     let cs = T_CS!(cs);
-    if let Some(defn) = self.lookup_definition(&cs) {
+    Ok(
+    if let Some(defn) = self.lookup_definition(&cs)? {
       if defn.is_register() {
         defn.value_of(parameters, self)
       } else {
         let message = s!("The control sequence {:?} is not a register", cs);
-        Warn!("expected", "register", None, self, message);
+        Warn!("expected", "register", None, message);
         None
       }
     } else {
       let message = s!("The control sequence {:?} is not defined", cs);
-      Warn!("expected", "register", None, self, message);
+      Warn!("expected", "register", None, message);
       None
-    }
+    })
   }
 
-  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Option<Rc<dyn Definition>> {
+  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
     // Can only be a token or definition; we want defns!
     // is this the right logic here? don't expand unless digesting?
-    self
-      .lookup_definition(token)
-      .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected()))
+    Ok(self
+      .lookup_definition(token)?
+      .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())))
   }
 
   /// Whether token must be wrapped as dont_expand
@@ -1033,7 +1034,7 @@ impl State {
     }
   }
 
-  pub fn shift_value(&mut self, key: &str) -> Option<Stored> {
+  pub fn shift_value(&mut self, key: &str) -> Result<Option<Stored>> {
     let key_sym = arena::pin(key);
     if !self.value.contains_key(&key_sym) {
       self.assign_internal(
@@ -1043,6 +1044,7 @@ impl State {
         Some(Scope::Global),
       )
     }
+    Ok(
     if let Some(&mut Stored::VecDequeStored(ref mut front)) =
       self.value.get_mut(&key_sym).unwrap().front_mut()
     {
@@ -1052,11 +1054,10 @@ impl State {
         "state",
         "Stored",
         None,
-        self,
         "BUG: Tried to shift_value from a non-vecdeque value key!"
       );
       None
-    }
+    })
   }
 
   /// manage a (global) hash of values
@@ -1336,7 +1337,7 @@ impl State {
   /// Since we're not doing digestion here, we don't need to handle mathactive,
   /// nor cs let to executable tokens
   /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Option<Rc<dyn Definition>> {
+  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Result<Option<Rc<dyn Definition>>> {Ok(
     if let Some(defs) = self.lookup_definition_internal(key) {
       match defs.front() {
         Some(Stored::Conditional(entry)) => Some(entry.clone()),
@@ -1348,19 +1349,19 @@ impl State {
         Some(Stored::None) | Some(Stored::Token(_)) | None => None,
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", None, self, message);
+          Error!("unexpected", "value", None, message);
           None
         },
       }
     } else {
       None
-    }
+    })
   }
 
   /// Returns a definition as `Stored` so that one can call `.read_arguments`,
   /// which can't be specialized during compile-time over a trait object
   /// Instead we'll dispatch via `Stored` at runtime, to allow generic calls
-  pub fn lookup_definition_stored<'def>(&'def self, key: &'def Token) -> Option<Stored> {
+  pub fn lookup_definition_stored<'def>(&'def self, key: &'def Token) -> Result<Option<Stored>> {Ok(
     match self.lookup_definition_internal(key) {
       Some(defs) => match defs.front() {
         // Still, good time to handle the Token case and catch weird storage errors
@@ -1378,13 +1379,13 @@ impl State {
         }))),
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", None, self, message);
+          Error!("unexpected", "value", None, message);
           None
         },
         None => None,
       },
       _ => None,
-    }
+    })
   }
 
   /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
@@ -1752,7 +1753,7 @@ impl State {
         });
         let stomach = self.stomach.borrow();
         arena::with(key, |key_str| {
-          Warn!("internal", key_str, stomach, self, message)
+          Warn!("internal", key_str, stomach, message)
         });
       }
     }
@@ -1781,30 +1782,14 @@ impl State {
         Some(sp) => *sp,
         None => {
           let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
-          Warn!("expected", "<unit>", None, self, message);
+          Warn!("expected", "<unit>", None, message);
           *UNITS.get("pt").unwrap()
         },
       },
     }
   }
 
-  // #======================================================================
-  /// TODO
-  pub fn note_status(&self, _category: &str, _what: &str) {
-    // Ok, note status is *EXTREMELY* localized
-    // it only touches the status field of state,
-    // and has NO side-effects to any of the other stateful machinery.
-    // So. Let's make it possible to call it from any context, including immutable state borrows,
-    // by using interiror mutability.
-    // "Proof by commenting intent"
-
-    // if ($type eq 'undefined') {
-    //   map { $$self{status}{undefined}{$_}++ } @data; }
-    // elsif ($type eq 'missing') {
-    //   map { $$self{status}{missing}{$_}++ } @data; }
-    // else {
-    //   $$self{status}{$type}++;
-  }
+  // ======================================================================
 
   // sub getStatus {
   //   my ($self, $type) = @_;
@@ -2010,7 +1995,7 @@ impl State {
   /// along with appropriate error messge.
   pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
     let cs = token.with_cs_name(ToString::to_string);
-    self.note_status("undefined", &cs); // TODO: Undefined:cs
+    note_status(LogStatus::Undefined, Some(&cs));
                                         // To minimize chatter, go ahead and define it...
     if cs.starts_with("\\if") {
       // Apparently an \ifsomething ???
@@ -2019,7 +2004,6 @@ impl State {
         "undefined",
         token,
         caller,
-        self,
         s!(
           "The token {} is not defined. Defining it now as with \\newif",
           token.stringify()
@@ -2032,7 +2016,7 @@ impl State {
           s!("\\let{}\\iftrue", cs),
           None,
           self,
-        ),
+        )?,
         Some(Scope::Global),
       );
       self.install_definition(
@@ -2042,7 +2026,7 @@ impl State {
           s!("\\let{}\\iffalse", cs),
           None,
           self,
-        ),
+        )?,
         Some(Scope::Global),
       );
       self.let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global), caller);
@@ -2051,7 +2035,6 @@ impl State {
         "undefined",
         token,
         caller,
-        self,
         s!(
           "The token {} is not defined. Defining it now as <ltx:ERROR/>",
           token.stringify()

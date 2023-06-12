@@ -28,7 +28,7 @@ pub fn compile_expansion(input: DeriveInput) -> TokenStream {
       quote!(None)
     } else {
       // rescan for match tokens and unwrap dont_expand...
-      let expansion = performed_expansion.pack_parameters();
+      let expansion = performed_expansion.pack_parameters().unwrap();
       // println!("expanded into: {:?} tokens: {:?}", performed_expansion.len(),
       // performed_expansion);
       //

@@ -172,11 +172,11 @@ LoadDefinitions!(_state, {
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
   before_digest => sub[_stomach,state] {
-    state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()));
+    state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
   },
   after_digest => sub[_stomach,whatsit,state] {
     let kv     = whatsit.get_arg(1);
-    if let Some(Stored::HashStored(xmargs)) = state.pop_value("PENDING_DUAL_XMARGS") { // Really SHOULD be a hash
+    if let Some(Stored::HashStored(xmargs)) = state.pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
     }
     // TODO:
@@ -312,7 +312,7 @@ LoadDefinitions!(_state, {
     }
     for mut r in refs {                        // Now fill in the references
       let r_xmkey = r.get_attribute("_xmkey").unwrap();
-      document.set_attribute(&mut r, "idref", ids.get(&r_xmkey).unwrap(), state)?;
+      document.set_attribute(&mut r, "idref", ids.get(&r_xmkey).unwrap())?;
       r.remove_attribute("_xmkey")?;
     }
   });

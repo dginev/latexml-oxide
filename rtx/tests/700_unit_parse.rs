@@ -36,7 +36,7 @@ fn basic_1() {
   let mut parser = MathParser::default();
   let mut state = State::new(StateOptions::default());
   // need to load the model schema by hand in the unit test, to get the "ltx" namespace working
-  state.model.load_schema(&[]);
+  assert!(state.model.load_schema(&[]).is_ok());
   let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc, &mut state);
 
   assert!(parse_tree_opt.is_ok());

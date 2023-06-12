@@ -391,7 +391,7 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-  fn get_body(&self) -> Option<Digested> {
+  fn get_body(&self) -> Result<Option<Digested>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => {
@@ -399,20 +399,18 @@ impl BoxOps for Digested {
           "digested",
           "get_body",
           self,
-          None,
           s!("Called get_body on Box: {:?}", b)
         );
-        None
+        Ok(None)
       },
       List(ref l) => {
         Error!(
           "digested",
           "get_body",
           self,
-          None,
           s!("Called get_body on List: {:?}", l)
         );
-        None
+        Ok(None)
       },
       Whatsit(ref w) => w.borrow().get_body(),
       _ => unimplemented!(),
@@ -515,15 +513,15 @@ impl Digested {
   }
 
   /// Predicate check - delegates to `.is_empty()` of the underlying data
-  pub fn is_empty(&self) -> bool {
+  pub fn is_empty(&self) -> Result<bool> {
     use DigestedData::*;
-    match *self.0 {
+    Ok(match *self.0 {
       TBox(ref b) => b.borrow().is_empty(),
       List(ref l) => l.borrow().is_empty(),
-      Whatsit(ref w) => w.borrow().is_empty(),
+      Whatsit(ref w) => w.borrow().is_empty()?,
       Postponed(ref tks) => tks.is_empty(),
       _ => unimplemented!(),
-    }
+    })
   }
 
   /// Provide a way of emulating an `Undigested` argument, by requesting

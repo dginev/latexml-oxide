@@ -105,7 +105,7 @@ LoadDefinitions!(state, {
         lines.push(pre);
         if !post.is_empty() {
           let message = s!("Characters dropped after '\\end{{{}}}'", env);
-          Info!("unexpected","stuff", gullet, state, message);
+          Info!("unexpected","stuff", gullet, message);
         }
         break;
       } else {
@@ -155,7 +155,7 @@ LoadDefinitions!(state, {
       )
     } else {
       let message = s!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
-      Error!("binding", "missing_file", gullet, state, message);
+      Error!("binding", "missing_file", gullet, message);
       Ok(Tokens!())
     }
   });

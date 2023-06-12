@@ -14,7 +14,6 @@ fn main() -> Result<()> {
       "rtx",
       "logger",
       None,
-      None,
       "Failed to load logger, aborting. Please check rtx_core::util::logger installed correctly."
     );
   }
@@ -27,7 +26,6 @@ fn main() -> Result<()> {
       Error!(
         "rtx",
         "",
-        None,
         None,
         "Please provide a TeX formula on input! Exiting..."
       );
@@ -65,7 +63,6 @@ fn main() -> Result<()> {
     Warn!(
       "math",
       "parse",
-      None,
       None,
       "Grammar did not recognize expression."
     );

@@ -11,10 +11,10 @@ LoadDefinitions!(state, {
   //   \end{document}
 
   DefMacro!("\\AtBeginDocument{}", sub[gullet,(rules),state] {
-    state.push_value("@at@begin@document", rules);
+    state.push_value("@at@begin@document", rules)
   });
   DefMacro!("\\AtEndDocument{}", sub[gullet,(rules),state] {
-    state.push_value("@at@end@document", rules);
+    state.push_value("@at@end@document", rules)
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
@@ -26,7 +26,7 @@ LoadDefinitions!(state, {
     if let Some(mut docel) = document.findnode("/ltx:document", None, state) {
       if id != *EMPTY_SYM {
         arena::with(id, |id_str|
-          document.set_attribute(&mut docel, "xml:id", id_str, state))?;
+          document.set_attribute(&mut docel, "xml:id", id_str))?;
       }
     } else {
       let props = arena::with(id, |id_str| string_map!("xml:id" => id_str));

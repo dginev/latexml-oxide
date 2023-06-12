@@ -72,8 +72,10 @@ LoadDefinitions!(outer_state, {
       match thebox.get_width(None, state) {
         Ok(v) => v,
         Err(e) => {
-          Error!("method", "get_width", None, state, format!("{e}"));
-          None }
+          let err = || {Error!("method", "get_width", None, format!("{e}")); Ok(()) };
+          err().ok();
+          None
+        }
       }
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
@@ -168,7 +170,7 @@ LoadDefinitions!(outer_state, {
     if LoadFontMap!(&encoding).is_some() {
       MergeFont!(encoding => encoding);
     } else {
-      Info!("missing_font_encoding", encoding, stomach, state,
+      Info!("missing_font_encoding", encoding, stomach,
         "Couldn't find font encoding, falling back to OT1");
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");

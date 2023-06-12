@@ -38,7 +38,7 @@ LoadDefinitions!(outer_state, {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false, state).unwrap_or_default();
       // DG: Can't we do this \endlinechar check in readRawLine ?!
       // DG:  and can't we make it *faster* ?
-      if let Some(eol) = state.lookup_definition(&T_CS!("\\endlinechar")) {
+      if let Some(eol) = state.lookup_definition(&T_CS!("\\endlinechar"))? {
         let eolv   = eol.value_of(Vec::new(), state).unwrap_or_default().value_of();
         if (eolv > 0) && (eolv <= 255) {
           raw_line.push(eolv as u8 as char);
@@ -159,7 +159,7 @@ LoadDefinitions!(outer_state, {
 
   // \unless someif
   DefConditional!("\\unless Token", sub[gullet, (if_token), state] {
-    if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token) {
+    if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token)? {
       if defn.conditional_type == ConditionalType::If {
         if let Some(ref test) = defn.test {
           // Invert the if's test!
@@ -169,7 +169,7 @@ LoadDefinitions!(outer_state, {
       }
     }
     let msg = s!("\\unless should not be followed by {}",if_token.stringify());
-    Error!("unexpected", if_token, gullet, state, msg);
+    Error!("unexpected", if_token, gullet, msg);
     false
   });
 

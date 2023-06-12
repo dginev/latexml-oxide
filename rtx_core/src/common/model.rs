@@ -91,15 +91,15 @@ impl Model {
     }
   }
 
-  pub fn load_schema(&mut self, search_paths: &[&str]) -> &Option<Relaxng> {
+  pub fn load_schema(&mut self, search_paths: &[&str]) -> Result<&Option<Relaxng>> {
     // Only load once
     if self.schema.is_some() {
-      return &self.schema;
+      return Ok(&self.schema);
     }
     let mut name = String::new();
     if self.schema_data.is_none() {
       // TODO: Return this code path to normal once we properly load schemas
-      Warn!("expected", "<model>", None, None, "TODO");
+      Warn!("expected", "<model>", None, "TODO");
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
 
@@ -138,7 +138,7 @@ impl Model {
           let message = arena::with(schema_type, |schema_type_str| {
             s!("Can't load a schema of type {schema_type_str:?}")
           });
-          Error!("unknown", "schematype", self, None, message)
+          Error!("unknown", "schematype", self, message)
         }
       },
     };
@@ -168,7 +168,7 @@ impl Model {
       self.describe_model()
     }
 
-    &self.schema
+    Ok(&self.schema)
   }
   pub fn describe_model(&self) {}
 
@@ -279,7 +279,6 @@ impl Model {
         "malformed",
         namespace,
         self,
-        None,
         "No prefix has been registered for namespace (in document)",
         message2
       );
@@ -317,7 +316,8 @@ impl Model {
         s!("No namespace has been registered for prefix '{dp_str}' (in document)")
       });
       let msg2 = s!("Using '{ns_str}' instead");
-      Error!("malformed", docprefix, self, None, msg1, msg2);
+      let err = || {Error!("malformed", docprefix, self, msg1, msg2); Ok(()) };
+      err().ok();
     }
     if ns_str.is_empty() {
       None
@@ -365,7 +365,7 @@ impl Model {
     codeprefix
   }
 
-  pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Option<SymbolU32> {
+  pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Result<Option<SymbolU32>> {
     let mut ns: Option<SymbolU32> = self.code_namespaces.get(&arena::pin(codeprefix)).copied();
     if ns.is_none() && !probe {
       self.namespace_errors += 1;
@@ -379,12 +379,11 @@ impl Model {
         "malformed",
         codeprefix,
         self,
-        None,
         s!("No namespace has been registered for prefix '{codeprefix}' (in code)"),
         s!("Using '{example_namespace}' instead")
       );
     }
-    ns
+    Ok(ns)
   }
 
   /// Get the node's qualified name in standard form
@@ -490,22 +489,22 @@ impl Model {
   /// Given a Qualified name, possibly prefixed with a namespace prefix,
   /// as defined by the code namespace mapping,
   /// return the NamespaceURI and localname.
-  pub fn decode_qname(&mut self, codetag: &str) -> (Option<String>, String) {
+  pub fn decode_qname(&mut self, codetag: &str) -> Result<(Option<String>, String)> {
     match PREFIXED_LOCALNAME_RE.captures(codetag) {
       Some(captures) => {
         let prefix = captures.get(1).map_or("", |m| m.as_str());
         let localname = captures.get(2).map_or("", |m| m.as_str());
 
         if prefix == "xml" {
-          (None, codetag.to_string())
+          Ok((None, codetag.to_string()))
         } else {
-          (
-            self.get_namespace(prefix, false).map(arena::to_string),
+          Ok((
+            self.get_namespace(prefix, false)?.map(arena::to_string),
             localname.to_string(),
-          )
+          ))
         }
       },
-      None => (None, codetag.to_string()),
+      None => Ok((None, codetag.to_string())),
     }
   }
 

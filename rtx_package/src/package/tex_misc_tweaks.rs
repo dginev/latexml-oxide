@@ -93,8 +93,8 @@ LoadDefinitions!(_state, {
   //       $document->getNode->appendChild($node);
   // } });
 
-  DefMacro!("\\dump", sub[gullet,_args,state] {
-    Warn!("unexpected", "dump", gullet, state, "Do not know how to \\dump yet, sorry");
+  DefMacro!("\\dump", sub[gullet,_args,_state] {
+    Warn!("unexpected", "dump", gullet, "Do not know how to \\dump yet, sorry");
   });
 
 });

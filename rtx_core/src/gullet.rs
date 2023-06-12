@@ -156,7 +156,7 @@ impl Gullet {
         None => String::from("Empty"),
       };
       let message = s!("Closing mouth with input remaining '{}'", next);
-      Error!("unexpected", next, self, state, message);
+      Error!("unexpected", next, self, message);
     }
     if let Some(ref mut runtime) = self.mouth {
       runtime.mouth.finish(state);
@@ -416,7 +416,7 @@ impl Gullet {
         }
         // And *then* continue the main loop checks
       } else if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state.lookup_definition(&token) {
+        if let Some(defn) = state.lookup_definition(&token)? {
           if (toplevel || !defn.is_protected()) && defn.is_expandable() {
             // is this the right logic here? don't expand unless digesting?
             state.local_current_token(token);
@@ -602,7 +602,6 @@ impl Gullet {
         "expected",
         "}",
         self,
-        state,
         "Gullet->readBalanced ran out of input in an unbalanced state."
       );
     }
@@ -976,7 +975,7 @@ impl Gullet {
         state.get_current_token().unwrap(),
         next
       );
-      Warn!("expected", "<number>", self, state, message);
+      Warn!("expected", "<number>", self, message);
       if let Some(next) = next {
         self.unread_one(next);
       }
@@ -1103,7 +1102,6 @@ impl Gullet {
             "expected",
             "<unit>",
             self,
-            state,
             "Illegal unit of measure (pt inserted)."
           );
           65536.0
@@ -1116,7 +1114,7 @@ impl Gullet {
         "Missing number, treated as zero. while processing {:?}",
         state.get_current_token().unwrap()
       );
-      Warn!("expected", "<number>", self, state, message);
+      Warn!("expected", "<number>", self, message);
       Ok(Dimension::new(0))
     }
   }
@@ -1218,7 +1216,6 @@ impl Gullet {
                   "expected",
                   "<unit>",
                   self,
-                  state,
                   "Illegal unit of measure (mu inserted)."
                 );
                 None
@@ -1232,7 +1229,6 @@ impl Gullet {
                   "expected",
                   "<unit>",
                   self,
-                  state,
                   "Illegal unit of measure (pt inserted)."
                 );
                 None
@@ -1292,7 +1288,6 @@ impl Gullet {
           "expected",
           "<unit>",
           self,
-          state,
           "Illegal unit of measure (mu inserted)."
         );
       }
@@ -1308,7 +1303,6 @@ impl Gullet {
         "expected",
         "<mudimen>",
         self,
-        state,
         "Expecting mudimen; assuming 0"
       );
       Ok(MuDimension::new(0))
@@ -1357,7 +1351,7 @@ impl Gullet {
             },
             _ => Ok(Tokens!(token)),
           }
-        } else if let Some(defn) = state.lookup_definition(&token) {
+        } else if let Some(defn) = state.lookup_definition(&token)? {
           // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
           // way to circumvent? Is it slow in the first place?
           if defn.is_expandable() {
@@ -1436,7 +1430,6 @@ impl Gullet {
             "unexpected",
             "<closed>",
             self,
-            state,
             "Mouth is unexpectedly already closed",
             message
           );
@@ -1459,7 +1452,6 @@ impl Gullet {
               "unexpected",
               "next",
               self,
-              state,
               "TODO: unexpected input remaining"
             );
             // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
@@ -1481,7 +1473,6 @@ impl Gullet {
           "unexpected",
           "runtime",
           self,
-          state,
           "TODO: gullet had no active runtime"
         );
         break;

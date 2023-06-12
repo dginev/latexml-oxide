@@ -14,7 +14,7 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node, state: &mut St
       || document.get_node_qname(&prev_opt.unwrap(), state) != arena::pin_static("ltx:para")
     {
       // If `node` WAS the 1st child
-      document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first", state)?;
+      document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first")?;
     }
     node.unlink();
   }

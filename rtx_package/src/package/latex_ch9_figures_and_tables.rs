@@ -90,8 +90,8 @@ LoadDefinitions!(state, {
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
-  before_digest => sub[stomach, state] {
-    Error!("unexpected", "\\caption", stomach, state,
+  before_digest => sub[stomach, _state] {
+    Error!("unexpected", "\\caption", stomach,
       "Use of \\caption outside any known float"); });
 
   // Note that even without \caption, we'd probably like to have xml:id.

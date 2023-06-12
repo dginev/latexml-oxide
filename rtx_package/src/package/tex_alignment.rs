@@ -104,13 +104,13 @@ LoadDefinitions!(outer_state, {
   // Handled directly in alignments, but must be defined as non-macros
   DefPrimitive!("\\noalign", sub[stomach,_args,state] {
       stomach.bgroup(state);
-      Error!("unexpected", "\\noalign", stomach, state, "\\noalign cannot be used here");
+      Error!("unexpected", "\\noalign", stomach, "\\noalign cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
   DefPrimitive!("\\omit", sub[stomach,_args,state] {
-      Error!("unexpected", "\\omit", stomach, state, "\\omit cannot be used here");
+      Error!("unexpected", "\\omit", stomach, "\\omit cannot be used here");
       stomach.bgroup(state);
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
@@ -118,7 +118,7 @@ LoadDefinitions!(outer_state, {
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
   DefPrimitive!("\\span", sub[stomach,_args,state] {
       stomach.bgroup(state);
-      Error!("unexpected", "\\span", stomach, state, "\\span cannot be used here");
+      Error!("unexpected", "\\span", stomach, "\\span cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
@@ -335,7 +335,7 @@ LoadDefinitions!(outer_state, {
       if tbox.get_property_bool("alignmentSkippable")
         || tbox.get_property_bool("isFill") {
         save.push(tbox);
-      } else if !tbox.is_empty() {
+      } else if !tbox.is_empty()? {
         stomach.box_list.push(tbox);
         break;
       }
@@ -425,7 +425,6 @@ pub fn digest_alignment_body(
       "missing",
       "alignment",
       stomach,
-      state,
       "There is no open alignment structure here"
     );
     return Ok(());
@@ -456,7 +455,7 @@ pub fn digest_alignment_body(
           .unlist()
           .into_iter(),
       );
-      extract_alignment_column(alignment_cell.borrow_mut(), cell, state);
+      extract_alignment_column(alignment_cell.borrow_mut(), cell, state)?;
     } else {
       // Debug("Halign $alignment: BODY DONE!") if $LaTeXML::DEBUG{halign};
       break;
@@ -495,7 +494,6 @@ pub fn digest_alignment_body(
         "unexpected",
         next_tok,
         stomach,
-        state,
         s!("Column ended with {next_tok}")
       );
     }
@@ -588,7 +586,7 @@ pub fn digest_alignment_column(
     // Next column, unless spanning (then combine columns)
     if spanning {
       spanning = false;
-      alignment.borrow_mut().next_column();
+      alignment.borrow_mut().next_column()?;
     } else {
       alignment.borrow_mut().start_column(false, stomach, state)?;
     }
@@ -689,7 +687,7 @@ pub fn extract_alignment_column(
   mut alignment: RefMut<Alignment>,
   in_box: Digested,
   state: &mut State,
-) -> Digested {
+) -> Result<Digested> {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
   let is_math = state.lookup_bool("IN_MATH");
@@ -723,7 +721,7 @@ pub fn extract_alignment_column(
           || front_box.get_property("alignmentSkippable").is_some()
           || front_box.get_property("isSpace").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || front_box.is_empty() =>
+          || front_box.is_empty()? =>
       {
         saveleft.push_front(front_box)
       },
@@ -755,7 +753,7 @@ pub fn extract_alignment_column(
           || last_box.get_property("alignmentSkippable").is_some()
           || last_box.get_property("isSpace").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || last_box.is_empty() =>
+          || last_box.is_empty()? =>
       {
         saveright.push_front(last_box);
       },
@@ -793,5 +791,5 @@ pub fn extract_alignment_column(
   //     $$c{skipped} = 1 if $c; }
   //   Debug("Halign $alignment: INSTALL column " . join(',', map { $_ . "=" .
   // ToString($$colspec{$_}); } sort keys %$colspec)) if $LaTeXML::DEBUG{halign};
-  digested_out
+  Ok(digested_out)
 }

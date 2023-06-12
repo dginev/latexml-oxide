@@ -8,7 +8,7 @@ LoadDefinitions!(state, {
   RelaxNGSchema!("LaTeXML");
   Tag!("ltx:section", auto_close => true);
   Tag!("ltx:document", auto_close => true, auto_open => true);
-  Tag!("ltx:document", after_open => sub[document,root,state] {
+  Tag!("ltx:document", after_open => sub[document,root,_state] {
     let mut bg_to_set = None;
     if let Some(bg) = document.get_node_font(root).get_background() {
       if bg != "white" {
@@ -16,7 +16,7 @@ LoadDefinitions!(state, {
       }
     }
     if let Some(bg) = bg_to_set {
-      document.set_attribute(root, "backgroundcolor", &bg, state)?;
+      document.set_attribute(root, "backgroundcolor", &bg)?;
     }
   });
 

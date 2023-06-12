@@ -1022,7 +1022,7 @@ impl<'a> From<&'a Stored> for Token {
       },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
-        Warn!("Stored", "cast", None, None, message);
+        Warn!("Stored", "cast", None, message);
         T_CS!(t.to_string())
       }, /* TODO, is this the right place to default to CS? Do we need a
           * custom method instead? */

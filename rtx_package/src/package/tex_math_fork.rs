@@ -45,7 +45,7 @@ LoadDefinitions!(_state, {
         stuff.push(t);
       }
     }
-    Error!("unexpected", "\\eqno", gullet, state, "Fell of the end reading tag for \\eqno!");
+    Error!("unexpected", "\\eqno", gullet, "Fell of the end reading tag for \\eqno!");
       // s!("started {locator}"));
     Tokens::new(stuff)
   });

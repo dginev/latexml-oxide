@@ -247,7 +247,7 @@ pub fn spec_setup(
         "You should not create {} with both units and stretch",
         if is_mu { "MuGlue" } else { "Glue" }
       );
-      Warn!("unexpected", "fill", None, state, msg);
+      Warn!("unexpected", "fill", None, msg);
     }
 
     if let Some(cs) = GLUE_RE.captures(spec) {
@@ -269,7 +269,7 @@ pub fn spec_setup(
         f.trunc() as i64
       } else if is_mu {
         if unit != "mu" {
-          Warn!("unexpected", unit, None, state, "Assumed mu");
+          Warn!("unexpected", unit, None, "Assumed mu");
         }
         fixpoint(f, None) // in mu
       } else {
@@ -285,7 +285,7 @@ pub fn spec_setup(
       } else if is_mu {
         pfill = None;
         if punit != "mu" {
-          Warn!("unexpected", punit, None, state, "Assumed mu");
+          Warn!("unexpected", punit, None, "Assumed mu");
         }
         Some(fixpoint(p, None))
       } else {
@@ -302,7 +302,7 @@ pub fn spec_setup(
       } else if is_mu {
         mfill = None; // 0
         if munit != "mu" {
-          Warn!("unexpected", munit, None, state, "Assumed mu");
+          Warn!("unexpected", munit, None, "Assumed mu");
         }
         Some(fixpoint(m, None))
       } else {
@@ -332,7 +332,7 @@ pub fn spec_setup(
         "Missing {} specification assuming 0pt",
         if is_mu { "MuGlue" } else { "Glue" }
       );
-      Warn!("unexpected", spec, None, state, msg);
+      Warn!("unexpected", spec, None, msg);
       (0, None, None, None, None)
     }
   }
