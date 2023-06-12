@@ -3427,6 +3427,9 @@
 <a href="#3427" id="3427">3427</a>
 <a href="#3428" id="3428">3428</a>
 <a href="#3429" id="3429">3429</a>
+<a href="#3430" id="3430">3430</a>
+<a href="#3431" id="3431">3431</a>
+<a href="#3432" id="3432">3432</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -4262,9 +4265,10 @@
     <span class="kw">if </span>n_type == <span class="prelude-val">Some</span>(NodeType::DocumentNode) {
       <span class="comment">// Didn&#39;t find $node at all!!
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Attempt to close {:?}, which isn&#39;t open&quot;</span>, node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str| <span class="prelude-val">Ok</span>({
-        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
-      }))<span class="question-mark">?</span>;
+      arena::with(state.model.get_node_qname(node), |qname_str| {
+        {<span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)};
+        <span class="prelude-val">Ok</span>(())
+      })<span class="question-mark">?</span>;
     <span class="comment">//     &quot;Currently in &quot; . $self-&gt;getInsertionContext()) unless $ifopen;
     </span>} <span class="kw">else </span>{
       <span class="comment">// Found node.
@@ -4280,9 +4284,10 @@
             .collect::&lt;Vec&lt;String&gt;&gt;()
             .join(<span class="string">&quot;,&quot;</span>)
         );
-        arena::with(qname, |qname_str| <span class="prelude-val">Ok</span>({
-          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
-        }))<span class="question-mark">?</span>;
+        arena::with(qname, |qname_str| {
+          {<span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)};
+          <span class="prelude-val">Ok</span>(())
+        })<span class="question-mark">?</span>;
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(lastopen_node) = lastopen {
         <span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>lastopen_node, state)<span class="question-mark">?</span>;
@@ -4322,14 +4327,15 @@
       <span class="comment">// Didn&#39;t find $qname at all!!
       </span><span class="kw">if </span>strict {
         <span class="kw">let </span>qname = state.model.get_node_qname(node);
-        arena::with(qname, |qname_str| <span class="prelude-val">Ok</span>({
+        arena::with(qname, |qname_str| {
           <span class="kw">let </span>message = <span class="macro">s!</span>(
             <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {:?}&quot;</span>,
             qname_str,
             <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)<span class="question-mark">?
           </span>);
-          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
-        }))<span class="question-mark">?</span>;
+          {<span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)};
+          <span class="prelude-val">Ok</span>(())
+        })<span class="question-mark">?</span>;
       }
     } <span class="kw">else </span>{
       <span class="comment">// Found node.

@@ -388,6 +388,11 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::{Captures, Regex};
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -395,7 +400,7 @@
 <span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>rtx_core::common::arena;
-<span class="kw">use </span>rtx_core::common::error::{note_begin, note_end, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>rtx_core::common::error::{<span class="self">self</span>, note_begin, note_end, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rtx_core::common::DigestionMode;
 <span class="kw">use </span>rtx_core::definition::expandable::Expandable;
 <span class="kw">use </span>rtx_core::digested::Digested;
@@ -448,7 +453,10 @@
 
 <span class="kw">impl </span>DigestionAPI <span class="kw">for </span>Core {
   <span class="kw">fn </span>initialize_state(<span class="kw-2">&amp;mut </span><span class="self">self</span>, preloads: Vec&lt;String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">let </span>state = <span class="kw-2">&amp;mut </span><span class="self">self</span>.state;
+    <span class="comment">// first, reset the error REPORT singleton
+    </span>error::init_report();
+    <span class="comment">// now handle state
+    </span><span class="kw">let </span>state = <span class="kw-2">&amp;mut </span><span class="self">self</span>.state;
     state.initialize_stomach();
     <span class="comment">// let paths = state.search_paths;
     </span>state.assign_value(<span class="string">&quot;InitialPreloads&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
@@ -557,7 +565,8 @@
     }
   }
 
-  <span class="kw">fn </span>convert_document(<span class="kw-2">&amp;mut </span><span class="self">self</span>, digested: Digested) -&gt; <span class="prelude-ty">Result</span>&lt;Document&gt; {
+  <span class="doccomment">/// Restriction: convert_document runs on a single thread, and should never try branching out.
+  </span><span class="kw">fn </span>convert_document(<span class="kw-2">&amp;mut </span><span class="self">self</span>, digested: Digested) -&gt; <span class="prelude-ty">Result</span>&lt;Document&gt; {
     note_begin(<span class="string">&quot;Building&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>document = Document::new();
     {
@@ -678,6 +687,7 @@
   //    preamble = names a tex file (or standard_preamble.tex)
   //    postamble = names a tex file (or standard_postamble.tex)
 
+  </span><span class="doccomment">/// Restriction: `digest_file` runs on a single thread, and should never try branching out.
   </span><span class="kw">fn </span>digest_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>request: String, options: DigestionOptions) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>dir = String::new();
     <span class="kw">let </span>name;
