@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_setup.rs`."><title>tex_setup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_setup.rs`."><title>tex_setup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1252,11 +1252,11 @@
       <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
         gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>.unwrap_or_default()
       } <span class="kw">else </span>{
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, state, <span class="string">&quot;Expected &lt;general text&gt; here&quot;</span>);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, <span class="string">&quot;Expected &lt;general text&gt; here&quot;</span>);
         <span class="macro">Tokens!</span>(open)
       }
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, state, <span class="string">&quot;Expected &lt;general text&gt; here&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, <span class="string">&quot;Expected &lt;general text&gt; here&quot;</span>);
       <span class="macro">Tokens!</span>()
     }
   });
@@ -1290,7 +1290,7 @@
     <span class="kw">match </span>gullet.read_token(state)<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(ArgWrap::Token(t)),
       <span class="prelude-val">None </span>=&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;Token&quot;</span>, gullet, state, <span class="string">&quot;Paramater &lt;Token&gt; found None.&quot;</span>);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;Token&quot;</span>, gullet, <span class="string">&quot;Paramater &lt;Token&gt; found None.&quot;</span>);
         <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
       }
     }
@@ -1301,7 +1301,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
       <span class="prelude-val">Ok</span>(ArgWrap::Token(t))
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;XToken&quot;</span>, gullet, state, <span class="string">&quot;Paramater &lt;XToken&gt; found None.&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;XToken&quot;</span>, gullet,<span class="string">&quot;Paramater &lt;XToken&gt; found None.&quot;</span>);
       <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
     }
   });
@@ -1344,7 +1344,8 @@
     gullet.read_token(state)<span class="question-mark">?</span>.map(|tok| {
       gullet.unread_one(tok.clone());
       <span class="kw">if </span>tok.get_catcode() != Catcode::BEGIN {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, state, <span class="string">&quot;Expected a {{ here.&quot;</span>);
+        <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet,<span class="string">&quot;Expected a {{ here.&quot;</span>); <span class="prelude-val">Ok</span>(())};
+        err().ok();
       }
       tok
     })
@@ -1362,7 +1363,7 @@
         tokens.push(token);
         tokens.extend(gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">?</span>.unwrap_or_default().unlist());
         tokens.push(<span class="macro">T_END!</span>());
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition_stored(<span class="kw-2">&amp;</span>token) {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition_stored(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
         <span class="kw">let </span>args = defn.read_arguments(gullet, state)<span class="question-mark">?</span>;
         tokens.extend(<span class="macro">Invocation!</span>(token, args, gullet, state)<span class="question-mark">?</span>.unlist());
       } <span class="kw">else </span>{
@@ -1383,7 +1384,7 @@
         <span class="macro">Tokens!</span>(token)
       }
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;expanded&quot;</span>, gullet, state,
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;expanded&quot;</span>, gullet,
         <span class="string">&quot;was expecting an Expanded parameter value, found nothing.&quot;</span>);
       <span class="macro">Tokens!</span>()
     }
@@ -1412,8 +1413,7 @@
           <span class="macro">Tokens!</span>(token)
         }
       } <span class="kw">else </span>{
-        <span class="macro">Error!</span>(<span class="string">&quot;Expected&quot;</span>, <span class="string">&quot;DefExpanded&quot;</span>, gullet, state,
-          <span class="string">&quot;Expected &lt;DefExpanded&gt; here&quot;</span>);
+        <span class="macro">Error!</span>(<span class="string">&quot;Expected&quot;</span>, <span class="string">&quot;DefExpanded&quot;</span>, gullet, <span class="string">&quot;Expected &lt;DefExpanded&gt; here&quot;</span>);
         <span class="macro">Tokens!</span>()
       };
       state.expire_smuggle_the();
@@ -1592,7 +1592,7 @@
     <span class="kw">match </span>token {
       <span class="prelude-val">Some</span>(t) =&gt; <span class="prelude-val">Ok</span>(ArgWrap::Token(t)),
       <span class="prelude-val">None </span>=&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;DefToken&quot;</span>, gullet, state,
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;DefToken&quot;</span>, gullet,
           <span class="string">&quot;Expected a DefToken parameter, found nothing.&quot;</span>);
         <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
       }
@@ -1620,12 +1620,12 @@
           </span><span class="prelude-val">Ok</span>(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;variable&gt; was supposed to be here\n Got {:?}&quot;</span>, token_opt);
-          <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;variable&gt;&quot;</span>, gullet, state, message);
+          <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;variable&gt;&quot;</span>, gullet,message);
           <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
         }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;variable&gt; was supposed to be here\n Got {:?}&quot;</span>, token_opt);
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;variable&gt;&quot;</span>, gullet, state, message);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;variable&gt;&quot;</span>, gullet,message);
       <span class="prelude-val">Ok</span>(ArgWrap::Tokens(<span class="macro">Tokens!</span>()))
     }
   },
@@ -1658,7 +1658,7 @@
       },
       <span class="prelude-val">None </span>=&gt; {
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;register&gt; was supposed to be here. Got {:?}&quot;</span>, token);
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;register&gt;&quot;</span>, gullet, state, message);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;register&gt;&quot;</span>, gullet,message);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = token {
           <span class="kw">if </span>is_definable(<span class="kw-2">&amp;</span>t, state) {
             def_register(t, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">None</span>, state);
@@ -1763,14 +1763,14 @@
       };
       <span class="kw">if </span>csname != <span class="string">&quot;\\hbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vbox&quot; </span>&amp;&amp; csname != <span class="string">&quot;\\vtop&quot; </span>{
         <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;box&gt; was supposed to be here.\nGot {}&quot;</span>, csname);
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;box&gt;&quot;</span>, stomach, state, message);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;box&gt;&quot;</span>, stomach,message);
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
         <span class="prelude-val">Some</span>(tbox)
       }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;A &lt;box&gt; was supposed to be here.\nGot none.&quot;</span>);
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;box&gt;&quot;</span>, stomach, state, message);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;&lt;box&gt;&quot;</span>, stomach,message);
       <span class="prelude-val">None
     </span>}
   });
@@ -1866,10 +1866,10 @@
   // particularly alignments (which may or may not be actual environments),
   // but which need special treatment of some of their content
   // as the expansion is carried out.
-  </span><span class="macro">DefParameterType!</span>(DigestedBody, reader =&gt; <span class="macro">reader!</span>(_gullet, _inner, _extra, _state, {
+  </span><span class="macro">DefParameterType!</span>(DigestedBody, sub[_gullet, _inner, _extra, _state] {
       <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) <span class="comment">// all done in predigestion
-    </span>}),
-    predigest =&gt; <span class="macro">predigest!</span>(stomach, _arg, state, {
+    </span>},
+    predigest =&gt; sub[stomach, _arg, state] {
       <span class="kw">let </span>ismath   = state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>);
       <span class="kw">let </span><span class="kw-2">mut </span>list     = stomach.digest_next_body(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
       <span class="comment">// In most (all?) cases, we&#39;re really looking for a single Whatsit here...
@@ -1877,7 +1877,7 @@
       <span class="kw">let </span><span class="kw-2">mut </span>digested = List::new(list, state);
       digested.mode = <span class="kw">if </span>ismath { <span class="prelude-val">Some</span>(TexMode::Math) } <span class="kw">else </span>{ <span class="prelude-val">Some</span>(TexMode::Text) };
       digested
-    })
+    }
   );
 
   <span class="comment">// In addition to the standard TeX Dimension, there are various LaTeX constructs
@@ -1978,7 +1978,7 @@
         ..KVSpec::default()
       }, state)
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;Expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, state, <span class="string">&quot;Missing keyval arguments&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;Expected&quot;</span>,<span class="string">&quot;{&quot;</span>, gullet, <span class="string">&quot;Missing keyval arguments&quot;</span>);
       <span class="prelude-val">Ok</span>(KeyVals::default())
     }
   }

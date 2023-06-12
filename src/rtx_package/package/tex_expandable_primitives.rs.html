@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -417,6 +417,10 @@
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^(\w+):&quot;</span>).unwrap());
 <span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^\\w?Until(\\w*):&quot;</span>).unwrap());
@@ -457,10 +461,13 @@
       } <span class="kw">else </span>{
         t
       }});
-    <span class="kw">let </span>token = token_opt.unwrap_or_else(|| {
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet, state,
-        <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
-      <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>) });
+    <span class="kw">let </span>token = <span class="kw">match </span>token_opt {
+      <span class="prelude-val">Some</span>(t) =&gt; t,
+      <span class="prelude-val">None </span>=&gt; {
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet,
+          <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
+        <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>)
+      }};
     <span class="kw">if </span>token.has_smuggled() {    <span class="comment">// marked dont_expand
       </span><span class="kw">let </span>smuggled = token.get_dont_expand().as_ref().unwrap();
       <span class="kw">if </span>smuggled.get_catcode() == Catcode::ACTIVE {
@@ -486,9 +493,9 @@
     state.x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right)
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvoid Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state).is_empty() });
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifhbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state) == <span class="string">&quot;hbox&quot; </span>});
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state) == <span class="string">&quot;vbox&quot; </span>});
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvoid Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">?</span>.is_empty() });
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifhbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">? </span>== <span class="string">&quot;hbox&quot; </span>});
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">? </span>== <span class="string">&quot;vbox&quot; </span>});
 
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\iftrue&quot;</span>, { <span class="bool-val">true </span>});
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\iffalse&quot;</span>, { <span class="bool-val">false </span>});
@@ -674,14 +681,14 @@
       }
       <span class="kw">match </span>token.get_catcode() {
         Catcode::CS =&gt; {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token) {
+          <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
             <span class="kw">let </span>message =
               <span class="macro">s!</span>(<span class="string">&quot;The control sequence {:?} should not appear between \\csname and \\endcsname&quot;</span>,
                 token);
-            <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, token, gullet, state, message);
+            <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, token, gullet, message);
           } <span class="kw">else </span>{
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The token {:?} is not defined&quot;</span>, token);
-            <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, token, gullet, state, message);
+            <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, token, gullet, message);
           }
         },
         Catcode::SPACE =&gt; {  <span class="comment">// Keep newlines from having \n!
@@ -704,12 +711,12 @@
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\endcsname&quot;</span>, sub[stomach, (), state] {
-    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot; </span>,<span class="string">&quot;\\endcsname&quot;</span>, stomach, state, <span class="string">&quot;Extra \\endcsname&quot;</span>);
+    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot; </span>,<span class="string">&quot;\\endcsname&quot;</span>, stomach, <span class="string">&quot;Extra \\endcsname&quot;</span>);
   });
 
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[gullet, (tok, xtok), state] {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="macro">vec!</span>[tok];
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
       state.local_current_token(xtok);
       <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
@@ -794,7 +801,7 @@
       };
       tokens
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;register&gt;&quot;</span>, gullet, state, <span class="string">&quot;a register was expected to be here&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;register&gt;&quot;</span>, gullet, <span class="string">&quot;a register was expected to be here&quot;</span>);
       Vec::new()
     }
   });
@@ -802,7 +809,7 @@
 
 <span class="comment">// Hmm... I wonder, should getString itself be dealing with escapechar?
 </span><span class="kw">fn </span>escapechar(state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
-  <span class="kw">let </span>code: i64 = <span class="kw">match </span>state.lookup_register(<span class="string">&quot;\\escapechar&quot;</span>, Vec::new()) {
+  <span class="kw">let </span>code: i64 = <span class="kw">match </span>state.lookup_register(<span class="string">&quot;\\escapechar&quot;</span>, Vec::new()).unwrap() {
     <span class="prelude-val">Some</span>(RegisterValue::Number(v)) =&gt; v.value_of(),
     <span class="kw">_ </span>=&gt; -<span class="number">1</span>,
   };
@@ -832,7 +839,8 @@
       rel,
       rel.get_catcode()
     );
-    <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, message);
+    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, <span class="prelude-val">None</span>, message); <span class="prelude-val">Ok</span>(())};
+    err().ok();
     <span class="bool-val">false
   </span>}
 }

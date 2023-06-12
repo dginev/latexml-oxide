@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1507,6 +1507,11 @@
 <a href="#1507" id="1507">1507</a>
 <a href="#1508" id="1508">1508</a>
 <a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1628,7 +1633,7 @@
   options: ConditionalOptions,
   gullet: <span class="kw-2">&amp;mut </span>Gullet,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>locked_key = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = options.locked {
     arena::with(cs.get_sym(), |cs_name| <span class="macro">s!</span>(<span class="string">&quot;{cs_name}:locked&quot;</span>))
   } <span class="kw">else </span>{
@@ -1666,14 +1671,14 @@
           <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), cs.clone(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iftrue&quot;</span>)),
           <span class="prelude-val">None</span>,
           state,
-        );
+        )<span class="question-mark">?</span>;
         def_macro(
           <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}false&quot;</span>, name)),
           <span class="prelude-val">None</span>,
           <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\let&quot;</span>), cs.clone(), <span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>)),
           <span class="prelude-val">None</span>,
           state,
-        );
+        )<span class="question-mark">?</span>;
         state.let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\iffalse&quot;</span>), <span class="prelude-val">None</span>, gullet);
       } <span class="kw">else </span>{
         <span class="comment">//  For \ifcase, the parameter list better be a single Number !!
@@ -1693,13 +1698,14 @@
         <span class="string">&quot;The conditional {} is being defined but doesn&#39;t start with \\if&quot;</span>,
         cs
       );
-      <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, cs, <span class="prelude-val">None</span>, state, message);
+      <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, cs, <span class="prelude-val">None</span>, message);
     }
   }
 
   <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="bool-val">true</span>) = options.locked {
     state.assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
   }
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Defines the macro expansion for a `cs`: a macro control sequence that reads parameters
@@ -1711,7 +1717,7 @@
   expansion: T,
   options_opt: <span class="prelude-ty">Option</span>&lt;ExpandableOptions&gt;,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>expansion_opt: <span class="prelude-ty">Option</span>&lt;ExpansionBody&gt; = expansion.into();
   <span class="comment">// TODO: The None case could be refactored to feel much cleaner.
   // For now it&#39;s equivalent to Tokens!()
@@ -1731,17 +1737,18 @@
     <span class="prelude-val">None
   </span>};
   <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, options.scope.clone(), state)
-  } <span class="kw">else </span>{
+    def_robust_cs(cs, options.locked, options.scope.clone(), state)<span class="question-mark">?
+  </span>} <span class="kw">else </span>{
     cs
   };
   state.install_definition(
-    Expandable::new(defcs, paramlist, expansion, <span class="prelude-val">Some</span>(options), state),
+    Expandable::new(defcs, paramlist, expansion, <span class="prelude-val">Some</span>(options), state)<span class="question-mark">?</span>,
     scope,
   );
   <span class="kw">if let </span><span class="prelude-val">Some</span>(locked_key) = locked_key_opt {
     state.assign_value(<span class="kw-2">&amp;</span>locked_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// configuration for creating a new Register
@@ -1803,9 +1810,9 @@
     <span class="prelude-val">Some</span>(setter) =&gt; setter.clone(),
     <span class="prelude-val">None </span>=&gt; {
       <span class="kw">if </span>readonly {
-        Rc::new(<span class="kw">move </span>|_value, _args, state| {
+        Rc::new(<span class="kw">move </span>|_value, _args, _state| {
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to register {}&quot;</span>, setter_name);
-          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, setter_name, <span class="prelude-val">None</span>, state, message);
+          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, setter_name, <span class="prelude-val">None</span>, message);
         })
       } <span class="kw">else </span>{
         Rc::new(<span class="kw">move </span>|value, args, state| {
@@ -1856,7 +1863,7 @@
   compiled_replacement: <span class="prelude-ty">Option</span>&lt;PrimitiveClosure&gt;,
   options: PrimitiveOptions,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>options_locked = options.locked;
   <span class="kw">let </span>scope = options.scope;
   <span class="kw">let </span><span class="kw-2">mut </span>before_digest_env: Vec&lt;BeforeDigestClosure&gt; = Vec::new();
@@ -1912,8 +1919,8 @@
   }
   <span class="comment">//  Not sure robust entirely makes sense for Primitives, other than LaTeXML vs LaTeX mismatch
   </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs, options.locked, scope.clone(), state)
-  } <span class="kw">else </span>{
+    def_robust_cs(cs, options.locked, scope.clone(), state)<span class="question-mark">?
+  </span>} <span class="kw">else </span>{
     cs
   };
 
@@ -1934,6 +1941,7 @@
   <span class="kw">if </span>options_locked {
     state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}:locked&quot;</span>, cs_name), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
   }
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Advanced math replacements require a XMDual representation
@@ -1943,14 +1951,14 @@
   presentation: String,
   options: MathPrimitiveOptions,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>(cont_cs_str, pres_cs_str) =
     cs.with_str(|csname| (<span class="macro">s!</span>(<span class="string">&quot;{csname}@content&quot;</span>), <span class="macro">s!</span>(<span class="string">&quot;{csname}@presentation&quot;</span>)));
   <span class="kw">let </span>cont_cs = <span class="macro">T_CS!</span>(cont_cs_str);
   <span class="kw">let </span>pres_cs = <span class="macro">T_CS!</span>(pres_cs_str);
   <span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
-  } <span class="kw">else </span>{
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)<span class="question-mark">?
+  </span>} <span class="kw">else </span>{
     cs.clone()
   };
   <span class="kw">let </span>presentation_toks = mouth::tokenize_internal(<span class="kw-2">&amp;</span>presentation);
@@ -2021,7 +2029,7 @@
         ..ExpandableOptions::default()
       }),
       state,
-    ),
+    )<span class="question-mark">?</span>,
     options.scope.clone(),
   );
 
@@ -2036,7 +2044,7 @@
         ..ExpandableOptions::default()
       }),
       state,
-    ),
+    )<span class="question-mark">?</span>,
     options.scope.clone(),
   );
 
@@ -2107,6 +2115,7 @@
   <span class="kw">let </span>scope = options.scope.clone();
   transfer_common_constructor_options(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span>presentation, options, <span class="kw-2">&amp;mut </span>content_constructor);
   state.install_definition(content_constructor, scope);
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// EXPERIMENT: Introduce an intermediate case for simple symbols
@@ -2163,7 +2172,7 @@
   presentation: String,
   <span class="kw-2">mut </span>options: MathPrimitiveOptions,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// TODO: do we need to do anything about digesting the presentation?
   </span><span class="kw">let </span>nargs = paramlist
     .as_ref()
@@ -2175,8 +2184,8 @@
   //   None
   // };
   </span><span class="kw">let </span>defcs = <span class="kw">if </span>options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)
-  } <span class="kw">else </span>{
+    def_robust_cs(cs.clone(), options.locked, options.scope.clone(), state)<span class="question-mark">?
+  </span>} <span class="kw">else </span>{
     cs.clone()
   };
   <span class="kw">if </span>options.reversion.is_none() &amp;&amp; nargs == <span class="number">0 </span>&amp;&amp; options.alias.is_none() {
@@ -2338,6 +2347,7 @@
   <span class="kw">let </span>scope = options.scope.clone();
   transfer_common_constructor_options(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span>presentation, options, <span class="kw-2">&amp;mut </span>constructor);
   state.install_definition(constructor, scope);
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">fn </span>infer_sizer(
@@ -2353,7 +2363,7 @@
   }
 }
 
-<span class="kw">fn </span>def_robust_cs(cs: Token, locked: bool, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; Token {
+<span class="kw">fn </span>def_robust_cs(cs: Token, locked: bool, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Token&gt; {
   <span class="kw">let </span>cs_str = cs.with_str(|cstr| <span class="macro">format!</span>(<span class="string">&quot;{} &quot;</span>, cstr));
   <span class="kw">let </span>defcs = <span class="macro">T_CS!</span>(cs_str);
   <span class="kw">let </span>return_cs = defcs.clone();
@@ -2364,10 +2374,10 @@
   };
   <span class="comment">// scope should be \x@protect?
   </span>state.install_definition(
-    Expandable::new(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">Some</span>(options), state),
+    Expandable::new(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">Some</span>(options), state)<span class="question-mark">?</span>,
     scope,
   );
-  return_cs
+  <span class="prelude-val">Ok</span>(return_cs)
 }
 
 <span class="doccomment">/// The Constructor is where LaTeXML really starts getting interesting;
@@ -2546,7 +2556,7 @@
       <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>(body))),
       <span class="prelude-val">None</span>,
       state,
-    );
+    )<span class="question-mark">?</span>;
   });
   before_digest_env.push(current_environment_closure);
 
@@ -2621,7 +2631,6 @@
         <span class="string">&quot;unexpected&quot;</span>,
         end_name_clone,
         stomach,
-        state,
         message1,
         message2
       );
@@ -2734,15 +2743,15 @@
     <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@XMARG@ID&quot;</span>),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(state
-      .lookup_register(<span class="string">&quot;\\c@@XMARG&quot;</span>, Vec::new())
-      .unwrap()
+      .lookup_register(<span class="string">&quot;\\c@@XMARG&quot;</span>, Vec::new())<span class="question-mark">?
+      </span>.unwrap()
       .value_of())),
     <span class="prelude-val">Some</span>(ExpandableOptions {
       scope: <span class="prelude-val">Some</span>(Scope::Global),
       ..ExpandableOptions::default()
     }),
     state,
-  );
+  )<span class="question-mark">?</span>;
   gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\the@XMARG@ID&quot;</span>), state)
 }
 
@@ -2848,7 +2857,7 @@
   presentation: String,
   <span class="kw-2">mut </span>options: MathPrimitiveOptions,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Can&#39;t defer parsing parameters since we need to know number of args!
   // $paramlist = parseParameters($paramlist, $cs) if defined $paramlist &amp;&amp; !ref $paramlist;
 
@@ -2921,18 +2930,19 @@
     //((ref presentation eq &quot;CODE&quot;)
     // || ((ref presentation) &amp;&amp; grep { $_-&gt;equals(T_PARAM) } presentation-&gt;unlist)
     // || ((ref presentation) &amp;&amp; (grep { $_-&gt;isExecutable } presentation-&gt;unlist)))
-    </span>def_math_dual(cs, paramlist, presentation, options, state);
+    </span>def_math_dual(cs, paramlist, presentation, options, state)<span class="question-mark">?</span>;
   }
   <span class="comment">// EXPERIMENT: Introduce an intermediate case for simple symbols
   // Define a primitive that will create a Box with the appropriate set of XMTok attributes.
   </span><span class="kw">else if </span>nargs == <span class="number">0 </span>&amp;&amp; !options.has_complex_option() {
     def_math_primitive(cs, paramlist, presentation, options, state);
   } <span class="kw">else </span>{
-    def_math_constructor(cs, paramlist, presentation, options, state);
+    def_math_constructor(cs, paramlist, presentation, options, state)<span class="question-mark">?</span>;
   }
   <span class="kw">if </span>locked {
     state.assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{csname}:locked&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
   }
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Transfers the common MathPrimitive options to a (ideally freshly instantiated) Constructor.

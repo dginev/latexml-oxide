@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/setup_binding_language.rs`."><title>setup_binding_language.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/setup_binding_language.rs`."><title>setup_binding_language.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2839,8 +2839,6 @@
 <a href="#2839" id="2839">2839</a>
 <a href="#2840" id="2840">2840</a>
 <a href="#2841" id="2841">2841</a>
-<a href="#2842" id="2842">2842</a>
-<a href="#2843" id="2843">2843</a>
 </pre></div><pre class="rust"><code><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>LoadDefinitions {
   (<span class="macro-nonterminal">$outer_state</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
@@ -3302,7 +3300,7 @@
           <span class="kw">let </span><span class="macro-nonterminal">$var</span>: <span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>) = <span class="kw">match </span><span class="macro-nonterminal">$var</span>.try_into() {
             <span class="prelude-val">Ok</span>(v) =&gt; v,
             <span class="prelude-val">Err</span>(e) =&gt; {
-              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$gullet</span>, <span class="prelude-val">None</span>, e);
+              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$gullet</span>, e);
               &lt;<span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>)&gt;::default()
             }
           };
@@ -3322,7 +3320,7 @@
     <span class="macro">defi_conditional!</span>(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$test</span>, <span class="macro-nonterminal">$options</span>, gullet, st);
   }};
   (<span class="macro-nonterminal">$cs</span>:expr, <span class="macro-nonterminal">$paramlist</span>:expr, <span class="macro-nonterminal">$test</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$gullet</span>:ident, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {{
-    def_conditional(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$test</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$gullet</span>, <span class="macro-nonterminal">$state_arg</span>);
+    def_conditional(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$test</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$gullet</span>, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?</span>;
   }};
 }
 
@@ -3453,7 +3451,7 @@
           <span class="kw">let </span><span class="macro-nonterminal">$var</span>: <span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>) = <span class="kw">match </span><span class="macro-nonterminal">$var</span>.try_into() {
             <span class="prelude-val">Ok</span>(v) =&gt; v,
             <span class="prelude-val">Err</span>(e) =&gt; {
-              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$stomach_arg</span>, <span class="prelude-val">None</span>, e);
+              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$stomach_arg</span>, e);
               &lt;<span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>)&gt;::default()
             }
           };
@@ -3471,7 +3469,7 @@
     <span class="macro">defi_primitive!</span>(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$params</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, st)
   }};
   (<span class="macro-nonterminal">$cs</span>:expr, <span class="macro-nonterminal">$params</span>:expr, <span class="macro-nonterminal">$compiled_replacement</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {{
-    def_primitive(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$params</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$state_arg</span>);
+    def_primitive(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$params</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?</span>;
   }};
 );
 
@@ -3489,7 +3487,7 @@
       defn.value_of(<span class="macro-nonterminal">$parameters</span>, <span class="macro-nonterminal">$state_arg</span>).unwrap_or_default()
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The control sequence {:?} is not a register&quot;</span>, <span class="macro-nonterminal">$cs</span>);
-      <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;register&quot;</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$state_arg</span>, message);
+      <span class="macro">Warn!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;register&quot;</span>, <span class="prelude-val">None</span>, message);
       RegisterValue::default()
     }
   };
@@ -3770,7 +3768,7 @@
     <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cstext</span>.to_string());
     <span class="kw">let </span>presentation = <span class="macro-nonterminal">$presentation</span>.to_string();
     <span class="kw">let </span>paramlist: <span class="prelude-ty">Option</span>&lt;Parameters&gt; = <span class="macro-nonterminal">$paramlist</span>;
-    def_math(cs, paramlist, presentation, options, <span class="macro-nonterminal">$state_arg</span>);
+    def_math(cs, paramlist, presentation, options, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?</span>;
   }};
 }
 
@@ -3829,8 +3827,8 @@
 </span><span class="macro">macro_rules! </span>AddToCounter {
   (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$gullet</span>:ident) =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    add_to_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$gullet</span>, st)
-  }};
+    add_to_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$gullet</span>, st)<span class="question-mark">?
+  </span>}};
   (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$gullet</span>:ident, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {
     add_to_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>, <span class="macro-nonterminal">$gullet</span>, <span class="macro-nonterminal">$state_arg</span>)
   };
@@ -3877,15 +3875,15 @@
 </span><span class="macro">macro_rules! </span>ResetCounter {
   (<span class="macro-nonterminal">$ctr</span>:literal) =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$ctr</span>), st)
-  }};
+    reset_counter(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$ctr</span>), st)<span class="question-mark">?
+  </span>}};
   (<span class="macro-nonterminal">$ctr</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    reset_counter(<span class="macro-nonterminal">$ctr</span>, st)
-  }};
+    reset_counter(<span class="macro-nonterminal">$ctr</span>, st)<span class="question-mark">?
+  </span>}};
   (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$state_arg</span>: ident) =&gt; {
-    reset_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$state_arg</span>)
-  };
+    reset_counter(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?
+  </span>};
 }
 
 <span class="doccomment">/// Return $tokens with all tokens expanded
@@ -4002,7 +4000,7 @@
         <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@applyaccent&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$accent</span>),
         <span class="macro">T_OTHER_CHAR!</span>(<span class="macro-nonterminal">$combiningchar</span>), <span class="macro">T_OTHER!</span>(<span class="macro-nonterminal">$standalonechar</span>),
         <span class="macro">T_BEGIN!</span>(), <span class="macro">T_ARG!</span>(<span class="number">1</span>), <span class="macro">T_END!</span>())),
-      <span class="prelude-val">Some</span>(ExpandableOptions{protected: <span class="bool-val">true</span>, ..ExpandableOptions::default()}), <span class="macro-nonterminal">$state</span>);
+      <span class="prelude-val">Some</span>(ExpandableOptions{protected: <span class="bool-val">true</span>, ..ExpandableOptions::default()}), <span class="macro-nonterminal">$state</span>)<span class="question-mark">?</span>;
   }};
 }
 
@@ -4104,15 +4102,15 @@
 </span><span class="macro">macro_rules! </span>PushValue {
   (<span class="macro-nonterminal">$name</span>:expr =&gt; <span class="macro-nonterminal">$values</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    st.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)
-  }};
+    st.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)<span class="question-mark">?
+  </span>}};
   (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$values</span>:expr) =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    st.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)
-  }};
+    st.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)<span class="question-mark">?
+  </span>}};
   (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$values</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {
-    <span class="macro-nonterminal">$state_arg</span>.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)
-  };
+    <span class="macro-nonterminal">$state_arg</span>.push_value(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$values</span>)<span class="question-mark">?
+  </span>};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>PopValue {
@@ -4232,8 +4230,8 @@
     <span class="macro">LookupDefinition!</span>(<span class="macro-nonterminal">$name</span>, st)
   }};
   (<span class="macro-nonterminal">$name</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {
-    <span class="macro-nonterminal">$state_arg</span>.lookup_definition(<span class="macro-nonterminal">$name</span>)
-  };
+    <span class="macro-nonterminal">$state_arg</span>.lookup_definition(<span class="macro-nonterminal">$name</span>)<span class="question-mark">?
+  </span>};
 }
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>InstallDefinition {
@@ -4456,7 +4454,7 @@
   }};
   <span class="comment">// explicit state, for nested macro factories
   </span>(<span class="macro-nonterminal">$cs</span>:expr, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {{
-    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$state_arg</span>);
+    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?</span>;
   }};
   (<span class="macro-nonterminal">$cs</span>:expr, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$expansion</span>:literal, $(<span class="macro-nonterminal">$input</span>:tt)+) =&gt; {{
     <span class="kw">let </span>compiled_expansion;
@@ -4499,7 +4497,7 @@
           <span class="kw">let </span><span class="macro-nonterminal">$var</span>: <span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>) = <span class="kw">match </span><span class="macro-nonterminal">$var</span>.try_into() {
             <span class="prelude-val">Ok</span>(v) =&gt; v,
             <span class="prelude-val">Err</span>(e) =&gt; {
-              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$gullet</span>, <span class="prelude-val">None</span>, e);
+              <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;argument&quot;</span>, <span class="macro-nonterminal">$gullet</span>, e);
               &lt;<span class="macro">parameter_rust_type!</span>(<span class="macro-nonterminal">$ptype</span>)&gt;::default()
             }
           };
@@ -4520,7 +4518,7 @@
     <span class="macro">defi_macro!</span>(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, st);
   }};
   (<span class="macro-nonterminal">$cs</span>:expr, <span class="macro-nonterminal">$paramlist</span>:expr, <span class="macro-nonterminal">$compiled_replacement</span>:expr, <span class="macro-nonterminal">$options</span>:expr, <span class="macro-nonterminal">$state_arg</span>:ident) =&gt; {
-    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$state_arg</span>);
+    def_macro(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$paramlist</span>, <span class="macro-nonterminal">$compiled_replacement</span>, <span class="macro-nonterminal">$options</span>, <span class="macro-nonterminal">$state_arg</span>)<span class="question-mark">?</span>;
   };
 }
 
@@ -4702,12 +4700,11 @@
         <span class="macro-nonterminal">$expansion_closure</span>,
         <span class="prelude-val">None</span>,
         st,
-      );
+      )<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
       <span class="macro">Warn!</span>(
         <span class="string">&quot;expected&quot;</span>,
         <span class="string">&quot;character&quot;</span>,
-        <span class="prelude-val">None</span>,
         <span class="prelude-val">None</span>,
         <span class="string">&quot;Expected Column specifier&quot;
       </span>);
@@ -4928,8 +4925,8 @@
 </span><span class="macro">macro_rules! </span>Today {
   () =&gt; {{
     <span class="macro">bind_state_mut!</span>(st);
-    today(st)
-  }};
+    today(st)<span class="question-mark">?
+  </span>}};
 }
 
 <span class="attr">#[macro_export]
@@ -4948,7 +4945,7 @@
   };
   (<span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>:ident, <span class="macro-nonterminal">$outer_state</span>: ident) =&gt; {
     <span class="kw">let </span>cs = String::from(<span class="string">&quot;\\default@ds&quot;</span>);
-    def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$outer_state</span>);
+    def_macro(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$outer_state</span>)<span class="question-mark">?</span>;
   };
   (<span class="prelude-val">None</span>, sub <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
@@ -4968,7 +4965,7 @@
     </span><span class="kw">let </span>code: PrimitiveClosure = Rc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$stomach</span>, _args, <span class="macro-nonterminal">$inner_state</span>|
       <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, <span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$inner_state</span>).into_digested_result()
     );
-    def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default(), <span class="macro-nonterminal">$outer_state</span>);
+    def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default(), <span class="macro-nonterminal">$outer_state</span>)<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="prelude-val">None</span>) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
@@ -4978,17 +4975,17 @@
     <span class="macro">bind_state_mut!</span>(st);
     <span class="kw">let </span>tokenized;
     <span class="macro">compile_tokenize_internal!</span>(tokenized, <span class="macro-nonterminal">$tex</span>);
-    st.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>);
+    st.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// literal case, create a macro
-    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>,tokenized,<span class="prelude-val">None</span>,st);
+    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>,tokenized,<span class="prelude-val">None</span>,st)<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, <span class="macro-nonterminal">$tokenized</span>:ident) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
-    st.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>.to_string());
+    st.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>.to_string())<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// literal case, create a macro
-    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>, st);
+    </span>def_macro(<span class="macro">T_CS!</span>(cs),<span class="prelude-val">None</span>, <span class="macro-nonterminal">$tokenized</span>, <span class="prelude-val">None</span>, st)<span class="question-mark">?</span>;
   };
   (<span class="macro-nonterminal">$option</span>:expr, sub <span class="macro-nonterminal">$body</span>:block) =&gt; {
     <span class="macro">bind_state_mut!</span>(st);
@@ -5003,13 +5000,13 @@
     <span class="macro">DeclareOption!</span>(<span class="macro-nonterminal">$option</span>, sub[<span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$state</span>] <span class="macro-nonterminal">$body</span>, st)
   };
   (<span class="macro-nonterminal">$option</span>:expr, sub[<span class="macro-nonterminal">$stomach</span>:ident, <span class="macro-nonterminal">$inner_state</span>:ident] <span class="macro-nonterminal">$body</span>:block, <span class="macro-nonterminal">$outer_state</span>: ident) =&gt; {
-    <span class="macro-nonterminal">$outer_state</span>.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>);
+    <span class="macro-nonterminal">$outer_state</span>.push_value(<span class="string">&quot;@declaredoptions&quot;</span>, <span class="macro-nonterminal">$option</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>cs = <span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, <span class="macro-nonterminal">$option</span>);
     <span class="comment">// block case, create a primitive
     </span><span class="kw">let </span>code: PrimitiveClosure = Rc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$stomach</span>, _args, <span class="macro-nonterminal">$inner_state</span>|
       <span class="macro">WithInnerState!</span>(<span class="macro-nonterminal">$body</span>, <span class="macro-nonterminal">$stomach</span>, <span class="macro-nonterminal">$inner_state</span>).into_digested_result()
     );
-    def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default(), <span class="macro-nonterminal">$outer_state</span>);
+    def_primitive(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(code), PrimitiveOptions::default(), <span class="macro-nonterminal">$outer_state</span>)<span class="question-mark">?</span>;
   }
 }
 
@@ -5035,11 +5032,11 @@
   }};
   (<span class="macro-nonterminal">$cs</span>:ident, <span class="macro-nonterminal">$tokens</span>:ident, <span class="macro-nonterminal">$organ</span>:ident, <span class="macro-nonterminal">$state</span>:ident) =&gt; {{
     <span class="comment">// Needs error checking!
-    </span><span class="kw">let </span>defn = <span class="macro-nonterminal">$state</span>.lookup_definition(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$cs</span>);
+    </span><span class="kw">let </span>defn = <span class="macro-nonterminal">$state</span>.lookup_definition(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$cs</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;{} is not an expandable control sequence&quot;</span>, <span class="macro-nonterminal">$cs</span>);
       <span class="kw">let </span>message2 = <span class="string">&quot;Ignoring addition&quot;</span>;
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$organ</span>, <span class="macro-nonterminal">$state</span>, message, message2);
+      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$organ</span>, message, message2);
     } <span class="kw">else </span>{
       <span class="kw">let </span><span class="kw-2">mut </span>expansion = <span class="kw">match </span>defn.unwrap().get_expansion() {
         <span class="comment">// the .clone() call is again avoidable with a careful refactor via e.g. using
@@ -5056,7 +5053,6 @@
             <span class="string">&quot;unexpected&quot;</span>,
             <span class="string">&quot;ExpandableBody::Closure&quot;</span>,
             <span class="macro-nonterminal">$organ</span>,
-            <span class="macro-nonterminal">$state</span>,
             message
           );
           Vec::new()
@@ -5074,7 +5070,7 @@
           ..ExpandableOptions::default()
         }),
         <span class="macro-nonterminal">$state</span>,
-      );
+      )<span class="question-mark">?</span>;
     }
   }};
 }

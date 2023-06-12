@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment.rs`."><title>alignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment.rs`."><title>alignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1661,8 +1661,6 @@
 <a href="#1661" id="1661">1661</a>
 <a href="#1662" id="1662">1662</a>
 <a href="#1663" id="1663">1663</a>
-<a href="#1664" id="1664">1664</a>
-<a href="#1665" id="1665">1665</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -1868,21 +1866,21 @@
     }
   }
 
-  <span class="kw">pub fn </span>next_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cell&gt; {
-    <span class="self">self</span>.current_row<span class="question-mark">?</span>;
+  <span class="kw">pub fn </span>next_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cell&gt;&gt; {
+    <span class="kw">if </span><span class="self">self</span>.current_row.is_none() { <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>); }
     <span class="self">self</span>.current_column += <span class="number">1</span>;
     <span class="kw">let </span>current_row = <span class="self">self</span>.rows.get_mut(<span class="self">self</span>.current_row.unwrap()).unwrap();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(colspec) = current_row.get_column_mut(<span class="self">self</span>.current_column) {
-      <span class="prelude-val">Some</span>(colspec)
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(colspec))
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;&amp;&quot;</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Extra alignment tab &#39;&amp;&#39;&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;&amp;&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Extra alignment tab &#39;&amp;&#39;&quot;</span>);
       <span class="comment">// DG: Mutability issue, should we do an alternative recovery?
       //     or change the call interface?
       //
       // let fallback_cell = Cell{align: Some(Align::Center),..Cell::default()};
       // current_row.add_column(fallback_cell);
-      </span><span class="prelude-val">None
-    </span>}
+      </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+    }
   }
 
   <span class="kw">pub fn </span>last_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Cell&gt; {
@@ -2176,7 +2174,7 @@
             }
           }
         }
-        <span class="kw">let </span>empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty();
+        <span class="kw">let </span>empty = cell.empty || cell.boxes.is_none() || cell.boxes.as_ref().unwrap().is_empty()<span class="question-mark">?</span>;
         <span class="kw">let </span>open_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_column;
         <span class="kw">let </span><span class="kw-2">mut </span>cell_attrs = HashMap::default();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(align) = cell.align {
@@ -2341,7 +2339,7 @@
         <span class="kw">break</span>;
       }
       gullet.unread_one(last_op);
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{op}&quot;</span>)), <span class="bool-val">true</span>) {
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{op}&quot;</span>)), <span class="bool-val">true</span>)<span class="question-mark">? </span>{
       <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
       gullet.unread(invoked);
     } <span class="kw">else if </span>cc == Catcode::BEGIN {
@@ -2353,7 +2351,6 @@
         <span class="string">&quot;unexpected&quot;</span>,
         op,
         gullet,
-        state,
         <span class="macro">s!</span>(<span class="string">&quot;Unrecognized tabular template {op:?}&quot;</span>)
       );
     }
@@ -2431,7 +2428,7 @@
     <span class="kw">if </span>rows.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
-    alignment_characterize_lines(document, Axis::Row, <span class="bool-val">false</span>, rows.as_mut_slice(), state)<span class="question-mark">?</span>;
+    alignment_characterize_lines(document, Axis::Row, <span class="bool-val">false</span>, rows.as_mut_slice())<span class="question-mark">?</span>;
   }
   <span class="comment">// Flip the rows around to produce a column view.
   </span>{
@@ -2440,7 +2437,7 @@
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
     <span class="comment">// This usually does something unpleasant
-    </span>alignment_characterize_lines(document, Axis::Column, <span class="bool-val">false</span>, cols.as_mut_slice(), state)<span class="question-mark">?</span>;
+    </span>alignment_characterize_lines(document, Axis::Column, <span class="bool-val">false</span>, cols.as_mut_slice())<span class="question-mark">?</span>;
   }
 
   <span class="comment">// Did we go overboard?
@@ -2478,7 +2475,7 @@
   }
   <span class="kw">if </span>n_h &gt; <span class="number">0 </span>{
     <span class="comment">// Found some headers?
-    </span>document.add_class(table, <span class="string">&quot;ltx_guessed_headers&quot;</span>, state)<span class="question-mark">?</span>;
+    </span>document.add_class(table, <span class="string">&quot;ltx_guessed_headers&quot;</span>)<span class="question-mark">?</span>;
   }
 
   <span class="comment">//   # Debugging report!
@@ -2903,8 +2900,7 @@
   document: <span class="kw-2">&amp;mut </span>Document,
   axis: Axis,
   reversed: bool,
-  lines: <span class="kw-2">&amp;mut </span>[Vec&lt;<span class="kw-2">&amp;mut </span>Cell&gt;],
-  state: <span class="kw-2">&amp;</span>State,
+  lines: <span class="kw-2">&amp;mut </span>[Vec&lt;<span class="kw-2">&amp;mut </span>Cell&gt;]
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>n = lines.len();
   <span class="kw">if </span>n &lt; <span class="number">2 </span>{
@@ -2988,7 +2984,7 @@
                   })))
             {
             } <span class="kw">else </span>{
-              document.add_ss_values(xcell, <span class="string">&quot;thead&quot;</span>, axis.marker_name(), state)<span class="question-mark">?</span>;
+              document.add_ss_values(xcell, <span class="string">&quot;thead&quot;</span>, axis.marker_name())<span class="question-mark">?</span>;
             }
           }
         }

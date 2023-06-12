@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><title>document.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (7820972f8 2023-06-10)" data-search-js="search-4926e5fc22a5646a.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-48600a9606eff342.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/document.rs`."><title>document.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -3427,10 +3427,6 @@
 <a href="#3427" id="3427">3427</a>
 <a href="#3428" id="3428">3428</a>
 <a href="#3429" id="3429">3429</a>
-<a href="#3430" id="3430">3430</a>
-<a href="#3431" id="3431">3431</a>
-<a href="#3432" id="3432">3432</a>
-<a href="#3433" id="3433">3433</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>helpers;
 <span class="kw">pub mod </span>resource;
 <span class="kw">pub mod </span>tag;
@@ -3620,7 +3616,7 @@
         // alternative
         </span>arena::with(<span class="kw-2">*</span>prefix, |p_str| {
           arena::with(<span class="kw-2">*</span>ns, |ns_str| context.register_namespace(p_str, ns_str))
-        });
+        }).unwrap();
       }
       <span class="self">self</span>.context = <span class="prelude-val">Some</span>(context);
       <span class="self">self</span>.context.as_mut().unwrap()
@@ -3744,7 +3740,7 @@
           }
           arena::with(key, |key_str| {
             arena::with(value, |value_str| {
-              <span class="self">self</span>.set_attribute(node, key_str, value_str, state)
+              <span class="self">self</span>.set_attribute(node, key_str, value_str)
             })
           })<span class="question-mark">?</span>;
         }
@@ -3805,7 +3801,7 @@
           <span class="comment">// Too late to do wrapNodes?
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>text) = <span class="self">self</span>.wrap_nodes(FONT_ELEMENT_NAME, <span class="macro">vec!</span>[child], state)<span class="question-mark">? </span>{
             <span class="kw">for </span>(key, (value, _properties)) <span class="kw">in </span><span class="kw-2">&amp;</span>pending_declaration {
-              <span class="self">self</span>.set_attribute(<span class="kw-2">&amp;mut </span>text, key, value, state)<span class="question-mark">?</span>;
+              <span class="self">self</span>.set_attribute(<span class="kw-2">&amp;mut </span>text, key, value)<span class="question-mark">?</span>;
             }
             <span class="self">self</span>.finalize_rec(<span class="kw-2">&amp;mut </span>text, state)<span class="question-mark">?</span>; <span class="comment">// Now have to clean up the new node!
           </span>}
@@ -4149,9 +4145,9 @@
       <span class="kw">let </span>message = <span class="macro">s!</span>(
         <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {}&quot;</span>,
         qname_msg,
-        <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
-      );
-      <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+        <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)<span class="question-mark">?
+      </span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
       <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     } <span class="kw">else </span>{
       <span class="comment">// Found node.
@@ -4166,7 +4162,7 @@
             .collect::&lt;Vec&lt;String&gt;&gt;()
             .join(<span class="string">&quot;,&quot;</span>)
         );
-        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
       }
       <span class="comment">// So, now close up to the desired node.
       </span><span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>node, state)<span class="question-mark">?</span>;
@@ -4266,9 +4262,9 @@
     <span class="kw">if </span>n_type == <span class="prelude-val">Some</span>(NodeType::DocumentNode) {
       <span class="comment">// Didn&#39;t find $node at all!!
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Attempt to close {:?}, which isn&#39;t open&quot;</span>, node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str| {
-        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
-      });
+      arena::with(state.model.get_node_qname(node), |qname_str| <span class="prelude-val">Ok</span>({
+        <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
+      }))<span class="question-mark">?</span>;
     <span class="comment">//     &quot;Currently in &quot; . $self-&gt;getInsertionContext()) unless $ifopen;
     </span>} <span class="kw">else </span>{
       <span class="comment">// Found node.
@@ -4284,9 +4280,9 @@
             .collect::&lt;Vec&lt;String&gt;&gt;()
             .join(<span class="string">&quot;,&quot;</span>)
         );
-        arena::with(qname, |qname_str| {
-          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
-        });
+        arena::with(qname, |qname_str| <span class="prelude-val">Ok</span>({
+          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
+        }))<span class="question-mark">?</span>;
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(lastopen_node) = lastopen {
         <span class="self">self</span>.close_node_internal(<span class="kw-2">&amp;</span>lastopen_node, state)<span class="question-mark">?</span>;
@@ -4326,14 +4322,14 @@
       <span class="comment">// Didn&#39;t find $qname at all!!
       </span><span class="kw">if </span>strict {
         <span class="kw">let </span>qname = state.model.get_node_qname(node);
-        arena::with(qname, |qname_str| {
+        arena::with(qname, |qname_str| <span class="prelude-val">Ok</span>({
           <span class="kw">let </span>message = <span class="macro">s!</span>(
             <span class="string">&quot;Attempt to close {}, which isn&#39;t open. Currently in {:?}&quot;</span>,
             qname_str,
-            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
-          );
-          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, state, message)
-        });
+            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)<span class="question-mark">?
+          </span>);
+          <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname_str, <span class="self">self</span>, message)
+        }))<span class="question-mark">?</span>;
       }
     } <span class="kw">else </span>{
       <span class="comment">// Found node.
@@ -4350,11 +4346,12 @@
               .join(<span class="string">&quot;, &quot;</span>)
           );
           <span class="kw">if </span>strict {
-            <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+            <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
           } <span class="kw">else </span>{
-            <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+            <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
           }
-        });
+          <span class="prelude-val">Ok</span>(())
+        })<span class="question-mark">?</span>;
       }
       <span class="self">self</span>.close_node_internal(node, state)<span class="question-mark">?</span>;
     }
@@ -5214,7 +5211,7 @@
 
   </span><span class="doccomment">/// Return a string indicating the path to the current insertion point in the document.
   /// if $levels is defined, show only that many levels
-  </span><span class="kw">pub fn </span>get_insertion_context(<span class="kw-2">&amp;</span><span class="self">self</span>, levels_opt: <span class="prelude-ty">Option</span>&lt;usize&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
+  </span><span class="kw">pub fn </span>get_insertion_context(<span class="kw-2">&amp;</span><span class="self">self</span>, levels_opt: <span class="prelude-ty">Option</span>&lt;usize&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>levels = <span class="kw">match </span>levels_opt {
       <span class="prelude-val">None </span>=&gt; {
         <span class="comment">// Default depth is based on verbosity
@@ -5236,8 +5233,8 @@
         <span class="string">&quot;Insertion point is not an element, document or text: {:?}&quot;</span>,
         <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span>node)
       );
-      <span class="macro">Error!</span>(<span class="string">&quot;internal&quot;</span>, <span class="string">&quot;context&quot;</span>, <span class="self">self</span>, state, message);
-      <span class="kw">return </span>String::new();
+      <span class="macro">Error!</span>(<span class="string">&quot;internal&quot;</span>, <span class="string">&quot;context&quot;</span>, <span class="self">self</span>, message);
+      <span class="kw">return </span><span class="prelude-val">Ok</span>(String::new());
     }
     <span class="kw">let </span><span class="kw-2">mut </span>path = <span class="macro">s!</span>(<span class="string">&quot;TODO&quot;</span>); <span class="comment">//TODO: Stringify($node);
     </span><span class="kw">while let </span><span class="prelude-val">Some</span>(parent_node) = node.get_parent() {
@@ -5251,7 +5248,7 @@
       }
       <span class="comment">// TODO: $path = Stringify($node) . $path; }
     </span>}
-    path
+    <span class="prelude-val">Ok</span>(path)
   }
 
   <span class="doccomment">/// Find the node where an element with qualified name $qname can be inserted.
@@ -5286,17 +5283,16 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(has_opened) = has_opened_opt {
       <span class="comment">// out of options if already inside an auto-open chain
-      </span><span class="kw">let </span>message = arena::with(has_opened, |has_opened_str| {
-        arena::with(cur_qname, |cur_qname_str| {
-          <span class="macro">s!</span>(
+      </span><span class="kw">let </span>message: String = arena::with(has_opened, |has_opened_str|
+        arena::with(cur_qname, |cur_qname_str| <span class="prelude-val">Ok</span>::&lt;String,<span class="kw">crate</span>::common::error::Error&gt;(
+          <span class="macro">format!</span>(
             <span class="string">&quot;failed auto-open through &lt;{}&gt; at inadmissible &lt;{}&gt;. Currently in {}&quot;</span>,
             has_opened_str,
             cur_qname_str,
-            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)
-          )
-        })
-      });
-      <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+            <span class="self">self</span>.get_insertion_context(<span class="prelude-val">None</span>, state)<span class="question-mark">?
+          </span>))
+      ))<span class="question-mark">?</span>;
+      <span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
       <span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone()) <span class="comment">// But we&#39;ll do it anyway, unless Error =&gt; Fatal.
     </span>} <span class="kw">else </span>{
       <span class="comment">// Now we&#39;re getting more desparate...
@@ -5327,7 +5323,7 @@
           <span class="macro">s!</span>(<span class="string">&quot;{:?} isn&#39;t allowed in &lt;{}&gt;&quot;</span>, qname, cur_qname_str)
         });
         <span class="comment">//&quot;Currently in &quot; self.getInsertionContext());
-        </span><span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, message);
+        </span><span class="macro">Error!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, message);
 
         <span class="comment">// But we&#39;ll do it anyway, unless Error =&gt; Fatal.
         </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.node.clone())
@@ -5466,7 +5462,6 @@
     node: <span class="kw-2">&amp;mut </span>Node,
     key: <span class="kw-2">&amp;</span>str,
     value: <span class="kw-2">&amp;</span>str,
-    state: <span class="kw-2">&amp;</span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span>value.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(()); <span class="comment">// skip if empty
@@ -5474,7 +5469,7 @@
     <span class="kw">if </span>key == <span class="string">&quot;xml:id&quot; </span>|| key == <span class="string">&quot;id&quot; </span>{
       <span class="comment">// If it&#39;s an ID attribute
       // Do id book keeping
-      </span><span class="self">self</span>.record_id_with_node(value, node, state);
+      </span><span class="self">self</span>.record_id_with_node(value, node);
       <span class="comment">// TODO: Need to improve Namespace ergonomics, also in rust-libxml
       // let node_ns = self
       //   .document
@@ -5538,7 +5533,6 @@
     node: <span class="kw-2">&amp;mut </span>Node,
     key: <span class="kw-2">&amp;</span>str,
     values_str: <span class="kw-2">&amp;</span>str,
-    state: <span class="kw-2">&amp;</span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// $values = $values-&gt;toAttribute if ref $values;
     </span><span class="kw">if </span>!values_str.is_empty() {
@@ -5553,17 +5547,17 @@
           }
         }
         old.sort_unstable();
-        <span class="self">self</span>.set_attribute(node, key, <span class="kw-2">&amp;</span>old.join(<span class="string">&quot; &quot;</span>), state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.set_attribute(node, key, <span class="kw-2">&amp;</span>old.join(<span class="string">&quot; &quot;</span>))<span class="question-mark">?</span>;
       } <span class="kw">else </span>{
         values.sort_unstable();
-        <span class="self">self</span>.set_attribute(node, key, <span class="kw-2">&amp;</span>values.join(<span class="string">&quot; &quot;</span>), state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.set_attribute(node, key, <span class="kw-2">&amp;</span>values.join(<span class="string">&quot; &quot;</span>))<span class="question-mark">?</span>;
       }
     }
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>add_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, class: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="self">self</span>.add_ss_values(node, <span class="string">&quot;class&quot;</span>, class, state)
+  <span class="kw">pub fn </span>add_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;mut </span>Node, class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="self">self</span>.add_ss_values(node, <span class="string">&quot;class&quot;</span>, class)
   }
 
   <span class="comment">//**********************************************************************
@@ -5594,7 +5588,7 @@
   /// which should be the `xml:id` attribute of the `node`.
   /// Usually this association will be maintained by the methods
   /// that create nodes or set attributes.
-  </span><span class="kw">fn </span>record_id_with_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>str, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;</span>State) -&gt; String {
+  </span><span class="kw">fn </span>record_id_with_node(<span class="kw-2">&amp;mut </span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>str, node: <span class="kw-2">&amp;</span>Node) -&gt; String {
     <span class="kw">let </span>prev_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(prev) = <span class="self">self</span>.idstore.get(id) {
       <span class="comment">// Whoops! Already assigned!!!
       // Can we recover?
@@ -5616,7 +5610,7 @@
         badid,
         <span class="self">self</span>.document.node_to_string(<span class="kw-2">&amp;</span>prev)
       );
-      <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, <span class="string">&quot;id&quot;</span>, <span class="self">self</span>, state, message);
+      <span class="macro">Info!</span>(<span class="string">&quot;malformed&quot;</span>, <span class="string">&quot;id&quot;</span>, <span class="self">self</span>, message);
     }
     <span class="self">self</span>.idstore.insert(id.to_string(), node.clone());
     id.to_string()
@@ -5628,7 +5622,7 @@
   </span><span class="kw">pub fn </span>record_node_ids(<span class="kw-2">&amp;mut </span><span class="self">self</span>, node: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span><span class="kw-2">mut </span>idnode <span class="kw">in </span><span class="self">self</span>.findnodes(<span class="string">&quot;descendant-or-self::*[@xml:id]&quot;</span>, <span class="prelude-val">Some</span>(node), state) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = idnode.get_attribute_ns(<span class="string">&quot;id&quot;</span>, XML_NS) {
-        <span class="kw">let </span>newid = <span class="self">self</span>.record_id_with_node(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>idnode, state);
+        <span class="kw">let </span>newid = <span class="self">self</span>.record_id_with_node(<span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>idnode);
         <span class="kw">if </span>newid != id {
           idnode.set_attribute(<span class="string">&quot;xml:id&quot;</span>, <span class="kw-2">&amp;</span>newid)<span class="question-mark">?</span>;
         }
@@ -5738,7 +5732,6 @@
             <span class="string">&quot;expected&quot;</span>,
             <span class="string">&quot;id&quot;</span>,
             <span class="self">self</span>,
-            state,
             <span class="string">&quot;Missing idref on ltx:XMRef&quot;</span>,
             <span class="macro">s!</span>(<span class="string">&quot;_xmkey is `{}`&quot;</span>, key.unwrap_or_default())
           );
@@ -5749,7 +5742,6 @@
               <span class="string">&quot;expected&quot;</span>,
               <span class="string">&quot;node&quot;</span>,
               <span class="self">self</span>,
-              state,
               <span class="macro">s!</span>(<span class="string">&quot;No node found with id=&#39;{id}&#39; (referred to from ltx:XMRef)&quot;</span>)
             );
           },
@@ -5889,7 +5881,7 @@
         } <span class="comment">// Change dualid refs to branchid
       </span>} <span class="kw">else </span>{
         branch.set_attribute(<span class="string">&quot;xml:id&quot;</span>, <span class="kw-2">&amp;</span>dualid)<span class="question-mark">?</span>; <span class="comment">// Just use same ID on the branch
-        </span><span class="self">self</span>.record_id_with_node(<span class="kw-2">&amp;</span>dualid, <span class="kw-2">&amp;</span>branch, state);
+        </span><span class="self">self</span>.record_id_with_node(<span class="kw-2">&amp;</span>dualid, <span class="kw-2">&amp;</span>branch);
       }
     }
     <span class="self">self</span>.replace_tree(branch, dual, state)<span class="question-mark">?</span>;
@@ -6096,7 +6088,7 @@
         }
       }
     }
-    <span class="kw">let </span>(decoded_ns, tag) = state.model.decode_qname(qname);
+    <span class="kw">let </span>(decoded_ns, tag) = state.model.decode_qname(qname)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>newnode;
     <span class="comment">// box = self.node_boxes.get(box);    // may already be the string key
     // If this will be the document root node, things are slightly more involved.
@@ -6149,7 +6141,7 @@
         <span class="kw">if </span>key == <span class="string">&quot;font&quot; </span>|| key == <span class="string">&quot;locator&quot; </span>{
           <span class="kw">continue</span>;
         }
-        <span class="self">self</span>.set_attribute(<span class="kw-2">&amp;mut </span>newnode, key, <span class="kw-2">&amp;</span>attrs[key], state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.set_attribute(<span class="kw-2">&amp;mut </span>newnode, key, <span class="kw-2">&amp;</span>attrs[key])<span class="question-mark">?</span>;
       }
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = font_opt {
@@ -6212,7 +6204,7 @@
                   <span class="prelude-val">Ok</span>(ns) =&gt; <span class="prelude-val">Some</span>(ns),
                   <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;failed to create namespace: {:?}&quot;</span>, prefix);
-                    <span class="macro">Error!</span>(<span class="string">&quot;document&quot;</span>, <span class="string">&quot;open_element_internal&quot;</span>, <span class="self">self</span>, state, message);
+                    <span class="macro">Error!</span>(<span class="string">&quot;document&quot;</span>, <span class="string">&quot;open_element_internal&quot;</span>, <span class="self">self</span>, message);
                     <span class="prelude-val">None
                   </span>},
                 }
@@ -6232,7 +6224,7 @@
                 <span class="prelude-val">Ok</span>(ns) =&gt; <span class="prelude-val">Some</span>(ns),
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                   <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;failed to create namespace: {:?}&quot;</span>, prefix);
-                  <span class="macro">Error!</span>(<span class="string">&quot;document&quot;</span>, <span class="string">&quot;open_element_internal&quot;</span>, <span class="self">self</span>, state, message);
+                  <span class="macro">Error!</span>(<span class="string">&quot;document&quot;</span>, <span class="string">&quot;open_element_internal&quot;</span>, <span class="self">self</span>, message);
                   <span class="prelude-val">None
                 </span>},
               }
@@ -6354,7 +6346,7 @@
               <span class="string">&quot;xml:id&quot; </span>| <span class="string">&quot;id&quot; </span>=&gt; {
                 <span class="comment">// Use the replacement id
                 </span><span class="kw">let </span>mapped_id = id_map.get(<span class="kw-2">&amp;</span>val).unwrap();
-                <span class="kw">let </span>newid = <span class="self">self</span>.record_id_with_node(mapped_id, <span class="kw-2">&amp;</span>new, state);
+                <span class="kw">let </span>newid = <span class="self">self</span>.record_id_with_node(mapped_id, <span class="kw-2">&amp;</span>new);
                 new.set_attribute(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>newid)<span class="question-mark">?</span>;
               },
               <span class="string">&quot;idref&quot; </span>=&gt; {
@@ -6399,7 +6391,7 @@
     }
     <span class="kw">let </span>first_node = <span class="kw-2">&amp;</span>nodes[<span class="number">0</span>];
     <span class="kw">let </span><span class="kw-2">mut </span>parent = first_node.get_parent().unwrap();
-    <span class="kw">let </span>(ns, tag) = state.model.decode_qname(qname);
+    <span class="kw">let </span>(ns, tag) = state.model.decode_qname(qname)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>new = <span class="self">self</span>.open_element_internal(<span class="kw-2">&amp;mut </span>parent, ns, <span class="kw-2">&amp;</span>tag, state)<span class="question-mark">?</span>;
     <span class="self">self</span>.after_open(<span class="kw-2">&amp;mut </span>new, state)<span class="question-mark">?</span>;
     parent.replace_child_node(new.clone(), first_node.clone())<span class="question-mark">?</span>;
@@ -6569,7 +6561,7 @@
         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(savenode));
       }
     } <span class="kw">else if </span>!<span class="self">self</span>.can_contain_node_somehow(<span class="kw-2">&amp;</span><span class="self">self</span>.node, qname, state) {
-        <span class="macro">Warn!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, state, <span class="macro">s!</span>(<span class="string">&quot;No open node can contain element &#39;{}&#39;&quot;</span>, qname));
+        <span class="macro">Warn!</span>(<span class="string">&quot;malformed&quot;</span>, qname, <span class="self">self</span>, <span class="macro">s!</span>(<span class="string">&quot;No open node can contain element &#39;{}&#39;&quot;</span>, qname));
         <span class="comment">// self.get_insertion_context())
     </span>}
     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -6623,7 +6615,7 @@
       <span class="prelude-val">Some</span>(savenode)
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;No open node with an xml:id can get attribute {:?}&quot;</span>, key);
-      <span class="macro">Warn!</span>(<span class="string">&quot;malformed&quot;</span>, key, <span class="self">self</span>, state, message);
+      <span class="macro">Warn!</span>(<span class="string">&quot;malformed&quot;</span>, key, <span class="self">self</span>, message);
       <span class="comment">//  $self-&gt;getInsertionContext());
       </span><span class="prelude-val">None
     </span>}
@@ -6637,7 +6629,7 @@
     <span class="self">self</span>.box_to_absorb = <span class="self">self</span>.localized_boxes.pop().unwrap();
   }
 
-  <span class="kw">pub fn </span>load_labels_for_rewrite(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="kw">pub fn </span>load_labels_for_rewrite(<span class="kw-2">&amp;mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">for </span>node <span class="kw">in </span><span class="self">self</span>.findnodes(<span class="string">&quot;//*[@labels]&quot;</span>, <span class="prelude-val">None</span>, state) {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(labels) = node.get_attribute(<span class="string">&quot;labels&quot;</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_attribute(<span class="string">&quot;id&quot;</span>) {
@@ -6651,12 +6643,12 @@
             <span class="string">&quot;malformed&quot;</span>,
             <span class="string">&quot;label&quot;</span>,
             <span class="prelude-val">None</span>,
-            <span class="prelude-val">None</span>,
             <span class="macro">format!</span>(<span class="string">&quot;Node {} has labels but no xml:id&quot;</span>, node.get_name())
           );
         }
       }
     }
+    <span class="prelude-val">Ok</span>(())
   }
 
   <span class="kw">fn </span>set_local_font(<span class="kw-2">&amp;mut </span><span class="self">self</span>, arg: Rc&lt;Font&gt;) { <span class="self">self</span>.localized_fonts.push(arg); }
@@ -6711,7 +6703,7 @@
         + <span class="kw-2">&amp;</span>ctr;
 
       ancestor.set_attribute(<span class="kw-2">&amp;</span>ctrkey, <span class="kw-2">&amp;</span>ctr)<span class="question-mark">?</span>;
-      <span class="self">self</span>.set_attribute(node, <span class="string">&quot;xml:id&quot;</span>, <span class="kw-2">&amp;</span>id, state)<span class="question-mark">?</span>;
+      <span class="self">self</span>.set_attribute(node, <span class="string">&quot;xml:id&quot;</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(())
   }
