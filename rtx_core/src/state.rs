@@ -863,6 +863,15 @@ impl State {
     self.assign_value("font", Stored::Font(font), scope);
   }
 
+  pub fn lookup_font_info(&self, key: &Token) -> Result<Option<&Stored>> {
+    let key_str = if let Some(defn) = self.lookup_definition(key)? {
+      s!("fontinfo_{}", defn.get_cs_name())
+    } else {
+      s!("fontinfo_{key}")
+    };
+    Ok(self.lookup_value(&key_str))
+  }
+
   /// a variant of `lookup_value` that casts the value into `Number`
   pub fn lookup_number(&self, key: &str) -> Option<Number> {
     match self.lookup_value(key) {
@@ -941,15 +950,29 @@ impl State {
       if defn.is_register() {
         defn.value_of(parameters, self)
       } else {
-        let message = s!("The control sequence {:?} is not a register", cs);
+        let message = s!("The control sequence '{}' is not a register", cs);
         Warn!("expected", "register", None, message);
         None
       }
     } else {
-      let message = s!("The control sequence {:?} is not defined", cs);
-      Warn!("expected", "register", None, message);
+      // let message = s!("The control sequence '{}' is not defined", cs);
+      // Warn!("expected", "register", None, message);
       None
     })
+  }
+
+  pub fn assign_register(&mut self, cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
+    let cs = T_CS!(cs);
+    if let Some(defn) = self.lookup_definition(&cs)? {
+      if defn.is_register() {
+        defn.set_value(value, scope, parameters, self);
+        return Ok(());
+      }
+    }
+    let stomach = self.stomach.borrow();
+    Warn!("expected", "register", stomach,
+        format!("The control sequence '{cs}' is not a register"));
+    Ok(())
   }
 
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {

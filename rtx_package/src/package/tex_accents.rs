@@ -99,20 +99,7 @@ LoadDefinitions!(state, {
   // both the above & below cases!  We'll prefer the above case.
   DefPrimitive!("\\accent Number Expanded", sub[stomach,(num,letter),state] {
     unimplemented!();
-    // my $n        = $num->valueOf;
-    // my $fam      = 0;                                            # ?
-    // my $font     = LookupValue('fontinfo_' . $fam . '_text');
-    // my $fontinfo = LookupValue('fontinfo_' . ToString($font));
-    // my $acc      = ($fontinfo && $$fontinfo{encoding} ? FontDecode($n, $$fontinfo{encoding}) : chr($n));
-    // my $reversion = Invocation(T_CS('\accent'), $num, $letter);
-    // # NOTE: REVERSE LOOKUP in above accent list for the non-spacing accent char
-    // # BUT, \accent always (?) makes an above type accent... doesn't it?
-    // if (my $combiner = LookupMapping('accent_combiner_above', $acc)
-    //   || LookupMapping('accent_combiner_below', $acc)) {
-    //   applyAccent($stomach, $letter, $combiner, $acc, $reversion); }
-    // else {
-    //   Warn('unexpected', "accent$n", $stomach, "Accent '$n' not recognized");
-    //   Box(ToString($letter), undef, undef, $reversion); }
+ 
     Ok(())
   });
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!

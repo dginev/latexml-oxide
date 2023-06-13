@@ -41,16 +41,30 @@ LoadDefinitions!(state, {
   });
 
   DefPrimitive!("\\newlength DefToken", sub[stomach, (cs), inner_state] {
-    DefRegister!(cs, None, Glue::new(0));
+    DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
     Ok(vec![])
   });
 
-  // TODO: Update these !!!
-  DefMacro!("\\setlength{}{}", "\\@check@length{#1}#1#2\\relax");
-  DefMacro!(
-    "\\addtolength{}{}",
-    "\\@check@length{#1}\\advance#1 #2\\relax"
-  );
+  DefPrimitive!("\\setlength {Variable}{Dimension}", sub[stomach,(variable,length),state] {
+    if let ArgWrap::RegisterDefinition(dbox) = variable {
+      let (rtoken, params) = *dbox;
+      let defn = rtoken.to_register(state)
+        .expect("if a Variable parameter provides a token, it must have a Register definition.");
+      defn.set_value(length.into(), None, params, state);
+    }
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[stomach,(variable,length),state] {
+    if let ArgWrap::RegisterDefinition(dbox) = variable {
+      let (rtoken, params) = *dbox;
+      let defn = rtoken.to_register(state)
+        .expect("if a Variable parameter provides a token, it must have a Register definition.");
+      // TODO: can we avoid cloning the params?
+      let oldlength = defn.value_of(params.clone(), state).unwrap_or_default();
+      defn.set_value(oldlength.add(length), None, params, state);
+    }
+    Ok(Vec::new())
+  });
 
   DefMacro!(
     "\\@settodim{}{}{}",
@@ -61,25 +75,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\settowidth", "\\@settodim\\wd");
   DefMacro!(r"\@settopoint{}", r"\divide#1\p@\multiply#1\p@");
 
-  // Assuming noone tries to get clever with figuring out the allocation of
-  // numbers, these become simple DefRegister's
-  DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Number::new(0));
-  });
-  DefPrimitive!("\\newdimen Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Dimension::new(0));
-  });
-  DefPrimitive!("\\newskip Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Glue::new(0));
-  });
-  DefPrimitive!("\\newmuskip Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, MuGlue::new(0));
-  });
-  DefPrimitive!("\\newtoks Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Tokens!());
-  });
-
-  // DefRegister!("\\fill", Glue(0, "1fill"));
+  DefRegister!("\\fill", Glue!("0pt plus 1fill"));
 
   //======================================================================
   // C.13.2 Space
@@ -263,7 +259,7 @@ LoadDefinitions!(state, {
   //       height  => $_[2]); },
   //   mode => 'text', bounded => 1,
   //   beforeDigest => sub {
-  //     AssignValue('\hsize' => $_[4]);
+  // AssignRegister('\hsize' => $_[4]);
   //     Let('\\\\', '\lx@parboxnewline'); });
 
   DefMacro!("\\@parboxrestore", "");
@@ -283,7 +279,7 @@ LoadDefinitions!(state, {
   //       vattach => translateAttachment($_[1])); },
   //   beforeDigest => sub {
   //     Digest(T_CS('\@minipagetrue'));
-  //     AssignValue('\hsize' => $_[4]);
+  // AssignRegister('\hsize' => $_[4]);
   //     // this conflicts (& not needed?) with insertBlock
   //     Let('\\\\', '\lx@parboxnewline'); });
 

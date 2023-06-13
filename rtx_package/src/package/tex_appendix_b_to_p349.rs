@@ -314,17 +314,21 @@ LoadDefinitions!(state, {
   }, locked => true);
   // From plain.tex
   DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Number::new(0));
+    DefRegister!(name, None, Number::new(0), allocate=>"\\count");
   });
   DefPrimitive!("\\newdimen Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Dimension::new(0));
+    DefRegister!(name, None, Dimension::new(0), allocate=>"\\dimen");
   });
   DefPrimitive!("\\newskip Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, Glue::new(0));
+    DefRegister!(name, None, Glue::new(0), allocate=>"\\skip");
   });
   DefPrimitive!("\\newmuskip Token", sub[stomach, (name), state] {
-    DefRegister!(name, None, MuGlue::new(0));
+    DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
   });
+  DefPrimitive!("\\newtoks Token", sub[stomach, (name), state] {
+    DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
+  });
+
   AssignValue!("allocated_boxes" => false);
   DefPrimitive!("\\newbox DefToken", sub[stomach, (t), state] {
     let n = state.lookup_int("allocated_boxes");
@@ -333,18 +337,22 @@ LoadDefinitions!(state, {
     AssignValue!(&s!("box{}",n), empty_list);
     DefRegister!(t, None, Number(n));
   });
-  DefPrimitive!("\\newhelp Token {}", sub[stomach,(token,arg),state] { unimplemented!(); ()});// AssignValue(ToString($_[1]) => $_[2]); });
-  DefPrimitive!("\\newtoks Token", sub[stomach,(token),state] { unimplemented!(); ()});//DefRegisterI($_[1], undef, Tokens()); });
+  DefPrimitive!("\\newhelp Token {}", sub[stomach,(token,arg),state] {
+    state.assign_value(&token.to_string(), arg, None);
+  });
+  DefPrimitive!("\\newtoks Token", sub[stomach,(name),state] {
+    DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
+  });
 
   // the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
-  DefMacro!("\\alloc@@ {}", sub[gullet, (atype_tokens), state] {
-    let atype = atype_tokens.to_string();
+  DefPrimitive!("\\alloc@@ {}", sub[stomach, (atype), state] {
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(&c).value_of();
-    AssignValue!(&c                  => n + 1,     Some(Scope::Global));
-    AssignValue!("\\allocationnumber" => Number!(n), Some(Scope::Global));
+    state.assign_value(&c, n + 1, Some(Scope::Global));
+    state.assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
+    Ok(Vec::new())
   });
   DefMacro!(
     "\\newread Token",

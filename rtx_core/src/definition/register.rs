@@ -16,7 +16,7 @@ use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::state::State;
+use crate::state::{Scope,State};
 use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -388,15 +388,15 @@ pub enum RegisterType {
 /// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
 pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
 /// sets a register value in the State frame
-pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Vec<ArgWrap>, &mut State)>;
+pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>, &mut State)>;
 
 /// A struct representing a TeX register
 #[derive(Clone)]
 pub struct Register {
   /// the public command sequence for this register
   pub cs: Token,
-  /// the internal name for this register
-  pub name: String,
+  /// the internal address for this register
+  pub address: String,
   /// associated parameters, if any
   pub parameters: Option<Parameters>,
   /// the type of values accepted by this register (Number, Dimension, ...)
@@ -408,23 +408,25 @@ pub struct Register {
   /// the current value
   pub value: Option<RegisterValue>,
   /// reader for a value
-  pub getter: RegisterGetterClosure,
+  pub getter: Option<RegisterGetterClosure>,
   /// setter for a value
-  pub setter: RegisterSetterClosure,
-  // pub traits: PrimitiveOptions,
+  pub setter: Option<RegisterSetterClosure>,
+  ///
+  pub default: Option<RegisterValue>,
 }
 impl Default for Register {
   fn default() -> Self {
     Register {
       cs: T_CS!("Register"),
-      name: String::from("Register"),
+      address: String::from("Register"),
       parameters: None,
       register_type: RegisterType::Number,
-      getter: Rc::new(|_: Vec<ArgWrap>, _: &mut State| Some(RegisterValue::Number(Number::new(0)))),
-      setter: Rc::new(|_: RegisterValue, _: Vec<ArgWrap>, _: &mut State| {}),
+      getter: None,
+      setter: None,
       readonly: false,
       internalcs: None,
       value: None,
+      default: None
     }
   }
 }
@@ -433,15 +435,16 @@ impl PartialEq for Register {
     self.register_type == other.register_type
       && self.parameters == other.parameters
       && self.value == other.value
-      && self.name == other.name
+      && self.address == other.address
   }
 }
 impl fmt::Debug for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(
       f,
-      "Register[cs:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}]",
-      self.cs, self.parameters, self.register_type, self.readonly, self.internalcs, self.value
+      "Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}, default:{:?}]",
+      self.cs, self.address, self.parameters, self.register_type, self.readonly, self.internalcs, self.value,
+      self.default,
     )
   }
 }
@@ -466,6 +469,39 @@ impl Definition for Register {
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs.clone()) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
+
+  fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>, state: &mut State) {
+    if self.register_type == RegisterType::CharDef {
+      let message = self
+        .cs
+        .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
+      let err = || {Error!("unexpected", "chardef", None, message); Ok(()) };
+      err().ok();
+    } else if let Some(setter) = &self.setter {
+      setter(value, scope, args, state);
+    } else {
+      // default setter
+      if self.readonly {
+        let message = s!("Can't assign to register {}", self.address);
+        Warn!("unexpected", self.address, None, message);
+      } else {
+        let loc = if args.is_empty() { Cow::Borrowed(&self.address) } else {
+          let args_string: String = args
+            .into_iter()
+            .map(|a| {
+              a.as_tokens(state)
+               .expect("TODO: handle malformed values here.")
+               .unwrap()
+               .to_string()
+           })
+           .collect::<Vec<String>>()
+           .join("");
+          Cow::Owned(format!("{}{args_string}",self.address))
+        };
+        state.assign_value(&loc, value, scope);
+      }
+    }
+  }
   // No before/after daemons ???
   // (other than afterassign)
   fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
@@ -486,7 +522,7 @@ impl Definition for Register {
     gullet.read_keyword(&["="], state)?;
     let value = gullet.read_value(self.register_type().unwrap(), state)?;
 
-    self.borrow().set_value(value, args, state);
+    self.borrow().set_value(value, None, args, state);
 
     state.after_assignment(gullet);
     // # Tracing ?
@@ -520,8 +556,23 @@ impl Definition for Register {
   fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {
     if self.register_type == RegisterType::CharDef {
       self.value.clone()
+    } else if let Some(ref getter) = self.getter {
+      getter(args, state)
     } else {
-      (self.getter)(args, state)
+      let key = if args.is_empty() {
+        Cow::Borrowed(&self.address)
+      } else {
+        let args_string: String = args
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join("");
+        Cow::Owned(format!("{}{args_string}",self.address))
+      };
+      match state.lookup_value(&key) {
+        Some(v) => v.into(),
+        None => self.default.clone(),
+      }
     }
   }
   fn register_type(&self) -> Option<RegisterType> { Some(self.register_type) }
@@ -530,18 +581,6 @@ impl Definition for Register {
 impl Register {
   /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
-  /// runs the setter to assign the value for this register
-  pub fn set_value(&self, value: RegisterValue, args: Vec<ArgWrap>, state: &mut State) {
-    if self.register_type == RegisterType::CharDef {
-      let message = self
-        .cs
-        .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
-      let err = || {Error!("unexpected", "chardef", None, message); Ok(()) };
-      err().ok();
-    } else {
-      (self.setter)(value, args, state);
-    }
-  }
   /// creates a CharDef type register
   pub fn new_chardef(cs: Token, value: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
     Register {
@@ -553,6 +592,14 @@ impl Register {
       readonly: true,
       //locator => $STATE->getStomach->getGullet->getMouth->getLocator,
       ..Register::default()
+    }
+  }
+
+  pub fn get_address(&self) -> Cow<str> {
+    if self.address.is_empty() {
+      self.get_cs_name()
+    } else {
+      Cow::Borrowed(&self.address)
     }
   }
 }

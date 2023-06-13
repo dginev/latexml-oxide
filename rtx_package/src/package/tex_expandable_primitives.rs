@@ -107,6 +107,8 @@ LoadDefinitions!(outer_state, {
     Tokens::new(Explode!("fontname not implemented"))
   );
 
+  // Not sure about this yet...
+  // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
   DefMacro!("\\meaning Token", sub[gullet, (token), state] {
     let mut meaning = String::from("undefined");
     if let Some(definition) = if token == T_ALIGN!() {
@@ -143,24 +145,7 @@ LoadDefinitions!(outer_state, {
           meaning.push_str(&text);
         },
         Stored::Register(register) => {
-          let value = register.value_of(vec![],state);
-          let register_type = register.register_type().unwrap();
-          let prefix = match register_type {
-            RegisterType::Glue | RegisterType::MuGlue =>  "\\skip",
-            RegisterType::Dimension => "\\dimen",
-            _ => "\\count"
-          };
-          let literal_value : String = if register_type != RegisterType::Any {
-            if let Some(v) = value {
-              v.value_of().to_string()
-            } else {
-              String::new()
-            }
-          } else {
-            String::new()
-          };
-          // Should we be more careful to distinguish between latex and tex counters?
-          meaning = format!("{prefix}{literal_value}");
+          meaning = register.get_address().to_string();
         },
         Stored::Expandable(expandable) => {
           // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,

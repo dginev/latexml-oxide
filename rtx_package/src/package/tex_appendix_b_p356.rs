@@ -27,8 +27,8 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\ss", "\u{00DF}");     // LATIN SMALL LETTER SHARP S
 
   // apparently the rest can appear in math.
-  DefPrimitive!("\\lx@sectionsign",   "\u{00a7}");    // SECTION SIGN
-  DefPrimitive!("\\lx@paragraphsign", "\u{00B6}");    // PILCROW SIGN
+  DefPrimitive!("\\lx@sectionsign",   "\u{00a7}", alias=>"\\S");    // SECTION SIGN
+  DefPrimitive!("\\lx@paragraphsign", "\u{00B6}", alias=>"\\P");    // PILCROW SIGN
   DefMacro!("\\S", "\\lx@sectionsign");
   DefMacro!("\\P", "\\lx@paragraphsign");
   DefPrimitive!("\\dag",       "\u{2020}");          // DAGGER

@@ -19,7 +19,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\lx@thinmuskip", sub[stomach,(),state] {
     Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
       stored_map!("name"  => "thinspace", "isSpace" => true,
-      "width" => state.lookup_value("\\thinmuskip")), state)
+      "width" => state.lookup_register("\\thinmuskip", Vec::new())?), state)
   });
   DefPrimitive!("\\lx@thinspace", sub[stomach,(),state] {
     Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\,")),
@@ -46,12 +46,12 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\>", sub[stomach,(),state] {
     Tbox::new(arena::pin_static("\u{2005}"), None, None, Tokens!(T_CS!("\\>")),
       stored_map!("name"  => "medspace", "isSpace" => true,
-      "width" => state.lookup_value("\\medmuskip")), state)
+      "width" => state.lookup_register("\\medmuskip", Vec::new())?), state)
   });
   DefPrimitive!("\\;", sub[stomach, (), state] {
     Tbox::new(arena::pin_static("\u{2004}"), None, None, Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
-      "width" => state.lookup_value("\\thickmuskip")), state)
+      "width" => state.lookup_register("\\thickmuskip", Vec::new())?), state)
   });
 
   Let!("\\:", "\\>");

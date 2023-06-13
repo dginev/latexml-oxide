@@ -288,7 +288,14 @@ macro_rules! getter {
 macro_rules! setter {
   ($value:ident, $args: ident, $state:ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, mut $args: Vec<ArgWrap>, $state: &mut State| {
+      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>, $state: &mut State| {
+        WithInnerState!($body, $state)
+      },
+    ))
+  };
+  ($value:ident, $scope:ident, $args: ident, $state:ident, $body:block) => {
+    Some(Rc::new(
+      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>, $state: &mut State| {
         WithInnerState!($body, $state)
       },
     ))
@@ -514,7 +521,7 @@ macro_rules! AssignRegister {
   }};
   ($cs:literal, $value:ident, $args:expr, $state_arg: ident) => {{
     if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
-      (*defn).set_value($value, $args, $state_arg);
+      (*defn).set_value($value, None, $args, $state_arg);
     } else {
       let message = s!("The control sequence {} is not a register", $cs);
       Warn!("expected", "register", None, message);

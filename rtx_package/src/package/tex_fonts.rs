@@ -10,34 +10,37 @@ LoadDefinitions!(outer_state, {
 
   // Doubtful that we can do anything useful with these.
   // These look essentially like Registers, although Knuth doesn't call them that.
+  // NOTE: These should just point to a CS token, right????
+  // (although it SHOULD be one defined to be a font switch??)
+  // NOTE: These should NOT be global(?)
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args, state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("fontinfo_{}_text", fam)).unwrap_or_default()
+    state.lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,args,state] {
+  setter => sub[font,scope,args,state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("fontinfo_{}_text", fam), font, Some(Scope::Global));
+    state.assign_value(&s!("textfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args, state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("fontinfo_{}_script", fam)).unwrap_or_default()
+    state.lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,args,state] {
+  setter => sub[font,scope,args,state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("fontinfo_{}_script", fam), font, Some(Scope::Global));
+    state.assign_value(&s!("scriptfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args, state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("fontinfo_{}_scriptscript", fam)).unwrap_or_default()
+    state.lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,args,state] {
+  setter => sub[font,scope,args,state] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("fontinfo_{}_scriptscript", fam), font, Some(Scope::Global));
+    state.assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
   });
 
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
@@ -55,7 +58,7 @@ LoadDefinitions!(outer_state, {
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
     }},
-  setter => sub[value,args,state] {
+  setter => sub[value,_scope,args,state] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
     let stuff = state.lookup_value_mut(&boxkey);
@@ -85,7 +88,7 @@ LoadDefinitions!(outer_state, {
     }
     result
   },
-  setter => sub[value,args,state] {
+  setter => sub[value,_scope,args,state] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
     let stuff = state.lookup_value_mut(&boxkey);
@@ -102,7 +105,7 @@ LoadDefinitions!(outer_state, {
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
     }},
-  setter => sub[value,args,state] {
+setter => sub[value,_scope,args,state] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
     let stuff = state.lookup_value_mut(&boxkey);
@@ -417,7 +420,7 @@ LoadDefinitions!(outer_state, {
     sizer       => "#1",
     after_digest => sub[stomach,whatsit,state] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state);
+      let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
       if let Some(glyph) = glyph_opt {
         whatsit.set_property("glyph", glyph);
         whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -435,7 +438,7 @@ LoadDefinitions!(outer_state, {
   after_digest => sub[stomach,whatsit,state] {
     let mut n = whatsit.get_arg(1).unwrap().value_of();
     n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state);
+    let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph",glyph);
       whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
@@ -452,7 +455,7 @@ LoadDefinitions!(outer_state, {
     state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = stomach.get_gullet_mut().read_number(state).unwrap();
     // eprintln!(" ** {} + {}", value,csname);
-    let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state);
+    let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_opt = glyph.map(|_|
@@ -489,7 +492,7 @@ LoadDefinitions!(outer_state, {
   sizer => "#1",    // Close enough?
   after_digest => sub[stomach, whatsit, state] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let (role, glyph_opt) = decode_math_char(n as u16, stomach, state);
+    let (role, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph", glyph);
 

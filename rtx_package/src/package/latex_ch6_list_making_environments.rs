@@ -174,6 +174,12 @@ LoadDefinitions!(state, {
   // Class file should have
   //  NewCounter for enumi,...,
   //  define \labelenumi,... and probably \p@enumii...
+  NewCounter!("enumi",   "", idwithin => "@itemizei", idprefix => "i");
+  NewCounter!("enumii",  "", idwithin => "enumi",     idprefix => "i");
+  NewCounter!("enumiii", "", idwithin => "enumii",    idprefix => "i");
+  NewCounter!("enumiv",  "", idwithin => "enumiii",   idprefix => "i");
+  NewCounter!("enumv",   "", idwithin => "enumiv",    idprefix => "i");    // A couple of extra
+  NewCounter!("enumvi",  "", idwithin => "enumv",     idprefix => "i");
 
   // How the refnums look... (probably should be in class file, but already here)
   DefMacro!("\\p@enumii", "\\theenumi");

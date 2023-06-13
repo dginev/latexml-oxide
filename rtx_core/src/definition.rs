@@ -26,7 +26,7 @@ use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
 use crate::parameter::Parameters;
-use crate::state::State;
+use crate::state::{State,Scope};
 use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::{Tokens, NO_TOKENS};
@@ -340,6 +340,8 @@ pub trait Definition: Object {
   fn value_of(&self, _args: Vec<ArgWrap>, _state: &mut State) -> Option<RegisterValue> {
     unimplemented!()
   }
+  /// runs the setter to assign the value for a register
+  fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>, _state: &mut State) { unimplemented!(); }
   fn register_type(&self) -> Option<RegisterType> { None }
   fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }

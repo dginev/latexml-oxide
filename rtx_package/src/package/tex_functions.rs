@@ -243,19 +243,19 @@ pub fn decode_math_char(
   mut n: u16,
   stomach: &mut Stomach,
   state: &mut State,
-) -> (Option<String>, Option<char>) {
+) -> Result<(Option<String>, Option<char>)> {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let fam: u16 = n / 256;
   n %= 256;
   let font = state
-    .lookup_value(&s!("fontinfo_{}_text", fam))
+    .lookup_value(&s!("textfont_{fam}"))
     .unwrap_or_else(|| {
       state
-        .lookup_value(&s!("fontinfo_{}_script", fam))
+        .lookup_value(&s!("scriptfont_{fam}"))
         .unwrap_or_else(|| {
           state
-            .lookup_value(&s!("fontinfo_{}_scriptscript", fam))
+            .lookup_value(&s!("scriptscriptfont_{fam}"))
             .unwrap_or(&Stored::Bool(false))
         })
     });
@@ -264,7 +264,7 @@ pub fn decode_math_char(
   let c = n as u8 as char;
   // // If no specific class, Lookup properties from a DefMath?
   let charinfo = state.lookup_value(&s!("math_token_attributes_{}", c));
-  let fontinfo = state.lookup_value(&s!("fontinfo_{}", font.to_string()));
+  let fontinfo = state.lookup_font_info(&T_CS!(font.to_string()))?;
   let mut role = MATH_CLASS_ROLE[class as usize];
 
   if role.is_empty() {
@@ -287,7 +287,7 @@ pub fn decode_math_char(
     None
   };
 
-  (role_opt, font_opt)
+  Ok((role_opt, font_opt))
 }
 
 // Risky: I think this needs to be digested as a body to work like TeX (?)

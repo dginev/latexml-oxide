@@ -580,7 +580,7 @@ LoadDefinitions!(state, {
         Error!("expected","<register>", gullet,message);
         if let Some(t) = token {
           if is_definable(&t, state) {
-            def_register(t, None, Tokens!(), None, state);
+            def_register(t, None, Tokens!(), None, state)?;
           }
         }
         Ok(ArgWrap::Tokens(Tokens!()))
