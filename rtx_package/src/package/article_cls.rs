@@ -96,10 +96,6 @@ LoadDefinitions!(stomach, state, {
   DefMacro!("\\thefigure", "\\arabic{figure}");
   DefMacro!("\\thetable", "\\arabic{table}");
 
-  NewCounter!("enumi",   "", idwithin => "@itemizei", idprefix => "i");
-  NewCounter!("enumii",  "", idwithin => "enumi",     idprefix => "i");
-  NewCounter!("enumiii", "", idwithin => "enumii",    idprefix => "i");
-  NewCounter!("enumiv",  "", idwithin => "enumiii",   idprefix => "i");
   DefMacro!("\\theenumi", "\\arabic{enumi}");
   DefMacro!("\\theenumii", "\\alph{enumii}");
   DefMacro!("\\theenumiii", "\\roman{enumiii}");

@@ -52,6 +52,7 @@ LoadDefinitions!(state, {
 \newrobustcmd*{\csshow}[1]{%
   \begingroup\expandafter\endgroup
   \expandafter\show\csname#1\endcsname}
+
 % {<csname>}
 
 \newcommand*{\csmeaning}[1]{%
@@ -187,13 +188,9 @@ LoadDefinitions!(state, {
     tfalse
   } }, protected => true);
 
-  // latexml does not implement x@protect for DeclareRobustCommand, skip
-  //\ifx\etb@resrvda\etb@resrvdb
-  //  \noexpand\x@protect
-  //  \noexpand#1%
-  //\fi
   RawTeX!(
     r###"
+
 % {<csname>}{<true>}{<false>}
 
 \newcommand*{\ifcsprotected}[1]{%
@@ -230,10 +227,10 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\@secondoftwo}
     {\ifdefmacro{#1}
-       {\ifdefparam{#1}
-	  {\@secondoftwo}
-	  {\etb@ifdefempty{#1}}}
-       {\@secondoftwo}}}
+        {\ifdefparam{#1}
+    {\@secondoftwo}
+    {\etb@ifdefempty{#1}}}
+        {\@secondoftwo}}}
 
 \def\etb@ifdefempty#1{%
   \expandafter\expandafter
@@ -248,8 +245,8 @@ LoadDefinitions!(state, {
   \ifcsundef{#1}
     {\@secondoftwo}
     {\expandafter\ifdefparam\csname#1\endcsname
-       {\@secondoftwo}
-       {\expandafter\etb@ifdefempty\csname#1\endcsname}}}
+        {\@secondoftwo}
+        {\expandafter\etb@ifdefempty\csname#1\endcsname}}}
 
 % {<cstoken>}{<true>}{<false>}
 
@@ -257,10 +254,10 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\@firstoftwo}
     {\ifdefmacro{#1}
-       {\ifdefparam{#1}
-	  {\@secondoftwo}
-	  {\etb@ifdefempty{#1}}}
-       {\@secondoftwo}}}
+        {\ifdefparam{#1}
+    {\@secondoftwo}
+    {\etb@ifdefempty{#1}}}
+        {\@secondoftwo}}}
 
 % {<csname>}{<true>}{<false>}
 
@@ -268,8 +265,8 @@ LoadDefinitions!(state, {
   \ifcsundef{#1}
     {\@firstoftwo}
     {\expandafter\ifdefparam\csname#1\endcsname
-       {\@secondoftwo}
-       {\expandafter\etb@ifdefempty\csname#1\endcsname}}}
+        {\@secondoftwo}
+        {\expandafter\etb@ifdefempty\csname#1\endcsname}}}
 
 % {<cstoken1>}{<cstoken2>}{<true>}{<false>}
 
@@ -277,8 +274,8 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\@secondoftwo}
     {\ifundef{#2}
-       {\@secondoftwo}
-       {\ifx#1#2%
+        {\@secondoftwo}
+        {\ifx#1#2%
           \expandafter\@firstoftwo
         \else
           \expandafter\@secondoftwo
@@ -290,8 +287,8 @@ LoadDefinitions!(state, {
   \ifcsundef{#1}
     {\@secondoftwo}
     {\ifcsundef{#2}
-       {\@secondoftwo}
-       {\expandafter\ifx
+        {\@secondoftwo}
+        {\expandafter\ifx
         \csname#1\expandafter\endcsname
         \csname#2\endcsname
           \expandafter\@firstoftwo
@@ -304,16 +301,16 @@ LoadDefinitions!(state, {
 \newrobustcmd{\ifdefstrequal}[2]{%
   \ifdefmacro{#1}
     {\ifdefmacro{#2}
-       {\begingroup
-	\edef\etb@tempa{\expandafter\strip@prefix\meaning#1}%
-	\edef\etb@tempb{\expandafter\strip@prefix\meaning#2}%
-	\ifx\etb@tempa\etb@tempb
-	  \aftergroup\@firstoftwo
-	\else
-	  \aftergroup\@secondoftwo
-	\fi
-	\endgroup}
-       {\@secondoftwo}}
+        {\begingroup
+  \edef\etb@tempa{\expandafter\strip@prefix\meaning#1}%
+  \edef\etb@tempb{\expandafter\strip@prefix\meaning#2}%
+  \ifx\etb@tempa\etb@tempb
+    \aftergroup\@firstoftwo
+  \else
+    \aftergroup\@secondoftwo
+  \fi
+  \endgroup}
+        {\@secondoftwo}}
     {\@secondoftwo}}
 
 % {<csname1>}{<csname2>}{<true>}{<false>}
@@ -322,24 +319,24 @@ LoadDefinitions!(state, {
   \ifcsundef{#1}
     {\@secondoftwo}
     {\ifcsundef{#2}
-       {\@secondoftwo}
-       {\expandafter\ifdefstrequal
+        {\@secondoftwo}
+        {\expandafter\ifdefstrequal
         \csname#1\expandafter\endcsname
-	\csname#2\endcsname}}}
+  \csname#2\endcsname}}}
 
 % {<cstoken>}{<string>}{<true>}{<false>}
 
 \newrobustcmd{\ifdefstring}[2]{%
   \ifdefmacro{#1}
     {\begingroup
-     \edef\etb@tempa{\expandafter\strip@prefix\meaning#1}%
-     \edef\etb@tempb{\detokenize{#2}}%
-     \ifx\etb@tempa\etb@tempb
-       \aftergroup\@firstoftwo
-     \else
-       \aftergroup\@secondoftwo
-     \fi
-     \endgroup}
+      \edef\etb@tempa{\expandafter\strip@prefix\meaning#1}%
+      \edef\etb@tempb{\detokenize{#2}}%
+      \ifx\etb@tempa\etb@tempb
+        \aftergroup\@firstoftwo
+      \else
+        \aftergroup\@secondoftwo
+      \fi
+      \endgroup}
     {\@secondoftwo}}
 
 % {<csname>}{<string>}{<true>}{<false>}
@@ -535,55 +532,55 @@ LoadDefinitions!(state, {
   \ifblank{#2}
     {}
     {\etb@be@beg
-     \etb@be@bgroup#2&}}
+      \etb@be@bgroup#2&}}
 
 \long\def\etb@be@egroup#1)#2&{%
   \etb@be@and#1and&%
   \ifblank{#2}
     {}
     {\etb@be@end\etb@be@true\etb@be@false
-     \etb@be@egroup#2&}}
+      \etb@be@egroup#2&}}
 
 \long\def\etb@be@and#1and#2&{%
   \etb@be@or#1or&%
   \ifblank{#2}
     {}
     {<\z@
-       \expandafter\@firstofone
-     \else
-       \expandafter\@gobble
-     \fi
-     {=\z@\fi\ifnum\numexpr\m@ne}%
-     \ifnum\numexpr\z@
-     \etb@be@and#2&}}
+        \expandafter\@firstofone
+      \else
+        \expandafter\@gobble
+      \fi
+      {=\z@\fi\ifnum\numexpr\m@ne}%
+      \ifnum\numexpr\z@
+      \etb@be@and#2&}}
 
 \long\def\etb@be@or#1or#2&{%
   \etb@be@not#1not&%
   \ifblank{#2}
     {}
     {<\z@
-       \expandafter\@secondoftwo
-     \else
-       \expandafter\@firstoftwo
-     \fi
-     {=\z@\fi\ifnum\numexpr\z@
+        \expandafter\@secondoftwo
+      \else
+        \expandafter\@firstoftwo
+      \fi
+      {=\z@\fi\ifnum\numexpr\z@
       \ifnum\numexpr\@ne}
-     {=\z@\fi\ifnum\numexpr\z@
+      {=\z@\fi\ifnum\numexpr\z@
       \ifnum\numexpr\z@}%
-     \etb@be@or#2&}}
+      \etb@be@or#2&}}
 
 \long\def\etb@be@not#1not#2&{%
   \etb@be@togl#1togl&%
   \ifblank{#2}
     {}
     {>\z@
-       \expandafter\@firstoftwo
-     \else
-       \expandafter\@secondoftwo
-     \fi
-     {\unless\ifnum\numexpr\m@ne}
-     {\unless\ifnum\numexpr\z@}%
-     \etb@be@not#2&}}
+        \expandafter\@firstoftwo
+      \else
+        \expandafter\@secondoftwo
+      \fi
+      {\unless\ifnum\numexpr\m@ne}
+      {\unless\ifnum\numexpr\z@}%
+      \etb@be@not#2&}}
 
 \long\def\etb@be@togl#1togl#2&{%
   \etb@be@bool#1bool&%
@@ -607,9 +604,9 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\etb@be@err{Boolean '#1' undefined}{}}
     {\csname if#1\endcsname
-     \else
-       \etb@be@false
-     \fi}%
+      \else
+        \etb@be@false
+      \fi}%
   \etb@be@bool#2&}
 
 \long\def\etb@be@test#1test#2&{%
@@ -637,7 +634,7 @@ LoadDefinitions!(state, {
     \expandafter\@secondoftwo
   \fi
   {=\z@\fi
-   \etb@be@err{#1}{#2\ifnum\numexpr\m@ne}}
+    \etb@be@err{#1}{#2\ifnum\numexpr\m@ne}}
   {\etb@err@expr{#1}#2}}
 
 % {<expr>}{<true>}{<false>}
@@ -682,43 +679,43 @@ LoadDefinitions!(state, {
   \ifblank{#2}
     {}
     {\etb@br@beg
-     \etb@br@bgroup#2&}}
+      \etb@br@bgroup#2&}}
 
 \long\def\etb@br@egroup#1)#2&{%
   \etb@br@and#1and&%
   \ifblank{#2}
     {}
     {\etb@br@end
-     \etb@br@egroup#2&}}
+      \etb@br@egroup#2&}}
 
 \long\def\etb@br@and#1and#2&{%
   \etb@br@or#1or&%
   \ifblank{#2}
     {}
     {\ifnum\etb@tempcnta<\z@
-       \etb@tempcnta\m@ne
-     \else
-       \etb@tempcnta\z@
-     \fi
-     \etb@br@and#2&}}
+        \etb@tempcnta\m@ne
+      \else
+        \etb@tempcnta\z@
+      \fi
+      \etb@br@and#2&}}
 
 \long\def\etb@br@or#1or#2&{%
   \etb@br@not#1not&%
   \ifblank{#2}
     {}
     {\ifnum\etb@tempcnta<\z@
-       \etb@tempcnta\z@
-     \else
-       \etb@tempcnta\@ne
-     \fi
-     \etb@br@or#2&}}
+        \etb@tempcnta\z@
+      \else
+        \etb@tempcnta\@ne
+      \fi
+      \etb@br@or#2&}}
 
 \long\def\etb@br@not#1not#2&{%
   \etb@br@togl#1togl&%
   \ifblank{#2}
     {}
     {\let\etb@br@neg\@secondoftwo
-     \etb@br@not#2&}}
+      \etb@br@not#2&}}
 
 \long\def\etb@br@togl#1togl#2&{%
   \etb@br@bool#1bool&%
@@ -742,10 +739,10 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\etb@err@expr{Boolean '#1' undefined}\etb@br@false}
     {\csname if#1\endcsname
-       \etb@br@true
-     \else
-       \etb@br@false
-     \fi}%
+        \etb@br@true
+      \else
+        \etb@br@false
+      \fi}%
   \etb@br@bool#2&}
 
 \long\def\etb@br@test#1test#2&{%
@@ -837,8 +834,8 @@ LoadDefinitions!(state, {
 \newrobustcmd*{\csletcs}[2]{%
   \ifcsdef{#2}
     {\expandafter\let
-     \csname#1\expandafter\endcsname
-     \csname#2\endcsname}
+      \csname#1\expandafter\endcsname
+      \csname#2\endcsname}
     {\csundef{#1}}}
 
 % {<csname>}
@@ -1012,15 +1009,15 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\expandafter\newif\csname if#1\endcsname}
     {\begingroup
-     \edef\@tempa{\expandafter\meaning\csname if#1\endcsname}%
-     \ifx\@tempa\etb@isfalse
-     \else
-       \ifx\@tempa\etb@istrue
-       \else
-         \etb@error{\@backslashchar if#1 not a boolean}\@eha
-       \fi
-     \fi
-     \endgroup}}
+      \edef\@tempa{\expandafter\meaning\csname if#1\endcsname}%
+      \ifx\@tempa\etb@isfalse
+      \else
+        \ifx\@tempa\etb@istrue
+        \else
+          \etb@error{\@backslashchar if#1 not a boolean}\@eha
+        \fi
+      \fi
+      \endgroup}}
 
 % {<name>}{<true>|<false>}
 
@@ -1028,8 +1025,8 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\etb@noglobal\etb@err@nobool{#1}}
     {\ifcsundef{#1#2}
-       {\etb@noglobal\etb@err@boolval{#2}}
-       {\csname#1#2\endcsname}}}
+        {\etb@noglobal\etb@err@boolval{#2}}
+        {\csname#1#2\endcsname}}}
 
 % {<name>}
 
@@ -1055,10 +1052,10 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\etb@err@nobool{#1}\@gobbletwo}
     {\csname if#1\endcsname
-       \expandafter\@firstoftwo
-     \else
-       \expandafter\@secondoftwo
-     \fi}}
+        \expandafter\@firstoftwo
+      \else
+        \expandafter\@secondoftwo
+      \fi}}
 
 % {<name>}{<not true}{<not false>}
 
@@ -1066,10 +1063,10 @@ LoadDefinitions!(state, {
   \ifcsundef{if#1}
     {\etb@err@nobool{#1}\@gobbletwo}
     {\csname if#1\endcsname
-       \expandafter\@secondoftwo
-     \else
-       \expandafter\@firstoftwo
-     \fi}}
+        \expandafter\@secondoftwo
+      \else
+        \expandafter\@firstoftwo
+      \fi}}
 
 \protected\def\etb@err@nobool#1{%
   \etb@error{Boolean '\@backslashchar if#1' undefined}\@eha}
@@ -1098,8 +1095,8 @@ LoadDefinitions!(state, {
 \newrobustcmd*{\settoggle}[2]{%
   \ifcsdef{etb@tgl@#1}
     {\ifcsdef{etb@toggle#2}
-       {\csletcs{etb@tgl@#1}{etb@toggle#2}}
-       {\etb@noglobal\etb@err@boolval{#2}}}
+        {\csletcs{etb@tgl@#1}{etb@toggle#2}}
+        {\etb@noglobal\etb@err@boolval{#2}}}
     {\etb@noglobal\etb@err@notoggle{#1}}}
 
 % {<name>}
@@ -1191,25 +1188,25 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\etb@error{\string#1 undefined}\@eha}
     {\ifdefmacro{#1}
-       {\ifdefltxprotect{#1}
+        {\ifdefltxprotect{#1}
           {\letcs\etb@resrvda{\expandafter\@gobble\string#1 }%
-           \@tempswatrue}
+            \@tempswatrue}
           {\let\etb@resrvda#1%
-           \@tempswafalse}%
+            \@tempswafalse}%
         \ifdefparam\etb@resrvda
           {\etb@ifscanable\etb@resrvda
-             {\etb@robustify\etb@resrvda
+              {\etb@robustify\etb@resrvda
               \let#1\etb@resrvda}
-             {\etb@error{Failed to robustify \string#1}
+              {\etb@error{Failed to robustify \string#1}
                 {The command is special and cannot be
-                 handled by \string\robustify.}%
+                  handled by \string\robustify.}%
               \@tempswafalse}}
           {\protected\edef#1{\expandonce\etb@resrvda}}%
         \if@tempswa
           \csundef{\expandafter\@gobble\string#1 }%
         \fi
         \undef\etb@resrvda}
-       {\etb@error{\string#1 not a macro}\@eha}}}
+        {\etb@error{\string#1 not a macro}\@eha}}}
 
 \def\etb@robustify#1{%
   \begingroup
@@ -1236,18 +1233,18 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\etb@dbg@fail{def}\@secondoftwo}
     {\etb@dbg@info{def}%
-     \ifdefmacro{#1}
-       {\etb@dbg@info{mac}%
+      \ifdefmacro{#1}
+        {\etb@dbg@info{mac}%
         \etb@ifscanable{#1}
           {\etb@ifhashcheck{#2}
-             {\etb@dbg@info{tok}%
+              {\etb@dbg@info{tok}%
               \etb@ifpattern#1{#2}
-                 {\etb@dbg@info{pat}%
+                  {\etb@dbg@info{pat}%
                   \etb@dbg@info{pos}\@firstoftwo}
-                 {\etb@dbg@fail{pat}\@secondoftwo}}
-             {\etb@dbg@fail{hsh}\@secondoftwo}}
+                  {\etb@dbg@fail{pat}\@secondoftwo}}
+              {\etb@dbg@fail{hsh}\@secondoftwo}}
           {\etb@dbg@fail{tok}\@secondoftwo}}
-       {\etb@dbg@fail{mac}\@secondoftwo}}}
+        {\etb@dbg@fail{mac}\@secondoftwo}}}
 
 \long\def\etb@ifpatchable@i#1{%
   \endgroup
@@ -1255,20 +1252,21 @@ LoadDefinitions!(state, {
   \ifundef{#1}
     {\etb@dbg@fail{def}\@secondoftwo}
     {\etb@dbg@info{def}%
-     \ifdefmacro{#1}
-       {\etb@dbg@info{mac}%
+      \ifdefmacro{#1}
+        {\etb@dbg@info{mac}%
         \ifdefparam{#1}
           {\etb@dbg@info{prm}%
-           \etb@ifscanable{#1}
-             {\etb@dbg@info{tok}%
+            \etb@ifscanable{#1}
+              {\etb@dbg@info{tok}%
               \etb@dbg@info{pos}\@firstoftwo}
-             {\etb@dbg@fail{tok}\@secondoftwo}}
+              {\etb@dbg@fail{tok}\@secondoftwo}}
           {\etb@dbg@info{prl}%
-           \ifdefprotected{#1}
-             {\etb@dbg@info{pro}}
-             {}%
-           \etb@dbg@info{pos}\@firstoftwo}}
-       {\etb@dbg@fail{mac}\@secondoftwo}}}
+            \ifdefprotected{#1}
+              {\etb@dbg@info{pro}}
+              {}%
+            \etb@dbg@info{pos}\@firstoftwo}}
+        {\etb@dbg@fail{mac}\@secondoftwo}}}
+
 "###
   );
 
@@ -1309,19 +1307,19 @@ LoadDefinitions!(state, {
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
     {\etb@dbg@succ{ret}%
-     \begingroup
-     \edef\etb@resrvda{%
-       \def\noexpand\etb@resrvda####1\detokenize{macro:}####2->####3&{%
-         #1\def\string\etb@resrvda\space####2{\noexpand\etb@resrvdb####3&}}%
-       \def\noexpand\etb@resrvdb####1\detokenize{#3}####2&{%
-         ####1\detokenize{#4}####2}%
-       \edef\noexpand\etb@resrvda{%
-         \noexpand\etb@resrvda\meaning#2&}}%
-     \etb@resrvda
-     \etb@patchcmd@scantoks\etb@resrvda
-     \let#2\etb@resrvda
-     \undef\etb@resrvda
-     \@firstoftwo}%
+      \begingroup
+      \edef\etb@resrvda{%
+        \def\noexpand\etb@resrvda####1\detokenize{macro:}####2->####3&{%
+          #1\def\string\etb@resrvda\space####2{\noexpand\etb@resrvdb####3&}}%
+        \def\noexpand\etb@resrvdb####1\detokenize{#3}####2&{%
+          ####1\detokenize{#4}####2}%
+        \edef\noexpand\etb@resrvda{%
+          \noexpand\etb@resrvda\meaning#2&}}%
+      \etb@resrvda
+      \etb@patchcmd@scantoks\etb@resrvda
+      \let#2\etb@resrvda
+      \undef\etb@resrvda
+      \@firstoftwo}%
     {\@secondoftwo}}
 
 \def\etb@patchcmd@scantoks#1{%
@@ -1352,27 +1350,27 @@ LoadDefinitions!(state, {
   \ifundef{#2}
     {\etb@dbg@fail{def}\@secondoftwo}
     {\etb@dbg@info{def}%
-     \ifdefmacro{#2}
-       {\etb@dbg@info{mac}%
+      \ifdefmacro{#2}
+        {\etb@dbg@info{mac}%
         \ifdefparam{#2}
           {\etb@dbg@info{prm}%
-           \etb@ifscanable{#2}
-             {\etb@ifhashcheck{#3}
+            \etb@ifscanable{#2}
+              {\etb@ifhashcheck{#3}
                 {\etb@dbg@info{tok}%
-                 \etb@dbg@succ{ret}%
-                 \etb@hooktocmd@i#1#2{#3}%
-                 \@firstoftwo}
+                  \etb@dbg@succ{ret}%
+                  \etb@hooktocmd@i#1#2{#3}%
+                  \@firstoftwo}
                 {\etb@dbg@fail{hsh}\@secondoftwo}}
-             {\etb@dbg@fail{tok}\@secondoftwo}}
+              {\etb@dbg@fail{tok}\@secondoftwo}}
           {\etb@dbg@info{prl}%
-           \ifdefprotected{#2}
-             {\etb@dbg@info{pro}%
+            \ifdefprotected{#2}
+              {\etb@dbg@info{pro}%
               \etb@dbg@succ{red}%
               \protected}
-             {\etb@dbg@succ{red}}%
-           \edef#2{#1{\expandonce#2}{\unexpanded{#3}}}%
-           \@firstoftwo}}
-       {\etb@dbg@fail{mac}\@secondoftwo}}}
+              {\etb@dbg@succ{red}}%
+            \edef#2{#1{\expandonce#2}{\unexpanded{#3}}}%
+            \@firstoftwo}}
+        {\etb@dbg@fail{mac}\@secondoftwo}}}
 
 \long\def\etb@hooktocmd@i#1#2#3{%
   \begingroup
@@ -1407,7 +1405,7 @@ LoadDefinitions!(state, {
   \ifblank{#1}
     {}
     {\expandafter\etb@rti@end\number\numexpr
-     \expandafter\etb@rti@prs\detokenize{#1}&\relax}}
+      \expandafter\etb@rti@prs\detokenize{#1}&\relax}}
 
 \def\etb@rti@prs#1#2{%
   \ifx&#1%
@@ -1417,12 +1415,12 @@ LoadDefinitions!(state, {
   \fi
   {#1#2}
   {\ifx&#2%
-     \expandafter\@firstoftwo
-   \else
-     \expandafter\@secondoftwo
-   \fi
-   {\etb@rti@chk#1+\etb@rti@num#1#2}
-   {\etb@rti@chk#1\etb@rti@chk#2%
+      \expandafter\@firstoftwo
+    \else
+      \expandafter\@secondoftwo
+    \fi
+    {\etb@rti@chk#1+\etb@rti@num#1#2}
+    {\etb@rti@chk#1\etb@rti@chk#2%
     \ifnum\etb@rti@num#1<\etb@rti@num#2 %
       \expandafter\@firstoftwo
     \else
@@ -1510,9 +1508,9 @@ LoadDefinitions!(state, {
       \noexpand\fi
         {\noexpand\listbreak}
         {\noexpand\etb@listitem\noexpand\do{####1}%
-         \expandafter\noexpand
-         \csname etb@lst@\expandafter\@gobble\string#1\endcsname
-	 \noexpand\@nil}}}%
+          \expandafter\noexpand
+          \csname etb@lst@\expandafter\@gobble\string#1\endcsname
+    \noexpand\@nil}}}%
   \@tempa}
 
 \long\def\etb@lst@@notoken@do#1{%
@@ -1548,9 +1546,9 @@ LoadDefinitions!(state, {
       \noexpand\fi
         {\noexpand\listbreak}
         {\noexpand\etb@listitem{####1}{####2}%
-         \expandafter\noexpand
-         \csname etb@lst@\expandafter\@gobble\string#1\endcsname
-	        {####1}\noexpand\@nil}}}%
+          \expandafter\noexpand
+          \csname etb@lst@\expandafter\@gobble\string#1\endcsname
+          {####1}\noexpand\@nil}}}%
   \@tempa}
 
 \long\def\etb@lst@@notoken@arg#1#2{%
@@ -1567,7 +1565,7 @@ LoadDefinitions!(state, {
   \expandafter\ifblank\expandafter{\@gobble#2}
     {}
     {\expandafter\etb@listitem@i
-     \expandafter{\@secondoftwo#2}{#1}}}
+      \expandafter{\@secondoftwo#2}{#1}}}
 \long\def\etb@listitem@i#1#2{#2{#1}}
 
 \newcommand*{\listbreak}{}
@@ -1618,9 +1616,9 @@ LoadDefinitions!(state, {
   \ifblank{#2}
     {}
     {\ifinlist{#2}{#1}{%
-     \begingroup
-     \def\etb@tempa##1|#2|##2&{\endgroup
-       \expandafter#3\expandafter#1\expandafter{\@gobble##1|##2}}%
+      \begingroup
+      \def\etb@tempa##1|#2|##2&{\endgroup
+        \expandafter#3\expandafter#1\expandafter{\@gobble##1|##2}}%
     \expandafter\etb@tempa\expandafter|#1&}{}}%
 }
 

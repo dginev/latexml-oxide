@@ -12,7 +12,7 @@ use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::arena;
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::definition::argument::ArgWrap;
+use crate::common::number::Number;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
@@ -246,8 +246,10 @@ pub struct RegisterOptions {
   pub setter: Option<RegisterSetterClosure>,
   /// is this register meant as read-only? (default: false)
   pub readonly: bool,
-  /// an optional name for the register (default: the csname)
-  pub name: Option<String>,
+  /// an optional name for the register (default: the cs)
+  pub address: Option<String>,
+  /// an optional allocation for the register (default: None)
+  pub allocate: Option<String>
 }
 
 /// Defines a register with `value` as the initial value
@@ -262,79 +264,42 @@ pub fn def_register<T: Into<RegisterValue>>(
   value: T,
   options: Option<RegisterOptions>,
   state: &mut State,
-) {
-  let options: RegisterOptions = options.unwrap_or_default();
+) -> Result<()> {
+  let mut options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
-  let name = options.name.unwrap_or_else(|| cs.to_string());
+  let mut address = match options.address.take() {
+    Some(v) => v,
+    None => match options.allocate {
+      Some(v) => allocate_register(&v, state)?.unwrap_or_default(),
+      None => String::new(),
+    }
+  };
+  // by adding this check here, we no longer need to use Register::new in the Rust version
+  if address.is_empty() {
+    address = cs.to_string();
+  }
+  // Assign, but do not RE-assign
+  if options.address.is_none() || state.lookup_value(&address).is_none() {
+    state.assign_value(&address, value.clone(), Some(Scope::Global));
+  }
+
   let register_type: RegisterType = (&value).into();
-  // Prepare clones to move into closures
-  let getter_value = value.clone();
-  let setter_name = name.clone();
-
-  let getter: RegisterGetterClosure = match options.getter {
-    Some(getter) => getter.clone(),
-    None => {
-      let name_clone = name.clone();
-      Rc::new(
-        move |args: Vec<ArgWrap>, state: &mut State| -> Option<RegisterValue> {
-          let args_string: String = args
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .join("");
-          match state.lookup_value(&format!("{name_clone}{args_string}")) {
-            None => Some(getter_value.clone()),
-            Some(v) => v.into(),
-          }
-        },
-      )
-    },
-  };
-  let readonly = options.readonly;
-
-  let setter: RegisterSetterClosure = match options.setter {
-    Some(setter) => setter.clone(),
-    None => {
-      if readonly {
-        Rc::new(move |_value, _args, _state| {
-          let message = s!("Can't assign to register {}", setter_name);
-          Warn!("unexpected", setter_name, None, message);
-        })
-      } else {
-        Rc::new(move |value, args, state| {
-          let args_string: String = args
-            .into_iter()
-            .map(|a| {
-              a.as_tokens(state)
-                .expect("TODO: handle malformed values here.")
-                .unwrap()
-                .to_string()
-            })
-            .collect::<Vec<String>>()
-            .join("");
-
-          state.assign_value(&(setter_name.clone() + &args_string), value, None);
-        })
-      }
-    },
-  };
-
-  // Not really right to set the value!
-  state.assign_value_sym(cs.get_sym(), value, None);
   state.install_definition(
     Register {
       cs,
-      name,
+      address,
       parameters,
       register_type,
-      readonly,
-      getter,
-      setter,
+      readonly: options.readonly,
+      getter: options.getter,
+      setter: options.setter,
+      default: Some(value),
       value: None,
       internalcs: None,
     },
     Some(Scope::Global),
   );
+  Ok(())
 }
 
 /// Defines a primitive control sequence; a primitive is processed during
@@ -1511,4 +1476,34 @@ fn transfer_common_constructor_options(
   );
 
   cons.properties = Rc::new(move |_stomach, _args, _state| Ok(properties.clone()));
+}
+
+//======================================================================
+// Allocated registers.
+// We ASSUME the same set of \count positions used by TeX & LaTeX
+// for recording the next available position in \count,\dimen,\skip,\muskip.
+
+pub fn allocate_register(rtype:&str, state:&mut State) -> Result<Option<String>> {
+  let addr = match rtype {
+    "\\count" => "\\count10",
+    "\\dimen" => "\\count11",
+    "\\skip" => "\\count12",
+    "\\muskip" => "\\count13",
+    "\\box"   => "\\count14",
+    "\\toks"  => "\\count15",
+    _ => ""
+  };
+  if !addr.is_empty() { // addr is a Register but MUST be stored as \count<#>
+    if let Some(n) = state.lookup_number(addr) {
+      let next = n.value_of() + 1;
+      state.assign_value(addr, Number::new(next), Some(Scope::Global));
+      Ok(Some(format!("{rtype}{next}")))
+    }
+    else {
+      Ok(None)
+    }
+  } else {
+    Error!("misdefined", rtype, None, format!("Type {rtype} is not an allocated register type"));
+    Ok(None)
+  }
 }

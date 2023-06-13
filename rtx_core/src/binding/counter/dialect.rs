@@ -12,15 +12,15 @@ use rustc_hash::FxHashMap as HashMap;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use crate::binding::content::{build_invocation, digest_if, digest_literal, digest_text};
-use crate::binding::def::dialect::{def_macro, def_register, is_defined};
+use crate::binding::content::{build_invocation, digest_literal, digest_text};
+use crate::binding::def::dialect::{def_macro, def_register, is_defined, RegisterOptions};
 use crate::common::arena;
 use crate::common::cleaners::{clean_id, clean_label, roman_aux};
 use crate::common::error::*;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::expandable::ExpandableOptions;
-use crate::definition::ExpansionBody;
+use crate::definition::{Definition,ExpansionBody};
 use crate::gullet::Gullet;
 use crate::mouth;
 use crate::state::{Scope, State, Stored};
@@ -61,15 +61,19 @@ pub fn new_counter(
   let clctr = s!("\\cl@{}", ctr);
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
+  if !within.is_empty() && within != "document" && state.lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none() {
+    new_counter(within, "", None, stomach, state)?;
+  }
 
-  def_register(T_CS!(&cctr), None, Number::new(0), None, state);
+  def_register(T_CS!(&cctr), None, Number::new(0),
+    Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}), state)?;
   state.assign_value(&cctr, Number::new(0), Some(Scope::Global));
   state.after_assignment(stomach.get_gullet_mut());
   if state.lookup_value(&clctr).is_none() {
     state.assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
-  def_register(T_CS!(&cunctr), None, Number::new(0), None, state);
+  def_register(T_CS!(&cunctr), None, Number::new(0), None, state)?;
   state.assign_value(&cunctr, Number::new(0), Some(Scope::Global));
   if state.lookup_value(&clunctr).is_none() {
     state.assign_value(&clunctr, Tokens!(), Some(Scope::Global));
@@ -123,7 +127,7 @@ pub fn new_counter(
     None,
     Some(ExpansionBody::Closure(Rc::new(
       move |_gullet, _args, inner_state| {
-        let counter_value = counter_value(&ctr_string, inner_state).value_of();
+        let counter_value = counter_value(&ctr_string, inner_state)?.value_of();
         Ok(Tokens::new(ExplodeText!(counter_value)))
       },
     ))),
@@ -209,9 +213,7 @@ pub fn new_counter(
         Some(ExpansionBody::Closure(Rc::new(
           move |_gullet, _args, _inner_state| {
             Ok(mouth::tokenize_internal(&s!(
-              "{}\\csname @{}@ID\\endcsname",
-              prefix,
-              ctr_string
+              "{prefix}\\csname @{ctr_string}@ID\\endcsname",
             )))
           },
         ))),
@@ -237,22 +239,22 @@ pub fn new_counter(
   Ok(())
 }
 /// Fetches the value associated with the counter C<$ctr>.
-pub fn counter_value(ctr: &str, state: &mut State) -> Number {
-  match state.lookup_number(&s!("\\c@{}", ctr)) {
+pub fn counter_value(ctr: &str, state: &mut State) -> Result<Number> {
+  match state.lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
     None => {
       let message = s!("Counter {} was not defined; assuming 0", ctr);
       Warn!("undefined", ctr, None, message);
-      Number::new(0)
+      Ok(Number::new(0))
     },
-    Some(value) => value,
+    Some(value) => Ok(Number::new(dbg!(value).value_of())),
   }
 }
 /// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) -> Result<()> {
-  let v = counter_value(ctr, state).add(value);
-  state.assign_value(&s!("\\c@{}", ctr), v, Some(Scope::Global));
+  let v = counter_value(ctr, state)?.add(value);
+  state.assign_value(&s!("\\c@{ctr}"), v, Some(Scope::Global));
   state.after_assignment(gullet);
-  let id_cs = T_CS!(s!("\\@{}@ID", ctr));
+  let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
     id_cs,
     None,
@@ -273,19 +275,19 @@ pub fn step_counter(
   stomach: &mut Stomach,
   state: &mut State,
 ) -> Result<()> {
-  let value = counter_value(ctr, state);
-  state.assign_value(
-    &s!("\\c@{}", ctr),
-    value.add(Number::new(1)),
+  let value = counter_value(ctr, state)?;
+  let newvalue = value.add(Number::new(1));
+  let c_ctr = s!("\\c@{ctr}");
+  state.assign_register(
+    &c_ctr,
+    newvalue.into(),
     Some(Scope::Global),
-  );
+    Vec::new()
+  )?;
   state.after_assignment(stomach.get_gullet_mut());
-  let token_value = Tokens::new(Explode!(state
-    .lookup_number(&s!("\\c@{}", ctr))
-    .unwrap()
-    .value_of()));
+  let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
-    T_CS!(s!("\\@{}@ID", ctr)),
+    T_CS!(s!("\\@{ctr}@ID")),
     None,
     token_value,
     Some(ExpandableOptions {
@@ -297,13 +299,12 @@ pub fn step_counter(
 
   // and reset any within counters!
   if !noreset {
-    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
+    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{ctr}")) {
       for c in nested.unlist() {
         reset_counter(&c, state)?;
       }
     }
   }
-  digest_if(T_CS!(s!("\\the{}", ctr)), stomach, state)?;
   Ok(())
 }
 
@@ -315,7 +316,7 @@ pub fn step_counter_gullet(
   gullet: &mut Gullet,
   state: &mut State,
 ) -> Result<()> {
-  let value = counter_value(ctr, state);
+  let value = counter_value(ctr, state)?;
   state.assign_value(
     &s!("\\c@{}", ctr),
     value.add(Number::new(1)),
@@ -567,25 +568,24 @@ pub fn ref_step_id(
     state,
   )?;
 
-  let thectr = s!("\\the{ctr}@ID");
-  def_macro(T_CS!("\\@currentID"), None, T_CS!(&thectr), None, state)?;
+  let the_ctr_id = s!("\\the{ctr}@ID");
+  def_macro(T_CS!("\\@currentID"), None, T_CS!(&the_ctr_id), None, state)?;
   Ok(stored_map!("id" =>
-    clean_id(&digest_literal(T_CS!(thectr), stomach, state)?.to_string())))
+    clean_id(&digest_literal(T_CS!(the_ctr_id), stomach, state)?.to_string())))
 }
 
 /// Resets the counter `ctr` to zero.
 pub fn reset_counter(ctr: &Token, state: &mut State) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
-    ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{}@ID", ctr)));
-  state.assign_value(&c_ctr, Number::new(0), Some(Scope::Global));
-  state.assign_value(&c_un_ctr, Number::new(0), Some(Scope::Global));
+    ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
+  state.assign_register(&c_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+  if ctr.with_str(|cstr| !cstr.starts_with("UN")) { // but not UN
+    state.assign_register(&c_un_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+  }
   def_macro(
     T_CS!(ctr_id),
     None,
-    Tokens!(Explode!(state
-      .lookup_number(&s!("\\c@{ctr}"))
-      .unwrap()
-      .value_of())),
+    Tokens!(T_OTHER!("0")),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -757,7 +757,7 @@ pub fn begin_itemize(
   // And that the items within this list's id's are relative to this (new) list.
   state.assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
   let listcounter = s!("@itemize{listpostfix}");
-  if state.lookup_value(&s!("\\c@{listcounter}")).is_none() {
+  if state.lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
     //Create new list counters as needed
     new_counter(&listcounter, "", None, stomach, state)?;
   }

@@ -975,10 +975,10 @@ macro_rules! NewCounterWO {
 macro_rules! CounterValue {
   ($ctr:expr) => {{
     bind_state_mut!(st);
-    counter_value($ctr, st)
+    counter_value($ctr, st)?
   }};
   ($ctr:expr, $state_arg:ident) => {
-    counter_value($ctr, $state_arg)
+    counter_value($ctr, $state_arg)?
   };
 }
 
@@ -1728,7 +1728,7 @@ macro_rules! defi_register {
       }
     }; // allow to reborrow state.
     bind_state_mut!(st);
-    def_register($cs, $paramlist, value, $options, st)
+    def_register($cs, $paramlist, value, $options, st)?
   }};
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr, $state_arg:ident) => {
     let value = {
@@ -1736,7 +1736,7 @@ macro_rules! defi_register {
         $value
       }
     }; // allow to reborrow state.
-    def_register($cs, $paramlist, value, $options, $state_arg)
+    def_register($cs, $paramlist, value, $options, $state_arg)?
   };
 }
 
@@ -2595,15 +2595,25 @@ macro_rules! defi_opts {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
   };
   // for register
-  // name: ident
-  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident, $($next:tt)*)
+  // address: Option<String>
+  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
-      [ name @ Some($idval.to_string()) ] })
+      [ address @ Some($idval.to_string()) ] })
   };
-  (@munch ( $(,)? name $(:)?$(=>)? $idval:ident)
+  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
+  };
+  // allocate: Option<String>
+  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
+      [ allocate @ Some($idval.to_string()) ] })
+  };
+  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ allocate @ Some($idval.to_string()) ] })
   };
   // for defmath
   // stretchy: bool
@@ -2750,10 +2760,10 @@ macro_rules! defi_opts {
   };
 
   (@setter (
-    sub[$value:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* )
+    sub[$value:ident, $scope:ident, $args:ident, $state_arg: ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [setter @ setter!($value, $args, $state_arg, $body)]})
+      [setter @ setter!($value, $scope, $args, $state_arg, $body)]})
   };
   (@setter (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
