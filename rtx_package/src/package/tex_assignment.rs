@@ -339,8 +339,8 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue, stomach
   state.assign_meaning(&cs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(),None);
   let num = stomach.get_gullet_mut().read_number(state)?;
   let address = s!("{address_type}{}", num.value_of());
-  def_register(cs, None, init,
-      Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()}), state)?;
+  let options = Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()});
+  def_register(cs, None, init, options, state)?;
   state.after_assignment(stomach.get_gullet_mut());
   Ok(())
 }
