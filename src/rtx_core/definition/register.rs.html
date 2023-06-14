@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/register.rs`."><title>register.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/definition/register.rs`."><title>register.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -558,6 +558,53 @@
 <a href="#558" id="558">558</a>
 <a href="#559" id="559">559</a>
 <a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::borrow::Cow;
@@ -576,7 +623,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::Parameters;
-<span class="kw">use </span><span class="kw">crate</span>::state::State;
+<span class="kw">use </span><span class="kw">crate</span>::state::{Scope,State};
 <span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
@@ -948,15 +995,15 @@
 </span><span class="doccomment">/// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
 </span><span class="kw">pub type </span>RegisterGetterClosure = Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt;;
 <span class="doccomment">/// sets a register value in the State frame
-</span><span class="kw">pub type </span>RegisterSetterClosure = Rc&lt;<span class="kw">dyn </span>Fn(RegisterValue, Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State)&gt;;
+</span><span class="kw">pub type </span>RegisterSetterClosure = Rc&lt;<span class="kw">dyn </span>Fn(RegisterValue, <span class="prelude-ty">Option</span>&lt;Scope&gt;, Vec&lt;ArgWrap&gt;, <span class="kw-2">&amp;mut </span>State)&gt;;
 
 <span class="doccomment">/// A struct representing a TeX register
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Register {
   <span class="doccomment">/// the public command sequence for this register
   </span><span class="kw">pub </span>cs: Token,
-  <span class="doccomment">/// the internal name for this register
-  </span><span class="kw">pub </span>name: String,
+  <span class="doccomment">/// the internal address for this register
+  </span><span class="kw">pub </span>address: String,
   <span class="doccomment">/// associated parameters, if any
   </span><span class="kw">pub </span>parameters: <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
   <span class="doccomment">/// the type of values accepted by this register (Number, Dimension, ...)
@@ -968,24 +1015,26 @@
   <span class="doccomment">/// the current value
   </span><span class="kw">pub </span>value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
   <span class="doccomment">/// reader for a value
-  </span><span class="kw">pub </span>getter: RegisterGetterClosure,
+  </span><span class="kw">pub </span>getter: <span class="prelude-ty">Option</span>&lt;RegisterGetterClosure&gt;,
   <span class="doccomment">/// setter for a value
-  </span><span class="kw">pub </span>setter: RegisterSetterClosure,
-  <span class="comment">// pub traits: PrimitiveOptions,
-</span>}
+  </span><span class="kw">pub </span>setter: <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
+  <span class="doccomment">///
+  </span><span class="kw">pub </span>default: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;,
+}
 <span class="kw">impl </span>Default <span class="kw">for </span>Register {
   <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
     Register {
       cs: <span class="macro">T_CS!</span>(<span class="string">&quot;Register&quot;</span>),
-      name: String::from(<span class="string">&quot;Register&quot;</span>),
+      address: String::from(<span class="string">&quot;Register&quot;</span>),
       parameters: <span class="prelude-val">None</span>,
       register_type: RegisterType::Number,
-      getter: Rc::new(|<span class="kw">_</span>: Vec&lt;ArgWrap&gt;, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State| <span class="prelude-val">Some</span>(RegisterValue::Number(Number::new(<span class="number">0</span>)))),
-      setter: Rc::new(|<span class="kw">_</span>: RegisterValue, <span class="kw">_</span>: Vec&lt;ArgWrap&gt;, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State| {}),
+      getter: <span class="prelude-val">None</span>,
+      setter: <span class="prelude-val">None</span>,
       readonly: <span class="bool-val">false</span>,
       internalcs: <span class="prelude-val">None</span>,
       value: <span class="prelude-val">None</span>,
-    }
+      default: <span class="prelude-val">None
+    </span>}
   }
 }
 <span class="kw">impl </span>PartialEq <span class="kw">for </span>Register {
@@ -993,15 +1042,16 @@
     <span class="self">self</span>.register_type == other.register_type
       &amp;&amp; <span class="self">self</span>.parameters == other.parameters
       &amp;&amp; <span class="self">self</span>.value == other.value
-      &amp;&amp; <span class="self">self</span>.name == other.name
+      &amp;&amp; <span class="self">self</span>.address == other.address
   }
 }
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Register {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
     <span class="macro">write!</span>(
       f,
-      <span class="string">&quot;Register[cs:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}]&quot;</span>,
-      <span class="self">self</span>.cs, <span class="self">self</span>.parameters, <span class="self">self</span>.register_type, <span class="self">self</span>.readonly, <span class="self">self</span>.internalcs, <span class="self">self</span>.value
+      <span class="string">&quot;Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}, default:{:?}]&quot;</span>,
+      <span class="self">self</span>.cs, <span class="self">self</span>.address, <span class="self">self</span>.parameters, <span class="self">self</span>.register_type, <span class="self">self</span>.readonly, <span class="self">self</span>.internalcs, <span class="self">self</span>.value,
+      <span class="self">self</span>.default,
     )
   }
 }
@@ -1026,6 +1076,39 @@
   <span class="kw">fn </span>get_cs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;Token&gt; { Cow::Owned(<span class="self">self</span>.cs.clone()) }
   <span class="kw">fn </span>get_cs_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; { Cow::Owned(<span class="self">self</span>.cs.with_cs_name(ToString::to_string)) }
   <span class="kw">fn </span>get_alias(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt; { <span class="prelude-val">None </span>}
+
+  <span class="kw">fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, value: RegisterValue, scope: <span class="prelude-ty">Option</span>&lt;Scope&gt;, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) {
+    <span class="kw">if </span><span class="self">self</span>.register_type == RegisterType::CharDef {
+      <span class="kw">let </span>message = <span class="self">self
+        </span>.cs
+        .with_cs_name(|cs_str| <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to chardef {}&quot;</span>, cs_str));
+      <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;chardef&quot;</span>, <span class="prelude-val">None</span>, message); <span class="prelude-val">Ok</span>(()) };
+      err().ok();
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(setter) = <span class="kw-2">&amp;</span><span class="self">self</span>.setter {
+      setter(value, scope, args, state);
+    } <span class="kw">else </span>{
+      <span class="comment">// default setter
+      </span><span class="kw">if </span><span class="self">self</span>.readonly {
+        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to register {}&quot;</span>, <span class="self">self</span>.address);
+        <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="self">self</span>.address, <span class="prelude-val">None</span>, message);
+      } <span class="kw">else </span>{
+        <span class="kw">let </span>loc = <span class="kw">if </span>args.is_empty() { Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.address) } <span class="kw">else </span>{
+          <span class="kw">let </span>args_string: String = args
+            .into_iter()
+            .map(|a| {
+              a.as_tokens(state)
+               .expect(<span class="string">&quot;TODO: handle malformed values here.&quot;</span>)
+               .unwrap()
+               .to_string()
+           })
+           .collect::&lt;Vec&lt;String&gt;&gt;()
+           .join(<span class="string">&quot;&quot;</span>);
+          Cow::Owned(<span class="macro">format!</span>(<span class="string">&quot;{}{args_string}&quot;</span>,<span class="self">self</span>.address))
+        };
+        state.assign_value(<span class="kw-2">&amp;</span>loc, value, scope);
+      }
+    }
+  }
   <span class="comment">// No before/after daemons ???
   // (other than afterassign)
   </span><span class="kw">fn </span>invoke_primitive(<span class="kw-2">&amp;</span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
@@ -1046,7 +1129,7 @@
     gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;=&quot;</span>], state)<span class="question-mark">?</span>;
     <span class="kw">let </span>value = gullet.read_value(<span class="self">self</span>.register_type().unwrap(), state)<span class="question-mark">?</span>;
 
-    <span class="self">self</span>.borrow().set_value(value, args, state);
+    <span class="self">self</span>.borrow().set_value(value, <span class="prelude-val">None</span>, args, state);
 
     state.after_assignment(gullet);
     <span class="comment">// # Tracing ?
@@ -1080,8 +1163,23 @@
   <span class="kw">fn </span>value_of(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
     <span class="kw">if </span><span class="self">self</span>.register_type == RegisterType::CharDef {
       <span class="self">self</span>.value.clone()
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>getter) = <span class="self">self</span>.getter {
+      getter(args, state)
     } <span class="kw">else </span>{
-      (<span class="self">self</span>.getter)(args, state)
+      <span class="kw">let </span>key = <span class="kw">if </span>args.is_empty() {
+        Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.address)
+      } <span class="kw">else </span>{
+        <span class="kw">let </span>args_string: String = args
+          .iter()
+          .map(ToString::to_string)
+          .collect::&lt;Vec&lt;String&gt;&gt;()
+          .join(<span class="string">&quot;&quot;</span>);
+        Cow::Owned(<span class="macro">format!</span>(<span class="string">&quot;{}{args_string}&quot;</span>,<span class="self">self</span>.address))
+      };
+      <span class="kw">match </span>state.lookup_value(<span class="kw-2">&amp;</span>key) {
+        <span class="prelude-val">Some</span>(v) =&gt; v.into(),
+        <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.default.clone(),
+      }
     }
   }
   <span class="kw">fn </span>register_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterType&gt; { <span class="prelude-val">Some</span>(<span class="self">self</span>.register_type) }
@@ -1090,18 +1188,6 @@
 <span class="kw">impl </span>Register {
   <span class="doccomment">/// checks the readonly flag
   </span><span class="kw">pub fn </span>is_readonly(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool { <span class="self">self</span>.readonly }
-  <span class="doccomment">/// runs the setter to assign the value for this register
-  </span><span class="kw">pub fn </span>set_value(<span class="kw-2">&amp;</span><span class="self">self</span>, value: RegisterValue, args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State) {
-    <span class="kw">if </span><span class="self">self</span>.register_type == RegisterType::CharDef {
-      <span class="kw">let </span>message = <span class="self">self
-        </span>.cs
-        .with_cs_name(|cs_str| <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to chardef {}&quot;</span>, cs_str));
-      <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;chardef&quot;</span>, <span class="prelude-val">None</span>, message); <span class="prelude-val">Ok</span>(()) };
-      err().ok();
-    } <span class="kw">else </span>{
-      (<span class="self">self</span>.setter)(value, args, state);
-    }
-  }
   <span class="doccomment">/// creates a CharDef type register
   </span><span class="kw">pub fn </span>new_chardef(cs: Token, value: <span class="prelude-ty">Option</span>&lt;RegisterValue&gt;, internalcs: <span class="prelude-ty">Option</span>&lt;Token&gt;) -&gt; <span class="self">Self </span>{
     Register {
@@ -1113,6 +1199,14 @@
       readonly: <span class="bool-val">true</span>,
       <span class="comment">//locator =&gt; $STATE-&gt;getStomach-&gt;getGullet-&gt;getMouth-&gt;getLocator,
       </span>..Register::default()
+    }
+  }
+
+  <span class="kw">pub fn </span>get_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cow&lt;str&gt; {
+    <span class="kw">if </span><span class="self">self</span>.address.is_empty() {
+      <span class="self">self</span>.get_cs_name()
+    } <span class="kw">else </span>{
+      Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.address)
     }
   }
 }

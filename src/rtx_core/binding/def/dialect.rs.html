@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (37998ab50 2023-06-11)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/def/dialect.rs`."><title>dialect.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../rtx_core/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1508,10 +1508,6 @@
 <a href="#1508" id="1508">1508</a>
 <a href="#1509" id="1509">1509</a>
 <a href="#1510" id="1510">1510</a>
-<a href="#1511" id="1511">1511</a>
-<a href="#1512" id="1512">1512</a>
-<a href="#1513" id="1513">1513</a>
-<a href="#1514" id="1514">1514</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <span class="kw">use </span>std::borrow::Cow;
@@ -1521,12 +1517,12 @@
 
 <span class="comment">// use crate::common::error::*;
 </span><span class="kw">use </span><span class="kw">crate</span>::binding::content::merge_font;
-<span class="kw">use </span><span class="kw">crate</span>::binding::counter::dialect::step_counter_gullet;
+<span class="kw">use </span><span class="kw">crate</span>::binding::counter::dialect::step_counter;
 <span class="kw">use </span><span class="kw">crate</span>::binding::def::traits::{IntoDigestedResult, IntoOption};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::Font;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
+<span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
 <span class="kw">use </span><span class="kw">crate</span>::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::{Constructor, ConstructorOptions};
 <span class="kw">use </span><span class="kw">crate</span>::definition::expandable::{Expandable, ExpandableOptions};
@@ -1760,8 +1756,10 @@
   </span><span class="kw">pub </span>setter: <span class="prelude-ty">Option</span>&lt;RegisterSetterClosure&gt;,
   <span class="doccomment">/// is this register meant as read-only? (default: false)
   </span><span class="kw">pub </span>readonly: bool,
-  <span class="doccomment">/// an optional name for the register (default: the csname)
-  </span><span class="kw">pub </span>name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="doccomment">/// an optional name for the register (default: the cs)
+  </span><span class="kw">pub </span>address: <span class="prelude-ty">Option</span>&lt;String&gt;,
+  <span class="doccomment">/// an optional allocation for the register (default: None)
+  </span><span class="kw">pub </span>allocate: <span class="prelude-ty">Option</span>&lt;String&gt;
 }
 
 <span class="doccomment">/// Defines a register with `value` as the initial value
@@ -1776,79 +1774,43 @@
   value: T,
   options: <span class="prelude-ty">Option</span>&lt;RegisterOptions&gt;,
   state: <span class="kw-2">&amp;mut </span>State,
-) {
-  <span class="kw">let </span>options: RegisterOptions = options.unwrap_or_default();
+) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>options: RegisterOptions = options.unwrap_or_default();
   <span class="kw">let </span>value: RegisterValue = value.into();
-  <span class="kw">let </span>name = options.name.unwrap_or_else(|| cs.to_string());
+  <span class="kw">let </span>has_address_option = options.address.is_some();
+  <span class="kw">let </span><span class="kw-2">mut </span>address = <span class="kw">match </span>options.address.take() {
+    <span class="prelude-val">Some</span>(v) =&gt; v,
+    <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>options.allocate {
+      <span class="prelude-val">Some</span>(v) =&gt; allocate_register(<span class="kw-2">&amp;</span>v, state)<span class="question-mark">?</span>.unwrap_or_default(),
+      <span class="prelude-val">None </span>=&gt; String::new(),
+    }
+  };
+  <span class="comment">// by adding this check here, we no longer need to use Register::new in the Rust version
+  </span><span class="kw">if </span>address.is_empty() {
+    address = cs.to_string();
+  }
+  <span class="comment">// Assign, but do not RE-assign
+  </span><span class="kw">if </span>!has_address_option || state.lookup_value(<span class="kw-2">&amp;</span>address).is_none() {
+    state.assign_value(<span class="kw-2">&amp;</span>address, value.clone(), <span class="prelude-val">Some</span>(Scope::Global));
+  }
+
   <span class="kw">let </span>register_type: RegisterType = (<span class="kw-2">&amp;</span>value).into();
-  <span class="comment">// Prepare clones to move into closures
-  </span><span class="kw">let </span>getter_value = value.clone();
-  <span class="kw">let </span>setter_name = name.clone();
-
-  <span class="kw">let </span>getter: RegisterGetterClosure = <span class="kw">match </span>options.getter {
-    <span class="prelude-val">Some</span>(getter) =&gt; getter.clone(),
-    <span class="prelude-val">None </span>=&gt; {
-      <span class="kw">let </span>name_clone = name.clone();
-      Rc::new(
-        <span class="kw">move </span>|args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State| -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
-          <span class="kw">let </span>args_string: String = args
-            .iter()
-            .map(ToString::to_string)
-            .collect::&lt;Vec&lt;String&gt;&gt;()
-            .join(<span class="string">&quot;&quot;</span>);
-          <span class="kw">match </span>state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{name_clone}{args_string}&quot;</span>)) {
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Some</span>(getter_value.clone()),
-            <span class="prelude-val">Some</span>(v) =&gt; v.into(),
-          }
-        },
-      )
-    },
-  };
-  <span class="kw">let </span>readonly = options.readonly;
-
-  <span class="kw">let </span>setter: RegisterSetterClosure = <span class="kw">match </span>options.setter {
-    <span class="prelude-val">Some</span>(setter) =&gt; setter.clone(),
-    <span class="prelude-val">None </span>=&gt; {
-      <span class="kw">if </span>readonly {
-        Rc::new(<span class="kw">move </span>|_value, _args, _state| {
-          <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t assign to register {}&quot;</span>, setter_name);
-          <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, setter_name, <span class="prelude-val">None</span>, message);
-        })
-      } <span class="kw">else </span>{
-        Rc::new(<span class="kw">move </span>|value, args, state| {
-          <span class="kw">let </span>args_string: String = args
-            .into_iter()
-            .map(|a| {
-              a.as_tokens(state)
-                .expect(<span class="string">&quot;TODO: handle malformed values here.&quot;</span>)
-                .unwrap()
-                .to_string()
-            })
-            .collect::&lt;Vec&lt;String&gt;&gt;()
-            .join(<span class="string">&quot;&quot;</span>);
-
-          state.assign_value(<span class="kw-2">&amp;</span>(setter_name.clone() + <span class="kw-2">&amp;</span>args_string), value, <span class="prelude-val">None</span>);
-        })
-      }
-    },
-  };
-
-  <span class="comment">// Not really right to set the value!
-  </span>state.assign_value_sym(cs.get_sym(), value, <span class="prelude-val">None</span>);
   state.install_definition(
     Register {
       cs,
-      name,
+      address,
       parameters,
       register_type,
-      readonly,
-      getter,
-      setter,
+      readonly: options.readonly,
+      getter: options.getter,
+      setter: options.setter,
+      default: <span class="prelude-val">Some</span>(value),
       value: <span class="prelude-val">None</span>,
       internalcs: <span class="prelude-val">None</span>,
     },
     <span class="prelude-val">Some</span>(Scope::Global),
   );
+  <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Defines a primitive control sequence; a primitive is processed during
@@ -2738,7 +2700,7 @@
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID&#39;s can stay in the desired format?
 </span><span class="kw">pub fn </span>get_xmarg_id(gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  step_counter_gullet(<span class="string">&quot;@XMARG&quot;</span>, <span class="bool-val">false</span>, gullet, state)<span class="question-mark">?</span>;
+  step_counter(<span class="string">&quot;@XMARG&quot;</span>, <span class="bool-val">false</span>, gullet, state)<span class="question-mark">?</span>;
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">&quot;\\@@XMARG@ID&quot;</span>),
     <span class="prelude-val">None</span>,
@@ -3025,5 +2987,35 @@
   );
 
   cons.properties = Rc::new(<span class="kw">move </span>|_stomach, _args, _state| <span class="prelude-val">Ok</span>(properties.clone()));
+}
+
+<span class="comment">//======================================================================
+// Allocated registers.
+// We ASSUME the same set of \count positions used by TeX &amp; LaTeX
+// for recording the next available position in \count,\dimen,\skip,\muskip.
+
+</span><span class="kw">pub fn </span>allocate_register(rtype:<span class="kw-2">&amp;</span>str, state:<span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
+  <span class="kw">let </span>addr = <span class="kw">match </span>rtype {
+    <span class="string">&quot;\\count&quot; </span>=&gt; <span class="string">&quot;\\count10&quot;</span>,
+    <span class="string">&quot;\\dimen&quot; </span>=&gt; <span class="string">&quot;\\count11&quot;</span>,
+    <span class="string">&quot;\\skip&quot; </span>=&gt; <span class="string">&quot;\\count12&quot;</span>,
+    <span class="string">&quot;\\muskip&quot; </span>=&gt; <span class="string">&quot;\\count13&quot;</span>,
+    <span class="string">&quot;\\box&quot;   </span>=&gt; <span class="string">&quot;\\count14&quot;</span>,
+    <span class="string">&quot;\\toks&quot;  </span>=&gt; <span class="string">&quot;\\count15&quot;</span>,
+    <span class="kw">_ </span>=&gt; <span class="string">&quot;&quot;
+  </span>};
+  <span class="kw">if </span>!addr.is_empty() { <span class="comment">// addr is a Register but MUST be stored as \count&lt;#&gt;
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(n) = state.lookup_number(addr) {
+      <span class="kw">let </span>next = n.value_of() + <span class="number">1</span>;
+      state.assign_value(addr, Number::new(next), <span class="prelude-val">Some</span>(Scope::Global));
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;{rtype}{next}&quot;</span>)))
+    }
+    <span class="kw">else </span>{
+      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+    }
+  } <span class="kw">else </span>{
+    <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, rtype, <span class="prelude-val">None</span>, <span class="macro">format!</span>(<span class="string">&quot;Type {rtype} is not an allocated register type&quot;</span>));
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+  }
 }
 </code></pre></div></section></main></body></html>
