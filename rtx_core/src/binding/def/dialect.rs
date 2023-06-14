@@ -267,6 +267,7 @@ pub fn def_register<T: Into<RegisterValue>>(
 ) -> Result<()> {
   let mut options: RegisterOptions = options.unwrap_or_default();
   let value: RegisterValue = value.into();
+  let has_address_option = options.address.is_some();
   let mut address = match options.address.take() {
     Some(v) => v,
     None => match options.allocate {
@@ -279,7 +280,7 @@ pub fn def_register<T: Into<RegisterValue>>(
     address = cs.to_string();
   }
   // Assign, but do not RE-assign
-  if options.address.is_none() || state.lookup_value(&address).is_none() {
+  if !has_address_option || state.lookup_value(&address).is_none() {
     state.assign_value(&address, value.clone(), Some(Scope::Global));
   }
 
