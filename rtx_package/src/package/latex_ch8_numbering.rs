@@ -49,7 +49,7 @@ LoadDefinitions!(outer_state, {
   DefPrimitive!("\\stepcounter{}",    sub[stomach, (cs), state] {
     let gullet = stomach.get_gullet_mut();
     let cs_expanded = &Expand!(cs, gullet).to_string();
-    StepCounter!(cs_expanded, false, stomach)?;
+    StepCounter!(cs_expanded, false, gullet)?;
   });
   DefPrimitive!("\\refstepcounter{}", sub[stomach, (cs), state] {
     let gullet = stomach.get_gullet_mut();

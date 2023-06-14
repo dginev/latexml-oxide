@@ -246,13 +246,13 @@ pub fn counter_value(ctr: &str, state: &mut State) -> Result<Number> {
       Warn!("undefined", ctr, None, message);
       Ok(Number::new(0))
     },
-    Some(value) => Ok(Number::new(dbg!(value).value_of())),
+    Some(value) => Ok(Number::new(value.value_of())),
   }
 }
 /// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut State) -> Result<()> {
   let v = counter_value(ctr, state)?.add(value);
-  state.assign_value(&s!("\\c@{ctr}"), v, Some(Scope::Global));
+  state.assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
   state.after_assignment(gullet);
   let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
@@ -272,7 +272,7 @@ pub fn add_to_counter(ctr: &str, value: Number, gullet: &mut Gullet, state: &mut
 pub fn step_counter(
   ctr: &str,
   noreset: bool,
-  stomach: &mut Stomach,
+  gullet: &mut Gullet,
   state: &mut State,
 ) -> Result<()> {
   let value = counter_value(ctr, state)?;
@@ -284,7 +284,7 @@ pub fn step_counter(
     Some(Scope::Global),
     Vec::new()
   )?;
-  state.after_assignment(stomach.get_gullet_mut());
+  state.after_assignment(gullet);
   let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
@@ -308,48 +308,6 @@ pub fn step_counter(
   Ok(())
 }
 
-/// DG: This is a dirty refactor that avoids the Stomach threading for DefMath --- is there a
-/// conceptually better organization?
-pub fn step_counter_gullet(
-  ctr: &str,
-  noreset: bool,
-  gullet: &mut Gullet,
-  state: &mut State,
-) -> Result<()> {
-  let value = counter_value(ctr, state)?;
-  state.assign_value(
-    &s!("\\c@{}", ctr),
-    value.add(Number::new(1)),
-    Some(Scope::Global),
-  );
-  state.after_assignment(gullet);
-  let token_value = Tokens::new(Explode!(state
-    .lookup_number(&s!("\\c@{}", ctr))
-    .unwrap()
-    .value_of()));
-  def_macro(
-    T_CS!(s!("\\@{}@ID", ctr)),
-    None,
-    token_value,
-    Some(ExpandableOptions {
-      scope: Some(Scope::Global),
-      ..ExpandableOptions::default()
-    }),
-    state,
-  )?;
-
-  // and reset any within counters!
-  if !noreset {
-    if let Some(nested) = state.lookup_tokens(&s!("\\cl@{}", ctr)) {
-      for c in nested.unlist() {
-        reset_counter(&c, state)?;
-      }
-    }
-  }
-  // digest_if(T_CS!(s!("\\the{}", ctr)), stomach, state)?;
-  Ok(())
-}
-
 /// Analog of `\refstepcounter`, steps the counter and returns a hash
 /// containing the keys `refnum` and `id`.  This makes it
 /// suitable for use in a `properties` option to constructors.
@@ -365,10 +323,15 @@ pub fn ref_step_counter(
     Some(Stored::String(ctr)) => arena::to_string(*ctr),
     _ => ctype.to_string(),
   };
-  step_counter(&ctr, noreset, stomach, state)?;
-  maybe_preempt_refnum(&ctr, false, stomach.get_gullet_mut(), state);
+  { let gullet = stomach.get_gullet_mut();
+    step_counter(&ctr, noreset, gullet, state)?;
+    maybe_preempt_refnum(&ctr, false, gullet, state);
+  }
 
-  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(s!("\\the{ctr}@ID")))? {
+  let the_ctr_id = s!("\\the{ctr}@ID");
+  let the_ctr = s!("\\the{ctr}");
+
+  let has_id: bool = if let Some(iddef) = state.lookup_definition(&T_CS!(&the_ctr_id))? {
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
@@ -378,12 +341,12 @@ pub fn ref_step_counter(
     false
   };
 
-  let the_cs = T_CS!(s!("\\the{ctr}"));
-  let the_id_cs = T_CS!(s!("\\the{ctr}@ID"));
+  let the_ctr_cs = T_CS!(&the_ctr);
+  let the_ctr_id_cs = T_CS!(&the_ctr_id);
   def_macro(
     T_CS!("\\@currentlabel"),
     None,
-    the_cs,
+    the_ctr_cs,
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -394,7 +357,7 @@ pub fn ref_step_counter(
     def_macro(
       T_CS!("\\@currentID"),
       None,
-      the_id_cs,
+      the_ctr_id_cs,
       Some(ExpandableOptions {
         scope: Some(Scope::Global),
         ..ExpandableOptions::default()
@@ -404,12 +367,12 @@ pub fn ref_step_counter(
   }
 
   let id = if has_id {
-    digest_literal(Tokens!(T_CS!(s!("\\the{ctr}@ID"))), stomach, state)?.to_string()
+    digest_literal(Tokens!(T_CS!(&the_ctr_id)), stomach, state)?.to_string()
   } else {
     String::new()
   };
 
-  let refnum = digest_text(Tokens!(T_CS!(s!("\\the{ctr}"))), stomach, state)?;
+  let refnum = digest_text(Tokens!(T_CS!(&the_ctr)), stomach, state)?;
   let invocation;
   {
     let gullet = stomach.get_gullet_mut();
@@ -554,8 +517,10 @@ pub fn ref_step_id(
     None => ctype.to_string(),
   };
   let unctr = s!("UN{ctr}");
-  step_counter(&unctr, false, stomach, state)?;
-  maybe_preempt_refnum(&ctr, true, stomach.get_gullet_mut(), state);
+  { let gullet = stomach.get_gullet_mut();
+    step_counter(&unctr, false, gullet, state)?;
+    maybe_preempt_refnum(&ctr, true, gullet, state);
+  }
   let cunctr_val = state.lookup_number(&s!("\\c@{unctr}")).unwrap().value_of();
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),

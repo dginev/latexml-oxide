@@ -969,8 +969,7 @@ impl State {
         return Ok(());
       }
     }
-    let stomach = self.stomach.borrow();
-    Warn!("expected", "register", stomach,
+    Warn!("expected", "register", None,
         format!("The control sequence '{cs}' is not a register"));
     Ok(())
   }
