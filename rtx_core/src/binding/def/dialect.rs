@@ -7,7 +7,7 @@ use regex::Regex;
 
 // use crate::common::error::*;
 use crate::binding::content::merge_font;
-use crate::binding::counter::dialect::step_counter_gullet;
+use crate::binding::counter::dialect::step_counter;
 use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::arena;
 use crate::common::font::Font;
@@ -1189,7 +1189,7 @@ pub fn def_environment(
 // Perhaps it would be better to use a label(-like) indirection here,
 // so all ID's can stay in the desired format?
 pub fn get_xmarg_id(gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
-  step_counter_gullet("@XMARG", false, gullet, state)?;
+  step_counter("@XMARG", false, gullet, state)?;
   def_macro(
     T_CS!("\\@@XMARG@ID"),
     None,

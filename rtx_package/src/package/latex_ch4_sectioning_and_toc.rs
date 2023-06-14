@@ -21,29 +21,26 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // These are defined in terms of \@startsection so that
   // casual user redefinitions work, too.
-  DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}", locked=>true);
 
   // not locked since sometimes redefined as partition?
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}");
-  DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}"); // TODO: locked => true);
+  DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}", locked=>true);
+  DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}", locked => true);
   DefMacro!(
     "\\subsubsection",
-    "\\@startsection{subsubsection}{3}{}{}{}{}"
-  ); // TODO: locked => true);
-  DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}"); // TODO: locked => true);
-  DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}"); // TODO: locked => true);
-  for tag in &[
-    "part",
-    "chapter",
-    "section",
-    "subsection",
-    "subsubsection",
-    "paragraph",
-    "subparagraph",
-  ] {
-    Tag!(&s!("ltx:{}",tag), auto_close => true);
-  }
+    "\\@startsection{subsubsection}{3}{}{}{}{}",
+    locked => true);
+  DefMacro!("\\paragraph", "\\@startsection{paragraph}{4}{}{}{}{}", locked => true);
+  DefMacro!("\\subparagraph", "\\@startsection{subparagraph}{5}{}{}{}{}", locked => true);
+
+  Tag!("ltx:part", auto_close=>true);
+  Tag!("ltx:chapter", auto_close=>true);
+  Tag!("ltx:section", auto_close=>true);
+  Tag!("ltx:subsection", auto_close=>true);
+  Tag!("ltx:subsubsection", auto_close=>true);
+  Tag!("ltx:paragraph", auto_close=>true);
+  Tag!("ltx:subparagraph", auto_close=>true);
 
   DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, (token1, token2, star), state] {
     if star.is_some() {
@@ -60,6 +57,17 @@ LoadDefinitions!(outer_stomach, outer_state, {
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
     sub[ gullet, (type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag), state ] {
+      // Aside: Guard mode
+      // Never start sections in math mode -- this is a good recovery point for broken documents
+      if state.lookup_bool("IN_MATH") {
+        let mode = state.lookup_string("MODE");
+        if mode.contains("math") { // double-check we're really in math
+          state.stomach.clone().borrow_mut().end_mode(&mode, state)?;
+        } else { // otherwise, just unset the flag?
+          state.assign_value("IN_MATH", false, Some(Scope::Global));
+        }
+      }
+      // Main logic
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
@@ -311,4 +319,9 @@ LoadDefinitions!(outer_stomach, outer_state, {
   // Handled in article,report or book.
   DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\appendixesname", "Appendixes");
+
+  //======================================================================
+  // C.4.4 Style registers
+  //======================================================================
+  NewCounter!("tocdepth");
 });

@@ -343,11 +343,10 @@ impl Parameter {
       self.setup_catcodes(state);
       if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
-          let neutralized = stomach.reading_from_mouth(
+          let neutralized = stomach.get_gullet_mut().reading_from_mouth(
             Mouth::default(),
             state,
-            move |stomach: &mut Stomach, state: &mut State| {
-              let gullet = stomach.get_gullet_mut();
+            move |gullet: &mut Gullet, state: &mut State| {
               gullet.unread(value);
               let mut tokens = Vec::new();
               loop {

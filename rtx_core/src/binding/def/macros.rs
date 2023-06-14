@@ -535,21 +535,12 @@ macro_rules! AssignRegister {
 
 #[macro_export]
 macro_rules! SetCounter {
-  ($ctr:expr, $value:expr) => {
-    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
-                scope => Some(Scope::Global)
-    );
-  };
-  ($ctr:expr, $value:expr) => {
-    AssignValue!(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
-    AfterAssignment!();
-    DefMacro!(T_CS!(s!("\\@{}@ID",$ctr)), None, Tokens::new(Explode!($value.value_of())),
-                scope => Some(Scope::Global)
-    );
-  };
+  ($ctr:expr, $value:expr) => {{
+    bind_state_mut!(stmch, st);
+    SetCounter!($ctr, $value,  stmch, st);
+  }};
   ($ctr:expr, $value:expr, $stomach:ident, $state_arg:ident) => {
-    $state_arg.assign_value(&s!("\\c@{}",$ctr), $value, Some(Scope::Global));
+    $state_arg.assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
     $state_arg.after_assignment($stomach.get_gullet_mut());
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
       Tokens::new(Explode!($value.value_of())),

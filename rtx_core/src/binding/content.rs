@@ -581,8 +581,7 @@ fn load_tex_definitions(
     state,
     move |i_stomach, i_state| -> Result<()> {
       while let Some(token) =
-        i_stomach
-          .get_gullet_mut()
+        i_stomach.get_gullet_mut()
           .read_x_token(Some(false), false, i_state)?
       {
         if token != T_SPACE!() {
