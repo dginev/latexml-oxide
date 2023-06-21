@@ -12,7 +12,7 @@ LoadDefinitions!({
 
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
-    gullet_mut!().read_until(&until[0]) },
+    gullet::read_until(&until[0]) },
   before_digest => {
     stomach_mut!().bgroup();
     MergeFont!(mathstyle => "script");

@@ -342,7 +342,7 @@ impl Parameter {
               gullet_mut!().unread(value);
               let mut tokens = Vec::new();
               loop {
-                match gullet_mut!().read_x_token(Some(true), true) {
+                match gullet::read_x_token(Some(true), true) {
                   Ok(token_opt) => match token_opt {
                     Some(token) => tokens.push(token),
                     None => break,
@@ -481,7 +481,7 @@ impl Parameters {
     fordefn: Option<&dyn Definition>,
   ) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
-    gullet_mut!().setup_scan();
+    gullet::setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if parameter.predigest.is_some() {
@@ -504,7 +504,7 @@ impl Parameters {
     fordefn: &Constructor,
   ) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
-    gullet_mut!().setup_scan();
+    gullet::setup_scan();
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {
@@ -528,7 +528,7 @@ impl Parameters {
     gullet::reading_from_mouth(reader_mouth, || {
       gullet_mut!().unread(value_tokens); // but put back tokens to be read
       let values = self.read_arguments(None)?;
-      gullet_mut!().skip_spaces()?;
+      gullet::skip_spaces()?;
       Ok(values)
     })
   }

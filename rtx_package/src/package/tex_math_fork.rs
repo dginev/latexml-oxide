@@ -18,10 +18,10 @@ LoadDefinitions!({
     let mut stuff    = Vec::new();
     // This is risky!!!
     let mut gullet = gullet_mut!();
-    while let Some(t) = gullet.read_x_token(Some(false), false)? {
+    while let Some(t) = gullet::read_x_token(Some(false), false)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        if let Some(balanced_arg) = gullet.read_balanced(false)? {
+        if let Some(balanced_arg) = gullet::read_balanced(false)? {
           stuff.extend(balanced_arg.unlist());
         }
         stuff.push(T_END!());

@@ -157,10 +157,9 @@ LoadDefinitions!({
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
-      let mut gullet = gullet_mut!();
-      gullet.skip_spaces()?;
-      if gullet.if_next(&TOKEN_BEGIN)? {
-        gullet.read_arg()?;
+      gullet::skip_spaces()?;
+      if gullet::if_next(&TOKEN_BEGIN)? {
+        gullet::read_arg()?;
       }
       begin_bibliography( whatsit)?;
     },
@@ -178,8 +177,8 @@ LoadDefinitions!({
 
   DefMacro!("\\par@in@bibliography", {
     let mut gullet = gullet_mut!();
-    gullet.skip_spaces()?;
-    if let Some(tok) = gullet.read_token()? {
+    gullet::skip_spaces()?;
+    if let Some(tok) = gullet::read_token()? {
       // If next token is another \par, or a REAL \bibitem,
       // then this \par expands into what followed
       // Else, put it back, and start a bibitem.
@@ -627,7 +626,6 @@ LoadDefinitions!({
 
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
     if state!().lookup_int("VERBOSITY") > -1 {
-      let gullet = gullet_mut!();
       let content = Expand!(stuff);
       eprintln!("{content}\n");
     }

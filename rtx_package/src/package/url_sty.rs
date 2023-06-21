@@ -41,16 +41,16 @@ LoadDefinitions!({
   DefMacro!("\\@Url Token", sub[(cmd)] {
     let perc = vec!['%'];
     state_mut!().begin_semiverbatim(Some(&perc));
-    let mut open = gullet_mut!().read_token()?.unwrap();
+    let mut open = gullet::read_token()?.unwrap();
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet_mut!().read_balanced(false)?.unwrap_or_default()
+      gullet::read_balanced(false)?.unwrap_or_default()
     } else {
       open = open.as_other();
       close = open.clone();
-      gullet_mut!().read_until_token(close.clone())?
+      gullet::read_until_token(close.clone())?
     };
     state_mut!().end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)

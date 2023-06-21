@@ -397,11 +397,11 @@ LoadDefinitions!({
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
   DefPrimitive!("\\joinrel", {
-    gullet_mut!().skip_spaces()?;
+    gullet::skip_spaces()?;
     if let Some(left) = stomach_mut!().box_list.pop() {
       let mut stuff = Vec::new();
-      while let Some(tok) = gullet_mut!().read_x_token(Some(false),false)? {
-        stuff = stomach_mut!().invoke_token(&tok)?;
+      while let Some(tok) = gullet::read_x_token(Some(false),false)? {
+        stuff = stomach::invoke_token(&tok)?;
         if !stuff.is_empty() {
           break;
         }

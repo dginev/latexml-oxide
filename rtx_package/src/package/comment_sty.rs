@@ -11,9 +11,8 @@ LoadDefinitions!({
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
       let mut nlines = 0;
-      let mut gullet = gullet_mut!();
-      gullet.read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-      while let Some(line) = gullet.read_raw_line() {
+      gullet::read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+      while let Some(line) = gullet::read_raw_line() {
         if line == end_mark {
           break;
         }
@@ -48,7 +47,7 @@ LoadDefinitions!({
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
     DefMacro!(T_CS!(s!("\\begin{{{name}}}")), None,
     {
-      gullet_mut!().read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+      gullet::read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
       before_tokens.clone()
     });
     DefMacro!(

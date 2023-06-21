@@ -178,8 +178,7 @@ pub fn tabular_bindings(
     }
   }
   if !xml_attributes.contains_key("rowsep") {
-    let astr = gullet_mut!()
-      .do_expand(T_CS!("\\arraystretch"))?
+    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?
       .to_string();
     if astr != "1" {
       let astr_int = astr.parse::<i64>().expect(&astr);

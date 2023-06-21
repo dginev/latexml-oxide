@@ -67,7 +67,7 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
 //
 fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
   //   let mut gullet = gullet_mut!();
-  //   gullet.skip_spaces();
+  //   gullet::skip_spaces();
   let font = state!().lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
     let mut putback = VecDeque::new();
@@ -150,9 +150,9 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = gullet_mut!().read_x_token(Some(false), false)?
+    while let Some(tok) = gullet::read_x_token(Some(false), false)?
     {
-      stuff = stomach.invoke_token(&tok)?;
+      stuff = stomach::invoke_token(&tok)?;
       if !stuff.is_empty() {
         break;
       }
@@ -406,16 +406,16 @@ LoadDefinitions!({
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     let mut gullet = gullet_mut!();
-    while gullet.if_next(&T_OTHER!("'"))? {
-      gullet.read_token()?;
+    while gullet::if_next(&T_OTHER!("'"))? {
+      gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&TOKEN_SUPER)? {
-      gullet.read_token()?;
-      sup.extend(gullet.read_arg()?.unlist());
+    if gullet::if_next(&TOKEN_SUPER)? {
+      gullet::read_token()?;
+      sup.extend(gullet::read_arg()?.unlist());
     }
     Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
   },
@@ -426,16 +426,16 @@ LoadDefinitions!({
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
     let mut gullet = gullet_mut!();
-    while gullet.if_next(&prime_token)? {
-      gullet.read_token()?;
+    while gullet::if_next(&prime_token)? {
+      gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&T_SUPER!())? {
-      gullet.read_token()?;
-      let arg = gullet.read_arg()?;
+    if gullet::if_next(&T_SUPER!())? {
+      gullet::read_token()?;
+      let arg = gullet::read_arg()?;
       let arg_tks = arg.unlist();
       sup.extend(arg_tks);
     }

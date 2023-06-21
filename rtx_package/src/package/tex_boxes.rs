@@ -26,9 +26,8 @@ LoadDefinitions!({
       None
     };
     state_mut!().clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = gullet_mut!()
-      .read_x_token(None, false)? {
-        stomach_mut!().invoke_token(&xtoken)?
+    let mut rest = if let Some(xtoken) = gullet::read_x_token(None, false)? {
+        stomach::invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
       Stored::Digested(rest.remove(0))
@@ -71,7 +70,7 @@ LoadDefinitions!({
 
 
   DefParameterType!(BoxSpecification, sub[_inner, _extra] {
-      if let Some(key) = gullet_mut!().read_keyword(&["to", "spread"])? {
+      if let Some(key) = gullet::read_keyword(&["to", "spread"])? {
         Ok(Tokens!(T_OTHER!(key)))
       } else {
         Ok(Tokens!())
@@ -91,7 +90,7 @@ LoadDefinitions!({
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(
           KeyvalsConfig{skip_missing: true, ..KeyvalsConfig::default()});
-        let dim = gullet_mut!().read_dimension()?;
+        let dim = gullet::read_dimension()?;
         keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false);
         keyvals.into()
       } else {
@@ -238,9 +237,8 @@ LoadDefinitions!({
   DefParameterType!(RuleSpecification, sub[_inner, _extra] {
       let mut keyvals = KeyVals::new(
         KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()});
-      let mut gullet = gullet_mut!();
-      while let Some(key) = gullet.read_keyword(&["width", "height", "depth"])? {
-        keyvals.set_value(&key, Stored::Dimension(gullet.read_dimension()?), false);
+      while let Some(key) = gullet::read_keyword(&["width", "height", "depth"])? {
+        keyvals.set_value(&key, Stored::Dimension(gullet::read_dimension()?), false);
       }
       keyvals
     },

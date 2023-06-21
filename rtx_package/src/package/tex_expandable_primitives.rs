@@ -30,7 +30,7 @@ LoadDefinitions!({
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
-    let token_opt = gullet_mut!().read_x_token(Some(false), false)?.map(|t| {
+    let token_opt = gullet::read_x_token(Some(false), false)?.map(|t| {
       // Also resolve \let variants:
       if let Some(Stored::Token(ref meaning)) = state!().lookup_meaning(&t).as_deref() {
         meaning.clone()
@@ -236,7 +236,7 @@ LoadDefinitions!({
     let mut cs = escapechar();
     let endcsname_token = T_CS!("\\endcsname");
     // keep newlines from having \n inside!
-    while let Some(token) = gullet_mut!().read_x_token(Some(true), true)? {
+    while let Some(token) = gullet::read_x_token(Some(true), true)? {
       if token == endcsname_token {
         break;
       }
@@ -298,7 +298,7 @@ LoadDefinitions!({
 
   // Replace the next token with it's not-expanded variant
   DefMacro!(T_CS!("\\noexpand"), None, {
-    if let Some(token) = gullet_mut!().read_token()? {
+    if let Some(token) = gullet::read_token()? {
       vec![token.with_dont_expand()?]
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed

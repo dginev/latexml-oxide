@@ -17,12 +17,11 @@ LoadDefinitions!({
     None, {
       let mut op = "\\@@BEGININLINEMATH";
       {
-        let mut gullet = gullet_mut!();
         let mode = state!().lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
-          if gullet.if_next(&TOKEN_MATH)? {
-            gullet.read_token()?;
+          if gullet::if_next(&TOKEN_MATH)? {
+            gullet::read_token()?;
             op = "\\@@ENDDISPLAYMATH";
           } else {
             // Avoid a Fatal, but we're likely in trouble.
@@ -37,13 +36,13 @@ LoadDefinitions!({
           }
         } else if mode == "inline_math" {
           op = "\\@@ENDINLINEMATH";
-        } else if gullet.if_next(&TOKEN_MATH)? {
-          gullet.read_token()?;
+        } else if gullet::if_next(&TOKEN_MATH)? {
+          gullet::read_token()?;
           op = "\\@@BEGINDISPLAYMATH";
         }
       }
       if !op.is_empty() {
-        Ok(stomach_mut!().invoke_token(&T_CS!(op))?)
+        Ok(stomach::invoke_token(&T_CS!(op))?)
       } else {
         Ok(Vec::new())
       }

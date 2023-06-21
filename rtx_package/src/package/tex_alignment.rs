@@ -139,19 +139,19 @@ LoadDefinitions!({
       state_mut!().local_align_group_count(1000000);
       let mut gullet = gullet_mut!();
       if skipspaces {
-        gullet.skip_spaces()?;
+        gullet::skip_spaces()?;
       }
       let (mut star, mut optional) = (false, None);
-      let mut next_opt = gullet.read_token()?;
+      let mut next_opt = gullet::read_token()?;
       if next_opt == Some(T_OTHER!("*")) {
         star = true;
         if skipspaces {
-          gullet.skip_spaces()?;
+          gullet::skip_spaces()?;
         }
-        next_opt = gullet.read_token()?;
+        next_opt = gullet::read_token()?;
       }
       if next_opt == Some(T_OTHER!("[")) {
-        optional = Some(gullet.read_until(&Tokens!(T_OTHER!("]")))?);
+        optional = Some(gullet::read_until(&Tokens!(T_OTHER!("]")))?);
         next_opt = None;
       }
       if let Some(next) = next_opt {
@@ -284,7 +284,7 @@ LoadDefinitions!({
   DefPrimitive!("\\@dollar@in@textmode", {
     let mathcs = if state!().lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
       else {T_CS!("\\@@BEGININLINEMATH") };
-    stomach_mut!().invoke_token(&mathcs)
+    stomach::invoke_token(&mathcs)
   });
 
   DefMacro!("\\@row@before", None);
@@ -476,7 +476,7 @@ pub fn digest_alignment_body(
         reversion.push(next.clone().unwrap());
         creversion.push(next.unwrap());
       } else if vtype.as_deref() == Some("cr") {
-        let arg_toks = gullet_mut!().read_arg()?;
+        let arg_toks = gullet::read_arg()?;
         let arg = stomach::digest(arg_toks)?;
         reversion.extend(p_revert(arg.clone())?.unlist().into_iter());
         creversion.extend(c_revert(arg)?.unlist().into_iter());
@@ -524,8 +524,7 @@ pub fn digest_alignment_column(
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    while let Some(xtoken) = gullet_mut!()
-      .read_x_token(Some(false), false)?
+    while let Some(xtoken) = gullet::read_x_token(Some(false), false)?
     {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
@@ -550,7 +549,7 @@ pub fn digest_alignment_column(
         }
         alignment.borrow_mut().start_column(true)?;
         alignment.borrow_mut().last_column();
-        let next_arg = gullet_mut!().read_arg()?;
+        let next_arg = gullet::read_arg()?;
         let r = stomach::digest(next_arg)?;
         alignment.borrow_mut().end_row()?;
         stomach_mut!().expire_local_box_list();
@@ -559,7 +558,7 @@ pub fn digest_alignment_column(
       } else if *token == T_CS!("\\hidden@noalign") {
         // \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-        let invoked = stomach_mut!().invoke_token(token)?;
+        let invoked = stomach::invoke_token(token)?;
         stomach_mut!().box_list.extend(invoked);
       } else {
         break;
@@ -589,8 +588,7 @@ pub fn digest_alignment_column(
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     gullet_mut!().unread(to_unread);
-    while let Some(token) = gullet_mut!()
-      .read_x_token(Some(false), false)?
+    while let Some(token) = gullet::read_x_token(Some(false), false)?
     {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token) {
         if vtype == "span" {
@@ -621,7 +619,7 @@ pub fn digest_alignment_column(
       } else {
         // Else, we're getting some actual content for the column
         // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
-        let invoked = stomach_mut!().invoke_token(&token)?;
+        let invoked = stomach::invoke_token(&token)?;
         stomach_mut!().box_list.extend(invoked);
         // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),
         // List::new(stomach.box_list.clone()).stringify()); //       if

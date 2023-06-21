@@ -305,7 +305,7 @@ impl DigestionAPI for Core {
       let request_base = if request.ends_with(&ext_str) {
         request[0..request.len() - ext_str.len()].to_string()
       } else {
-        request.to_string()
+        request
       };
 
       if let Some(pathname) = pathname::find(
@@ -320,7 +320,7 @@ impl DigestionAPI for Core {
         name = pathname::file_stem(&request);
       // ext = pathname::extension(&request);
       } else {
-        let message = s!("Can't find {} file {} ", mode, request);
+        let message = s!("Can't find {} file {} ", mode, request_base);
         fatal!(Core, MissingFile, message);
       }
     }

@@ -113,9 +113,9 @@ setter => sub[value,_scope,args] {
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
   DefParameterType!(FontToken, sub[_inner, _extra] {
-    let token = gullet_mut!().read_token()?.unwrap();
+    let token = gullet::read_token()?.unwrap();
     if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet_mut!().read_number()?;
+      gullet::read_number()?;
     }
     token
   }); // ?
@@ -386,7 +386,7 @@ setter => sub[value,_scope,args] {
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
-    let value = gullet_mut!().read_number()?;
+    let value = gullet::read_number()?;
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
@@ -446,7 +446,7 @@ setter => sub[value,_scope,args] {
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
-    let value  = gullet_mut!().read_number().unwrap();
+    let value  = gullet::read_number().unwrap();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);

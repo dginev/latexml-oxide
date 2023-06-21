@@ -10,7 +10,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::{gullet,gullet_mut};
+use crate::{gullet};
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
@@ -263,11 +263,11 @@ impl KeyVals {
     let mut tokens = Vec::new();
 
     // we do not want any spaces
-    gullet_mut!().skip_spaces()?;
+    gullet::skip_spaces()?;
 
     // read tokens one-by-one
     let mut last_token = None;
-    while let Some(token) = gullet_mut!().read_x_token(None, false)? {
+    while let Some(token) = gullet::read_x_token(None, false)? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
@@ -533,7 +533,7 @@ impl KeyVals {
     let startloc = gullet!().get_locator().unwrap().into_owned();
 
     // set and read tokens
-    let _open = gullet_mut!().read_token();
+    let _open = gullet::read_token();
     let assign = T_OTHER!("=");
     let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
@@ -581,19 +581,17 @@ impl KeyVals {
 
           // read until $punct
           let mut toks = Vec::new();
-          let mut gullet = gullet_mut!();
           loop {
-            delim_opt = gullet
-              .read_match(&[&punct_tks, &until_tks])?
+            delim_opt = gullet::read_match(&[&punct_tks, &until_tks])?
               .map(|tks| tks.into());
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
-            if let Some(tok) = gullet.read_token()? {
+            if let Some(tok) = gullet::read_token()? {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
-                if let Some(balanced) = gullet.read_balanced(false)? {
+                if let Some(balanced) = gullet::read_balanced(false)? {
                   rest.append(&mut balanced.unlist());
                 }
                 rest.push(T_END!());
@@ -653,7 +651,7 @@ impl KeyVals {
       match v {
         // TODO: This is a really quick CRUTCH, what is the proper interface?
         Stored::Tokens(vtks) => {
-          let expanded = gullet_mut!().do_expand(vtks)?;
+          let expanded = gullet::do_expand(vtks)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
             exp_str = String::new();

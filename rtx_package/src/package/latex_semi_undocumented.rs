@@ -5,7 +5,7 @@ use crate::package::*;
 
 LoadDefinitions!({
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
-    let next = gullet_mut!().read_non_space()?;
+    let next = gullet::read_non_space()?;
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
     let next_test = match next {
@@ -31,7 +31,7 @@ LoadDefinitions!({
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
     let mut gullet = gullet_mut!();
-    while let Some(t) = gullet.read_token()? {
+    while let Some(t) = gullet::read_token()? {
       if t == toks[0] {
         toks.pop_front();
         read.push(t);
@@ -50,7 +50,7 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
-  let next_opt = gullet_mut!().read_non_space()?;
+  let next_opt = gullet::read_non_space()?;
   if next_opt == Some(T_OTHER!("*")) {
     Ok(if_toks)
   } else {
@@ -65,7 +65,7 @@ LoadDefinitions!({
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
   DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
-    if gullet_mut!().if_next(&T_OTHER!("["))? {
+    if gullet::if_next(&T_OTHER!("["))? {
       Ok(cmd)
     } else {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))

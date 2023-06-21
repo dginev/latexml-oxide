@@ -184,7 +184,7 @@ LoadDefinitions!({
     rtype: RegisterType,
   ) -> Result<RegisterValue> {
     let value = etex_readexpr_i( rtype, 0)?;
-    if let Some(token) = gullet_mut!().read_token()? {
+    if let Some(token) = gullet::read_token()? {
       // Skip \relax
       if token != *TOKEN_RELAX {
         gullet_mut!().unread_one(token);
@@ -199,13 +199,13 @@ LoadDefinitions!({
   ) -> Result<RegisterValue> {
     // Read a first value
     let mut gullet = gullet_mut!();
-    let token = match gullet.read_x_non_space()? {
+    let token = match gullet::read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };
     let mut value = if token == T_OTHER!("(") {
       let i_value = etex_readexpr_i( rtype, 0)?;
-      let close = gullet.read_x_token(None, false)?;
+      let close = gullet::read_x_token(None, false)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
         unimplemented!();
@@ -216,11 +216,11 @@ LoadDefinitions!({
     } else {
       // Read core TeX value/register
       gullet.unread_one(token);
-      gullet.read_value(rtype)?
+      gullet::read_value(rtype)?
     };
 
     // Now check for a following operator(s) & operand(s) (respecting precedence)
-    while let Some(next) = gullet.read_x_non_space()? {
+    while let Some(next) = gullet::read_x_non_space()? {
       if next == *TOKEN_RELAX {
         gullet.unread_one(next); // leave the \relax for top-level to strip off.
         break;

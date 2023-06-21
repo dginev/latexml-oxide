@@ -636,11 +636,11 @@ impl PartialEq for Alignment {
 /// a reader for the Template parameter type
 pub fn read_alignment_template() -> Result<Template> {
   let mut gullet = gullet_mut!();
-  gullet.skip_spaces()?;
+  gullet::skip_spaces()?;
   state_mut!().local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
-  while let Some(open) = gullet.read_token()? {
+  while let Some(open) = gullet::read_token()? {
     if open.get_catcode() == Catcode::BEGIN {
       nopens += 1;
     } else {
@@ -648,14 +648,14 @@ pub fn read_alignment_template() -> Result<Template> {
       break;
     }
   }
-  while let Some(op) = gullet.read_token()? {
+  while let Some(op) = gullet::read_token()? {
     let cc = op.get_catcode();
     if cc == Catcode::SPACE {
     } else if cc == Catcode::END {
       let mut last_op = op;
       nopens -= 1;
       while nopens > 0 {
-        if let Some(next_op) = gullet.read_token()? {
+        if let Some(next_op) = gullet::read_token()? {
           last_op = next_op;
           if last_op.get_catcode() != Catcode::END {
             break;
@@ -673,7 +673,7 @@ pub fn read_alignment_template() -> Result<Template> {
       let invoked = defn.invoke(true)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {
-      if let Some(balanced_tks) = gullet.read_balanced(false)? {
+      if let Some(balanced_tks) = gullet::read_balanced(false)? {
         gullet.unread(balanced_tks);
       }
     } else {

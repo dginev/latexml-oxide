@@ -69,10 +69,10 @@ LoadDefinitions!({
     let mut gullet = gullet_mut!();
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
-      gullet.read_keyword(&["at"])?
-        .map(|_| gullet.read_dimension().unwrap().pt_value(None)),
-      gullet.read_keyword(&["scaled"])?
-        .map(|_| gullet.read_number().unwrap().value_of() as f64 / 1000.0)) {
+      gullet::read_keyword(&["at"])?
+        .map(|_| gullet::read_dimension().unwrap().pt_value(None)),
+      gullet::read_keyword(&["scaled"])?
+        .map(|_| gullet::read_number().unwrap().value_of() as f64 / 1000.0)) {
       props.name = Some(Cow::Owned(name));
       Some(props)
     } else { // Failed?
@@ -81,7 +81,7 @@ LoadDefinitions!({
       Info!("unexpected", name, message);
       None
     };
-    gullet.skip_spaces()?;
+    gullet::skip_spaces()?;
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{}", cs.to_string()), props.clone());
     }
@@ -117,7 +117,7 @@ LoadDefinitions!({
         let defn_opt = state_mut!().lookup_register_definition(&defn_token);
         state_mut!().local_current_token(defn_token);
         if let Some(defn) = defn_opt {
-          let summand = gullet_mut!().read_value(defn.register_type().unwrap())?;
+          let summand = gullet::read_value(defn.register_type().unwrap())?;
           let defn_args : Vec<ArgWrap> = inner.clone();
           let defn_value = defn.value_of(inner).unwrap_or_default();
           defn.set_value(defn_value.add(summand), None, defn_args);
@@ -227,8 +227,8 @@ LoadDefinitions!({
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
     let mut gullet = gullet_mut!();
     for i in 0..n.value_of() {
-      gullet.read_dimension()?;
-      gullet.read_dimension()?;
+      gullet::read_dimension()?;
+      gullet::read_dimension()?;
     }
     // we _could_ conceivably store this somewhere for some attempt at stylistic purpose...
     Ok(Vec::new())
@@ -337,7 +337,7 @@ LoadDefinitions!({
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
   state_mut!().assign_meaning(&cs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(),None);
-  let num = gullet_mut!().read_number()?;
+  let num = gullet::read_number()?;
   let address = s!("{address_type}{}", num.value_of());
   let options = Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()});
   def_register(cs, None, init, options)?;

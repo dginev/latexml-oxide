@@ -185,7 +185,7 @@ impl Tokens {
       .collect()
   }
 
-  /// to_number casts back to a parsed Number (usually via gullet.read_number)
+  /// to_number casts back to a parsed Number (usually via gullet::read_number)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_number(&self) -> Number {
     if self.is_empty() {
@@ -196,7 +196,7 @@ impl Tokens {
     }
   }
 
-  /// to_dimension casts back to a parsed Dimension (usually via gullet.read_dimension)
+  /// to_dimension casts back to a parsed Dimension (usually via gullet::read_dimension)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_dimension(&self) -> Dimension {
     // TODO: How do we enhance here to be able to use the current font information from state::
@@ -205,28 +205,28 @@ impl Tokens {
     Dimension::new_f64(Dimension::spec_to_f64(&self.to_string()).unwrap_or_default())
   }
 
-  /// to_glue casts back to a parsed Glue (usually via gullet.read_glue)
+  /// to_glue casts back to a parsed Glue (usually via gullet::read_glue)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_glue(&self) -> Glue {
     let token: Token = self.into();
     token.to_glue()
   }
 
-  /// to_mu_glue casts back to a parsed MuGlue (usually via gullet.read_mu_glue)
+  /// to_mu_glue casts back to a parsed MuGlue (usually via gullet::read_mu_glue)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_mu_glue(&self) -> MuGlue {
     let token: Token = self.into();
     token.to_mu_glue()
   }
 
-  /// to_mu_dimension casts back to a parsed MuGlue (usually via gullet.read_mu_glue)
+  /// to_mu_dimension casts back to a parsed MuGlue (usually via gullet::read_mu_glue)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_mu_dimension(&self) -> MuDimension {
     let token: Token = self.into();
     token.to_mu_dimension()
   }
 
-  /// to_float casts back to a parsed Float (usually via gullet.read_float)
+  /// to_float casts back to a parsed Float (usually via gullet::read_float)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_float(&self) -> Float {
     if self.is_empty() {

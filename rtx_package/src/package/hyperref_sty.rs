@@ -235,12 +235,12 @@ LoadDefinitions!({
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
   DefMacro!("\\@Url Token", sub[(cmd)] {
-    let open = gullet_mut!().read_token()?.unwrap();
+    let open = gullet::read_token()?.unwrap();
     state_mut!().begin_semiverbatim(Some(&['%']));
     state_mut!().let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
-        gullet_mut!().read_balanced(true)?.unwrap_or_default()) // Expand as we go!
+        gullet::read_balanced(true)?.unwrap_or_default()) // Expand as we go!
     } else {
       ( T_OTHER!("{"), T_OTHER!("}"),
         Tokens!(open.as_other()) )

@@ -285,7 +285,7 @@ pub fn read_box_contents(
   everybox_opt: Option<Tokens>,
 ) -> Result<Tokens> {
   let mut gullet = gullet_mut!();
-  while let Some(t) = gullet.read_token()? {
+  while let Some(t) = gullet::read_token()? {
     if t.get_catcode() == Catcode::BEGIN {
       break;
     } // Skip till { or \bgroup
@@ -310,7 +310,7 @@ pub fn read_box_contents(
 pub fn predigest_box_contents(
   _tokens: ArgWrap,
 ) -> Result<Option<Digested>> {
-  let mut contents = stomach_mut!().invoke_token(&T_BEGIN!())?;
+  let mut contents = stomach::invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
   } else {

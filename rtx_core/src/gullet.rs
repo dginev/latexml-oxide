@@ -169,7 +169,7 @@ impl Gullet {
       }
     }
     if error_has_more_input {
-      let next = match self.read_token()? {
+      let next = match read_token()? {
         Some(t) => t.stringify(),
         None => String::from("Empty"),
       };
@@ -208,317 +208,6 @@ impl Gullet {
     }
     self.mouthstack.iter().any(|runtime| &runtime.mouth == mouth)
   }
-
-  ///**********************************************************************
-  /// Low-level readers: read token, read expanded token
-  ///**********************************************************************
-  /// Note that every char (token) comes through here (maybe even twice, through args parsing),
-  /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
-
-  fn handle_template(
-    &mut self,
-    mut alignment: RefMut<Alignment>,
-    token: Token,
-    vtype: &str,
-    hidden: bool,
-  ) -> Result<()> {
-    // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
-    // state!().lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
-    // if $LaTeXML::DEBUG{halign};
-
-    //  Append expansion to end!?!?!?!
-    state_mut!().local_current_token(token.clone());
-    let post = alignment.get_column_after();
-    state_mut!().set_align_group_count(1000000);
-    // ### NOTE: Truly fishy smuggling w/ \hidden@cr
-    let arg_opt = if (vtype == "cr") && hidden {
-      // \hidden@cr gets an argument as payload!!!!!
-      Some(self.read_arg()?)
-    } else {
-      None
-    };
-    // eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
-    if (vtype == "cr" || vtype == "crcr")
-      && alignment.is_in_row()
-      && !alignment
-        .current_row()
-        .map(|v| v.is_pseudo())
-        .unwrap_or(false)
-    {
-      self.unread_one(T_CS!("\\@row@after"));
-    }
-    if let Some(arg) = arg_opt {
-      // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
-      self.unread_one(T_END!());
-      self.unread(arg);
-      self.unread_one(T_BEGIN!());
-    }
-    self.unread_one(token);
-    self.unread(post);
-    state_mut!().expire_current_token();
-    Ok(())
-  }
-
-  pub fn read_token(&mut self) -> Result<Option<Token>> {
-    let mut next_token: Option<Token> = None;
-    loop {
-      // If we're without a runtime, bail
-      let runtime = match self.mouth {
-        None => return Ok(None),
-        Some(ref mut runtime) => runtime,
-      };
-      // Check in pushback first....
-      while let Some(mut pushback_token) = runtime.pushback.pop_front() {
-        if pushback_token.get_catcode() == Catcode::SmuggleTHE {
-          pushback_token = *pushback_token.take_smuggled().unwrap();
-        }
-        match pushback_token.get_catcode() {
-          Catcode::COMMENT => self.pending_comments.push_back(pushback_token),
-          Catcode::MARKER => handle_marker(pushback_token),
-          _ => {
-            next_token = Some(pushback_token);
-            break;
-          },
-        };
-      }
-      // Not in pushback, read from the current Mouth
-      if next_token.is_none() {
-        while let Some(token) = runtime.mouth.read_token() {
-          match token.get_catcode() {
-            Catcode::COMMENT => self.pending_comments.push_back(token),
-            Catcode::MARKER => handle_marker(token),
-            _ => {
-              next_token = Some(token);
-              break;
-            },
-          };
-        }
-      }
-      // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
-
-      // some infinite loops are hard to predict and may be
-      // better guarded against via a global token limit.
-      // if ($LaTeXML::TOKEN_LIMIT and $$self{progress} > $LaTeXML::TOKEN_LIMIT) {
-      // Fatal('timeout', 'token_limit', $self,
-      //   "Token limit of $LaTeXML::TOKEN_LIMIT exceeded, infinite loop?"); }
-      // if ($LaTeXML::PUSHBACK_LIMIT and scalar(@{ $$self{pushback} }) >
-      // $LaTeXML::PUSHBACK_LIMIT) {   Fatal('timeout', 'pushback_limit', $self,
-      //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
-
-      // Wow!!!!! See TeX the Program \S 309
-      if let Some(ref nextt) = next_token {
-        // SHOULD count nesting of { }!!! when SCANNED (not digested)
-        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
-          if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-            let reading_alignment = state!().get_reading_alignment().unwrap();
-            if let DigestedData::Alignment(data) = reading_alignment.data() {
-              self.handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
-            } else {
-              return Err("reading_alignment should always contain DigestedData::Alignment".into());
-            }
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
-      } else {
-        break;
-      }
-    }
-    Ok(next_token)
-  }
-
-  // Read the next non-expandable token (expanding tokens until there's a non-expandable one).
-  // Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
-  // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
-  //  will step to the next input stream (Mouth) if one is available,
-  // If `commentsok` is true, will also pass comments.
-  /// Return the next unexpandable token from the input source, or None if there is no more input.
-  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the
-  /// input. If `commentsok`, a comment read or pending will be returned.
-  pub fn read_x_token(
-    &mut self,
-    toplevel_opt: Option<bool>,
-    commentsok: bool,
-  ) -> Result<Option<Token>> {
-    // toplevel should be true by default
-    let toplevel = toplevel_opt.unwrap_or(true);
-    if commentsok {
-      if let Some(pending_comment_token) = self.pending_comments.pop_front() {
-        return Ok(Some(pending_comment_token));
-      }
-    }
-
-    loop {
-      let runtime = match self.mouth {
-        None => return Ok(None),
-        Some(ref mut runtime) => runtime,
-      };
-      // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
-      let mut next_token = None;
-      while let Some(token) = runtime.pushback.pop_front() {
-        match token.get_catcode() {
-          Catcode::COMMENT => {
-            if commentsok {
-              return Ok(Some(token));
-            } else {
-              self.pending_comments.push_back(token);
-            }
-          },
-          Catcode::MARKER => handle_marker(token),
-          _ => {
-            next_token = Some(token);
-            break;
-          },
-        }
-      }
-      if next_token.is_none() {
-        // Else read from current mouth
-        while let Some(token) = runtime.mouth.read_token() {
-          match token.get_catcode() {
-            Catcode::COMMENT => {
-              if commentsok {
-                return Ok(Some(token));
-              } else {
-                self.pending_comments.push_back(token);
-              }
-            },
-            Catcode::MARKER => handle_marker(token),
-            _ => {
-              next_token = Some(token);
-              break;
-            },
-          }
-        }
-      }
-      //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
-      if next_token.is_none() {
-        if !(runtime.autoclose && toplevel && !self.mouthstack.is_empty()) {
-          return Ok(None);
-        }
-        self.close_mouth(false)?; // Next input stream.
-        continue;
-      }
-      // we got a token
-      // -- check if smuggled for \the
-      let mut token = next_token.unwrap();
-      if token.has_smuggled() {
-        if token.get_catcode() != Catcode::SmuggleTHE || state!().get_smuggle_the() {
-          return Ok(Some(token));
-        } else {
-          return Ok(token.take_smuggled().map(|t| *t));
-        }
-      }
-      // --
-      // Wow!!!!! See TeX the Program \S 309
-      // SHOULD count nesting of { }!!! when SCANNED (not digested)
-      let check_alignment_data =
-        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
-          if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-            let reading_alignment = state!().get_reading_alignment().unwrap();
-            Some((reading_alignment, atype, ahidden))
-          } else {
-            None
-          }
-        } else {
-          None
-        };
-      if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
-        if let DigestedData::Alignment(data) = reading_alignment.data() {
-          self.handle_template(data.borrow_mut(), token, atype, ahidden)?;
-        } else {
-          panic!("malformed alignmed was stored?");
-        }
-        // And *then* continue the main loop checks
-      } else if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state!().lookup_definition(&token)? {
-          if (toplevel || !defn.is_protected()) && defn.is_expandable() {
-            // is this the right logic here? don't expand unless digesting?
-            state_mut!().local_current_token(token);
-            self.invoke_for_read_x_token(defn)?;
-            state_mut!().expire_current_token();
-            continue;
-          }
-        }
-        if token.get_catcode() == Catcode::CS && state!().lookup_meaning(&token).is_none() {
-          return Ok(Some(state::generate_error_stub(&token)?)); // cs SHOULD have defn by now;
-                                                                     // report early!
-        } else {
-          return Ok(Some(token));
-        }
-      } else {
-        return Ok(Some(token));
-      }
-    }
-  }
-
-  /// Separate method that adds a recursive call chain to read_x_token
-  // TODO: linearizing in a single loop{}, as in perl, may be faster
-  //       but it is hard to convince the borrow checker that we can safely
-  //       reborrow gullet mutably.
-  fn invoke_for_read_x_token(&mut self, defn: Rc<dyn Definition>) -> Result<()> {
-    let mut expansion = defn.invoke(false)?;
-    if expansion.is_empty() {
-      return Ok(());
-    }
-    if SMUGGLE_THE_COMMANDS.with(|set| set.contains(&defn.get_cs().get_sym())) {
-      // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
-      // at the exact time the token leaves the pushback.
-      // This is *required to be different* from the noexpand flag, as per the B Book
-      for item in expansion.unlist_mut() {
-        if item.get_catcode().can_smuggle_the() {
-          let taken = mem::replace(item, T_RELAX!());
-          *item = T_SMUGGLE_THE!(taken);
-        }
-      }
-      // PERFORMANCE:
-      //   explicitly flag that we've seen this case, so that higher levels know to
-      //   unset the flag from the entire {pushback}
-      self.pushback_has_smuggled_the = true;
-    }
-
-    // add the newly expanded tokens back into the gullet stream, in the ordinary case.
-    {
-      let runtime = self.mouth.as_mut().unwrap();
-      for token in expansion.unlist().into_iter().rev() {
-        runtime.pushback.push_front(token);
-      }
-    }
-    Ok(())
-  }
-
-  /// Read the next raw line (string);
-  /// primarily to read from the Mouth, but keep any unread input!
-  pub fn read_raw_line(&mut self) -> Option<String> {
-    // If we've got unread tokens, they presumably should come before the Mouth's raw data
-    // but we'll convert them back to string.
-    if let Some(ref mut runtime) = self.mouth {
-      let tokens: Vec<Token> = runtime.pushback.drain(..).collect();
-
-      // TODO
-      // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
-      // Catcode::MARKER).collect(); if !markers.is_empty() {    // Whoops, profiling markers!
-
-      // @tokens = grep { $_->getCatcode != Catcode::MARKER } @tokens;    // Remove
-      // map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers;
-      // }
-
-      // If we still have peeked tokens, we ONLY want to combine it with the remainder
-      // of the current line from the Mouth (NOT reading a new line)
-      if !tokens.is_empty() {
-        Some(
-          Tokens::new(tokens).to_string()
-            + &runtime.mouth.read_raw_line(true).unwrap_or_default(),
-        )
-      } else {
-        // Otherwise, read the next line from the Mouth.
-        runtime.mouth.read_raw_line(false)
-      }
-    } else {
-      None
-    }
-  }
   /// Push the `tokens` back into the input stream to be re-read.
   pub fn unread(&mut self, tokens: Tokens) {
     self.unread_vec(tokens.unlist());
@@ -546,15 +235,330 @@ impl Gullet {
     };
   }
 
+}
+
+  ///**********************************************************************
+  /// Low-level readers: read token, read expanded token
+  ///**********************************************************************
+  /// Note that every char (token) comes through here (maybe even twice, through args parsing),
+  /// So, be Fast & Clean!  This method only reads from the current input stream (Mouth).
+
+  fn handle_template(
+    mut alignment: RefMut<Alignment>,
+    token: Token,
+    vtype: &str,
+    hidden: bool,
+  ) -> Result<()> {
+    // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
+    // state!().lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
+    // if $LaTeXML::DEBUG{halign};
+
+    //  Append expansion to end!?!?!?!
+    state_mut!().local_current_token(token.clone());
+    let post = alignment.get_column_after();
+    state_mut!().set_align_group_count(1000000);
+    // ### NOTE: Truly fishy smuggling w/ \hidden@cr
+    let arg_opt = if (vtype == "cr") && hidden {
+      // \hidden@cr gets an argument as payload!!!!!
+      Some(read_arg()?)
+    } else {
+      None
+    };
+    // eprintln!("Halign: column after {post}");// . ToString($post)) if $LaTeXML::DEBUG{halign};
+    if (vtype == "cr" || vtype == "crcr")
+      && alignment.is_in_row()
+      && !alignment
+        .current_row()
+        .map(|v| v.is_pseudo())
+        .unwrap_or(false)
+    {
+      gullet_mut!().unread_one(T_CS!("\\@row@after"));
+    }
+    if let Some(arg) = arg_opt {
+      // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
+      gullet_mut!().unread_one(T_END!());
+      gullet_mut!().unread(arg);
+      gullet_mut!().unread_one(T_BEGIN!());
+    }
+    gullet_mut!().unread_one(token);
+    gullet_mut!().unread(post);
+    state_mut!().expire_current_token();
+    Ok(())
+  }
+
+  pub fn read_token() -> Result<Option<Token>> {
+    let mut next_token: Option<Token> = None;
+    loop {
+      // If we're without a runtime, bail
+      { let mut gullet = gullet_mut!();
+        if gullet.mouth.is_none() { return Ok(None); }
+        // Check in pushback first....
+        while let Some(mut pushback_token) = gullet.mouth.as_mut().unwrap().pushback.pop_front() {
+          if pushback_token.get_catcode() == Catcode::SmuggleTHE {
+            pushback_token = *pushback_token.take_smuggled().unwrap();
+          }
+          match pushback_token.get_catcode() {
+            Catcode::COMMENT => gullet.pending_comments.push_back(pushback_token),
+            Catcode::MARKER => handle_marker(pushback_token),
+            _ => {
+              next_token = Some(pushback_token);
+              break;
+            },
+          };
+        }
+        // Not in pushback, read from the current Mouth
+        if next_token.is_none() {
+          while let Some(token) = gullet.mouth.as_mut().unwrap().mouth.read_token() {
+            match token.get_catcode() {
+              Catcode::COMMENT => gullet.pending_comments.push_back(token),
+              Catcode::MARKER => handle_marker(token),
+              _ => {
+                next_token = Some(token);
+                break;
+              },
+            };
+          }
+        }
+      }
+      // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
+
+      // some infinite loops are hard to predict and may be
+      // better guarded against via a global token limit.
+      // if ($LaTeXML::TOKEN_LIMIT and $$self{progress} > $LaTeXML::TOKEN_LIMIT) {
+      // Fatal('timeout', 'token_limit', $self,
+      //   "Token limit of $LaTeXML::TOKEN_LIMIT exceeded, infinite loop?"); }
+      // if ($LaTeXML::PUSHBACK_LIMIT and scalar(@{ $$self{pushback} }) >
+      // $LaTeXML::PUSHBACK_LIMIT) {   Fatal('timeout', 'pushback_limit', $self,
+      //     "Pushback limit of $LaTeXML::PUSHBACK_LIMIT exceeded, infinite loop?"); }
+
+      // Wow!!!!! See TeX the Program \S 309
+      if let Some(ref nextt) = next_token {
+        // SHOULD count nesting of { }!!! when SCANNED (not digested)
+        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
+          if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
+            let reading_alignment = state!().get_reading_alignment().unwrap();
+            if let DigestedData::Alignment(data) = reading_alignment.data() {
+              handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
+            } else {
+              return Err("reading_alignment should always contain DigestedData::Alignment".into());
+            }
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    Ok(next_token)
+  }
+
+  // Read the next non-expandable token (expanding tokens until there's a non-expandable one).
+  // Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
+  // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
+  //  will step to the next input stream (Mouth) if one is available,
+  // If `commentsok` is true, will also pass comments.
+  /// Return the next unexpandable token from the input source, or None if there is no more input.
+  /// If the next token is expandable, it is expanded, and its expansion is reinserted into the
+  /// input. If `commentsok`, a comment read or pending will be returned.
+  pub fn read_x_token(
+    toplevel_opt: Option<bool>,
+    commentsok: bool,
+  ) -> Result<Option<Token>> {
+    // toplevel should be true by default
+    let toplevel = toplevel_opt.unwrap_or(true);
+    if commentsok {
+      if let Some(pending_comment_token) = gullet_mut!().pending_comments.pop_front() {
+        return Ok(Some(pending_comment_token));
+      }
+    }
+
+    loop {
+      let mut next_token = None;
+      { let mut gullet = gullet_mut!();
+        if gullet.mouth.is_none() {
+          return Ok(None);
+        }
+        // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
+        while let Some(token) = gullet.mouth.as_mut().unwrap().pushback.pop_front() {
+          match token.get_catcode() {
+            Catcode::COMMENT => {
+              if commentsok {
+                return Ok(Some(token));
+              } else {
+                gullet.pending_comments.push_back(token);
+              }
+            },
+            Catcode::MARKER => handle_marker(token),
+            _ => {
+              next_token = Some(token);
+              break;
+            },
+          }
+        }
+
+        if next_token.is_none() {
+          // Else read from current mouth
+          while let Some(token) = gullet.mouth.as_mut().unwrap().mouth.read_token() {
+            match token.get_catcode() {
+              Catcode::COMMENT => {
+                if commentsok {
+                  return Ok(Some(token));
+                } else {
+                  gullet.pending_comments.push_back(token);
+                }
+              },
+              Catcode::MARKER => handle_marker(token),
+              _ => {
+                next_token = Some(token);
+                break;
+              },
+            }
+          }
+        }
+
+        //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
+        if next_token.is_none() {
+          if !(gullet.mouth.as_ref().unwrap().autoclose && toplevel && !gullet.mouthstack.is_empty()) {
+            return Ok(None);
+          }
+          gullet.close_mouth(false)?; // Next input stream.
+          continue;
+        }
+      }
+      // we got a token
+      // -- check if smuggled for \the
+      let mut token = next_token.unwrap();
+      if token.has_smuggled() {
+        if token.get_catcode() != Catcode::SmuggleTHE || state!().get_smuggle_the() {
+          return Ok(Some(token));
+        } else {
+          return Ok(token.take_smuggled().map(|t| *t));
+        }
+      }
+      // --
+      // Wow!!!!! See TeX the Program \S 309
+      // SHOULD count nesting of { }!!! when SCANNED (not digested)
+      let check_alignment_data =
+        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
+          if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
+            let reading_alignment = state!().get_reading_alignment().unwrap();
+            Some((reading_alignment, atype, ahidden))
+          } else {
+            None
+          }
+        } else {
+          None
+        };
+      if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
+        if let DigestedData::Alignment(data) = reading_alignment.data() {
+          handle_template(data.borrow_mut(), token, atype, ahidden)?;
+        } else {
+          panic!("malformed alignmed was stored?");
+        }
+        // And *then* continue the main loop checks
+      } else if token.get_catcode().is_active_or_cs() {
+        if let Some(defn) = state!().lookup_definition(&token)? {
+          if (toplevel || !defn.is_protected()) && defn.is_expandable() {
+            // is this the right logic here? don't expand unless digesting?
+            state_mut!().local_current_token(token);
+            invoke_for_read_x_token(defn)?;
+            state_mut!().expire_current_token();
+            continue;
+          }
+        }
+        if token.get_catcode() == Catcode::CS && state!().lookup_meaning(&token).is_none() {
+          return Ok(Some(state::generate_error_stub(&token)?)); // cs SHOULD have defn by now;
+                                                                     // report early!
+        } else {
+          return Ok(Some(token));
+        }
+      } else {
+        return Ok(Some(token));
+      }
+    }
+  }
+
+  /// Separate method that adds a recursive call chain to read_x_token
+  // TODO: linearizing in a single loop{}, as in perl, may be faster
+  //       but it is hard to convince the borrow checker that we can safely
+  //       reborrow gullet mutably.
+  fn invoke_for_read_x_token(defn: Rc<dyn Definition>) -> Result<()> {
+    let mut expansion = defn.invoke(false)?;
+    if expansion.is_empty() {
+      return Ok(());
+    }
+    if SMUGGLE_THE_COMMANDS.with(|set| set.contains(&defn.get_cs().get_sym())) {
+      // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
+      // at the exact time the token leaves the pushback.
+      // This is *required to be different* from the noexpand flag, as per the B Book
+      for item in expansion.unlist_mut() {
+        if item.get_catcode().can_smuggle_the() {
+          let taken = mem::replace(item, T_RELAX!());
+          *item = T_SMUGGLE_THE!(taken);
+        }
+      }
+      // PERFORMANCE:
+      //   explicitly flag that we've seen this case, so that higher levels know to
+      //   unset the flag from the entire {pushback}
+      gullet_mut!().pushback_has_smuggled_the = true;
+    }
+
+    // add the newly expanded tokens back into the gullet stream, in the ordinary case.
+    {
+      let mut gullet = gullet_mut!();
+      let runtime = gullet.mouth.as_mut().unwrap();
+      for token in expansion.unlist().into_iter().rev() {
+        runtime.pushback.push_front(token);
+      }
+    }
+    Ok(())
+  }
+
+  /// Read the next raw line (string);
+  /// primarily to read from the Mouth, but keep any unread input!
+  pub fn read_raw_line() -> Option<String> {
+    // If we've got unread tokens, they presumably should come before the Mouth's raw data
+    // but we'll convert them back to string.
+    let mut gullet = gullet_mut!();
+    if let Some(ref mut runtime) = gullet.mouth {
+      let tokens: Vec<Token> = runtime.pushback.drain(..).collect();
+
+      // TODO
+      // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
+      // Catcode::MARKER).collect(); if !markers.is_empty() {    // Whoops, profiling markers!
+
+      // @tokens = grep { $_->getCatcode != Catcode::MARKER } @tokens;    // Remove
+      // map { LaTeXML::Core::Definition::stopProfiling($_, 'expand') } @markers;
+      // }
+
+      // If we still have peeked tokens, we ONLY want to combine it with the remainder
+      // of the current line from the Mouth (NOT reading a new line)
+      if !tokens.is_empty() {
+        Some(
+          Tokens::new(tokens).to_string()
+            + &runtime.mouth.read_raw_line(true).unwrap_or_default(),
+        )
+      } else {
+        // Otherwise, read the next line from the Mouth.
+        runtime.mouth.read_raw_line(false)
+      }
+    } else {
+      None
+    }
+  }
+
   //**********************************************************************
   // Mid-level readers: checking and matching tokens, strings etc.
   //**********************************************************************
   // The following higher-level parsing methods are built upon readToken & `.
 
   /// Read a single non-space token
-  pub fn read_non_space(&mut self) -> Result<Option<Token>> {
+  pub fn read_non_space() -> Result<Option<Token>> {
     loop {
-      match self.read_token()? {
+      match read_token()? {
         None => return Ok(None),
         Some(t) => {
           if t.get_catcode() != Catcode::SPACE {
@@ -566,9 +570,9 @@ impl Gullet {
   }
 
   /// Read a single expanded, non-space, token
-  pub fn read_x_non_space(&mut self) -> Result<Option<Token>> {
+  pub fn read_x_non_space() -> Result<Option<Token>> {
     loop {
-      match self.read_x_token(Some(false), false)? {
+      match read_x_token(Some(false), false)? {
         None => return Ok(None),
         Some(t) => {
           if t.get_catcode() != Catcode::SPACE {
@@ -582,15 +586,15 @@ impl Gullet {
   /// Read a sequence of tokens balanced in {}
   /// assuming the { has already been read.
   /// Returns a Tokens list of the balanced sequence, omitting the closing }
-  pub fn read_balanced(&mut self, expanded: bool) -> Result<Option<Tokens>> {
+  pub fn read_balanced(expanded: bool) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
     state_mut!().local_align_group_count(1000000);
     // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
     while let Some(t) = if expanded {
-      self.read_x_token(Some(false), true)?
+      read_x_token(Some(false), true)?
     } else {
-      self.read_token()?
+      read_token()?
     } {
       match t.get_catcode() {
         Catcode::BEGIN => {
@@ -631,13 +635,13 @@ impl Gullet {
   /// Match the input against a set of keywords; Similar to readMatch, but the keywords are strings,
   /// and Case and catcodes are ignored; additionally, leading spaces are skipped.
   /// AND, macros are expanded.
-  pub fn read_keyword(&mut self, keywords: &[&str]) -> Result<Option<String>> {
-    self.skip_spaces()?;
+  pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
+    skip_spaces()?;
     for keyword in keywords.iter() {
       let mut to_match: VecDeque<char> = keyword.to_uppercase().chars().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
-        if let Some(tok) = self.read_x_token(Some(false), false)? {
+        if let Some(tok) = read_x_token(Some(false), false)? {
           let cmp_tok = tok.with_str(|s| s.to_uppercase());
           matched.push(tok);
           if cmp_tok == to_match[0].to_string() {
@@ -653,7 +657,7 @@ impl Gullet {
         // All matched!!!
         return Ok(Some(keyword.to_string()));
       } else {
-        self.unread(matched.into()); // Put 'em back and try next!
+        gullet_mut!().unread(matched.into()); // Put 'em back and try next!
       }
     }
     Ok(None)
@@ -663,7 +667,7 @@ impl Gullet {
   /// Note that Braces on input hides the contents from matching,
   /// so this assumes there wont be braces in $delim!
   /// But, see readUntilBrace for that case.
-  pub fn read_until(&mut self, delim: &Tokens) -> Result<Tokens> {
+  pub fn read_until(delim: &Tokens) -> Result<Tokens> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut nbraces = 0;
     let want = delim.unlist_ref();
@@ -673,11 +677,11 @@ impl Gullet {
     if ntomatch == 1 {
       let want = &want[0];
       loop {
-        let token = match self.read_token()? {
+        let token = match read_token()? {
           Some(t) => t,
           None => {
             // Ran out!
-            self.unread(Tokens::new(tokens));
+            gullet_mut!().unread(Tokens::new(tokens));
             return Ok(Tokens!()); // Not more correct, but maybe less confusing?
           },
         };
@@ -693,7 +697,7 @@ impl Gullet {
             // And if it's a BEGIN, copy till balanced END
             nbraces += 1;
             tokens.push(token);
-            if let Some(balanced) = self.read_balanced(false)? {
+            if let Some(balanced) = read_balanced(false)? {
               tokens.extend(balanced.unlist());
             }
             tokens.push(T_END!());
@@ -708,11 +712,11 @@ impl Gullet {
       loop {
         // prefill the required number of tokens
         while ring.len() < ntomatch {
-          let token = match self.read_token()? {
+          let token = match read_token()? {
             Some(t) => t,
             None => {
               // Ran out!
-              self.unread(Tokens::new(tokens));
+              gullet_mut!().unread(Tokens::new(tokens));
               return Ok(Tokens!()); // Not more correct, but maybe less confusing?
             },
           };
@@ -723,7 +727,7 @@ impl Gullet {
               tokens.push(r_token);
             }
             tokens.push(token);
-            if let Some(balanced) = self.read_balanced(false)? {
+            if let Some(balanced) = read_balanced(false)? {
               tokens.append(&mut balanced.unlist());
             }
             tokens.push(T_END!()); // Copy directly to result
@@ -755,18 +759,18 @@ impl Gullet {
 
   /// Convenience method wrapping around `read_until`
   /// TODO: This seems to be the wrong Rust type interface, we need to rework...
-  pub fn read_until_token(&mut self, t: Token) -> Result<Tokens> {
-    self.read_until(&Tokens!(t))
+  pub fn read_until_token(t: Token) -> Result<Tokens> {
+    read_until(&Tokens!(t))
   }
   /// reads until it encounters a Catcode::BEGIN token
-  pub fn read_until_brace(&mut self) -> Result<Option<Tokens>> {
+  pub fn read_until_brace() -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
-    while let Some(token) = self.read_token()? {
+    while let Some(token) = read_token()? {
       if token.get_catcode() == Catcode::BEGIN {
-        if let Some(runtime) = self.mouth.as_mut() {
+        if let Some(runtime) = gullet_mut!().mouth.as_mut() {
           runtime.pushback.push_front(token); // Unread
         } else {
-          fatal!(Mouth, NotFound, "No Mouth in Gullet.read_until_brace")
+          fatal!(Mouth, NotFound, "No Mouth in gullet::read_until_brace")
         }
         break;
       } else {
@@ -781,10 +785,8 @@ impl Gullet {
     }
   }
   /// reads and discards tokens, until it encounters a conditional, if any
-  pub fn read_next_conditional(
-    &mut self,
-  ) -> Result<Option<(Token, ConditionalType)>> {
-    while let Some(mut token) = self.read_token()? {
+  pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
+    while let Some(mut token) = read_token()? {
       if token.get_catcode() == Catcode::SmuggleTHE {
         token = token.without_dont_expand();
       }
@@ -801,14 +803,14 @@ impl Gullet {
   /// Higher-level readers: Read various types of things from the input:
   ///  tokens, non-expandable tokens, args, Numbers, ...
   ///**********************************************************************
-  pub fn read_arg(&mut self) -> Result<Tokens> {
-    match self.read_non_space()? {
+  pub fn read_arg() -> Result<Tokens> {
+    match read_non_space()? {
       None => Ok(Tokens!()),
       Some(token) => {
         match token.get_catcode() {
           Catcode::BEGIN => {
             // Inline ->getCatcode!
-            if let Some(balanced) = self.read_balanced(false)? {
+            if let Some(balanced) = read_balanced(false)? {
               Ok(balanced)
             } else {
               // since arg is mandatory, return an empty tokens
@@ -825,30 +827,29 @@ impl Gullet {
   /// Note that this returns an empty array if [] is present,
   /// i.e. "[contents]" in TeX will lead to Tokens(contents), otherwise returns None
   pub fn read_optional(
-    &mut self,
     default: Option<Tokens>,
   ) -> Result<Option<Tokens>> {
-    match self.read_non_space()? {
+    match read_non_space()? {
       None => Ok(None),
       Some(t) => {
         if t.get_catcode() == Catcode::OTHER && t.get_sym() == arena::pin_static("[") {
-          Ok(Some(self.read_until(&Tokens!(T_OTHER!("]")))?))
+          Ok(Some(read_until(&Tokens!(T_OTHER!("]")))?))
         } else {
-          self.unread_one(t);
+          gullet_mut!().unread_one(t);
           Ok(default)
         }
       },
     }
   }
 
-  pub fn if_next(&mut self, token: &Token) -> Result<bool> {
+  pub fn if_next(token: &Token) -> Result<bool> {
     let mut is_next = false;
-    if let Some(tok) = self.read_token()? {
+    if let Some(tok) = read_token()? {
       is_next = tok == *token;
-      if let Some(mouth) = self.mouth.as_mut() {
+      if let Some(mouth) = gullet_mut!().mouth.as_mut() {
         mouth.pushback.push_front(tok); // Unread
       } else {
-        fatal!(Mouth, NotFound, "No Mouth found in Gullet.if_next")
+        fatal!(Mouth, NotFound, "No Mouth found in gullet::if_next")
       }
     }
     Ok(is_next)
@@ -860,28 +861,26 @@ impl Gullet {
   //**********************************************************************
 
   pub fn read_value(
-    &mut self,
     value_type: RegisterType,
   ) -> Result<RegisterValue> {
     match value_type {
-      RegisterType::Number => Ok(self.read_number()?.into()),
-      RegisterType::Dimension => Ok(self.read_dimension()?.into()),
-      RegisterType::MuDimension => Ok(self.read_mu_dimension()?.into()),
-      RegisterType::Glue => Ok(self.read_glue()?.into()),
-      RegisterType::MuGlue => Ok(self.read_mu_glue()?.into()),
-      RegisterType::Tokens => Ok(self.read_tokens_value()?.into()),
+      RegisterType::Number => Ok(read_number()?.into()),
+      RegisterType::Dimension => Ok(read_dimension()?.into()),
+      RegisterType::MuDimension => Ok(read_mu_dimension()?.into()),
+      RegisterType::Glue => Ok(read_glue()?.into()),
+      RegisterType::MuGlue => Ok(read_mu_glue()?.into()),
+      RegisterType::Tokens => Ok(read_tokens_value()?.into()),
       // TODO: unwrap should be a proper error, value is expected
-      RegisterType::Token => Ok(self.read_token()?.unwrap().into()),
-      RegisterType::CharDef => Ok(self.read_number()?.into()),
-      RegisterType::Any => Ok(self.read_arg()?.into()),
+      RegisterType::Token => Ok(read_token()?.unwrap().into()),
+      RegisterType::CharDef => Ok(read_number()?.into()),
+      RegisterType::Any => Ok(read_arg()?.into()),
     }
   }
 
   pub fn read_register_value(
-    &mut self,
     value_type: RegisterType,
   ) -> Result<Option<RegisterValue>> {
-    match self.read_x_token(None, false)? {
+    match read_x_token(None, false)? {
       None => Ok(None),
       Some(token) => {
         if let Some(defn) = state_mut!().lookup_register_definition(&token) {
@@ -894,15 +893,15 @@ impl Gullet {
               let args = defn.read_arguments()?;
               Ok(defn.value_of(args))
             } else {
-              self.unread_one(token); // Unread
+              gullet_mut!().unread_one(token); // Unread
               Ok(None)
             }
           } else {
-            self.unread_one(token); // Unread
+            gullet_mut!().unread_one(token); // Unread
             Ok(None)
           }
         } else {
-          self.unread_one(token); // Unread
+          gullet_mut!().unread_one(token); // Unread
           Ok(None)
         }
       },
@@ -911,12 +910,12 @@ impl Gullet {
 
   /// Match the input against one of the Token or Tokens in @choices; return the matching one or
   /// undef.
-  pub fn read_match(&mut self, choices: &[&Tokens]) -> Result<Option<Tokens>> {
+  pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
     for choice in choices {
       let mut to_match: Vec<&Token> = choice.unlist_ref().iter().rev().collect();
       let mut matched = Vec::new();
       while !to_match.is_empty() {
-        match self.read_token()? {
+        match read_token()? {
           None => break,
           Some(token) => {
             let cc = token.get_catcode();
@@ -930,12 +929,12 @@ impl Gullet {
 
             if cc == Catcode::SPACE {
               // If this was space, SKIP any following!!!
-              while let Some(space_token) = self.read_token()? {
+              while let Some(space_token) = read_token()? {
                 if space_token.get_catcode() != Catcode::SPACE {
                   // Unread non-space and end
-                  match self.mouth.as_mut() {
+                  match gullet_mut!().mouth.as_mut() {
                     Some(mouth) => mouth.pushback.push_front(space_token),
-                    None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match"),
+                    None => fatal!(Mouth, NotFound, "No Mouth in gullet::read_match"),
                   }
                   break;
                 } else {
@@ -950,9 +949,9 @@ impl Gullet {
         return Ok(Some((*choice).clone())); // All matched!!!
       } else {
         for matched_token in matched.into_iter().rev() {
-          match self.mouth.as_mut() {
+          match gullet_mut!().mouth.as_mut() {
             Some(mouth) => mouth.pushback.push_front(matched_token), // Put 'em back and try next!
-            None => fatal!(Mouth, NotFound, "No Mouth in Gullet.read_match"),
+            None => fatal!(Mouth, NotFound, "No Mouth in gullet::read_match"),
           }
         }
       }
@@ -966,21 +965,21 @@ impl Gullet {
   /// <number> = <optional signs><unsigned number>
   /// <unsigned number> = <normal integer> | <coerced integer>
   /// <coerced integer> = <internal dimen> | <internal glue>
-  pub fn read_number(&mut self) -> Result<Number> {
-    let is_negative = self.read_optional_signs()?;
+  pub fn read_number() -> Result<Number> {
+    let is_negative = read_optional_signs()?;
     let s = if is_negative { -1 } else { 1 };
-    if let Some(n) = self.read_normal_integer()? {
+    if let Some(n) = read_normal_integer()? {
       if is_negative {
         Ok(n.negate())
       } else {
         Ok(n)
       }
-    } else if let Some(n) = self.read_internal_dimension()? {
+    } else if let Some(n) = read_internal_dimension()? {
       Ok(Number::new(s * n.value_of()))
-    } else if let Some(n) = self.read_internal_glue()? {
+    } else if let Some(n) = read_internal_glue()? {
       Ok(Number::new(s * n.value_of()))
     } else {
-      let next = self.read_token()?;
+      let next = read_token()?;
       let message = s!(
         "Missing number, treated as zero while processing {:?}, next token is {:?}",
         state!().get_current_token().unwrap(),
@@ -988,7 +987,7 @@ impl Gullet {
       );
       Warn!("expected", "<number>", message);
       if let Some(next) = next {
-        self.unread_one(next);
+        gullet_mut!().unread_one(next);
       }
       Ok(Number::new(0))
     }
@@ -997,27 +996,27 @@ impl Gullet {
   /// <normal integer> = <internal integer> | <integer constant>
   ///   | '<octal constant><one optional space> | "<hexadecimal constant><one optional space>
   ///   | `<character token><one optional space>
-  pub fn read_normal_integer(&mut self) -> Result<Option<Number>> {
-    match self.read_x_token(None, false)? {
+  pub fn read_normal_integer() -> Result<Option<Number>> {
+    match read_x_token(None, false)? {
       None => Ok(None),
       Some(token) => {
         let cc = token.get_catcode();
         let mut text = token.to_string();
         if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
           // Read decimal literal
-          text.push_str(&self.read_digits(&DIGIT_RE, true)?);
+          text.push_str(&read_digits(&DIGIT_RE, true)?);
           Ok(Some(Number::new(text.parse::<i64>().expect(&text))))
         } else if token == T_OTHER!("'") {
           // Read Octal literal
-          let decimal = i64::from_str_radix(&self.read_digits(&OCT_RE, true)?, 8)?;
+          let decimal = i64::from_str_radix(&read_digits(&OCT_RE, true)?, 8)?;
           Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("\"") {
           //  Read Hex literal
-          let decimal = i64::from_str_radix(&self.read_digits(&HEX_RE, true)?, 16)?;
+          let decimal = i64::from_str_radix(&read_digits(&HEX_RE, true)?, 16)?;
           Ok(Some(Number::new(decimal)))
         } else if token == T_OTHER!("`") {
           //  Read Charcode
-          let mut s = match self.read_token()? {
+          let mut s = match read_token()? {
             None => String::new(),
             Some(next) => next.to_string(),
           };
@@ -1027,8 +1026,8 @@ impl Gullet {
           let s_char = s.chars().next().unwrap();
           Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
         } else {
-          self.unread_one(token); // Unread
-          self.read_internal_integer()
+          gullet_mut!().unread_one(token); // Unread
+          read_internal_integer()
         }
       },
     }
@@ -1038,28 +1037,27 @@ impl Gullet {
   /// Float, a floating point number.
   /// Similar to factor, but does NOT accept comma!
   /// This is NOT part of TeX, but is convenient.
-  pub fn read_float(&mut self) -> Result<Float> {
-    let is_negative = self.read_optional_signs()?;
+  pub fn read_float() -> Result<Float> {
+    let is_negative = read_optional_signs()?;
     let s = if is_negative { -1.0 } else { 1.0 };
-    let mut string = self.read_digits(&DIGIT_RE, true)?;
-    let mut token = self.read_x_token(None, false)?;
+    let mut string = read_digits(&DIGIT_RE, true)?;
+    let mut token = read_x_token(None, false)?;
     if token.is_some() && token.as_ref().unwrap().get_sym() == arena::pin_static(".") {
-      string = s!("{string}.{}", self.read_digits(&DIGIT_RE, true)?);
-      token = self.read_x_token(None, false)?;
+      string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
+      token = read_x_token(None, false)?;
     }
     let n_opt: Option<f64> = if !string.is_empty() {
       if let Some(t) = token {
         if t.get_catcode() != Catcode::SPACE {
-          self.unread_one(t);
+          gullet_mut!().unread_one(t);
         }
       }
       Some(string.parse::<f64>().expect(&string))
     } else {
       if let Some(t) = token {
-        self.unread_one(t); // Unread
+        gullet_mut!().unread_one(t); // Unread
       }
-      self
-        .read_normal_integer()?
+      read_normal_integer()?
         .map(|v| v.value_of() as f64)
     };
 
@@ -1070,20 +1068,20 @@ impl Gullet {
     }
   }
 
-  fn read_internal_integer(&mut self) -> Result<Option<Number>> {
-    match self.read_register_value(RegisterType::Number)? {
+  fn read_internal_integer() -> Result<Option<Number>> {
+    match read_register_value(RegisterType::Number)? {
       None => Ok(None),
       Some(val) => Ok(Some(val.into())),
     }
   }
-  fn read_internal_dimension(&mut self) -> Result<Option<Dimension>> {
-    match self.read_register_value(RegisterType::Dimension)? {
+  fn read_internal_dimension() -> Result<Option<Dimension>> {
+    match read_register_value(RegisterType::Dimension)? {
       None => Ok(None),
       Some(val) => Ok(Some(val.into())),
     }
   }
-  fn read_internal_glue(&mut self) -> Result<Option<Glue>> {
-    match self.read_register_value(RegisterType::Glue)? {
+  fn read_internal_glue() -> Result<Option<Glue>> {
+    match read_register_value(RegisterType::Glue)? {
       None => Ok(None),
       Some(val) => Ok(Some(val.into())),
     }
@@ -1095,18 +1093,18 @@ impl Gullet {
   // <dimen> = <optional signs><unsigned dimen>
   // <unsigned dimen> = <normal dimen> | <coerced dimen>
   // <coerced dimen> = <internal glue>
-  pub fn read_dimension(&mut self) -> Result<Dimension> {
-    let is_negative = self.read_optional_signs()?;
-    if let Some(d) = self.read_internal_dimension()? {
+  pub fn read_dimension() -> Result<Dimension> {
+    let is_negative = read_optional_signs()?;
+    if let Some(d) = read_internal_dimension()? {
       Ok(if is_negative { d.negate() } else { d })
-    } else if let Some(d) = self.read_internal_glue()? {
+    } else if let Some(d) = read_internal_glue()? {
       Ok(Dimension::new(if is_negative {
         d.negate().value_of()
       } else {
         d.value_of()
       }))
-    } else if let Some(d) = self.read_factor()? {
-      let unit = match self.read_unit()? {
+    } else if let Some(d) = read_factor()? {
+      let unit = match read_unit()? {
         Some(u) => u,
         None => {
           Warn!(
@@ -1136,22 +1134,22 @@ impl Gullet {
   // <physical unit> = pt | pc | in | bp | cm | mm | dd | cc | sp
 
   /// Read a unit, returning the equivalent number of scaled points,
-  fn read_unit(&mut self) -> Result<Option<f64>> {
-    let unit_opt = if let Some(u) = self.read_keyword(&["ex", "em"])? {
-      self.skip_one_space()?;
+  fn read_unit() -> Result<Option<f64>> {
+    let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
+      skip_one_space()?;
       Some(state!().convert_unit(&u))
-    } else if let Some(u) = self.read_internal_integer()? {
+    } else if let Some(u) = read_internal_integer()? {
       Some(u.value_of() as f64) // These are coerced to number=>sp
-    } else if let Some(u) = self.read_internal_dimension()? {
+    } else if let Some(u) = read_internal_dimension()? {
       Some(u.value_of() as f64)
-    } else if let Some(u) = self.read_internal_glue()? {
+    } else if let Some(u) = read_internal_glue()? {
       Some(u.value_of() as f64)
     } else {
-      self.read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
-      if let Some(u) = self.read_keyword(
+      read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
+      if let Some(u) = read_keyword(
         &["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"],
           )? {
-        self.skip_one_space()?;
+        skip_one_space()?;
         Some(state!().convert_unit(&u))
       } else {
         None
@@ -1166,25 +1164,25 @@ impl Gullet {
   // <glue> = <optional signs><internal glue> | <dimen><stretch><shrink>
   // <stretch> = plus <dimen> | plus <fil dimen> | <optional spaces>
   // <shrink>  = minus <dimen> | minus <fil dimen> | <optional spaces>
-  pub fn read_glue(&mut self) -> Result<Glue> {
-    let is_negative = self.read_optional_signs()?;
-    if let Some(n) = self.read_internal_glue()? {
+  pub fn read_glue() -> Result<Glue> {
+    let is_negative = read_optional_signs()?;
+    if let Some(n) = read_internal_glue()? {
       if is_negative {
         Ok(n.negate())
       } else {
         Ok(n)
       }
     } else {
-      let mut d = self.read_dimension()?;
+      let mut d = read_dimension()?;
       if is_negative {
         d = d.negate();
       }
-      let (r1, f1) = match self.read_keyword(&["plus"])? {
-        Some(_) => self.read_rubber(false)?,
+      let (r1, f1) = match read_keyword(&["plus"])? {
+        Some(_) => read_rubber(false)?,
         None => (None, None),
       };
-      let (r2, f2) = match self.read_keyword(&["minus"])? {
-        Some(_) => self.read_rubber(false)?,
+      let (r2, f2) = match read_keyword(&["minus"])? {
+        Some(_) => read_rubber(false)?,
         None => (None, None),
       };
 
@@ -1199,25 +1197,24 @@ impl Gullet {
   }
 
   pub fn read_rubber(
-    &mut self,
     mu: bool,
   ) -> Result<(Option<i64>, Option<FillCode>)> {
-    let is_negative = self.read_optional_signs()?;
+    let is_negative = read_optional_signs()?;
     let s = if is_negative { -1 } else { 1 };
-    match self.read_factor()? {
+    match read_factor()? {
       None => {
         let f = if mu {
-          self.read_mu_dimension()?.value_of()
+          read_mu_dimension()?.value_of()
         } else {
-          self.read_dimension()?.value_of()
+          read_dimension()?.value_of()
         };
         Ok((Some(f * s), None))
       },
-      Some(f) => match self.read_keyword(&["filll", "fill", "fil"])? {
+      Some(f) => match read_keyword(&["filll", "fill", "fil"])? {
         Some(fil) => Ok((Some(fixpoint(s as f64 * f, None)), FillCode::from(&fil))),
         None => {
           let u = if mu {
-            match self.read_mu_unit()? {
+            match read_mu_unit()? {
               None => {
                 Warn!(
                   "expected",
@@ -1229,7 +1226,7 @@ impl Gullet {
               Some(v) => Some(v as f64),
             }
           } else {
-            match self.read_unit()? {
+            match read_unit()? {
               None => {
                 Warn!(
                   "expected",
@@ -1253,22 +1250,22 @@ impl Gullet {
   // <muglue> = <optional signs><internal muglue> | <mudimen><mustretch><mushrink>
   // <mustretch> = plus <mudimen> | plus <fil dimen> | <optional spaces>
   // <mushrink> = minus <mudimen> | minus <fil dimen> | <optional spaces>
-  pub fn read_mu_glue(&mut self) -> Result<MuGlue> {
-    let is_negative = self.read_optional_signs()?;
-    if let Some(n) = self.read_internal_mu_glue()? {
+  pub fn read_mu_glue() -> Result<MuGlue> {
+    let is_negative = read_optional_signs()?;
+    if let Some(n) = read_internal_mu_glue()? {
       Ok(if is_negative { n.negate() } else { n })
     } else {
-      let mut d = self.read_mu_dimension()?;
+      let mut d = read_mu_dimension()?;
       if is_negative {
         d = d.negate()
       }
-      let (r1, f1) = if self.read_keyword(&["plus"])?.is_some() {
-        self.read_rubber(true)?
+      let (r1, f1) = if read_keyword(&["plus"])?.is_some() {
+        read_rubber(true)?
       } else {
         (None, None)
       };
-      let (r2, f2) = if self.read_keyword(&["minus"])?.is_some() {
-        self.read_rubber(true)?
+      let (r2, f2) = if read_keyword(&["minus"])?.is_some() {
+        read_rubber(true)?
       } else {
         (None, None)
       };
@@ -1284,10 +1281,10 @@ impl Gullet {
   // <normal mudimen> = <factor><mu unit>
   // <mu unit> = <optional spaces><internal muglue> | mu <one optional space>
   // <coerced mudimen> = <internal muglue>
-  pub fn read_mu_dimension(&mut self) -> Result<MuDimension> {
-    let is_negative = self.read_optional_signs()?;
-    if let Some(mut m) = self.read_factor()? {
-      let munit = self.read_mu_unit()?;
+  pub fn read_mu_dimension() -> Result<MuDimension> {
+    let is_negative = read_optional_signs()?;
+    if let Some(mut m) = read_factor()? {
+      let munit = read_mu_unit()?;
       if munit.is_none() {
         Warn!(
           "expected",
@@ -1299,7 +1296,7 @@ impl Gullet {
         m *= -1.0;
       }
       Ok(MuDimension::new(fixpoint(m, munit.map(|v| v as f64))))
-    } else if let Some(mglue) = self.read_internal_mu_glue()? {
+    } else if let Some(mglue) = read_internal_mu_glue()? {
       let m = if is_negative { mglue.negate() } else { mglue };
       Ok(MuDimension::new(m.value_of()))
     } else {
@@ -1312,31 +1309,31 @@ impl Gullet {
     }
   }
 
-  pub fn read_mu_unit(&mut self) -> Result<Option<i64>> {
-    if self.read_keyword(&["mu"])?.is_some() {
-      self.skip_one_space()?;
+  pub fn read_mu_unit() -> Result<Option<i64>> {
+    if read_keyword(&["mu"])?.is_some() {
+      skip_one_space()?;
       Ok(Some(UNITY)) // effectively, scaled mu
-    } else if let Some(m) = self.read_internal_mu_glue()? {
+    } else if let Some(m) = read_internal_mu_glue()? {
       Ok(Some(m.value_of()))
     } else {
       Ok(None)
     }
   }
 
-  fn read_internal_mu_glue(&mut self) -> Result<Option<MuGlue>> {
-    match self.read_register_value(RegisterType::MuGlue)? {
+  fn read_internal_mu_glue() -> Result<Option<MuGlue>> {
+    match read_register_value(RegisterType::MuGlue)? {
       None => Ok(None),
       Some(val) => Ok(Some(val.into())),
     }
   }
 
   /// Apparent behaviour of a token value (ie \toks#=<arg>)
-  pub fn read_tokens_value(&mut self) -> Result<Tokens> {
-    match self.read_non_space()? {
+  pub fn read_tokens_value() -> Result<Tokens> {
+    match read_non_space()? {
       None => Ok(Tokens!()),
       Some(token) => {
         if token.get_catcode() == Catcode::BEGIN {
-          match self.read_balanced(false)? {
+          match read_balanced(false)? {
             Some(tks) => Ok(tks),
             None => Ok(Tokens!()),
           }
@@ -1360,9 +1357,9 @@ impl Gullet {
           if defn.is_expandable() {
             let x = defn.invoke(false)?;
             if !x.is_empty() {
-              self.unread(x);
+              gullet_mut!().unread(x);
             }
-            self.read_tokens_value()
+            read_tokens_value()
           } else {
             Ok(Tokens!(token))
           }
@@ -1373,27 +1370,27 @@ impl Gullet {
     }
   }
 
-  pub fn skip_spaces(&mut self) -> Result<()> {
-    if let Some(t) = self.read_non_space()? {
-      self.unread_one(t);
+  pub fn skip_spaces() -> Result<()> {
+    if let Some(t) = read_non_space()? {
+      gullet_mut!().unread_one(t);
     }
     Ok(())
   }
 
-  pub fn skip_one_space(&mut self) -> Result<()> {
-    if let Some(token) = self.read_token()? {
+  pub fn skip_one_space() -> Result<()> {
+    if let Some(token) = read_token()? {
       if token.get_catcode() != Catcode::SPACE {
-        self.unread_one(token);
+        gullet_mut!().unread_one(token);
       }
     }
     Ok(())
   }
 
-  pub fn setup_scan(&mut self) {
-    if self.pushback_has_smuggled_the {
-      self.pushback_has_smuggled_the = false;
+  pub fn setup_scan() {
+    if gullet!().pushback_has_smuggled_the {
+      gullet_mut!().pushback_has_smuggled_the = false;
       // setup new scan by removing any smuggle CCs
-      if let Some(runtime) = &mut self.mouth {
+      if let Some(runtime) = &mut gullet_mut!().mouth {
         for token in runtime.pushback.iter_mut() {
           if token.get_catcode() == Catcode::SmuggleTHE {
             *token = *token.take_dont_expand().unwrap();
@@ -1408,23 +1405,23 @@ impl Gullet {
 
   // <optional signs> = <optional spaces> | <optional signs><plus or minus><optional spaces>
   // returns false if None, or positive, true if negative
-  fn read_optional_signs(&mut self) -> Result<bool> {
+  fn read_optional_signs() -> Result<bool> {
     let mut sign = false;
-    while let Some(t) = self.read_x_token(None, false)? {
+    while let Some(t) = read_x_token(None, false)? {
       let sym = t.get_sym();
       if sym == arena::pin_static("-") {
         sign = !sign;
       } else if (sym != arena::pin_static("+")) && t.get_catcode() != Catcode::SPACE {
-        self.unread_one(t); // Unread and end
+        gullet_mut!().unread_one(t); // Unread and end
         break;
       }
     }
     Ok(sign)
   }
 
-  fn read_digits(&mut self, range_regex: &Regex, skip: bool) -> Result<String> {
+  fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
     let mut result = String::new();
-    while let Some(token) = self.read_x_token(None, false)? {
+    while let Some(token) = read_x_token(None, false)? {
       let digit_opt = token.with_str(|s| {
         if s.len() == 1 && range_regex.is_match(s) {
           s.chars().next()
@@ -1436,7 +1433,7 @@ impl Gullet {
         result.push(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
-          self.unread_one(token);
+          gullet_mut!().unread_one(token);
         }
         break;
       }
@@ -1447,14 +1444,14 @@ impl Gullet {
   // <factor> = <normal integer> | <decimal constant>
   // <decimal constant> = . | , | <digit><decimal constant> | <decimal constant><digit>
   // Return a number (Rust f64 number)
-  fn read_factor(&mut self) -> Result<Option<f64>> {
-    let mut factor = self.read_digits(&DIGIT_RE, false)?;
-    let mut token_opt = self.read_x_token(None, false)?;
+  fn read_factor() -> Result<Option<f64>> {
+    let mut factor = read_digits(&DIGIT_RE, false)?;
+    let mut token_opt = read_x_token(None, false)?;
     if let Some(ref token) = token_opt {
       let sym = token.get_sym();
       if sym == arena::pin_static(".") || sym == arena::pin_static(",") {
-        factor = s!("{}.{}", factor, self.read_digits(&DIGIT_RE, false)?);
-        token_opt = self.read_x_token(None, false)?;
+        factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
+        token_opt = read_x_token(None, false)?;
       }
     }
 
@@ -1463,39 +1460,35 @@ impl Gullet {
       let factor_f64: f64 = factor.parse::<f64>().unwrap_or(0.0);
       if let Some(token) = token_opt {
         if token.get_catcode() != Catcode::SPACE {
-          self.unread_one(token);
+          gullet_mut!().unread_one(token);
         }
       }
       Ok(Some(factor_f64))
     } else {
       if let Some(token) = token_opt {
-        self.unread_one(token);
+        gullet_mut!().unread_one(token);
       }
-      match self.read_normal_integer()? {
+      match read_normal_integer()? {
         None => Ok(None),
         Some(n) => Ok(Some(n.value_of() as f64)),
       }
     }
   }
 
-  pub fn do_expand<T: Into<Tokens>>(
-    &mut self,
-    tokens: T,
-  ) -> Result<Tokens> {
+  pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
     let tokens: Tokens = tokens.into();
     reading_from_mouth(
       Mouth::default(),
       move || -> Result<Tokens> {
-        gullet_mut!().unread(tokens);
+        { gullet_mut!().unread(tokens); }
         let mut expanded = Vec::new();
-        while let Some(t) = gullet_mut!().read_x_token(Some(false), false)? {
+        while let Some(t) = read_x_token(Some(false), false)? {
           expanded.push(t);
         }
         Ok(Tokens::new(expanded))
       },
     )
   }
-}
 
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
@@ -1552,15 +1545,17 @@ where
   FnR: FnOnce() -> Result<R>,
 {
   let mouth_source = mouth.get_source().to_string();
-  gullet_mut!().open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
+  { gullet_mut!().open_mouth(mouth, false); } // only allow mouth to be explicitly closed here.
   let results: R = reader()?;
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
+  let mut gullet = gullet_mut!();
   loop {
-    if let Some(ref mut runtime) = gullet_mut!().mouth {
+    let mouthstack_is_empty = gullet.mouthstack.is_empty();
+    if let Some(ref mut runtime) = gullet.mouth {
       if runtime.mouth.get_source() == mouth_source {
-        gullet_mut!().close_mouth(true)?;
+        gullet.close_mouth(true)?;
         break;
-      } else if gullet!().mouthstack.is_empty() {
+      } else if mouthstack_is_empty {
         let message = s!(
           "Reading from {}, but it has already been closed.",
           runtime.mouth.stringify()
@@ -1575,7 +1570,7 @@ where
       } else {
         let mut ready_to_read = false;
         {
-          if let Some(ref mut runtime) = gullet_mut!().mouth {
+          if let Some(ref mut runtime) = gullet.mouth {
             if !runtime.autoclose
               || !runtime.pushback.is_empty()
               || runtime.mouth.has_more_input()
@@ -1585,7 +1580,7 @@ where
           }
         }
         if ready_to_read {
-          let _next = gullet_mut!().read_token()?; // stringify( ?
+          let _next = read_token()?; // stringify( ?
           Error!(
             "unexpected",
             "next",
@@ -1594,15 +1589,15 @@ where
           // Error('unexpected', $next, $gullet, "Unexpected input remaining: '$next'",
           //   "Finished reading from " . Stringify($mouth) . ", but it still has input.");
           {
-            if let Some(ref mut runtime) = gullet_mut!().mouth {
+            if let Some(ref mut runtime) = gullet.mouth {
               runtime.mouth.finish();
             }
           }
-          gullet_mut!().close_mouth(true)?;
+          gullet.close_mouth(true)?;
         }
         // ?? if we continue?
         else {
-          gullet_mut!().close_mouth(false)?;
+          gullet.close_mouth(false)?;
         }
       }
     } else {

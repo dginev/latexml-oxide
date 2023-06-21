@@ -1184,7 +1184,7 @@ pub fn get_xmarg_id() -> Result<Tokens> {
       ..ExpandableOptions::default()
     })
   )?;
-  gullet_mut!().do_expand(T_CS!("\\the@XMARG@ID"))
+  gullet::do_expand(T_CS!("\\the@XMARG@ID"))
 }
 
 type ArgsUnpacked = Vec<Option<Tokens>>;

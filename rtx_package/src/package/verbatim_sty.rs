@@ -98,7 +98,7 @@ LoadDefinitions!({
     // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
-    while let Some(line) = gullet_mut!().read_raw_line() {
+    while let Some(line) = gullet::read_raw_line() {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();

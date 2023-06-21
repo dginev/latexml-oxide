@@ -73,13 +73,13 @@ pub fn input_definitions(
   // so let's make stomach a mandatory option.
   let prevname =
     if options.handleoptions && state!().lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      gullet_mut!().do_expand(T_CS!("\\@currname"))?.to_string()
+      gullet::do_expand(T_CS!("\\@currname"))?.to_string()
     } else {
       String::new()
     };
   let prevext = if options.handleoptions && state!().lookup_definition(&T_CS!("\\@currext"))?.is_some()
   {
-    gullet_mut!().do_expand(T_CS!("\\@currext"))?.to_string()
+    gullet::do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
     String::new()
   };
@@ -543,11 +543,10 @@ fn load_tex_definitions(
     pathname_mouth,
     move || -> Result<()> {
       while let Some(token) =
-        gullet_mut!()
-          .read_x_token(Some(false), false)?
+        gullet::read_x_token(Some(false), false)?
       {
         if token != T_SPACE!() {
-          stomach_mut!().invoke_token(&token)?;
+          stomach::invoke_token(&token)?;
         }
       }
       Ok(())
@@ -751,7 +750,7 @@ fn reset_options() -> Result<()> {
     Stored::VecDequeStored(VecDeque::new()),
     None,
   );
-  let opt_unused_cs = if gullet_mut!().do_expand(T_CS!("\\@currext"))?.to_string() == "cls" {
+  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.to_string() == "cls" {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"
@@ -1138,7 +1137,7 @@ pub fn build_invocation<T: Into<Token>>(
 pub fn do_expand<T: Into<Tokens>>(
   tokens: T
 ) -> Result<Tokens> {
-  gullet_mut!().do_expand(tokens)
+  gullet::do_expand(tokens)
 }
 
 /// Convert a LaTeX-style argument spec to our Package form.

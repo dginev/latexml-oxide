@@ -52,7 +52,7 @@ LoadDefinitions!({
       let font : Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
       let mut lines : Vec<SymbolU32> = Vec::new();
-      while let Some(line) = gullet_mut!().read_raw_line() {
+      while let Some(line) = gullet::read_raw_line() {
         // The raw chars will still have to be decoded (but not space!!)
         let mut decoded_line : String = String::new();
         for c in line.chars() {
@@ -111,7 +111,7 @@ LoadDefinitions!({
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     let space_sym = arena::pin_static(" ");
     let mut gullet = gullet_mut!();
-    while let Some(maybe_init) = gullet.read_token()? {
+    while let Some(maybe_init) = gullet::read_token()? {
       if maybe_init.get_sym() != space_sym {
         init = Some(maybe_init);
         break;
@@ -121,7 +121,7 @@ LoadDefinitions!({
     if let Some(ref init_token) = init {
       if *init_token == *T_OTHER_STAR {
         starred = true;
-        while let Some(maybe_init) =  gullet.read_token()? {
+        while let Some(maybe_init) =  gullet::read_token()? {
           if maybe_init.get_sym() != space_sym {
             init = Some(maybe_init);
             break;
@@ -133,7 +133,7 @@ LoadDefinitions!({
       let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
       state_mut!().assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = gullet.read_until(&delim)?;
+      let body = gullet::read_until(&delim)?;
       state_mut!().end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\@hidden@bgroup")];

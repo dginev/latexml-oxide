@@ -16,10 +16,12 @@ use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::state::{Scope};
+use crate::stomach;
+use crate::gullet;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator, state,state_mut, stomach_mut,gullet_mut};
+use crate::{Digested, Locator, state,state_mut};
 
 use super::argument::ArgWrap;
 
@@ -509,16 +511,15 @@ impl Definition for Register {
       return match internalcs {
         // Tracing ?
         None => Ok(Vec::new()),
-        Some(ref cs) => stomach_mut!().invoke_token(cs),
+        Some(ref cs) => stomach::invoke_token(cs),
       };
     }
 
     // my $profiled = $state::>lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
-    let mut gullet = gullet_mut!();
     let args = self.read_arguments()?;
-    gullet.read_keyword(&["="])?;
-    let value = gullet.read_value(self.register_type().unwrap())?;
+    gullet::read_keyword(&["="])?;
+    let value = gullet::read_value(self.register_type().unwrap())?;
 
     self.borrow().set_value(value, None, args);
 

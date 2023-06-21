@@ -21,7 +21,7 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use crate::{gullet, gullet_mut, state, state_mut};
+use crate::{gullet, state, state_mut};
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -259,7 +259,7 @@ impl Conditional {
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so state::shouldn't change behind our backs]
     loop {
-      let (t, cond_type) = match gullet_mut!().read_next_conditional()? {
+      let (t, cond_type) = match gullet::read_next_conditional()? {
         Some((tok, typ)) => (Tokens!(tok), Some(typ)),
         None => (Tokens!(), None),
       };
