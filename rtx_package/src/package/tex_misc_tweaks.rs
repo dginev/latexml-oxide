@@ -93,7 +93,7 @@ LoadDefinitions!({
   //       $document->getNode->appendChild($node);
   // } });
 
-  DefMacro!("\\dump", sub[_args] {
+  DefMacro!("\\dump", {
     Warn!("unexpected", "dump", "Do not know how to \\dump yet, sorry");
   });
 

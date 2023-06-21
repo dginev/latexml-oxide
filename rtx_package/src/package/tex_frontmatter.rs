@@ -31,7 +31,7 @@ LoadDefinitions!({
     Some(Scope::Global)
   );
 
-  DefConditional!("\\if@in@preamble", sub[_s,_args] { state!().lookup_bool("inPreamble") });
+  DefConditional!("\\if@in@preamble", { state!().lookup_bool("inPreamble") });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -41,7 +41,7 @@ LoadDefinitions!({
   //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-    sub[ (_keys_tks,tag,attrs_opt,tokens)] {
+    sub[(_keys_tks,tag,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
@@ -66,7 +66,8 @@ LoadDefinitions!({
     wrapped_tokens.push(T_END!());
     let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
-    let frontmatter = match state!().lookup_value_mut("frontmatter") {
+    let mut state = state_mut!();
+    let frontmatter = match state.lookup_value_mut("frontmatter") {
       Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
@@ -147,7 +148,7 @@ LoadDefinitions!({
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
-    after_digest => sub[_args] { state_mut!().assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+    after_digest => { state_mut!().assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
 
   // TeX.pool.ltxml, line 5421
   // Maintain a list of classes that apply to the document root.
@@ -200,7 +201,7 @@ LoadDefinitions!({
   // The design reflects LaTeX needs, more than TeX, but support starts here!
 
   // This collects up the various declared ltx:tag's into an ltx:tags
-  DefMacro!("\\lx@make@tags {}", sub[ (ttype)] {
+  DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
     let formatters = if let Some(Stored::HashStored(formatters)) =
       state!().lookup_value("type_tag_formatter") {
         Some(formatters.clone())
@@ -221,7 +222,7 @@ LoadDefinitions!({
           vec![
             Tokens!(T_OTHER!(role)),
             build_invocation(formatter, vec![Some(ttype.clone())])?
-          ])?
+          ])
         );
       }
     }
@@ -266,8 +267,9 @@ LoadDefinitions!({
   // "refnum" is the lowest level reference number for an object is typically \the<counter>
   // but be sure to use the right counter!  This is how \ref will show the number.
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
-  DefMacro!("\\lx@counterfor{}", sub[ (ctr_type)] {
-    if let Some(ctr) = LookupMapping!("counter_for_type", &ctr_type.to_string()) {
+  DefMacro!("\\lx@counterfor{}", sub[(ctr_type)] {
+    let state = state!();
+    if let Some(ctr) = state.lookup_mapping("counter_for_type", &ctr_type.to_string()) {
       Tokens!(T_OTHER!(ctr.to_string()))
     } else {
       ctr_type

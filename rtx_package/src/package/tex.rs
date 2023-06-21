@@ -1,6 +1,4 @@
 use crate::package::*;
-use rtx_core::{state_mut,state};
-
 LoadDefinitions!({
   // port of TeX.pool.ltxml
   // commit 6b748e367af3b15c11f41454bfe79bfc27763577

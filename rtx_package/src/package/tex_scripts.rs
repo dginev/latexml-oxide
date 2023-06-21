@@ -65,7 +65,7 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
 // in the new codebase, so as to avoid both 1) cloning and
 // 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
-fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
+fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
   //   let mut gullet = gullet_mut!();
   //   gullet.skip_spaces();
   let font = state!().lookup_font().unwrap();
@@ -85,6 +85,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go
     // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
+    let mut stomach = stomach_mut!();
     while let Some(prev) = stomach.box_list.pop() {
       if prev.get_property_bool("isSpace") {
         prevspace = true; // a space avoids double-scripts
@@ -105,9 +106,8 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
           if !prevspace {
             Error!(
               "unexpected",
-              s!("double-{}", lcode),
-              stomach,
-              s!("Double {}", lcode)
+              s!("double-{lcode}"),
+              s!("Double {lcode}")
             );
           }
           cs = if cc == Catcode::SUPER {
@@ -150,9 +150,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
     MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = stomach
-      .get_gullet_mut()
-      .read_x_token(Some(false), false)?
+    while let Some(tok) = gullet_mut!().read_x_token(Some(false), false)?
     {
       stuff = stomach.invoke_token(&tok)?;
       if !stuff.is_empty() {
@@ -163,7 +161,6 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
       Error!(
         "expected",
         "{",
-        stomach,
         "Missing sub/superscript argument"
       ); //$gullet->showUnexpected);
       stuff.push(Digested::default());
@@ -202,8 +199,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode) -> Result<Vec<Digested>> {
     Error!(
       "Unexpected",
       c,
-      stomach,
-      format!("Script {} can only appear in math mode", c)
+      format!("Script {c} can only appear in math mode")
     );
     let placeholder = if cc == Catcode::SUPER {
       T_SUPER!()
@@ -338,8 +334,8 @@ LoadDefinitions!({
     T_SUPER!(),
     None,
     Some(Rc::new(
-      |stomach: &mut Stomach, _args: Vec<ArgWrap>| {
-        script_handler( Catcode::SUPER)
+      |_args: Vec<ArgWrap>| {
+        script_handler(Catcode::SUPER)
       },
     )),
     PrimitiveOptions::default(),
@@ -348,7 +344,7 @@ LoadDefinitions!({
     T_SUB!(),
     None,
     Some(Rc::new(
-      |stomach: &mut Stomach, _args: Vec<ArgWrap>| {
+      |_args: Vec<ArgWrap>| {
         script_handler( Catcode::SUB)
       },
     )),
@@ -406,9 +402,10 @@ LoadDefinitions!({
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
 
-  DefMacro!("'", sub[_args] {
+  DefMacro!("'", {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
+    let mut gullet = gullet_mut!();
     while gullet.if_next(&T_OTHER!("'"))? {
       gullet.read_token()?;
       sup.push(T_CS!("\\prime"));
@@ -424,10 +421,11 @@ LoadDefinitions!({
   },
   mathactive => true); // Only in math!
 
-  DefMacro!("\\active@math@prime", sub[()] {
+  DefMacro!("\\active@math@prime", {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
+    let mut gullet = gullet_mut!();
     while gullet.if_next(&prime_token)? {
       gullet.read_token()?;
       sup.push(T_CS!("\\prime"));

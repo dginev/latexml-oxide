@@ -68,7 +68,7 @@ LoadDefinitions!({
   DefConstructor!("\\and", " and ");
 
   AssignValue!("NUMBER_OF_AUTHORS" => 0);
-  DefPrimitive!("\\lx@count@author", sub[ ()] {
+  DefPrimitive!("\\lx@count@author", sub[()] {
     let current = state!().lookup_int("NUMBER_OF_AUTHORS");
     AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
   });
@@ -98,13 +98,13 @@ LoadDefinitions!({
 
   DefMacro!("\\@author", "\\@empty");
   DefMacro!("\\author{}", "\\def\\@author{#1}\\lx@make@authors@anded{#1}", locked => true);
-  DefMacro!("\\lx@make@authors@anded{}", sub[ (authors)] {
+  DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
-  DefPrimitive!("\\ltx@authors@oneline", sub[ ()] {
+  DefPrimitive!("\\ltx@authors@oneline", sub[()] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
   });
-  DefPrimitive!("\\ltx@authors@multiline", sub[ ()] {
+  DefPrimitive!("\\ltx@authors@multiline", sub[()] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
   });
 
@@ -154,17 +154,18 @@ LoadDefinitions!({
   // Probably there are other places (eg in titlepage?) that should force the close??
 
   DefEnvironment!("{abstract}", "",
-    after_digest_begin => sub[ _args] {
+    after_digest_begin => {
       AssignValue!("inPreamble" => false);
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     },
-    after_digest => sub[ _args] {
+    after_digest => {
       let abstract_title = stomach::digest(Tokens!(T_CS!("\\format@title@abstract"),
         T_BEGIN!(), T_CS!("\\abstractname"), T_END!()))?;
-      let regurgitated = List::new(stomach.box_list.clone());
-      let frontmatter = match state!().lookup_value_mut("frontmatter") {
+      let regurgitated = List::new(stomach!().box_list.clone());
+      let mut state = state_mut!();
+      let frontmatter = match state.lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => Fatal!(TexPool, Expected, stomach,
+        _ => Fatal!(TexPool, Expected,
              "Global TeX Frontmatter hash was not available, should never happen"),
       };
       let abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
@@ -177,8 +178,8 @@ LoadDefinitions!({
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
-  DefMacro!("\\abstract", sub[ _args] {
-    if gullet.if_next(&TOKEN_BEGIN)? {
+  DefMacro!("\\abstract", {
+    if gullet_mut!().if_next(&TOKEN_BEGIN)? {
       T_CS!("\\abstract@onearg")
     } else {
       T_CS!("\\begin{abstract}")

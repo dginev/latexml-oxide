@@ -94,7 +94,7 @@ LoadDefinitions!({
   DefMacro!("\\pdf@filemdfivesum Number {}", None);
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
-    let filepath = Expand!(file,gullet).to_string();
+    let filepath = Expand!(file).to_string();
     if let Some(path) = find_file(&filepath,None) {
       unimplemented!();
       // let stat = stat $path;
@@ -141,7 +141,7 @@ LoadDefinitions!({
   DefMacro!("\\pdfinfo{}", None);
 
   // Ugh, what a mess of ugly syntax....
-  DefParameterType!(OpenActionSpecification, reader => reader!(_gullet, _args, _extra,{
+  DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
   unimplemented!(); ()
   //   my ($gullet) = @_;
   //   if (my $key = $gullet->readKeyword('openaction')) {
@@ -237,7 +237,7 @@ LoadDefinitions!({
 
   DefMacro!("\\expanded Expanded", "#1");
 
-  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[ (first,second)] {
+  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[(first,second)] {
     match first.to_string().cmp(&second.to_string()) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),

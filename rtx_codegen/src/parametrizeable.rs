@@ -32,7 +32,7 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
   if prototype.is_empty() {
     quote!(()).into()
   } else {
-    match parse_prototype(&prototype) {
+    match parse_prototype(&prototype, false) {
       Ok((cs, params_opt)) => {
         let csname = cs.with_cs_name(ToString::to_string);
         let proto_types: Vec<_> = if let Some(ref params) = params_opt {
@@ -94,7 +94,7 @@ pub fn compile_prototype(input: DeriveInput) -> TokenStream {
   if prototype.is_empty() {
     panic!("Must never call on empty prototype?! input was {prototype}");
   } else {
-    match parse_prototype(&prototype) {
+    match parse_prototype(&prototype, false) {
       Ok((cs, params_opt)) => match params_opt {
         Some(params) => quote!(
           macro_rules! this_cs_and_parameters {

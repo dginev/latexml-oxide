@@ -13,10 +13,11 @@ LoadDefinitions!({
   // However, since people abuse this, and we're really not quite TeX,
   // we really can't do it Right.
   // Even a \begin{array} ends up expanding into a $ !!!
-  DefMacro!("\\eqno", sub[()] {
+  DefMacro!("\\eqno", {
     // my $locator  = $gullet->getLocator;
     let mut stuff    = Vec::new();
     // This is risky!!!
+    let mut gullet = gullet_mut!();
     while let Some(t) = gullet.read_x_token(Some(false), false)? {
       if t == T_BEGIN!() {
         stuff.push(t);
@@ -38,14 +39,14 @@ LoadDefinitions!({
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
         // This seems needed within AmSTeX environs
       {
-        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)])?.unlist();
+        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)]).unlist();
         invoked.push(t);
         return Ok(Tokens::new(invoked));
       } else {
         stuff.push(t);
       }
     }
-    Error!("unexpected", "\\eqno", gullet, "Fell of the end reading tag for \\eqno!");
+    Error!("unexpected", "\\eqno", "Fell of the end reading tag for \\eqno!");
       // s!("started {locator}"));
     Tokens::new(stuff)
   });

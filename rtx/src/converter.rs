@@ -4,7 +4,7 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
-use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
+use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut, state_mut};
 use rtx_package::package;
 use std::rc::Rc;
 
@@ -204,8 +204,7 @@ impl Converter {
           Ok(dom) => dom.serialize_to_string(),
           Err(e) => {
             let message = s!("{:?}", e);
-            let error_where = &self.core;
-            let err = || {Error!("document", "convert", error_where, message); Ok(()) };
+            let err = || {Error!("document", "convert", message); Ok(()) };
             err().ok();
             String::new()
           },
@@ -282,7 +281,7 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
-    Info!("status", "conversion", None, self.runtime.status_code);
+    Info!("status", "conversion", self.runtime.status_code);
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

@@ -46,18 +46,13 @@ LoadDefinitions!({
     });
   }
   // TODO: Port and use `DefAutoload` instead of this single-purpose macro
-  DefPrimitive!("\\@load@latex@pool", sub[ ()] {
+  DefPrimitive!("\\@load@latex@pool", sub[()] {
     input_definitions(
       "LaTeX",
       InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
-      },
-      // Note: passing in "stomach" is crucial,
-      // or we can't invoke any RawTeX-like macros in the pool
-      // due to multiple mutable borrows of stomach!
-      stomach,
-      )?;
+      })?;
   });
 
   for _ltx3trigger in ["\\ExplSyntaxOn","\\ProvidesExplClass","\\ProvidesExplPackage"] {

@@ -1,7 +1,7 @@
 use crate::package::*;
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r",\s*").unwrap());
 
-LoadDefinitions!(outer_stomach, {
+LoadDefinitions!({
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
@@ -23,8 +23,8 @@ LoadDefinitions!(outer_stomach, {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-    before_digest => sub[stomach] { only_preamble("\\usepackage") },
-    after_digest => sub[ whatsit] {
+    before_digest => { only_preamble("\\usepackage") },
+    after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
       let package_list = match packages {
@@ -48,9 +48,9 @@ LoadDefinitions!(outer_stomach, {
 
   DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
   "<?latexml package='#2' ?#1(options='#1')?>",
-  before_digest =>  sub[stomach] { only_preamble("\\RequirePackage") },
-  after_digest => sub[ whatsit] {
-    let options  = whatsit.get_arg(1);
+  before_digest =>  { only_preamble("\\RequirePackage") },
+  after_digest => sub[whatsit] {
+    // let options  = whatsit.get_arg(1);
     let packages = whatsit.get_arg(2).unwrap();
   //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
     for pkg in packages.to_string().split(',') {
@@ -77,7 +77,7 @@ LoadDefinitions!(outer_stomach, {
   // Internals used in Packages
   DefMacro!("\\NeedsTeXFormat{}[]", None);
 
-  DefPrimitive!("\\ProvidesClass{}[]", sub[ (class, version_opt)] {
+  DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
@@ -85,13 +85,13 @@ LoadDefinitions!(outer_stomach, {
   });
 
   // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
-  DefMacro!("\\ProvidesPackage{}[]", sub[ (package, version_opt)] {
+  DefMacro!("\\ProvidesPackage{}[]", sub[(package, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
     () });
 
-  DefMacro!("\\ProvidesFile{}[]", sub[ (file, version_opt)] {
+  DefMacro!("\\ProvidesFile{}[]", sub[(file, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{file}"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
@@ -152,7 +152,7 @@ LoadDefinitions!(outer_stomach, {
     //   return; });
   );
   DefPrimitive!("\\@onefilewithoptions {} [][] {}",
-  sub[ (name,option1,option2,ext)] {
+  sub[(name,option1,option2,ext)] {
     unimplemented!();
     // InputDefinitions(ToString(Expand($name)),
     //    type => ToString(Expand($ext)), options => $option1);
@@ -161,27 +161,27 @@ LoadDefinitions!(outer_stomach, {
 
   DefMacro!("\\CurrentOption", None);
 
-  DefPrimitive!("\\ExecuteOptions{}", sub[ (options)] {
+  DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
     // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
-    Info!("TODO","\\ExecuteOptions",gullet,"implement fully, it's an empty stub.");
+    Info!("TODO","\\ExecuteOptions","implement fully, it's an empty stub.");
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[ (star)] {
+  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(star)] {
     // TODO:
     // if star.is_some() {
     //   "inorder"
     // }
     // ProcessOptions!(($star ? (inorder => 1) : ()));
-    Info!("TODO","\\ProcessOptions",stomach,"implement fully, missing 'inorder'");
-    process_options(stomach)?;
+    Info!("TODO","\\ProcessOptions","implement fully, missing 'inorder'");
+    process_options()?;
     Ok(Vec::new())
   });
   DefMacro!("\\@options", "\\ProcessOptions*");
 
   Let!("\\@enddocumenthook", "\\@empty");
-  DefMacro!("\\AtEndOfPackage{}", sub [gullet, (code)] {
+  DefMacro!("\\AtEndOfPackage{}", sub [(code)] {
     let name = Expand!(T_CS!("\\@currname")).to_string();
     let ttype = Expand!(T_CS!("\\@currext")).to_string();
     let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
@@ -192,7 +192,7 @@ LoadDefinitions!(outer_stomach, {
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
-  DefMacro!("\\@ifl@aded{}{}", sub[ (ext, name)] {
+  DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // If EITHER the raw TeX or ltxml version of this file was loaded.
   if state!().lookup_bool(&s!("{path}_loaded")) || state!().lookup_bool(&s!("{path}_binding_loaded")) {

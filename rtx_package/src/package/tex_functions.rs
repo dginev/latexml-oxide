@@ -11,8 +11,8 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     "HTEXT_MODE_BINDINGS"
   };
   let text_key = "TEXT_MODE_BINDINGS";
-  let mode_bindings = state::checkout_value(mode_key);
-  let text_bindings = state::checkout_value(text_key);
+  let mode_bindings = state_mut!().checkout_value(mode_key);
+  let text_bindings = state_mut!().checkout_value(text_key);
   let mut bindings: VecDeque<&Stored> = match mode_bindings {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.iter().collect::<VecDeque<&Stored>>(),
     _ => VecDeque::new(),
@@ -189,7 +189,6 @@ pub fn parse_def_parameters(
 
 pub fn do_def(
   globally: bool,
-  stomach: &mut Stomach,
   cs: Token,
   params: Tokens,
   body: Tokens,
@@ -197,7 +196,7 @@ pub fn do_def(
   let paramlist = parse_def_parameters(&cs, params)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };
-  state_mut!().install_definition(
+  state::install_definition(
     Expandable::new(
       cs,
       paramlist,
@@ -206,7 +205,7 @@ pub fn do_def(
         nopack_parameters: true,
         ..ExpandableOptions::default()
       }))?,
-    scope,
+    scope
   );
   state_mut!().after_assignment();
   Ok(())
@@ -239,11 +238,10 @@ pub fn decode_math_char(
   n %= 16 * 256;
   let fam: u16 = n / 256;
   n %= 256;
-  let font = state
-    .lookup_value(&s!("textfont_{fam}"))
+  let state = state!();
+  let font = state.lookup_value(&s!("textfont_{fam}"))
     .unwrap_or_else(|| {
-      state
-        .lookup_value(&s!("scriptfont_{fam}"))
+        state.lookup_value(&s!("scriptfont_{fam}"))
         .unwrap_or_else(|| {
           state
             .lookup_value(&s!("scriptscriptfont_{fam}"))
@@ -254,8 +252,8 @@ pub fn decode_math_char(
   // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
   let c = n as u8 as char;
   // // If no specific class, Lookup properties from a DefMath?
-  let charinfo = state!().lookup_value(&s!("math_token_attributes_{}", c));
-  let fontinfo = state!().lookup_font_info(&T_CS!(font.to_string()))?;
+  let charinfo = state.lookup_value(&s!("math_token_attributes_{}", c));
+  let fontinfo = state.lookup_font_info(&T_CS!(font.to_string()))?;
   let mut role = MATH_CLASS_ROLE[class as usize];
 
   if role.is_empty() {
@@ -284,9 +282,9 @@ pub fn decode_math_char(
 // Risky: I think this needs to be digested as a body to work like TeX (?)
 // but parameter think's it's just parsing from gullet...
 pub fn read_box_contents(
-  gullet: &mut Gullet,
   everybox_opt: Option<Tokens>,
 ) -> Result<Tokens> {
+  let mut gullet = gullet_mut!();
   while let Some(t) = gullet.read_token()? {
     if t.get_catcode() == Catcode::BEGIN {
       break;
@@ -310,10 +308,9 @@ pub fn read_box_contents(
 /// digested result Hence it is *always* needed to pair `read_box_contents` with its stomach-level
 /// counterpart, `predigest_box_contents`
 pub fn predigest_box_contents(
-  stomach: &mut Stomach,
   _tokens: ArgWrap,
 ) -> Result<Option<Digested>> {
-  let mut contents = stomach.invoke_token(&T_BEGIN!())?;
+  let mut contents = stomach_mut!().invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
   } else {
@@ -383,10 +380,10 @@ pub fn insert_block(
   }
   let hasattr = !blockattr.is_empty();
   if hasattr
-    || !document.can_contain_node_somehow(&context, "ltx:p")
-    || document.can_contain(&context, "#PCDATA")
+    || !document::can_contain_node_somehow(&context, "ltx:p")
+    || document::can_contain(&context, "#PCDATA")
   {
-    let tag = if document.can_contain(&context, blocktag) {
+    let tag = if document::can_contain(&context, blocktag) {
       blocktag
     } else {
       iblocktag
@@ -409,17 +406,17 @@ pub fn insert_block(
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    let qname = document.get_node_qname(&nodes[0]);
+    let qname = document::get_node_qname(&nodes[0]);
     if qname == arena::pin_static("ltx:break") {
       // ltx:break are superflous, now, unless we're transporting a figure/float
-      let bp_name = document.get_node_qname(&nodes[0].get_parent().unwrap());
+      let bp_name = document::get_node_qname(&nodes[0].get_parent().unwrap());
       if bp_name != arena::pin_static("ltx:figure") && bp_name != arena::pin_static("ltx:float") {
         document.remove_node(&mut nodes.pop_front().unwrap());
         continue;
       }
     }
     let mut inline = Vec::new(); // Collect up sequences of Inline
-    while !nodes.is_empty() && state::model.is_node_in_schema_class("Inline", &nodes[0]) {
+    while !nodes.is_empty() && model!().is_node_in_schema_class("Inline", &nodes[0]) {
       inline.push(nodes.pop_front().unwrap());
     }
     if !inline.is_empty() {
@@ -452,10 +449,9 @@ pub fn insert_block(
       document.remove_node(&mut blocknode); // then remove the new block entirely
     } else if rows.len() == 1
       && crows.len() == 1
-      && state
-        .model
+      && model!()
         .with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
-      && document.can_contain_sym(
+      && document::can_contain_sym(
         &blocknode.get_parent().unwrap(),
         model!().get_node_qname(&crows[0]),
           )
@@ -469,7 +465,7 @@ pub fn insert_block(
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
     } else if rows.len() == 1
-      && document.can_contain_sym(
+      && document::can_contain_sym(
         &blocknode.get_parent().unwrap(),
         model!().get_node_qname(&rows[0]),
           )
@@ -612,8 +608,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   // How much math should determine the switch?
   // [will alignment attributes be lost?]
   } else if children.len() == 1
-    && state
-      .model
+    && model!()
       .with_node_qname(children.first().as_ref().unwrap(), |qname| {
         qname == "ltx:tabular"
       })
@@ -830,7 +825,6 @@ pub struct KVSpec {
   pub skip: bool,
 }
 pub fn keyvals_aux(
-  gullet: &mut Gullet,
   until: Option<Token>,
   mut spec: KVSpec,
 ) -> Result<KeyVals> {
@@ -862,7 +856,7 @@ pub fn keyvals_aux(
   );
   // and read it from the gullet
   if let Some(until_token) = until {
-    keyvals.read_from(gullet, until_token)?;
+    keyvals.read_from( until_token)?;
   }
   // we still want to make use of the hash
   Ok(keyvals)
@@ -959,14 +953,12 @@ pub fn set_align_or_class(
   }
   // HACK
   else if !align.is_empty()
-    && state
-      .model
+    && model!()
       .can_have_attribute(qname, arena::pin_static("align"))
   {
     node.set_attribute("align", align)?;
   } else if !class.is_empty()
-    && state
-      .model
+    && model!()
       .can_have_attribute(qname, arena::pin_static("class"))
   {
     document.add_class(node, class)?;
@@ -979,7 +971,7 @@ pub fn make_generic_message(
   args: Vec<Tokens>,
   kind: &str,
   ) -> Result<()> {
-  stomach.bgroup();
+  stomach_mut!().bgroup();
   state_mut!().let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\string"),
@@ -994,12 +986,11 @@ pub fn make_generic_message(
   for arg in args.into_iter() {
     let mut arg_toks = arg.unlist();
     arg_toks.push(T_CS!("\\MessageBreak"));
-    let gullet = gullet_mut!();
     let arg_str = Expand!(arg_toks).to_string();
     message.push_str(&arg_str);
   }
 
-  stomach.egroup()?;
+  stomach_mut!().egroup()?;
   //   return ('latex', $cmd, $stomach, $message);
   match kind {
     "error" => {
@@ -1033,7 +1024,7 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
 
 pub fn in_svg(document: &Document) -> bool {
   if let Some(context) = document.get_element() {
-    document.with_node_qname(&context,
+    document::with_node_qname(&context,
       |qname| qname.starts_with("svg:"))
   } else { false }
 }

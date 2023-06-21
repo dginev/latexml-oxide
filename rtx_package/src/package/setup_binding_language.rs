@@ -167,7 +167,7 @@ macro_rules! DefMathLigature {
       let mut node : Node;
       let mut node_mut = node_opt;
       for c in chars.iter() {
-        if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
+        if model!().with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
            node_mut.get_content() != c.to_string() {
           return Ok(None);
         }
@@ -184,8 +184,8 @@ macro_rules! DefMathLigature {
         Ok(None)
       }
     }));
-    let id = st.generate_ligature_id();
-    st.unshift_value("MATH_LIGATURES", vec![Ligature {
+    let id = state_mut!().generate_ligature_id();
+    state_mut!().unshift_value("MATH_LIGATURES", vec![Ligature {
       id,
       matcher,
       code: None,
@@ -193,11 +193,11 @@ macro_rules! DefMathLigature {
       regex: None,
     }]);
   }};
-  (matcher => sub[$document:ident, $node:ident, $state:::ident] $code:block) => {{
-    let id = st.generate_ligature_id();
+  (matcher => sub[$document:ident, $node:ident] $code:block) => {{
+    let id = state_mut!().generate_ligature_id();
     let matcher : Option<LigatureMatcher> = Some(Rc::new(
       |$document: &mut Document, $node: &mut Node| $code));
-      st.unshift_value("MATH_LIGATURES", vec![Ligature {
+      state_mut!().unshift_value("MATH_LIGATURES", vec![Ligature {
         id,
         matcher,
         code: None,
@@ -210,13 +210,13 @@ macro_rules! DefMathLigature {
 #[macro_export]
 macro_rules! DefConditional(
   // test with explicit arguments can get typed at compile-time
-  ($proto:literal, sub [ $gullet:ident, ( $($var:ident),* )]
+  ($proto:literal, sub [( $($var:ident),* )]
     $body:block $($input:tt)*) => {{
     compile_prototype_for_typed_conditional!($proto, sub [ ( $($var),* )]
       $body $($input)*)
   }};
   // test is always a rust closure
-  ($proto:literal, sub [ $gullet:ident, $args:ident]
+  ($proto:literal, sub [$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
     let (cs, paramlist) = parse_prototype!($proto);
@@ -354,6 +354,15 @@ macro_rules! DefPrimitive {
       });
     def_primitive($cs, None, Some(replacement_closure), options)?;
   }};
+  // Case: cs-noparams with closure block
+  ($cs:expr, None, $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
+    let replacement_closure = Rc::new(
+      move |_args: Vec<ArgWrap>| {
+        $body.into_digested_result()
+      });
+    def_primitive($cs, None, Some(replacement_closure), options)?;
+  }};
   // Case: no replacement
   ($proto:literal, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
@@ -434,12 +443,9 @@ macro_rules! LookupRegisterOrDefault {
   ($cs:expr) => {
     LookupRegisterOrDefault!($cs, Vec::new())
   };
-  ($cs:expr, $parameters:expr) => {{
-    LookupRegisterOrDefault!($cs, $parameters)
-  }};
   ($cs:expr, $parameters:expr) => {
-    if let Some(defn) = $state::arg.lookup_register_definition(&T_CS!($cs)) {
-      defn.value_of($parameters, $state::arg).unwrap_or_default()
+    if let Some(defn) = state!().lookup_register_definition(&T_CS!($cs)) {
+      defn.value_of($parameters).unwrap_or_default()
     } else {
       RegisterValue::default()
     }
@@ -487,15 +493,15 @@ macro_rules! LookupRegisterOrDefault {
 #[macro_export]
 macro_rules! DefConstructor {
   // Closure replacement flavors
-  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident]
+  ($proto:literal, sub [ $document:ident, $args:ident, $props:ident ]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
       replacement!($document, $args, $props, $body)));
     let (cs, params) = parse_prototype!($proto);
-    def_constructor(cs, params, compiled_replacement, options)?;
+    def_constructor(cs, params, compiled_replacement, options);
   }};
-  ($proto:literal, sub [ $document:ident, $args:ident]
+  ($proto:literal, sub [ $document:ident, $args:ident ]
     $body:block $($input:tt)*) => {{
     #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
@@ -503,7 +509,7 @@ macro_rules! DefConstructor {
     let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
       replacement!($document, $args, props, $body)));
     let (cs, params) = parse_prototype!($proto);
-    def_constructor(cs, params, compiled_replacement, options)?;
+    def_constructor(cs, params, compiled_replacement, options);
   }};
   ($proto:literal, sub [ $document:ident] $body:block $($input:tt)*) => {{
     #![allow(unused_variables)]
@@ -513,38 +519,38 @@ macro_rules! DefConstructor {
     let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
       replacement!($document, args, props, $body)));
     let (cs, params) = parse_prototype!($proto);
-    def_constructor(cs, params, compiled_replacement, options)?;
+    def_constructor(cs, params, compiled_replacement, options);
   }};
   // Literal replacement flavors
   ($proto:expr, $replacement:literal) => {{
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor(cs, params, compiled_replacement, ConstructorOptions::default())?;
+    def_constructor(cs, params, compiled_replacement, ConstructorOptions::default());
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident,ident]
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident]
     $body:block, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let compiled_replacement : Option<ReplacementClosure>= Some(Rc::new(
       replacement!($document, $args, $props, $body)));
-    def_constructor($cs, $parameters, compiled_replacement, options)?;
+    def_constructor($cs, $parameters, compiled_replacement, options);
   }};
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident,ident]
+  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident]
     $body:block) => {{
     let compiled_replacement : Option<ReplacementClosure>= Some(Rc::new(
       replacement!($document, $args, $props, $body)));
-    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default())?;
+    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
   //  Pre-parsed prototype; Literal replacement flavors
   ($cs:expr, $parameters:expr, $replacement:literal) => {{
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default())?;
+    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
   ($cs:expr, $parameters:expr, None) => {{
-    def_constructor($cs, $parameters, $replacement, ConstructorOptions::default())?;
+    def_constructor($cs, $parameters, $replacement, ConstructorOptions::default());
   }};
 
   // Optioned flavors come last due to :tt munching
@@ -552,18 +558,18 @@ macro_rules! DefConstructor {
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor($cs, $parameters, compiled_replacement, options)?;
+    def_constructor($cs, $parameters, compiled_replacement, options);
   }};
   ($cs:expr, $parameters:expr, None, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    def_constructor($cs, $parameters, None, options)?;
+    def_constructor($cs, $parameters, None, options);
   }};
   ($proto:expr, $replacement:literal, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor(cs, params, compiled_replacement, options)?;
+    def_constructor(cs, params, compiled_replacement, options);
   }};
 }
 
@@ -576,22 +582,20 @@ macro_rules! parse_prototype(
   ($proto:literal) => {{
     let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
     match params_opt {
-      Some(params) => (cs, Some(params.init(st)?)),
+      Some(params) => (cs, Some(params.init()?)),
       None => (cs, None),
     }
   }};
   ($proto:literal) => {{
     let (cs, params_opt) : (Token,Option<Parameters>) = compile_prototype!($proto);
     match params_opt {
-      Some(params) => (cs, Some(params.init($state::arg)?)),
+      Some(params) => (cs, Some(params.init()?)),
       None => (cs, None),
     }
   }};
   // expressions get handled at runtime
   ($proto:expr) => {{
-    rtx_core::common::def_parser::parse_prototype($proto, Some(st))? }};
-  ($proto:expr) => {{
-    rtx_core::common::def_parser::parse_prototype($proto, Some($state::arg))? }};
+    rtx_core::common::def_parser::parse_prototype($proto, true)? }};
 );
 
 // sub DocType {
@@ -604,9 +608,6 @@ macro_rules! parse_prototype(
 
 #[macro_export]
 macro_rules! DefEnvironmentWO (
-  ($proto_raw:expr, $replacement:expr, $options:expr) => {{
-    DefEnvironmentWO!($proto_raw, $replacement, $options)
-  }};
   ($proto_raw:expr, $replacement:expr, $options:expr) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
@@ -615,31 +616,25 @@ macro_rules! DefEnvironmentWO (
   compile_replacement!(compiled_replacement, $replacement);
 
   let options = $options;
-  def_environment(name, None, compiled_replacement, options, $state::arg);
+  def_environment(name, None, compiled_replacement, options);
 }));
 
 #[macro_export]
 macro_rules! DefEnvironmentIWO (
-  ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => {{
-    DefEnvironmentIWO!($proto_raw, $compiled_replacement, $options)
-  }};
   ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => ({
   use rtx_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
   // TODO: What do we do with param lists?
   //let paramlist_str = proto.trim_start().to_string();
-  def_environment(name, None, $compiled_replacement, $options, $state::arg);
+  def_environment(name, None, $compiled_replacement, $options);
 }));
 
 #[macro_export]
 macro_rules! RelaxNGSchema {
   ($name:expr) => {{
-    RelaxNGSchema!($name)
+    select_relaxng_schema($name, None)
   }};
-  ($name:expr,$state::arg:ident) => {
-    select_relaxng_schema($name, None, $state::arg)
-  };
 }
 
 #[macro_export]
@@ -698,67 +693,43 @@ macro_rules! defi_math {
 //           the inner counter's scopes are also deactivated.
 //           NOTE: I'm not sure this is even a sensible implementation,
 //           or why inner should be different than the counters reset by incrementing this counter.
-#[macro_export]
-macro_rules! NewCounterWO {
-  ($ctr:expr, $within:expr, None) => {
-    new_counter($ctr, $within, None, stmch)?
-  };
 
-  ($ctr:expr, $within:expr, $opts:expr) => {
-    new_counter($ctr, $within, Some($opts))?
-  };
-}
 #[macro_export]
 macro_rules! CounterValue {
   ($ctr:expr) => {{
     counter_value($ctr)?
   }};
   ($ctr:expr) => {
-    counter_value($ctr, $state::arg)?
+    counter_value($ctr)?
   };
 }
 
 #[macro_export]
 macro_rules! AddToCounter {
-  ($ctr:expr, $value:expr, $gullet:ident) => {{
-    add_to_counter($ctr, $value.into(), $gullet)?
-  }};
-  ($ctr:expr, $value:expr, $gullet:ident) => {
-    add_to_counter($ctr, $value.into(), $gullet, $state::arg)
-  };
+  ($ctr:expr, $value:expr) => {
+    add_to_counter($ctr, $value.into())?
+  }
 }
 #[macro_export]
 macro_rules! StepCounter {
-  ($ctr:expr, $noreset:expr, $gullet:ident) => {{
-    step_counter($ctr, $noreset, $gullet)
-  }};
-  ($ctr:expr, $noreset:expr, $gullet:ident) => {
-    step_counter($ctr, $noreset, $gullet, $state::arg)
+  ($ctr:expr, $noreset:expr) => {
+    step_counter($ctr, $noreset)
   };
 }
 
 /// convenience macro for `api::counter_dialect::ref_step_counter`
 #[macro_export]
 macro_rules! RefStepCounter {
-  ($ctr:expr, $noreset:expr, $stomach:ident) => {{
-    ref_step_counter($ctr, $noreset, $stomach)
-  }};
-  ($ctr:expr, $noreset:expr, $stomach:ident) => {
-    ref_step_counter($ctr, $noreset, $stomach, $state::arg)
+  ($ctr:expr, $noreset:expr) => {
+    ref_step_counter($ctr, $noreset)
   };
 }
 
 /// convenience macro for `api::counter_dialect::ref_step_id`
 #[macro_export]
 macro_rules! RefStepID {
-  ($ctr:expr) => {{
-    ref_step_id($ctr, stmch)
-  }};
-  ($ctr:expr, $stomach:ident) => {{
-    ref_step_id($ctr, $stomach)
-  }};
-  ($ctr:expr, $stomach:ident) => {
-    ref_step_id($ctr, $stomach, $state::arg)
+  ($ctr:expr) => {
+    ref_step_id($ctr)
   };
 }
 #[macro_export]
@@ -770,41 +741,30 @@ macro_rules! ResetCounter {
     reset_counter($ctr)?
   }};
   ($ctr:expr) => {
-    reset_counter($ctr, $state::arg)?
+    reset_counter($ctr)?
   };
 }
 
 /// Return $tokens with all tokens expanded
 #[macro_export]
 macro_rules! Expand {
-  ($tokens:expr, $gullet:ident) => {{
-    do_expand($tokens, $gullet)?
-  }};
-  ($tokens:expr, $gullet:ident) => {
-    do_expand($tokens, $gullet, $state::arg)?
-  };
+  ($tokens:expr) => {
+    do_expand($tokens)?
+  }
 }
 
 /// Invocation(<list of Token>); builds a representation of a command sequence invoked on its
 /// arguments
 #[macro_export]
 macro_rules! Invocation {
-  ($csname:literal, $args:expr, $gullet:expr) => {{
-    Invocation!(T_CS!($csname), $args, $gullet)
+  ($csname:literal, $args:expr) => {{
+    Invocation!(T_CS!($csname), $args)
   }};
-  ($csname:literal, $args:expr, $gullet:expr) => {
-    Invocation!(T_CS!($csname), $args, $gullet, $state::arg)
-  };
-  ($token:expr, $args:expr, $gullet:expr) => {{
-    Invocation!($token, $args, $gullet)
-  }};
-  ($token:expr, $args:expr, $gullet:expr) => {
+  ($token:expr, $args:expr) => {
     build_invocation(
       $token,
-      $args.into_iter().map(Into::into).collect(),
-      $gullet,
-
-    )
+      $args.into_iter().map(Into::into).collect()
+    )?
   };
 }
 #[macro_export]
@@ -936,7 +896,7 @@ macro_rules! RemoveValue {
 #[macro_export]
 macro_rules! PushValue {
   ($name:expr => $values:expr) => {{
-    st.push_value($name, $values)?
+    state_mut!().push_value($name, $values)?
   }};
   ($name:expr, $values:expr) => {{
     state_mut!().push_value($name, $values)?
@@ -959,12 +919,6 @@ macro_rules! ShiftValue {
   ($name:expr) => {{
     state_mut!().shift_value($name)
   }};
-}
-#[macro_export]
-macro_rules! LookupMapping {
-  ($map:expr, $key:expr) => {
-    state!().lookup_mapping($map, $key)
-  };
 }
 #[macro_export]
 macro_rules! AssignMapping {
@@ -1021,7 +975,7 @@ macro_rules! LookupDefinition {
 #[macro_export]
 macro_rules! InstallDefinition {
   ($name:expr, $definition:expr, $scope:expr) => {
-    state_mut!().install_definition($name, $definition, $scope)
+    state::install_definition($name, $definition, $scope)
   };
 }
 #[macro_export]
@@ -1076,14 +1030,11 @@ macro_rules! Let {
 
 #[macro_export]
 macro_rules! DigestIf {
-  ($token:literal, $stomach:ident) => {{
-    DigestIf!(T_CS!($token), $stomach)
-  }};
-  ($token:literal, $stomach:ident) => {
-    digest_if(T_CS!($token), $stomach)
+  ($token:literal) => {
+    digest_if(T_CS!($token))
   };
-  ($token:expr, $stomach:ident) => {
-    digest_if($token, $stomach)
+  ($token:expr) => {
+    digest_if($token)
   };
 }
 #[macro_export]
@@ -1138,7 +1089,7 @@ macro_rules! DefMacro {
       $body $($input)*)
   }};
   // closure, general form
-  ($proto:expr, sub [ $args:ident]
+  ($proto:expr, sub [$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
@@ -1147,13 +1098,14 @@ macro_rules! DefMacro {
       Rc::new(move |mut $args| $body.into_tokens_result())));
     def_macro(cs, params, expansion_closure, Some(options))?;
   }};
-  ($proto:expr, $body:block) => {{
+  ($proto:expr, $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     #[allow(unused_mut, unused_variables)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |gullet, mut args| $body.into_tokens_result()
+      move |mut args| $body.into_tokens_result()
     )));
-    def_macro(cs, params, expansion_closure, None)?;
+    def_macro(cs, params, expansion_closure, Some(options))?;
   }};
   // String; implicit state
   ($proto:literal, $expansion:literal $($input:tt)*) => {{
@@ -1191,6 +1143,12 @@ macro_rules! DefMacro {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro($cs, None, compiled_expansion, None)?;
+  }};
+  ($cs:expr, None, $body:block) => {{
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |_args| $body.into_tokens_result()
+    )));
+    def_macro($cs, None, expansion_closure, None)?;
   }};
   ($cs:expr, None, $expansion:expr) => {{
     def_macro($cs, None, $expansion, None)?;
@@ -1236,7 +1194,7 @@ macro_rules! TypedMacro {
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
             Ok(v) => v,
             Err(e) => {
-              Error!("expected", "argument", $gullet, e);
+              Error!("expected", "argument", e);
               <parameter_rust_type!($ptype)>::default()
             }
           };
@@ -1302,22 +1260,16 @@ macro_rules! defi_register {
         $value
       }
     }; // allow to reborrow state::
-    def_register($cs, $paramlist, value, $options, $state::arg)?
+    def_register($cs, $paramlist, value, $options)?
   };
 }
 
 #[macro_export]
 macro_rules! NewCounter {
-  ($ctr:expr) => (NewCounterWO!($ctr, "", None));
-  ($ctr:expr, $within:expr) => (NewCounterWO!($ctr, $within, None));
+  ($ctr:expr) => (new_counter($ctr, "", None)?);
+  ($ctr:expr, $within:expr) => (new_counter($ctr, $within, None)?);
   ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) => (
-    NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*))));
-  // with state
-  ($ctr:expr) => (NewCounterWO!($ctr, "", None, $state::arg));
-  ($ctr:expr, $within:expr) => (NewCounterWO!($ctr, $within, None, $state::arg));
-  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) =>
-    (NewCounterWO!($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)),
-      $state::arg))
+    new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)))?);
 }
 
 //=====================================================================
@@ -1380,19 +1332,13 @@ macro_rules! DefParameterType {
     DefParameterTypeWO!($name, NewDefault!(Parameter, name => Cow::Borrowed(stringify!($name)),
     $($key=>$value),*)));
   // with reader as explicit sub
-  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident,ident] $body:block) => (
+  ($name:ident, sub[$inner:ident, $extra:ident] $body:block) => (
     DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
-      reader!($gullet, $inner, $extra, $body))));
-  // ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident,ident]
-  //   $body:block, $($key:ident => $value:expr),*) => (
-  //     DefParameterTypeWO!($name, NewDefault!(Parameter, reader =>
-  //       reader!($gullet, $inner, $extra, $body),
-  //     name => Cow::Borrowed(stringify!($name)),  $($key=>$value),*)));
+      reader!($inner, $extra, $body))));
   // fully advanced version, including e.g. inner sub[] patterns for before_digest, after_digest,...
-  ($name:ident, sub[$gullet:ident, $inner:ident, $extra:ident,ident]
-    $body:block, $($input:tt)+) => (
+  ($name:ident, sub[$inner:ident, $extra:ident] $body:block, $($input:tt)+) => (
       let mut paramtype_options = defi_opts!(@munch ($($input)*) -> {Parameter,});
-      paramtype_options.reader = reader!($gullet, $inner, $extra, $body);
+      paramtype_options.reader = reader!($inner, $extra, $body);
       paramtype_options.name = Cow::Borrowed(stringify!($name));
       DefParameterTypeWO!($name, paramtype_options));
 }
@@ -1406,6 +1352,13 @@ macro_rules! DefColumnType {
     )));
     DefColumnType!($proto, expansion_closure)
   };
+  ($proto:literal, $body:block) => {
+    #[allow(unused_mut)]
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |_args| $body.into_tokens_result()
+    )));
+    DefColumnType!($proto, expansion_closure)
+  };
   ($proto:literal, $expansion_closure:ident) => {
     let mut c_chars = $proto.chars();
     if let Some(first_c) = c_chars.next() {
@@ -1413,7 +1366,7 @@ macro_rules! DefColumnType {
       while c_chars_peek.peek() == Some(&' ') {
         c_chars_peek.next();
       }
-      let proto = parse_parameters(&c_chars_peek.collect::<String>(), &T_RELAX!(), Some(st))?;
+      let proto = parse_parameters(&c_chars_peek.collect::<String>(), &T_RELAX!(), true)?;
       def_macro(
         T_CS!(s!("\\NC@rewrite@{first_c}")),
         proto,
@@ -1438,7 +1391,7 @@ macro_rules! Revert {
     Explode!($thing)
   };
   ($thing:expr) => {{
-    $thing.revert(st)?.unlist()
+    $thing.revert()?.unlist()
   }};
 }
 
@@ -1472,7 +1425,6 @@ macro_rules! GetKeyVals {
 macro_rules! DefKeyVal {
   ($keyset:expr, $key:expr, $vtype:expr) => {{
     let prefix = "KV";
-    let gullet = gullet_mut!();
     ::rtx_core::keyval::define(
       KeyvalConfig {
         prefix,
@@ -1481,16 +1433,12 @@ macro_rules! DefKeyVal {
         vtype: $vtype,
         default: None,
         ..KeyvalConfig::default()
-      },
-      gullet,
-      st,
-    )?;
+      })?;
   }};
   ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
     // extract the prefix
     // my $prefix = $options{prefix} || 'KV';
     let prefix = "KV";
-    let gullet = gullet_mut!();
     ::rtx_core::keyval::define(
       KeyvalConfig {
         prefix,
@@ -1517,30 +1465,19 @@ macro_rules! Digest {
   ($string:literal) => {{
     let tokenized;
     compile_tokenize_internal!(tokenized, $string);
-    stmch.digest(tokenized)
+    stomach::digest(tokenized)
   }};
 
   ($tokens:expr) => {{
-    stmch.digest($tokens)
-  }};
-  ($tokens:expr) => {{
-    let state::stomach = Rc::clone(&$state::arg.stomach);
-    let mut state::stomach_mut = state::stomach.borrow_mut();
-    state::stomach_mut.digest($tokens, $state::arg)
+    stomach::digest($tokens)
   }};
 }
 
 #[macro_export]
 macro_rules! DigestText {
   ($tokens:expr) => {{
-    digest_text($tokens, outer_stomach!())
+    digest_text($tokens)
   }};
-  ($tokens:expr, $stomach:ident) => {{
-    DigestText!($tokens, $stomach)
-  }};
-  ($tokens:expr, $stomach:ident) => {
-    digest_text($tokens, $stomach, $state::arg)
-  };
 }
 
 /// Tokenize($string); Tokenizes the string using the standard cattable, returning a
@@ -1553,13 +1490,7 @@ macro_rules! Tokenize {
     tokenized
   }};
   ($string:expr) => {
-    mouth::tokenize($string, None)
-  };
-  ($string:expr, None) => {
-    mouth::tokenize($string, None)
-  };
-  ($string:expr) => {
-    mouth::tokenize($string, Some($state::arg))
+    mouth::tokenize($string)
   };
 }
 
@@ -1580,7 +1511,7 @@ macro_rules! TokenizeInternal {
 #[macro_export]
 macro_rules! RawTeX {
   ($text:expr) => {
-    raw_tex($text)?;
+    ::rtx_core::stomach::raw_tex($text)?;
   }
 }
 
@@ -1612,10 +1543,10 @@ macro_rules! DocType {
     DocType!($rootelement, $pubid, $sysid, namespaces)
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr) => {{
-    let mut model = &mut $state::arg.model;
-    model.set_doc_type($rootelement, $pubid, $sysid);
+    let mut md = model_mut!();
+    md.set_doc_type($rootelement, $pubid, $sysid);
     for (prefix, value) in $namespaces.iter() {
-      model.register_document_namespace(prefix, Some(value));
+      md.register_document_namespace(prefix, Some(value));
     }
   }};
 }
@@ -1623,89 +1554,57 @@ macro_rules! DocType {
 #[macro_export]
 macro_rules! Today {
   () => {{
-    today(st)?
+    today()?
   }};
 }
 
 #[macro_export]
 macro_rules! SetPrefix {
   ($prefix:literal) => {{
-    st.set_prefix($prefix);
+    state_mut!().set_prefix($prefix);
   }};
 }
 
 #[macro_export]
 macro_rules! DeclareOption {
   (None, $tokenized:ident) => {
-    DeclareOption!(None, $tokenized)
-  };
-  (None, $tokenized:ident) => {
     let cs = String::from("\\default@ds");
     def_macro(T_CS!(cs), None, $tokenized, None)?;
   };
-  (None, sub $body:block) => {
-    DeclareOption!(None, sub[stomach] $body)
-  };
-  (None, sub[$state::ident] $body:block) => {
-    DeclareOption!(None, sub[stomach] $body)
-  };
-  (None, sub[$stomach:ident, $state::ident] $body:block) => {
-    DeclareOption!(None, sub[$stomach] $body)
-  };
-  (None, sub[$stomach:ident,ident] $body:block) => {
+  (None, $(sub)? $body:block) => {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
-    let code: PrimitiveClosure = Rc::new(move |$stomach, _args,
-      $body, $stomach.into_digested_result()
-    );
+    let code: PrimitiveClosure = Rc::new(move |_args| $body.into_digested_result());
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
-  };
-  ($option:expr, None) => {
-    DeclareOption!($option, {})
   };
   ($option:expr, $tex:literal) => {
     let tokenized;
     compile_tokenize_internal!(tokenized, $tex);
-    st.push_value("@declaredoptions", $option)?;
+    state_mut!().push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
-    def_macro(T_CS!(cs),None,tokenized,None,st)?;
+    def_macro(T_CS!(cs),None,tokenized,None)?;
   };
   ($option:expr, $tokenized:ident) => {
-    st.push_value("@declaredoptions", $option.to_string())?;
+    state_mut!().push_value("@declaredoptions", $option.to_string())?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
     def_macro(T_CS!(cs),None, $tokenized, None)?;
   };
-  ($option:expr, sub $body:block) => {
-    DeclareOption!($option, sub[stomach] $body)
-  };
-  ($option:expr, sub[$state::ident] $body:block) => {
-    DeclareOption!($option, sub[stomach] $body)
-  };
-  ($option:expr, sub[$stomach:ident, $state::ident] $body:block) => {
-    DeclareOption!($option, sub[$stomach] $body)
-  };
-  ($option:expr, sub[$stomach:ident,ident] $body:block, $outerident) => {
-    $outer_state_mut!().push_value("@declaredoptions", $option)?;
+  ($option:expr, $(sub)? $body:block) => {
+    state_mut!().push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
-    let code: PrimitiveClosure = Rc::new(move |$stomach, _args,
-      $body, $stomach.into_digested_result()
-    );
+    let code: PrimitiveClosure = Rc::new(move |_args| $body.into_digested_result());
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   }
 }
 
 #[macro_export]
 macro_rules! ProcessOptions {
-  () => {{
-    bind_state::mut!(st);
-    process_options(stomach)?;
-  }};
-  ($stomach:ident) => {{
-    process_options($stomach)?;
-  }};
+  () => {
+    process_options()?;
+  };
 }
 
 #[macro_export]
@@ -1713,15 +1612,16 @@ macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
     let into_cs = T_CS!($cs);
     let into_tokens = TokenizeInternal!($tokens);
-    AddToMacro!(into_cs, into_tokens, stmch);
+    AddToMacro!(into_cs, into_tokens);
   }};
-  ($cs:ident, $tokens:ident, $organ:ident, $state::ident) => {{
+  ($cs:ident, $tokens:ident) => {{
     // Needs error checking!
-    let defn = $state!().lookup_definition(&$cs)?;
+    let st = state!();
+    let defn = st.lookup_definition(&$cs)?;
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       let message = s!("{} is not an expandable control sequence", $cs);
       let message2 = "Ignoring addition";
-      Warn!("unexpected", $cs, $organ, message, message2);
+      Warn!("unexpected", $cs, message, message2);
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using
@@ -1737,7 +1637,6 @@ macro_rules! AddToMacro {
           Warn!(
             "unexpected",
             "ExpandableBody::Closure",
-            $organ,
             message
           );
           Vec::new()
@@ -1753,8 +1652,7 @@ macro_rules! AddToMacro {
           scope: Some(Scope::Global),
           nopack_parameters: true,
           ..ExpandableOptions::default()
-        }),
-        $state::
+        })
       )?;
     }
   }};
@@ -1788,10 +1686,19 @@ macro_rules! defi_opts {
     }
   };
   // reversion: Option<Reversion>
-    // reversion: sub
-  (@munch ( $(,)? reversion $(:)?$(=>)? sub $($next:tt)*)
+  // DG: this is currently problematic - we seem to have two kinds of reversions, one working after
+  //     digestion, and one *not*
+  (@munch ( $(,)? reversion $(:)?$(=>)? sub[$whatsit:ident, $args:ident] $body:block $($next:tt)*)
+  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@reversion (sub[$whatsit,$args] $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? reversion $(:)?$(=>)? sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@reversion (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+    defi_opts!(@reversion (sub[$arg,$inner,$extra] $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
+  };
+  (@munch ( $(,)? reversion $(:)?$(=>)? $(sub)? $body:block $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@reversion (sub $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -1809,6 +1716,11 @@ macro_rules! defi_opts {
   {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [
       sizer @ Some(sizersub!($whatsit_arg, $body)) ]})
+  };
+  (@munch ( $(,)? sizer $(:)?$(=>)? $body:block $($next:tt)*) ->
+  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [
+      sizer @ Some(sizersub!(_whatsit_arg, $body)) ]})
   };
   (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -1883,15 +1795,20 @@ macro_rules! defi_opts {
       [ scope @ $scope.into_option() ] })
   };
   // font: Font
-  (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident, $font_state::ident ]
+  (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident]
     $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
-      [ font @ Some(FontDirective::Closure(Rc::new(move |$font_whatsit, $font$body))) ] })
+      [ font @ Some(FontDirective::Closure(Rc::new(move |$font_whatsit| $body))) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ font @ FontDirective!($($fkey => $fvalue),*) ] })
+  };
+  (@munch ( $(,)? font $(:)?$(=>)? $body:block $($next:tt)*) ->
+  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
+      [ font @ Some(FontDirective::Closure(Rc::new(move |_font_whatsit| $body))) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
@@ -2194,23 +2111,17 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest_end @ before_digest!($body)]})
   };
-  (@before_digest_end (sub [$stomach_arg:ident] $body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
-    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [before_digest_end @ before_digest!($body)]})
-  };
-
-  (@before_digest (sub [$stomach_arg:ident] $body:block $($next:tt)* )
+  (@before_digest ($(sub)? $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };
-  (@before_digest ($body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@before_digest ($(sub)? $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };
   (@after_digest (
-    sub[$stomach_arg:ident, $whatsit:ident] $body:block $($next:tt)* )
+    sub[$whatsit:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest @ after_digest!($whatsit, $body)]})
@@ -2218,11 +2129,11 @@ macro_rules! defi_opts {
   (@after_digest (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [after_digest @ after_digest!( _whatsit,$body)]})
+      [after_digest @ after_digest!(_whatsit,$body)]})
   };
 
   (@after_digest_begin (
-    sub[$stomach_arg:ident, $whatsit:ident] $body:block $($next:tt)* )
+    sub[$whatsit:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_begin @ after_digest!($whatsit, $body)]})
@@ -2230,11 +2141,11 @@ macro_rules! defi_opts {
   (@after_digest_begin (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [after_digest_begin @ after_digest!( whatsit, $body)]})
+      [after_digest_begin @ after_digest!(_whatsit, $body)]})
   };
 
   (@after_digest_body (
-    sub[$stomach_arg:ident, $whatsit:ident] $body:block $($next:tt)* )
+    sub[$whatsit:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_body @ after_digest!($whatsit, $body)]})
@@ -2349,18 +2260,23 @@ macro_rules! defi_opts {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @
       rewrite_replace_sub!($document_arg, $node_arg, $body)]})
   };
-  (@reversion (sub [$stomach:ident, $args:ident] $body:block $($next:tt)* )
+  (@reversion (sub [$whatsit:ident, $args:ident] $body:block $($next:tt)* )
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [reversion @ reversion_digested!($stomach, $args, $body)]})
+      [reversion @ reversion_digested!($whatsit, $args, $body)]})
   };
-  (@reversion (sub [$gullet:ident, $args:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
+  (@reversion (sub [$args:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
                   -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [reversion @ reversion!($gullet, $args, $inner, $extra, $body)]})
+      [reversion @ reversion!($args, $inner, $extra, $body)]})
+  };
+  (@reversion (sub $body:block $($next:tt)*)
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [reversion @ reversion!(_args, _inner, _extra, $body)]})
   };
   (@predigest (
-    sub[$stomach_arg:ident, $whatsit:ident] $body:block $($next:tt)* )
+    sub[$whatsit:ident] $body:block $($next:tt)* )
       -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [predigest @ predigest!($whatsit, $body)]})

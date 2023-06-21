@@ -58,8 +58,7 @@ pub fn make_note_tags(
     props.insert("mark".to_string(), mark.into());
     props.insert(
       "tags".to_string(),
-      stomach
-        .digest(
+      stomach::digest(
           Tokens!(
             T_BEGIN!(),
             T_CS!("\\def"),
@@ -149,7 +148,6 @@ pub fn only_preamble(cs: &str) -> Result<()> {
     Error!(
       "unexpected",
       cs,
-      stomach,
       "The current command '{cs}' can only appear in the preamble"
     );
   }
@@ -159,8 +157,7 @@ pub fn only_preamble(cs: &str) -> Result<()> {
 pub fn tabular_bindings(
   template: Template,
   mut properties: HashMap<String, Stored>,
-  mut xml_attributes: HashMap<String, String>,
-  gullet: &mut Gullet,
+  mut xml_attributes: HashMap<String, String>
 ) -> Result<()> {
   if !properties.contains_key("guess_headers") {
     if let Some(v) = state!().lookup_value("GUESS_TABULAR_HEADERS") {
@@ -171,7 +168,7 @@ pub fn tabular_bindings(
     let sep_opt = state!().lookup_dimension("\\tabcolsep");
     if let Some(sep) = sep_opt {
       if sep.value_of()
-        != state
+        != state!()
           .lookup_dimension("\\lx@default@tabcolsep")
           .unwrap()
           .value_of()
@@ -181,7 +178,7 @@ pub fn tabular_bindings(
     }
   }
   if !xml_attributes.contains_key("rowsep") {
-    let astr = gullet
+    let astr = gullet_mut!()
       .do_expand(T_CS!("\\arraystretch"))?
       .to_string();
     if astr != "1" {
@@ -196,7 +193,7 @@ pub fn tabular_bindings(
   if !properties.contains_key("strut") {
     properties.insert(
       String::from("strut"),
-      state
+      state_mut!()
         .lookup_register("\\baselineskip", Vec::new())?
         .unwrap()
         .multiply(Float::new_f64(1.5))
@@ -207,8 +204,7 @@ pub fn tabular_bindings(
     template,
     String::from("text"),
     properties,
-    xml_attributes,
-    gullet,
+    xml_attributes
   );
   state_mut!().let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
   state_mut!().let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);

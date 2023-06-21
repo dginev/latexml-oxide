@@ -3,7 +3,7 @@ use crate::package::*;
 //**********************************************************************
 // C.11 Moving Information Around
 //**********************************************************************
-LoadDefinitions!(outer_stomach, outer{
+LoadDefinitions!({
   //======================================================================
   // C.11.1 Files
   //======================================================================
@@ -26,13 +26,13 @@ LoadDefinitions!(outer_stomach, outer{
         labels.insert(label.to_string(), true);
       }
       document.node_set_attribute("labels",
-         &labels.keys().map(ToString::to_string).collect::<Vec<_>>().join(" "));
+         &labels.keys().map(ToString::to_string).collect::<Vec<_>>().join(" "))?;
       document.set_node(&savenode);
     }
   },
   reversion => "", // TODO: implement for DUAL_BRANCH
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
-  after_digest => sub[ whatsit] {
+  after_digest => sub[whatsit] {
     let label = match whatsit.get_arg(1) {
       Some(labeld) => clean_label(&labeld.to_string(), None).into_owned(),
       None => String::new()
@@ -40,12 +40,14 @@ LoadDefinitions!(outer_stomach, outer{
     let scope = label.replace("LABEL:","label:");
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
-    let cc = state!().lookup_value("current_counter");
-    let ctr_key_opt = cc.map(|ctr| s!("scopes_for_counter:{}", ctr));
+
+    let ctr_key_opt = state!().lookup_value("current_counter")
+      .map(|ctr| s!("scopes_for_counter:{}", ctr));
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
-      state::unshift_value(&ctr_key, vec![scope.clone()]);
-      state::activate_scope(arena::pin(scope));
+      let mut state = state_mut!();
+      state.unshift_value(&ctr_key, vec![scope.clone()]);
+      state.activate_scope(arena::pin(scope));
       stomach_mut!().begin_mode("text")?;
       let current_label = stomach::digest(Tokens!(T_CS!("\\@currentlabel")))?;
       state_mut!().assign_value(&label_key, current_label, Some(Scope::Global));
@@ -147,15 +149,15 @@ LoadDefinitions!(outer_stomach, outer{
   DefConstructor!("\\thebibliography",
     "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont'
     _force_font='true'>#title</ltx:title><ltx:biblist>",
-     before_digest => sub[stomach] {
+     before_digest => {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach::digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")))?])
     },
-    after_digest => sub[ whatsit] {
+    after_digest => sub[whatsit] {
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
-      let gullet = gullet_mut!();
+      let mut gullet = gullet_mut!();
       gullet.skip_spaces()?;
       if gullet.if_next(&TOKEN_BEGIN)? {
         gullet.read_arg()?;
@@ -174,21 +176,22 @@ LoadDefinitions!(outer_stomach, outer{
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);
 
-  DefMacro!("\\par@in@bibliography", sub[ _args] {
-      gullet.skip_spaces()?;
-      if let Some(tok) = gullet.read_token()? {
-        // If next token is another \par, or a REAL \bibitem,
-        // then this \par expands into what followed
-        // Else, put it back, and start a bibitem.
-        if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
-          Ok(Tokens!(tok))
-        } else {
-          gullet.unread_one(tok);
-          Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
-        }
+  DefMacro!("\\par@in@bibliography", {
+    let mut gullet = gullet_mut!();
+    gullet.skip_spaces()?;
+    if let Some(tok) = gullet.read_token()? {
+      // If next token is another \par, or a REAL \bibitem,
+      // then this \par expands into what followed
+      // Else, put it back, and start a bibitem.
+      if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
+        Ok(Tokens!(tok))
       } else {
+        gullet.unread_one(tok);
         Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
       }
+    } else {
+      Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
+    }
   });
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
@@ -209,7 +212,7 @@ LoadDefinitions!(outer_stomach, outer{
     "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem", locked=>true);
   DefConstructor!("\\lx@bibitem[] Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
-    after_digest => sub[ whatsit] {
+    after_digest => sub[whatsit] {
       let tag_opt = whatsit.get_arg(1);
       let key = if let Some(key) = whatsit.get_arg(2) {
         clean_bib_key(&key.to_string())
@@ -217,13 +220,12 @@ LoadDefinitions!(outer_stomach, outer{
       if let Some(tag) = tag_opt {
         let mut properties = RefStepID!("@bibitem")?;
         properties.insert("key".to_string(), key.into());
-        let gullet = gullet_mut!();
         let mut tag_tokens = vec![
             T_BEGIN!(), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
         tag_tokens.extend(Revert!(tag));
         tag_tokens.push(T_END!());
         tag_tokens.extend(
-          Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")])?.unlist());
+          Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
         tag_tokens.push(T_END!());
         properties.insert("tags".to_string(),
           stomach::digest(tag_tokens)?.into());
@@ -238,12 +240,12 @@ LoadDefinitions!(outer_stomach, outer{
 
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
   // We try to close the list and open the bibliography
-  DefMacro!("\\lx@mung@bibliography{}", sub[ (env)] {
+  DefMacro!("\\lx@mung@bibliography{}", sub[(env)] {
     let tag = env.to_string();
     let mut tokens = Vec::new();
     // If we're in some sort of list environment, maybe we can recover
     if tag == "enumerate" || tag == "itemize" || tag == "description" {
-      tokens.extend(Invocation!("\\end", vec![env])?.unlist());
+      tokens.extend(Invocation!("\\end", vec![env]).unlist());
       tokens.extend(vec![
         T_CS!("\\let"),
         T_CS!(format!("\\end{tag}")),
@@ -256,7 +258,7 @@ LoadDefinitions!(outer_stomach, outer{
     // else ? it probably isn't going to work??
     Info!("Now, try to open {{thebibliography}}");
     tokens.extend(Invocation!("\\begin",
-      vec![Tokenize!("thebibliography"), Tokens!()])?.unlist());
+      vec![Tokenize!("thebibliography"), Tokens!()]).unlist());
     let tokens = Tokens::new(tokens);
     Info!("PATCHING with {:?}", tokens.to_string());
     Ok(tokens)
@@ -317,8 +319,8 @@ LoadDefinitions!(outer_stomach, outer{
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' separator='#separator'
       yyseparator='#yyseparator'>#3#4</ltx:bibref>",
-    properties => sub[ args] {
-      unref!(args => show, keys, phrase1, phrase2);
+    properties => sub[args] {
+      unref!(args => _show, keys, _phrase1, _phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
         "separator" => match state!().lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => stomach::digest(sep)?.to_string().into(),
@@ -333,7 +335,7 @@ LoadDefinitions!(outer_stomach, outer{
   // Simple container for any phrases used in the bibref
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
-  DefMacro!("\\cite[] Semiverbatim", sub[ (post_opt, keys)] {
+  DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
     let style = state!().lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
     let open = state!().lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or_else(|| Tokens!());
@@ -350,14 +352,14 @@ LoadDefinitions!(outer_stomach, outer{
       post_tokens = post_wrapped;
     }
     let bibref = Invocation!(T_CS!("\\@@bibref"),
-      vec![Tokens!(), keys, Tokens!(), Tokens!()])?;
+      vec![Tokens!(), keys, Tokens!(), Tokens!()]);
     let mut arg_tokens = open.unlist();
     arg_tokens.extend(bibref.unlist());
     arg_tokens.extend(post_tokens);
     arg_tokens.extend(close.unlist());
 
     Ok(Invocation!(T_CS!("\\@@cite"),
-      vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)])?)
+      vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
   });
 
   // # NOTE: Eventually needs to be recognized by MakeBibliography
@@ -684,7 +686,6 @@ fn begin_bibliography_clean(
   // But also, if there are multiple bibliographies,
   let bibnumber = 1 + state!().lookup_int("n_bibliographies");
   state_mut!().assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
-  let gullet = gullet_mut!();
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
   if !docid.is_empty() {
     docid += ".";
@@ -700,8 +701,9 @@ fn begin_bibliography_clean(
     whatsit.set_property("titlefont", title.get_font()?.unwrap());
     whatsit.set_property("title", title);
   }
-  whatsit.set_property("bibstyle", LookupValue!("BIBSTYLE"));
-  whatsit.set_property("citestyle", LookupValue!("CITE_STYLE"));
+  let state = state!();
+  whatsit.set_property("bibstyle", state.lookup_value("BIBSTYLE"));
+  whatsit.set_property("citestyle", state.lookup_value("CITE_STYLE"));
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv");
   Ok(())

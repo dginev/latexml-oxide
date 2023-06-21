@@ -10,16 +10,14 @@ LoadDefinitions!({
 
   DefConditional!("\\if@nmbrlist");
   DefMacro!("\\@listctr", "");
-  DefPrimitive!("\\usecounter{}", sub[ (counter)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\usecounter{}", sub[(counter)] {
     let counter = Expand!(counter).to_string();
     if counter.is_empty() {
       begin_itemize("list", None, BeginItemizeOptions::default())?;
     } else {
       begin_itemize("list", Some(&counter), BeginItemizeOptions {
         nolevel:true,
-        ..BeginItemizeOptions::default() },
-        stomach)?;
+        ..BeginItemizeOptions::default() })?;
     }
   });
 
@@ -32,22 +30,22 @@ LoadDefinitions!({
   // Start an anonymous list (often misused)
   DefConstructor!("\\lx@list",
     "<ltx:itemize>",
-    before_digest => sub[stomach] { stomach.bgroup(); });
+    before_digest => { stomach_mut!().bgroup(); });
   // Close the anonymous list if we're still within one.
   DefConstructor!("\\endlx@list", sub[document] {
     document.maybe_close_element("ltx:itemize")?; },
-    before_digest => sub[stomach] { stomach.egroup()?; });
+    before_digest => { stomach_mut!().egroup()?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[ args] {
+    properties => sub[args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested) }
   );
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties => sub[ _args] {
+    properties => {
       begin_itemize("trivlist", None, BeginItemizeOptions::default()) },
     before_digest_end => { Digest!("\\par")?; }
   );
@@ -56,10 +54,9 @@ LoadDefinitions!({
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
     // At least an empty tag! ?
-    properties => sub[ args] {
+    properties => sub[args] {
       if let Some(ref arg) = args[0] {
         if let DigestedData::Postponed(ref tag_tokens) = arg.data() {
-          let gullet = gullet_mut!();
           let tag_expanded = Expand!(tag_tokens.clone());
           let tag = stomach::digest(tag_expanded)?;
           Ok(stored_map!("tag" => tag))

@@ -330,6 +330,12 @@ pub trait IntoDigestedOptionResult<T>: Sized {
   fn into_digested_option_result(self) -> Result<Option<Digested>>;
 }
 
+impl IntoDigestedOptionResult<Result<Option<Digested>>> for () {
+  fn into_digested_option_result(self: ()) -> Result<Option<Digested>> {
+    Ok(None)
+  }
+}
+
 impl IntoDigestedOptionResult<Result<Option<Digested>>> for Glue {
   fn into_digested_option_result(self) -> Result<Option<Digested>> {
     RegisterValue::Glue(self).into_digested_option_result()

@@ -10,8 +10,6 @@ mod helpers;
 ///**********************************************************************
 use rtx::util::test::*;
 use rtx_core::common::error::*;
-use rtx_core::{state_mut,state};
-use rtx_core::stomach::Stomach;
 use std::rc::Rc;
 
 #[test]
@@ -29,7 +27,7 @@ pub fn complex_tests_dispatch(
   ) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "xii.tex" => Some(helpers::xii_tex::load_definitions(stomach)),
+    "xii.tex" => Some(helpers::xii_tex::load_definitions()),
     _ => None,
   }
 }

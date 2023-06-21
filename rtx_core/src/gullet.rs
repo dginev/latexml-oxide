@@ -442,7 +442,7 @@ impl Gullet {
           }
         }
         if token.get_catcode() == Catcode::CS && state!().lookup_meaning(&token).is_none() {
-          return Ok(Some(state_mut!().generate_error_stub(&token)?)); // cs SHOULD have defn by now;
+          return Ok(Some(state::generate_error_stub(&token)?)); // cs SHOULD have defn by now;
                                                                      // report early!
         } else {
           return Ok(Some(token));

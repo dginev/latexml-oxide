@@ -17,11 +17,11 @@ fn prepare_equation_counter(options: HashMap<String, Stored>) {
   );
 }
 
-fn before_equation(stomach: &mut Stomach) -> Result<()> {
+fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
   let ctr = if let Some(Stored::HashStored(ref mut numbering)) =
-    state!().lookup_value_mut("EQUATION_NUMBERING")
+    state_mut!().lookup_value_mut("EQUATION_NUMBERING")
   {
     numbering.insert("in_equation".to_owned(), true.into());
     // MaybePeekLabel();
@@ -50,7 +50,6 @@ fn before_equation(stomach: &mut Stomach) -> Result<()> {
       Some(Scope::Global),
     );
   }
-  let gullet = gullet_mut!();
   state_mut!().let_i(
     &T_CS!("\\@@ENDDISPLAYMATH"),
     &T_CS!("\\lx@eDM@in@equation"),
@@ -64,7 +63,7 @@ fn before_equation(stomach: &mut Stomach) -> Result<()> {
   Ok(())
 }
 
-fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit) -> Result<()> {
+fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
   let mut ctr: Option<String> = None;
   let mut tags_numbered_update = false;
   let mut is_aligned = false;
@@ -100,7 +99,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit) -> Result<()> {
     }
   }
 
-  if let Some(Stored::HashStored(ref mut numbering)) = state!().lookup_value_mut("EQUATION_NUMBERING")
+  if let Some(Stored::HashStored(ref mut numbering)) = state_mut!().lookup_value_mut("EQUATION_NUMBERING")
   {
     numbering.insert("in_equation".to_string(), Stored::Bool(false));
   }
@@ -110,7 +109,7 @@ fn after_equation(stomach: &mut Stomach, whatsit: &mut Whatsit) -> Result<()> {
       vec![Some(Tokens::new(Explode!(ctr.unwrap())))]
       )?;
     let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
-    if let Some(Stored::HashStored(ref mut tags)) = state!().lookup_value_mut("EQUATIONROW_TAGS") {
+    if let Some(Stored::HashStored(ref mut tags)) = state_mut!().lookup_value_mut("EQUATIONROW_TAGS") {
       // TODO: Invocation!() feels really awkward to use, should we reinvent it?
       // especially the magical `.into()` that it does behind the scenes is concerning.
       tags.insert("tags".to_string(), stored_tags_update);
@@ -148,7 +147,7 @@ LoadDefinitions!({
   </ltx:Math>\
   </ltx:equation>",
   alias        => "$$",
-  before_digest => sub[stomach] {
+  before_digest => {
     stomach_mut!().begin_mode("display_math")?;
     if let Some(RegisterValue::Tokens(everymath_toks)) = state_mut!().lookup_register("\\everymath", Vec::new())? {
       let everymath_toks = everymath_toks.unlist();
@@ -163,13 +162,13 @@ LoadDefinitions!({
       }
     }
   },
-  properties  => sub[_args] { ref_step_id("equation") },
+  properties  => { ref_step_id("equation") },
   capture_body => true);
 
   DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
   mode       => "display_math",
-  properties   => sub[ _args] { ref_step_id("equation") },
+  properties   => { ref_step_id("equation") },
   locked     => true);
   DefEnvironment!("{math}",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
@@ -181,12 +180,12 @@ LoadDefinitions!({
     "{equation}",
     "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     mode => "display_math",
-    before_digest => sub[stomach] {
+    before_digest => {
       prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
-      before_equation(stomach)?;
+      before_equation()?;
     },
-    after_digest_body => sub[ whatsit] {
-      after_equation( whatsit)?;
+    after_digest_body => sub[whatsit] {
+      after_equation(whatsit)?;
     },
     locked => true);
 
@@ -201,7 +200,7 @@ LoadDefinitions!({
     None,
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
-  DefMacro!("\\@ensuremath{}", sub[ (stuff)] {
+  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
     if state!().lookup_bool("IN_MATH") {
       stuff.unlist()
     } else {

@@ -89,6 +89,20 @@ macro_rules! mixvec {
   }}
 }
 
+/// A variant on `mixvec!` where each argument receives an additional `.into()` call
+/// best used with an outer context that explicitly provides the expected type, such as
+/// ```
+/// # use rtx_core::common::store::Stored;
+/// # use rtx_core::mixvec;
+/// let stored_vec : Rc<[Stored]> = mixrc!(1, true, "string");
+/// ```
+#[macro_export]
+macro_rules! mixrc {
+  ($( $val:expr ),*) => {{
+    Rc::new([ $($val.into()),*])
+  }}
+}
+
 /// Instantiates a `Font`, using the `Font` fields as keys, and calling `.into()` for each value.
 /// The specification can be partial - missing fields are taken via the `Default` trait.
 #[macro_export]

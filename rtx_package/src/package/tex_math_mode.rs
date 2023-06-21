@@ -14,11 +14,10 @@ LoadDefinitions!({
 
   DefPrimitive!(
     T_MATH!(),
-    None,
-    sub[ _args] {
+    None, {
       let mut op = "\\@@BEGININLINEMATH";
       {
-        let gullet = gullet_mut!();
+        let mut gullet = gullet_mut!();
         let mode = state!().lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
@@ -32,7 +31,6 @@ LoadDefinitions!({
             Error!(
               "expected",
               "$",
-              stomach,
               "Missing $ closing display math.\nIgnoring; expect to be in wrong math/text mode."
             );
             op = "";
@@ -45,7 +43,7 @@ LoadDefinitions!({
         }
       }
       if !op.is_empty() {
-        Ok(stomach.invoke_token(&T_CS!(op))?)
+        Ok(stomach_mut!().invoke_token(&T_CS!(op))?)
       } else {
         Ok(Vec::new())
       }
@@ -64,7 +62,7 @@ LoadDefinitions!({
     </ltx:Math>\
   </ltx:equation>",
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => sub[stomach] {
+    before_digest => {
       stomach_mut!().begin_mode("display_math")?;
       // TODO:
       // if let Some(everymath_toks) = state!().lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
@@ -79,12 +77,12 @@ LoadDefinitions!({
 
   DefConstructor!(T_CS!("\\@@ENDDISPLAYMATH"), None, None,
     reversion => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => sub[stomach] { stomach_mut!().end_mode("display_math")?; });
+    before_digest => { stomach_mut!().end_mode("display_math")?; });
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     reversion    => Tokens!(T_MATH!()),
-    before_digest => sub[stomach] {
+    before_digest => {
       stomach_mut!().begin_mode("inline_math")?;
       if let Some(RegisterValue::Tokens(everymath_toks)) = state_mut!().lookup_register("\\everymath", Vec::new())? {
         let everymath_toks = everymath_toks.unlist();
@@ -96,7 +94,7 @@ LoadDefinitions!({
     capture_body => true);
 
   DefConstructor!(T_CS!("\\@@ENDINLINEMATH"), None, None,
-    before_digest => sub[stomach] { stomach_mut!().end_mode("inline_math")?; },
+    before_digest => { stomach_mut!().end_mode("inline_math")?; },
     reversion    => Tokens!(T_MATH!())
   );
 

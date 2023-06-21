@@ -63,7 +63,7 @@ macro_rules! transfer_opt_default {
 #[macro_export]
 macro_rules! primitiveproc {
   ($args:ident, $body:block) => (Rc::new(
-    |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>| {
+    |mut $args : Vec<ArgWrap>| {
       $body
       Ok(Vec::new())
     }
@@ -213,12 +213,10 @@ macro_rules! after_digest_simple {
 
 #[macro_export]
 macro_rules! reader {
-  ($gullet:ident, $inner:ident, $extra:ident, $body:block) => {
+  ($inner:ident, $extra:ident, $body:block) => {
     Rc::new(
-      |$gullet: &mut Gullet,
-       $inner: Option<&Parameters>,
-       $extra: &[Tokens]|
-       -> Result<ArgWrap> { $body.into_result_argwrap() },
+      |$inner: Option<&Parameters>, $extra: &[Tokens]|
+       -> Result<ArgWrap> {$body.into_result_argwrap()}
     )
   };
 }
@@ -265,12 +263,12 @@ macro_rules! setter {
 
 #[macro_export]
 macro_rules! reversion {
-  ($gullet:ident, $arg:ident, $inner:ident, $extra:ident, $body:block) => {
+  ($arg:ident, $inner:ident, $extra:ident, $body:block) => {
     Some(Rc::new(
       |mut $arg: Vec<Token>,
        $inner: Option<&Parameters>,
-       $extra: &[Tokens]
-       -> Result<Tokens> $body ,
+       $extra: &[Tokens]|
+       -> Result<Tokens> {$body}
     ))
   };
 }
@@ -279,7 +277,7 @@ macro_rules! reversion {
 macro_rules! reversion_digested {
   ($whatsit:ident, $args:ident, $body:block) => {
     Some(Reversion::Closure(Rc::new(
-      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>| -> Result<Tokens> $body,
+      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>| -> Result<Tokens> {$body}
     )))
   };
 }

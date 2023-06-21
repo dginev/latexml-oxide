@@ -7,11 +7,11 @@ LoadDefinitions!({
   // thus it needs \par to check whether such indentation has been set.
   DefConstructor!("\\indent", sub[document,whatsit] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node);
+      let tag = document::get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
-      } else if document.sym_can_contain_somehow(tag,para_tag) {
+      } else if document::sym_can_contain_somehow(tag,para_tag) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None)?;
       }
@@ -20,11 +20,11 @@ LoadDefinitions!({
   });
   DefConstructor!("\\noindent", sub[document,whatsit] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node);
+      let tag = document::get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
-      } else if document.sym_can_contain_somehow(tag, para_tag ) {
+      } else if document::sym_can_contain_somehow(tag, para_tag ) {
         // Used in a position where a paragraph can be started, start
         document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None)?;
       }
@@ -46,7 +46,7 @@ LoadDefinitions!({
         document.maybe_close_element("ltx:p")?;
         let element = document.get_element();
         if let Some(mut node) = element {
-          let qname = document.get_node_qname(&node);
+          let qname = document::get_node_qname(&node);
           // Only set on the para about to close, if unknown!
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
@@ -60,7 +60,7 @@ LoadDefinitions!({
         document.maybe_close_element("ltx:para")?;
       }
     },
-    after_digest => sub[ whatsit] {
+    after_digest => sub[whatsit] {
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
@@ -95,7 +95,7 @@ LoadDefinitions!({
   DefConstructor!("\\inner@par", sub[document, _args, _props] {
     Debug!("inner@par invoked!\n");
     if document.maybe_close_element("ltx:p")?.is_some() {
-    } else if document.can_contain(document.get_node(), "ltx:break") {
+    } else if document::can_contain(document.get_node(), "ltx:break") {
       document.insert_element("ltx:break", Vec::new(), None)?;
     }
   });
@@ -110,5 +110,5 @@ LoadDefinitions!({
   });
 
   // \dump ???
-  DefPrimitive!("\\end", sub[ ()] { gullet_mut!().flush(); });
+  DefPrimitive!("\\end", sub[()] { gullet_mut!().flush(); });
 });

@@ -16,21 +16,22 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
-  DefColumnType!("|", sub[_args] {
+  DefColumnType!("|", {
     state_mut!().current_build_template().unwrap().
       add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")]);
   });
-  DefColumnType!("l", sub[_args] {
+  DefColumnType!("l", {
     state_mut!().current_build_template().unwrap().add_column(Cell {
       after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
   });
-  DefColumnType!("c", sub[_args] {
+  DefColumnType!("c", {
     state_mut!().current_build_template().unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
       after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
   });
-  DefColumnType!("r", sub[_args] {
-    let mut template = state_mut!().current_build_template().unwrap();
+  DefColumnType!("r", {
+    let mut state = state_mut!();
+    let mut template = state.current_build_template().unwrap();
     template.add_column(Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
       ..Cell::default()});
@@ -77,12 +78,12 @@ LoadDefinitions!({
       }},
     sizer => "#alignment",
     after_digest => sub[whatsit] {
-      stomach.bgroup();
+      stomach_mut!().bgroup();
       if let Some(alignment) = state!().lookup_alignment() {
         whatsit.set_property("alignment", Stored::Digested(alignment));
         digest_alignment_body(whatsit)?;
       }
-      stomach.egroup()?;
+      stomach_mut!().egroup()?;
     }
   );
 
@@ -102,23 +103,23 @@ LoadDefinitions!({
   DefConstructor!("\\hidden@align", "",   alias => "");
 
   // Handled directly in alignments, but must be defined as non-macros
-  DefPrimitive!("\\noalign", sub[_args] {
-      stomach.bgroup();
-      Error!("unexpected", "\\noalign", stomach, "\\noalign cannot be used here");
+  DefPrimitive!("\\noalign", {
+      stomach_mut!().bgroup();
+      Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
-  DefPrimitive!("\\omit", sub[_args] {
-      Error!("unexpected", "\\omit", stomach, "\\omit cannot be used here");
-      stomach.bgroup();
+  DefPrimitive!("\\omit", {
+      Error!("unexpected", "\\omit", "\\omit cannot be used here");
+      stomach_mut!().bgroup();
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
-  DefPrimitive!("\\span", sub[_args] {
-      stomach.bgroup();
-      Error!("unexpected", "\\span", stomach, "\\span cannot be used here");
+  DefPrimitive!("\\span", {
+      stomach_mut!().bgroup();
+      Error!("unexpected", "\\span", "\\span cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
@@ -136,6 +137,7 @@ LoadDefinitions!({
   ) -> Result<(bool, Option<Tokens>)> {
     if state!().lookup_alignment().is_some() {
       state_mut!().local_align_group_count(1000000);
+      let mut gullet = gullet_mut!();
       if skipspaces {
         gullet.skip_spaces()?;
       }
@@ -175,8 +177,8 @@ LoadDefinitions!({
   // But we're not there (yet)
 
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
-  DefMacro!("\\@alignment@newline", sub[_a] {
-    let (star, optional) = read_newline_args(gullet, true)?;
+  DefMacro!("\\@alignment@newline", {
+    let (star, optional) = read_newline_args(true)?;
     let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));
@@ -193,8 +195,8 @@ LoadDefinitions!({
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
-  DefMacro!("\\@alignment@newline@noskip", sub[_a] {
-    let (star, optional) = read_newline_args(gullet, false)?;
+  DefMacro!("\\@alignment@newline@noskip", {
+    let (star, optional) = read_newline_args(false)?;
     let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));
@@ -239,7 +241,7 @@ LoadDefinitions!({
   // But doesn't create a pseudo-row (??? Or does it?; is it still needed?)
   DefConstructor!("\\hidden@noalign{}", "#1",
     reversion  => "",
-    properties =>  sub[ args] {
+    properties =>  sub[args] {
       // Sometimes, we"re smuggling stuff that needs to be carried into the XML.
       let mut props = stored_map!("alignmentSkippable" => true);
       if let Some(preserve) = args.iter().find(|v_opt| if let Some(ref v) = v_opt {
@@ -257,15 +259,15 @@ LoadDefinitions!({
           .add_line("t", Vec::new());
       }
     },
-    properties =>  sub[ _args] { Ok(stored_map!("isHorizontalRule" => true))},
+    properties =>  { Ok(stored_map!("isHorizontalRule" => true))},
     sizer      => 0, alias => "\\hline");
 
-  DefMacro!("\\@tabular@begin@heading", sub[_args] {
+  DefMacro!("\\@tabular@begin@heading", {
   if let Some(alignment_stored) = state!().lookup_alignment() {
     alignment_stored.alignment_cell().unwrap().borrow_mut()
       .set_in_tabular_head();
   }});
-  DefMacro!("\\@tabular@end@heading", sub[_args] {
+  DefMacro!("\\@tabular@end@heading", {
   if let Some(alignment_stored) = state!().lookup_alignment() {
     alignment_stored.alignment_cell().unwrap().borrow_mut()
       .unset_in_tabular_head();
@@ -279,10 +281,10 @@ LoadDefinitions!({
   //
   // This is the "normal" case: $ appearing with an alignment that is in text mode.
   // It's just like regular $, except it doesn't look for $$ (no display math).
-  DefPrimitive!("\\@dollar@in@textmode", sub [stomach, ()] {
+  DefPrimitive!("\\@dollar@in@textmode", {
     let mathcs = if state!().lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
       else {T_CS!("\\@@BEGININLINEMATH") };
-    stomach.invoke_token(&mathcs)
+    stomach_mut!().invoke_token(&mathcs)
   });
 
   DefMacro!("\\@row@before", None);
@@ -319,7 +321,7 @@ LoadDefinitions!({
   //       $tokens->unlist,
   //       ($column ? afterCellUnlist($$column{after}) : ())); });
 
-  DefConditional!("\\if@in@alignment", sub [gullet, ()] { state!().lookup_alignment().is_some() });
+  DefConditional!("\\if@in@alignment", { state!().lookup_alignment().is_some() });
 
   // DefPrimitive('\@alignment@bindings AlignmentTemplate []', sub {
   //     my ($stomach, $template, $mode) = @_;
@@ -328,19 +330,19 @@ LoadDefinitions!({
   // This removes trailing whitespace from the current digested list.
   // It is useful as the 1st thing in the rhs template of things like {tabular}.
   // But note that \halign does NOT remove this trailing space!
-  DefPrimitive!("\\@@eat@space", sub[()] {
+  DefPrimitive!("\\@@eat@space", {
     let mut save = Vec::new();
-    while let Some(tbox) = stomach.box_list.pop() {
+    while let Some(tbox) = stomach_mut!().box_list.pop() {
       if tbox.get_property_bool("alignmentSkippable")
         || tbox.get_property_bool("isFill") {
         save.push(tbox);
       } else if !tbox.is_empty()? {
-        stomach.box_list.push(tbox);
+        stomach_mut!().box_list.push(tbox);
         break;
       }
     }
     if !save.is_empty() {
-      stomach.box_list.extend(save);
+      stomach_mut!().box_list.extend(save);
     }
     Ok(Vec::new())
   });
@@ -355,8 +357,7 @@ pub fn alignment_bindings(
   template: Template,
   mode: String,
   properties: HashMap<String, Stored>,
-  xml_attributes: HashMap<String, String>,
-  gullet: &mut Gullet,
+  xml_attributes: HashMap<String, String>
 ) {
   let mode = if mode.is_empty() {
     state!().lookup_string("MODE")
@@ -419,7 +420,6 @@ pub fn digest_alignment_body(
     Error!(
       "missing",
       "alignment",
-      stomach,
       "There is no open alignment structure here"
     );
     return Ok(());
@@ -488,7 +488,6 @@ pub fn digest_alignment_body(
       Error!(
         "unexpected",
         next_tok,
-        stomach,
         s!("Column ended with {next_tok}")
       );
     }
@@ -525,8 +524,7 @@ pub fn digest_alignment_column(
   loop {
     // Outer loop; collects 1 column (possibly multiple spans) return from within!
     // Scan till we get something NOT \omit, \noalign
-    while let Some(xtoken) = stomach
-      .get_gullet_mut()
+    while let Some(xtoken) = gullet_mut!()
       .read_x_token(Some(false), false)?
     {
       last_token = Some(xtoken);
@@ -561,8 +559,8 @@ pub fn digest_alignment_column(
       } else if *token == T_CS!("\\hidden@noalign") {
         // \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
-        let invoked = stomach.invoke_token(token)?;
-        stomach.box_list.extend(invoked);
+        let invoked = stomach_mut!().invoke_token(token)?;
+        stomach_mut!().box_list.extend(invoked);
       } else {
         break;
       }
@@ -573,7 +571,7 @@ pub fn digest_alignment_column(
       || last_token == Some(T_END!())
       || last_token == Some(T_CS!("\\@close@alignment"))
     {
-      stomach.expire_local_box_list();
+      stomach_mut!().expire_local_box_list();
       return Ok((None, last_token, None, false));
     }
     // Next column, unless spanning (then combine columns)
@@ -591,8 +589,7 @@ pub fn digest_alignment_column(
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     gullet_mut!().unread(to_unread);
-    while let Some(token) = stomach
-      .get_gullet_mut()
+    while let Some(token) = gullet_mut!()
       .read_x_token(Some(false), false)?
     {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token) {
@@ -604,7 +601,7 @@ pub fn digest_alignment_column(
         } else {
           // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
           //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
-          let current_list = stomach.expire_local_box_list();
+          let current_list = stomach_mut!().expire_local_box_list();
           let mut out_list = List::new(current_list);
           out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
           return Ok((
@@ -624,15 +621,15 @@ pub fn digest_alignment_column(
       } else {
         // Else, we're getting some actual content for the column
         // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
-        let invoked = stomach.invoke_token(&token)?;
-        stomach.box_list.extend(invoked);
+        let invoked = stomach_mut!().invoke_token(&token)?;
+        stomach_mut!().box_list.extend(invoked);
         // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),
         // List::new(stomach.box_list.clone()).stringify()); //       if
         // $LaTeXML::DEBUG{halign};
       }
     }
   }
-  stomach.expire_local_box_list();
+  stomach_mut!().expire_local_box_list();
   Ok((None, None, None, false))
 }
 

@@ -80,7 +80,7 @@ LoadDefinitions!({
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
-  DefPrimitive!("\\@@add@caption@counters", sub[ ()] {
+  DefPrimitive!("\\@@add@caption@counters", sub[()] {
     let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
     let props   = ref_step_counter(&captype, false)?;
     let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
@@ -116,7 +116,7 @@ LoadDefinitions!({
   "###,
     properties   => { map!("layout" => "vertical".into()) },
     before_digest => { DefMacro!("\\@captype", "figure"); },
-    after_digest  => sub[ tag] {
+    after_digest  => sub[tag] {
       rescue_caption_counters("figure", tag);
     }
   );

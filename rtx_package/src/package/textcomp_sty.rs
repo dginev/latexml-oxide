@@ -1,6 +1,4 @@
 use crate::package::*;
-use rtx_core::{state_mut,state};
-
 LoadDefinitions!({
   DefPrimitive!("\\textlangle", "\u{27E8}",
     bounded => true, font => { encoding => "TS1" });

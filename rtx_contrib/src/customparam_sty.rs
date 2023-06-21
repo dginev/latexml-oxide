@@ -2,7 +2,7 @@ use rtx_package::*;
 
 LoadDefinitions!({
 
-  // DefParameterType!(Foo, sub[ inner, _extra] {
+  // DefParameterType!(Foo, sub[inner, _extra] {
   //   gullet.skip_one_space();
   // });
 

@@ -11,7 +11,7 @@ LoadDefinitions!({
     aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
   },   // aligning will take care of \\\\ "rows"
-  before_digest => sub[gullet] {
+  before_digest => {
     Let!("\\par", "\\inner@par");
     Let!("\\\\", "\\inner@par");
   });
@@ -41,8 +41,8 @@ LoadDefinitions!({
   // create a node! or even a whatsit!)
   DefConstructor!("\\centering", sub[doc,_args] {
   state_mut!().assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
-  before_digest => sub[gullet] {
-    state::unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
+  before_digest => {
+    state_mut!().unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
   });
   // DefConstructorI('\raggedright', undef,
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },

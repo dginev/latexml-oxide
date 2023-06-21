@@ -90,7 +90,7 @@ LoadDefinitions!({
   // Well, we have to dance a bit...
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
-  DefMacro!("\\verbatim@", sub[ _arg] {
+  DefMacro!("\\verbatim@", {
     let env = state!().lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
@@ -98,7 +98,7 @@ LoadDefinitions!({
     // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
-    while let Some(line) = gullet.read_raw_line() {
+    while let Some(line) = gullet_mut!().read_raw_line() {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
@@ -119,10 +119,10 @@ LoadDefinitions!({
     for line in &lines {
       tokens.push(T_CS!("\\verbatim@startline"));
       tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
-        vec![Tokens::new(ExplodeText!(line))])?.unlist());
+        vec![Tokens::new(ExplodeText!(line))]).unlist());
       tokens.push(T_CS!("\\verbatim@processline"));
     }
-    tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)])?.unlist());
+    tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)]).unlist());
     Ok(Tokens::new(tokens))
   });
 
@@ -130,10 +130,10 @@ LoadDefinitions!({
   // // Read verbatim material from file.
   DefMacro!("\\verbatiminput {}", sub[(file)] {
     if let Some(path) = find_file(&file.to_string(), None) {
-      reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
+      gullet::reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
             || -> Result<Tokens> {
           let mut lines = Vec::new();
-          if let Some(mouth) = igullet.get_mouth_mut() {
+          if let Some(mouth) = gullet_mut!().get_mouth_mut() {
             while let Some(line) = mouth.read_raw_line(false) {
               lines.push(line);
             }
@@ -142,7 +142,7 @@ LoadDefinitions!({
           for line in lines.into_iter() {
             tokens.push(T_CS!("\\verbatim@startline"));
             tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
-              vec![Tokens::new(ExplodeText!(line))])?.unlist());
+              vec![Tokens::new(ExplodeText!(line))]).unlist());
             tokens.push(T_CS!("\\verbatim@processline"));
           }
           Ok(Tokens!(
@@ -161,7 +161,7 @@ LoadDefinitions!({
 
   // //======================================================================
   // // Getting verbatim text into arguments
-  // DefPrimitive!("\\newverbtext DefToken", sub[ args] {
+  // DefPrimitive!("\\newverbtext DefToken", sub[args] {
   //     unpack!(args => cs);
   //     let mouth = gullet_mut!().get_mouth_mut();
   //     my ($init, $body);

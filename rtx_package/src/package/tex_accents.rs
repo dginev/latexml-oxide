@@ -8,7 +8,6 @@ static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 // Hopefully, we'll get a Box from digestion with a plain string.
 // Then we can apply combining accents to it.
 pub fn apply_accent(
-  stomach: &mut Stomach,
   letter: Tokens,
   combiningchar: char,
   standalonechar: &str,

@@ -338,7 +338,7 @@ LoadDefinitions!({
     // should it be another datastructure?
     let thing = nodes.pop().unwrap();
     let not_node = nodes.pop().unwrap();
-    let text = state::model.with_node_qname(thing, |thing_str| match thing_str {
+    let text = model_mut!().with_node_qname(thing, |thing_str| match thing_str {
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
@@ -396,12 +396,12 @@ LoadDefinitions!({
 
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
-  DefPrimitive!("\\joinrel", sub[()] {
+  DefPrimitive!("\\joinrel", {
     gullet_mut!().skip_spaces()?;
-    if let Some(left) = stomach.box_list.pop() {
+    if let Some(left) = stomach_mut!().box_list.pop() {
       let mut stuff = Vec::new();
       while let Some(tok) = gullet_mut!().read_x_token(Some(false),false)? {
-        stuff = stomach.invoke_token(&tok)?;
+        stuff = stomach_mut!().invoke_token(&tok)?;
         if !stuff.is_empty() {
           break;
         }

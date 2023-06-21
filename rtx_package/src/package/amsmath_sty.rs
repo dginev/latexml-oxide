@@ -1,5 +1,5 @@
 use crate::package::*;
-use rtx_core::{state_mut,state};
+use rtx_core::{state_mut};
 //**********************************************************************
 // See amsldoc
 //

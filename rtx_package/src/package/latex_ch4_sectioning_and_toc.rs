@@ -3,7 +3,7 @@
 //**********************************************************************
 use crate::package::*;
 
-LoadDefinitions!(outer_stomach, outer{
+LoadDefinitions!({
   //======================================================================
   // C.4.1 Sectioning Commands.
   //======================================================================
@@ -42,7 +42,7 @@ LoadDefinitions!(outer_stomach, outer{
   Tag!("ltx:paragraph", auto_close=>true);
   Tag!("ltx:subparagraph", auto_close=>true);
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[ (token1, token2, star)] {
+  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[(token1, token2, star)] {
     if star.is_some() {
       Ok(token2) // can't move out without clone, how to circumvent?
     } else {
@@ -56,13 +56,13 @@ LoadDefinitions!(outer_stomach, outer{
   SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
-    sub[ gullet, (type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag)] {
+    sub[(type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
       if state!().lookup_bool("IN_MATH") {
         let mode = state!().lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
-          state::stomach.clone().borrow_mut().end_mode(&mode)?;
+          stomach_mut!().end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
           state_mut!().assign_value("IN_MATH", false, Some(Scope::Global));
         }
@@ -147,9 +147,9 @@ LoadDefinitions!(outer_stomach, outer{
         document.insert_element("ltx:toctitle", toctitle, None)?;
       }
     },
-    properties => sub[ args] {
+    properties => sub[args] {
       let stype = args[0].as_ref().unwrap();
-      let inlist = args[1].as_ref().unwrap();
+      // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
 
@@ -164,20 +164,11 @@ LoadDefinitions!(outer_stomach, outer{
       };
       let stype_tokens = stype.revert()?;
       let title_tokens = title.revert()?;
-      let invoked_title;
-      {
-        let gullet = gullet_mut!();
-        invoked_title =
-          Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens])?;
-      }
+      let invoked_title =
+        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens]);
       let xtitle    = stomach::digest(invoked_title)?;
-
-      let invoked_toctitle;
-      {
-        let gullet = gullet_mut!();
-        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype.revert()?, toctitle.revert()?])?;
-      }
+      let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
+          vec![stype.revert()?, toctitle.revert()?]);
       let xtoctitle = stomach::digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
@@ -202,8 +193,7 @@ LoadDefinitions!(outer_stomach, outer{
         Some(string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
-        )), None, state
-      )?;
+        )), None)?;
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None)?;
 
@@ -212,10 +202,10 @@ LoadDefinitions!(outer_stomach, outer{
         document.insert_element("ltx:toctitle", toctitle, None)?;
       }
     },
-    properties => sub[ args] {
+    properties => sub[args] {
       use DigestedData::*;
       let stype = args[0].as_ref().unwrap();
-      let inlist = args[1].as_ref().unwrap();
+      // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
       let mut props = RefStepID!(&stype.to_string())?;
@@ -224,7 +214,7 @@ LoadDefinitions!(outer_stomach, outer{
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
         stomach::digest(
-          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?;
+          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?
       } else {
         title.clone()
       };

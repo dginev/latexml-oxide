@@ -26,13 +26,13 @@ LoadDefinitions!({
   r###"<ltx:text class='ltx_LaTeX_logo' cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>L<ltx:text
   fontsize='80%' yoffset='0.4ex'>A</ltx:text>T<ltx:text
   yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
-  sizer => sub[_w,_s] { Ok((Dimension!("2.6em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
+  sizer => { Ok((Dimension!("2.6em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
   DefConstructor!("\\LaTeXe",
   "<ltx:text class='ltx_LaTeX_logo' cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>L<ltx:text
   fontsize='80%' yoffset='0.4ex'>A</ltx:text>T<ltx:text
   yoffset='-0.4ex'>E</ltx:text>X\u{2002}2<ltx:text yoffset='-0.4em'>\u{03B5}</ltx:text></ltx:text>",
-  sizer => sub[_w,_s] { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
+  sizer => { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
   DefMacro!("\\fmtname", "LaTeX2e");
   DefMacro!("\\fmtversion", "2018/12/01");
@@ -46,9 +46,8 @@ LoadDefinitions!({
     bounded        => true,
     font=> { emph => true },
     alias => "\\emph",
-    before_digest => sub[stomach] {
-      let gullet = gullet_mut!();
-      if Expand!(T_CS!("\\f@shape"),gullet).to_string() == "it" {
+    before_digest => {
+      if Expand!(T_CS!("\\f@shape")).to_string() == "it" {
         DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("n")));
       } else {
         DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
@@ -95,10 +94,10 @@ LoadDefinitions!({
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   mode         => "text", bounded => true,
-  before_digest => sub [stomach] {
-    reenter_text_mode(true, gullet_mut!());
+  before_digest => {
+    reenter_text_mode(true);
     neutralize_font(); },
-  properties   => sub [stomach, args] {
+  properties   => sub [args] {
     let arg1 = &args[0];
     let arg2 = &args[1];
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
@@ -120,7 +119,7 @@ LoadDefinitions!({
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("role".to_string(), s!("{note_type}mark").into());
-    props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))),stomach)?.into());
+    props.insert("list".to_string(), digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     Ok(props)
   },
   reversion => "");
@@ -128,7 +127,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@notetext[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   mode       => "text",
-  properties => sub [stomach, args] {
+  properties => sub [args] {
     let arg1 = &args[0];
     let arg2 = &args[1];
     let arg3 = &args[2];

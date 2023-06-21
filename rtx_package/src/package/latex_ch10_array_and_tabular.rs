@@ -34,7 +34,7 @@ LoadDefinitions!({
     if let Some(va) = attrs.get("vattach") {
       attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
-    let gullet = gullet_mut!();
+    let mut gullet = gullet_mut!();
     tabular_bindings(template, HashMap::default(), attrs)?;
   });
 
@@ -51,7 +51,7 @@ LoadDefinitions!({
     locked => true);
   DefMacro!("\\endtabular", r"\@tabular@after\@finish@alignment\@end@tabular",
     locked => true);
-  DefPrimitive!("\\@end@tabular", sub[()] { stomach_mut!().egroup()?; });
+  DefPrimitive!("\\@end@tabular", { stomach_mut!().egroup()?; });
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
@@ -77,10 +77,10 @@ LoadDefinitions!({
   //   r"\@finish@alignment\@end@tabular@");
   // DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
   //   "#4",
-  //   before_digest => sub[_a] { stomach.bgroup(); },
+  //   before_digest => { stomach.bgroup(); },
   //   reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*",
   //   mode         => "text");
-  DefPrimitive!("\\@end@tabular@", sub [stomach,_args] { stomach.egroup()?; });
+  DefPrimitive!("\\@end@tabular@", { stomach_mut!().egroup()?; });
   Let!("\\multicolumn", "\\@multicolumn");
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
@@ -90,7 +90,7 @@ LoadDefinitions!({
 
   DefMacro!("\\cline{}", r"\noalign{\@cline{#1}}");
   DefConstructor!("\\@cline{}", "",
-    after_digest => sub[ whatsit] {
+    after_digest => sub[whatsit] {
       let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let mut cols_vec = Vec::new();
       let cols_chars = cols.chars();
@@ -150,7 +150,7 @@ LoadDefinitions!({
 
   // Array and similar environments
 
-  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[ (pos,template)] {
+  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos,template)] {
   // my $attr = { vattach => translateAttachment($pos),
   //   role => 'ARRAY' };
   // # Determine column and row separations, if non default
@@ -171,10 +171,10 @@ LoadDefinitions!({
     r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
   );
   DefMacro!("\\endarray", None, r"\@finish@alignment\@end@array");
-  DefPrimitive!("\\@end@array", sub[_args] { stomach.egroup()?; });
+  DefPrimitive!("\\@end@array", { stomach_mut!().egroup()?; });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",
-    before_digest => sub[stomach] { stomach.bgroup(); },
+    before_digest => { stomach_mut!().bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
 
   DefMacro!("\\@tabarray", r"\m@th\@@array[c]");

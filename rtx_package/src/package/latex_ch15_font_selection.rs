@@ -98,10 +98,9 @@ LoadDefinitions!({
 
   Let!("\\reset@font", "\\normalfont");
 
-  DefPrimitive!("\\selectfont", sub[()] {
-    let mut gullet = gullet_mut!();
+  DefPrimitive!("\\selectfont", {
     let family = Expand!(T_CS!("\\f@family")).to_string();
-    let series = Expand!(T_CS!("\\f@series"),gullet).to_string();
+    let series = Expand!(T_CS!("\\f@series")).to_string();
     let shape  = Expand!(T_CS!("\\f@shape")).to_string();
     if let Some(sh) = font::lookup_font_family(&family) { MergeFont!(sh.clone()); }
     else {
@@ -126,34 +125,34 @@ LoadDefinitions!({
   // If these series or shapes appear in math, they revert it to roman, medium, upright (?)
   DefConstructor!("\\textmd@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { series => "medium" }, alias => "\\textmd",
-    before_digest => sub[_gullet] { DefMacro!("\\f@series", "m"); });
+    before_digest => { DefMacro!("\\f@series", "m"); });
   DefConstructor!("\\textbf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { series => "bold" }, alias => "\\textbf",
-    before_digest => sub[_gullet] { DefMacro!("\\f@series", "b"); });
+    before_digest => { DefMacro!("\\f@series", "b"); });
   DefConstructor!("\\textrm@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
     mode => "text", bounded => true, font => { family => "serif" }, alias => "\\textrm",
-    before_digest => sub[_gullet] { DefMacro!("\\f@family", "cm"); });
+    before_digest => { DefMacro!("\\f@family", "cm"); });
   DefConstructor!("\\textsf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { family => "sansserif" }, alias => "\\textsf",
-    before_digest => sub[_gullet] { DefMacro!("\\f@family", "cmss"); });
+    before_digest => { DefMacro!("\\f@family", "cmss"); });
   DefConstructor!("\\texttt@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { family => "typewriter" }, alias => "\\texttt",
-    before_digest => sub[_gullet] { DefMacro!("\\f@family", "cmtt"); });
+    before_digest => { DefMacro!("\\f@family", "cmtt"); });
   DefConstructor!("\\textup@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "upright" }, alias => "\\textup",
-    before_digest => sub[_gullet] { DefMacro!("\\f@shape", ""); });
+    before_digest => { DefMacro!("\\f@shape", ""); });
   DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "italic" }, alias => "\\textit",
-    before_digest => sub[_gullet] { DefMacro!("\\f@shape", "i"); });
+    before_digest => { DefMacro!("\\f@shape", "i"); });
   DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "slanted" }, alias => "\\textsl",
-    before_digest => sub[_gullet] { DefMacro!("\\f@shape", "sl"); });
+    before_digest => { DefMacro!("\\f@shape", "sl"); });
   DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "smallcaps" }, alias => "\\textsc",
-    before_digest => sub[_gullet] { DefMacro!("\\f@shape", "sc"); });
+    before_digest => { DefMacro!("\\f@shape", "sc"); });
   DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode =>
   "text",   bounded => true, font => { family => "serif", series => "medium", shape => "upright"
-  }, alias => "\\textnormal",   before_digest => sub[_gullet] {
+  }, alias => "\\textnormal",   before_digest => {
     DefMacro!("\\f@family", "cmtt");
     DefMacro!("\\f@series", "m");
     DefMacro!("\\f@shape",  "n"); });

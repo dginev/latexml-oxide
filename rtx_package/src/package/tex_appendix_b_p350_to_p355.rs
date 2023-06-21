@@ -125,33 +125,33 @@ LoadDefinitions!({
   "###
   );
 
-  DefPrimitive!("\\enskip", sub[()] {
+  DefPrimitive!("\\enskip", {
     Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enskip")),
     stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
       "isSpace"=>true)) });
 
-  DefPrimitive!("\\enspace", sub[()] {
+  DefPrimitive!("\\enspace", {
       Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enspace")),
       stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
         "isSpace"=>true)) });
 
-  DefPrimitive!("\\quad", sub[()] {
+  DefPrimitive!("\\quad", {
       Tbox::new(arena::pin_static("\u{2003}"), None, None, Tokens!(T_CS!("\\quad")),
       stored_map!("name" => "quad", "width" => Dimension::from_str("1em")?,
         "isSpace"=>true)) });
 
   // Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
-  DefPrimitive!("\\qquad", sub[()] {
+  DefPrimitive!("\\qquad", {
       Tbox::new(arena::pin_static("\u{2003}\u{2003}"), None, None, Tokens!(T_CS!("\\qquad")),
       stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
         "isSpace"=>true, "asHint" => true)) });
 
-  DefPrimitive!("\\thinspace", sub[()] {
+  DefPrimitive!("\\thinspace", {
       Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\thinspace")),
       stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
         "isSpace"=>true)) });
 
-  DefPrimitive!("\\negthinspace", sub[()] {
+  DefPrimitive!("\\negthinspace", {
       Tbox::new(arena::pin_static(""), None, None, Tokens!(T_CS!("\\negthinspace")),
       stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
         "isSpace"=>true)) });
@@ -173,7 +173,7 @@ LoadDefinitions!({
   DefPrimitive!("\\break", None);
   DefPrimitive!("\\nobreak", None);
   DefPrimitive!("\\allowbreak", None);
-  DefPrimitive!("\\nobreakspace", sub[ ()] {
+  DefPrimitive!("\\nobreakspace", sub[()] {
     Tbox::new(arena::pin_static("\u{00A0}"), None, None,
       Tokens!(T_ACTIVE!('~')), stored_map!("isSpace" => true,
       "width" => Dimension::from_str("0.333em")?))
@@ -187,7 +187,7 @@ LoadDefinitions!({
   Let!("\\newpage", "\\eject");
 
   DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
-  before_digest=>sub[stomach] {
+  before_digest=>{
     state_mut!().after_assignment();
     Ok(Vec::new())
   });

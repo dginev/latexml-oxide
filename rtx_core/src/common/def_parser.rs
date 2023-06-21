@@ -22,7 +22,8 @@ static PARAMSPECT_CHECK_RE: Lazy<Regex> =
 
 /// If calling at compile-time, pass `None` for state:: to avoid initialization.
 pub fn parse_prototype(
-  proto: &str
+  proto: &str,
+  init_flag: bool
 ) -> Result<(Token, Option<Parameters>)> {
   let cs;
   let normalized_proto = if let Some(captures) = CSNAME_MACRO_RE.captures(proto) {
@@ -55,14 +56,15 @@ pub fn parse_prototype(
     fatal!(Prototype, Misdefined, message);
   };
   let final_proto = normalized_proto.trim();
-  let paramlist = parse_parameters(final_proto, &cs)?;
+  let paramlist = parse_parameters(final_proto, &cs, init_flag)?;
   Ok((cs, paramlist))
 }
 
 /// If calling at compile-time, pass `None` for state:: to avoid initialization.
 pub fn parse_parameters(
   outer_prototype: &str,
-  cs: &Token
+  cs: &Token,
+  init_flag: bool,
 ) -> Result<Option<Parameters>> {
   let mut prototype = Cow::Borrowed(outer_prototype);
   let mut parameters = Vec::new();
@@ -77,7 +79,7 @@ pub fn parse_parameters(
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
-        parse_parameters(inner_spec, cs)?
+        parse_parameters(inner_spec, cs, init_flag)?
       };
       let mut p = Parameter {
         name: Cow::Borrowed("Plain"),
@@ -89,7 +91,9 @@ pub fn parse_parameters(
         inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
       };
-      p = p.init()?;
+      if init_flag {
+        p = p.init()?;
+      }
       parameters.push(p);
     } else if let Some(captures) = OPTIONAL_CHECK_RE.captures(&prototype) {
       // Ditto for Optional
@@ -108,7 +112,9 @@ pub fn parse_parameters(
           // extra: vec![TokenizeInternal!(default_captures.get(0).map_or("", |m| m.as_str()))],
           ..Parameter::default()
         };
-        p = p.init()?;
+        if init_flag {
+          p = p.init()?;
+        }
         parameters.push(p);
       } else if !inner_spec.is_empty() {
         let mut p = Parameter {
@@ -118,12 +124,14 @@ pub fn parse_parameters(
           } else {
             Cow::Owned(spec.to_string())
           },
-          inner: parse_parameters(inner_spec, cs)?
+          inner: parse_parameters(inner_spec, cs, init_flag)?
             .map(|ps| ps.into())
             .unwrap_or_default(),
           ..Parameter::default()
         };
-        p = p.init()?;
+        if init_flag {
+          p = p.init()?;
+        }
         parameters.push(p);
       } else {
         let mut p = Parameter {
@@ -131,7 +139,9 @@ pub fn parse_parameters(
           spec: Cow::Owned(spec.to_string()),
           ..Parameter::default()
         };
-        p = p.init()?;
+        if init_flag {
+          p = p.init()?;
+        }
         parameters.push(p);
       }
     } else if let Some(captures) = PARAMSPECT_CHECK_RE.captures(&prototype) {
@@ -153,7 +163,9 @@ pub fn parse_parameters(
         extra,
         ..Parameter::default()
       };
-      p = p.init()?;
+      if init_flag {
+        p = p.init()?;
+      }
       parameters.push(p);
     } else {
       fatal!(

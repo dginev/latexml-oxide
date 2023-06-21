@@ -5,6 +5,7 @@
 //!  fully implement KeyVal pairs.
 
 use std::rc::Rc;
+use std::borrow::Cow;
 
 use crate::binding::def::dialect::{def_conditional, def_macro};
 use crate::common::arena;
@@ -160,7 +161,8 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   let vtype = if vtype.is_empty() { "{}" } else { vtype };
   let paramlist_opt = parse_parameters(
     vtype,
-    &T_OTHER!(s!("KeyVal {key} in set {keyset} with prefix {prefix}"))
+    &T_OTHER!(s!("KeyVal {key} in set {keyset} with prefix {prefix}")),
+    true
   )?;
   match paramlist_opt {
     None => {
@@ -230,16 +232,15 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
       options.bin,
     )?,
     "boolean" => {
-      let macroname = if let Some(mpfx) = options.macroprefix {
-        s!("{mpfx}{key}")
-      } else {
-        qname.clone()
-      };
       define_boolean(
         &qname,
         options.code,
         options.mismatch,
-        &macroname,
+        &if let Some(mpfx) = options.macroprefix {
+          Cow::Owned(s!("{mpfx}{key}"))
+        } else {
+          Cow::Borrowed(&qname)
+        }
       )?
     },
     _ => Warn!(
@@ -260,7 +261,7 @@ fn define_ordinary(
   code_expansion: Option<ExpansionBody>,
 ) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs)?;
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
   def_macro(qname_cs, plain_params, code_expansion, None)
 }
 
@@ -271,7 +272,7 @@ fn define_command(
   macroname: &str,
 ) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs)?;
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
   let plainp = plain_params.clone();
   let orig = s!("\\ltxml@orig@{qname}");
   let macroname_cs = s!("\\{macroname}");
@@ -324,7 +325,7 @@ fn define_choice(
   };
   let qname_cs = T_CS!(s!("\\{qname}"));
   let orig = T_CS!(s!("\\ltxml@orig@{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs)?;
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
   let plain_params_main = plain_params.clone();
   let closure: ExpansionClosure = Rc::new(move |mut values| {
     // Store the normalized value (if applicable)
@@ -412,7 +413,7 @@ fn define_boolean(
   )?; // We might need to $scope here
   let orig = s!("\\ltxml@@rig@{qname}");
   let orig_cs = T_CS!(orig);
-  let plain_params = parse_parameters("{}", &orig_cs)?;
+  let plain_params = parse_parameters("{}", &orig_cs, true)?;
   let macroname_true = T_CS!(s!("\\{macroname}true"));
   let macroname_false = T_CS!(s!("\\{macroname}false"));
   let closure: ExpansionClosure = Rc::new(move |mut values: Vec<ArgWrap>| {

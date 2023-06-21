@@ -24,8 +24,8 @@ LoadDefinitions!({
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitive!("{", sub[ ()] {
-    stomach.bgroup();
+  DefPrimitive!("{", sub[()] {
+    stomach_mut!().bgroup();
     let open = Tbox::new(arena::pin_static(""), None, None,
         Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
     let mode = Some(if state!().lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
@@ -48,38 +48,35 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!(
-    "}",
-    sub[ ()] {
-      let f = LookupFont!();
-      stomach.egroup()?;
-      Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
-    }
-  );
+  DefPrimitive!("}", {
+    let f = LookupFont!();
+    stomach_mut!().egroup()?;
+    Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
+  });
 
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
   // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
-    before_digest => sub[stomach] { stomach.bgroup(); },
+    before_digest => { stomach_mut!().bgroup(); },
     capture_body => true,
-    reversion=> sub[whatsit, _args] {
+    reversion=> sub[whatsit,_args] {
       if let Some(body) = whatsit.get_body()? {
         body.revert()
       } else { Ok(Tokens!()) }
     }
   );
   DefConstructor!("\\@hidden@egroup", "",
-    after_digest => sub[_args] { stomach.egroup()?; },
+    after_digest => { stomach_mut!().egroup()?; },
     reversion => ""
   );
 
   DefPrimitive!(
-  "\\begingroup", sub[ _args] {
+  "\\begingroup", {
     stomach_mut!().begingroup();
   });
   DefPrimitive!(
-  "\\endgroup", sub[ _args] {
+  "\\endgroup", {
     stomach_mut!().endgroup()?;
   });
 
@@ -89,7 +86,7 @@ LoadDefinitions!({
     let lhs = if arg.get_catcode() == Catcode::CS {
       s!("{arg}=")
     } else { String::new() };
-    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg])?;
+    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
     let rhs = writable_tokens(&Expand!(stuff));
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
@@ -98,8 +95,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();
-    let stuff = state!().lookup_value(&s!("box{n}"));
-    Debug!("Box {n} = {stuff:?}");
+    Debug!("Box {n} = {:?}", state!().lookup_value(&s!("box{n}")));
     ()
   });
   DefPrimitive!("\\showlists", None);
@@ -108,10 +104,10 @@ LoadDefinitions!({
   // DefPrimitive('\shipout ??
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
 
-  DefPrimitive!("\\lx@ignorehardspaces", sub[ ()] {
+  DefPrimitive!("\\lx@ignorehardspaces", {
     let mut boxes = Vec::new();
     while let Some(token) = gullet_mut!().read_x_token(None, false)? {
-      boxes = stomach.invoke_token(&token)?;
+      boxes = stomach_mut!().invoke_token(&token)?;
       if boxes.is_empty() {
         break;
       }
@@ -141,12 +137,12 @@ LoadDefinitions!({
   });
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
-  DefPrimitive!("\\afterassignment Token", sub[ (t)] {
+  DefPrimitive!("\\afterassignment Token", sub[(t)] {
     state_mut!().assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }
-  DefPrimitive!("\\aftergroup Token", sub[ (t)] {
+  DefPrimitive!("\\aftergroup Token", sub[(t)] {
     state_mut!().push_value("afterGroup", t)
   });
 
@@ -156,20 +152,19 @@ LoadDefinitions!({
   DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
     gullet_mut!().unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| uppercase_token(t))
+        .map(uppercase_token)
         .collect());
   });
   DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
     gullet_mut!().unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| lowercase_token(t))
+        .map(lowercase_token)
         .collect::<Vec<Token>>());
   });
 
-  DefPrimitive!("\\message{}", sub [stomach, (message)] {
+  DefPrimitive!("\\message{}", sub [(message)] {
     if state!().lookup_int("VERBOSITY") > -1 {
-      eprintln!("{}", writable_tokens(
-        &do_expand(message, gullet_mut!())?));
+      eprintln!("{}", writable_tokens(&do_expand(message)?));
     }
   });
 
@@ -183,7 +178,7 @@ LoadDefinitions!({
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
-  sub[ (port, filename)] {
+  sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
@@ -204,10 +199,10 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\closein Number", sub[ (port)] {
+  DefPrimitive!("\\closein Number", sub[(port)] {
     // Clone the Rc<> for mouth out of state:: since we'll be mutating.
     let file_key = s!("input_file:{}", port);
-    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&file_key) {
+    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = state!().lookup_value(&file_key) {
       Some(Rc::clone(mouth))
     } else {
       None
@@ -220,10 +215,10 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
-    sub[ (port, token)] {
+    sub[(port, token)] {
     if let Some(Stored::Mouth(mouth_stored)) = state!().lookup_value(&format!("input_file:{port}")) {
       let mouth_obj = Rc::clone(mouth_stored);
-      stomach.bgroup();
+      stomach_mut!().bgroup();
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
       AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
@@ -243,13 +238,13 @@ LoadDefinitions!({
           break;
         }
       }
-      stomach.egroup()?;
+      stomach_mut!().egroup()?;
       DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
     }
   });
 
-  DefConditional!("\\ifeof Number", sub[ (port)] {
-    if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
+  DefConditional!("\\ifeof Number", sub[(port)] {
+    if let Some(Stored::Mouth(mouth)) = state!().lookup_value(&s!("input_file:{}", port)) {
       mouth.borrow().at_eof()
     } else {
       true
@@ -259,7 +254,7 @@ LoadDefinitions!({
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
   DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
-    sub[ (port, filename)] {
+    sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
     let contents_key = &s!("{}_contents",filename);
@@ -267,20 +262,20 @@ LoadDefinitions!({
     AssignValue!(contents_key => "",  Some(Scope::Global));
   });
 
-  DefPrimitive!("\\closeout Number", sub[ (port)] {
+  DefPrimitive!("\\closeout Number", sub[(port)] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
 
-  DefPrimitive!("\\write Number {}", sub[ (port, tokens)] {
-    if let Some(filename) = LookupValue!(&s!("output_file:{}", port)) {
+  DefPrimitive!("\\write Number {}", sub[(port, tokens)] {
+    if let Some(filename) = state!().lookup_value(&s!("output_file:{}", port)) {
       let handle   = s!("{}_contents",filename);
       let mut contents : String = LookupString!(&handle);
       let mut gullet = gullet_mut!();
-      contents.push_str(&Expand!(tokens,gullet).untex());
+      contents.push_str(&Expand!(tokens).untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
-      let gullet = gullet_mut!();
+      let mut gullet = gullet_mut!();
       println_stderr!("{}", Expand!(tokens).untex());
     }
   });
@@ -322,7 +317,7 @@ LoadDefinitions!({
       gullet.unread_vec(kv);
       gullet.unread_one(T_CS!("\\ltx@special@graphics"));
     } else {
-      Info!("ignored", "special", stomach, s!("Unrecognized TeX Special: {arg}"));
+      Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }
   });
 
@@ -390,7 +385,7 @@ LoadDefinitions!({
       args[0].as_ref().unwrap().data() {
         *d
       } else { Dimension::default() };
-      let is_svg_g = document.with_node_qname(document.get_node(),
+      let is_svg_g = document::with_node_qname(document.get_node(),
         |qname| qname == "svg:g");
     let parent = document.get_node_mut();
     if is_svg_g {
@@ -405,7 +400,7 @@ LoadDefinitions!({
         parent.set_attribute("transform", &transform)?;
       }
     } else if in_svg(document) {
-      Warn!("unexpected", "kern", document, s!("Lost kern in SVG {length}"));
+      Warn!("unexpected", "kern", s!("Lost kern in SVG {length}"));
     }
   });
   DefMacro!(
@@ -415,11 +410,11 @@ LoadDefinitions!({
   DefPrimitive!("\\unpenalty", None);
   DefPrimitive!("\\unkern", None);
   // Worrisome, but...
-  DefPrimitive!("\\unskip", sub[()] {
+  DefPrimitive!("\\unskip", {
     // pop until a non-empty box is found
-    while let Some(last_box) = stomach.box_list.pop() {
+    while let Some(last_box) = stomach_mut!().box_list.pop() {
       if !last_box.is_empty()? {
-        stomach.box_list.push(last_box);
+        stomach_mut!().box_list.push(last_box);
         break;
       }
     }

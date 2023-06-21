@@ -1,8 +1,7 @@
 use crate::package::*;
 use rtx_core::{state_mut,state};
 
-fn setup_cyrillic(_stomach: &mut Stomach) -> Result<()> {
-  Bindstate::(_stomach);
+fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\cyra", "\u{0430}");
   DefMacro!("\\cyrb", "\u{0431}");
   DefMacro!("\\cyrv", "\u{0432}");
@@ -106,8 +105,7 @@ LoadDefinitions!( {
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
 
-  DeclareOption!(None, sub[stomach] {
-    let gullet = gullet_mut!();
+  DeclareOption!(None, {
     let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
     UnshiftValue!("font_encodings", vec![Stored::String(arena::pin(current_option))]);
   });
@@ -116,12 +114,12 @@ LoadDefinitions!( {
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  ProcessOptions!(stomach);
+  ProcessOptions!();
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if let Some(font_encodings_ref) = state!().lookup_vecdeque("font_encodings") {
     let font_encodings: VecDeque<Stored> = font_encodings_ref.clone();
     if !font_encodings.is_empty() {
-      setup_cyrillic(stomach)?;
+      setup_cyrillic()?;
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(enc_sym) = encoding_stored {
           let encoding = arena::to_string(enc_sym);
@@ -129,7 +127,7 @@ LoadDefinitions!( {
             scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
-          if LoadFontMap!(&encoding).is_some() {
+          if load_font_map(&encoding).is_some() {
             MergeFont!(encoding => encoding);
           }
         } else {

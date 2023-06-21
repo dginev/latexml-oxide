@@ -1859,12 +1859,12 @@ impl Document {
     } else {
       // Accept any namespaced attributes
       unimplemented!();
-      //   my ($ns, $name) = state::model}->decodeQName($key);
+      //   my ($ns, $name) = model_mut!()}->decodeQName($key);
       //   if ($ns) {             // If namespaced attribute (must have prefix!
       // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
       // declared? if (!$prefix) {                                    // if
       // namespace not already declared $prefix =
-      // state::model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+      // model_mut!()}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
       // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
       // // and declare it if ($prefix eq '//default') {    // Probably
       // shouldn't happen...?       node.setAttribute($name => $value); }
@@ -1933,7 +1933,7 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      // let model = state::model;
+      // let model = model_mut!();
       // let qname = model.get_node_qname(node);
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
       node.set_attribute(key, value)?;
@@ -1943,7 +1943,7 @@ impl Document {
       dbg!(key);
       unimplemented!();
     }
-    //   my ($ns, $name) = state::model.decodeQName($key);
+    //   my ($ns, $name) = model_mut!().decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
     // declared? if (!$prefix) {                                    // if

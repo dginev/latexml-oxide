@@ -26,7 +26,7 @@ LoadDefinitions!({
 
   // I don't understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  let define_included: PrimitiveClosure = primitiveproc!( args, inner{
+  let define_included: PrimitiveClosure = primitiveproc!(args, {
     args.reverse(); // we'll be using .pop() from the front
     let name = args
       .pop()
@@ -58,12 +58,7 @@ LoadDefinitions!({
     );
   });
 
-  let mut mock_stomach = Stomach::default();
-  define_excluded(
-    &mut mock_stomach,
-    vec![ArgWrap::Tokens(Tokenize!("comment", None))],
-    outer_state::
-  )?;
+  define_excluded(vec![ArgWrap::Tokens(Tokenize!("comment"))])?;
 
   DefPrimitive!("\\includecomment{}", Some(Rc::clone(&define_included)));
   DefPrimitive!("\\excludecomment{}", Some(define_excluded));

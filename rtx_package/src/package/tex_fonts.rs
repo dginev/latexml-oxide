@@ -52,8 +52,7 @@ LoadDefinitions!({
   DefRegister!("\\ht Number", Dimension::new(0),
   getter => sub[args] {
     let n = args.remove(0).expect_number();
-    let stuff = state!().lookup_value(&format!("box{}", n.value_of()));
-    if let Some(Stored::Digested(thebox)) = stuff {
+    if let Some(Stored::Digested(thebox)) = state!().lookup_value(&format!("box{}", n.value_of())) {
       thebox.get_height()
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
@@ -61,8 +60,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state!().lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
       thebox.set_height(value);
     }});
 
@@ -70,12 +68,12 @@ LoadDefinitions!({
   getter => sub[args] {
     let n = args.remove(0).expect_number();
     let boxid = format!("box{}", n.value_of());
-    let mut stuff = state::checkout_value(&boxid);
+    let mut stuff = state_mut!().checkout_value(&boxid);
     let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
       match thebox.get_width(None) {
         Ok(v) => v,
         Err(e) => {
-          let err = || {Error!("method", "get_width", None, format!("{e}")); Ok(()) };
+          let err = || {Error!("method", "get_width", format!("{e}")); Ok(()) };
           err().ok();
           None
         }
@@ -91,35 +89,33 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state!().lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
       thebox.set_width(value);
     }});
 
   DefRegister!("\\dp Number", Dimension::new(0),
   getter => sub[args] {
     let n = args.remove(0).expect_number();
-    let stuff = state!().lookup_value(&format!("box{}", n.value_of()));
-    if let Some(Stored::Digested(thebox)) = stuff {
-      thebox.get_depth()
-    } else {
-      Some(RegisterValue::Dimension(Dimension::default()))
-    }},
+    if let Some(Stored::Digested(thebox)) =
+      state!().lookup_value(&format!("box{}", n.value_of())) {
+        thebox.get_depth()
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      }},
 setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state!().lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
       thebox.set_depth(value);
     }});
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
-  DefParameterType!(FontToken, sub[ _inner, _extra] {
-    let token = gullet.read_token()?.unwrap();
+  DefParameterType!(FontToken, sub[_inner, _extra] {
+    let token = gullet_mut!().read_token()?.unwrap();
     if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet.read_number()?;
+      gullet_mut!().read_number()?;
     }
     token
   }); // ?
@@ -167,13 +163,12 @@ setter => sub[value,_scope,args] {
 
   DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
 
-  DefPrimitive!("\\@@@fontencoding{}", sub[ (encoding)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\@@@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
-    if LoadFontMap!(&encoding).is_some() {
+    if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding);
     } else {
-      Info!("missing_font_encoding", encoding, stomach,
+      Info!("missing_font_encoding", encoding,
         "Couldn't find font encoding, falling back to OT1");
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
@@ -191,7 +186,7 @@ setter => sub[value,_scope,args] {
   // Used for SemiVerbatim text
   DeclareFontMap!(
     "ASCII",
-    mixvec![
+    mixrc![
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
       None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
@@ -219,7 +214,7 @@ setter => sub[value,_scope,args] {
   // only when no other spacing point is available.]
   DeclareFontMap!(
     "OT1",
-    mixvec![
+    mixrc![
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}',
       '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}',
@@ -236,7 +231,7 @@ setter => sub[value,_scope,args] {
 
   DeclareFontMap!(
     "OT1",
-    mixvec![
+    mixrc![
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{2191}', '\u{2193}', '\'', '\u{00A1}',
       '\u{00BF}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}',
@@ -253,7 +248,7 @@ setter => sub[value,_scope,args] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OML",
-    mixvec![
+    mixrc![
       // \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma \Upsilon
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}',
@@ -302,7 +297,7 @@ setter => sub[value,_scope,args] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OMS",
-    mixvec![
+    mixrc![
     // minus     dot         times       ast          divide      diamond    plus-minus minus-plus
     '-',        '\u{22C5}', '\u{00D7}', '\u{2217}', '\u{00F7}', '\u{22C4}', '\u{00B1}', '\u{2213}',
     // oplus      ominus      otimes      oslash       odot        bigcirc circ        bullet
@@ -341,7 +336,7 @@ setter => sub[value,_scope,args] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OMX",
-    mixvec![
+    mixrc![
       // (          )           [           ]             lfloor      rfloor      lceil rceil
       '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}',
       '\u{2309}', /* lbrace      rbrace      langle      rangle        |           ||          /
@@ -374,7 +369,7 @@ setter => sub[value,_scope,args] {
 
   DefPrimitive!("\\char Number", sub[(number)] {
     let number_tks = number.revert().unwrap_or_default().unlist();
-    let decoded = match font::decode(number.value_of() as u8, None, false, stomach) {
+    let decoded = match font::decode(number.value_of() as u8, None, false) {
       None => *EMPTY_SYM,
       Some(c) => arena::pin_char(c)
     };
@@ -388,7 +383,7 @@ setter => sub[value,_scope,args] {
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipMatch:=", sub[ (newcs)] {
+  DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value = gullet_mut!().read_number()?;
@@ -396,9 +391,9 @@ setter => sub[value,_scope,args] {
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
     DefPrimitive!(internalcs.clone(), None, sub[args] {
-      let decoded = font::decode(value.value_of() as u8, None, false, stomach)
+      let decoded = font::decode(value.value_of() as u8, None, false)
         .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
-      let gullet = gullet_mut!();
+      let mut gullet = gullet_mut!();
       Tbox::new(decoded,
         None,
         None,
@@ -408,7 +403,7 @@ setter => sub[value,_scope,args] {
         Invocation!(T_CS!("\\char"), vec![value]),
         HashMap::default())
     });
-    state_mut!().install_definition(
+    state::install_definition(
       Register::new_chardef(newcs, Some(value.into()), Some(internalcs)), None);
     AfterAssignment!();
     Ok(Vec::new())
@@ -448,7 +443,7 @@ setter => sub[value,_scope,args] {
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[ (newcs)] {
+  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
     let value  = gullet_mut!().read_number().unwrap();
@@ -468,19 +463,19 @@ setter => sub[value,_scope,args] {
       DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
         properties => glyph_props,
-        font => sub[whatsit] { Ok(state!().lookup_font().unwrap().specialize(&glyph_str)) },
-        reversion =>  sub[_whatsit,_args,st] {
-          Ok(Tokens::new(
-            if (glyph_c as usize) < 128 {
-              vec![CharToken!(glyph_c,Catcode::OTHER)]
-            } else {
-              let v = value.value_of().to_string();
-              vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
-            }))
-        }
+        font => { Ok(state!().lookup_font().unwrap().specialize(&glyph_str)) }
+        // reversion => {
+        //   Ok(Tokens::new(
+        //     if (glyph_c as usize) < 128 {
+        //       vec![CharToken!(glyph_c,Catcode::OTHER)]
+        //     } else {
+        //       let v = value.value_of().to_string();
+        //       vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
+        //     }))
+        // }
       );
     }
-    state_mut!().install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
+    state::install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
     AfterAssignment!();
     Ok(Vec::new())
   });
@@ -488,9 +483,9 @@ setter => sub[value,_scope,args] {
   DefConstructor!("\\mathaccent Number Digested",
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
   sizer => "#1",    // Close enough?
-  after_digest => sub[ whatsit] {
+  after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let (role, glyph_opt) = decode_math_char(n as u16)?;
+    let (_role, glyph_opt) = decode_math_char(n as u16)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph", glyph);
 

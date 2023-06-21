@@ -9,11 +9,11 @@ LoadDefinitions!({
 
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
-  DefPrimitive!("\\lastbox", sub[()] {// Hopefully, the correct box got seen!
-    stomach.box_list.pop().map(|b| vec![b]).unwrap_or_default()
+  DefPrimitive!("\\lastbox", {// Hopefully, the correct box got seen!
+    stomach_mut!().box_list.pop().map(|b| vec![b]).unwrap_or_default()
   });
 
-  DefPrimitive!("\\setbox Number SkipMatch:=", sub[ (number)] {
+  DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = state_mut!().remove_value("afterAssignment") {
       state_mut!().assign_value("BeforeNextBox", after_token, None);
@@ -28,7 +28,7 @@ LoadDefinitions!({
     state_mut!().clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
     let mut rest = if let Some(xtoken) = gullet_mut!()
       .read_x_token(None, false)? {
-        stomach.invoke_token(&xtoken)?
+        stomach_mut!().invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
       Stored::Digested(rest.remove(0))
@@ -39,7 +39,7 @@ LoadDefinitions!({
     rest
   });
 
-  DefPrimitive!("\\box Number", sub[ (number)] {
+  DefPrimitive!("\\box Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state_mut!().remove_value(&box_key) {
       Ok(vec![stuff])
@@ -48,7 +48,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\copy Number", sub[ (number)] {
+  DefPrimitive!("\\copy Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = state!().lookup_value(&box_key) {
       let cloned_stuff : Digested = (*stuff).clone();
@@ -70,8 +70,8 @@ LoadDefinitions!({
   });
 
 
-  DefParameterType!(BoxSpecification, sub[ _inner, _extra] {
-      if let Some(key) = gullet.read_keyword(&["to", "spread"])? {
+  DefParameterType!(BoxSpecification, sub[_inner, _extra] {
+      if let Some(key) = gullet_mut!().read_keyword(&["to", "spread"])? {
         Ok(Tokens!(T_OTHER!(key)))
       } else {
         Ok(Tokens!())
@@ -87,7 +87,7 @@ LoadDefinitions!({
     // Importantly, predigest forces the parameter to be usable
     // only for stomach-capable bindings,
     // namely DefConstructor, DefPrimitive or DefEnvironment
-    predigest => sub[ key] {
+    predigest => sub[key] {
       if !key.is_empty() {
         let mut keyvals = KeyVals::new(
           KeyvalsConfig{skip_missing: true, ..KeyvalsConfig::default()});
@@ -100,17 +100,17 @@ LoadDefinitions!({
     },
     optional => true);
 
-  DefParameterType!(HBoxContents, sub[ _inner, _extra] {
-      read_box_contents(gullet, state!().lookup_tokens("\\everyhbox"))
+  DefParameterType!(HBoxContents, sub[_inner, _extra] {
+      read_box_contents(state!().lookup_tokens("\\everyhbox"))
     },
-    predigest => sub[ arg] {
-      predigest_box_contents( arg)
+    predigest => sub[arg] {
+      predigest_box_contents(arg)
     });
 
-  DefParameterType!(VBoxContents, sub[ _inner, _extra] {
-      read_box_contents(gullet, state!().lookup_tokens("\\everyvbox"))
+  DefParameterType!(VBoxContents, sub[_inner, _extra] {
+      read_box_contents(state!().lookup_tokens("\\everyvbox"))
     },
-    predigest => sub[ arg] {
+    predigest => sub[arg] {
       predigest_box_contents( arg)
     });
 
@@ -138,7 +138,7 @@ LoadDefinitions!({
       // What is the CORRECT (& general) way to ask whether we're in "vertical mode"??
       //  my $vmode = $tag eq 'ltx:inline-block'; # ie, explicitly \vbox !?!?!?!
       let is_svg  = if let Some(ref current) = current_opt {
-        document.with_node_qname(current, |qname| qname.starts_with("svg:"))
+        document::with_node_qname(current, |qname| qname.starts_with("svg:"))
       } else { false };
       let vmode = if let Some(ref current) = current_opt {
         current.has_attribute("_vertical_mode_")
@@ -170,9 +170,9 @@ LoadDefinitions!({
     sizer => "#2",
     //   # Workaround for $ in alignment; an explicit \hbox gives us a normal $.
     //   # And also things like \centerline that will end up bumping up to block level!
-    before_digest => sub[stomach] {
-      reenter_text_mode(false, gullet_mut!())},
-    after_digest => sub[ whatsit] {
+    before_digest => {
+      reenter_text_mode(false)},
+    after_digest => sub[whatsit] {
       let width : Option<RegisterValue> = {
         let spec = whatsit.get_arg(1);
         if let Some(w) = GetKeyVal!(spec, "to") {
@@ -235,9 +235,10 @@ LoadDefinitions!({
     }
   );
 
-  DefParameterType!(RuleSpecification, sub[ _inner, _extra] {
+  DefParameterType!(RuleSpecification, sub[_inner, _extra] {
       let mut keyvals = KeyVals::new(
         KeyvalsConfig{ skip_missing: true, .. KeyvalsConfig::default()});
+      let mut gullet = gullet_mut!();
       while let Some(key) = gullet.read_keyword(&["width", "height", "depth"])? {
         keyvals.set_value(&key, Stored::Dimension(gullet.read_dimension()?), false);
       }
@@ -251,7 +252,7 @@ LoadDefinitions!({
   // "?#invisible()(?#isVerticalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)' \
   //    width='&GetKeyVal(#1,width)' color='#color'/>))",
-  after_digest => sub [_stomach,whatsit] {
+  after_digest => sub [whatsit] {
   //   my $dims   = $whatsit->getArg(1);
   //   my $width  = GetKeyVal($dims, 'width');
   //   my $height = GetKeyVal($dims, 'height');
@@ -264,7 +265,7 @@ LoadDefinitions!({
   //   my $d = ($depth  ? $depth->ptValue  : undef);
   //   $h -= $d if $h && $d;    # - ??
 
-    if let Some(alignment) = state!().lookup_alignment() {
+    if let Some(_alignment) = state!().lookup_alignment() {
   //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
   //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
   // This isXxxxRule property is to determine if it is used for separating rules within alignments
@@ -285,7 +286,7 @@ LoadDefinitions!({
   // "?#isHorizontalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
   //    width='&GetKeyVal(#1,width)' color='#color'/>)",
-  after_digest=> {unimplemented!(); ()});
+  after_digest=> {unimplemented!(); Ok(Vec::new())});
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
   //   my $dims   = $whatsit->getArg(1);

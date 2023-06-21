@@ -44,10 +44,10 @@ LoadDefinitions!({
 
   DefPrimitive!("\\hss", None);
   DefPrimitive!("\\hfilneg", None);
-  DefPrimitive!("\\hfil", sub[_s,_a] {
+  DefPrimitive!("\\hfil", {
     Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfil")),
     stored_map!("isSpace" => true, "isFill" => true))});
-  DefPrimitive!("\\hfill", sub[_s,_a] {
+  DefPrimitive!("\\hfill", {
     Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfill")),
     stored_map!("isSpace" => true, "isFill" => true)) });
 

@@ -13,13 +13,13 @@ LoadDefinitions!({
   DefConditional!("\\fi");
   DefConditional!("\\ifcase Number");
 
-  DefConditional!("\\ifnum Number Token Number", sub[ (u,rel,v)] {
+  DefConditional!("\\ifnum Number Token Number", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  DefConditional!("\\ifdim Dimension Token Dimension", sub[ (u,rel,v)] {
+  DefConditional!("\\ifdim Dimension Token Dimension", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  DefConditional!("\\ifodd Number", sub[ (u)] {
+  DefConditional!("\\ifodd Number", sub[(u)] {
     u.value_of() % 2 == 1
   });
 
@@ -29,11 +29,10 @@ LoadDefinitions!({
   DefConditional!("\\ifinner", { false });
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
-  DefParameterType!(ExpandedIfToken, sub[ _inner, _extra] {
-    let token_opt = gullet.read_x_token(Some(false), false)?.map(|t| {
+  DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
+    let token_opt = gullet_mut!().read_x_token(Some(false), false)?.map(|t| {
       // Also resolve \let variants:
-      let meaning_opt = state!().lookup_meaning(&t);
-      if let Some(Stored::Token(ref meaning)) = meaning_opt.as_deref() {
+      if let Some(Stored::Token(ref meaning)) = state!().lookup_meaning(&t).as_deref() {
         meaning.clone()
       } else {
         t
@@ -41,7 +40,7 @@ LoadDefinitions!({
     let token = match token_opt {
       Some(t) => t,
       None => {
-        Error!("expected", "ExpandedIfToken", gullet,
+        Error!("expected", "ExpandedIfToken",
           "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty")
       }};
@@ -58,21 +57,21 @@ LoadDefinitions!({
     }
   });
 
-  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[ (left,right)] {
+  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_charcode() == right.get_charcode()
   });
 
-  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[ (left,right)] {
+  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_catcode() == right.get_catcode()
   });
 
-  DefConditional!("\\ifx Token Token", sub[ (left,right)] {
-    state::x_equals(&left, &right)
+  DefConditional!("\\ifx Token Token", sub[(left,right)] {
+    state!().x_equals(&left, &right)
   });
 
-  DefConditional!("\\ifvoid Number", sub[_g, (arg)] { classify_box(arg)?.is_empty() });
-  DefConditional!("\\ifhbox Number", sub[_g, (arg)] { classify_box(arg)? == "hbox" });
-  DefConditional!("\\ifvbox Number", sub[_g, (arg)] { classify_box(arg)? == "vbox" });
+  DefConditional!("\\ifvoid Number", sub[(arg)] { classify_box(arg)?.is_empty() });
+  DefConditional!("\\ifhbox Number", sub[(arg)] { classify_box(arg)? == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[(arg)] { classify_box(arg)? == "vbox" });
 
   DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
@@ -82,16 +81,16 @@ LoadDefinitions!({
   // (which seems most TeX like).
   DefPrimitive!("\\relax", None);
 
-  DefMacro!("\\number Number", sub[ (num)] { Explode!(num.value_of()) });
+  DefMacro!("\\number Number", sub[(num)] { Explode!(num.value_of()) });
 
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[ (num)] { roman!(num.value_of()) });
+  DefMacro!("\\romannumeral Number", sub[(num)] { roman!(num.value_of()) });
 
   // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
-  DefMacro!("\\string Token", sub[ (token)] {
+  DefMacro!("\\string Token", sub[(token)] {
     let mut s = token.to_string();
     if s.starts_with('\\') {
       s = escapechar() + &s[1..];
@@ -109,7 +108,7 @@ LoadDefinitions!({
 
   // Not sure about this yet...
   // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
-  DefMacro!("\\meaning Token", sub[ (token)] {
+  DefMacro!("\\meaning Token", sub[(token)] {
     let mut meaning = String::from("undefined");
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
@@ -233,17 +232,17 @@ LoadDefinitions!({
 
   //======================================================================
 
-  DefParameterType!(CSName, reader => reader!(gullet, _inner, _extra, {
+  DefParameterType!(CSName, reader => reader!( _inner, _extra, {
     let mut cs = escapechar();
     let endcsname_token = T_CS!("\\endcsname");
     // keep newlines from having \n inside!
-    while let Some(token) = gullet.read_x_token(Some(true), true)? {
+    while let Some(token) = gullet_mut!().read_x_token(Some(true), true)? {
       if token == endcsname_token {
         break;
       }
       match token.get_catcode() {
         Catcode::CS => {
-          if let Some(defn) = state!().lookup_definition(&token)? {
+          if state!().lookup_definition(&token)?.is_some() {
             let message =
               s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
                 token);
@@ -264,7 +263,7 @@ LoadDefinitions!({
     T_CS!(cs)
   }));
 
-  DefMacro!("\\csname CSName", sub[ (token)] {
+  DefMacro!("\\csname CSName", sub[(token)] {
     if state!().lookup_meaning(&token).is_none() {
       state_mut!().assign_meaning(&token,
         state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
@@ -272,15 +271,15 @@ LoadDefinitions!({
     token
   });
 
-  DefPrimitive!("\\endcsname", sub[ ()] {
-    Error!("unexpected" ,"\\endcsname", stomach, "Extra \\endcsname");
+  DefPrimitive!("\\endcsname", sub[()] {
+    Error!("unexpected" ,"\\endcsname", "Extra \\endcsname");
   });
 
-  DefMacro!("\\expandafter Token Token", sub[ (tok, xtok)] {
+  DefMacro!("\\expandafter Token Token", sub[(tok, xtok)] {
     let mut tokens : Vec<Token> = vec![tok];
     if let Some(defn) = state!().lookup_expandable(&xtok, false)? {
       state_mut!().local_current_token(xtok);
-      let invoked = defn.invoke(gullet, true)?;
+      let invoked = defn.invoke( true)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
       }
@@ -289,7 +288,7 @@ LoadDefinitions!({
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
-      state_mut!().generate_error_stub(&xtok)?;
+      state::generate_error_stub(&xtok)?;
       tokens.push(xtok);
     } else {
       tokens.push(xtok);
@@ -298,8 +297,8 @@ LoadDefinitions!({
   });
 
   // Replace the next token with it's not-expanded variant
-  DefMacro!(T_CS!("\\noexpand"), None, sub[ _args] {
-    if let Some(token) = gullet.read_token()? {
+  DefMacro!(T_CS!("\\noexpand"), None, {
+    if let Some(token) = gullet_mut!().read_token()? {
       vec![token.with_dont_expand()?]
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed
@@ -320,7 +319,7 @@ LoadDefinitions!({
   // For now I have changed to DefPrimitive, so that there is a clear access to the
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
-  DefPrimitive!("\\ltx@input TeXFileName", sub[ (name)] {
+  DefPrimitive!("\\ltx@input TeXFileName", sub[(name)] {
     let mut tks = name.unlist();
     // If given a LaTeX-style argument, strip braces
     if tks.len() > 1 && tks.first().unwrap().get_catcode() == Catcode::BEGIN
@@ -338,12 +337,12 @@ LoadDefinitions!({
 
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
-  DefMacro!(T_CS!("\\endinput"), None, sub[ _args] {
-    gullet.flush_mouth();
+  DefMacro!(T_CS!("\\endinput"), None, {
+    gullet_mut!().flush_mouth();
   });
 
   // \the<internal quantity>
-  DefMacro!("\\the Register", sub[ args] {
+  DefMacro!("\\the Register", sub[args] {
     if let ArgWrap::RegisterDefinition(dbox) = args.remove(0) {
       let (rtoken, inner) = *dbox;
       // let register_type = defn.borrow().register_type;
@@ -363,7 +362,7 @@ LoadDefinitions!({
       };
       tokens
     } else {
-      Error!("expected", "<register>", gullet, "a register was expected to be here");
+      Error!("expected", "<register>", "a register was expected to be here");
       Vec::new()
     }
   });

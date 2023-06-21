@@ -606,7 +606,8 @@ macro_rules! ExplodeChars(($text:expr) => (
 /// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
-macro_rules! ExplodeText(($text:expr) => ({
+macro_rules! ExplodeText(
+  ($text:expr) => ({
   use $crate::token::{Catcode,Token};
   $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }

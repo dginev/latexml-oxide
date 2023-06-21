@@ -38,8 +38,8 @@ LoadDefinitions!({
   DefMacro!("\\multido@@initvars@@{}", sub[(variables)] {
     let reader_mouth = Mouth::new("", None)?;
     let read_result : Result<Vec<Token>> =
-    reading_from_mouth(reader_mouth, || {
-      let gullet = gullet_mut!();
+    gullet::reading_from_mouth(reader_mouth, || {
+      let mut gullet = gullet_mut!();
       gullet.unread(variables);
       let mut inits : Vec<Token> = Vec::new();
       let mut steps = Vec::new();
@@ -51,7 +51,7 @@ LoadDefinitions!({
         if let Some(cap) = DNIR_REX.captures(&csname) {
           let vtype = cap.get(1).map_or(String::new(), |m| m.as_str().to_lowercase());
           if gullet.read_keyword(&["="])?.is_none() {
-            Error!("expected", "=", gullet, "Missing = in multido variables");
+            Error!("expected", "=", "Missing = in multido variables");
           }
           let init = match vtype.as_str() {
             "d" => Tokens!(Explode!(s!("{}sp", gullet.read_dimension()?.value_of()))),
@@ -66,7 +66,7 @@ LoadDefinitions!({
           inits.extend(init.unlist());
           inits.push(T_END!());
           if gullet.read_keyword(&["+"])?.is_none() {
-            Error!("expected", "+", gullet, "Missing + in multido variables");
+            Error!("expected", "+", "Missing + in multido variables");
           }
           let needs_negate = state!().lookup_int("\\multido@count") < 0;
           let step = match vtype.as_str() {
@@ -101,8 +101,7 @@ LoadDefinitions!({
             break;
           }
         }  else {
-          Error!("unexpected", var, gullet,
-            format!("Wrong format for multido variable {var:?}"));
+          Error!("unexpected", var, format!("Wrong format for multido variable {var:?}"));
         }
         gullet.skip_spaces()?;
       }
@@ -113,24 +112,24 @@ LoadDefinitions!({
     read_result?
   });
 
-  DefMacro!("\\multido@step@d DefToken {Dimension}", sub[ (v,step)] {
+  DefMacro!("\\multido@step@d DefToken {Dimension}", sub[(v,step)] {
     let origin = Dimension::from_str(&Expand!(&v).to_string())?;
     let value = origin.add(step);
     DefMacro!(v, None, Tokens!(Explode!(format!("{}sp",value.value_of())))); });
-  DefMacro!("\\multido@step@i DefToken {Number}", sub[ (v, step)] {
+  DefMacro!("\\multido@step@i DefToken {Number}", sub[(v, step)] {
     let value = Number::from(Expand!(&v).to_string()).add(step);
     DefMacro!(v, None, Tokens!(Explode!(value.value_of()))); });
-  DefMacro!("\\multido@step@r DefToken {Float}", sub[ (v, step)] {
+  DefMacro!("\\multido@step@r DefToken {Float}", sub[(v, step)] {
     let value = Float::from(Expand!(&v).to_string()).add(step);
     DefMacro!(v, None, Tokens!(Explode!(value.to_tight_string()))); });
   // Note: n _should_ be fixed point!
   DefMacro!("\\multido@step@n DefToken {}", "\\fpAdd{#1}{#2}{#1}");
 
   // Should evolve these to work in fixed point (particularly, the formatting?)
-  DefMacro!("\\fpAdd {Float} {Float} DefToken", sub[ (a,b,token)] {
+  DefMacro!("\\fpAdd {Float} {Float} DefToken", sub[(a,b,token)] {
     let value = a.add(b);
     DefMacro!(token, None, Tokens!(Explode!(value.to_tight_string()))); });
-  DefMacro!("\\fpSub {Float} {Float} DefToken", sub[ (a,b,token)] {
+  DefMacro!("\\fpSub {Float} {Float} DefToken", sub[(a,b,token)] {
     let value = a.subtract(b);
     DefMacro!(token, None, Tokens!(Explode!(value.to_tight_string()))); });
 });

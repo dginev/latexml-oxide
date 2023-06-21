@@ -10,7 +10,7 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
     reversion  => "\\ldots",
-    properties => sub[ _args] {
+    properties => {
       if state!().lookup_bool("IN_MATH") {
         let new_font = state!().lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")

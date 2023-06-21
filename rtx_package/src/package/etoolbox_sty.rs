@@ -26,7 +26,7 @@ LoadDefinitions!({
   DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
   if !is_definable(&cs) {
     if !state!().lookup_bool(&s!("{cs}:locked")) {
-      Info!("ignore", cs, stomach,
+      Info!("ignore", cs,
         "Ignoring redefinition (\\newcommand) of '{cs}'"); }
   } else {
     let args = convert_latex_args(nargs.value_of() as usize, opt)?;
@@ -1277,7 +1277,7 @@ LoadDefinitions!({
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
     if matches!(expansion,Some(ExpansionBody::Closure(_))) {
-      Info!("unexpected", "patchcmd", gullet, "Patchcmd is not supported on LaTeXML-native definitions, will not patch {}",cs);
+      Info!("unexpected", "patchcmd", "Patchcmd is not supported on LaTeXML-native definitions, will not patch {}",cs);
       return Ok(failure)
     }
     let string        = expansion.unwrap().to_string();
@@ -1291,13 +1291,13 @@ LoadDefinitions!({
       let replace_string = replace.to_string();
       let patched = string.replace(&search_string, &replace_string);
       // New definition in local scope
-      state_mut!().install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None)?, None);
+      state::install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None)?, None);
       Ok(success)
     } else {
       Ok(failure)
     }
   } else {
-    Info!("unexpected", "patchcmd", gullet, "Patchcmd is not supported on non-expandable definitions, will not patch {}", cs);
+    Info!("unexpected", "patchcmd", s!("Patchcmd is not supported on non-expandable definitions, will not patch {cs}"));
     Ok(failure)
   }
 }, protected => true);

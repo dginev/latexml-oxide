@@ -10,8 +10,7 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::gullet::Gullet;
-use crate::{gullet_mut};
+use crate::{gullet,gullet_mut};
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
@@ -517,7 +516,7 @@ impl KeyVals {
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
-  pub fn read_from(&mut self, gullet: &mut Gullet, until: Token) -> Result<()> {
+  pub fn read_from(&mut self, until: Token) -> Result<()> {
     // TODO
     // # if we want to force skip_missing keys, we set it up here
     // my $silenceMissing = $options{silenceMissing} ? 1 : 0;
@@ -531,10 +530,10 @@ impl KeyVals {
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    let startloc = gullet.get_locator().unwrap().into_owned();
+    let startloc = gullet!().get_locator().unwrap().into_owned();
 
     // set and read tokens
-    let _open = gullet.read_token();
+    let _open = gullet_mut!().read_token();
     let assign = T_OTHER!("=");
     let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
@@ -582,6 +581,7 @@ impl KeyVals {
 
           // read until $punct
           let mut toks = Vec::new();
+          let mut gullet = gullet_mut!();
           loop {
             delim_opt = gullet
               .read_match(&[&punct_tks, &until_tks])?

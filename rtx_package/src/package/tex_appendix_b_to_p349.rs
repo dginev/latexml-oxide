@@ -18,7 +18,7 @@ LoadDefinitions!({
   //
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", sub[doc,_a] { Error!("unexpected", "&", doc, "Stray alignment \"&\""); });
+  DefConstructor!("&", sub[doc,_a] { Error!("unexpected", "&", "Stray alignment \"&\""); });
 
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
@@ -217,7 +217,7 @@ LoadDefinitions!({
        let mut n      = 0;
        let mut text = String::new();
        loop {
-         if state::model.with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
+         if model!().with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || document.get_node_font(node_mut) != font
           || node_mut.has_attribute("name") {
             break;
@@ -307,30 +307,28 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 347
   DefPrimitive!("\\wlog{}", sub[(arg)] {
-    let mut gullet = gullet_mut!();
-    let message = Expand!(arg,gullet);
-    eprintln!("{message}");
+    eprintln!("{}", Expand!(arg));
     Ok(Vec::new())
   }, locked => true);
   // From plain.tex
-  DefPrimitive!("\\newcount Token", sub[ (name)] {
+  DefPrimitive!("\\newcount Token", sub[(name)] {
     DefRegister!(name, None, Number::new(0), allocate=>"\\count");
   });
-  DefPrimitive!("\\newdimen Token", sub[ (name)] {
+  DefPrimitive!("\\newdimen Token", sub[(name)] {
     DefRegister!(name, None, Dimension::new(0), allocate=>"\\dimen");
   });
-  DefPrimitive!("\\newskip Token", sub[ (name)] {
+  DefPrimitive!("\\newskip Token", sub[(name)] {
     DefRegister!(name, None, Glue::new(0), allocate=>"\\skip");
   });
-  DefPrimitive!("\\newmuskip Token", sub[ (name)] {
+  DefPrimitive!("\\newmuskip Token", sub[(name)] {
     DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
   });
-  DefPrimitive!("\\newtoks Token", sub[ (name)] {
+  DefPrimitive!("\\newtoks Token", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
   });
 
   AssignValue!("allocated_boxes" => false);
-  DefPrimitive!("\\newbox DefToken", sub[ (t)] {
+  DefPrimitive!("\\newbox DefToken", sub[(t)] {
     let n = state!().lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     let empty_list = List::new(Vec::new());
@@ -347,7 +345,7 @@ LoadDefinitions!({
   // the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
-  DefPrimitive!("\\alloc@@ {}", sub[ (atype)] {
+  DefPrimitive!("\\alloc@@ {}", sub[(atype)] {
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(&c).value_of();
     state_mut!().assign_value(&c, n + 1, Some(Scope::Global));
@@ -387,7 +385,7 @@ LoadDefinitions!({
                     {128}");
 
   // This implementation is quite wrong
-  DefPrimitive!("\\newinsert Token", sub[ (t)] {
+  DefPrimitive!("\\newinsert Token", sub[(t)] {
     DefRegister!(t, None, Number::new(0));
   });
   // \alloc@, \ch@ck
@@ -407,8 +405,8 @@ LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B, p. 348
 
-  DefMacro!("\\newif DefToken", sub[ (cs)] {
-    def_conditional(cs, None,None,ConditionalOptions::default(),gullet)
+  DefMacro!("\\newif DefToken", sub[(cs)] {
+    def_conditional(cs, None,None,ConditionalOptions::default())
   });
 
   // See the section Registers & Parameters, above for setting default values.
@@ -429,7 +427,7 @@ LoadDefinitions!({
   DefRegister!("\\interfootnotelinepenalty", Number(100));
 
   DefMacro!("\\magstephalf", "1095");
-  DefMacro!("\\magstep{}", sub[ (mag)] {
+  DefMacro!("\\magstep{}", sub[(mag)] {
     Explode!(match mag.to_string().as_str() {
       "0" => "1000",
       "1" => "1200",

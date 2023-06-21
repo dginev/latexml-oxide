@@ -69,38 +69,6 @@ impl<'t> Stomach {
   // Digestion
   // **********************************************************************
 
-
-  /// a convenience function for including chunks of raw TeX (or LaTeX) code
-  /// It is useful for copying portions of the normal
-  /// implementation that can be handled simply using macros and primitives.
-
-  pub fn raw_tex(&mut self, text: &str) -> Result<()> {
-    // It could be as simple as this, except if catcodes get changed, it's too late!!!
-    //  Digest(TokenizeInternal($text));
-    let savedcc = state!().lookup_catcode('@').unwrap_or(Catcode::OTHER);
-    state_mut!().assign_catcode('@', Catcode::LETTER, None);
-    let raw_tex_mouth = Mouth::new(
-      text,
-      Some(MouthOptions {
-        fordefinitions: true,
-        ..MouthOptions::default()
-      }),
-    )?;
-    gullet::reading_from_mouth(raw_tex_mouth, move || -> Result<()> {
-      while let Some(token) = gullet_mut!()
-        .read_x_token(Some(false), false)?
-      {
-        if token != T_SPACE!() {
-          stomach_mut!().invoke_token(&token)?;
-        }
-      }
-      Ok(())
-    })?;
-
-    state_mut!().assign_catcode('@', savedcc, None);
-    Ok(())
-  }
-
   /// Invoke a token;
   /// If it is a primitive or constructor, the definition will be invoked,
   /// possibly arguments will be parsed from the Gullet.
@@ -117,7 +85,9 @@ impl<'t> Stomach {
     while maybe_token.is_some() {
       let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
-      state_mut!().local_current_token(token.clone());
+      {
+        state_mut!().local_current_token(token.clone());
+      }
       self.token_stack.push(token.clone());
       if self.token_stack.len() > MAXSTACK {
         fatal!(
@@ -136,7 +106,10 @@ impl<'t> Stomach {
       // API is identical. However, as the types are different, Rust
       // constrains us here, we need separate match arms for each
       // distinctly typed enum case.
-      match state_mut!().lookup_digestable_definition(&token) {
+      let digestable_def = {
+        state_mut!().lookup_digestable_definition(&token)
+      };
+      match digestable_def {
         None => {
           result = self.invoke_token_undefined(&token)?;
         },
@@ -167,12 +140,12 @@ impl<'t> Stomach {
           // (? I think)
           let invoked_meaning = meaning.invoke( false)?;
           if !invoked_meaning.is_empty() {
-            gullet_mut!().unread(invoked_meaning);
+            { gullet_mut!().unread(invoked_meaning); }
           }
           // replace the token by it's expansion!!!
-          maybe_token = gullet_mut!()
+          maybe_token = { gullet_mut!()
             .read_x_token(None, false)?
-            .map(Cow::Owned);
+            .map(Cow::Owned) };
           self.token_stack.pop();
           state_mut!().expire_current_token();
           continue;
@@ -180,12 +153,14 @@ impl<'t> Stomach {
         Some(Stored::Conditional(meaning)) => {
           // Conditionals are "expandable", use the regular invoke.
           let invoked_meaning = meaning.invoke(false)?;
-          gullet_mut!().unread(invoked_meaning);
-          maybe_token = gullet_mut!()
+          maybe_token = {
+            let mut gullet = gullet_mut!();
+            gullet.unread(invoked_meaning);
+            gullet
             .read_x_token(None, false)?
-            .map(Cow::Owned);
+            .map(Cow::Owned) };
           self.token_stack.pop();
-          state_mut!().expire_current_token();
+          { state_mut!().expire_current_token(); }
           continue;
         },
         Some(Stored::Constructor(meaning)) => {
@@ -251,7 +226,7 @@ impl<'t> Stomach {
         "Defining it now as with \\newif"
       );
       // install stub definitions for new conditional
-      state_mut!().install_definition(
+      state::install_definition(
         Expandable::new(
           T_CS!(s!("\\{}true", name)),
           None,
@@ -260,7 +235,7 @@ impl<'t> Stomach {
               )?,
         None,
       );
-      state_mut!().install_definition(
+      state::install_definition(
         Expandable::new(
           T_CS!(s!("\\{}false", name)),
           None,
@@ -282,7 +257,7 @@ impl<'t> Stomach {
         &message,
         "Defining it now as <ltx:ERROR/>"
       );
-      state_mut!().install_definition(
+      state::install_definition(
         Constructor {
           cs: token.clone(),
           paramlist: None,
@@ -701,4 +676,34 @@ pub fn digest_next_body(
     // info!(target:"digest_next_body","no_token");
   }
   Ok(stomach_mut!().expire_local_box_list())
+}
+
+/// a convenience function for including chunks of raw TeX (or LaTeX) code
+/// It is useful for copying portions of the normal
+/// implementation that can be handled simply using macros and primitives.
+pub fn raw_tex(text: &str) -> Result<()> {
+  // It could be as simple as this, except if catcodes get changed, it's too late!!!
+  //  Digest(TokenizeInternal($text));
+  let savedcc = state!().lookup_catcode('@').unwrap_or(Catcode::OTHER);
+  state_mut!().assign_catcode('@', Catcode::LETTER, None);
+  let raw_tex_mouth = Mouth::new(
+    text,
+    Some(MouthOptions {
+      fordefinitions: true,
+      ..MouthOptions::default()
+    }),
+  )?;
+  gullet::reading_from_mouth(raw_tex_mouth, move || -> Result<()> {
+    while let Some(token) = {gullet_mut!()
+      .read_x_token(Some(false), false)?}
+    {
+      if token != T_SPACE!() {
+        stomach_mut!().invoke_token(&token)?;
+      }
+    }
+    Ok(())
+  })?;
+
+  state_mut!().assign_catcode('@', savedcc, None);
+  Ok(())
 }

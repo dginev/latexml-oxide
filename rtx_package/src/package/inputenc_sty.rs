@@ -9,7 +9,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   //   AssignCatcode!(ch, Catcode::ACTIVE);
   //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
   // }
-  state::input_encoding = None; // Disable the state::level decoding, if any.
+  state_mut!().input_encoding = None; // Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
   input_definitions(
@@ -17,8 +17,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
     InputDefinitionOptions {
       extension: Some("def".into()),
       ..InputDefinitionOptions::default()
-    },
-    stomach,
+    }
   )?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
@@ -34,15 +33,15 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   )
 }
 
-LoadDefinitions!(outer_stomach, {
+LoadDefinitions!({
   //**********************************************************************
-  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[ (code,expansion)] {
+  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[(code,expansion)] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
   });
 
-  DefPrimitive!("\\DeclareInputText {Number} {}", sub[ (code, expansion)] {
+  DefPrimitive!("\\DeclareInputText {Number} {}", sub[(code, expansion)] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
@@ -50,23 +49,21 @@ LoadDefinitions!(outer_stomach, {
 
   DefMacro!("\\IeC{}", "#1");
 
-  DefMacro!("\\@inpenc@undefined", sub[ ()] {
+  DefMacro!("\\@inpenc@undefined", sub[()] {
     let message = s!("Keyboard character used is undefined in inputencoding {}",
-      state::input_encoding.as_ref().unwrap());
-    Error!("unexpected", "<char>", gullet,  message);
+      state!().input_encoding.as_ref().unwrap());
+    Error!("unexpected", "<char>", message);
   });
 
-  DefPrimitive!("\\inputencoding{}", sub[ (encoding)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\inputencoding{}", sub[(encoding)] {
     set_input_encoding(&Expand!(encoding).to_string())?;
   });
 
-  DeclareOption!(None, sub[stomach] {
-    let gullet = gullet_mut!();
+  DeclareOption!(None, {
     set_input_encoding(&Expand!(T_CS!("\\CurrentOption")).to_string())?;
   });
 
-  ProcessOptions!(outer_stomach);
+  ProcessOptions!();
 
   //**********************************************************************
 });

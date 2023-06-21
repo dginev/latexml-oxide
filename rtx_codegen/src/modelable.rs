@@ -45,7 +45,11 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
     None => panic!("Model {name:?} not found, required to load a compiled model!"),
   };
 
-  let mut operations = Vec::new();
+  let mut operations = vec![
+    quote!(
+      let mut model = ::rtx_core::model_mut!();
+    )
+  ];
   // NOTE: Do something automatic about this too!?!
   // We'll need to generate namespace prefixes for all namespaces found in the doc!
   operations.push(quote!(
@@ -101,7 +105,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 
   Ok(TokenStream::from(quote!(
     impl _ModelLoader {
-      fn model(model : &mut Model) {
+      fn model() {
         #(#operations)*
       }
     }

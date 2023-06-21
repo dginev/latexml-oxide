@@ -12,8 +12,6 @@ use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
-use rtx_core::{state_mut,state};
-use rtx_core::stomach::Stomach;
 use rtx_package::package;
 
 use phf::phf_map;
@@ -25,8 +23,8 @@ pub fn expansion_tests_dispatch(
   filename: &str,
   ) -> Option<Result<()>> {
   match filename {
-    "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions(stomach)),
-    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions(stomach)),
+    "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions()),
+    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions()),
     other => package::dispatch(other),
   }
 }

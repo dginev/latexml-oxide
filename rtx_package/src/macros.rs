@@ -85,7 +85,7 @@ macro_rules! compile_expansion {
 
 #[macro_export]
 macro_rules! load_model {
-  ($var:expr, $name:expr) => {{
+  ($name:literal) => {{
     use rtx_core::common::model::Model;
     use rtx_core::common::relaxng::Relaxng;
     use rustc_hash::FxHashSet as HashSet;
@@ -96,7 +96,7 @@ macro_rules! load_model {
     struct _ModelLoader;
     {
       // compute the model
-      _ModelLoader::model(&mut $var.model);
+      _ModelLoader::model();
     }
 
     // TODO: It seems that properly computing the indirect hash requires all Tag!() definitions to

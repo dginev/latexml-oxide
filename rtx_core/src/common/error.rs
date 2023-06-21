@@ -35,11 +35,11 @@ pub enum LogStatus {
 pub static REPORT : Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
 #[macro_export]
 macro_rules! report {
-  () => ((*$crate::report::REPORT).borrow())
+  () => ((*$crate::common::error::REPORT).borrow())
 }
 #[macro_export]
 macro_rules! report_mut {
-  () => ((*$crate::report::REPORT).borrow_mut())
+  () => ((*$crate::common::error::REPORT).borrow_mut())
 }
 
 pub fn note_status(status: LogStatus, what:Option<&str>) {

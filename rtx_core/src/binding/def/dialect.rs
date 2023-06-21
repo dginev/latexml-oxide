@@ -122,7 +122,7 @@ pub fn def_conditional(
     String::new()
   };
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
-    state_mut!().install_definition(
+    state::install_definition(
       Conditional {
         cs: cs.clone(),
         paramlist,
@@ -162,7 +162,7 @@ pub fn def_conditional(
         state_mut!().let_i(&cs, &T_CS!("\\iffalse"), None);
       } else {
         //  For \ifcase, the parameter list better be a single Number !!
-        state_mut!().install_definition(
+        state::install_definition(
           Conditional {
             cs,
             paramlist,
@@ -220,7 +220,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   } else {
     cs
   };
-  state_mut!().install_definition(
+  state::install_definition(
     Expandable::new(defcs, paramlist, expansion, Some(options))?,
     scope,
   );
@@ -277,7 +277,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   }
 
   let register_type: RegisterType = (&value).into();
-  state_mut!().install_definition(
+  state::install_definition(
     Register {
       cs,
       address,
@@ -367,7 +367,7 @@ pub fn def_primitive(
     cs
   };
 
-  state_mut!().install_definition(
+  state::install_definition(
     Primitive {
       cs: defcs,
       paramlist,
@@ -411,7 +411,7 @@ pub fn def_math_dual(
   let captured_cont_cs = cont_cs.clone();
   let captured_pres_cs = pres_cs.clone();
   let captured_pres = presentation.clone();
-  state_mut!().install_definition(
+  state::install_definition(
     Expandable::new(
       defcs,
       paramlist.clone(),
@@ -475,7 +475,7 @@ pub fn def_math_dual(
   );
 
   // Make the presentation macro.
-  state_mut!().install_definition(
+  state::install_definition(
     Expandable::new(
       pres_cs,
       paramlist.clone(),
@@ -554,7 +554,7 @@ pub fn def_math_dual(
   };
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
-  state_mut!().install_definition(content_constructor, scope);
+  state::install_definition(content_constructor, scope);
   Ok(())
 }
 
@@ -570,7 +570,7 @@ pub fn def_math_primitive(
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
 
-  state_mut!().install_definition(
+  state::install_definition(
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
@@ -783,7 +783,7 @@ pub fn def_math_constructor(
   };
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut constructor);
-  state_mut!().install_definition(constructor, scope);
+  state::install_definition(constructor, scope);
   Ok(())
 }
 
@@ -810,7 +810,7 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token>
     ..ExpandableOptions::default()
   };
   // scope should be \x@protect?
-  state_mut!().install_definition(
+  state::install_definition(
     Expandable::new(cs, None, expansion, Some(options))?,
     scope,
   );
@@ -919,7 +919,7 @@ pub fn def_constructor(
     // long
     ..Constructor::default()
   };
-  state_mut!().install_definition(constructor, scope);
+  state::install_definition(constructor, scope);
 
   if is_locked {
     state_mut!().assign_value(&locked_key, true, None);
@@ -1043,7 +1043,7 @@ pub fn def_environment(
     reversion: options.reversion,
     alias: options.alias,
   });
-  state_mut!().install_definition(begin_name_constructor, options.scope.clone());
+  state::install_definition(begin_name_constructor, options.scope.clone());
 
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
@@ -1113,7 +1113,7 @@ pub fn def_environment(
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });
-  state_mut!().install_definition(end_envname_constructor, options.scope.clone());
+  state::install_definition(end_envname_constructor, options.scope.clone());
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Rc::new(Constructor {
@@ -1138,7 +1138,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   });
-  state_mut!().install_definition(name_constructor, options.scope.clone());
+  state::install_definition(name_constructor, options.scope.clone());
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
   after_digest_end.push(after_digest_simple!( _whatsit, {
@@ -1155,7 +1155,7 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   };
-  state_mut!().install_definition(Rc::new(end_name_constructor), options.scope);
+  state::install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
     state_mut!().assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);

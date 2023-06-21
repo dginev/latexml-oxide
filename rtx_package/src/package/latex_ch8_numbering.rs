@@ -22,8 +22,8 @@ LoadDefinitions!({
     document.generate_id(node, "p")?;
   });
 
-  DefPrimitive!("\\newcounter{}[]", sub[ (cs, default_opt)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\newcounter{}[]", sub[(cs, default_opt)] {
+    let mut gullet = gullet_mut!();
     let default = if let Some(tks) = default_opt {
       if !tks.is_empty() {
         Expand!(tks)
@@ -36,23 +36,22 @@ LoadDefinitions!({
     let cs_expanded = &Expand!(cs).to_string();
     NewCounter!(cs_expanded, &default.to_string());
   });
-  DefPrimitive!("\\setcounter{}{Number}", sub[ (cs, default)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\setcounter{}{Number}", sub[(cs, default)] {
+    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     SetCounter!(cs_expanded, default);
   });
-  DefPrimitive!("\\addtocounter{}{Number}", sub[ (cs,default)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\addtocounter{}{Number}", sub[(cs,default)] {
     let cs_expanded = &Expand!(cs).to_string();
     AddToCounter!(cs_expanded, default);
   });
-  DefPrimitive!("\\stepcounter{}",    sub[ (cs)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\stepcounter{}",    sub[(cs)] {
+    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     StepCounter!(cs_expanded, false)?;
   });
-  DefPrimitive!("\\refstepcounter{}", sub[ (cs)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\refstepcounter{}", sub[(cs)] {
+    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     RefStepCounter!(cs_expanded, false)?;
   });
@@ -77,52 +76,52 @@ LoadDefinitions!({
   //       DefMacroI(T_CS("\\\@$ctr\@ID"), undef, "0", scope => 'global'); }
   //     return; });
 
-  DefMacro!("\\value{}", sub[ (value)] {
+  DefMacro!("\\value{}", sub[(value)] {
     T_CS!(s!("\\c@{}", Expand!(value)))
   });
 
-  DefMacro!("\\@arabic{Number}", sub[ (number)] {
+  DefMacro!("\\@arabic{Number}", sub[(number)] {
     ExplodeText!(number.value_of().to_string())
   });
-  DefMacro!("\\arabic{}", sub[ (value)] {
+  DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
     ExplodeText!(ctr_value)
   });
 
-  DefMacro!("\\@roman{Number}", sub[ (number)] {
+  DefMacro!("\\@roman{Number}", sub[(number)] {
     ExplodeText!(radix::radix_roman(number.value_of()))
   });
-  DefMacro!("\\roman{}", sub[ (token)] {
+  DefMacro!("\\roman{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Roman{Number}", sub[ (number)] {
+  DefMacro!("\\@Roman{Number}", sub[(number)] {
     ExplodeText!(radix::radix_up_roman(number.value_of()))
   });
-  DefMacro!("\\Roman{}", sub[ (token)] {
+  DefMacro!("\\Roman{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@alph{Number}", sub[ (number)] {
+  DefMacro!("\\@alph{Number}", sub[(number)] {
     ExplodeText!(radix::radix_alpha(number.value_of()))
   });
-  DefMacro!("\\alph{}", sub[ (token)] {
+  DefMacro!("\\alph{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Alph{Number}", sub[ (number)] {
+  DefMacro!("\\@Alph{Number}", sub[(number)] {
     ExplodeText!(radix::radix_up_alpha(number.value_of()))
   });
-  DefMacro!("\\Alph{}", sub[ (token)] {
+  DefMacro!("\\Alph{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of()))
   });
 
-  DefMacro!("\\@fnsymbol{Number}", sub[ (number)] {
+  DefMacro!("\\@fnsymbol{Number}", sub[(number)] {
     ExplodeText!(radix::radix_format_str(number.value_of(), FNSYMBOLS))
   });
-  DefMacro!("\\fnsymbol{}", sub[ (token)] {
+  DefMacro!("\\fnsymbol{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))
   });

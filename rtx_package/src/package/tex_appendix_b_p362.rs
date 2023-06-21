@@ -46,7 +46,7 @@ LoadDefinitions!({
   //     Let("\\\\", '\@alignment@newline');
   // });
 
-  DefPrimitive!("\\lx@end@gen@matrix", sub[_args] { stomach.egroup()?; });
+  DefPrimitive!("\\lx@end@gen@matrix", { stomach_mut!().egroup()?; });
 
   DefMacro!("\\lx@gen@plain@matrix{}{}",
     "\\lx@gen@matrix@bindings{#1}\
@@ -176,7 +176,7 @@ LoadDefinitions!({
     "\\lx@gen@cases@bindings{#1}\
       \\lx@gen@plain@cases@{#1}{\\@start@alignment#2\\@finish@alignment}
       \\lx@end@gen@cases");
-  DefPrimitive!("\\lx@end@gen@cases", sub[_args] { stomach.egroup()?; });
+  DefPrimitive!("\\lx@end@gen@cases", { stomach_mut!().egroup()?; });
 
   // The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (an empty condition is replaced by "otherwise" !?!?!)

@@ -92,7 +92,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
       XM::Lexeme(lex, _) => {
         // If arg is already XML, it's too late to get automatic ID's
         let node = lookup_lex_node(lex, nodes).expect("lexemes should only have valid ids.");
-        // let qname   = document.get_node_qname(node, state);
+        // let qname   = document::get_node_qname(node, state);
         // let nodebox     = document.get_node_box(node);
 
         match node.get_attribute("id") {

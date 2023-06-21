@@ -19,14 +19,14 @@ LoadDefinitions!({
     r"\par\aftergroup\lx@end@verbatim\lx@@verbatim"
   ); // Close enough?
   DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
-  before_digest => sub[stomach] {
+  before_digest => {
     state_mut!().begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"));
     state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
     Let!(&T_ACTIVE!(' '), T_SPACE!());
   });
   DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
-    before_digest => sub[_stomach] { state_mut!().end_semiverbatim()?; });
+    before_digest => { state_mut!().end_semiverbatim()?; });
 
   // Close enough?
   // verbatim is a bit of special case;
@@ -36,8 +36,8 @@ LoadDefinitions!({
   // and also the usual environment capture.
 
   DefConstructor!(T_CS!("\\begin{verbatim}"), None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
-    before_digest => sub[stomach] {
-      stomach.bgroup();
+    before_digest => {
+      stomach_mut!().bgroup();
       let mut stuff = Vec::new();
       if let Some(b) = state!().lookup_tokens("@environment@verbatim@atbegin") {
         stuff.push(stomach::digest(b.unlist())?);
@@ -47,7 +47,7 @@ LoadDefinitions!({
       MergeFont!(family => "typewriter");
       Ok(stuff)
     },
-    after_digest => sub[ whatsit] {
+    after_digest => sub[whatsit] {
       // makes you wonder if the `get_font` API should be working with Rc<Font> in the first place...
       let font : Option<Rc<Font>> = whatsit.get_font()?.map(|ft| Rc::new((*ft).to_owned()));
       let loc = whatsit.get_locator();
@@ -83,7 +83,7 @@ LoadDefinitions!({
       if let Some(b) = state!().lookup_tokens("@environment@verbatim@atend") {
         lines.push(arena::pin(stomach::digest(b)?.to_string()));
       }
-      stomach.egroup()?;
+      stomach_mut!().egroup()?;
       lines.push(arena::pin_static("\\end{verbatim}"));
       let boxes = lines.into_iter().map(|line|
         Tbox::new(line, font.clone(), loc.clone()
@@ -95,7 +95,7 @@ LoadDefinitions!({
       document.maybe_close_element("ltx:p")?; }
   );
 
-  DefPrimitive!("\\@vobeyspaces", sub[ ()] {
+  DefPrimitive!("\\@vobeyspaces", sub[()] {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
   });
@@ -103,14 +103,15 @@ LoadDefinitions!({
 
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
-  DefMacro!("\\verb", sub[ _args] {
+  DefMacro!("\\verb", {
     state_mut!().begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     // Do NOT (necessarily) skip spaces after \verb!!!
     state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);
     let mut init = None;
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     let space_sym = arena::pin_static(" ");
-    while let Some(maybe_init) =  gullet.read_token()? {
+    let mut gullet = gullet_mut!();
+    while let Some(maybe_init) = gullet.read_token()? {
       if maybe_init.get_sym() != space_sym {
         init = Some(maybe_init);
         break;
@@ -143,18 +144,18 @@ LoadDefinitions!({
         if starred { Tokens!(T_OTHER!("*")) } else { Tokens!() },
         Tokens!(init_token),
         body
-      ])?.unlist());
+      ]).unlist());
       result.push(T_CS!("\\@hidden@egroup"));
       Ok(Tokens::new(result))
     } else { // typically something read too far got \verb and the content is somewhere else..?
-      Error!("expected", "delimiter", gullet,
+      Error!("expected", "delimiter",
         "Verbatim argument lost\n Bindings for preceding code is probably broken");
       state_mut!().end_semiverbatim()?;
       Ok(Tokens!())
     }
   });
 
-  DefPrimitive!("\\lx@use@visiblespace", sub[ ()] {
+  DefPrimitive!("\\lx@use@visiblespace", sub[()] {
     // Do NOT (necessarily) skip spaces after \verb!!!
     state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);
     // Visible space
@@ -173,7 +174,7 @@ LoadDefinitions!({
     "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
     font            => { family => "typewriter", series => "medium", shape => "upright" },
     before_construct => sub[doc,_whatsit] {
-      if !doc.can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
+      if !document::can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
         doc.open_element("ltx:p", None, None)?;
       }
     },

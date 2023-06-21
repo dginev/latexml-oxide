@@ -84,10 +84,10 @@ LoadDefinitions!({
   // TeX's ligatures handled by rewrite regexps.
   // Note: applied in reverse order of definition (latest defined applied first!)
   // Note also, these area only applied in text content, not in attributes!
-  DefPrimitive!("\\@@endash", sub[()] {
+  DefPrimitive!("\\@@endash", {
     Tbox::new(arena::pin_static("\u{2013}"), None, None,
       Tokens!(T_CS!("\\@@endash")), HashMap::default()); });
-  DefPrimitive!("\\@@emdash", sub[()] {
+  DefPrimitive!("\\@@emdash", {
     Tbox::new(arena::pin_static("\u{2014}"), None, None,
       Tokens!(T_CS!("\\@@emdash")), HashMap::default()); });
 

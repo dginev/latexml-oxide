@@ -33,15 +33,12 @@ LoadDefinitions!({
       document.open_element("ltx:document", Some(props), None)?;
     }
   },
-  after_digest => sub[ whatsit] {
+  after_digest => sub[whatsit] {
     stomach_mut!().begin_mode("text")?;
-    { // we need to re-bind in order to nest calls to the binding macro machinery
-      bind_state::mut!(stomach);
-      DefMacro!("\\@currenvir", "document");
-    }
-    let gullet = gullet_mut!();
+    // we need to re-bind in order to nest calls to the binding macro machinery
+    DefMacro!("\\@currenvir", "document");
     state_mut!().assign_value("current_environment", "document", None);
-    let expanded_id = Expand!(T_CS!("\\thedocument@ID"),gullet);
+    let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     let mut boxes = Vec::new();
     if let Some(ops) = state!().lookup_tokens("@document@preamble@atend") {
@@ -68,7 +65,7 @@ LoadDefinitions!({
   DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props] {
       document.close_element("ltx:document")?;
     },
-    before_digest => sub[stomach] {
+    before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
       if let Some(ops) = state!().lookup_tokens("@at@end@document") {
         boxes.push(stomach::digest(ops)?);

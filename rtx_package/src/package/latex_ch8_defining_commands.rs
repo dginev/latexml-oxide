@@ -11,7 +11,7 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
-  sub[ (star,cs_token,nargs,opt,body)] {
+  sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     if !IsDefinable!(&cs_token) {
       if !state!().has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
@@ -25,7 +25,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
-  sub[ (star, cs, nargs_num, opt, body)] {
+  sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     let opt = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() { None } else { opt }
@@ -45,7 +45,7 @@ LoadDefinitions!({
   // machinery.
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
-  sub[ (star, cs, nargs, opt, body)] {
+  sub[(star, cs, nargs, opt, body)] {
     // TODO: Consider if we should just treat the empty tokens directly in convert_latex_args ?
     let opt_checked = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() {
@@ -61,7 +61,7 @@ LoadDefinitions!({
 
   // Crazy; define \cs in terms of \cs[space] !!!
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
-  sub[ (star,cs,nargs,opt,body)] {
+  sub[(star,cs,nargs,opt,body)] {
     let opt_checked = match opt {
       Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
       _ => None
@@ -71,7 +71,7 @@ LoadDefinitions!({
     DefMacro!(cs, cs_args, body, robust => true);
   });
 
-  DefPrimitive!("\\MakeRobust DefToken", sub[ (cs)] {
+  DefPrimitive!("\\MakeRobust DefToken", sub[(cs)] {
     let mungedcs = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
     // only if defined but not yet robust
     if LookupDefinition!(&cs).is_some() &&
@@ -90,10 +90,10 @@ LoadDefinitions!({
   // But more importantly, we don't want to override a hand-written definition (if any).
   //------------------------------------------------------------
   DefPrimitive!("\\DeclareTextCommand DefToken {}[Number][]{}",
-  sub[ (cs, encoding, nargs, opts, expansion)] {
+  sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
-    let gullet = gullet_mut!();
+    let mut gullet = gullet_mut!();
     let encoding = Expand!(encoding);
     if !IsDefined!(&cs) {    // If not already defined...
       DefMacro!(cs, None, Some(s!(r#"""
@@ -112,7 +112,7 @@ LoadDefinitions!({
   );
 
   DefPrimitive!("\\ProvideTextCommand DefToken {}[Number][]{}",
-  sub[ (cs, encoding, nargs, opts, expansion)] {
+  sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
     if IsDefinable!(&cs) { // If not already defined...
@@ -136,7 +136,7 @@ LoadDefinitions!({
   // #------------------------------------------------------------
 
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}",
-    sub[ (cs, encoding, code)] {
+    sub[(cs, encoding, code)] {
     // TODO:
     //     $code = $code->valueOf;
     //     my $css = ToString($cs);
@@ -189,7 +189,7 @@ LoadDefinitions!({
   // http://tex.loria.fr/general/new/fntguide.html
   // we ignore font encoding
   DefPrimitive!("\\DeclareSymbolFont{}{}{}{}{}",
-  sub[ (name, enc, family, series, shape)] {
+  sub[(name, enc, family, series, shape)] {
     AssignValue!(&s!("fontdeclaration@{}", name),
       fontmap!(family => family.to_string(),
         series   => series.to_string(),
@@ -198,9 +198,9 @@ LoadDefinitions!({
       )
     );
   });
-  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[ (cs, name)] {
+  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
     let fontkey = s!("fontdeclarations@{}", name.to_string());
-    let font : Option<Font> = if let Some(Stored::Font(value)) = LookupValue!(&fontkey) {
+    let font : Option<Font> = if let Some(Stored::Font(value)) = state!().lookup_value(&fontkey) {
       Some((**value).clone())
     } else {
       None
@@ -213,14 +213,14 @@ LoadDefinitions!({
 
   DefMacro!("\\cdp@list", "\\@empty");
   Let!("\\cdp@elt", "\\relax");
-  DefPrimitive!("\\DeclareFontEncoding{}{}{}", sub[ (encoding, x, y)] {
+  DefPrimitive!("\\DeclareFontEncoding{}{}{}", sub[(encoding, x, y)] {
     // TODO:
     // AddToMacro!(T_CS!("\\cdp@list"), T_CS!("\\cdp@elt"),
     //   T_BEGIN!(), encoding.unlist(), T_END,
     //   T_BEGIN!(), T_CS!("\\default@family"), *T_END,
     //   T_BEGIN!(), T_CS!("\\default@series"), *T_END,
     //   T_BEGIN!(), T_CS!("\\default@shape"),  *T_END);
-    let gullet = gullet_mut!();
+    let mut gullet = gullet_mut!();
     let e = Expand!(encoding);
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
     DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);

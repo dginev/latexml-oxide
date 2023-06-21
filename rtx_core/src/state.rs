@@ -1480,45 +1480,6 @@ impl State {
     Some(token.into())
   }
 
-  /// And a shorthand for installing definitions
-  pub fn install_definition<T: Into<Stored>>(&mut self, definition: T, scope: Option<Scope>) {
-    let definition = definition.into();
-
-    // Locked definitions!!! (or should this test be in assignMeaning?)
-    // Ignore attempts to (re)define $cs from tex sources
-    let token = match definition {
-      Stored::Expandable(ref defn) => defn.get_cs(),
-      Stored::Conditional(ref defn) => defn.get_cs(),
-      Stored::Constructor(ref defn) => defn.get_cs(),
-      Stored::Primitive(ref defn) => defn.get_cs(),
-      Stored::MathPrimitive(ref defn) => defn.get_cs(),
-      Stored::Register(ref defn) => defn.get_cs(),
-      Stored::Token(ref token) => Cow::Borrowed(token),
-      _ => panic!("_wrong_argument_for_install_definition"),
-    };
-    let cs_sym = token.get_cs_name();
-    let cs_locked = token.with_cs_name(|cs| s!("{cs}:locked"));
-    // info!("-- installing definition for: {:?}", token);
-
-    // TODO, .is_none() should be a real false check
-    let is_cs_locked = self.lookup_bool(&cs_locked);
-    let is_state_unlocked = self.lookup_bool("UNLOCKED");
-
-    if is_cs_locked && !is_state_unlocked {
-      if let Some(Stored::String(s)) = self.lookup_value("SOURCEFILE") {
-        // report if the redefinition seems to come from document source
-        if arena::with(*s, |txt| {
-          txt == "Anonymous String"
-            || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
-        }) {
-          //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
-        }
-        return;
-      }
-    }
-    self.assign_internal(TableName::Meaning, cs_sym, definition, scope);
-  }
-
   // NOTE: Common usage patterns seem to be to lookup
   //   expandable definitions
   //   register values
@@ -1939,7 +1900,7 @@ impl State {
       None => *EMPTY_SYM,
     };
 
-    // A bit tricky here, we need to release the state::model borrow immediately, which is why we
+    // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
     let tag_contents: Vec<SymbolU32> = self.model.get_tag_contents(&tag);
@@ -2021,65 +1982,6 @@ impl State {
       (None, None) => true,                       // true if both undefined
       (_, _) => false,                            // False, if only one has 'meaning'
     }
-  }
-
-  /// Generate a stub definition for an undefined control-sequence,
-  /// along with appropriate error messge.
-  pub fn generate_error_stub(&mut self, token: &Token) -> Result<Token> {
-    let cs = token.with_cs_name(ToString::to_string);
-    note_status(LogStatus::Undefined, Some(&cs));
-                                        // To minimize chatter, go ahead and define it...
-    if cs.starts_with("\\if") {
-      // Apparently an \ifsomething ???
-      let name = cs.replace("\\if", "");
-      Error!(
-        "undefined",
-        token,
-        s!(
-          "The token {} is not defined. Defining it now as with \\newif",
-          token.stringify()
-        )
-      );
-      self.install_definition(
-        Expandable::new(
-          T_CS!(s!("\\{}true", name)),
-          None,
-          s!("\\let{}\\iftrue", cs),
-          None
-        )?,
-        Some(Scope::Global),
-      );
-      self.install_definition(
-        Expandable::new(
-          T_CS!(s!("\\{}false", name)),
-          None,
-          s!("\\let{}\\iffalse", cs),
-          None
-        )?,
-        Some(Scope::Global),
-      );
-      self.let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
-    } else {
-      Error!(
-        "undefined",
-        token,
-        s!(
-          "The token {} is not defined. Defining it now as <ltx:ERROR/>",
-          token.stringify()
-        )
-      );
-      self.install_definition(
-        Constructor {
-          cs: token.clone(),
-          replacement: Some(Rc::new(move |document, _args, _props| {
-            document.make_error("undefined", &cs) })),
-          ..Constructor::default()
-        },
-        //TODO: sizer => "X"),
-        Some(Scope::Global),
-      );
-    }
-    Ok(token.clone())
   }
 
   /// simple id generator for a ligature
@@ -2228,4 +2130,105 @@ pub fn use_main_state() {
       USES_STY = false;
     }
   }
+}
+
+/// A shorthand for installing definitions
+pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) {
+  let definition = definition.into();
+
+  // Locked definitions!!! (or should this test be in assignMeaning?)
+  // Ignore attempts to (re)define $cs from tex sources
+  let token = match definition {
+    Stored::Expandable(ref defn) => defn.get_cs(),
+    Stored::Conditional(ref defn) => defn.get_cs(),
+    Stored::Constructor(ref defn) => defn.get_cs(),
+    Stored::Primitive(ref defn) => defn.get_cs(),
+    Stored::MathPrimitive(ref defn) => defn.get_cs(),
+    Stored::Register(ref defn) => defn.get_cs(),
+    Stored::Token(ref token) => Cow::Borrowed(token),
+    _ => panic!("_wrong_argument_for_install_definition"),
+  };
+  let cs_sym = token.get_cs_name();
+  let cs_locked = token.with_cs_name(|cs| s!("{cs}:locked"));
+  // info!("-- installing definition for: {:?}", token);
+
+  // TODO, .is_none() should be a real false check
+  let state = state!();
+  let is_cs_locked = state.lookup_bool(&cs_locked);
+  let is_state_unlocked = state.lookup_bool("UNLOCKED");
+
+  if is_cs_locked && !is_state_unlocked {
+    if let Some(Stored::String(s)) = state.lookup_value("SOURCEFILE") {
+      // report if the redefinition seems to come from document source
+      if arena::with(*s, |txt| {
+        txt == "Anonymous String"
+          || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
+      }) {
+        //  info("ignore", cs, self.get_stomach(), "Ignoring redefinition of $cs");
+      }
+      return;
+    }
+  }
+  drop(state);
+  let mut state = state_mut!();
+  state.assign_internal(TableName::Meaning, cs_sym, definition, scope);
+}
+
+/// Generate a stub definition for an undefined control-sequence,
+/// along with appropriate error messge.
+pub fn generate_error_stub(token: &Token) -> Result<Token> {
+  let cs = token.with_cs_name(ToString::to_string);
+  note_status(LogStatus::Undefined, Some(&cs));
+                                      // To minimize chatter, go ahead and define it...
+  if cs.starts_with("\\if") {
+    // Apparently an \ifsomething ???
+    let name = cs.replace("\\if", "");
+    Error!(
+      "undefined",
+      token,
+      s!(
+        "The token {} is not defined. Defining it now as with \\newif",
+        token.stringify()
+      )
+    );
+    install_definition(
+      Expandable::new(
+        T_CS!(s!("\\{}true", name)),
+        None,
+        s!("\\let{}\\iftrue", cs),
+        None
+      )?,
+      Some(Scope::Global),
+    );
+    install_definition(
+      Expandable::new(
+        T_CS!(s!("\\{}false", name)),
+        None,
+        s!("\\let{}\\iffalse", cs),
+        None
+      )?,
+      Some(Scope::Global),
+    );
+    state_mut!().let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+  } else {
+    Error!(
+      "undefined",
+      token,
+      s!(
+        "The token {} is not defined. Defining it now as <ltx:ERROR/>",
+        token.stringify()
+      )
+    );
+    install_definition(
+      Constructor {
+        cs: token.clone(),
+        replacement: Some(Rc::new(move |document, _args, _props| {
+          document.make_error("undefined", &cs) })),
+        ..Constructor::default()
+      },
+      //TODO: sizer => "X"),
+      Some(Scope::Global),
+    );
+  }
+  Ok(token.clone())
 }

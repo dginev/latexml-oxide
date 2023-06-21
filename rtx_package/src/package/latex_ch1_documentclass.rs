@@ -9,8 +9,7 @@ LoadDefinitions!({
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
-  DefConditional!("\\if@compatibility", sub [gullet, ()] {
-    state!().lookup_bool("2.09_COMPATIBILITY") });
+  DefConditional!("\\if@compatibility", { state!().lookup_bool("2.09_COMPATIBILITY") });
   DefMacro!("\\@compatibilitytrue", "");
   DefMacro!("\\@compatibilityfalse", "");
 
@@ -34,10 +33,10 @@ LoadDefinitions!({
   });
 
   AssignValue!("@unusedoptionlist", Stored::VecString(Vec::new()));
-  DefPrimitive!("\\warn@unusedclassoptions", sub[_args] {
+  DefPrimitive!("\\warn@unusedclassoptions", {
     if let Some(Stored::VecString(unused)) = state!().lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
-        Info!("unexpected", "options", stomach,
+        Info!("unexpected", "options",
               "Unused global options: {}",unused.join(","));
         state_mut!().assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
       }

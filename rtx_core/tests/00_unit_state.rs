@@ -255,13 +255,6 @@ fn install_definition_and_meaning() {
     is_protected: state.get_prefix("protected"),
     ..Expandable::default()
   };
-  // Install a Definition
-  state.install_definition(job_definition.clone(), None);
-  if let Ok(Some(stored_definition)) = state.lookup_definition(&T_CS!("\\jobname")) {
-    assert_eq!(stored_definition.get_cs().into_owned(), T_CS!("\\jobname"));
-  } else {
-    panic!("Failed to lookup installed definition!");
-  }
 
   // Assign a Meaning
   state.assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));

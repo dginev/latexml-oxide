@@ -61,12 +61,12 @@ LoadDefinitions!({
   DefMacro!("\\@gobble{}", None);
   DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
-  DefMacro!("\\@firstofone{}",       sub[ (first)] { Ok(first) });
+  DefMacro!("\\@firstofone{}",       sub[(first)] { Ok(first) });
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[ (first,_second)] { Ok(first) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[ (_first, second)] { Ok(second) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[ (_first,_second, third)] { Ok(third) });
-  DefMacro!("\\@expandtwoargs{}{}{}", sub[ (first,second,third)] {
+  DefMacro!("\\@firstoftwo{}{}",     sub[(first,_second)] { Ok(first) });
+  DefMacro!("\\@secondoftwo{}{}",    sub[(_first, second)] { Ok(second) });
+  DefMacro!("\\@thirdofthree{}{}{}", sub[(_first,_second, third)] { Ok(third) });
+  DefMacro!("\\@expandtwoargs{}{}{}", sub[(first,second,third)] {
     let mut tks = first.unlist();
     tks.push(T_BEGIN!());
     tks.append(&mut Expand!(second).unlist());
@@ -83,7 +83,7 @@ LoadDefinitions!({
       Some('\\') => arg_chars.next().unwrap(),
       Some(other) => other,
       None => {
-        Warn!("expected","character",gullet ,"\\@makeother called on empty argument?");
+        Warn!("expected","character","\\@makeother called on empty argument?");
         return Ok(Tokens!());
       }};
     state_mut!().assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));

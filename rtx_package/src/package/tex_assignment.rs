@@ -14,23 +14,23 @@ LoadDefinitions!({
   // <def> = \def | \gdef | \edef | \xdef
   // <definition text> = <register text><left brace><balanced text><right brace>
   DefPrimitive!("\\def SkipSpaces Token UntilBrace DefPlain",
-    sub[ (cs,params,body)] {
-      do_def(false, stomach, cs,params,body)?;
+    sub[(cs,params,body)] {
+      do_def(false,cs,params,body)?;
     },
     locked => true);
   DefPrimitive!("\\gdef SkipSpaces Token UntilBrace DefPlain",
-    sub[ (cs,params,body)] {
-      do_def(true, stomach, cs,params,body)?;
+    sub[(cs,params,body)] {
+      do_def(true,cs,params,body)?;
     },
     locked => true);
   DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
-    sub[ (cs,params,body)] {
-      do_def(false, stomach, cs,params,body)?;
+    sub[(cs,params,body)] {
+      do_def(false,cs,params,body)?;
     },
     locked => true);
   DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
-    sub[ (cs,params,body)] {
-      do_def(true, stomach, cs,params,body)?;
+    sub[(cs,params,body)] {
+      do_def(true,cs,params,body)?;
     },
     locked => true);
 
@@ -65,8 +65,8 @@ LoadDefinitions!({
 
   // Need to handle "at" too!!!
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
-  sub[ (cs, name_arg)] {
-    let gullet = gullet_mut!();
+  sub[(cs, name_arg)] {
+    let mut gullet = gullet_mut!();
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
       gullet.read_keyword(&["at"])?
@@ -109,7 +109,7 @@ LoadDefinitions!({
   //    | \multiply <numeric variable><optional by><number>
   //    | \divide <numeric variable><optional by><number>
 
-  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[ (var)] {
+  DefPrimitive!("\\advance Variable SkipKeyword:by", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
@@ -131,7 +131,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[ (var,scale)] {
+  DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[(var,scale)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -150,7 +150,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[ (var,scale)] {
+  DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[(var,scale)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -159,7 +159,7 @@ LoadDefinitions!({
         let defn_value = defn.value_of(inner).unwrap_or_default();
         let mut denominator = scale.value_f64();
         if denominator == 0.0 {
-          Error!("misdefined", scale, stomach, "Illegal \\divide by 0; assuming 1");
+          Error!("misdefined", scale, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
         defn.set_value(defn_value.divide(Float::new_f64(denominator)), None, defn_args);
@@ -176,11 +176,11 @@ LoadDefinitions!({
 
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
-  DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[ (token1, token2)] {
+  DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[(token1, token2)] {
     Let!(token1, token2);
   });
 
-  DefPrimitive!("\\futurelet Token Token Token", sub[ (cs, token1, token2)] {
+  DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
     gullet_mut!().unread(Tokens!(token1,token2.clone()));
     Let!(cs, token2);
@@ -195,23 +195,23 @@ LoadDefinitions!({
 
   // DG: it's just RegisterValue actually.
 
-  DefPrimitive!("\\countdef Token SkipMatch:=", sub[ (cs)] {
+  DefPrimitive!("\\countdef Token SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\count", Number::new(0).into())
   });
 
-  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[ (cs)] {
+  DefPrimitive!("\\dimendef Token SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\dimen", Dimension::new(0).into())
   });
 
-  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[ (cs)] {
+  DefPrimitive!("\\skipdef Token SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\skip", Glue::new(0).into())
   });
 
-  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[ (cs)] {
+  DefPrimitive!("\\muskipdef Token SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\muskip", MuGlue::new(0).into())
   });
 
-  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[ (cs)] {
+  DefPrimitive!("\\toksdef Token SkipMatch:=", sub[(cs)] {
     shorthand_def(cs, "\\toks", Tokens!().into())
   });
 
@@ -224,8 +224,8 @@ LoadDefinitions!({
   DefRegister!("\\lastpenalty", Number::new(0), readonly => true);
 
   // \parshape !?!??
-  DefPrimitive!("\\parshape SkipMatch:= Number", sub[ (n)] {
-    let gullet = gullet_mut!();
+  DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
+    let mut gullet = gullet_mut!();
     for i in 0..n.value_of() {
       gullet.read_dimension()?;
       gullet.read_dimension()?;
@@ -234,11 +234,8 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=>sub[_args] {
-    let stomach = state::stomach.clone();
-    let stomach_mut = stomach.borrow_mut();
-    let locator = stomach_mut.get_gullet().get_locator();
-    Number::new(locator.map(|l| l.from_line as i64).unwrap_or(0))
+  DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=> {
+    Number::new(gullet!().get_locator().map(|l| l.from_line as i64).unwrap_or(0))
   });
 
   DefRegister!("\\badness", Number::new(0), readonly => true);
@@ -318,12 +315,15 @@ LoadDefinitions!({
   });
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
-  for letter in b'A'..=b'Z' {
-    //FYI: 0x20 == 32
-    outer_state_mut!().assign_lccode(letter, letter + 32, Some(Scope::Global));
-    outer_state_mut!().assign_uccode(letter, letter, Some(Scope::Global));
-    outer_state_mut!().assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
-    outer_state_mut!().assign_uccode(letter + 32, letter, Some(Scope::Global));
+  {
+    let mut state = state_mut!();
+    for letter in b'A'..=b'Z' {
+      //FYI: 0x20 == 32
+      state.assign_lccode(letter, letter + 32, Some(Scope::Global));
+      state.assign_uccode(letter, letter, Some(Scope::Global));
+      state.assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
+      state.assign_uccode(letter + 32, letter, Some(Scope::Global));
+    }
   }
 
   // Stub definitions ???

@@ -10,13 +10,13 @@ LoadDefinitions!({
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
-  DefPrimitive!("\\protected", sub[ _args] {
+  DefPrimitive!("\\protected", {
     state_mut!().set_prefix("protected");
   },
   is_prefix => true);
 
   // \detokenize
-  DefMacro!("\\detokenize GeneralText", sub[ (text)] {
+  DefMacro!("\\detokenize GeneralText", sub[(text)] {
     Explode!(writable_tokens(&text))
   });
 
@@ -52,8 +52,8 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\scantokens GeneralText", sub[ (tokens)] {
-    gullet.open_mouth(
+  DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
+    gullet_mut!().open_mouth(
       Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });
@@ -66,18 +66,18 @@ LoadDefinitions!({
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
-    getter => sub[_args] { state!().get_frame_depth() });
+    getter => { state!().get_frame_depth() });
 
   // \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
-  DefConditional!("\\ifcsname CSName", sub[ (t)] {
+  DefConditional!("\\ifcsname CSName", sub[(t)] {
     state!().lookup_meaning(&t).is_some()
   });
 
   // \ifdefined <token>
-  DefConditional!("\\ifdefined Token", sub[ (t)] {
+  DefConditional!("\\ifdefined Token", sub[(t)] {
     state!().lookup_meaning(&t).is_some()
   });
 
@@ -89,11 +89,11 @@ LoadDefinitions!({
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", sub[ (num)] {});
-  DefMacro!("\\firstmarks Number", sub[ (num)] {});
-  DefMacro!("\\botmarks Number", sub[ (num)] {});
-  DefMacro!("\\splitfirstmarks Number", sub[ (num)] {});
-  DefMacro!("\\splitbotmarks Number", sub[ (num)] {});
+  DefMacro!("\\topmarks Number", sub[(num)] {});
+  DefMacro!("\\firstmarks Number", sub[(num)] {});
+  DefMacro!("\\botmarks Number", sub[(num)] {});
+  DefMacro!("\\splitfirstmarks Number", sub[(num)] {});
+  DefMacro!("\\splitbotmarks Number", sub[(num)] {});
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -159,18 +159,18 @@ LoadDefinitions!({
   //     return; });
 
   // \unless someif
-  DefConditional!("\\unless Token", sub[ (if_token)] {
+  DefConditional!("\\unless Token", sub[(if_token)] {
     if let Some(Stored::Conditional(defn)) = state!().lookup_definition_stored(&if_token)? {
       if defn.conditional_type == ConditionalType::If {
         if let Some(ref test) = defn.test {
           // Invert the if's test!
           let args = defn.read_arguments()?;
-          return Ok(!(test(gullet, args)?));
+          return Ok(!(test( args)?));
         }
       }
     }
     let msg = s!("\\unless should not be followed by {}",if_token.stringify());
-    Error!("unexpected", if_token, gullet, msg);
+    Error!("unexpected", if_token, msg);
     false
   });
 
@@ -181,31 +181,30 @@ LoadDefinitions!({
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
   fn etex_readexpr(
-
     rtype: RegisterType,
   ) -> Result<RegisterValue> {
-    let value = etex_readexpr_i(gullet, rtype, 0)?;
-    if let Some(token) = gullet.read_token()? {
+    let value = etex_readexpr_i( rtype, 0)?;
+    if let Some(token) = gullet_mut!().read_token()? {
       // Skip \relax
       if token != *TOKEN_RELAX {
-        gullet.unread_one(token);
+        gullet_mut!().unread_one(token);
       }
     }
     Ok(value)
   }
 
   fn etex_readexpr_i(
-
     rtype: RegisterType,
     prec: usize,
   ) -> Result<RegisterValue> {
     // Read a first value
+    let mut gullet = gullet_mut!();
     let token = match gullet.read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };
     let mut value = if token == T_OTHER!("(") {
-      let i_value = etex_readexpr_i(gullet, rtype, 0)?;
+      let i_value = etex_readexpr_i( rtype, 0)?;
       let close = gullet.read_x_token(None, false)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
@@ -226,15 +225,15 @@ LoadDefinitions!({
         gullet.unread_one(next); // leave the \relax for top-level to strip off.
         break;
       } else if next == T_OTHER!("+") && prec < 1 {
-        value = value.add(etex_readexpr_i(gullet, rtype, 1)?);
+        value = value.add(etex_readexpr_i( rtype, 1)?);
       } else if next == T_OTHER!("-") && prec < 1 {
-        value = value.subtract(etex_readexpr_i(gullet, rtype, 1)?);
+        value = value.subtract(etex_readexpr_i( rtype, 1)?);
       } else if next == T_OTHER!("*") && prec < 2 {
         // multiplier should be pure number
-        value = value.multiply(etex_readexpr_i(gullet, RegisterType::Number, 2)?);
+        value = value.multiply(etex_readexpr_i( RegisterType::Number, 2)?);
       } else if next == T_OTHER!("/") && prec < 2 {
         // denominator should be pure number
-        value = value.divideround(etex_readexpr_i(gullet, RegisterType::Number, 2)?);
+        value = value.divideround(etex_readexpr_i( RegisterType::Number, 2)?);
       } else {
         // anything else, we're done.
         gullet.unread_one(next);
@@ -244,17 +243,17 @@ LoadDefinitions!({
     Ok(value)
   }
 
-  DefParameterType!(NumExpr, sub[ _inner, _extra] {
-    etex_readexpr(gullet, RegisterType::Number)?
+  DefParameterType!(NumExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Number)?
   });
-  DefParameterType!(DimExpr, sub[ _inner, _extra] {
-    etex_readexpr(gullet, RegisterType::Dimension)?
+  DefParameterType!(DimExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Dimension)?
   });
-  DefParameterType!(GlueExpr, sub[ _inner, _extra] {
-    etex_readexpr(gullet, RegisterType::Glue)?
+  DefParameterType!(GlueExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Glue)?
   });
-  DefParameterType!(MuExpr, sub[ _inner, _extra] {
-    etex_readexpr(gullet, RegisterType::MuGlue)?
+  DefParameterType!(MuExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::MuGlue)?
   });
 
   DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args] {

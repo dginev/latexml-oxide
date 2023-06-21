@@ -25,7 +25,7 @@ LoadDefinitions!({
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[ (cs)] {
+  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
     match state!().lookup_definition(&cs)? {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
@@ -81,12 +81,12 @@ LoadDefinitions!({
   // C.13.2 Space
   //======================================================================
 
-  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[ (star,length)] {
+  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[(star,length)] {
     let s = dimension_to_spaces(&length);
     if !s.is_empty() {
       let length_tokens = length.revert()?;
       let mut gullet = gullet_mut!();
-      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens])?;
+      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
       Tbox::new(arena::pin(&s), None, None, tokens,
         stored_map!("width" => length, "isSpace" => true));
     }
@@ -110,8 +110,8 @@ LoadDefinitions!({
     mode => "text",
     bounded => true,
     sizer => "#1",
-    before_digest => sub[stomach] {
-      reenter_text_mode(false, gullet_mut!()); }
+    before_digest => {
+      reenter_text_mode(false); }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
@@ -119,8 +119,8 @@ LoadDefinitions!({
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
-    before_digest => sub[stomach] {
-      reenter_text_mode(false, gullet_mut!()); }
+    before_digest => {
+      reenter_text_mode(false); }
     // properties   => sub[args] {
     //   let arg1 = &args[0];
     //   let arg2 = &args[1];
@@ -289,8 +289,8 @@ LoadDefinitions!({
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
-    before_digest => sub[stomach] {
-      reenter_text_mode(false, gullet_mut!()); }
+    before_digest => {
+      reenter_text_mode(false); }
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );

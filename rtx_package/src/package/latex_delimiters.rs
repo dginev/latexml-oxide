@@ -114,12 +114,12 @@ LoadDefinitions!({
   DefMacro!("\\left XToken", r"\@left #1\@hidden@bgroup");
   // Like \@hidden@egroup, but softer about missing \left
   DefConstructor!("\\right@hidden@egroup", "",
-    after_digest => sub[_args] {
+    after_digest => {
       if state!().is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
         || state!().lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
-        Error!("unexpected", "\\right", stomach, "Unbalanced \\right, no balancing \\left."); }
+        Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
-        stomach.egroup()?;
+        stomach_mut!().egroup()?;
       }
     },
     reversion => None);
@@ -146,7 +146,7 @@ LoadDefinitions!({
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach,
+        Warn!("unexpected", delim,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())
@@ -172,7 +172,7 @@ LoadDefinitions!({
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach,
+        Warn!("unexpected", delim,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())

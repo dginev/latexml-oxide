@@ -16,21 +16,21 @@ use crate::package::*;
 LoadDefinitions!({
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
   DefMacro!("\\@currenvir", "");
-  DefPrimitive!("\\f{}", sub[ (env)] {
+  DefPrimitive!("\\f{}", sub[(env)] {
     let env_string = env.to_string();
     DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
   });
 
   DefPrimitive!(
-  "\\lx@setcurrenvir{}", sub[ (env)] {
+  "\\lx@setcurrenvir{}", sub[(env)] {
     let env_string = env.to_string();
     DefMacro!(T_CS!("\\@currenvir"), None, env);
     AssignValue!("current_environment", env_string);
   });
   Let!("\\@currenvline", "\\@empty");
 
-  DefMacro!("\\begin{}", sub[ (env)] {
+  DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
     let before_opt = state!().lookup_tokens(&format!("@environment@{name}@beforebegin"));
@@ -49,7 +49,7 @@ LoadDefinitions!({
         Error!("undefined", undef, message);
         note_status(LogStatus::Undefined, Some(&undef));
         // TODO:
-        // state_mut!().install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
+        // state::install_definition(LaTeXML::Core::Definition::Constructor->new($token, undef,
         //       sub { LaTeXML::Core::Stomach::makeError($_[0], "undefined", $undef); })); }
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
@@ -57,13 +57,13 @@ LoadDefinitions!({
       if let Some(after) = after_opt {
         out_tokens.extend(after.unlist());
       }
-      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env])?.unlist());
+      out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
       out_tokens.push(token);
       Ok(Tokens::new(out_tokens))
     }
   });
 
-  DefMacro!("\\end {}", sub[ (env)]{
+  DefMacro!("\\end {}", sub[(env)]{
     let name = Expand!(env).to_string();
     let before = state!().lookup_tokens(&s!("@environment@{name}@atend"));
     let after = state!().lookup_tokens(&s!("@environment@{name}@afterend"));

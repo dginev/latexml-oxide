@@ -6,6 +6,7 @@ use std::process;
 
 use rtx::util::test::{new_test_engine,lex_single_tex_formula};
 use rtx_core::common::error::Result;
+use rtx_core::state_mut;
 use rtx_math_parser::*;
 
 fn main() -> Result<()> {
@@ -13,7 +14,6 @@ fn main() -> Result<()> {
     Error!(
       "rtx",
       "logger",
-      None,
       "Failed to load logger, aborting. Please check rtx_core::util::logger installed correctly."
     );
   }
@@ -26,7 +26,6 @@ fn main() -> Result<()> {
       Error!(
         "rtx",
         "",
-        None,
         "Please provide a TeX formula on input! Exiting..."
       );
       process::exit(1);
@@ -37,7 +36,7 @@ fn main() -> Result<()> {
   assert!(!lexemes.is_empty());
   eprintln!("\n\nlexemes: {lexemes:?}\n");
 
-  state::nomathparse = false; // nomathparse is "true" while lexing, but "false" while parsing
+  state_mut!().nomathparse = false; // nomathparse is "true" while lexing, but "false" while parsing
   let mut parser = MathParser::default();
   if let Ok(Some(parse_tree)) = parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) {
     let mut xmath = xmath_opt.unwrap();
@@ -62,7 +61,6 @@ fn main() -> Result<()> {
     Warn!(
       "math",
       "parse",
-      None,
       "Grammar did not recognize expression."
     );
     process::exit(1);
