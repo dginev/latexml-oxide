@@ -4,7 +4,7 @@ use crate::package::*;
 // Better would be language sensitive!
 const PM_ORDINAL_SUFFICES: &[&str] = &["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"];
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.6.2 List-Making environments
   //======================================================================
@@ -47,38 +47,38 @@ LoadDefinitions!(state, {
   DefMacro!("\\itemize@item", "\\par\\itemize@item@");
   DefConstructor!("\\itemize@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
   DefConstructor!("\\inline@itemize@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
 
   DefMacro!("\\enumerate@item", "\\par\\enumerate@item@");
   DefConstructor!("\\enumerate@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
 
   DefMacro!("\\description@item", "\\par\\description@item@");
   DefConstructor!("\\description@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
   DefConstructor!("\\inline@description@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[ args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) });
+      ref_step_item_counter(undigested) });
 
   DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
@@ -140,7 +140,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\fnum@@itemiii", r"{\makelabel{\label@itemiii}}");
   DefMacro!("\\fnum@@itemiv", r"{\makelabel{\label@itemiv}}");
 
-  DefMacro!("\\lx@poormans@ordinal{}", sub[gullet, (ctr), state] {
+  DefMacro!("\\lx@poormans@ordinal{}", sub[ (ctr)] {
     let mut ctr_str      = CounterValue!(&ctr.to_string()).value_of().to_string();
     let last_char = ctr_str.chars().last().unwrap_or('.');
     if last_char.is_ascii_digit() {

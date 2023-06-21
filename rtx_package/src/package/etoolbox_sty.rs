@@ -1,5 +1,5 @@
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
   RawTeX!(
     r###"
 \def\etb@catcodes{\do\&\do\|\do\:\do\-\do\=\do\<\do\>}
@@ -23,25 +23,25 @@ LoadDefinitions!(state, {
 "###
   );
 
-  DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
-  if !is_definable(&cs, state) {
-    if !state.lookup_bool(&s!("{cs}:locked")) {
+  DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
+  if !is_definable(&cs) {
+    if !state!().lookup_bool(&s!("{cs}:locked")) {
       Info!("ignore", cs, stomach,
         "Ignoring redefinition (\\newcommand) of '{cs}'"); }
   } else {
-    let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
+    let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true);
   }
   Tokens!() });
 
-  DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body),state] {
-  let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
+  DefMacro!("\\renewrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
+  let args = convert_latex_args(nargs.value_of() as usize, opt)?;
   DefMacro!(cs, args, body, protected => true, long => true);
   Tokens!() });
 
-  DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[stomach,(_star,cs,nargs,opt,body), state] {
-  if is_definable(&cs, state) {
-    let args = convert_latex_args(nargs.value_of() as usize, opt, state)?;
+  DefMacro!("\\providerobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
+  if is_definable(&cs) {
+    let args = convert_latex_args(nargs.value_of() as usize, opt)?;
     DefMacro!(cs, args, body, protected => true, long => true); }
   Tokens!() });
 
@@ -170,8 +170,8 @@ LoadDefinitions!(state, {
   // we load the native package, since they are used within it extensively.
   // Hence we need to lock them, to avoid the native redefinition.
 
-  DefMacro!("\\ifdefprotected DefToken {} {}", sub[gullet,(cs,ttrue,tfalse),state] {
-  let definition = state.lookup_definition(&cs)?;
+  DefMacro!("\\ifdefprotected DefToken {} {}", sub[(cs,ttrue,tfalse)] {
+  let definition = state!().lookup_definition(&cs)?;
   if definition.is_none() || !definition.as_ref().unwrap().is_expandable() {
     // Undefined, or not an expandable definition, therefore not protected
     return Ok(tfalse);
@@ -1272,8 +1272,8 @@ LoadDefinitions!(state, {
 
   // Need to be able to examine a Macro's replacement for a match (and then replace)
   // we can only do this for token expansions, and should return failure for all else.
-  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[gullet,(_prefix,cs,search,replace,success,failure), state] {
-  let definition = state.lookup_definition(&cs)?;
+  DefMacro!("\\patchcmd [] DefToken {}{}{}{}", sub[(_prefix,cs,search,replace,success,failure)] {
+  let definition = state!().lookup_definition(&cs)?;
   if definition.is_some() && definition.as_ref().unwrap().is_expandable() {
     let expansion = definition.as_ref().unwrap().get_expansion();
     if matches!(expansion,Some(ExpansionBody::Closure(_))) {
@@ -1291,7 +1291,7 @@ LoadDefinitions!(state, {
       let replace_string = replace.to_string();
       let patched = string.replace(&search_string, &replace_string);
       // New definition in local scope
-      state.install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None, state)?, None);
+      state_mut!().install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None)?, None);
       Ok(success)
     } else {
       Ok(failure)
@@ -1694,19 +1694,19 @@ LoadDefinitions!(state, {
   // \AtEndPreamble
   // \AfterEndPreamble
   // \AfterEndDocument
-  DefMacro!("\\AfterPreamble{}", sub[gullet,(arg),state] {
-  if state.lookup_bool("inPreamble") {
-    state.push_value("@at@begin@document", arg.unlist())?;
+  DefMacro!("\\AfterPreamble{}", sub[(arg)] {
+  if state!().lookup_bool("inPreamble") {
+    state_mut!().push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {
     arg
   }});
-  DefMacro!("\\AtEndPreamble{}", sub[gullet,(arg),state] {
-  state.push_value("@document@preamble@atend", arg.unlist())?; });
-  DefMacro!("\\AfterEndPreamble{}", sub[gullet,(arg),state] {
-  state.push_value("@document@preamble@afterend", arg.unlist())?; });
-  DefMacro!("\\AfterEndDocument{}", sub[gullet,(arg),state] {
-  state.push_value("@after@end@document", arg.unlist())?; });
+  DefMacro!("\\AtEndPreamble{}", sub[(arg)] {
+  state_mut!().push_value("@document@preamble@atend", arg.unlist())?; });
+  DefMacro!("\\AfterEndPreamble{}", sub[(arg)] {
+  state_mut!().push_value("@document@preamble@afterend", arg.unlist())?; });
+  DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
+  state_mut!().push_value("@after@end@document", arg.unlist())?; });
 
   RawTeX!(
     r###"
@@ -1716,12 +1716,12 @@ LoadDefinitions!(state, {
   //======================================================================
   // 2.6 Environment Hooks
 
-  DefMacro!("\\AtBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
-    state.push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
-  DefMacro!("\\AtEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
-    state.push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
-  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
-    state.push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
-  DefMacro!("\\AfterEndEnvironment{}{}", sub[gullet,(arg1,arg2),state] {
-    state.push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
+    state_mut!().push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
+  DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
+    state_mut!().push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
+  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
+    state_mut!().push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
+  DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
+    state_mut!().push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
 });

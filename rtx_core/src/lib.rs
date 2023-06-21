@@ -46,11 +46,13 @@ pub mod mouth;
 pub mod parameter;
 /// Rules for rewriting the constructed XML document, after core processing has completed
 pub mod rewrite;
-/// A global, singleton, mutable State - hosts almost all TeX-facing runtime information for the
+/// A global, singleton, mutable state::- hosts almost all TeX-facing runtime information for the
 /// conversion
+#[macro_use]
 pub mod state;
 /// The stomach is an abstraction responsible for digesting `Tokens` and `Register`s prepared by the
 /// Gullet into Boxes
+#[macro_use]
 pub mod stomach;
 /// A TeX-like digested Box
 pub mod tbox;
@@ -63,7 +65,6 @@ use libxml::tree::Node;
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -87,21 +88,14 @@ pub static NO_PROPERTIES: Lazy<HashMap<String, Stored>> = Lazy::new(HashMap::def
 
 /// The Core conversion runtime
 pub struct Core {
-  /// the singleton State which bookkeeps all TeX-related state
-  pub state: State,
-  /// the singleton stomach executing the digestion
-  pub stomach: Rc<RefCell<Stomach>>,
   /// a list of library names to be preloaded before the main conversion begins
   pub preload: Vec<String>,
-}
-impl Object for Core {
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
 }
 
 /// Configuration for the Core processing
 #[derive(Default)]
 pub struct CoreOptions {
-  // First, state-related options:
+  // First, state::related options:
   /// a custom schema-induced model (default is `None`) for the final XML
   pub model: Option<Model>,
   /// default is 0, sub-zero values are quiet, positive values are verbose
@@ -134,7 +128,7 @@ impl Core {
       Some(p) => p,
     };
 
-    // pass on the state options, defaults are handled in State::new
+    // pass on the state::options, defaults are handled in state:::new
     let state_options = StateOptions {
       model: options.model,
       verbosity: options.verbosity,
@@ -148,23 +142,14 @@ impl Core {
       nomathparse: options.nomathparse,
       ..StateOptions::default()
     };
-    let stomach = Rc::new(RefCell::new(Stomach::default()));
-    let mut state = State::new(state_options);
-    state.stomach = Rc::clone(&stomach);
-
-    // *STATE.write().unwrap() = istate;
-    // Core { state: Rc::clone(&STATE), stomach, preload }
+    let mut stomach = stomach_mut!();
+    *stomach = Stomach::default();
+    let mut state = state_mut!();
+    *state = State::new(state_options);
     Core {
-      state,
-      stomach,
-      preload,
+      preload
     }
   }
-
-  /// borrow the current state
-  pub fn get_state(&self) -> &State { &self.state }
-  /// mutably borrow the current state
-  pub fn get_state_mut(&mut self) -> &mut State { &mut self.state }
 }
 /// Common operations for Box-like (digested) data
 pub trait BoxOps: Object {
@@ -172,13 +157,13 @@ pub trait BoxOps: Object {
   fn unlist(&self) -> Vec<Digested> { unimplemented!() }
   fn unlist_ref(&self) -> Vec<Cow<Digested>> { unimplemented!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>>;
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>>;
   /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
-  fn be_absorbed_mut(&mut self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed_mut(&mut self, _document: &mut Document) -> Result<Vec<Node>> {
     unimplemented!();
   }
   /// build a string representation of the underlying digested data
-  fn get_string(&self, state: &State) -> Result<Cow<str>>;
+  fn get_string(&self) -> Result<Cow<str>>;
   /// get the underlying tokens (preceding digestion)
   fn get_tokens(&self) -> Option<&Tokens> { unimplemented!() }
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
@@ -243,13 +228,12 @@ pub trait BoxOps: Object {
     Error!(
       "boxops",
       "get_body",
-      self,
       "Generic BoxOps::get_body should never be called!"
     );
     Ok(None)
   }
   /// gets the associated font, if any
-  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>>;
+  fn get_font(&self) -> Result<Option<Cow<Font>>>;
   /// sets an associated font
   fn set_font(&mut self, _font: Rc<Font>) { unimplemented!() }
   /// sets a "width" property, for sizing
@@ -267,12 +251,11 @@ pub trait BoxOps: Object {
   fn get_width(
     &self,
     options: Option<HashMap<String, Stored>>,
-    state: &mut State,
   ) -> Result<Option<RegisterValue>> {
     if !self.has_property("width") && !self.has_property("cached_width") {
       // TODO: Restore caching?
-      // self.compute_size_store(options.unwrap_or_default(), state)?
-      let (w, _, _) = self.compute_size(options.unwrap_or_default(), state)?;
+      // self.compute_size_store(options.unwrap_or_default())?
+      let (w, _, _) = self.compute_size(options.unwrap_or_default())?;
       return Ok(Some(RegisterValue::Dimension(w)));
     }
 
@@ -287,7 +270,7 @@ pub trait BoxOps: Object {
   /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
   /// gets the "height" property value, if any
-  fn get_height(&self, _state: &State) -> Option<RegisterValue> {
+  fn get_height(&self) -> Option<RegisterValue> {
     match self.get_property("height") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
@@ -296,7 +279,7 @@ pub trait BoxOps: Object {
   /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
   /// gets the "depth" property value, if any
-  fn get_depth(&self, _state: &State) -> Option<RegisterValue> {
+  fn get_depth(&self) -> Option<RegisterValue> {
     match self.get_property("depth") {
       Some(val) => (&*val).into(),
       None => Some(RegisterValue::Dimension(Dimension::default())),
@@ -308,7 +291,6 @@ pub trait BoxOps: Object {
   fn get_size(
     &mut self,
     options: Option<HashMap<String, Stored>>,
-    state: &mut State,
   ) -> Result<(
     Dimension,
     Dimension,
@@ -322,7 +304,7 @@ pub trait BoxOps: Object {
       && self.has_property("cached_height")
       && self.has_property("cached_depth"))
     {
-      self.compute_size_and_cache(options.unwrap_or_default(), state)?;
+      self.compute_size_and_cache(options.unwrap_or_default())?;
     }
     self.with_properties(|props| {
       let (width, height, depth, cached_width, cached_height, cached_depth) = (
@@ -334,7 +316,7 @@ pub trait BoxOps: Object {
         props.get("cached_depth"),
       );
 
-      // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string(state)?);
+      // eprintln!("SIZE of {} {}", std::any::type_name::<Self>(), self.get_string()?);
       //     . "\n preassigned: " . _showsize($$props{width},  $$props{height},  $$props{depth})
       //     . "\n calculated : " . _showsize($$props{cached_width}, $$props{cached_height},
       // $$props{cached_depth})     . "\n w/options " . join(',', map { $_ . "=" .
@@ -393,7 +375,6 @@ pub trait BoxOps: Object {
   fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     for key in ["width", "height", "depth", "vattach", "layout"] {
       if let Some(v) = self.get_property(key) {
@@ -401,7 +382,7 @@ pub trait BoxOps: Object {
       }
     }
 
-    let (w, h, d) = self.compute_size(options, state)?;
+    let (w, h, d) = self.compute_size(options)?;
 
     if !self.has_property("cached_width") {
       self.set_property("cached_width", w);
@@ -419,7 +400,6 @@ pub trait BoxOps: Object {
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)>;
 }
 

@@ -3,8 +3,7 @@ use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
-use crate::state::State;
-use crate::stomach::Stomach;
+use crate::state;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use once_cell::sync::Lazy;
 /// Note that this has evolved way beynond just "font",
@@ -18,13 +17,14 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::fmt;
+use std::rc::Rc;
 use std::hash::{BuildHasher, Hash, Hasher};
 use string_interner::symbol::SymbolU32;
 
 mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
 
-pub type Fontmap = Vec<Option<char>>;
+pub type Fontmap = Rc<[Option<char>]>;
 
 static DEFFAMILY: &str = "serif";
 static DEFSERIES: &str = "medium";
@@ -34,7 +34,7 @@ static DEFBACKGROUND: &str = "white";
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
-// TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
+// TODO: master consults state::"NOMINAL_FONT_SIZE" before defaulting to 10
 static DEFSIZE: f64 = 10.0;
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
@@ -207,7 +207,7 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
     let shp = cap.get(3).map_or("", |m| m.as_str());
     let size_str = cap.get(4).map_or("", |m| m.as_str());
     // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property
-    // whitelist as in Perl? but the merge is convenient, especially if we can state "only the
+    // whitelist as in Perl? but the merge is convenient, especially if we can state::"only the
     // values different from the default Font" which may already work courtesy of "None"? Need
     // to think it through...
     if let Some(ffam) = lookup_font_family(fam) {
@@ -282,26 +282,26 @@ impl Hash for Font {
   // We need to implement hash since we have to tell Rust how to hash `f64` values
   // for now I have decided to go for a precision of 4 digits after the decimal point,
   // so multiplying by 1000
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.family.hash(state);
-    self.series.hash(state);
-    self.shape.hash(state);
-    self.size.map(|size| (size * 1000.0) as i64).hash(state);
-    self.color.hash(state);
-    self.bg.hash(state);
-    self.opacity.hash(state);
-    self.encoding.hash(state);
-    self.language.hash(state);
-    self.mathstyle.hash(state);
-    self.mathstylestep.hash(state);
-    self.name.hash(state);
-    self.emph.hash(state);
-    self.scripted.hash(state);
-    self.forceseries.hash(state);
-    self.forcefamily.hash(state);
-    self.forceshape.hash(state);
-    self.scale.map(|scale| (scale * 1000.0) as i64).hash(state);
-    self.flags.hash(state);
+  fn hash<H: Hasher>(&self, hasher: &mut H) {
+    self.family.hash(hasher);
+    self.series.hash(hasher);
+    self.shape.hash(hasher);
+    self.size.map(|size| (size * 1000.0) as i64).hash(hasher);
+    self.color.hash(hasher);
+    self.bg.hash(hasher);
+    self.opacity.hash(hasher);
+    self.encoding.hash(hasher);
+    self.language.hash(hasher);
+    self.mathstyle.hash(hasher);
+    self.mathstylestep.hash(hasher);
+    self.name.hash(hasher);
+    self.emph.hash(hasher);
+    self.scripted.hash(hasher);
+    self.forceseries.hash(hasher);
+    self.forcefamily.hash(hasher);
+    self.forceshape.hash(hasher);
+    self.scale.map(|scale| (scale * 1000.0) as i64).hash(hasher);
+    self.flags.hash(hasher);
   }
 }
 impl Eq for Font {}
@@ -457,7 +457,7 @@ impl Font {
     // my $style   = $self->getMathstyle || 'text';
     // if (!$bearing || (($bearing < 0) && ($style ne 'display') && ($style ne 'text'))) {
     //   return 0; }
-    // return $STATE->lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
+    // return $state::>lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
     0.0
   }
 
@@ -867,7 +867,6 @@ impl Font {
     &self,
     text: &str,
     _options: HashMap<String, Stored>,
-    _state: &State,
   ) -> (Dimension, Dimension, Dimension) {
     if text.is_empty()
       || self
@@ -942,28 +941,27 @@ impl Font {
     &self,
     boxes: &[Digested],
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),
-      None => match state.lookup_definition(&T_CS!("\\textwidth"))? {
-        Some(def) => def.value_of(Vec::new(), state).map(|x| x.value_of()),
+      None => match state!().lookup_definition(&T_CS!("\\textwidth"))? {
+        Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
         None => None,
       },
       _ => None,
     };
     let _maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
-    let _baseline = state
+    let _baseline = state!()
       .lookup_definition(&T_CS!("\\baselineskip"))?
       .expect("baseline skip should aways be defined")
-      .value_of(Vec::new(), state)
+      .value_of(Vec::new())
       .expect("\\baselineskip should always have a value.")
       .value_of();
-    let _lineskip = state
+    let _lineskip = state!()
       .lookup_definition(&T_CS!("\\lineskip"))?
       .expect("lineskip should always be defined")
-      .value_of(Vec::new(), state)
+      .value_of(Vec::new())
       .expect("\\lineskip should always have a value.")
       .value_of();
     let mut _lines: Vec<(Dimension, Dimension, Dimension)> = Vec::new();
@@ -982,7 +980,7 @@ impl Font {
     let mut prevbox_opt: Option<Digested> = None;
     for mut thisbox in filtered_boxes {
       // Should any `options` be inherited by the contained boxes?
-      let (w, h, d, _, _, _) = thisbox.get_size(None, state)?;
+      let (w, h, d, _, _, _) = thisbox.get_size(None)?;
 
       // DG: TODO: We'll have to figure out how to rearrange this logic,
       //           now that every emitted result of get_size is a Dimension.
@@ -1003,8 +1001,8 @@ impl Font {
         if matches!(prevbox.data(), DigestedData::TBox(_))
           && matches!(thisbox.data(), DigestedData::TBox(_))
         {
-          let prevchar = prevbox.get_string(state)?.chars().last();
-          let curchar = thisbox.get_string(state)?.chars().next();
+          let prevchar = prevbox.get_string()?.chars().last();
+          let curchar = thisbox.get_string()?.chars().next();
           let metric = self.get_metric(curchar);
           if let Some(family) = self.get_family() {
             if family == "math" {
@@ -1091,14 +1089,12 @@ pub fn decode(
   code: u8,
   encoding_opt: Option<String>,
   implicit: bool,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Option<char> {
+  ) -> Option<char> {
   let mut font = None;
   let encoding = match encoding_opt {
     Some(enc) => Cow::Owned(enc),
     None => {
-      font = state.lookup_font();
+      font = state!().lookup_font();
       if let Some(ref font) = font {
         match font.get_encoding() {
           None => Cow::Borrowed(""),
@@ -1110,10 +1106,11 @@ pub fn decode(
     },
   };
 
-  let mut map: Option<&Fontmap> = None;
+  let mut map: Option<Fontmap> = None;
+  let state = state!();
   if !encoding.is_empty() {
-    preload_font_map(&encoding, stomach, state).expect("preloading a font map should succeed?");
-    if let Some(encmap) = load_font_map(&encoding, state) {
+    preload_font_map(&encoding).expect("preloading a font map should succeed?");
+    if let Some(encmap) = load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {
@@ -1153,13 +1150,12 @@ pub fn decode_string(
   string: SymbolU32,
   encoding_opt: Option<&str>,
   implicit: bool,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> SymbolU32 {
+  ) -> SymbolU32 {
   let empty_sym = *EMPTY_SYM;
   if string == empty_sym {
     return empty_sym;
   }
+  let state = state!();
   let mut font = None;
   let encoding = match encoding_opt {
     None => {
@@ -1173,10 +1169,10 @@ pub fn decode_string(
     Some(encoding) => encoding,
   };
 
-  let mut map: Option<&Fontmap> = None;
+  let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    preload_font_map(encoding, stomach, state).expect("preload_font_map should succeed?");
-    if let Some(encmap) = load_font_map(encoding, state) {
+    preload_font_map(encoding).expect("preload_font_map should succeed?");
+    if let Some(encmap) = load_font_map(encoding) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font {
@@ -1193,10 +1189,10 @@ pub fn decode_string(
   arena::with(string, |str| {
     for c in str.chars() {
       if implicit {
-        if let Some(map) = map {
+        if let Some(ref map_ref) = map {
           let code = c as u16; // u16, so that Unicode chars get cast correctly
           if code < 128 {
-            if let Some(Some(mapc_val)) = map.get(code as usize) {
+            if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
               result_string.push(*mapc_val);
             }
           } else {
@@ -1205,9 +1201,9 @@ pub fn decode_string(
         } else {
           result_string.push(c)
         }
-      } else if let Some(map) = map {
+      } else if let Some(ref map_ref) = map {
         let code = c as u8;
-        if let Some(Some(mapc_val)) = map.get(code as usize) {
+        if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
           result_string.push(*mapc_val);
         }
       }

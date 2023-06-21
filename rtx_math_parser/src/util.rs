@@ -78,7 +78,6 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { nodes }
 pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM>, Box<dyn Error>> {
   let nodes = ctxt.nodes;
   let document = ctxt.document;
-  let state = ctxt.state;
   let mut refs = Vec::new();
   for arg in args {
     match arg {
@@ -104,7 +103,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           })),
           None => {
             // If arg is already XML, it's too late to get automatic ID's
-            document.generate_id(&mut node.clone(), "", state)?;
+            document.generate_id(&mut node.clone(), "")?;
             refs.push(XM::Ref(XProps {
               id: Some(Cow::Owned(
                 node
@@ -124,9 +123,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           }));
         } else {
           // not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
-          // DG: Interior mutability Trick to grab a gullet!
-          let stomach = state.stomach.clone();
-          let key = get_xmarg_id(stomach.borrow_mut().get_gullet_mut(), state)?.to_string();
+          let key = get_xmarg_id()?.to_string();
           props.xmkey = Some(Cow::Owned(key.clone()));
           refs.push(XM::Ref(XProps {
             xmkey: Some(Cow::Owned(key)),

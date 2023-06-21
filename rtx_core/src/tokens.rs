@@ -20,8 +20,7 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::keyvals::KeyVals;
-use crate::state::State;
-use crate::stomach::Stomach;
+use crate::stomach;
 use crate::token::*;
 use crate::Digested;
 
@@ -200,10 +199,10 @@ impl Tokens {
   /// to_dimension casts back to a parsed Dimension (usually via gullet.read_dimension)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
   pub fn to_dimension(&self) -> Dimension {
-    // TODO: How do we enhance here to be able to use the current font information from State?
-    // Using the State-ful variations makes it impossible to work with the From/Into standard Rust
-    // traits. Should we do StatefulFrom/StatefulInto ?
-    Dimension::new_f64(Dimension::spec_to_f64(&self.to_string(), None).unwrap_or_default())
+    // TODO: How do we enhance here to be able to use the current font information from state::
+    // Using the state::ful variations makes it impossible to work with the From/Into standard Rust
+    // traits. Should we do state::ulFrom/state::ulInto ?
+    Dimension::new_f64(Dimension::spec_to_f64(&self.to_string()).unwrap_or_default())
   }
 
   /// to_glue casts back to a parsed Glue (usually via gullet.read_glue)
@@ -240,15 +239,15 @@ impl Tokens {
 
   /// to_keyvals casts back to a parsed KeyVals (usually via a KeyVals parameter type)
   /// which had to be re-converted to a Tokens for reentering the expansion flow
-  pub fn to_keyvals(&self, state: &State) -> KeyVals {
+  pub fn to_keyvals(&self) -> KeyVals {
     let mut toks_iter = self.unlist_ref().iter();
     let mut kvs = KeyVals::default();
     while let Some(key) = toks_iter.next() {
       key.with_str(|key_str| {
         if let Some(value) = toks_iter.next() {
-          kvs.add_value(key_str, Stored::Token(value.clone()), false, false, state);
+          kvs.add_value(key_str, Stored::Token(value.clone()), false, false);
         } else {
-          kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false, state);
+          kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false);
         }
       });
     }
@@ -290,17 +289,17 @@ impl Tokens {
     )
   }
   /// digest the current `Tokens`
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-    stomach.digest(self, state)
+  pub fn be_digested(self) -> Result<Digested> {
+    stomach::digest(self)
   }
 
   /// Remove dont_expand, but preserve SMUGGLE_THE
-  pub fn neutralize(self, extraspecials: &[char], state: &State) -> Tokens {
+  pub fn neutralize(self, extraspecials: &[char]) -> Tokens {
     Tokens(
       self
         .0
         .into_iter()
-        .map(|t| t.neutralize(extraspecials, state))
+        .map(|t| t.neutralize(extraspecials))
         .collect::<Vec<_>>(),
     )
   }
@@ -392,7 +391,7 @@ impl Tokens {
       // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
       } else {
         let last_prevs = prevs.chars().last().unwrap_or('_');
-        // TOOD: this used to call "lookup_catcode" in State; is this char-check as good?
+        // TOOD: this used to call "lookup_catcode" in state:: is this char-check as good?
         let prev_is_letter = last_prevs.is_alphabetic();
 
         if (cc == Catcode::LETTER || (cc == Catcode::OTHER && first_char.is_alphanumeric()))
@@ -461,7 +460,6 @@ impl Tokens {
           Error!(
             "misdefined",
             "expansion",
-            None,
             "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );

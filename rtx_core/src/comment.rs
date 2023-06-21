@@ -12,7 +12,6 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::document::Document;
-use crate::state::State;
 use crate::tokens::Tokens;
 use crate::tokens::NO_TOKENS;
 use crate::{BoxOps, NO_PROPERTIES};
@@ -25,7 +24,7 @@ impl fmt::Display for Comment {
 }
 impl Object for Comment {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(NO_TOKENS) }
+  fn revert(&self) -> Result<Tokens> { Ok(NO_TOKENS) }
 }
 impl BoxOps for Comment {
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
@@ -34,16 +33,15 @@ impl BoxOps for Comment {
   }
   fn get_property(&self, _key: &str) -> Option<Cow<Stored>> { None }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {} // no-op
-  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
-    document.insert_comment(&self.0, state)?;
+  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Borrowed(&self.0)) }
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
+    document.insert_comment(&self.0)?;
     Ok(Vec::new())
   }
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) }
+  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) }
   fn get_width(
     &self,
     _options: Option<HashMap<String, Stored>>,
-    _state: &mut State,
   ) -> Result<Option<RegisterValue>> {
     Ok(Some(RegisterValue::Dimension(Dimension::new(0))))
   }
@@ -51,7 +49,6 @@ impl BoxOps for Comment {
   fn compute_size(
     &self,
     _options: HashMap<String, Stored>,
-    _state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok((
       Dimension::default(),

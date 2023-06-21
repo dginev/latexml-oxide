@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Horizontal Mode primitives in Ch.25, pp.285--287
 
@@ -15,7 +15,7 @@ LoadDefinitions!(state, {
   // \hskip handled similarly to \kern
   // \hskip can be ignored in certain situations...
 
-  // DefConstructor!("\\hskip Glue", sub[document, (length), state] {
+  // DefConstructor!("\\hskip Glue", sub[document, (length)] {
   //     let parent = document.get_node();
   //     if ($document->getNodeQName($parent) eq 'svg:g') {
   //       if (my $x = $length->pxValue) {
@@ -44,12 +44,12 @@ LoadDefinitions!(state, {
 
   DefPrimitive!("\\hss", None);
   DefPrimitive!("\\hfilneg", None);
-  DefPrimitive!("\\hfil", sub[_s,_a,state] {
+  DefPrimitive!("\\hfil", sub[_s,_a] {
     Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfil")),
-    stored_map!("isSpace" => true, "isFill" => true), state)});
-  DefPrimitive!("\\hfill", sub[_s,_a,state] {
+    stored_map!("isSpace" => true, "isFill" => true))});
+  DefPrimitive!("\\hfill", sub[_s,_a] {
     Tbox::new(arena::pin_static(" "), None, None, Tokens!(T_CS!("\\hfill")),
-    stored_map!("isSpace" => true, "isFill" => true), state) });
+    stored_map!("isSpace" => true, "isFill" => true)) });
 
   // \lower <dimen> <box>
   // \raise <dimen> <box>
@@ -62,7 +62,7 @@ LoadDefinitions!(state, {
   // (<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
     // sizer => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)->negate); },
-    after_digest => sub[_stomach, whatsit, _state] {
+    after_digest => sub[whatsit] {
       let y         = Dimension(-whatsit.get_arg(1).unwrap().value_of());
       let ypx       = y.px_value(None);
       let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };
@@ -77,7 +77,7 @@ LoadDefinitions!(state, {
   //   . "(<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>)",
   "<ltx:text yoffset='#y'  _noautoclose='1'>#2</ltx:text>",
   //sizer       => sub { raisedSizer($_[0]->getArg(2), $_[0]->getArg(1)); },
-  after_digest => sub[_stomach,whatsit,_state] {
+  after_digest => sub[whatsit] {
     let y         = Dimension(whatsit.get_arg(1).unwrap().value_of());
     let ypx       = y.px_value(None);
     let transform = if ypx != 0.0 { s!("translate(0,{ypx})") } else { String::new() };

@@ -61,20 +61,16 @@ impl DigestionAPI for Core {
     // first, reset the error REPORT singleton
     error::init_report();
     // now handle state
-    let state = &mut self.state;
-    state.initialize_stomach();
-    // let paths = state.search_paths;
-    state.assign_value("InitialPreloads", true, Some(Scope::Global));
+    state_mut!().initialize_stomach();
+    // let paths = state::search_paths;
+    state_mut!().assign_value("InitialPreloads", true, Some(Scope::Global));
     let mut stomach = self.stomach.borrow_mut();
     for preload in preloads {
       input_definitions(
         &preload,
-        InputDefinitionOptions::default(),
-        &mut stomach,
-        state,
-      )?;
+        InputDefinitionOptions::default())?;
     }
-    state.assign_value("InitialPreloads", false, Some(Scope::Global));
+    state_mut!().assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
@@ -111,29 +107,29 @@ impl DigestionAPI for Core {
       }
     };
     // else {
-    //   $self->withState(sub {
+    //   $self->withstate::sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
     let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
-    // $self->initializeState($mode . ".pool", @{ $$self{preload} || [] }) unless
-    // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
+    // $self->initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless
+    // $options{noinitialize}; $state::>assignValue(SOURCEFILE      => $request) if
     // (!pathname::is_literaldata($request));
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
       {
-        let state = self.get_state_mut();
-        state.assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
-        state.search_paths.push_front(dir.to_string());
+
+        state_mut!().assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
+        state::search_paths.push_front(dir.to_string());
       }
     }
-    //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
-    // $state->unshiftValue(GRAPHICSPATHS => $dir)
+    //   if defined $dir && !grep { $_ eq $dir } @{ $state::>lookupValue('SEARCHPATHS') };
+    // $state::>unshiftValue(GRAPHICSPATHS => $dir)
 
-    // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
+    // if defined $dir && !grep { $_ eq $dir } @{ $state::>lookupValue('GRAPHICSPATHS') };
 
     let name_copy = name;
-    self.get_state_mut().install_definition(
+    state_mut!().install_definition(
       Stored::Expandable(Rc::new(Expandable {
         cs: T_CS!("\\jobname"),
         paramlist: None,
@@ -146,15 +142,12 @@ impl DigestionAPI for Core {
     // $self->loadPostamble($options{postamble}) if $options{postamble};
     input_content(
       &request,
-      InputOptions::default(),
-      &mut self.stomach.borrow_mut(),
-      &mut self.state,
-    )?;
+      InputOptions::default())?;
     // $self->loadPreamble($options{preamble}) if $options{preamble};
 
     // // Now for the Hacky part for BibTeX!!!
     // if ($mode eq 'BibTeX') {
-    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
+    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state::>getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
     let list = self.digest_internal()?;
@@ -175,28 +168,28 @@ impl DigestionAPI for Core {
     note_begin("Building");
     let mut document = Document::new();
     {
-      let state = self.get_state_mut();
+
       // TODO: Can we disentangle the ownership to avoid the clone?
-      let paths_stored = state.search_paths.clone();
+      let paths_stored = state::search_paths.clone();
       let schema_paths = paths_stored
         .iter()
         .map(String::as_str)
         .collect::<Vec<&str>>();
-      let default_model_load = match state.model.schema_data {
+      let default_model_load = match state::model.schema_data {
         None => true,
         Some(ref v) => v.last() == Some(&arena::pin_static("LaTeXML")),
       };
       if default_model_load {
         // Compile-time load of model AND indirect model
-        load_model!(state, "LaTeXML");
+        load_model!("LaTeXML");
       } else {
         // Eager-load at runtime
-        state.model.load_schema(schema_paths.as_slice())?; // If needed?
+        state::model.load_schema(schema_paths.as_slice())?; // If needed?
       }
 
-      if !state.search_paths.is_empty() {
+      if !state::search_paths.is_empty() {
         {
-          if state.lookup_bool("INCLUDE_COMMENTS") {
+          if state!().lookup_bool("INCLUDE_COMMENTS") {
             let paths_string = state
               .search_paths
               .iter()
@@ -230,21 +223,21 @@ impl DigestionAPI for Core {
       }
     }
     Debug!("Doc absorb: {:?}", digested);
-    let state = self.get_state_mut();
-    document.absorb(&digested, None, state)?;
+
+    document.absorb(&digested, None)?;
     note_end("Building");
 
-    let has_rewrites = state.has_value("DOCUMENT_REWRITE_RULES");
+    let has_rewrites = state!().has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
-      document.mark_xmnode_visibility(state)?;
-      document.load_labels_for_rewrite(state)?;
+      document.mark_xmnode_visibility()?;
+      document.load_labels_for_rewrite()?;
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
-      if let Some(Stored::VecDequeStored(rules)) = state.remove_value("DOCUMENT_REWRITE_RULES") {
+      if let Some(Stored::VecDequeStored(rules)) = state_mut!().remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
           // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
-          // state. (TODO: obviously, this could be avoided if they never needed mutable
-          // state. When do they?)
+          // (TODO: obviously, this could be avoided if they never needed mutable
+          // When do they?)
           let mut rewrites = Vec::new();
           for rule in rules {
             if let Stored::Rewrite(mut rewrite_rule) = rule {
@@ -254,33 +247,32 @@ impl DigestionAPI for Core {
           }
           // Step 2: invoke the rewrite rules
           for mut rewrite_rule in rewrites {
-            rewrite_rule.invoke(&mut document, &root, state)?;
+            rewrite_rule.invoke(&mut document, &root)?;
           }
         }
       }
       note_end("Rewriting");
     }
 
-    if !state.nomathparse {
+    if !state::nomathparse {
       let mut parser = MathParser::default();
-      parser.parse_math(&mut document, state)?;
+      parser.parse_math(&mut document)?;
     }
     note_begin("Finalizing");
-    document.finalize(state)?;
+    document.finalize()?;
     note_end("Finalizing");
     Ok(document)
   }
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let mut stomach = self.stomach.borrow_mut();
-    while stomach.get_gullet_mut().has_more_input() {
-      let next_bodies: Vec<Digested> = stomach.digest_next_body(None, &mut self.state)?;
+    while gullet!().has_more_input() {
+      let next_bodies: Vec<Digested> = stomach::digest_next_body(None);
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    stomach.get_gullet_mut().flush(&mut self.state);
-    List::new(boxes, &mut self.state).into()
+    gullet_mut!().flush();
+    List::new(boxes)
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -288,7 +280,7 @@ impl DigestionAPI for Core {
 
   // options are currently being evolved to accomodate the Daemon:
   //    mode  : the processing mode, ie the pool to preload: TeX or BibTeX
-  //    noinitialize : if defined, it does not initialize State.
+  //    noinitialize : if defined, it does not initialize state::
   //    preamble = names a tex file (or standard_preamble.tex)
   //    postamble = names a tex file (or standard_postamble.tex)
 
@@ -329,7 +321,7 @@ impl DigestionAPI for Core {
       // ext = pathname::extension(&request);
       } else {
         let message = s!("Can't find {} file {} ", mode, request);
-        fatal!(Core, MissingFile, self, message);
+        fatal!(Core, MissingFile, message);
       }
     }
     note_begin(&s!("Digesting {} {}", mode, name));
@@ -341,17 +333,17 @@ impl DigestionAPI for Core {
       self.initialize_state(preloads)?;
     }
     {
-      let state = self.get_state_mut();
+
       if !pathname::is_literaldata(&request) {
-        state.assign_value("SOURCEFILE", request.clone(), None);
+        state_mut!().assign_value("SOURCEFILE", request.clone(), None);
       }
       if !dir.is_empty() {
-        state.assign_value("SOURCEDIRECTORY", dir.clone(), None);
+        state_mut!().assign_value("SOURCEDIRECTORY", dir.clone(), None);
       }
-      state.search_paths.push_front(dir.clone());
-      state.graphics_paths.push_front(dir);
+      state::search_paths.push_front(dir.clone());
+      state::graphics_paths.push_front(dir);
 
-      state.install_definition(
+      state_mut!().install_definition(
         Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!("\\jobname"),
           paramlist: None,
@@ -372,10 +364,7 @@ impl DigestionAPI for Core {
       let mut stomach = self.stomach.borrow_mut();
       input_content(
         &request,
-        InputOptions::default(),
-        &mut stomach,
-        &mut self.state,
-      )?;
+        InputOptions::default())?;
     }
 
     if let Some(preamble) = options.preamble {
@@ -384,7 +373,7 @@ impl DigestionAPI for Core {
 
     // Now for the Hacky part for BibTeX!!!
     // if mode == DigestionMode::BibTeX {
-    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
+    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state::>getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
     // }
 

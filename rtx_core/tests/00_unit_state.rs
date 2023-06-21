@@ -13,18 +13,18 @@ fn basic_state_init() {
   let state = State::new(StateOptions::default());
   assert_eq!(state.lookup_catcode('@'), None); // OTHER
 
-  let state_standard = State::new(StateOptions {
+  let state_std = State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   });
-  assert_eq!(state_standard.lookup_catcode('@'), None); // OTHER
-  assert_eq!(state_standard.lookup_catcode('\\'), Some(Catcode::ESCAPE));
+  assert_eq!(state_std.lookup_catcode('@'), None); // OTHER
+  assert_eq!(state_std.lookup_catcode('\\'), Some(Catcode::ESCAPE));
 
-  let state_style = State::new(StateOptions {
+  let std_sty = State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
   });
-  assert_eq!(state_style.lookup_catcode('@'), Some(Catcode::LETTER));
+  assert_eq!(std_sty.lookup_catcode('@'), Some(Catcode::LETTER));
 }
 
 #[test]
@@ -297,17 +297,17 @@ fn install_definition_and_meaning() {
 #[test]
 fn assign_lookup_mapping() {
   // # 10. assign Mapping
-  // ok(!state.lookupMapping('TAG_PROPERTIES', "tag"), "lookupMapping is false on new keys");
-  // state.assignMapping('TAG_PROPERTIES', "tag" => {});
-  // my $props = state.lookupMapping('TAG_PROPERTIES', "tag");
+  // ok(!state!().lookupMapping('TAG_PROPERTIES', "tag"), "lookupMapping is false on new keys");
+  // state_mut!().assignMapping('TAG_PROPERTIES', "tag" => {});
+  // my $props = state!().lookupMapping('TAG_PROPERTIES', "tag");
   // is_deeply($props,{},"Empty mapping hash roundtrip");
   // my $undef_val = $$props{"afterOpen"};
   // assert_eq!($undef_val,undef,"Surviving a lookup of a new key");
 
   // my $wdr_url = "http://www.w3.org/2007/05/powder#";
-  // state.assignMapping("RDFa_prefixes",
+  // state_mut!().assignMapping("RDFa_prefixes",
   //  "wdr"     => $wdr_url);
-  // assert_eq!(state.lookupMapping("RDFa_prefixes","wdr"),$wdr_url,"asssign/lookupMapping
+  // assert_eq!(state!().lookupMapping("RDFa_prefixes","wdr"),$wdr_url,"asssign/lookupMapping
   // roundtrip"); my %rdf_prefixes = (
   //   "cc"      => "http://creativecommons.org/ns#",
   //   "ctag"    => "http://commontag.org/ns#",
@@ -340,24 +340,24 @@ fn assign_lookup_mapping() {
   //   "wdrs"    => "http://www.w3.org/2007/05/powder-s#",
   // );
   // foreach my $p (keys %rdf_prefixes) {
-  //  state.assignMapping('RDFa_prefixes', $p => $rdf_prefixes{$p}); }
-  // is_deeply(state.lookup_value('RDFa_prefixes'),\%rdf_prefixes,"Entire RDF mapping");
+  //  state_mut!().assignMapping('RDFa_prefixes', $p => $rdf_prefixes{$p}); }
+  // is_deeply(state!().lookup_value('RDFa_prefixes'),\%rdf_prefixes,"Entire RDF mapping");
 }
 
 #[test]
 fn push_pop_daemon_frames() {
   // TODO
-  // state.assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
-  // state.push_daemon_frame();
-  // state.assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
-  // match state.lookup_value("daemon_mode") {
+  // state_mut!().assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
+  // state_mut!().push_daemon_frame();
+  // state_mut!().assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
+  // match state!().lookup_value("daemon_mode") {
   //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
   //   Some(& Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
   //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
   // };
 
-  // state.pop_daemon_frame();
-  // match state.lookup_value("daemon_mode") {
+  // state_mut!().pop_daemon_frame();
+  // match state!().lookup_value("daemon_mode") {
   //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
   //   Some(& Stored::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
   //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
@@ -370,18 +370,18 @@ fn texy_ops() {
   // my $mock1 = T_CS('\mock1');
   // my $mock2 = T_CS('\mock2');
   // my $mock3 = T_CS('\mock3');
-  // state.pushValue('DOCUMENT_REWRITE_RULES',
+  // state_mut!().pushValue('DOCUMENT_REWRITE_RULES',
   //     $mock1);
   // my @mocks = ($mock2,$mock3);
-  // state.pushValue('DOCUMENT_REWRITE_RULES',@mocks);
-  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock1,"shift_value 1");
-  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock2,"shift_value 2");
-  // assert_eq!(state.shift_value('DOCUMENT_REWRITE_RULES'),$mock3,"shift_value 3");
+  // state_mut!().pushValue('DOCUMENT_REWRITE_RULES',@mocks);
+  // assert_eq!(state_mut!().shift_value('DOCUMENT_REWRITE_RULES'),$mock1,"shift_value 1");
+  // assert_eq!(state_mut!().shift_value('DOCUMENT_REWRITE_RULES'),$mock2,"shift_value 2");
+  // assert_eq!(state_mut!().shift_value('DOCUMENT_REWRITE_RULES'),$mock3,"shift_value 3");
 
-  // state.pushValue("PENDING_RESOURCES" => ["resource1", foo => 1, bar => 2]);
-  // state.pushValue("PENDING_RESOURCES" => ["resource2", baz => 3, bam => 4]);
-  // state.pushValue("PENDING_RESOURCES" => ["resource3", a => 5, b => 6]);
-  // my $resources = state.lookup_value("PENDING_RESOURCES");
+  // state_mut!().pushValue("PENDING_RESOURCES" => ["resource1", foo => 1, bar => 2]);
+  // state_mut!().pushValue("PENDING_RESOURCES" => ["resource2", baz => 3, bam => 4]);
+  // state_mut!().pushValue("PENDING_RESOURCES" => ["resource3", a => 5, b => 6]);
+  // my $resources = state!().lookup_value("PENDING_RESOURCES");
   // is_deeply($resources, [
   //   ["resource1", foo => 1, bar => 2],
   //   ["resource2", baz => 3, bam => 4],

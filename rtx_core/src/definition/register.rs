@@ -14,14 +14,12 @@ use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
-use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::state::{Scope,State};
-use crate::stomach::Stomach;
+use crate::state::{Scope};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator};
+use crate::{Digested, Locator, state,state_mut, stomach_mut,gullet_mut};
 
 use super::argument::ArgWrap;
 
@@ -87,7 +85,7 @@ impl Default for RegisterValue {
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
   fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
-  fn revert(&self, _state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
       RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
@@ -113,12 +111,12 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuGlue(v) => v.value_of(),
       RegisterValue::Token(v) => {
         let message = s!(".value_of called on Token {:?}", v);
-        Warn!("register", "value_of", None, message);
+        Warn!("register", "value_of", message);
         -1
       },
       RegisterValue::Tokens(v) => {
         let message = s!(".value_of called on Tokens {:?}", v);
-        Warn!("register", "value_of", None, message);
+        Warn!("register", "value_of", message);
         -1
       },
     }
@@ -276,7 +274,7 @@ impl<'a> From<&'a RegisterValue> for Dimension {
         );
         // silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        let err = || {Error!("expected", "dimension", None, message); Ok(()) };
+        let err = || {Error!("expected", "dimension", message); Ok(()) };
         err().ok();
         Dimension::new(0)
       },
@@ -296,7 +294,7 @@ impl<'a> From<&'a RegisterValue> for Glue {
         let message = s!("Token register can not be cast into a Glue: {other:?}");
         // silence a potential Fatal from 100 errors,
         // until a better place is reached in the high-level conversion logic
-        let err = || { Error!("expected", "dimension", None, message); Ok(()) };
+        let err = || { Error!("expected", "dimension", message); Ok(()) };
         err().ok();
         Glue::new(0)
       },
@@ -321,7 +319,7 @@ impl<'a> From<&'a RegisterValue> for MuGlue {
       RegisterValue::Token(other) => other.to_number().into(),
       RegisterValue::Tokens(other) => {
         let message = s!("Token register can not be cast into a Glue: {:?}", other);
-        let err = || {Error!("expected", "dimension", None, message); Ok(())};
+        let err = || {Error!("expected", "dimension", message); Ok(())};
         err().ok();
         MuGlue::new(0)
       },
@@ -382,13 +380,13 @@ pub enum RegisterType {
   Any,
 }
 
-// why mutable state in the Getter closure? Because the `.get_width` and friends methods have a
+// why mutable state::in the Getter closure? Because the `.get_width` and friends methods have a
 // caching optimization, which requires writing new properties while they are stored in the State
 // table if we decide that isn't needed, we can go back to immutable.
-/// looks up a stored value from the State frame (at a constant key, or key based on the arguments)
-pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>, &mut State) -> Option<RegisterValue>>;
-/// sets a register value in the State frame
-pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>, &mut State)>;
+/// looks up a stored value from the state::frame (at a constant key, or key based on the arguments)
+pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Option<RegisterValue>>;
+/// sets a register value in the state::frame
+pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>)>;
 
 /// A struct representing a TeX register
 #[derive(Clone)]
@@ -462,7 +460,7 @@ impl Definition for Register {
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { self.readonly }
   // not implemented for primitives
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
     unimplemented!()
   }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
@@ -470,26 +468,26 @@ impl Definition for Register {
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
 
-  fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>, state: &mut State) {
+  fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
     if self.register_type == RegisterType::CharDef {
       let message = self
         .cs
         .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
-      let err = || {Error!("unexpected", "chardef", None, message); Ok(()) };
+      let err = || {Error!("unexpected", "chardef", message); Ok(()) };
       err().ok();
     } else if let Some(setter) = &self.setter {
-      setter(value, scope, args, state);
+      setter(value, scope, args);
     } else {
       // default setter
       if self.readonly {
         let message = s!("Can't assign to register {}", self.address);
-        Warn!("unexpected", self.address, None, message);
+        Warn!("unexpected", self.address, message);
       } else {
         let loc = if args.is_empty() { Cow::Borrowed(&self.address) } else {
           let args_string: String = args
             .into_iter()
             .map(|a| {
-              a.as_tokens(state)
+              a.as_tokens()
                .expect("TODO: handle malformed values here.")
                .unwrap()
                .to_string()
@@ -498,33 +496,33 @@ impl Definition for Register {
            .join("");
           Cow::Owned(format!("{}{args_string}",self.address))
         };
-        state.assign_value(&loc, value, scope);
+        state_mut!().assign_value(&loc, value, scope);
       }
     }
   }
   // No before/after daemons ???
   // (other than afterassign)
-  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     // CharDef case
     if self.register_type == RegisterType::CharDef {
       let internalcs = &self.internalcs;
       return match internalcs {
         // Tracing ?
         None => Ok(Vec::new()),
-        Some(ref cs) => stomach.invoke_token(cs, state),
+        Some(ref cs) => stomach_mut!().invoke_token(cs),
       };
     }
 
-    // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // my $profiled = $state::>lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
-    let gullet = stomach.get_gullet_mut();
-    let args = self.read_arguments(gullet, state)?;
-    gullet.read_keyword(&["="], state)?;
-    let value = gullet.read_value(self.register_type().unwrap(), state)?;
+    let mut gullet = gullet_mut!();
+    let args = self.read_arguments()?;
+    gullet.read_keyword(&["="])?;
+    let value = gullet.read_value(self.register_type().unwrap())?;
 
-    self.borrow().set_value(value, None, args, state);
+    self.borrow().set_value(value, None, args);
 
-    state.after_assignment(gullet);
+    state_mut!().after_assignment();
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
@@ -533,11 +531,11 @@ impl Definition for Register {
 
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { None }
-  fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
+  fn read_arguments(&self) -> Result<Vec<ArgWrap>> {
     let params = &self.parameters;
     match params {
       None => Ok(Vec::new()),
-      Some(ref params) => params.read_arguments(gullet, Some(self), state),
+      Some(ref params) => params.read_arguments(Some(self)),
     }
   }
 
@@ -545,7 +543,6 @@ impl Definition for Register {
     &self,
     _document: &mut Document,
     _whatsit: &Whatsit,
-    _state: &mut State,
   ) -> Result<Vec<Node>> {
     fatal!(
       Definition,
@@ -553,11 +550,11 @@ impl Definition for Register {
       "do_absorbtion on Primitive should never be called!"
     );
   }
-  fn value_of(&self, args: Vec<ArgWrap>, state: &mut State) -> Option<RegisterValue> {
+  fn value_of(&self, args: Vec<ArgWrap>) -> Option<RegisterValue> {
     if self.register_type == RegisterType::CharDef {
       self.value.clone()
     } else if let Some(ref getter) = self.getter {
-      getter(args, state)
+      getter(args)
     } else {
       let key = if args.is_empty() {
         Cow::Borrowed(&self.address)
@@ -569,7 +566,7 @@ impl Definition for Register {
           .join("");
         Cow::Owned(format!("{}{args_string}",self.address))
       };
-      match state.lookup_value(&key) {
+      match state!().lookup_value(&key) {
         Some(v) => v.into(),
         None => self.default.clone(),
       }
@@ -590,7 +587,7 @@ impl Register {
       internalcs,
       register_type: RegisterType::CharDef,
       readonly: true,
-      //locator => $STATE->getStomach->getGullet->getMouth->getLocator,
+      //locator => $state::>getStomach->getGullet->getMouth->getLocator,
       ..Register::default()
     }
   }

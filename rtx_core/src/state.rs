@@ -19,7 +19,6 @@ use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
 use crate::definition::argument::ArgWrap;
@@ -30,9 +29,8 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::gullet::Gullet;
+use crate::gullet_mut;
 use crate::mouth;
-use crate::stomach::Stomach;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
@@ -58,7 +56,7 @@ pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| {
   )
 });
 
-/// installation scope in the State tables
+/// installation scope in the state_tables
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Scope {
   /// globally visible, does not expire
@@ -74,7 +72,7 @@ pub enum Scope {
 pub enum TableName {
   /// token meaning
   Meaning,
-  /// all stateful values
+  /// all state::ul values
   Value,
   /// catcode bindings
   Catcode,
@@ -224,12 +222,12 @@ pub struct Localized {
   pub build_template: Vec<Template>,
 }
 
-/// The State efficiently maintain the bindings in a TeX-like fashion.
+/// The state::efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
-// TODO: Maybe the right Rust metaphor here is to chunk State into a tuple of independent data:
-// struct State(Gullet, Stomach, Model, StateTables, SessionState);
+// TODO: Maybe the right Rust metaphor here is to chunk state::into a tuple of independent data:
+// struct state::Gullet, Stomach, Model, state::ables, Sessionstate::;
 // maybe not...
 pub struct State {
   // Tables
@@ -247,7 +245,7 @@ pub struct State {
   delcode: Table,
   // Table bookkeeping
   undo: VecDeque<UndoFrame>,
-  // Stateful runtime - data structures
+  // state::ul runtime - data structures
   /// the schema-derived model used for the current document
   pub model: Model,
   prefixes: HashMap<SymbolU32, bool>, // ?
@@ -256,11 +254,10 @@ pub struct State {
   pub indirect_model: Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
   pub pending_resources: Vec<Resource>,
-  // Stateful runtime - simple fields
+  // state::ul runtime - simple fields
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
-  pub status_code: usize,
   pub unlocked: bool,
   pub input_encoding: Option<String>,
   // strict: bool,
@@ -278,13 +275,10 @@ pub struct State {
   /// A dispatcher routing to the compiled code of the main/official rtx bindings
   pub bindings_dispatch: Option<BindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
-  pub extra_bindings_dispatch: Option<BindingDispatcher>,
-  /// Circular dependency and global $STATE in Perl requires a bad
-  /// style use of interior mutability...
-  pub stomach: Rc<RefCell<Stomach>>,
+  pub extra_bindings_dispatch: Option<BindingDispatcher>
 }
 unsafe impl Send for State {}
-// state is NOT Sync!
+// State is NOT Sync!
 // each core conversion job must be localized in ONE thread.
 
 impl Default for State {
@@ -310,15 +304,14 @@ impl Default for State {
       delcode: HashMap::default(),
       // Table bookkeeping
       undo: undo_vdq,
-      // Stateful runtime - data structures
+      // state::ul runtime - data structures
       model: Model::default(),
       prefixes: HashMap::default(),
       tag_properties: HashMap::default(),
       indirect_model: None,
       pending_resources: Vec::new(),
-      // Stateful runtime - simple fields
+      // state::ul runtime - simple fields
       verbosity: 0,
-      status_code: 0,
       unlocked: true,
       input_encoding: None,
       // strict: false,
@@ -330,25 +323,39 @@ impl Default for State {
       localized: Localized::default(),
       bindings_dispatch: None,
       extra_bindings_dispatch: None,
-      // interiorly mutable
-      stomach: Rc::new(RefCell::new(Stomach::default())),
     }
   }
 }
 
 #[thread_local]
-pub static STY_STATE: Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+pub static STY_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
   catcodes: Some(Catcodes::Style),
   ..StateOptions::default()
 })));
 #[thread_local]
-pub static STD_STATE: Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+pub static STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
   catcodes: Some(Catcodes::Standard),
   ..StateOptions::default()
 })));
 
+#[macro_export]
+macro_rules! state {
+  () => ((*$crate::state::STATE).borrow())
+}
+#[macro_export]
+macro_rules! state_mut {
+  () => ((*$crate::state::STATE).borrow_mut())
+}
+#[macro_export]
+macro_rules! sty_state {
+  () => ((*$crate::state::STY_STATE).borrow())
+}
+#[macro_export]
+macro_rules! sty_state_mut {
+  () => ((*$crate::state::STY_STATE).borrow_mut())
+}
 
-/// State fields allowed for customization during construction
+/// state::fields allowed for customization during construction
 #[derive(Default)]
 pub struct StateOptions {
   pub model: Option<Model>,
@@ -363,6 +370,10 @@ pub struct StateOptions {
   pub catcodes: Option<Catcodes>,
   pub input_encoding: Option<String>,
 }
+
+// Public interface: package-access methods, for an implied thread-local singleton STATE
+
+// Private interface: struct-access methods, for a concrete piece of State data
 
 impl State {
   pub fn new(options: StateOptions) -> Self {
@@ -454,7 +465,7 @@ impl State {
       nomathparse,
       ..State::default()
     };
-    // TODO: should these be *fields* in state, or really as in Perl - globally assigned values?
+    // TODO: should these be *fields* in state:: or really as in Perl - globally assigned values?
     state.assign_value(
       "DOCUMENTID",
       options.documentid.unwrap_or_default(),
@@ -568,7 +579,7 @@ impl State {
         table_entry.push_front(value);
       },
       Scope::Local => {
-        // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state tables
+        // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state_tables
         let mut is_replace = false;
         // 1. Undo mutable logic
         if let Some(current_frame) = self.undo.front_mut() {
@@ -583,7 +594,7 @@ impl State {
             //  And push new binding in 2.2
           }
         }
-        // 2. State table mutable logic
+        // 2. state_table mutable logic
         let state_table = self.table_mut(table_name);
         let defs = state_table.entry(key).or_insert_with(VecDeque::new);
         if is_replace {
@@ -690,10 +701,11 @@ impl State {
       },
     }
   }
+
   /// assigns a `Stored` value at the given key and scope
-  pub fn assign_value<'av, T: Into<Stored>, S: Into<Option<Scope>>>(
-    &'av mut self,
-    key: &'av str,
+  pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
+    &mut self,
+    key: &str,
     value: T,
     scope: S,
   ) {
@@ -702,6 +714,7 @@ impl State {
     let key_sym = arena::pin(key);
     self.assign_internal(TableName::Value, key_sym, value, scope);
   }
+
   /// assigns a `Stored` value at the given (arena ticket!) key and scope
   pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
     &mut self,
@@ -737,7 +750,7 @@ impl State {
       other => {
         let message =
           s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
-        Error!("state", "Stored", None, message);
+        Error!("State", "Stored", message);
       },
     }
     Ok(())
@@ -760,9 +773,8 @@ impl State {
       Ok(front.pop_back())
     } else {
       Error!(
-        "state",
+        "State",
         "Stored",
-        None,
         "BUG: Tried to pop_value from a non-vecdeque value key!"
       );
       Ok(None)
@@ -891,7 +903,7 @@ impl State {
     match self.lookup_value(key) {
       Some(Stored::Glue(v)) => Some(*v),
       None | Some(Stored::None) => None,
-      Some(other) => panic!("state lookup expected Glue, found: {other:?}"),
+      Some(other) => panic!("State lookup expected Glue, found: {other:?}"),
     }
   }
   /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
@@ -899,7 +911,7 @@ impl State {
     match self.lookup_value(key) {
       Some(Stored::MuGlue(v)) => Some(*v),
       None | Some(Stored::None) => None,
-      Some(other) => panic!("state lookup expected MuGlue, found: {other:?}"),
+      Some(other) => panic!("State lookup expected MuGlue, found: {other:?}"),
     }
   }
   /// a variant of `lookup_value` that casts the response into `Tokens`
@@ -948,15 +960,15 @@ impl State {
     Ok(
     if let Some(defn) = self.lookup_definition(&cs)? {
       if defn.is_register() {
-        defn.value_of(parameters, self)
+        defn.value_of(parameters)
       } else {
         let message = s!("The control sequence '{}' is not a register", cs);
-        Warn!("expected", "register", None, message);
+        Warn!("expected", "register", message);
         None
       }
     } else {
       // let message = s!("The control sequence '{}' is not defined", cs);
-      // Warn!("expected", "register", None, message);
+      // Warn!("expected", "register", message);
       None
     })
   }
@@ -965,11 +977,11 @@ impl State {
     let cs = T_CS!(cs);
     if let Some(defn) = self.lookup_definition(&cs)? {
       if defn.is_register() {
-        defn.set_value(value, scope, parameters, self);
+        defn.set_value(value, scope, parameters);
         return Ok(());
       }
     }
-    Warn!("expected", "register", None,
+    Warn!("expected", "register",
         format!("The control sequence '{cs}' is not a register"));
     Ok(())
   }
@@ -1073,9 +1085,8 @@ impl State {
       front.pop_front()
     } else {
       Error!(
-        "state",
+        "State",
         "Stored",
-        None,
         "BUG: Tried to shift_value from a non-vecdeque value key!"
       );
       None
@@ -1371,7 +1382,7 @@ impl State {
         Some(Stored::None) | Some(Stored::Token(_)) | None => None,
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", None, message);
+          Error!("unexpected", "value", message);
           None
         },
       }
@@ -1401,7 +1412,7 @@ impl State {
         }))),
         Some(v) => {
           let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", None, message);
+          Error!("unexpected", "value", message);
           None
         },
         None => None,
@@ -1773,9 +1784,8 @@ impl State {
             .join(", ")
         )
         });
-        let stomach = self.stomach.borrow();
         arena::with(key, |key_str| {
-          Warn!("internal", key_str, stomach, message)
+          Warn!("internal", key_str, message)
         });
       }
     }
@@ -1804,7 +1814,7 @@ impl State {
         Some(sp) => *sp,
         None => {
           let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
-          Warn!("expected", "<unit>", None, message);
+          Warn!("expected", "<unit>", message);
           *UNITS.get("pt").unwrap()
         },
       },
@@ -1929,7 +1939,7 @@ impl State {
       None => *EMPTY_SYM,
     };
 
-    // A bit tricky here, we need to release the state.model borrow immediately, which is why we
+    // A bit tricky here, we need to release the state::model borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
     let tag_contents: Vec<SymbolU32> = self.model.get_tag_contents(&tag);
@@ -1983,14 +1993,14 @@ impl State {
     self.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
   }
 
-  // Package helpers used in core need to be localized here -- as State methods
+  // Package helpers used in core need to be localized here -- as state::methods
   /// `Let` macro setter
   pub fn let_i(
     &mut self,
     token1: &Token,
     token2: &Token,
     scope: Option<Scope>,
-    gullet: &mut Gullet,
+
   ) {
     let meaning = if token2.get_dont_expand().is_some() {
       Cow::Owned(Stored::Token(token2.clone()))
@@ -2000,7 +2010,7 @@ impl State {
         .unwrap_or(Cow::Owned(Stored::None))
     };
     self.assign_meaning(token1, meaning.into_owned(), scope);
-    self.after_assignment(gullet);
+    self.after_assignment();
   }
   /// `XEquals` check for two token arguments
   pub fn x_equals(&self, token1: &Token, token2: &Token) -> bool {
@@ -2015,7 +2025,7 @@ impl State {
 
   /// Generate a stub definition for an undefined control-sequence,
   /// along with appropriate error messge.
-  pub fn generate_error_stub(&mut self, caller: &mut Gullet, token: &Token) -> Result<Token> {
+  pub fn generate_error_stub(&mut self, token: &Token) -> Result<Token> {
     let cs = token.with_cs_name(ToString::to_string);
     note_status(LogStatus::Undefined, Some(&cs));
                                         // To minimize chatter, go ahead and define it...
@@ -2025,7 +2035,6 @@ impl State {
       Error!(
         "undefined",
         token,
-        caller,
         s!(
           "The token {} is not defined. Defining it now as with \\newif",
           token.stringify()
@@ -2036,8 +2045,7 @@ impl State {
           T_CS!(s!("\\{}true", name)),
           None,
           s!("\\let{}\\iftrue", cs),
-          None,
-          self,
+          None
         )?,
         Some(Scope::Global),
       );
@@ -2046,17 +2054,15 @@ impl State {
           T_CS!(s!("\\{}false", name)),
           None,
           s!("\\let{}\\iffalse", cs),
-          None,
-          self,
+          None
         )?,
         Some(Scope::Global),
       );
-      self.let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global), caller);
+      self.let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
     } else {
       Error!(
         "undefined",
         token,
-        caller,
         s!(
           "The token {} is not defined. Defining it now as <ltx:ERROR/>",
           token.stringify()
@@ -2065,9 +2071,8 @@ impl State {
       self.install_definition(
         Constructor {
           cs: token.clone(),
-          replacement: Some(Rc::new(move |document, _args, _props, i_state| {
-            document.make_error("undefined", &cs, i_state)
-          })),
+          replacement: Some(Rc::new(move |document, _args, _props| {
+            document.make_error("undefined", &cs) })),
           ..Constructor::default()
         },
         //TODO: sizer => "X"),
@@ -2085,10 +2090,10 @@ impl State {
   }
 
   /// run the accumulated directives from `\afterassignment`
-  pub fn after_assignment(&mut self, gullet: &mut Gullet) {
+  pub fn after_assignment(&mut self) {
     match self.remove_value("afterAssignment") {
-      Some(Stored::Tokens(after)) => gullet.unread(after),
-      Some(Stored::Token(after)) => gullet.unread_one(after),
+      Some(Stored::Tokens(after)) => gullet_mut!().unread(after),
+      Some(Stored::Token(after)) => gullet_mut!().unread_one(after),
       None | Some(Stored::None) => {},
       Some(other) => panic!("unexpected in after_assignment: {other:?}"),
     }
@@ -2201,4 +2206,26 @@ impl State {
     self.localized.build_template.last_mut()
   }
   pub fn take_build_template(&mut self) -> Option<Template> { self.localized.build_template.pop() }
+}
+
+static mut USES_STY : bool = false;
+pub fn use_sty_state() {
+  unsafe {
+    if !USES_STY {
+      let mut sty_state = sty_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *sty_state, &mut *main_state);
+      USES_STY = true;
+    }
+  }
+}
+pub fn use_main_state() {
+  unsafe {
+    if USES_STY {
+      let mut sty_state = sty_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *sty_state, &mut *main_state);
+      USES_STY = false;
+    }
+  }
 }

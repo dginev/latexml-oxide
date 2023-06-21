@@ -11,13 +11,13 @@ use crate::package::*;
 // attributes to all cells.  For HTML, CSS will be necessary to display them.
 // [We'll ignore HTML's frame, rules and colgroup mechanisms.]
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefRegister!("\\lx@arstrut", Dimension!("0pt"));
   DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
   DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
   Let!("\\@tabularcr", "\\@alignment@newline");
-  if LookupValue!("GUESS_TABULAR_HEADERS").is_none() {
+  if ! state!().has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }
 
@@ -25,7 +25,7 @@ LoadDefinitions!(state, {
   // Typical keys are width, vattach,...
   DefKeyVal!("tabular", "width", "Dimension");
   DefPrimitive!("\\@tabular@bindings AlignmentTemplate OptionalKeyVals:tabular",
-    sub[stomach, (template, attributes_opt), state] {
+    sub[(template, attributes_opt)] {
     let attrs_stored = attributes_opt.map(KeyVals::as_flat_hash).unwrap_or_default();
     let mut attrs = HashMap::default();
     for (k,v) in attrs_stored {
@@ -34,8 +34,8 @@ LoadDefinitions!(state, {
     if let Some(va) = attrs.get("vattach") {
       attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
-    let gullet = stomach.get_gullet_mut();
-    tabular_bindings(template, HashMap::default(), attrs, gullet, state)?;
+    let gullet = gullet_mut!();
+    tabular_bindings(template, HashMap::default(), attrs)?;
   });
 
   DefMacro!("\\@tabular@before", None);
@@ -51,14 +51,14 @@ LoadDefinitions!(state, {
     locked => true);
   DefMacro!("\\endtabular", r"\@tabular@after\@finish@alignment\@end@tabular",
     locked => true);
-  DefPrimitive!("\\@end@tabular", sub[stomach,_a,state] { stomach.egroup(state)?; });
+  DefPrimitive!("\\@end@tabular", sub[()] { stomach_mut!().egroup()?; });
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
-    before_digest => sub[stomach,state] { stomach.bgroup(state); },
+    before_digest => { stomach_mut!().bgroup(); },
     sizer        => "#3",
-    after_digest  => sub[_stomach,whatsit,state] {
-      if let Some(alignment) = state.lookup_alignment() {
+    after_digest  => sub[whatsit] {
+      if let Some(alignment) = state!().lookup_alignment() {
         if let DigestedData::Alignment(data) = alignment.data() {
           let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
           else { translate_attachment(String::new()) };
@@ -77,10 +77,10 @@ LoadDefinitions!(state, {
   //   r"\@finish@alignment\@end@tabular@");
   // DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
   //   "#4",
-  //   before_digest => sub[stomach,_a,state] { stomach.bgroup(); },
+  //   before_digest => sub[_a] { stomach.bgroup(); },
   //   reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*",
   //   mode         => "text");
-  DefPrimitive!("\\@end@tabular@", sub [stomach,_args,state] { stomach.egroup(state)?; });
+  DefPrimitive!("\\@end@tabular@", sub [stomach,_args] { stomach.egroup()?; });
   Let!("\\multicolumn", "\\@multicolumn");
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
@@ -90,7 +90,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\cline{}", r"\noalign{\@cline{#1}}");
   DefConstructor!("\\@cline{}", "",
-    after_digest => sub[_stomach, whatsit,state] {
+    after_digest => sub[ whatsit] {
       let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let mut cols_vec = Vec::new();
       let cols_chars = cols.chars();
@@ -128,7 +128,7 @@ LoadDefinitions!(state, {
           cols_vec.push(this_num);
         }
       }
-      if let Some(alignment_stored) = state.lookup_alignment() {
+      if let Some(alignment_stored) = state!().lookup_alignment() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", cols_vec);
       }
@@ -150,7 +150,7 @@ LoadDefinitions!(state, {
 
   // Array and similar environments
 
-  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[stomach, (pos,template), state] {
+  // DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[ (pos,template)] {
   // my $attr = { vattach => translateAttachment($pos),
   //   role => 'ARRAY' };
   // # Determine column and row separations, if non default
@@ -171,10 +171,10 @@ LoadDefinitions!(state, {
     r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
   );
   DefMacro!("\\endarray", None, r"\@finish@alignment\@end@array");
-  DefPrimitive!("\\@end@array", sub[stomach,_args,state] { stomach.egroup(state)?; });
+  DefPrimitive!("\\@end@array", sub[_args] { stomach.egroup()?; });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",
-    before_digest => sub[stomach,state] { stomach.bgroup(state); },
+    before_digest => sub[stomach] { stomach.bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
 
   DefMacro!("\\@tabarray", r"\m@th\@@array[c]");

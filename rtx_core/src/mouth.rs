@@ -20,10 +20,11 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope, State, STD_STATE, STY_STATE};
+use crate::state::{Scope};
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
+use crate::{state,state_mut};
 
 static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
@@ -159,29 +160,29 @@ impl Mouth {
   // DG: For now we are using a `foodtype` field instead of subclassing mouth, as it feels more
   // compact in this particular application     we're really looking at a unified Mouth
   // application logic, with a capacity of reading different kinds of sources
-  pub fn create(source: &str, mut options: MouthOptions, state: &mut State) -> Result<Self> {
+  pub fn create(source: &str, mut options: MouthOptions) -> Result<Self> {
     if let Some(content) = options.content.take() {
       // we've cached the content of this source
       let (_dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
-      Mouth::new(&content, Some(options), state)
+      Mouth::new(&content, Some(options))
     } else if source.starts_with("literal:") {
       let source = source.replacen("literal:", "", 1);
       // we've supplied literal data
       options.source = None; // the source does not have a corresponding file name
       options.foodtype = FoodType::opt_from_str("literal");
-      Mouth::new(&source, Some(options), state)
+      Mouth::new(&source, Some(options))
     } else if source.is_empty() {
-      Mouth::new("", Some(options), state)
+      Mouth::new("", Some(options))
     } else {
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
       options.source = Some(source.to_string());
-      Mouth::new(source, Some(options), state)
+      Mouth::new(source, Some(options))
     }
   }
 
-  pub fn new(text: &str, options: Option<MouthOptions>, state: &mut State) -> Result<Self> {
+  pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {
         foodtype: FoodType::Literal,
@@ -195,20 +196,20 @@ impl Mouth {
         ..Mouth::default()
       },
     };
-    mouth.open(text, state)?;
+    mouth.open(text)?;
     Ok(mouth)
   }
 
   pub fn get_source(&self) -> &str { &self.source }
 
-  pub fn open(&mut self, content: &str, state: &mut State) -> Result<()> {
+  pub fn open(&mut self, content: &str) -> Result<()> {
     match self.foodtype {
       FoodType::File => self.open_file(content)?,
       FoodType::Literal => self.open_literal(content),
       FoodType::HTTP => self.open_http(content),
       FoodType::HTTPS => self.open_https(content),
     };
-    self.initialize(state);
+    self.initialize();
     Ok(())
   }
 
@@ -246,7 +247,7 @@ impl Mouth {
   }
   // fn open_binding(&mut self, _content: &str) {}
 
-  fn initialize(&mut self, state: &mut State) {
+  fn initialize(&mut self) {
     self.note_message = if self.notes {
       if self.fordefinitions {
         Some(s!("Processing definitions"))
@@ -257,16 +258,16 @@ impl Mouth {
       None
     };
     if self.fordefinitions {
-      self.saved_at_cc = state.lookup_catcode('@');
-      self.saved_include_comments = match state.lookup_value("INCLUDE_COMMENTS") {
+      self.saved_at_cc = state!().lookup_catcode('@');
+      self.saved_include_comments = match state!().lookup_value("INCLUDE_COMMENTS") {
         Some(Stored::Bool(x)) => Some(*x),
         _ => None,
       };
-      state.assign_catcode('@', Catcode::LETTER, None);
-      state.assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
+      state_mut!().assign_catcode('@', Catcode::LETTER, None);
+      state_mut!().assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
   }
-  pub fn finish(&mut self, state: &mut State) {
+  pub fn finish(&mut self) {
     self.buffer = VecDeque::new();
     self.chars = VecDeque::new();
     self.lineno = 0;
@@ -274,10 +275,10 @@ impl Mouth {
     self.nchars = 0;
     if self.fordefinitions {
       if let Some(cc) = self.saved_at_cc {
-        state.assign_catcode('@', cc, None);
+        state_mut!().assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state.assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
+        state_mut!().assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
       }
     }
     if self.notes {
@@ -311,7 +312,7 @@ impl Mouth {
   /// If it's not the way XeTeX does it, perhaps, it must be that ALL combining chars
   /// have to be converted to the proper accent control sequences!
 
-  fn get_next_line(&mut self, state: &State) -> Option<String> {
+  fn get_next_line(&mut self) -> Option<String> {
     if self.buffer.is_empty() {
       if let Some(ref mut reader) = self.reader {
         // file mouth case
@@ -320,7 +321,7 @@ impl Mouth {
           Ok(count) => count,
           Err(e) => {
             let message = s!("BufReader::read_to_end returned an error: {:?}", e);
-            Warn!("mouth", "io", self, message);
+            Warn!("mouth", "io", message);
             0
           },
         };
@@ -331,13 +332,13 @@ impl Mouth {
         // just not going to be a sane way forward. we will first decode
         // the read-in bytes to the right String form, and THEN split lines.
         // as such, decoding is the first action taken on bytes read in from a file.
-        if let Some(ref _encoding) = state.input_encoding {
+        if let Some(ref _encoding) = state!().input_encoding {
           // TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
           // chars to space(?).
           unimplemented!();
           //let message = s!("input isn't valid under encoding {}", encoding);
-          //Info!("misdefined", encoding, self, state, message);
+          //Info!("misdefined", encoding, message);
           //unsafe { str::from_utf8_unchecked(&line_bytes).to_owned() }
         } else {
           // no encoding, interpret as unicode!
@@ -345,7 +346,7 @@ impl Mouth {
             Ok(fstr) => fstr,
             Err(e) => {
               let message = s!("input isn't valid under encoding utf8: {:?}", e);
-              Info!("misdefined", "utf8", self, message);
+              Info!("misdefined", "utf8", message);
               unsafe { str::from_utf8_unchecked(&file_bytes) }
             },
           };
@@ -360,7 +361,7 @@ impl Mouth {
   /// handling TeX's "^^" encoding.
   /// Note that this is the only place where catcode lookup is done,
   /// and that it is somewhat `inlined'.
-  fn get_next_char(&mut self, state: &State) -> Option<(char, Catcode)> {
+  fn get_next_char(&mut self) -> Option<(char, Catcode)> {
     if self.colno >= self.nchars {
       return None;
     };
@@ -368,7 +369,7 @@ impl Mouth {
     self.colno += 1;
     if let Some(ch) = ch_opt {
       let mut ch = *ch;
-      let mut cc = state.lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      let mut cc = state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       // Possible convert ^^x
       if cc == Catcode::SUPER && Some(&ch) == self.chars.get(self.colno) {
         let c1_opt = self.chars.get(self.colno + 1);
@@ -399,7 +400,7 @@ impl Mouth {
           self.splice(self.colno - 1..self.colno + 2, &[ch]);
           self.nchars -= 2;
         }
-        cc = state.lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+        cc = state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       }
       Some((ch, cc))
     } else {
@@ -416,19 +417,19 @@ impl Mouth {
   /// Note that this also returns COMMENT tokens containing source comments,
   /// and also locator comments (file, line# info).
   /// LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
-  pub fn read_token(&mut self, state: &mut State) -> Option<Token> {
+  pub fn read_token(&mut self) -> Option<Token> {
     loop {
       // Iterate till we find a token, or run out. (use return)
       // ===== Get next line, if we need to.
       if self.colno >= self.nchars {
         self.lineno += 1;
         self.colno = 0;
-        let line_opt = self.get_next_line(state);
+        let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
-        let read_mode = state.lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = if let Some(defn) = state.lookup_definition(&CS_ENDLINECHAR).unwrap() {
+        let read_mode = state!().lookup_int("PRESERVE_NEWLINES") > 1;
+        let eolch = if let Some(defn) = state!().lookup_definition(&CS_ENDLINECHAR).unwrap() {
           if defn.is_register() {
-            if let Some(eol) = defn.value_of(Vec::new(), state) {
+            if let Some(eol) = defn.value_of(Vec::new()) {
               let eol = eol.value_of() as i16;
               if eol > 0 && eol <= 255 {
                 let mch = (eol as u8) as char;
@@ -448,7 +449,7 @@ impl Mouth {
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {
-            state.lookup_catcode(ch).unwrap_or(Catcode::OTHER)
+            state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER)
           } else {
             Catcode::OTHER
           };
@@ -482,11 +483,11 @@ impl Mouth {
 
         self.chars = line.chars().collect::<VecDeque<char>>();
         self.nchars = self.chars.len();
-        // In state N, skip spaces
+        // In state::N, skip spaces
         while self.colno < self.nchars {
           let cc_next = match self.chars.get(self.colno) {
             None => Catcode::OTHER,
-            Some(c) => match state.lookup_catcode(*c) {
+            Some(c) => match state!().lookup_catcode(*c) {
               Some(cc) => cc,
               None => Catcode::OTHER,
             },
@@ -502,7 +503,7 @@ impl Mouth {
           return Some(T_MARKER!("EOL"));
         }
         // Sneak a comment out, every so often.
-        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state.lookup_bool("INCLUDE_COMMENTS") {
+        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state!().lookup_bool("INCLUDE_COMMENTS") {
           return Some(T_COMMENT!(s!(
             "**** {} Line {} ****",
             &self.shortsource,
@@ -511,12 +512,12 @@ impl Mouth {
         }
       }
       if self.skipping_spaces {
-        // In state S, skip spaces
+        // In state::S, skip spaces
         let mut cc = None;
         // This is very awkward as a loop,
         //  but I had to port the Perl logic without going crazy...
         // tokenizer/verb.tex depends on it.
-        while let Some((_, ncc)) = self.get_next_char(state) {
+        while let Some((_, ncc)) = self.get_next_char() {
           if ncc != Catcode::SPACE {
             cc = Some(ncc);
             break;
@@ -529,7 +530,7 @@ impl Mouth {
         }
         if cc == Some(Catcode::EOL) {
           // If we've got an EOL
-          self.get_next_char(state);
+          self.get_next_char();
           if self.colno < self.nchars {
             self.colno -= 1;
           }
@@ -537,8 +538,8 @@ impl Mouth {
         self.skipping_spaces = false;
       }
       // ==== Extract next token from line.
-      if let Some((ch, cc)) = self.get_next_char(state) {
-        if let Some(token) = Mouth::dispatch_char(self, ch, cc, state) {
+      if let Some((ch, cc)) = self.get_next_char() {
+        if let Some(token) = Mouth::dispatch_char(self, ch, cc) {
           return Some(token);
         } // Else, repeat till we get something or run out.
       }
@@ -548,9 +549,9 @@ impl Mouth {
   //**********************************************************************
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
-  pub fn read_tokens(&mut self, state: &mut State) -> Tokens {
+  pub fn read_tokens(&mut self) -> Tokens {
     let mut tokens = Vec::new();
-    while let Some(token) = self.read_token(state) {
+    while let Some(token) = self.read_token() {
       tokens.push(token);
     }
     while let Some(Token {
@@ -570,7 +571,7 @@ impl Mouth {
   // Alas: $noread true means NOT to read a new line, but only return
   // the remainder of the current line, if any. This is useful when combining
   // with previously peeked tokens from the Gullet.
-  pub fn read_raw_line(&mut self, noread: bool, state: &State) -> Option<String> {
+  pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {
       // DG: Can't slice a VecDeque really? Oh well...
@@ -585,7 +586,7 @@ impl Mouth {
     } else if noread {
       line = String::new();
     } else {
-      match self.get_next_line(state) {
+      match self.get_next_line() {
         None => {
           // We've exhausted this mouth
           self.at_eof = true;
@@ -607,12 +608,12 @@ impl Mouth {
     Some(line)
   }
 
-  fn dispatch_char(&mut self, ch: char, cc: Catcode, state: &State) -> Option<Token> {
+  fn dispatch_char(&mut self, ch: char, cc: Catcode) -> Option<Token> {
     // Possibly want to think about caching (common) letters, etc to keep from
     // creating tokens like crazy... or making them more compact... or ???
     use crate::token::Catcode::*;
     match cc {
-      ESCAPE => self.handle_escape(state), // T_ESCAPE
+      ESCAPE => self.handle_escape(), // T_ESCAPE
       BEGIN => {
         if ch == '{' {
           Some(T_BEGIN!())
@@ -641,7 +642,7 @@ impl Mouth {
           Some(CharToken!(ch, ALIGN))
         }
       },
-      EOL => self.handle_end_of_line(state),
+      EOL => self.handle_end_of_line(),
       PARAM => {
         if ch == '#' {
           Some(T_PARAM!())
@@ -663,22 +664,22 @@ impl Mouth {
           Some(CharToken!(ch, SUB))
         }
       }, // T_SUB
-      SPACE => self.handle_space(state),
+      SPACE => self.handle_space(),
       LETTER => Some(CharToken!(ch, Catcode::LETTER)),
       OTHER => Some(CharToken!(ch, Catcode::OTHER)),
       ACTIVE => Some(T_ACTIVE!(ch)),
-      COMMENT => self.handle_comment(state),
+      COMMENT => self.handle_comment(),
       INVALID => Some(CharToken!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
       _ => None,                                       // IGNORE, others
     }
   }
 
-  fn handle_end_of_line(&mut self, state: &State) -> Option<Token> {
+  fn handle_end_of_line(&mut self) -> Option<Token> {
     // Note that newines should be converted to space (with " " for content)
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
       T_CS!("\\par")
-    } else if state.lookup_int("PRESERVE_NEWLINES") > 0 {
+    } else if state!().lookup_int("PRESERVE_NEWLINES") > 0 {
       Token!("\n", Catcode::SPACE)
     } else {
       T_SPACE!()
@@ -687,9 +688,9 @@ impl Mouth {
     Some(token)
   }
 
-  fn handle_space(&mut self, state: &State) -> Option<Token> {
+  fn handle_space(&mut self) -> Option<Token> {
     // Skip any following spaces!
-    while let Some((_ch, cc)) = self.get_next_char(state) {
+    while let Some((_ch, cc)) = self.get_next_char() {
       if (cc != Catcode::SPACE) && (cc != Catcode::EOL) {
         // backup at nonspace/eol
         if self.colno <= self.nchars {
@@ -701,7 +702,7 @@ impl Mouth {
     Some(T_SPACE!())
   }
 
-  fn handle_comment(&mut self, state: &State) -> Option<Token> {
+  fn handle_comment(&mut self) -> Option<Token> {
     let n = self.colno;
     self.colno = self.nchars;
     let mut comment = String::new();
@@ -709,9 +710,9 @@ impl Mouth {
       comment.push(*c);
     }
     let trimmed_comment = comment.trim();
-    if !trimmed_comment.is_empty() && state.lookup_bool("INCLUDE_COMMENTS") {
+    if !trimmed_comment.is_empty() && state!().lookup_bool("INCLUDE_COMMENTS") {
       Some(T_COMMENT!(trimmed_comment))
-    } else if state.lookup_int("PRESERVE_NEWLINES") > 1 {
+    } else if state!().lookup_int("PRESERVE_NEWLINES") > 1 {
       Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {
       None
@@ -723,15 +724,15 @@ impl Mouth {
   //**********************************************************************
 
   /// Read control sequence
-  fn handle_escape(&mut self, state: &State) -> Option<Token> {
+  fn handle_escape(&mut self) -> Option<Token> {
     // NOTE: We're using control sequences WITH the \ prepended!!!
-    if let Some((ch, mut cc)) = self.get_next_char(state) {
+    if let Some((ch, mut cc)) = self.get_next_char() {
       // Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
       let mut cs = s!("\\{}", ch);
       if cc == Catcode::LETTER {
         // For letter, read more letters for csname.
-        while let Some((nch, ncc)) = self.get_next_char(state) {
+        while let Some((nch, ncc)) = self.get_next_char() {
           cc = ncc;
           if ncc == Catcode::LETTER {
             cs.push(nch);
@@ -770,11 +771,11 @@ impl Mouth {
   // Be Careful!
   // used BOTH for flushing input for \endinput
   // and for detecting line end for \read
-  pub fn is_eol(&mut self, state: &State) -> bool {
+  pub fn is_eol(&mut self) -> bool {
     let savecolno = self.colno;
     // We have to peek past any ignored tokens & also spaces, if skipping
     let mut cc = None;
-    while let Some((_, ncc)) = self.get_next_char(state) {
+    while let Some((_, ncc)) = self.get_next_char() {
       if ncc != Catcode::IGNORE && (!self.skipping_spaces || ncc != Catcode::SPACE) {
         cc = Some(ncc);
         break;
@@ -798,28 +799,25 @@ impl Mouth {
   pub fn at_eof(&self) -> bool { self.at_eof }
 }
 
-pub fn tokenize(text: &str, state_opt: Option<&mut State>) -> Tokens {
+pub fn tokenize(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
-  match state_opt {
-    None => {
-      let mut state = STD_STATE.borrow_mut();
-      Mouth::new(text, None, &mut state)
-        .unwrap()
-        .read_tokens(&mut state)
-    },
-    Some(s) => Mouth::new(text, None, s).unwrap().read_tokens(s),
-  }
+  Mouth::new(text, None)
+      .unwrap()
+      .read_tokens()
 }
 pub fn tokenize_internal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
   if text.is_empty() {
     return NO_TOKENS;
   }
-  let mut state = STY_STATE.borrow_mut();
-  Mouth::new(text, None, &mut state)
+  state::use_sty_state();
+
+  let result = Mouth::new(text, None)
     .unwrap()
-    .read_tokens(&mut state)
+    .read_tokens();
+  state::use_main_state();
+  result
 }

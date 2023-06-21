@@ -1,9 +1,9 @@
 use rtx_package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
 
-  // DefParameterType!(Foo, sub[gullet, inner, _extra, state] {
-  //   gullet.skip_one_space(state);
+  // DefParameterType!(Foo, sub[ inner, _extra] {
+  //   gullet.skip_one_space();
   // });
 
   DefMacro!("\\hw", "hello world!");

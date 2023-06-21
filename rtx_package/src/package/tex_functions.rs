@@ -4,15 +4,15 @@ use rtx_core::keyvals::KeyvalsConfig;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
 use std::collections::VecDeque;
 
-pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut State) {
+pub fn reenter_text_mode(vertical_mode: bool) {
   let mode_key = if vertical_mode {
     "VTEXT_MODE_BINDINGS"
   } else {
     "HTEXT_MODE_BINDINGS"
   };
   let text_key = "TEXT_MODE_BINDINGS";
-  let mode_bindings = state.checkout_value(mode_key);
-  let text_bindings = state.checkout_value(text_key);
+  let mode_bindings = state::checkout_value(mode_key);
+  let text_bindings = state::checkout_value(text_key);
   let mut bindings: VecDeque<&Stored> = match mode_bindings {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.iter().collect::<VecDeque<&Stored>>(),
     _ => VecDeque::new(),
@@ -24,25 +24,26 @@ pub fn reenter_text_mode(vertical_mode: bool, gullet: &mut Gullet, state: &mut S
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
       let vec = tks.unlist_ref();
-      state.let_i(&vec[0], &vec[1], None, gullet);
+      state_mut!().let_i(&vec[0], &vec[1], None);
     }
   }
   if let Some(value) = mode_bindings {
-    state.checkin_value(mode_key, value);
+    state_mut!().checkin_value(mode_key, value);
   }
   if let Some(value) = text_bindings {
-    state.checkin_value(text_key, value);
+    state_mut!().checkin_value(text_key, value);
   }
 }
 
 // Similarly, for metadata appearing within peculiar environments, fonts, etc
 // You'll typically want this within a group or bounded=>1.
-pub fn neutralize_font(state: &mut State) {
+pub fn neutralize_font() {
+  let mut state = state_mut!();
   state.assign_value("font", Font::text_default(), Some(Scope::Local));
   state.assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
-pub fn today(state: &mut State) -> Result<String> {
+pub fn today() -> Result<String> {
   let month_names = [
     "January",
     "February",
@@ -58,16 +59,15 @@ pub fn today(state: &mut State) -> Result<String> {
     "December",
   ];
   let month =
-    month_names[state.lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
-  let day = state.lookup_register("\\day", vec![])?.unwrap().value_of();
-  let year = state.lookup_register("\\year", vec![])?.unwrap().value_of();
+    month_names[state_mut!().lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
+  let day = state_mut!().lookup_register("\\day", vec![])?.unwrap().value_of();
+  let year = state_mut!().lookup_register("\\year", vec![])?.unwrap().value_of();
   Ok(s!("{} {}, {}", month, day, year))
 }
 
 pub fn parse_def_parameters(
   cs: &Token,
   params_in: Tokens,
-  state: &mut State,
 ) -> Result<Option<Parameters>> {
   let mut tokens: VecDeque<Token> =
     VecDeque::from(params_in.pack_parameters()?.unlist());
@@ -84,8 +84,7 @@ pub fn parse_def_parameters(
           params.push(Parameter::new(
             Cow::Borrowed("RequireBrace"),
             Cow::Borrowed("RequireBrace"),
-            state,
-          )?);
+                  )?);
           break;
         } else {
           n += 1;
@@ -141,7 +140,7 @@ pub fn parse_def_parameters(
             extra: vec![extra],
             ..Parameter::default()
           }
-          .init(state)?,
+          .init()?,
         );
       } else if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
         // Special case: trailing sole # => delimited by next opening brace.
@@ -149,15 +148,13 @@ pub fn parse_def_parameters(
         params.push(Parameter::new(
           Cow::Borrowed("UntilBrace"),
           Cow::Borrowed("UntilBrace"),
-          state,
-        )?);
+              )?);
       } else {
         // Nothing? Just a plain parameter.
         params.push(Parameter::new(
           Cow::Borrowed("Plain"),
           Cow::Borrowed("{}"),
-          state,
-        )?);
+              )?);
       }
     } else {
       // Initial delimiting text is required.
@@ -178,7 +175,7 @@ pub fn parse_def_parameters(
           novalue: true,
           ..Parameter::default()
         }
-        .init(state)?,
+        .init()?,
       );
     }
   }
@@ -196,13 +193,11 @@ pub fn do_def(
   cs: Token,
   params: Tokens,
   body: Tokens,
-  state: &mut State,
 ) -> Result<()> {
-  BindState!(stomach, state);
-  let paramlist = parse_def_parameters(&cs, params, state)?;
+  let paramlist = parse_def_parameters(&cs, params)?;
 
   let scope = if globally { Some(Scope::Global) } else { None };
-  state.install_definition(
+  state_mut!().install_definition(
     Expandable::new(
       cs,
       paramlist,
@@ -210,23 +205,21 @@ pub fn do_def(
       Some(ExpandableOptions {
         nopack_parameters: true,
         ..ExpandableOptions::default()
-      }),
-      state,
-    )?,
+      }))?,
     scope,
   );
-  state.after_assignment(stomach.get_gullet_mut());
+  state_mut!().after_assignment();
   Ok(())
 }
 
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
-pub fn classify_box(boxnum: Number, state: &State) -> Result<&'static str> {Ok(
-  match state.lookup_value(&s!("box{}", boxnum.value_of())) {
+pub fn classify_box(boxnum: Number) -> Result<&'static str> {Ok(
+  match state!().lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match d.data() {
       DigestedData::Whatsit(ref w)
-        if w.borrow().definition == state.lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
+        if w.borrow().definition == state!().lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
       {
         "vbox"
       },
@@ -241,9 +234,7 @@ const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOS
 // What we're really after is a connectio nto a font encoding mapping.
 pub fn decode_math_char(
   mut n: u16,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<(Option<String>, Option<char>)> {
+  ) -> Result<(Option<String>, Option<char>)> {
   let class: u16 = n / (16 * 256);
   n %= 16 * 256;
   let fam: u16 = n / 256;
@@ -263,8 +254,8 @@ pub fn decode_math_char(
   // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
   let c = n as u8 as char;
   // // If no specific class, Lookup properties from a DefMath?
-  let charinfo = state.lookup_value(&s!("math_token_attributes_{}", c));
-  let fontinfo = state.lookup_font_info(&T_CS!(font.to_string()))?;
+  let charinfo = state!().lookup_value(&s!("math_token_attributes_{}", c));
+  let fontinfo = state!().lookup_font_info(&T_CS!(font.to_string()))?;
   let mut role = MATH_CLASS_ROLE[class as usize];
 
   if role.is_empty() {
@@ -279,7 +270,7 @@ pub fn decode_math_char(
   };
   let font_opt = if let Some(Stored::Font(ref info)) = fontinfo {
     if let Some(ref data) = info.encoding {
-      font::decode(n as u8, Some(data.to_string()), false, stomach, state)
+      font::decode(n as u8, Some(data.to_string()), false)
     } else {
       Some(c)
     }
@@ -295,15 +286,14 @@ pub fn decode_math_char(
 pub fn read_box_contents(
   gullet: &mut Gullet,
   everybox_opt: Option<Tokens>,
-  state: &mut State,
 ) -> Result<Tokens> {
-  while let Some(t) = gullet.read_token(state)? {
+  while let Some(t) = gullet.read_token()? {
     if t.get_catcode() == Catcode::BEGIN {
       break;
     } // Skip till { or \bgroup
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
-  match state.remove_value("BeforeNextBox") {
+  match state_mut!().remove_value("BeforeNextBox") {
     Some(Stored::Tokens(tokens)) => gullet.unread(tokens),
     Some(Stored::Token(token)) => gullet.unread_one(token),
     None | Some(Stored::None) => {},
@@ -322,9 +312,8 @@ pub fn read_box_contents(
 pub fn predigest_box_contents(
   stomach: &mut Stomach,
   _tokens: ArgWrap,
-  state: &mut State,
 ) -> Result<Option<Digested>> {
-  let mut contents = stomach.invoke_token(&T_BEGIN!(), state)?;
+  let mut contents = stomach.invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     Ok(None)
   } else {
@@ -332,26 +321,26 @@ pub fn predigest_box_contents(
   }
 }
 
-pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str, _state: &mut State) -> Vec<Token> {
+pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str) -> Vec<Token> {
   //   my ($whatsit, $keyword) = @_;
   //   my $value = $whatsit->getProperty($keyword);
   //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
   unimplemented!()
 }
 
-pub fn p_revert<T>(arg: T, state: &mut State) -> Result<Tokens>
+pub fn p_revert<T>(arg: T) -> Result<Tokens>
 where T: Sized + Object {
-  state.set_dual_branch("presentation");
-  let result = arg.revert(state);
-  state.expire_dual_branch();
+  state_mut!().set_dual_branch("presentation");
+  let result = arg.revert();
+  state_mut!().expire_dual_branch();
   result
 }
 
-pub fn c_revert<T>(arg: T, state: &mut State) -> Result<Tokens>
+pub fn c_revert<T>(arg: T) -> Result<Tokens>
 where T: Sized + Object {
-  state.set_dual_branch("content");
-  let result = arg.revert(state);
-  state.expire_dual_branch();
+  state_mut!().set_dual_branch("content");
+  let result = arg.revert();
+  state_mut!().expire_dual_branch();
   result
 }
 
@@ -365,7 +354,6 @@ pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
   mut blockattr: HashMap<String, String>,
-  state: &mut State,
 ) -> Result<Vec<Node>> {
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
@@ -395,17 +383,17 @@ pub fn insert_block(
   }
   let hasattr = !blockattr.is_empty();
   if hasattr
-    || !document.can_contain_node_somehow(&context, "ltx:p", state)
-    || document.can_contain(&context, "#PCDATA", state)
+    || !document.can_contain_node_somehow(&context, "ltx:p")
+    || document.can_contain(&context, "#PCDATA")
   {
-    let tag = if document.can_contain(&context, blocktag, state) {
+    let tag = if document.can_contain(&context, blocktag) {
       blocktag
     } else {
       iblocktag
     };
     let mut attr_arg = blockattr.clone();
     attr_arg.insert("_autoclose".to_string(), "true".to_string());
-    newblock = Some(document.open_element(tag, Some(attr_arg), None, state)?);
+    newblock = Some(document.open_element(tag, Some(attr_arg), None)?);
   }
   // Insert the content for the block, and reduce
   document.set_attribute(
@@ -414,28 +402,28 @@ pub fn insert_block(
     "true",
   )?; // HACK!!!! (see \hbox)
 
-  document.absorb(contents, None, state)?;
+  document.absorb(contents, None)?;
   let absorbed: Vec<Node> = document.get_constructed_nodes().to_vec();
   let mut nodes = VecDeque::from(document.filter_children(document.filter_deletions(absorbed)));
 
   // Scan the inserted nodes, wrapping sequences of Inline items with a ltx:p
   let mut newnodes = Vec::new();
   while !nodes.is_empty() {
-    let qname = document.get_node_qname(&nodes[0], state);
+    let qname = document.get_node_qname(&nodes[0]);
     if qname == arena::pin_static("ltx:break") {
       // ltx:break are superflous, now, unless we're transporting a figure/float
-      let bp_name = document.get_node_qname(&nodes[0].get_parent().unwrap(), state);
+      let bp_name = document.get_node_qname(&nodes[0].get_parent().unwrap());
       if bp_name != arena::pin_static("ltx:figure") && bp_name != arena::pin_static("ltx:float") {
         document.remove_node(&mut nodes.pop_front().unwrap());
         continue;
       }
     }
     let mut inline = Vec::new(); // Collect up sequences of Inline
-    while !nodes.is_empty() && state.model.is_node_in_schema_class("Inline", &nodes[0]) {
+    while !nodes.is_empty() && state::model.is_node_in_schema_class("Inline", &nodes[0]) {
       inline.push(nodes.pop_front().unwrap());
     }
     if !inline.is_empty() {
-      if let Some(wrapped) = document.wrap_nodes("ltx:p", inline, state)? {
+      if let Some(wrapped) = document.wrap_nodes("ltx:p", inline)? {
         newnodes.push(wrapped);
       }
     } else {
@@ -448,9 +436,9 @@ pub fn insert_block(
   // Otherwise, close everything back up to the originally open element (but only if still open!)
   if let Some(ref blocknode) = newblock {
     let block_parent = blocknode.get_parent();
-    document.close_to_node(block_parent.as_ref().unwrap(), true, state)?;
+    document.close_to_node(block_parent.as_ref().unwrap(), true)?;
   } else {
-    document.close_to_node(&context, true, state)?;
+    document.close_to_node(&context, true)?;
   }
   // Check if the ltx:inline-block container is really needed.
   if let Some(mut blocknode) = newblock {
@@ -469,9 +457,8 @@ pub fn insert_block(
         .with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
       && document.can_contain_sym(
         &blocknode.get_parent().unwrap(),
-        state.model.get_node_qname(&crows[0]),
-        state,
-      )
+        model!().get_node_qname(&crows[0]),
+          )
     // TODO: && (!hasattr || blockattr.keys().any(...
     {
       // Else only 1 item inside...which is an ltx:p with 1 item, if allowed.
@@ -484,9 +471,8 @@ pub fn insert_block(
     } else if rows.len() == 1
       && document.can_contain_sym(
         &blocknode.get_parent().unwrap(),
-        state.model.get_node_qname(&rows[0]),
-        state,
-      )
+        model!().get_node_qname(&rows[0]),
+          )
     // if allowed.
     // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
     {
@@ -501,7 +487,7 @@ pub fn insert_block(
   Ok(newnodes)
 }
 
-pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) -> Result<()> {
+pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
   // But record the oddity with class=ltx_markedasmath
 
@@ -510,8 +496,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
     .findnodes(
       "ltx:XMath/ltx:*[local-name() != 'XMText']",
       Some(&mathnode),
-      state,
-    )
+      )
     .is_empty()
   {
     // So unwrap down to the contents of the XMText's.
@@ -527,7 +512,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
         // Make sure we've got an element
         text
       } else {
-        document.wrap_nodes("ltx:text", vec![text], state)?.unwrap()
+        document.wrap_nodes("ltx:text", vec![text])?.unwrap()
       };
       // Now record that it originally was marked as math
       document.add_class(&mut text, "ltx_markedasmath")?;
@@ -536,7 +521,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
     document.replace_node(mathnode.clone(), texts)?; // and replace the whole Math with the pieces
   } else {
     // Cleanup any remaining XMTexts
-    cleanup_xmtext_outer(document, &mathnode, state)?;
+    cleanup_xmtext_outer(document, &mathnode)?;
   }
   Ok(())
 }
@@ -556,15 +541,14 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node, state: &mut State) 
 fn cleanup_xmtext_outer(
   document: &mut Document,
   math_node: &Node,
-  state: &mut State,
 ) -> Result<()> {
-  for text_node in document.findnodes("descendant::ltx:XMText", Some(math_node), state) {
-    cleanup_xmtext(document, text_node, state)?;
+  for text_node in document.findnodes("descendant::ltx:XMText", Some(math_node)) {
+    cleanup_xmtext(document, text_node)?;
   }
   Ok(())
 }
 
-fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut State) -> Result<()> {
+fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   // We're really only interested in reducing nested math, right?
   // But actually also collapsing ltx:XMText/ltx:text
   // Apply "outer" simplifications: remove ltx:text or ltx:p wrappings.
@@ -578,8 +562,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
         .findnodes(
           "ltx:text | ltx:inline-block[count(*)=1] | ltx:p",
           Some(&text_node),
-          state,
-        )
+              )
         .is_empty()
     {
       break;
@@ -599,7 +582,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node, state: &mut Stat
   // If the XMText contains a single Math, pull it's content up in
   if children.len() == 1
     && !document
-      .findnodes("ltx:Math", Some(&text_node), state)
+      .findnodes("ltx:Math", Some(&text_node))
       .is_empty()
   {
     // Replace XMText by XMWrap/*  (this should preserve the parse?)
@@ -734,7 +717,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
-pub fn writable_tokens(tokens: &Tokens, _state: &mut State) -> String {
+pub fn writable_tokens(tokens: &Tokens) -> String {
   // unwrap a \noexpand-created \relax to its actual content,
   // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
@@ -850,7 +833,6 @@ pub fn keyvals_aux(
   gullet: &mut Gullet,
   until: Option<Token>,
   mut spec: KVSpec,
-  state: &mut State,
 ) -> Result<KeyVals> {
   // support both "keysets" and "prefix|keysets"
   // unless (defined($keysets)) {
@@ -877,24 +859,23 @@ pub fn keyvals_aux(
       skip: spec.skip,
       skip_missing: spec.star,
     },
-    state,
   );
   // and read it from the gullet
   if let Some(until_token) = until {
-    keyvals.read_from(gullet, until_token, state)?;
+    keyvals.read_from(gullet, until_token)?;
   }
   // we still want to make use of the hash
   Ok(keyvals)
 }
 
-pub fn uppercase_token(token: Token, state: &State) -> Token {
-  either_case_token(token, true, state)
+pub fn uppercase_token(token: Token) -> Token {
+  either_case_token(token, true)
 }
-pub fn lowercase_token(token: Token, state: &State) -> Token {
-  either_case_token(token, false, state)
+pub fn lowercase_token(token: Token) -> Token {
+  either_case_token(token, false)
 }
 
-fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
+fn either_case_token(token: Token, is_upper: bool) -> Token {
   let (chars_count, thischar) = token.with_str(|s| (s.chars().count(), s.chars().next()));
   // DG: new idea, short-circuit if more than 1 char, since our lccode/uccode tables are single
   // char-based (for now?)
@@ -903,9 +884,9 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
   }
   let mut result = String::new();
   let cased = if is_upper {
-    state.lookup_uccode(thischar.unwrap())
+    state!().lookup_uccode(thischar.unwrap())
   } else {
-    state.lookup_lccode(thischar.unwrap())
+    state!().lookup_lccode(thischar.unwrap())
   };
   if let Some(code) = cased {
     if code != 0 {
@@ -928,8 +909,8 @@ fn either_case_token(token: Token, is_upper: bool, state: &State) -> Token {
 }
 
 /// a candidate for use by \hskip, \hspace, etc... ?
-pub fn dimension_to_spaces(dimen: &Dimension, state: &State) -> Cow<'static, str> {
-  let fs = state.lookup_font().unwrap().get_size(); // 1 em
+pub fn dimension_to_spaces(dimen: &Dimension) -> Cow<'static, str> {
+  let fs = state!().lookup_font().unwrap().get_size(); // 1 em
   let pt = dimen.pt_value(None);
   let ems = pt / fs.unwrap();
   if ems < 0.01 {
@@ -957,12 +938,11 @@ pub fn aligning_environment(
   class: &str,
   document: &mut Document,
   props: &HashMap<String, Stored>,
-  state: &mut State,
 ) -> Result<()> {
   if let Some(Stored::Digested(body)) = props.get("body") {
     // Add class attribute to new nodes.
-    for mut node in insert_block(document, body, HashMap::default(), state)?.into_iter() {
-      set_align_or_class(document, &mut node, align, class, state)?;
+    for mut node in insert_block(document, body, HashMap::default())?.into_iter() {
+      set_align_or_class(document, &mut node, align, class)?;
     }
   }
   Ok(())
@@ -973,9 +953,8 @@ pub fn set_align_or_class(
   node: &mut Node,
   align: &str,
   class: &str,
-  state: &mut State,
 ) -> Result<()> {
-  let qname = state.model.get_node_qname(node);
+  let qname = model!().get_node_qname(node);
   if qname == arena::pin_static("ltx:tag") {
   }
   // HACK
@@ -999,42 +978,38 @@ pub fn make_generic_message(
   cmd: &str,
   args: Vec<Tokens>,
   kind: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
-  stomach.bgroup(state);
-  state.let_i(
+  ) -> Result<()> {
+  stomach.bgroup();
+  state_mut!().let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\string"),
-    None,
-    stomach.get_gullet_mut(),
+    None
   );
-  state.let_i(
+  state_mut!().let_i(
     &T_CS!("\\MessageBreak"),
     &T_CS!("\\ltx@hard@MessageBreak"),
-    None,
-    stomach.get_gullet_mut(),
+    None
   ); // tricky, we need Expand() to execute it
   let mut message = String::new();
   for arg in args.into_iter() {
     let mut arg_toks = arg.unlist();
     arg_toks.push(T_CS!("\\MessageBreak"));
-    let gullet = stomach.get_gullet_mut();
-    let arg_str = Expand!(arg_toks, gullet, state).to_string();
+    let gullet = gullet_mut!();
+    let arg_str = Expand!(arg_toks).to_string();
     message.push_str(&arg_str);
   }
 
-  stomach.egroup(state)?;
+  stomach.egroup()?;
   //   return ('latex', $cmd, $stomach, $message);
   match kind {
     "error" => {
-      Error!("latex", cmd, stomach, message);
+      Error!("latex", cmd, message);
     },
     "warn" => {
-      Warn!("latex", cmd, stomach, message);
+      Warn!("latex", cmd, message);
     },
     "info" => {
-      Info!("latex", cmd, stomach, message);
+      Info!("latex", cmd, message);
     },
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };
@@ -1056,9 +1031,9 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
   } // undef meaning 'baseline'
 }
 
-pub fn in_svg(document: &Document, state: &State) -> bool {
+pub fn in_svg(document: &Document) -> bool {
   if let Some(context) = document.get_element() {
-    document.with_node_qname(&context, state,
+    document.with_node_qname(&context,
       |qname| qname.starts_with("svg:"))
   } else { false }
 }

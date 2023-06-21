@@ -1,7 +1,7 @@
 //! TeX Book, Appendix B. p. 361
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // This is actually LaTeX's definition, but let's just do it this way.
   DefConstructor!(
     "\\sqrt OptionalInScriptStyle Digested",
@@ -11,15 +11,15 @@ LoadDefinitions!(state, {
   );
 
 
-  DefParameterType!(ScriptStyleUntil, sub[gullet,_inner,until,state] {
-    gullet.read_until(&until[0], state) },
-  before_digest => sub[stomach,state] {
-    stomach.bgroup(state);
+  DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
+    gullet.read_until(&until[0]) },
+  before_digest => sub[stomach] {
+    stomach.bgroup();
     MergeFont!(mathstyle => "script");
   },
-  after_digest => sub[stomach,_args,state] {
-    stomach.egroup(state)?; },
-  reversion => sub[gullet,args,_inner,_extra,_state] {
+  after_digest => sub[_args] {
+    stomach.egroup()?; },
+  reversion => sub[args,_inner,_extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) });
 
   DefConstructor!("\\root ScriptStyleUntil:\\of {}",

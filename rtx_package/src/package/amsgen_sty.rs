@@ -1,5 +1,5 @@
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
 
   DefMacro!("\\@saveprimitive{}{}", "\\let#2#1");
 
@@ -26,7 +26,7 @@ LoadDefinitions!(state, {
   // Do we need to worry about the skip space issues...?
   Let!("\\new@ifnextchar", "\\@ifnextchar");
   // \@ifstar already in LaTeX.pool
-  DefRegister!("\\ex@" => Dimension::from_str("1pt", state)?);    // Just fake it...
+  DefRegister!("\\ex@" => Dimension::from_str("1pt")?);    // Just fake it...
   // Hmm.... how should we detect whether there"\s already punctuation?
   DefMacro!("\\@addpunct{}", "#1");
 

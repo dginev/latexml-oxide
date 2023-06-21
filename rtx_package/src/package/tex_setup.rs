@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   RegisterNamespace!("ltx", "http://dlmf.nist.gov/LaTeXML");
   RegisterNamespace!("svg", "http://www.w3.org/2000/svg");
   // Needed for SVG
@@ -18,7 +18,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
-  let doc_id = state.lookup_string("DOCUMENTID");
+  let doc_id = state!().lookup_string("DOCUMENTID");
   if !doc_id.is_empty() {
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
     let doc_id_token = T_OTHER!(doc_id);
@@ -30,8 +30,8 @@ LoadDefinitions!(state, {
 
   //======================================================================
   Tag!("ltx:document",
-  after_open => sub[document, _node, state] {
-    document.process_pending_resources(state)?;
+  after_open => sub[document, _node] {
+    document.process_pending_resources()?;
   });
   RequireResource!("LaTeXML.css");
 
@@ -87,20 +87,20 @@ LoadDefinitions!(state, {
 
   // ======================================================================
   // Define parsers for standard parameter types.
-  DefParameterType!(Plain, sub[gullet, inner, _extra, state] {
-      let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
+  DefParameterType!(Plain, sub[ inner, _extra] {
+      let mut value = ArgWrap::Tokens(gullet.read_arg()?);
       if let Some(inner_ps) = inner {
         // TODO: How many arguments can we expect back? One? Many?
         //       Currently only passing through the first
-        value = inner_ps.reparse_argument(gullet, value, state)?.remove(0);
+        value = inner_ps.reparse_argument(gullet, value)?.remove(0);
       }
       Ok(value)
     },
-    reversion => sub[gullet, arg, inner, _extra, state] {
+    reversion => sub[ arg, inner, _extra] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       read_tokens.extend(if let Some(inner_ps) = inner {
-        inner_ps.revert_arguments(vec![Some(Tokens::new(arg))], state)?
+        inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
       } else {
         arg.iter().map(|t| t.clone().revert()).collect()
       });
@@ -108,19 +108,19 @@ LoadDefinitions!(state, {
       Ok(Tokens::new(read_tokens))
     });
 
-  DefParameterType!(DefPlain, sub[gullet, inner, _extra, state] {
-      let mut value = ArgWrap::Tokens(gullet.read_arg(state)?);
+  DefParameterType!(DefPlain, sub[ inner, _extra] {
+      let mut value = ArgWrap::Tokens(gullet.read_arg()?);
       if let Some(inner_ps) = inner {
-        value = inner_ps.reparse_argument(gullet, value, state)?.remove(0);
+        value = inner_ps.reparse_argument(gullet, value)?.remove(0);
       }
       Ok(value)
     },
     pack_parameters => true,
-    reversion => sub[gullet, arg, inner, _extra, state] {
+    reversion => sub[ arg, inner, _extra] {
      // let mut reverted_inner;
      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
      read_tokens.extend(if let Some(inner_ps) = inner {
-      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))], state)?
+      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
      } else {
        arg.iter().map(|t| t.clone().revert()).collect()
      });
@@ -128,14 +128,14 @@ LoadDefinitions!(state, {
      Ok(Tokens::new(read_tokens))
     });
 
-  DefParameterType!(Optional, sub[gullet, inner, default, state] {
-      let value = gullet.read_optional(None, state)?;
+  DefParameterType!(Optional, sub[ inner, default] {
+      let value = gullet.read_optional(None)?;
       if value.is_none() && !default.is_empty() {
         // TODO: Is the default really multiple Vec<Tokens> ? Or just a single Tokens?
         //       the default[0] is suspicious, compared to the original perl "$default"
         ArgWrap::Tokens(default[0].clone())
       } else if let Some(inner_ps) = inner {
-        let mut reparsed = inner_ps.reparse_argument(gullet, value.into(), state)?;
+        let mut reparsed = inner_ps.reparse_argument(gullet, value.into())?;
         if !reparsed.is_empty() {
           reparsed.remove(0)
         } else {
@@ -146,14 +146,14 @@ LoadDefinitions!(state, {
       }
     },
     optional => true,
-    reversion => sub[gullet, arg, inner, _extra, state] {
+    reversion => sub[ arg, inner, _extra] {
       // TODO: Same question for the type of "arg" as the one above "default" above:
       //  should this be a single `Tokens` rather than a `Vec<Token>`?
       if !arg.is_empty() {
         let mut read_tokens: Vec<Token> = vec![T_OTHER!("[")];
         read_tokens.extend(match inner {
           None => arg.into_iter().map(Token::revert).collect(),
-          Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))], state)?,
+          Some(inner_ps) => inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?,
         });
         read_tokens.push(T_OTHER!("]"));
         Ok(Tokens::new(read_tokens))
@@ -166,10 +166,10 @@ LoadDefinitions!(state, {
   //   <general text> = <filler>{<balanced text><right brace>
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
-  DefParameterType!(GeneralText, sub[gullet, _inner, _extra, state] {
-    if let Some(open) = gullet.read_x_token(None, false, state)? {
+  DefParameterType!(GeneralText, sub[_inner, _extra] {
+    if let Some(open) = gullet.read_x_token(None, false)? {
       if open.get_catcode() == Catcode::BEGIN {
-        gullet.read_balanced(false, state)?.unwrap_or_default()
+        gullet.read_balanced(false)?.unwrap_or_default()
       } else {
         Error!("expected","{", gullet, "Expected <general text> here");
         Tokens!(open)
@@ -180,11 +180,11 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefParameterType!(Until, sub[gullet, _inner, until_extra, state] {
+  DefParameterType!(Until, sub[ _inner, until_extra] {
     // TODO: how many tokens are in extra?
-    gullet.read_until(&until_extra[0], state)
+    gullet.read_until(&until_extra[0])
   },
-  reversion => sub[gullet, arg, _inner, until, _state] {
+  reversion => sub[arg, _inner, until] {
     let mut rev = Vec::new();
     for t in arg {
       rev.push(t.revert());
@@ -196,17 +196,17 @@ LoadDefinitions!(state, {
   });
 
   // Skip any spaces, but don't contribute an argument.
-  DefParameterType!(SkipSpaces, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state)?;
+  DefParameterType!(SkipSpaces, sub[_inner, _extra] {
+    gullet_mut!().skip_spaces()?;
   }, novalue => true);
 
-  DefParameterType!(Skip1Space, sub[gullet, _inner, _extra, state] {
-    gullet.skip_one_space(state)?;
+  DefParameterType!(Skip1Space, sub[_inner, _extra] {
+    gullet_mut!().skip_one_space()?;
   }, novalue => true);
 
   // Read the next token
-  DefParameterType!(Token, sub[gullet, _inner, _extra, state] {
-    match gullet.read_token(state)? {
+  DefParameterType!(Token, sub[_inner, _extra] {
+    match gullet_mut!().read_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
       None => {
         Error!("expected", "Token", gullet, "Paramater <Token> found None.");
@@ -216,23 +216,23 @@ LoadDefinitions!(state, {
   });
 
   // Read the next token, after expanding any expandable ones.
-  DefParameterType!(XToken, sub[gullet, _inner, _extra, state] {
-    if let Some(t) = gullet.read_x_token(None, false, state)? {
+  DefParameterType!(XToken, sub[_inner, _extra] {
+    if let Some(t) = gullet_mut!().read_x_token(None, false)? {
       Ok(ArgWrap::Token(t))
     } else {
-      Error!("expected","XToken", gullet,"Paramater <XToken> found None.");
+      Error!("expected","XToken", "Paramater <XToken> found None.");
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   });
 
   // Read a number
-  DefParameterType!(Number, sub[gullet, _inner, _extra, state] {
-    gullet.read_number(state)?
+  DefParameterType!(Number, sub[_inner, _extra] {
+    gullet.read_number()?
   });
 
   // Read a floating point number
-  DefParameterType!(Float, sub[gullet, _inner, _extra, state] {
-    gullet.read_float(state)?
+  DefParameterType!(Float, sub[_inner, _extra] {
+    gullet.read_float()?
   });
 
   // ??? DG: is this needed?
@@ -242,25 +242,25 @@ LoadDefinitions!(state, {
   //   return ($gullet->readFloat || Float(0)); }
 
   // Read a dimension
-  DefParameterType!(Dimension, sub[gullet, _inner, _extra, state] {
-    gullet.read_dimension(state)? });
+  DefParameterType!(Dimension, sub[_inner, _extra] {
+    gullet.read_dimension()? });
   // Read a Glue (aka skip)
-  DefParameterType!(Glue, sub[gullet, _inner, _extra, state] { gullet.read_glue(state)? });
+  DefParameterType!(Glue, sub[_inner, _extra] { gullet.read_glue()? });
   // Read a MuDimension (math)
-  DefParameterType!(MuDimension, sub[gullet, _inner, _extra, state] {
-    gullet.read_mu_dimension(state)? });
+  DefParameterType!(MuDimension, sub[_inner, _extra] {
+    gullet.read_mu_dimension()? });
   // Read a MuGlue (math)
-  DefParameterType!(MuGlue, sub[gullet, _inner, _extra, state] { gullet.read_mu_glue(state)? });
+  DefParameterType!(MuGlue, sub[_inner, _extra] { gullet.read_mu_glue()? });
 
   // Read until the next (balanced) open brace {
   // used for the last TeX-style delimited argument
-  DefParameterType!(UntilBrace, sub[gullet, _inner, _extra, state] {
-    gullet.read_until_brace(state)?.unwrap_or_default()
+  DefParameterType!(UntilBrace, sub[_inner, _extra] {
+    gullet.read_until_brace()?.unwrap_or_default()
   });
 
   // Yet another special case: Require a { but do not read it!!!
-  DefParameterType!(RequireBrace, sub[gullet, _inner, _extra, state] {
-    gullet.read_token(state)?.map(|tok| {
+  DefParameterType!(RequireBrace, sub[_inner, _extra] {
+    gullet.read_token()?.map(|tok| {
       gullet.unread_one(tok.clone());
       if tok.get_catcode() != Catcode::BEGIN {
         let err = || {Error!("expected","{", gullet,"Expected a {{ here."); Ok(())};
@@ -271,20 +271,20 @@ LoadDefinitions!(state, {
   },
   novalue => true);
 
-  DefParameterType!(XUntil, sub[gullet, _inner, untils, state] {
+  DefParameterType!(XUntil, sub[ _inner, untils] {
     // Make sure it's a single token!!!
     let until : Token = untils.first().expect("XUntil needs a token Extra.").into();
     let mut tokens : Vec<Token> = Vec::new();
-    while let Some(token) = gullet.read_x_token(Some(false), false, state)? {
+    while let Some(token) = gullet.read_x_token(Some(false), false)? {
       if token == until {
         break;
       } else if token.get_catcode() == Catcode::BEGIN {
         tokens.push(token);
-        tokens.extend(gullet.read_balanced(false, state)?.unwrap_or_default().unlist());
+        tokens.extend(gullet.read_balanced(false)?.unwrap_or_default().unlist());
         tokens.push(T_END!());
-      } else if let Some(defn) = state.lookup_definition_stored(&token)? {
-        let args = defn.read_arguments(gullet, state)?;
-        tokens.extend(Invocation!(token, args, gullet, state)?.unlist());
+      } else if let Some(defn) = state!().lookup_definition_stored(&token)? {
+        let args = defn.read_arguments()?;
+        tokens.extend(Invocation!(token, args)?.unlist());
       } else {
         tokens.push(token);
       }
@@ -295,10 +295,10 @@ LoadDefinitions!(state, {
   // This is sorta like readbalanced, but expands as it goes.
   // This appears to be needed by certain primitives (eg. \noalign ?)
   // and maybe what we should be using for some Digested ??
-  DefParameterType!(Expanded, sub[gullet, _inner, _untils, state] {
-    if let Some(token) = gullet.read_x_token(Some(false), false, state)? {
+  DefParameterType!(Expanded, sub[ _inner, _untils] {
+    if let Some(token) = gullet.read_x_token(Some(false), false)? {
       if token.get_catcode() == Catcode::BEGIN {
-        gullet.read_balanced(true, state)?.unwrap_or_default().without_dont_expand()
+        gullet.read_balanced(true)?.unwrap_or_default().without_dont_expand()
       } else {
         Tokens!(token)
       }
@@ -308,14 +308,14 @@ LoadDefinitions!(state, {
       Tokens!()
     }
   },
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  reversion => sub[arg, _inner, _extra] {
     let mut tks = vec![T_BEGIN!()];
     tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
     tks.push(T_END!());
     Ok(Tokens::new(tks))
   });
 
-  // Set state.smuggle_the=true whenever you want to handle special TeX neutralization of
+  // Set state::smuggle_the=true whenever you want to handle special TeX neutralization of
   // tokens created by \the-like primitives.
   //
   // IMPORTANTLY, call packParameters early on the tokens read from the Gullet
@@ -323,11 +323,11 @@ LoadDefinitions!(state, {
   //
   // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a
   // new one.
-  DefParameterType!(DefExpanded, sub[gullet, _inner, _extra, state] {
-      state.set_smuggle_the(true);
-      let expanded = if let Some(token) = gullet.read_x_token(None, false, state)? {
+  DefParameterType!(DefExpanded, sub[_inner, _extra] {
+      state_mut!().set_smuggle_the(true);
+      let expanded = if let Some(token) = gullet.read_x_token(None, false)? {
         if token.get_catcode() == Catcode::BEGIN {
-          gullet.read_balanced(true, state)?.unwrap_or_default()
+          gullet.read_balanced(true)?.unwrap_or_default()
         } else {
           Tokens!(token)
         }
@@ -335,44 +335,44 @@ LoadDefinitions!(state, {
         Error!("Expected", "DefExpanded", gullet, "Expected <DefExpanded> here");
         Tokens!()
       };
-      state.expire_smuggle_the();
+      state_mut!().expire_smuggle_the();
       Ok(expanded)
     },
     pack_parameters => true,
-    reversion      => sub[gullet, arg, _inner, _extra, _state] {
+    reversion      => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }
   );
 
   // Read a matching keyword, eg. Match:=
-  DefParameterType!(Match, sub[gullet, _inner, extra, state] {
+  DefParameterType!(Match, sub[ _inner, extra] {
     let extra_refs = extra.iter().collect::<Vec<&Tokens>>();
-    gullet.read_match(&extra_refs, state)?.unwrap_or_default()
+    gullet.read_match(&extra_refs)?.unwrap_or_default()
   });
 
   // Read a keyword; eg. Keyword:to
   // (like Match, but ignores catcodes)
-  DefParameterType!(Keyword, sub[gullet, _inner, extra, state] {
+  DefParameterType!(Keyword, sub[ _inner, extra] {
     let extra_string : String = extra.iter().map(ToString::to_string)
       .collect::<Vec<String>>().join("");
     Ok(
-      gullet.read_keyword(&[&extra_string], state)?.map(|t| Tokens!(T_OTHER!(t)))
+      gullet.read_keyword(&[&extra_string])?.map(|t| Tokens!(T_OTHER!(t)))
         .unwrap_or_default()
     )
   });
 
   // Read balanced material (?)
-  DefParameterType!(Balanced, sub[gullet, _inner, _extra, state] {
-    gullet.read_balanced(false, state)
+  DefParameterType!(Balanced, sub[_inner, _extra] {
+    gullet.read_balanced(false)
   });
 
   // Read a Semiverbatim argument; ie w/ most catcodes neutralized.
   DefParameterType!(Semiverbatim,
-    sub[gullet, _inner, _extra, state] { gullet.read_arg(state) },
-    reversion => sub[gullet, arg, inner, _extra, state] {
+    sub[_inner, _extra] { gullet.read_arg() },
+    reversion => sub[ arg, inner, _extra] {
       // let mut reverted_inner;
       let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
       read_tokens.extend(if let Some(inner_ps) = inner {
-        inner_ps.revert_arguments(vec![Some(Tokens::new(arg))], state)?
+        inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
       } else {
         arg.iter().map(|t| t.clone().revert()).collect()
       });
@@ -383,10 +383,10 @@ LoadDefinitions!(state, {
 
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!(OptionalSemiverbatim,
-    sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
+    sub[_inner, _extra] { gullet.read_optional(None) },
     semiverbatim => Some(Vec::new()),
     optional => true,
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
      if !arg.is_empty() {
        let mut read_tokens = vec![T_OTHER!(s!("["))];
        read_tokens.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
@@ -400,21 +400,21 @@ LoadDefinitions!(state, {
 
   // Be careful here: if % appears before the initial {, it's still a comment!
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
-  DefParameterType!(Verbatim, sub[gullet, _inner, _extra, state] {
-      gullet.read_until(&Tokens!(T_BEGIN!()), state)?;
-      state.begin_semiverbatim(Some(&['%', '\\']));
-      let arg = gullet.read_balanced(false, state)?;
-      state.end_semiverbatim()?;
+  DefParameterType!(Verbatim, sub[_inner, _extra] {
+      gullet.read_until(&Tokens!(T_BEGIN!()))?;
+      state_mut!().begin_semiverbatim(Some(&['%', '\\']));
+      let arg = gullet.read_balanced(false)?;
+      state_mut!().end_semiverbatim()?;
       Ok(arg)
     },
-    before_digest => sub[stomach, state] {
-      stomach.bgroup(state);
-      MergeFont!(family => "typewriter", state);
+    before_digest => sub[stomach] {
+      stomach.bgroup();
+      MergeFont!(family => "typewriter");
     },
-    after_digest => sub[stomach, _args, state] {
-      stomach.egroup(state)?;
+    after_digest => sub[ _args] {
+      stomach.egroup()?;
     },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
       reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
       reverted.push(T_END!());
@@ -423,29 +423,29 @@ LoadDefinitions!(state, {
   );
 
   // Read Verbatim, but allows expanding command sequences
-  DefParameterType!(HyperVerbatim, sub[gullet, _inner, _extra, state] {
-      gullet.read_until(&Tokens!(T_BEGIN!()), state)?;
-      state.begin_semiverbatim(Some(&['%']));
+  DefParameterType!(HyperVerbatim, sub[_inner, _extra] {
+      gullet.read_until(&Tokens!(T_BEGIN!()))?;
+      state_mut!().begin_semiverbatim(Some(&['%']));
       DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
-      state.let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None, gullet);
+      state_mut!().let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
       DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
-      state.let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None, gullet);
-      state.let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None, gullet);
-      state.let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None, gullet);
+      state_mut!().let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
+      state_mut!().let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+      state_mut!().let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       // Having prepared, read in the argument, expanding as we go
-      let arg = gullet.read_balanced(true, state)?;
-      state.end_semiverbatim()?;
+      let arg = gullet.read_balanced(true)?;
+      state_mut!().end_semiverbatim()?;
       arg
     },
-    before_digest => sub[stomach, state] {
-      stomach.bgroup(state);
-      MergeFont!(family => "typewriter", state); },
-    after_digest => sub[stomach, _args, state] {
-      stomach.egroup(state)?; },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    before_digest => sub[stomach] {
+      stomach.bgroup();
+      MergeFont!(family => "typewriter"); },
+    after_digest => sub[ _args] {
+      stomach.egroup()?; },
+    reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
       reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
       reverted.push(T_END!());
@@ -453,9 +453,9 @@ LoadDefinitions!(state, {
     }
   );
   // Read an argument that will not be digested.
-  DefParameterType!(Undigested, sub[gullet, _inner, _extra, state] { gullet.read_arg(state)},
-  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) }
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  DefParameterType!(Undigested, sub[_inner, _extra] { gullet.read_arg()},
+  predigest => sub[arg]{ Ok(arg.undigested()) }
+  reversion => sub[arg, _inner, _extra] {
     if arg.is_empty() {
       Ok(Tokens!())
     } else {
@@ -468,10 +468,10 @@ LoadDefinitions!(state, {
 
   // Read a LaTeX-style optional argument (ie. in []), but it will not be digested.
   DefParameterType!(OptionalUndigested,
-    sub[gullet, _inner, _extra, state] { gullet.read_optional(None, state) },
-    predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) }
+    sub[_inner, _extra] { gullet.read_optional(None) },
+    predigest => sub[arg]{ Ok(arg.undigested()) }
     optional => true,
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
       if arg.is_empty() {
         Ok(Tokens!())
       } else {
@@ -483,21 +483,21 @@ LoadDefinitions!(state, {
   });
 
   // Read a keyword value (KeyVals), that will not be digested.
-  DefParameterType!(UndigestedKey, sub[gullet, _inner, _extra, state] {
-    gullet.read_arg(state) },
-  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) });
-  DefParameterType!(UndigestedDefKey, sub[gullet, _inner, _extra, state] {
-    gullet.read_arg(state) },
+  DefParameterType!(UndigestedKey, sub[_inner, _extra] {
+    gullet.read_arg() },
+  predigest => sub[arg]{ Ok(arg.undigested()) });
+  DefParameterType!(UndigestedDefKey, sub[_inner, _extra] {
+    gullet.read_arg() },
   pack_parameters => true,
-  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) });
+  predigest => sub[arg]{ Ok(arg.undigested()) });
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
-  DefParameterType!(DefToken, sub[gullet, _inner, _extra, state] {
-    let mut token = gullet.read_token(state)?;
+  DefParameterType!(DefToken, sub[_inner, _extra] {
+    let mut token = gullet.read_token()?;
     let space_token = T_SPACE!();
 
     while token.is_some() && token.as_ref().unwrap().get_catcode() == Catcode::BEGIN {
-      let mut toks : Vec<Token> = gullet.read_balanced(false, state)?
+      let mut toks : Vec<Token> = gullet.read_balanced(false)?
         .unwrap_or_default().unlist().into_iter().filter(|t| *t != space_token).collect();
       if !toks.is_empty() {
         token = Some(toks.remove(0));
@@ -517,21 +517,21 @@ LoadDefinitions!(state, {
       }
     }
   },
-  predigest => sub[_stomach,arg,_state] { Ok(arg.undigested()) });
+  predigest => sub[arg]{ Ok(arg.undigested()) });
 
   // Stub register for misdefinitions, to avoid a cascade of Errors.
   DefRegister!("\\lx@DUMMY@REGISTER", Tokens!());
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
-  DefParameterType!(Variable, sub[gullet, _inner, _extra, state] {
-    let token_opt = gullet.read_x_token(None, false, state)?;
+  DefParameterType!(Variable, sub[_inner, _extra] {
+    let token_opt = gullet.read_x_token(None, false)?;
     let defn_opt = match token_opt {
-      Some(ref token) => state.lookup_register_definition(token),
+      Some(ref token) => state_mut!().lookup_register_definition(token),
       None => None
     };
     if let Some(defn) = defn_opt {
         if defn.is_register() && !defn.is_readonly() {
-          let args = defn.read_arguments(gullet, state)?;
+          let args = defn.read_arguments()?;
           // TODO: What is this datatype ?
           // How does it fit the rtx typed interfaces for parameter types?
           // An extension seems required, also due to the Register parameter type right under.
@@ -539,16 +539,16 @@ LoadDefinitions!(state, {
           Ok(ArgWrap::RegisterDefinition(Box::new((token_opt.unwrap(), args))))
         } else {
           let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
-          Error!("expected","<variable>", gullet,message);
+          Error!("expected","<variable>", message);
           Ok(ArgWrap::Tokens(Tokens!()))
         }
     } else {
       let message = s!("A <variable> was supposed to be here\n Got {:?}", token_opt);
-      Error!("expected","<variable>", gullet,message);
+      Error!("expected","<variable>", message);
       Ok(ArgWrap::Tokens(Tokens!()))
     }
   },
-  reversion => sub[gullet,args, _inner, _extra, _state] {
+  reversion => sub[args, _inner, _extra] {
     let _defn = args.remove(0);
     // my ($defn, @args) = @$var;
     unimplemented!()
@@ -564,23 +564,23 @@ LoadDefinitions!(state, {
   });
 
   // Same, but not necessarily writable
-  DefParameterType!(Register, sub[gullet, _inner, _extra, state] {
-    let token = gullet.read_x_token(None, false, state)?;
+  DefParameterType!(Register, sub[_inner, _extra] {
+    let token = gullet.read_x_token(None, false)?;
     let defn = match token {
       None => None,
-      Some(ref t) => state.lookup_register_definition(t)
+      Some(ref t) => state_mut!().lookup_register_definition(t)
     };
     match defn {
       Some(register) => {
-        let args = register.read_arguments(gullet, state)?;
+        let args = register.read_arguments()?;
         Ok(ArgWrap::RegisterDefinition(Box::new((token.unwrap(), args))))
       },
       None => {
         let message = s!("A <register> was supposed to be here. Got {:?}", token);
-        Error!("expected","<register>", gullet,message);
+        Error!("expected","<register>", message);
         if let Some(t) = token {
-          if is_definable(&t, state) {
-            def_register(t, None, Tokens!(), None, state)?;
+          if is_definable(&t) {
+            def_register(t, None, Tokens!(), None)?;
           }
         }
         Ok(ArgWrap::Tokens(Tokens!()))
@@ -588,7 +588,7 @@ LoadDefinitions!(state, {
     }
   },
   // TODO: If we want to revert "arg" in an honest manner, it needs to be an ArgWrap type.
-  reversion => sub[gullet, _arg, _inner, _extra, _state] {
+  reversion => sub[_arg, _inner, _extra] {
     // my ($var) = @_;
     // my ($defn, @args) = @$var;
     // my $params = $defn->getParameters;
@@ -596,12 +596,12 @@ LoadDefinitions!(state, {
     Ok(Tokens!())
   });
 
-  DefParameterType!(TeXFileName, sub[gullet, _inner, _extra, state] {
+  DefParameterType!(TeXFileName, sub[_inner, _extra] {
     use Catcode::*;
     let mut tokens = Vec::new();
     let mut token_opt;
     loop {
-      token_opt = gullet.read_x_token(Some(false), false, state)?;
+      token_opt = gullet.read_x_token(Some(false), false)?;
       if let Some(ref token) = token_opt {
         if matches!(token.get_catcode(), SPACE | EOL | COMMENT | CS) {
           break
@@ -628,12 +628,12 @@ LoadDefinitions!(state, {
     tokens
   });
 
-  DefPrimitive!("\\ltx@loadpool {}", sub[stomach,(name),state] {
+  DefPrimitive!("\\ltx@loadpool {}", sub[(name)] {
     LoadPool!(&name.to_string());
   });
 
   // A LaTeX style directory List
-  DefParameterType!(DirectoryList, sub[_gullet, _inner, _extra, _state] {
+  DefParameterType!(DirectoryList, sub[__inner, _extra] {
       // my ($gullet) = @_;
       // $gullet->skipSpaces;
       // if ($gullet->ifNext(T_BEGIN)) {
@@ -663,16 +663,16 @@ LoadDefinitions!(state, {
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
   // Hopefully there are no issues with the box being digested
   // as part of the reader???
-  DefParameterType!(MoveableBox, sub[gullet, _inner, _extra, state] {
-    gullet.skip_spaces(state)?;
-    if let Some(xtoken) = gullet.read_x_token(None, false, state)? {
+  DefParameterType!(MoveableBox, sub[_inner, _extra] {
+    gullet.skip_spaces()?;
+    if let Some(xtoken) = gullet.read_x_token(None, false)? {
       Tokens!(xtoken)
     } else {
       Tokens!()
     }
-  }, predigest => sub[stomach, arg, state] {
+  }, predigest => sub[ arg] {
     let token = arg.unlist().remove(0);
-    let mut stuff = stomach.invoke_token(&token, state)?;
+    let mut stuff = stomach.invoke_token(&token)?;
     if !stuff.is_empty() {
       let tbox = stuff.remove(0);
       let csname = match tbox.data() {
@@ -696,14 +696,14 @@ LoadDefinitions!(state, {
 
   // Read a parenthesis delimited argument.
   // Note that this does NOT balance () within the argument.
-  DefParameterType!(BalancedParen, sub[gullet, _inner, _extra, state] {
-    let tok_opt = gullet.read_x_token(None,false,state)?;
+  DefParameterType!(BalancedParen, sub[_inner, _extra] {
+    let tok_opt = gullet.read_x_token(None,false)?;
     let is_paren = match tok_opt {
       Some(ref t) => t.with_str(|ts| ts == "("),
       _ => false
     };
     if is_paren {
-      gullet.read_until(&Tokens!(T_OTHER!(")")), state).map(Some)
+      gullet.read_until(&Tokens!(T_OTHER!(")"))).map(Some)
     } else {
       if let Some(tok) = tok_opt {
         gullet.unread_one(tok);
@@ -711,7 +711,7 @@ LoadDefinitions!(state, {
       Ok(None)
     }
   },
-  reversion => sub[gullet, args, _inner, _extra, _state] {
+  reversion => sub[ args, _inner, _extra] {
     Ok(Tokens!(
       T_OTHER!("("), Tokens::new(args).revert(), T_OTHER!(")")
     ))
@@ -725,16 +725,16 @@ LoadDefinitions!(state, {
   // It is useful when the content would usually need to have been \protect'd
   // in order to correctly deal with catcodes.
   // BEWARE: This is NOT a shorthand for a simple digested {}!
-  DefParameterType!(Digested, sub[gullet, _inner, _extra, state] {
-      gullet.skip_spaces(state)?;
+  DefParameterType!(Digested, sub[_inner, _extra] {
+      gullet.skip_spaces()?;
       Ok(Tokens!())
     },
-    predigest => sub[stomach, _arg, state] {
-      let ismath = state.lookup_bool("IN_MATH");
+    predigest => sub[ _arg] {
+      let ismath = state!().lookup_bool("IN_MATH");
       let mut list = Vec::new();
       let mut next_token = None;
-      let gullet = stomach.get_gullet_mut();
-      while let Some(token) = gullet.read_x_token(Some(false), false ,state)? {
+      let gullet = gullet_mut!();
+      while let Some(token) = gullet.read_x_token(Some(false), false )? {
         let is_last = token.get_catcode() != Catcode::SPACE && token != T_RELAX!();
         next_token = Some(token);
         if is_last {
@@ -744,11 +744,11 @@ LoadDefinitions!(state, {
 
       if let Some(token) = next_token {
         if token.get_catcode() == Catcode::BEGIN {
-          stomach.digest(token, state)?;
-          list.extend(stomach.digest_next_body(None, state)?);
+          stomach::digest(token)?;
+          list.extend(stomach::digest_next_body(None)?);
           list.pop();
         } else {
-          list = stomach.invoke_token(&token, state)?;
+          list = stomach.invoke_token(&token)?;
         }
       }
 
@@ -756,27 +756,27 @@ LoadDefinitions!(state, {
       let mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
       List { boxes:list,  mode, ..List::default() }
     },
-    reversion => sub[gullet,args,_inner,_extra,_state] {
+    reversion => sub[args,_inner,_extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
   );
 
   // A variation: Digest until we encounter a given token!
-  DefParameterType!(DigestUntil, sub[gullet, _inner, _untils, state] {
-      gullet.skip_spaces(state)?;
+  DefParameterType!(DigestUntil, sub[ _inner, _untils] {
+      gullet.skip_spaces()?;
       Ok(Tokens!())
     },
     // TODO: To implement this natively, we need "untils" i.e.
     // "extra" passed into "predigest" as well.
-    predigest => sub[_stomach, _arg, _state] {
+    predigest => sub[_arg] {
       unimplemented!();
-      //   let ismath = state.lookup_bool("IN_MATH");
-      //   stomach.digest_next_body(Some(until), state)?
-    //   my @list   = $STATE->getStomach->digestNextBody($until);
+      //   let ismath = state!().lookup_bool("IN_MATH");
+      //   stomach::digest_next_body(Some(until))?
+    //   my @list   = $state::>getStomach->digestNextBody($until);
     //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
     //   List(@list, mode => ($ismath ? 'math' : 'text'));
       _arg.undigested()
     },
-    reversion => sub[gullet,args,_inner,_extra,_state] {
+    reversion => sub[args,_inner,_extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
   );
 
@@ -785,15 +785,15 @@ LoadDefinitions!(state, {
   // particularly alignments (which may or may not be actual environments),
   // but which need special treatment of some of their content
   // as the expansion is carried out.
-  DefParameterType!(DigestedBody, sub[_gullet, _inner, _extra, _state] {
+  DefParameterType!(DigestedBody, sub[__inner, _extra] {
       Ok(Tokens!()) // all done in predigestion
     },
-    predigest => sub[stomach, _arg, state] {
-      let ismath   = state.lookup_bool("IN_MATH");
-      let mut list     = stomach.digest_next_body(None, state)?;
+    predigest => sub[_arg] {
+      let ismath   = state!().lookup_bool("IN_MATH");
+      let mut list     = stomach::digest_next_body(None)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
       list.retain(|tbox| !tbox.is_comment());
-      let mut digested = List::new(list, state);
+      let mut digested = List::new(list);
       digested.mode = if ismath { Some(TexMode::Math) } else { Some(TexMode::Text) };
       digested
     }
@@ -814,7 +814,7 @@ LoadDefinitions!(state, {
   ////   my($gullet,$unit)=@_;
 
   // CommaList expects something like {balancedstuff,...}
-  DefParameterType!(CommaList, sub[_gullet, _inner, _extra, _state] {
+  DefParameterType!(CommaList, sub[__inner, _extra] {
       // my ($gullet, $type) = @_;
       // my $typedef = $type &&
       //       LaTeXML::Package::parseParameters(ToString($type), "CommaList")->[0];
@@ -889,40 +889,40 @@ LoadDefinitions!(state, {
 
   pub fn required_key_vals(
     star:bool, plus:bool, keysets: Option<&Parameters>,
-    gullet:&mut Gullet, state:&mut State) -> Result<KeyVals> {
-    if gullet.if_next(&T_BEGIN!(), state)? {
+    gullet:&mut Gullet) -> Result<KeyVals> {
+    if gullet.if_next(&T_BEGIN!())? {
       keyvals_aux(gullet, Some(T_END!()), KVSpec {
         star, plus,
         keysets: vec![keysets.cloned()],
         ..KVSpec::default()
-      }, state)
+      })
     } else {
       Error!("Expected","{", gullet, "Missing keyval arguments");
       Ok(KeyVals::default())
     }
   }
 
-  DefParameterType!(RequiredKeyVals, sub[gullet, inner, _extra, state] {
-      required_key_vals(false, false, inner, gullet, state)
+  DefParameterType!(RequiredKeyVals, sub[ inner, _extra] {
+      required_key_vals(false, false, inner)
     },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsStar, sub[gullet, inner, _extra, state] {
-      required_key_vals(true, false, inner, gullet, state)
+  DefParameterType!(RequiredKeyValsStar, sub[ inner, _extra] {
+      required_key_vals(true, false, inner)
     },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsPlus, sub[gullet, inner, _extra, state] {
-      required_key_vals(false, true, inner, gullet, state)
+  DefParameterType!(RequiredKeyValsPlus, sub[ inner, _extra] {
+      required_key_vals(false, true, inner)
     },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
-  DefParameterType!(RequiredKeyValsStarPlus, sub[gullet, inner, _extra, state] {
-      required_key_vals(true, true, inner, gullet, state)
-    }, reversion => sub[gullet, arg, _inner, _extra, _state] {
+  DefParameterType!(RequiredKeyValsStarPlus, sub[ inner, _extra] {
+      required_key_vals(true, true, inner)
+    }, reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
 
@@ -930,10 +930,9 @@ LoadDefinitions!(state, {
     star: bool,
     plus: bool,
     keysets: Option<&Parameters>,
-    gullet: &mut Gullet,
-    state: &mut State,
+
   ) -> Result<Option<KeyVals>> {
-    if gullet.if_next(&T_OTHER!("["), state)? {
+    if gullet.if_next(&T_OTHER!("["))? {
       let kvs: KeyVals = keyvals_aux(
         gullet,
         Some(T_OTHER!("]")),
@@ -943,52 +942,51 @@ LoadDefinitions!(state, {
           keysets: vec![keysets.cloned()], // TODO: Revisit carefully
           ..KVSpec::default()
         },
-        state,
-      )?;
+          )?;
       Ok(Some(kvs))
     } else {
       Ok(None)
     }
   }
 
-  DefParameterType!(OptionalKeyVals, sub[gullet, inner, _extra, state] {
-    optional_key_vals(false, false, inner, gullet, state)
+  DefParameterType!(OptionalKeyVals, sub[ inner, _extra] {
+    optional_key_vals(false, false, inner)
   }, optional=>true,
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsStar, sub[gullet, inner, _extra, state] {
-    optional_key_vals(true, false, inner, gullet, state)
+  DefParameterType!(OptionalKeyValsStar, sub[ inner, _extra] {
+    optional_key_vals(true, false, inner)
   }, optional=>true,
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsPlus, sub[gullet, inner, _extra, state] {
-    optional_key_vals(false, true, inner, gullet, state)
+  DefParameterType!(OptionalKeyValsPlus, sub[ inner, _extra] {
+    optional_key_vals(false, true, inner)
   }, optional=>true,
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
-  DefParameterType!(OptionalKeyValsPlusStar, sub[gullet, inner, _extra, state] {
-    optional_key_vals(true, true, inner, gullet, state)
+  DefParameterType!(OptionalKeyValsPlusStar, sub[ inner, _extra] {
+    optional_key_vals(true, true, inner)
   }, optional=>true,
-  reversion => sub[gullet, arg, _inner, _extra, _state] {
+  reversion => sub[arg, _inner, _extra] {
     Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
   });
 
   // Not sure that this is the most elegant solution, but...
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
-  DefParameterType!(DisplayStyle, sub[gullet, _inner, _extra, state] { gullet.read_arg(state) },
-    before_digest => sub[stomach,state] {
-      stomach.bgroup(state);
+  DefParameterType!(DisplayStyle, sub[_inner, _extra] { gullet.read_arg() },
+    before_digest => sub[stomach] {
+      stomach.bgroup();
       MergeFont!(mathstyle => "display");
     },
-    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    after_digest => sub[_args] { stomach.egroup()?; },
+    reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
   // TODO: Add when needed
-  // DefParameterType!(TextStyle, sub[gullet, inner, _extra, state] {
+  // DefParameterType!(TextStyle, sub[ inner, _extra] {
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -996,7 +994,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(ScriptStyle, sub[gullet, inner, _extra, state] {
+  // DefParameterType!(ScriptStyle, sub[ inner, _extra] {
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -1004,7 +1002,7 @@ LoadDefinitions!(state, {
   //   afterDigest => sub {
   //     $_[0]->egroup; },
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
-  // DefParameterType!(ScriptscriptStyle, sub[gullet, inner, _extra, state] {
+  // DefParameterType!(ScriptscriptStyle, sub[ inner, _extra] {
   //     $_[0]->readArg; },
   //   beforeDigest => sub {
   //     $_[0]->bgroup;
@@ -1014,31 +1012,31 @@ LoadDefinitions!(state, {
   //   reversion => sub { (T_BEGIN, Revert($_[0]), T_END); });
   // # Perverse naming convention: not script style, but in the style of a script relative to
   // current.
-  DefParameterType!(InScriptStyle, sub[gullet, _inner, _extra, state] {
-      gullet.read_arg(state) },
-    before_digest => sub[stomach,state] {
-      stomach.bgroup(state);
+  DefParameterType!(InScriptStyle, sub[_inner, _extra] {
+      gullet.read_arg() },
+    before_digest => sub[stomach] {
+      stomach.bgroup();
       MergeFont!(scripted => true);
     },
-    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
-    reversion => sub[gullet, arg, _inner, _extra, _state] {
+    after_digest => sub[_args] { stomach.egroup()?; },
+    reversion => sub[arg, _inner, _extra] {
         Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
   // # NOTE: the various parameter features don't combine easily!!
   // # I need a ScriptStyleUntil for \root!!!
   // # I also need to redo fractions using these new types....
-  DefParameterType!(OptionalInScriptStyle, sub[gullet, _inner, _extra, state] {
-      gullet.read_optional(None, state)
+  DefParameterType!(OptionalInScriptStyle, sub[_inner, _extra] {
+      gullet.read_optional(None)
     },
-    before_digest => sub[stomach,state] {
-      stomach.bgroup(state);
+    before_digest => sub[stomach] {
+      stomach.bgroup();
       MergeFont!(scripted => true);
     },
-    after_digest => sub[stomach,_args,state] {
-      stomach.egroup(state)?;
+    after_digest => sub[_args] {
+      stomach.egroup()?;
     },
     optional => true,
-    reversion => sub[_gullet,arg,_inner,_extra,_state] {
+    reversion => sub[arg,_inner,_extra] {
       if arg.is_empty() { Ok(Tokens!()) }
       else {
         let mut tks = vec![T_OTHER!("[")];
@@ -1047,17 +1045,17 @@ LoadDefinitions!(state, {
         Ok(Tokens::new(tks))
       }
     });
-  DefParameterType!(InFractionStyle, sub[gullet, _inner, _extra, state] {
-      gullet.read_arg(state)
+  DefParameterType!(InFractionStyle, sub[_inner, _extra] {
+      gullet.read_arg()
     },
-    before_digest => sub[stomach,state] {
-      stomach.bgroup(state);
+    before_digest => sub[stomach] {
+      stomach.bgroup();
       MergeFont!(fraction => true);
     },
-    after_digest => sub[stomach,_args,state] {
-      stomach.egroup(state)?;
+    after_digest => sub[_args] {
+      stomach.egroup()?;
     },
-    reversion => sub[_gullet,arg,_inner,_extra,_state] {
+    reversion => sub[arg,_inner,_extra] {
       let mut reverted = vec![T_BEGIN!()];
       reverted.extend(arg.into_iter().map(Token::revert));
       reverted.push(T_END!());
@@ -1069,12 +1067,12 @@ LoadDefinitions!(state, {
   // so let's get that squared away at the outset; it's useful for TeX, too!
   // Naturally, it uses \csname to check, which ends up DEFINING the possibly undefined macro as
   // \relax
-  DefMacro!("\\@ifundefined{}{}{}", sub[gullet, (name, if_token, else_token), inner_state] {
-    let cs = T_CS!(s!("\\{}", Expand!(name,gullet).to_string()));
-    if IsDefined!(&cs, inner_state) {
+  DefMacro!("\\@ifundefined{}{}{}", sub[(name, if_token, else_token)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    if IsDefined!(&cs) {
       Ok(else_token)
     } else {
-      inner_state.let_i(&cs, &T_RELAX!(), None, gullet); // Yuck, but traditional!
+      state_mut!().let_i(&cs, &T_RELAX!(), None); // Yuck, but traditional!
       Ok(if_token)
     }
   });

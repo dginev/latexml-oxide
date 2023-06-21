@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B. p. 362
 
@@ -46,7 +46,7 @@ LoadDefinitions!(state, {
   //     Let("\\\\", '\@alignment@newline');
   // });
 
-  DefPrimitive!("\\lx@end@gen@matrix", sub[stomach,_args,state] { stomach.egroup(state)?; });
+  DefPrimitive!("\\lx@end@gen@matrix", sub[_args] { stomach.egroup()?; });
 
   DefMacro!("\\lx@gen@plain@matrix{}{}",
     "\\lx@gen@matrix@bindings{#1}\
@@ -176,7 +176,7 @@ LoadDefinitions!(state, {
     "\\lx@gen@cases@bindings{#1}\
       \\lx@gen@plain@cases@{#1}{\\@start@alignment#2\\@finish@alignment}
       \\lx@end@gen@cases");
-  DefPrimitive!("\\lx@end@gen@cases", sub[stomach,_args,state] { stomach.egroup(state)?; });
+  DefPrimitive!("\\lx@end@gen@cases", sub[_args] { stomach.egroup()?; });
 
   // The logical structure for cases extracts the columns of the alignment
   // to give alternating value,condition (an empty condition is replaced by "otherwise" !?!?!)

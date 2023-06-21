@@ -15,18 +15,16 @@ use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 use rtx_core::stomach::Stomach;
 use rtx_package::package;
 
 fn digestion_tests_dispatch(
   filename: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Option<Result<()>> {
+  ) -> Option<Result<()>> {
   match filename {
-    "rebox.tex" => Some(helpers::rebox_tex::load_definitions(stomach, state)),
-    other => package::dispatch(other, stomach, state),
+    "rebox.tex" => Some(helpers::rebox_tex::load_definitions(stomach)),
+    other => package::dispatch(other),
   }
 }
 

@@ -1,6 +1,6 @@
 use crate::common::error::*;
 use crate::document::Document;
-use crate::state::{Scope, State};
+use crate::state::{Scope};
 use crate::tokens::Tokens;
 use libxml::tree::Node;
 use std::collections::VecDeque;
@@ -8,7 +8,7 @@ use std::fmt;
 use std::rc::Rc;
 
 pub type RewriteReplaceClosure =
-  Rc<dyn Fn(&mut Document, Vec<&mut Node>, &mut State) -> Result<()>>;
+  Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 
 // ======================================================================
 // Defining Rewrite rules that act on the DOM
@@ -217,11 +217,11 @@ impl Rewrite {
     }
   }
 
-  pub fn invoke(&mut self, document: &mut Document, root: &Node, state: &mut State) -> Result<()> {
+  pub fn invoke(&mut self, document: &mut Document, root: &Node) -> Result<()> {
     // Debug(('=' x 40)) if $LaTeXML::DEBUG{rewrite};
     // What goes into self.clauses ???
     let clauses = self.clauses.iter().collect();
-    self.apply_clause(document, root, 0, clauses, state)?;
+    self.apply_clause(document, root, 0, clauses)?;
     Ok(())
   }
   // Rewrite spec as input
@@ -251,7 +251,6 @@ impl Rewrite {
     tree: &Node,
     nmatched: usize,
     mut clauses: VecDeque<&RewriteClause>,
-    state: &mut State,
   ) -> Result<()> {
     use RewriteOperator::*;
     if let Some(RewriteClause {
@@ -264,7 +263,7 @@ impl Rewrite {
         Select => {
           // my ($xpath, $nnodes, @wilds) = @$pattern;
           if let RewritePattern::String(xpath) = pattern {
-            let matches = document.findnodes(xpath, Some(tree), state);
+            let matches = document.findnodes(xpath, Some(tree));
             // Debug("Rewrite selecting \"$xpath\" => " . scalar(@matches) . " matches") if
             // $LaTeXML::DEBUG{rewrite};
             for node in matches {
@@ -279,8 +278,7 @@ impl Rewrite {
                 &node,
                 self.options.select_count.unwrap_or(1),
                 clauses.clone(),
-                state,
-              )?;
+                          )?;
               // unmark_wildcards(node, w);
             }
           } else {
@@ -313,13 +311,13 @@ impl Rewrite {
             }
           }
           for rnode in replaced.iter() {
-            document.unrecord_node_ids(rnode, state);
+            document.unrecord_node_ids(rnode);
           }
           // Carry out the operation, inserting whatever nodes.
           document.set_node(&parent);
           let point_opt = parent.get_last_child();
           if let RewritePattern::Closure(closure) = pattern {
-            closure(document, replaced.iter_mut().collect(), state)?; // Carry out the insertion.
+            closure(document, replaced.iter_mut().collect())?; // Carry out the insertion.
           }
 
           // Now collect the newly inserted nodes for any needed patching
@@ -339,7 +337,7 @@ impl Rewrite {
 
           // Now make any adjustments to the new nodes
           for ins in inserted.iter() {
-            document.record_node_ids(ins, state)?;
+            document.record_node_ids(ins)?;
           }
           // TODO: Can we avoid this clone?
           let font = document.get_node_font(tree).clone();

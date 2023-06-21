@@ -22,15 +22,13 @@ use crate::common::arena::{
 use crate::common::error::*;
 use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
-use crate::common::model::Model;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
-use crate::state::State;
-use crate::TexMode;
+use crate::{state,state_mut,model,model_mut,TexMode};
 
 use crate::document::resource::Resource;
 use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
@@ -164,7 +162,6 @@ impl Document {
     &mut self,
     xpath: &str,
     node_opt: Option<&Node>,
-    state: &mut State,
   ) -> Vec<Node> {
     let node = match node_opt {
       Some(node) => Cow::Borrowed(node),
@@ -173,17 +170,17 @@ impl Document {
         None => return Vec::new(),
       },
     };
-    self.get_xpath(&state.model).findnodes(xpath, Some(&node))
+    self.get_xpath().findnodes(xpath, Some(&node))
   }
 
   /// Get an XPath context that knows about our namespace mappings.
-  pub fn get_xpath(&mut self, model: &Model) -> &mut XPath {
+  pub fn get_xpath(&mut self) -> &mut XPath {
     if let Some(ref mut ctxt) = self.context {
       ctxt
     } else {
       let mut context = XPath::new(&self.document, HashMap::default());
-      for (prefix, ns) in &model.code_namespaces {
-        // TODO: Is this too slow? We may need to store an active context in the State as an
+      for (prefix, ns) in &model!().code_namespaces {
+        // TODO: Is this too slow? We may need to store an active context in the state::as an
         // alternative
         arena::with(*prefix, |p_str| {
           arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
@@ -195,8 +192,8 @@ impl Document {
   }
 
   /// Like findnodes, but only returns the first matched node
-  pub fn findnode(&mut self, xpath: &str, node: Option<&Node>, state: &mut State) -> Option<Node> {
-    let mut nodes = self.get_xpath(&state.model).findnodes(xpath, node);
+  pub fn findnode(&mut self, xpath: &str, node: Option<&Node>) -> Option<Node> {
+    let mut nodes = self.get_xpath().findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {
@@ -209,30 +206,17 @@ impl Document {
     &mut self,
     xpath: &str,
     node_opt: Option<&Node>,
-    state: &mut State,
   ) -> Vec<String> {
     match node_opt {
-      Some(node) => self.get_xpath(&state.model).findvalues(xpath, Some(node)),
+      Some(node) => self.get_xpath().findvalues(xpath, Some(node)),
       None => {
         if let Some(root) = self.document.get_root_element() {
-          self.get_xpath(&state.model).findvalues(xpath, Some(&root))
+          self.get_xpath().findvalues(xpath, Some(&root))
         } else {
           Vec::new()
         }
       },
     }
-  }
-
-  /// Get the node's qualified name in standard form
-  /// Ie. using the registered prefix for that namespace.
-  /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-  /// NOTE: Should Deprecate! (use model)
-  pub fn get_node_qname(&self, node: &Node, state: &State) -> SymbolU32 {
-    state.model.get_node_qname(node)
-  }
-  pub fn with_node_qname<R, FnR>(&self, node: &Node, state: &State, caller: FnR) -> R
-  where FnR: FnOnce(&str) -> R {
-    state.model.with_node_qname(node, caller)
   }
 
   pub fn get_node(&self) -> &Node { &self.node }
@@ -246,12 +230,12 @@ impl Document {
   // outside world.  It resolves the fonts for each node relative to it's
   // ancestors. It removes the `helper' attributes that store fonts, source
   // box, etc.
-  pub fn finalize(&mut self, state: &mut State) -> Result<()> {
-    self.prune_xmduals(state)?;
+  pub fn finalize(&mut self) -> Result<()> {
+    self.prune_xmduals()?;
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
-      self.finalize_rec(&mut root, state)?;
-      if let Some(Stored::String(prefixes)) = state.lookup_value("RDFa_prefixes") {
+      self.finalize_rec(&mut root)?;
+      if let Some(Stored::String(prefixes)) = state!().lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes));
       }
       self.expire_local_font();
@@ -259,8 +243,8 @@ impl Document {
     Ok(())
   }
 
-  fn finalize_rec(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
-    let qname = state.model.get_node_qname(node);
+  fn finalize_rec(&mut self, node: &mut Node) -> Result<()> {
+    let qname = model!().get_node_qname(node);
     let local_font = self.get_local_font().unwrap();
     // _standalone_font is typically for metadata that gets extracted out of context
     let mut declared_font = if node.has_attribute("_standalone_font") {
@@ -293,7 +277,7 @@ impl Document {
         && !pending_declaration.is_empty()
       {
         for (key, (value, properties)) in &pending_declaration {
-          if state.model.can_have_attribute(qname, arena::pin(key)) {
+          if model!().can_have_attribute(qname, arena::pin(key)) {
             let key_sym = arena::pin(key);
             attrs_to_set.push((key_sym, arena::pin(value)));
             // Merge to set the font currently in effect
@@ -322,30 +306,30 @@ impl Document {
     }
     // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
     if qname != arena::pin_static("ltx:document")
-      && state.lookup_bool("GENERATE_IDS")
+      && state!().lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
       && arena::with(qname, |qname_str| {
-        self.can_have_attribute(qname_str, "xml:id", state)
+        can_have_attribute(qname_str, "xml:id")
       })
     {
-      self.generate_id(node, "", state)?;
+      self.generate_id(node, "")?;
     }
     self.set_local_font(Rc::new(declared_font.into_owned()));
     for mut child in node.get_child_nodes() {
       let child_type = child.get_type();
       if child_type == Some(NodeType::ElementNode) {
         let was_forcefont = child.has_attribute("_force_font");
-        self.finalize_rec(&mut child, state)?;
+        self.finalize_rec(&mut child)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (state.model.get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
+        if (model!().get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
           && !was_forcefont
           && child.get_attributes().is_empty()
         {
           let grandchildren = child.get_child_nodes();
           if grandchildren
             .iter()
-            .all(|gchild| self.can_contain_qsym(qname, state.model.get_node_qname(gchild), state))
+            .all(|gchild| can_contain_qsym(qname, model!().get_node_qname(gchild)))
           {
             Debug!(
               "will replace {} grandchildren nodes in finalize_rec",
@@ -361,20 +345,20 @@ impl Document {
         let mut keys_to_remove = Vec::new();
         // Remove any pending declarations that can't be on FONT_ELEMENT_NAME
         for key in pending_declaration.keys() {
-          if !self.can_have_attribute(FONT_ELEMENT_NAME, key, state) {
+          if !can_have_attribute(FONT_ELEMENT_NAME, key) {
             keys_to_remove.push(key.to_string());
           }
         }
         for key in keys_to_remove {
           pending_declaration.remove(&key);
         }
-        if self.can_contain(node, FONT_ELEMENT_NAME, state) && !pending_declaration.is_empty() {
+        if can_contain(node, FONT_ELEMENT_NAME) && !pending_declaration.is_empty() {
           // Too late to do wrapNodes?
-          if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child], state)? {
+          if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child])? {
             for (key, (value, _properties)) in &pending_declaration {
               self.set_attribute(&mut text, key, value)?;
             }
-            self.finalize_rec(&mut text, state)?; // Now have to clean up the new node!
+            self.finalize_rec(&mut text)?; // Now have to clean up the new node!
           }
         }
       }
@@ -412,7 +396,6 @@ impl Document {
     &mut self,
     object: &Digested,
     props_opt: Option<HashMap<String, Stored>>,
-    state: &mut State,
   ) -> Result<()> {
     use DigestedData::*;
     let props = props_opt.unwrap_or_default();
@@ -429,7 +412,7 @@ impl Document {
         TBox(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.borrow().be_absorbed(self, state)?;
+          digested.borrow().be_absorbed(self)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {
@@ -442,7 +425,7 @@ impl Document {
         Whatsit(ref digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          digested.borrow().be_absorbed(self, state)?;
+          digested.borrow().be_absorbed(self)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {
@@ -455,7 +438,7 @@ impl Document {
         Alignment(ref alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          alignment.borrow_mut().be_absorbed_mut(self, state)?;
+          alignment.borrow_mut().be_absorbed_mut(self)?;
           // record these for OUTER caller!
           // but return only the most recent set
           {
@@ -466,7 +449,7 @@ impl Document {
           self.expire_box_to_absorb();
         },
         Comment(ref comment) => {
-          comment.be_absorbed(self, state)?;
+          comment.be_absorbed(self)?;
         },
         Postponed(ref tokens) => {
           if !matches!(props.get("isMath"), Some(&Stored::Bool(true))) {
@@ -475,7 +458,7 @@ impl Document {
             } else {
               match self.box_to_absorb {
                 Some(ref thisbox) => thisbox
-                  .get_font(state)?
+                  .get_font()?
                   .map(|thisfont| Rc::new(thisfont.into_owned())),
                 None => None,
               }
@@ -483,7 +466,7 @@ impl Document {
             // TODO: Sometimes we can't find a `font` here. Should `open_text` allow a None font
             // arg?
             let text_font = text_font_opt.unwrap_or_default();
-            if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font, state)? {
+            if let Some(new_text) = self.open_text(&tokens.to_string(), &text_font)? {
               self.record_constructed_node(&new_text);
             }
           } else {
@@ -517,7 +500,6 @@ impl Document {
     &mut self,
     object: &str,
     props: &HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<Option<Node>> {
     // Else, plain string in text mode.
     let ismath: bool = match props.get("isMath") {
@@ -528,21 +510,21 @@ impl Document {
       let font: Font = match props.get("font") {
         Some(Stored::Font(fnt)) => (**fnt).clone(),
         Some(Stored::FontDirective(FontDirective::Asset(fnt))) => (**fnt).clone(),
-        Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None, state)?,
+        Some(Stored::FontDirective(FontDirective::Closure(code))) => code(None)?,
         _ => self
           .box_to_absorb
           .as_ref()
           .unwrap()
-          .get_font(state)?
+          .get_font()?
           .unwrap()
           .into_owned(),
       };
-      self.open_text(object, &font, state)
-    } else if self.get_node_qname(&self.node, state) == arena::pin_static(MATH_TOKEN_NAME) {
+      self.open_text(object, &font)
+    } else if get_node_qname(&self.node) == arena::pin_static(MATH_TOKEN_NAME) {
       // Or plain string in math mode.
       // Note text nodes can ONLY appear in <XMTok> or <text>!!!
       // Have we already opened an XMTok? Then insert into it.
-      Ok(Some(self.open_math_text_internal(object, state)?))
+      Ok(Some(self.open_math_text_internal(object)?))
     // Else create the XMTok now.
     } else {
       // Odd case: constructors that work in math & text can insert raw strings in Math mode.
@@ -550,7 +532,7 @@ impl Document {
         Some(Stored::Font(fnt)) => Some(Cow::Borrowed(&**fnt)),
         Some(Stored::FontDirective(FontDirective::Asset(fnt))) => Some(Cow::Borrowed(&**fnt)),
         Some(Stored::FontDirective(FontDirective::Closure(code))) => {
-          Some(Cow::Owned(code(None, state)?))
+          Some(Cow::Owned(code(None)?))
         },
         _ => None,
       };
@@ -559,15 +541,13 @@ impl Document {
           object,
           HashMap::default(),
           Some(&font_math),
-          state,
-        )?))
+              )?))
       } else {
         Ok(Some(self.insert_math_token(
           object,
           HashMap::default(),
           None,
-          state,
-        )?))
+              )?))
       }
     }
   }
@@ -579,14 +559,13 @@ impl Document {
     qname: &str,
     content: Vec<&Digested>,
     attrib: Option<HashMap<String, String>>,
-    state: &mut State,
   ) -> Result<Node> {
     // TODO: Quickly hacked together, needs a careful refactor with all .clone()
     // calls removed
-    let node = self.open_element(qname, attrib, None, state)?;
-    Debug!("Inserting element {:?} with body: {:?}", qname, content);
+    let node = self.open_element(qname, attrib, None)?;
+    // Debug!("Inserting element {:?} with body: {:?}", qname, content);
     for digested in content {
-      self.absorb(digested, None, state)?;
+      self.absorb(digested, None)?;
     }
 
     let self_node = self.node.get_parent().unwrap();
@@ -606,7 +585,7 @@ impl Document {
     // In obscure situations, `node` may have already gotten closed?
     // close it if it is still open.
     if (self.node == node) || (c.as_ref() == Some(&node)) {
-      self.close_element(qname, state)?;
+      self.close_element(qname)?;
     }
     Ok(node)
   }
@@ -654,17 +633,16 @@ impl Document {
     qname: &str,
     attributes: Option<HashMap<String, String>>,
     font_opt: Option<&Font>,
-    state: &mut State,
   ) -> Result<Node> {
     // NoteProgress('.') if (self.progress}++ % 25) == 0;
-    Debug!(
-      "Open element {:?} at {:?}",
-      qname,
-      self.get_node_qname(&self.node, state)
-    );
-    let mut point = self.find_insertion_point(qname, None, state)?;
+    // Debug!(
+    //   s!("Open element {:?} at {:?}",
+    //   qname,
+    //   self.with_node_qname(&self.node))
+    // );
+    let mut point = self.find_insertion_point(qname, None)?;
 
-    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned(), state)?;
+    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
     self.set_node(&newnode);
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -672,7 +650,7 @@ impl Document {
     // attributes externally via libxml.
     //
     // TODO: also accept a _box argument eventually? Or store differently?
-    // attributes.entry("_box").or_insert(state.locals.box);
+    // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
   }
@@ -682,18 +660,18 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
-  pub fn close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
+  pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
     Debug!(
       "Close element {:?} at {:?}",
       qname,
       self.document.node_to_string(&self.node)
     );
     let qsym = arena::pin(qname);
-    self.close_text_internal(state)?;
+    self.close_text_internal()?;
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
-      let t = state.model.get_node_qname(&node);
+      let t = model!().get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
       if t == qsym
@@ -701,7 +679,7 @@ impl Document {
       {
         break;
       }
-      if !self.can_auto_close(&node, state) {
+      if !can_auto_close(&node) {
         cant_close.push(node.clone());
       }
       node = node.get_parent().unwrap();
@@ -716,9 +694,9 @@ impl Document {
       let message = s!(
         "Attempt to close {}, which isn't open. Currently in {}",
         qname_msg,
-        self.get_insertion_context(None, state)?
+        self.get_insertion_context(None)?
       );
-      Error!("malformed", qname, self, message);
+      Error!("malformed", qname, message);
       Ok(None)
     } else {
       // Found node.
@@ -733,23 +711,23 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        Error!("malformed", qname, self, message);
+        Error!("malformed", qname, message);
       }
       // So, now close up to the desired node.
-      self.close_node_internal(&node, state)?;
+      self.close_node_internal(&node)?;
       Ok(Some(node))
     }
   }
 
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
-  pub fn is_openable(&self, qname: &str, state: &mut State) -> bool {
+  pub fn is_openable(&self, qname: &str) -> bool {
     let mut node_opt = Some(self.node.clone());
     while let Some(node) = node_opt {
-      let node_qname = self.get_node_qname(&node, state);
-      if self.sym_can_contain_somehow(node_qname, arena::pin(qname), state) {
+      let node_qname = get_node_qname(&node);
+      if sym_can_contain_somehow(node_qname, arena::pin(qname)) {
         return true;
-      } else if !self.can_auto_close(&node, state) {
+      } else if !can_auto_close(&node) {
         return false; // could close, then check if parent can contain
       } else {
         node_opt = node.get_parent();
@@ -762,7 +740,7 @@ impl Document {
   /// any intervening nodes must be autocloseable.
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
-  pub fn is_closeable<T: IntoVDQS>(&self, tags: T, state: &mut State) -> Option<Node> {
+  pub fn is_closeable<T: IntoVDQS>(&self, tags: T) -> Option<Node> {
     let mut tags: VecDeque<String> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
@@ -779,11 +757,11 @@ impl Document {
         if node_type == Some(NodeType::DocumentNode) || node_type.is_none() {
           return None;
         }
-        let this_qname = state.model.get_node_qname(node);
+        let this_qname = model!().get_node_qname(node);
         if this_qname == arena::pin(&qname) {
           break 'inner;
         }
-        if !self.can_auto_close(node, state) {
+        if !can_auto_close(node) {
           Debug!(
             "It was impossible to autoclose node: {:?}",
             self.document.node_to_string(node)
@@ -802,9 +780,9 @@ impl Document {
   }
 
   // Close $qname, if it is closeable.
-  pub fn maybe_close_element(&mut self, qname: &str, state: &mut State) -> Result<Option<Node>> {
-    if let Some(node) = self.is_closeable(qname, state) {
-      self.close_node_internal(&node, state)?;
+  pub fn maybe_close_element(&mut self, qname: &str) -> Result<Option<Node>> {
+    if let Some(node) = self.is_closeable(qname) {
+      self.close_node_internal(&node)?;
       Ok(Some(node))
     } else {
       Ok(None)
@@ -812,14 +790,14 @@ impl Document {
   }
 
   /// Closes all nodes until $node becomes the current point.
-  pub fn close_to_node(&mut self, node: &Node, _ifopen: bool, state: &mut State) -> Result<()> {
+  pub fn close_to_node(&mut self, node: &Node, _ifopen: bool) -> Result<()> {
     let mut cant_close = Vec::new();
     let mut lastopen: Option<Node> = None;
     let mut n = self.node.clone();
     let mut n_type = n.get_type();
     // go up the tree from current node, till we find `node`
     while n_type != Some(NodeType::DocumentNode) && &n != node {
-      if !self.can_auto_close(&n, state) {
+      if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
       lastopen = Some(n.clone());
@@ -833,8 +811,8 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(state.model.get_node_qname(node), |qname_str| {
-        {Error!("malformed", qname_str, self, message)};
+      arena::with(model!().get_node_qname(node), |qname_str| {
+        {Error!("malformed", qname_str, message)};
         Ok(())
       })?;
     //     "Currently in " . $self->getInsertionContext()) unless $ifopen;
@@ -842,7 +820,7 @@ impl Document {
       // Found node.
       if !cant_close.is_empty() {
         // But found has intervening non-auto-closeable nodes!!
-        let qname = state.model.get_node_qname(node);
+        let qname = model!().get_node_qname(node);
         let message = s!(
           "Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
           qname,
@@ -853,38 +831,37 @@ impl Document {
             .join(",")
         );
         arena::with(qname, |qname_str| {
-          {Error!("malformed", qname_str, self, message)};
+          {Error!("malformed", qname_str, message)};
           Ok(())
         })?;
       }
       if let Some(lastopen_node) = lastopen {
-        self.close_node_internal(&lastopen_node, state)?;
+        self.close_node_internal(&lastopen_node)?;
       }
     }
     Ok(())
   }
 
   /// Closes all nodes until $node is closed.
-  pub fn close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
-    self.close_node_with_strictness(true, node, state)
+  pub fn close_node(&mut self, node: &Node) -> Result<()> {
+    self.close_node_with_strictness(true, node)
   }
   /// Only if needed/possible: closes all nodes until $node is closed
-  pub fn maybe_close_node(&mut self, node: &Node, state: &mut State) -> Result<()> {
-    self.close_node_with_strictness(false, node, state)
+  pub fn maybe_close_node(&mut self, node: &Node) -> Result<()> {
+    self.close_node_with_strictness(false, node)
   }
 
   pub fn close_node_with_strictness(
     &mut self,
     strict: bool,
     node: &Node,
-    state: &mut State,
   ) -> Result<()> {
     // my ($t, @cant_close) = ();
     let mut cant_close: Vec<Node> = Vec::new();
     let mut n = self.node.clone();
     let mut t = node.get_type();
     while t.is_some() && t != Some(NodeType::DocumentNode) && &n != node {
-      if !self.can_auto_close(&n, state) {
+      if !can_auto_close(&n) {
         cant_close.push(n.clone());
       }
       n = n.get_parent().unwrap();
@@ -894,14 +871,14 @@ impl Document {
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
       if strict {
-        let qname = state.model.get_node_qname(node);
+        let qname = model!().get_node_qname(node);
         arena::with(qname, |qname_str| {
           let message = s!(
             "Attempt to close {}, which isn't open. Currently in {:?}",
             qname_str,
-            self.get_insertion_context(None, state)?
+            self.get_insertion_context(None)?
           );
-          {Error!("malformed", qname_str, self, message)};
+          {Error!("malformed", qname_str, message)};
           Ok(())
         })?;
       }
@@ -909,7 +886,7 @@ impl Document {
       // Found node.
       // Intervening non-auto-closeable nodes!!
       if !cant_close.is_empty() {
-        state.model.with_node_qname(node, |qname| {
+        model!().with_node_qname(node, |qname| {
           let message = s!(
             "Closing {} whose open descendents do not auto-close. Descendents are {}",
             qname,
@@ -920,45 +897,16 @@ impl Document {
               .join(", ")
           );
           if strict {
-            Error!("malformed", qname, self, message);
+            Error!("malformed", qname, message);
           } else {
-            Info!("malformed", qname, self, message);
+            Info!("malformed", qname, message);
           }
           Ok(())
         })?;
       }
-      self.close_node_internal(node, state)?;
+      self.close_node_internal(node)?;
     }
     Ok(())
-  }
-
-  // Dirty little secrets:
-  //  You can generically allow an element to autoClose using Tag.
-  // OR you can indicate a specific node can autoClose, or forbid it, using
-  // the _autoclose or _noautoclose attributes!
-  pub fn can_auto_close(&self, node: &Node, state: &State) -> bool {
-    // text or comments auto close
-    // otherwise must be element
-    // without _noautoclose
-    // and either with _autoclose
-    // OR it has autoClose set on tag properties
-    match node.get_type() {
-      Some(NodeType::TextNode) | Some(NodeType::CommentNode) => true,
-      Some(NodeType::ElementNode) => {
-        if !node.has_attribute("_noautoclose") {
-          if node.has_attribute("_autoclose") {
-            true
-          } else if let Some(props) = state.tag_properties.get(&self.get_node_qname(node, state)) {
-            props.auto_close.unwrap_or(false)
-          } else {
-            false
-          }
-        } else {
-          false
-        }
-      },
-      _ => false,
-    }
   }
 
   /// get the actions that should be performed on afterOpen or afterClose
@@ -966,7 +914,6 @@ impl Document {
     &self,
     tag: SymbolU32,
     when: TagOptionName,
-    state: &mut State,
   ) -> Vec<TagConstructionClosure> {
     use self::tag::TagOptionName::*;
     // my ($p, $n) = (undef, $tag);
@@ -987,14 +934,14 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = state
+    let tag_hash = state_mut!()
       .tag_properties
       .entry(tag)
       .or_insert_with(TagOptions::default)
       .clone();
-    // let ns_hash  = ((defined $p) && $STATE->lookupMapping('TAG_PROPERTIES', $p .
+    // let ns_hash  = ((defined $p) && $state::>lookupMapping('TAG_PROPERTIES', $p .
     // ':*')) || {};
-    let all_hash = state.tag_properties.entry(*LTX_STAR_SYM)
+    let all_hash = state_mut!().tag_properties.entry(*LTX_STAR_SYM)
       .or_insert_with(TagOptions::default)
       .clone();
 
@@ -1030,7 +977,7 @@ impl Document {
     actions
   }
 
-  pub fn serialize_to_string(&self, state: &mut State) -> String {
+  pub fn serialize_to_string(&self) -> String {
     // This line is to use libxml2's built-in serializer w/indentation heuristic.
     // Apparently, libxml2 is giving us "binary" or byte strings which we'd prefer
     // to have as text. return decode('UTF-8',
@@ -1038,7 +985,7 @@ impl Document {
     // emulating libxml2's heuristic indentation.
     //  return $self->serialize_aux($self->getDocument, 0, 0, 1); }
     // This uses our own serializer w/ correct indentation rules.
-    self.serialize_aux(&self.document.as_node(), 0, false, false, state)
+    self.serialize_aux(&self.document.as_node(), 0, false, false)
   }
 
   /// We ought to try for something close to C14N (http://www.w3.org/TR/xml-c14n),
@@ -1049,7 +996,6 @@ impl Document {
     depth: usize,
     noindent: bool,
     heuristic: bool,
-    state: &mut State,
   ) -> String {
     let indent = "  ".repeat(depth);
     let mut serialized = String::new();
@@ -1058,12 +1004,12 @@ impl Document {
       Some(NodeType::DocumentNode) => {
         serialized.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         if let Some(child) = node.get_first_child() {
-          let child_serialized = self.serialize_aux(&child, depth, noindent, heuristic, state);
+          let child_serialized = self.serialize_aux(&child, depth, noindent, heuristic);
           serialized.push_str(&child_serialized);
           let mut current_child = child;
           while let Some(sibling) = current_child.get_next_sibling() {
             let sibling_serialized =
-              self.serialize_aux(&sibling, depth, noindent, heuristic, state);
+              self.serialize_aux(&sibling, depth, noindent, heuristic);
             serialized.push_str(&sibling_serialized);
             current_child = sibling;
           }
@@ -1071,7 +1017,7 @@ impl Document {
       },
       Some(NodeType::ElementNode) => {
         // TODO: handle properly
-        // let tag = state.model.get_node_document_qname(&node);
+        // let tag = model!().get_node_document_qname(&node);
         let tag = node.get_name();
         let children = node.get_child_nodes();
         let mut open_tag = s!("<{tag}");
@@ -1095,8 +1041,7 @@ impl Document {
           if key == "id" {
             continue;
           } // HACK for xml:id
-          let key_sym = state
-            .model
+          let key_sym = model_mut!()
             .get_node_document_qname(&node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           arena::with(key_sym, |key_str| {
@@ -1118,9 +1063,8 @@ impl Document {
               .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
-          let node_qname = self.get_node_qname(node, state);
-          state
-            .model
+          let node_qname = get_node_qname(node);
+          model_mut!()
             .can_contain_sym(node_qname, *H_PCDATA_SYM)
         };
 
@@ -1140,8 +1084,7 @@ impl Document {
               depth + 1,
               noindent_children,
               heuristic,
-              state,
-            ));
+                      ));
           }
           if !noindent_children {
             serialized.push_str(&indent)
@@ -1210,7 +1153,6 @@ impl Document {
     text: &str,
     mut attributes: HashMap<String, String>,
     font_opt: Option<&Font>,
-    state: &mut State,
   ) -> Result<Node> {
     attributes
       .entry(s!("role"))
@@ -1226,7 +1168,7 @@ impl Document {
     } else {
       MATH_TOKEN_NAME
     };
-    let cur_qname = state.model.get_node_qname(&self.node);
+    let cur_qname = model!().get_node_qname(&self.node);
     let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
       "" // Make empty hint, of only spaces
     } else {
@@ -1235,15 +1177,15 @@ impl Document {
     if qname == MATH_TOKEN_NAME && cur_qname == *MATH_TOKEN_SYM {
       // Already INSIDE a token!
       if !text.is_empty() {
-        self.open_math_text_internal(text, state)?;
+        self.open_math_text_internal(text)?;
       }
     } else {
-      let mut node = self.open_element(qname, Some(attributes), None, state)?;
+      let mut node = self.open_element(qname, Some(attributes), None)?;
       // let tbox  = $attributes{_box} || $LaTeXML::BOX;
       let font = match font_opt {
         Some(f) => f.clone(),
         None => match self.box_to_absorb {
-          Some(ref tbox) => match tbox.get_font(state)? {
+          Some(ref tbox) => match tbox.get_font()? {
             Some(f) => f.into_owned(),
             None => Font::math_default(), // should never happen?
           },
@@ -1257,9 +1199,9 @@ impl Document {
         self.set_node_box(&node, digested.clone());
       }
       if !text.is_empty() {
-        self.open_math_text_internal(text, state)?;
+        self.open_math_text_internal(text)?;
       }
-      self.close_node_internal(&node, state)?; // Should be safe.
+      self.close_node_internal(&node)?; // Should be safe.
     }
     Ok(self.node.clone())
   }
@@ -1267,11 +1209,11 @@ impl Document {
   /// Insert a new comment, or append to previous comment.
   /// Does NOT move the current insertion point to the Comment,
   /// but may move up past a text node.
-  pub fn insert_comment(&mut self, text: &str, state: &mut State) -> Result<Node> {
+  pub fn insert_comment(&mut self, text: &str) -> Result<Node> {
     // TODO:
     let trimmed = text.trim_end();
     let _clean = DASHES_RE.replace_all(trimmed, "__");
-    self.close_text_internal(state)?; // Close any open text node.
+    self.close_text_internal()?; // Close any open text node.
     if self.node.get_type() == Some(NodeType::DocumentNode) {
       // TODO: add "create_comment" (or equiv) to libxml wrapper
       // let comment = self.document.create_comment(s!(" {} ",clean));
@@ -1305,14 +1247,14 @@ impl Document {
   //  I don't like having "text" built in here!
   //  AND, we've assumed that "font" names the relevant attribute!!!]
 
-  pub fn open_text(&mut self, text: &str, font: &Font, state: &mut State) -> Result<Option<Node>> {
+  pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
       if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
         && (node_type == Some(NodeType::DocumentNode)
           || (node_type == Some(NodeType::ElementNode)
-            && !self.can_contain(&self.node, "#PCDATA", state)))
+            && !can_contain(&self.node, "#PCDATA")))
       {
         return Ok(None);
       }
@@ -1341,7 +1283,7 @@ impl Document {
         && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
     {
       // then we'll need to do some open/close to get fonts matched.
-      let node = self.close_text_internal(state)?; // Close text node, if any.
+      let node = self.close_text_internal()?; // Close text node, if any.
       let mut bestdiff = 99;
       let rc_node = Rc::new(node);
       let mut closeto: Rc<Node> = Rc::clone(&rc_node);
@@ -1356,7 +1298,7 @@ impl Document {
             break;
           }
         }
-        if state.model.get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
+        if model!().get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
           break;
         }
         match n.get_parent() {
@@ -1367,7 +1309,7 @@ impl Document {
 
       // Move to best starting point for this text.
       if *closeto != *rc_node {
-        self.close_to_node(&closeto, false, state)?;
+        self.close_to_node(&closeto, false)?;
       }
       if bestdiff > 0 {
         // Open if needed.
@@ -1375,106 +1317,24 @@ impl Document {
           elementname,
           Some(string_map!("_fontswitch" => "true", "_autoopened" => "true")),
           Some(font),
-          state,
-        )?;
+              )?;
       }
     }
 
     // Finally, insert the darned text.
-    let outnode = self.open_text_internal(text, state)?;
+    let outnode = self.open_text_internal(text)?;
     self.record_constructed_node(&outnode);
     Ok(Some(outnode))
   }
 
-  pub fn can_contain(&self, node: &Node, child: &str, state: &mut State) -> bool {
-    let tag = state.model.get_node_qname(node);
-    state.model.can_contain_sym(tag, arena::pin(child))
-  }
-
-  pub fn can_contain_qname(&self, tag: &str, child: &str, state: &mut State) -> bool {
-    state.model.can_contain(tag, child)
-  }
-
-  pub fn can_contain_sym(&self, node: &Node, child: SymbolU32, state: &mut State) -> bool {
-    let tag = state.model.get_node_qname(node);
-    state.model.can_contain_sym(tag, child)
-  }
-  pub fn can_contain_qsym(&self, tag: SymbolU32, child: SymbolU32, state: &mut State) -> bool {
-    state.model.can_contain_sym(tag, child)
-  }
-
-  /// Can an element with (qualified name) $tag contain a $childtag element indirectly?
-  /// That is, by openning some number of autoOpen'able tags?
-  /// And if so, return the tag to open.
-  pub fn can_contain_indirect(
-    &self,
-    tag: SymbolU32,
-    child: SymbolU32,
-    state: &mut State,
-  ) -> Option<SymbolU32> {
-    // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
-    // node. $child = $model->getNodeQName($child) if ref $child;    // In case
-    // child is a node.
-
-    if state.indirect_model.is_none() {
-      state.indirect_model = Some(state.compute_indirect_model());
-    }
-
-    let imodel = state.indirect_model.as_ref().unwrap();
-    // returning inner_node
-    match imodel.get(&tag) {
-      Some(sub_m) => sub_m.get(&child).copied(),
-      None => None,
-    }
-  }
-
-  pub fn can_contain_node_somehow(&self, node: &Node, child: &str, state: &mut State) -> bool {
-    let child_sym = arena::pin(child);
-    self.sym_can_contain_somehow(state.model.get_node_qname(node), child_sym, state)
-  }
-
-  pub fn can_contain_somehow(&self, tag: &str, child: &str, state: &mut State) -> bool {
-    let tag_sym = arena::pin(tag);
-    let child_sym = arena::pin(child);
-    self.sym_can_contain_somehow(tag_sym, child_sym, state)
-  }
-
-  pub fn sym_can_contain_somehow(
-    &self,
-    tag: SymbolU32,
-    child: SymbolU32,
-    state: &mut State,
-  ) -> bool {
-    state.model.can_contain_sym(tag, child)
-      || self.can_contain_indirect(tag, child, state).is_some()
-  }
-
-  pub fn can_node_have_attribute(&mut self, node: &Node, attrib: &str, state: &mut State) -> bool {
-    let qname = state.model.get_node_qname(node);
-    state.model.can_have_attribute(qname, arena::pin(attrib))
-  }
-  pub fn can_have_attribute(&self, tag: &str, attrib: &str, state: &mut State) -> bool {
-    state
-      .model
-      .can_have_attribute(arena::pin(tag), arena::pin(attrib))
-  }
-  pub fn sym_can_have_attribute(
-    &self,
-    tag: SymbolU32,
-    attrib: SymbolU32,
-    state: &mut State,
-  ) -> bool {
-    state.model.can_have_attribute(tag, attrib)
-  }
-
-  pub fn close_text_internal(&mut self, state: &State) -> Result<Node> {
+  pub fn close_text_internal(&mut self) -> Result<Node> {
     if self.node.get_type() == Some(NodeType::TextNode) {
       // Current node is text?
       let parent = self.node.get_parent().unwrap();
       let font = self.get_node_font(&parent);
       let ocontent = self.node.get_content();
       let mut content = Cow::Borrowed(&ocontent);
-      if let Some(Stored::VecDequeStored(ligatures)) = state.lookup_value("TEXT_LIGATURES") {
+      if let Some(Stored::VecDequeStored(ligatures)) = state!().lookup_value("TEXT_LIGATURES") {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test {
@@ -1499,12 +1359,12 @@ impl Document {
   /// Close `node`, and any current nodes below it.
   /// No checking! Use this when you've already verified that `node` can be closed.
   /// and, of course, `node` must be current or some ancestor of it!!!
-  pub fn close_node_internal(&mut self, node: &Node, state: &mut State) -> Result<()> {
+  pub fn close_node_internal(&mut self, node: &Node) -> Result<()> {
     let closeto = node.get_parent().unwrap(); // Grab now in case afterClose screws the structure.
-    let mut n = self.close_text_internal(state)?; // Close any open text node.
+    let mut n = self.close_text_internal()?; // Close any open text node.
     while n.get_type() == Some(NodeType::ElementNode) {
-      self.close_element_at(&mut n, state)?;
-      self.auto_collapse_children(&mut n, state)?;
+      self.close_element_at(&mut n)?;
+      self.auto_collapse_children(&mut n)?;
       if *node == n {
         break;
       }
@@ -1517,23 +1377,22 @@ impl Document {
   /// Avoid redundant nesting of font switching elements:
   /// If we're closing a node that can take font switches and it contains
   /// a single FONT_ELEMENT_NAME node; pull it up.
-  fn auto_collapse_children(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
-    let qname = state.model.get_node_qname(node);
+  fn auto_collapse_children(&mut self, node: &mut Node) -> Result<()> {
+    let qname = model!().get_node_qname(node);
     if qname != *CAPTURE_SYM {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
-        && (state.model.get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
-        && state
-          .model
+        && (model!().get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
+        && model!()
           .can_have_attribute(qname, *FONT_SYM)
         && c[0]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
           .all(|v| {
-            state.model.can_have_attribute(qname, arena::pin(v))
+            model!().can_have_attribute(qname, arena::pin(v))
               && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
           })
         && !c[0].has_attribute("_force_font")
@@ -1582,7 +1441,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn open_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
+  pub fn open_text_internal(&mut self, text: &str) -> Result<Node> {
     if text.is_empty() {
       return Ok(self.node.clone());
     }
@@ -1601,9 +1460,9 @@ impl Document {
         // unimplemented!();
       }
       self.node.append_text(text)?;
-    } else if HAS_NONSPACE_RE.is_match(text) || self.can_contain(&self.node, "#PCDATA", state) {
+    } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
       // or text allowed here
-      let mut point = self.find_insertion_point("#PCDATA", None, state)?;
+      let mut point = self.find_insertion_point("#PCDATA", None)?;
       Debug!(
         "Inserting text node for {:?} into {:?}",
         text,
@@ -1627,10 +1486,10 @@ impl Document {
   // /// Since xml text nodes don't have attributes to record the origining box,
   // /// we need to manage the accumulation of autoOpen'ed boxes
   // /// Indeed, propogate it to ancestors if they were autoOpened for same cause (box)
-  // fn append_text_box(&mut self, node: &Node, thisbox: &Digested, state: &State) {
+  // fn append_text_box(&mut self, node: &Node, thisbox: &Digested) {
   //   let origbox = self.get_node_box(node);
   //   if origbox.is_some() && thisbox != &**origbox.as_ref().unwrap() { // if not already the same
-  // box     let newbox = List::new(vec![origbox, thisbox], state);
+  // box     let newbox = List::new(vec![origbox, thisbox]);
   //     self.set_node_box(node, newbox);
   //     let p = node;
   //     // AND, propogate change to autoOpen'd ancestors based on same initial box
@@ -1644,22 +1503,22 @@ impl Document {
   // but text ligatures handled within closeText_internal ???
 
   /// Needed externally only for the binding generation
-  fn open_math_text_internal(&mut self, text: &str, state: &mut State) -> Result<Node> {
+  fn open_math_text_internal(&mut self, text: &str) -> Result<Node> {
     // And if there's already text???
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
     node.append_text(text)?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
-    if !state.nomathparse {
-      self.apply_math_ligatures(&mut node, state)?;
+    if !state!().nomathparse {
+      self.apply_math_ligatures(&mut node)?;
     }
     Ok(node)
   }
 
-  // New stategy (but inefficient): apply ligatures until one succeeds,
+  // New state::y (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
-  fn apply_math_ligatures(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
-    let checked_out_ligatures = state.checkout_value("MATH_LIGATURES");
+  fn apply_math_ligatures(&mut self, node: &mut Node) -> Result<()> {
+    let checked_out_ligatures = state_mut!().checkout_value("MATH_LIGATURES");
     if let Some(Stored::VecDequeStored(ref stored_ligatures)) = checked_out_ligatures {
       let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
       while !ligatures.is_empty() {
@@ -1668,7 +1527,7 @@ impl Document {
         while !ligatures.is_empty() {
           let ligature_stored = ligatures.pop_front().unwrap();
           if let Stored::Ligature(ligature) = ligature_stored {
-            if self.apply_math_ligature(node, ligature, state)? {
+            if self.apply_math_ligature(node, ligature)? {
               next_ligatures.extend(ligatures.drain(..));
               matched = true;
               break;
@@ -1680,14 +1539,14 @@ impl Document {
         ligatures = next_ligatures;
         if !matched {
           if let Some(value) = checked_out_ligatures {
-            state.checkin_value("MATH_LIGATURES", value);
+            state_mut!().checkin_value("MATH_LIGATURES", value);
           }
           return Ok(());
         }
       }
     }
     if let Some(value) = checked_out_ligatures {
-      state.checkin_value("MATH_LIGATURES", value);
+      state_mut!().checkin_value("MATH_LIGATURES", value);
     }
     Ok(())
   }
@@ -1697,10 +1556,9 @@ impl Document {
     &mut self,
     node: &mut Node,
     ligature: &Ligature,
-    state: &mut State,
   ) -> Result<bool> {
     if let Some((nmatched, newstring, attr)) =
-      (ligature.matcher.as_ref().unwrap())(self, node, state)?
+      (ligature.matcher.as_ref().unwrap())(self, node)?
     {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
@@ -1716,7 +1574,7 @@ impl Document {
       // it(??)
       if boxes.len() > 1 {
         // TODO: Cloning boxes is BAD. What is a better model?
-        let mut list = List::new(boxes.into_iter().collect::<Vec<_>>(), state);
+        let mut list = List::new(boxes.into_iter().collect::<Vec<_>>());
         list.mode = Some(TexMode::Math);
         self.set_node_box(node, list.into());
       }
@@ -1785,11 +1643,11 @@ impl Document {
 
   /// Return a string indicating the path to the current insertion point in the document.
   /// if $levels is defined, show only that many levels
-  pub fn get_insertion_context(&self, levels_opt: Option<usize>, state: &mut State) -> Result<String> {
+  pub fn get_insertion_context(&self, levels_opt: Option<usize>) -> Result<String> {
     let mut levels = match levels_opt {
       None => {
         // Default depth is based on verbosity
-        if state.verbosity <= 1 {
+        if state!().verbosity <= 1 {
           Some(5)
         } else {
           None
@@ -1807,7 +1665,7 @@ impl Document {
         "Insertion point is not an element, document or text: {:?}",
         self.document.node_to_string(&node)
       );
-      Error!("internal", "context", self, message);
+      Error!("internal", "context", message);
       return Ok(String::new());
     }
     let mut path = s!("TODO"); //TODO: Stringify($node);
@@ -1832,25 +1690,24 @@ impl Document {
     &mut self,
     qname: &str,
     has_opened_opt: Option<SymbolU32>,
-    state: &mut State,
   ) -> Result<Node> {
     let qsym = arena::pin(qname);
-    self.close_text_internal(state)?; // Close any current text node.
-    let cur_qname = state.model.get_node_qname(&self.node);
+    self.close_text_internal()?; // Close any current text node.
+    let cur_qname = model!().get_node_qname(&self.node);
     // If `qname` is allowed at the current point, we're done.
-    if self.can_contain_qsym(cur_qname, qsym, state) {
+    if can_contain_qsym(cur_qname, qsym) {
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
-    } else if let Some(inter) = self.can_contain_indirect(cur_qname, qsym, state) {
+    } else if let Some(inter) = can_contain_indirect(cur_qname, qsym) {
       if (inter != qsym) && (inter != cur_qname) {
         // TODO: can we avoid the clone here? there is a mutability conflict...
         let node_font = self.get_node_font(&self.node).clone();
         // TODO: avoid this clone?
         let inter_string = arena::to_string(inter);
-        self.open_element(&inter_string, None, Some(&node_font), state)?;
+        self.open_element(&inter_string, None, Some(&node_font))?;
 
-        return self.find_insertion_point(qname, Some(inter), state); // And retry insertion (should
+        return self.find_insertion_point(qname, Some(inter)); // And retry insertion (should
                                                                      // work now).
       }
     }
@@ -1863,23 +1720,23 @@ impl Document {
             "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
             has_opened_str,
             cur_qname_str,
-            self.get_insertion_context(None, state)?
+            self.get_insertion_context(None)?
           ))
       ))?;
-      Error!("malformed", qname, self, message);
+      Error!("malformed", qname, message);
       Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
       // Now we're getting more desparate...
       // Check if we can auto close some nodes, and _then_ insert the `qname`.
       let mut node = self.node.clone();
       let mut close_to = None;
-      while (node.get_type() != Some(NodeType::DocumentNode)) && self.can_auto_close(&node, state) {
+      while (node.get_type() != Some(NodeType::DocumentNode)) && can_auto_close(&node) {
         let parent_opt = node.get_parent();
         let parent_name = match parent_opt {
           None => *EMPTY_SYM,
-          Some(ref p) => state.model.get_node_qname(p),
+          Some(ref p) => model!().get_node_qname(p),
         };
-        if self.sym_can_contain_somehow(parent_name, qsym, state) {
+        if sym_can_contain_somehow(parent_name, qsym) {
           close_to = Some(node);
           break;
         }
@@ -1889,15 +1746,15 @@ impl Document {
         };
       }
       if let Some(close_to_node) = close_to {
-        self.close_node_internal(&close_to_node, state)?; // Close the auto closeable nodes.
-        self.find_insertion_point(qname, None, state) // Then retry, possibly w/auto open's
+        self.close_node_internal(&close_to_node)?; // Close the auto closeable nodes.
+        self.find_insertion_point(qname, None) // Then retry, possibly w/auto open's
       } else {
         // Didn't find a legit place.
         let message = arena::with(cur_qname, |cur_qname_str| {
           s!("{:?} isn't allowed in <{}>", qname, cur_qname_str)
         });
         //"Currently in " self.getInsertionContext());
-        Error!("malformed", qname, self, message);
+        Error!("malformed", qname, message);
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
@@ -1954,7 +1811,7 @@ impl Document {
     nodes
   }
 
-  pub fn node_set_attribute(&mut self, key: &str, value: &str, state: &mut State) -> Result<()> {
+  pub fn node_set_attribute(&mut self, key: &str, value: &str) -> Result<()> {
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
@@ -1995,19 +1852,19 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      let qname = state.model.get_node_qname(&self.node);
-      if key.starts_with('_') || state.model.can_have_attribute(qname, arena::pin(key)) {
+      let qname = model!().get_node_qname(&self.node);
+      if key.starts_with('_') || model!().can_have_attribute(qname, arena::pin(key)) {
         self.node.set_attribute(key, value)?
       };
     } else {
       // Accept any namespaced attributes
       unimplemented!();
-      //   my ($ns, $name) = state.model}->decodeQName($key);
+      //   my ($ns, $name) = state::model}->decodeQName($key);
       //   if ($ns) {             // If namespaced attribute (must have prefix!
       // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
       // declared? if (!$prefix) {                                    // if
       // namespace not already declared $prefix =
-      // state.model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+      // state::model}->getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
       // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
       // // and declare it if ($prefix eq '//default') {    // Probably
       // shouldn't happen...?       node.setAttribute($name => $value); }
@@ -2076,7 +1933,7 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      // let model = state.model;
+      // let model = state::model;
       // let qname = model.get_node_qname(node);
       // if key.starts_with("_") || model.can_have_attribute(qname, key) {
       node.set_attribute(key, value)?;
@@ -2086,12 +1943,12 @@ impl Document {
       dbg!(key);
       unimplemented!();
     }
-    //   my ($ns, $name) = state.model.decodeQName($key);
+    //   my ($ns, $name) = state::model.decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
     // declared? if (!$prefix) {                                    // if
     // namespace not already declared $prefix =
-    // state.model.getDocumentNamespacePrefix($ns, 1);    // get the prefix to use
+    // model!()DocumentNamespacePrefix($ns, 1);    // get the prefix to use
     // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
     // // and declare it if ($prefix eq '//default') {    // Probably
     // shouldn't happen...?       node.setAttribute($name => $value); }
@@ -2184,7 +2041,7 @@ impl Document {
         badid,
         self.document.node_to_string(&prev)
       );
-      Info!("malformed", "id", self, message);
+      Info!("malformed", "id", message);
     }
     self.idstore.insert(id.to_string(), node.clone());
     id.to_string()
@@ -2193,8 +2050,8 @@ impl Document {
   pub fn unrecord_id(&mut self, id: &str) { self.idstore.remove(id); }
 
   /// These are used to record or unrecord, in bulk, all the ids within a node (tree).
-  pub fn record_node_ids(&mut self, node: &Node, state: &mut State) -> Result<()> {
-    for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
+  pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
+    for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         let newid = self.record_id_with_node(&id, &idnode);
         if newid != id {
@@ -2205,8 +2062,8 @@ impl Document {
     Ok(())
   }
 
-  pub fn unrecord_node_ids(&mut self, node: &Node, state: &mut State) {
-    for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node), state) {
+  pub fn unrecord_node_ids(&mut self, node: &Node) {
+    for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
@@ -2224,7 +2081,7 @@ impl Document {
       // || $$self{idstore}{ $id = $badid . $LaTeXML::Core::Document::ID_SUFFIX }) {
       // foreach my $s1 (1 .. 26 * 26 * 26) {    # Gotta give up, eventually; is 3 letters enough?
       //   return $id unless $$self{idstore}{ $id = $badid . radix_alpha($s1) }; }
-      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self, state,
+      // Error!("malformed", "id", "Automatic incrementing of ID counters failed", self,
       // s!("Last alternative for '{}' is '{}'",id,badid)); } } TODO
       s!("{}a", badid)
     } else {
@@ -2252,16 +2109,16 @@ impl Document {
 
   // NOTE: This should ultimately be in a base Document class,
   // since it is also needed before conversion to parallel markup!
-  pub fn mark_xmnode_visibility(&mut self, state: &mut State) -> Result<()> {
-    let xmath = self.findnodes("//ltx:XMath/*", None, state);
+  pub fn mark_xmnode_visibility(&mut self) -> Result<()> {
+    let xmath = self.findnodes("//ltx:XMath/*", None);
     for math in xmath.iter() {
-      for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(math), state) {
+      for mut node in self.findnodes("descendant-or-self::*[@_pvis or @_cvis]", Some(math)) {
         node.remove_attribute("_pvis")?;
         node.remove_attribute("_cvis")?;
       }
     }
     for math in xmath {
-      self.mark_xmnode_visibility_aux(math, true, true, state)?;
+      self.mark_xmnode_visibility_aux(math, true, true)?;
     }
     Ok(())
   }
@@ -2271,12 +2128,11 @@ impl Document {
     mut node: Node,
     cvis: bool,
     mut pvis: bool,
-    state: &mut State,
   ) -> Result<()> {
     if (!cvis || node.has_attribute("_cvis")) && (!pvis || node.has_attribute("_pvis")) {
       return Ok(());
     }
-    let qname = self.get_node_qname(&node, state);
+    let qname = get_node_qname(&node);
     // Special case: for XMArg used to wrap "formal" arguments on the content side,
     // mark them as visible as presentation as well.
     if cvis && (qname == arena::pin_static("ltx:XMArg")) {
@@ -2293,10 +2149,10 @@ impl Document {
       let c = children.remove(0);
       let p = children.remove(0);
       if cvis {
-        self.mark_xmnode_visibility_aux(c, true, false, state)?;
+        self.mark_xmnode_visibility_aux(c, true, false)?;
       }
       if pvis {
-        self.mark_xmnode_visibility_aux(p, false, true, state)?;
+        self.mark_xmnode_visibility_aux(p, false, true)?;
       }
     } else if qname == arena::pin_static("ltx:XMRef") {
       match node.get_attribute("idref") {
@@ -2305,7 +2161,6 @@ impl Document {
           Warn!(
             "expected",
             "id",
-            self,
             "Missing idref on ltx:XMRef",
             s!("_xmkey is `{}`", key.unwrap_or_default())
           );
@@ -2315,18 +2170,17 @@ impl Document {
             Warn!(
               "expected",
               "node",
-              self,
-              s!("No node found with id='{id}' (referred to from ltx:XMRef)")
+                s!("No node found with id='{id}' (referred to from ltx:XMRef)")
             );
           },
           Some(reffed) => {
-            self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis, state)?;
+            self.mark_xmnode_visibility_aux(reffed.clone(), cvis, pvis)?;
           },
         },
       }
     } else {
       for child in xml::element_nodes(&node) {
-        self.mark_xmnode_visibility_aux(child, cvis, pvis, state)?;
+        self.mark_xmnode_visibility_aux(child, cvis, pvis)?;
       }
     }
     Ok(())
@@ -2336,12 +2190,12 @@ impl Document {
   /// (according to markXMNodeVisibility)
   /// If we could be 100% sure that the marking had stayed consistent (after various doc surgery)
   /// we could avoid re-marking, but we'd better be sure before removing nodes!
-  fn prune_xmduals(&mut self, state: &mut State) -> Result<()> {
+  fn prune_xmduals(&mut self) -> Result<()> {
     // RE-mark visibility!
-    self.mark_xmnode_visibility(state)?;
+    self.mark_xmnode_visibility()?;
     // will reversing keep from problems removing nodes from trees that already have been removed?
     for mut dual in self
-      .findnodes("descendant-or-self::ltx:XMDual", None, state)
+      .findnodes("descendant-or-self::ltx:XMDual", None)
       .into_iter()
       .rev()
     {
@@ -2353,25 +2207,23 @@ impl Document {
         .findnode(
           "descendant-or-self::*[@_pvis or @_cvis]",
           Some(&content),
-          state,
-        )
+              )
         .is_none()
       {
         // content never seen
-        self.collapse_xmdual(&mut dual, presentation, state)?;
+        self.collapse_xmdual(&mut dual, presentation)?;
       } else if self
         .findnode(
           "descendant-or-self::*[@_pvis or @_cvis]",
           Some(&presentation),
-          state,
-        )
+              )
         .is_none()
       {
         // pres.
-        self.collapse_xmdual(&mut dual, content, state)?;
+        self.collapse_xmdual(&mut dual, content)?;
       } else {
         // compact aligned structures, where possible
-        self.compact_xmdual(dual, content, Some(presentation), state)?;
+        self.compact_xmdual(dual, content, Some(presentation))?;
       }
     }
     Ok(())
@@ -2386,7 +2238,6 @@ impl Document {
     _dual: Node,
     _content: Node,
     _presentation: Option<Node>,
-    _state: &mut State,
   ) -> Result<()> {
     //   my $c_name = $self->getNodeQName($content);
     //   my $p_name = $self->getNodeQName($presentation);
@@ -2442,7 +2293,6 @@ impl Document {
     &mut self,
     dual: &mut Node,
     mut branch: Node,
-    state: &mut State,
   ) -> Result<()> {
     // The other branch is not visible, nor referenced,
     // but the dual may have an id and be referenced
@@ -2450,7 +2300,7 @@ impl Document {
       self.unrecord_id(&dualid); // We'll move or remove the ID from the dual
       if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) {
         // branch has id too!
-        for mut tref in self.findnodes(&s!("//*[@idref='{}']", dualid), None, state) {
+        for mut tref in self.findnodes(&s!("//*[@idref='{}']", dualid), None) {
           tref.set_attribute("idref", &branchid)?;
         } // Change dualid refs to branchid
       } else {
@@ -2458,7 +2308,7 @@ impl Document {
         self.record_id_with_node(&dualid, &branch);
       }
     }
-    self.replace_tree(branch, dual, state)?;
+    self.replace_tree(branch, dual)?;
     Ok(())
   }
 
@@ -2522,9 +2372,9 @@ impl Document {
     Ok(())
   }
 
-  pub fn set_box_font(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+  pub fn set_box_font(&mut self, node: &mut Node) -> Result<()> {
     if let Some(ref thisbox) = self.box_to_absorb {
-      if let Some(font) = thisbox.get_font(state)? {
+      if let Some(font) = thisbox.get_font()? {
         let todo_font_clone = font.into_owned();
         self.set_node_font(node, &todo_font_clone)?;
       }
@@ -2648,7 +2498,6 @@ impl Document {
     qname: &str,
     attributes: Option<HashMap<String, String>>,
     mut font_opt: Option<Font>,
-    state: &mut State,
   ) -> Result<Node> {
     // DG: This is a cursed way to manage fonts, how can we unwind it all back to a clear
     // organization?
@@ -2662,14 +2511,14 @@ impl Document {
         }
       }
     }
-    let (decoded_ns, tag) = state.model.decode_qname(qname)?;
+    let (decoded_ns, tag) = model_mut!().decode_qname(qname)?;
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {
       // First node! (?)
       Debug!("adding schema declaration, new node will be : {}", tag);
-      state.model.add_schema_declaration(self);
+      model_mut!().add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.record_constructed_node(&newnode);
       self.document.set_root_element(&newnode);
@@ -2684,8 +2533,8 @@ impl Document {
         // there is ALSO a prefix associated with that namespace, we have to declare it
         // FIRST due to the (apparently) buggy way that XML::LibXML works with
         // namespaces in setAttributeNS.
-        let prefix_opt = state.model.get_document_namespace_prefix(&ns, false, false);
-        let attprefix_opt = state.model.get_document_namespace_prefix(&ns, true, true);
+        let prefix_opt = model_mut!().get_document_namespace_prefix(&ns, false, false);
+        let attprefix_opt = model_mut!().get_document_namespace_prefix(&ns, true, true);
         if prefix_opt.is_none() {
           if let Some(attprefix_sym) = attprefix_opt {
             let attr_ns_node = arena::with(attprefix_sym, |attprefix| {
@@ -2705,7 +2554,7 @@ impl Document {
       if font_opt.is_none() {
         font_opt = Some(self.get_node_font(point).clone());
       }
-      newnode = self.open_element_internal(point, decoded_ns, &tag, state)?;
+      newnode = self.open_element_internal(point, decoded_ns, &tag)?;
     }
 
     if let Some(attrs) = attributes {
@@ -2734,14 +2583,12 @@ impl Document {
       self.set_node_box(&newnode, digested.clone());
     }
 
-    Debug!(
-      "Inserting {:?} into {:?}",
-      self.get_node_qname(&newnode, state),
-      self.get_node_qname(point, state)
-    );
+    // Debug!(
+    //   s!("Inserting {:?} into {:?}", get_node_qname(&newnode), get_node_qname(point))
+    // );
 
     // Run afterOpen operations
-    self.after_open(&mut newnode, state)?;
+    self.after_open(&mut newnode)?;
 
     Ok(newnode)
   }
@@ -2751,7 +2598,6 @@ impl Document {
     point: &mut Node,
     ns_opt: Option<String>,
     tag: &str,
-    state: &mut State,
   ) -> Result<Node> {
     // TODO:
     //
@@ -2766,8 +2612,7 @@ impl Document {
         match point.lookup_namespace_prefix(&ns_uri) {
           // namespace not already declared?
           None => {
-            if let Some(prefix) = state
-              .model
+            if let Some(prefix) = model_mut!()
               .get_document_namespace_prefix(&ns_uri, false, false)
             {
               if prefix != *EMPTY_SYM {
@@ -2778,7 +2623,7 @@ impl Document {
                   Ok(ns) => Some(ns),
                   Err(_) => {
                     let message = s!("failed to create namespace: {:?}", prefix);
-                    Error!("document", "open_element_internal", self, message);
+                    Error!("document", "open_element_internal", message);
                     None
                   },
                 }
@@ -2798,7 +2643,7 @@ impl Document {
                 Ok(ns) => Some(ns),
                 Err(_) => {
                   let message = s!("failed to create namespace: {:?}", prefix);
-                  Error!("document", "open_element_internal", self, message);
+                  Error!("document", "open_element_internal", message);
                   None
                 },
               }
@@ -2830,28 +2675,28 @@ impl Document {
   /// Whenever a node has been created using openElementAt,
   /// closeElementAt ought to be used to close it, when you're finished inserting into $node.
   /// Basically, this just runs any afterClose operations.
-  pub fn close_element_at(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
-    self.after_close(node, state)
+  pub fn close_element_at(&mut self, node: &mut Node) -> Result<()> {
+    self.after_close(node)
   }
 
-  pub fn after_open(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+  pub fn after_open(&mut self, node: &mut Node) -> Result<()> {
     // Set current point to this node, just in case the afterOpen's use it.
     let savenode = self.node.clone();
     self.set_node(node);
-    let node_qname = self.get_node_qname(node, state);
-    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterOpen, state) {
-      action(self, node, state)?;
+    let node_qname = get_node_qname(node);
+    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterOpen) {
+      action(self, node)?;
     }
     self.set_node(&savenode);
     Ok(())
   }
 
-  pub fn after_close(&mut self, node: &mut Node, state: &mut State) -> Result<()> {
+  pub fn after_close(&mut self, node: &mut Node) -> Result<()> {
     // Should we set point to this node? (or to last child, or something ??
     let savenode = self.node.clone();
-    let node_qname = self.get_node_qname(node, state);
-    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose, state) {
-      action(self, node, state)?;
+    let node_qname = get_node_qname(node);
+    for action in self.get_tag_action_list(node_qname, TagOptionName::AfterClose) {
+      action(self, node)?;
     }
     self.set_node(&savenode);
     Ok(())
@@ -2874,7 +2719,6 @@ impl Document {
     &mut self,
     node: &mut Node,
     new_children: Vec<Node>,
-    state: &mut State,
   ) -> Result<()> {
     // Expand any document fragments
     let new_children = new_children
@@ -2891,12 +2735,12 @@ impl Document {
     let mut id_map = HashMap::default();
     // Find all id's defined in the copy and change the id.
     for child in new_children.iter() {
-      for id in self.findvalues(".//@xml:id", Some(child), state) {
+      for id in self.findvalues(".//@xml:id", Some(child)) {
         id_map.insert(id.to_string(), self.modify_id(id));
       }
     }
     // Now do the cloning (actually copying) and insertion.
-    self.append_clone_aux(node, new_children, &mut id_map, state)
+    self.append_clone_aux(node, new_children, &mut id_map)
   }
 
   fn append_clone_aux(
@@ -2904,7 +2748,6 @@ impl Document {
     node: &mut Node,
     new_children: Vec<Node>,
     id_map: &mut HashMap<String, String>,
-    state: &mut State,
   ) -> Result<()> {
     for child in new_children.into_iter() {
       match child.get_type() {
@@ -2913,8 +2756,7 @@ impl Document {
             node,
             child.get_namespace().map(|ns| ns.get_href()),
             &child.get_name(),
-            state,
-          )?;
+                  )?;
           for (key, val) in child.get_attributes() {
             match key.as_str() {
               "xml:id" | "id" => {
@@ -2935,9 +2777,9 @@ impl Document {
               },
             };
           }
-          self.after_open(&mut new, state)?;
-          self.append_clone_aux(&mut new, child.get_child_nodes(), id_map, state)?;
-          self.after_close(&mut new, state)?;
+          self.after_open(&mut new)?;
+          self.append_clone_aux(&mut new, child.get_child_nodes(), id_map)?;
+          self.after_close(&mut new)?;
         },
         Some(NodeType::TextNode) => node.append_text(&child.get_content())?,
         other => panic!("append_clone_aux called on {other:?} Node type."),
@@ -2958,16 +2800,15 @@ impl Document {
     &mut self,
     qname: &str,
     nodes: Vec<Node>,
-    state: &mut State,
   ) -> Result<Option<Node>> {
     if nodes.is_empty() {
       return Ok(None);
     }
     let first_node = &nodes[0];
     let mut parent = first_node.get_parent().unwrap();
-    let (ns, tag) = state.model.decode_qname(qname)?;
-    let mut new = self.open_element_internal(&mut parent, ns, &tag, state)?;
-    self.after_open(&mut new, state)?;
+    let (ns, tag) = model_mut!().decode_qname(qname)?;
+    let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
+    self.after_open(&mut new)?;
     parent.replace_child_node(new.clone(), first_node.clone())?;
 
     self.copy_node_font(&parent, &mut new)?;
@@ -2979,7 +2820,7 @@ impl Document {
       node.unlink();
       new.add_child(&mut node)?;
     }
-    self.after_close(&mut new, state)?;
+    self.after_close(&mut new)?;
     Ok(Some(new))
   }
 
@@ -3049,7 +2890,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn add_resource(&mut self, resource: Resource, state: &mut State) -> Result<()> {
+  pub fn add_resource(&mut self, resource: Resource) -> Result<()> {
     // let savenode_opt = self.float_to_element("ltx:resource", false);
     let savenode_opt = None;
     let mut attrib: HashMap<String, String> = HashMap::default();
@@ -3060,25 +2901,25 @@ impl Document {
       text: arena::pin(resource.content),
       ..Tbox::default()
     });
-    self.insert_element("ltx:resource", vec![&content_box], Some(attrib), state)?;
+    self.insert_element("ltx:resource", vec![&content_box], Some(attrib))?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
     }
     Ok(())
   }
 
-  pub fn process_pending_resources(&mut self, state: &mut State) -> Result<()> {
-    let resources: Vec<Resource> = state.pending_resources.drain(..).collect();
+  pub fn process_pending_resources(&mut self) -> Result<()> {
+    let resources: Vec<Resource> = state_mut!().pending_resources.drain(..).collect();
     for resource in resources {
-      self.add_resource(resource, state)?;
+      self.add_resource(resource)?;
     }
-    state.pending_resources = Vec::new();
+    state_mut!().pending_resources = Vec::new();
     Ok(())
   }
 
-  pub fn make_error(&mut self, error_class: &str, _content: &str, state: &mut State) -> Result<()> {
-    let savenode_opt = if !self.is_openable("ltx:ERROR", state) {
-      self.float_to_element("ltx:ERROR", false, state)?
+  pub fn make_error(&mut self, error_class: &str, _content: &str) -> Result<()> {
+    let savenode_opt = if !self.is_openable("ltx:ERROR") {
+      self.float_to_element("ltx:ERROR", false)?
     } else {
       None
     };
@@ -3086,9 +2927,8 @@ impl Document {
       "ltx:ERROR",
       Some(string_map!("class"=>error_class)),
       None,
-      state,
-    )?;
-    self.close_element("ltx:ERROR", state)?;
+      )?;
+    self.close_element("ltx:ERROR")?;
     if let Some(savenode) = savenode_opt {
       self.set_node(&savenode);
     }
@@ -3106,11 +2946,11 @@ impl Document {
   // to reset the insertion point to where it had been.
 
   /// Find a node in the document that can contain an element `qname`
-  pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool, state: &mut State) -> Result<Option<Node>> {
+  pub fn float_to_element(&mut self, qname: &str, closeifpossible: bool) -> Result<Option<Node>> {
     let mut candidates : VecDeque<Node> = VecDeque::from(self.get_insertion_candidates(&self.node));
     let mut closeable  = true;
     // If the current node can contain already, we're fine right here - just return
-    if !candidates.is_empty() && self.can_contain(&candidates[0], qname, state) {
+    if !candidates.is_empty() && can_contain(&candidates[0], qname) {
       // Edge case: Don't resume at a text node, if it is current.
       // Don't append more to it after other insertions.
       if self.node.get_type() == Some(NodeType::TextNode) {
@@ -3118,15 +2958,15 @@ impl Document {
       }
       return Ok(candidates.pop_front());
     }
-    while !candidates.is_empty() && !self.can_contain(&candidates[0], qname, state) {
+    while !candidates.is_empty() && !can_contain(&candidates[0], qname) {
       if closeable {
-        closeable = self.can_auto_close(&candidates[0], state);
+        closeable = can_auto_close(&candidates[0]);
       }
       candidates.pop_front();
     }
     if let Some(n) = candidates.pop_front() {
       if closeifpossible && closeable {
-        self.close_to_node(&n, false, state)?;
+        self.close_to_node(&n, false)?;
       } else {
         let savenode = self.node.clone();
         self.set_node(&n);
@@ -3134,8 +2974,8 @@ impl Document {
         //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
         return Ok(Some(savenode));
       }
-    } else if !self.can_contain_node_somehow(&self.node, qname, state) {
-        Warn!("malformed", qname, self, s!("No open node can contain element '{}'", qname));
+    } else if !can_contain_node_somehow(&self.node, qname) {
+        Warn!("malformed", qname, s!("No open node can contain element '{}'", qname));
         // self.get_insertion_context())
     }
     Ok(None)
@@ -3144,7 +2984,7 @@ impl Document {
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
-  pub fn float_to_label(&mut self, state: &mut State) -> Option<Node> {
+  pub fn float_to_label(&mut self) -> Option<Node> {
     let key = "labels";
     let ancestors: Vec<Node> = self
       .get_insertion_candidates(&self.node)
@@ -3155,7 +2995,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if self.can_node_have_attribute(candidate, key, state)
+      if can_node_have_attribute(candidate, key)
         && candidate.has_attribute_ns("id", xml::XML_NS)
       {
         node_opt = Some(Cow::Borrowed(candidate));
@@ -3170,7 +3010,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if self.can_node_have_attribute(&sibling, key, state)
+        if can_node_have_attribute(&sibling, key)
           && sibling.has_attribute_ns("id", xml::XML_NS)
         {
           node_opt = Some(Cow::Owned(sibling));
@@ -3189,7 +3029,7 @@ impl Document {
       Some(savenode)
     } else {
       let message = s!("No open node with an xml:id can get attribute {:?}", key);
-      Warn!("malformed", key, self, message);
+      Warn!("malformed", key, message);
       //  $self->getInsertionContext());
       None
     }
@@ -3203,8 +3043,8 @@ impl Document {
     self.box_to_absorb = self.localized_boxes.pop().unwrap();
   }
 
-  pub fn load_labels_for_rewrite(&mut self, state: &mut State) -> Result<()> {
-    for node in self.findnodes("//*[@labels]", None, state) {
+  pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
+    for node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {
         if let Some(id) = node.get_attribute("id") {
           for label in labels.split_whitespace() {
@@ -3216,7 +3056,6 @@ impl Document {
           Error!(
             "malformed",
             "label",
-            None,
             format!("Node {} has labels but no xml:id", node.get_name())
           );
         }
@@ -3241,18 +3080,16 @@ impl Document {
     &mut self,
     node: &mut Node,
     mut prefix: &str,
-    state: &mut State,
   ) -> Result<()> {
     // If node doesn't already have an id, and can
     // but isn't a _Capture_ node (which ultimately should disappear)
-    let model = &state.model;
-    let qname = model.get_node_qname(node);
+    let qname = model!().get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model.can_have_attribute(qname, *XML_ID_SYM)
+      && model!().can_have_attribute(qname, *XML_ID_SYM)
       && (qname != *CAPTURE_SYM)
     {
       let mut ancestor = self
-        .findnode("ancestor::*[@xml:id][1]", Some(node), state)
+        .findnode("ancestor::*[@xml:id][1]", Some(node))
         .unwrap_or_else(|| self.get_document().get_root_element().unwrap());
       //// Old versions don't like ancestor.getAttribute('xml:id');
       let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
@@ -3293,7 +3130,6 @@ impl Document {
     &mut self,
     new: Node,
     old: &mut Node,
-    state: &mut State,
   ) -> Result<Option<Node>> {
     if let Some(mut parent) = old.get_parent() {
       let mut following = VecDeque::new(); // Collect the matching and following nodes
@@ -3306,7 +3142,7 @@ impl Document {
         following.push_front(sib);
       }
       self.remove_node(old);
-      self.append_tree(&mut parent, vec![new], state)?;
+      self.append_tree(&mut parent, vec![new])?;
       let inserted = parent.get_last_child();
       for mut child in following {
         parent.add_child(&mut child)?; // No need for clone
@@ -3317,7 +3153,7 @@ impl Document {
     }
   }
 
-  pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>, state: &mut State) -> Result<()> {
+  pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
@@ -3332,15 +3168,15 @@ impl Document {
           //           $child->removeAttribute('xml:id');
           //           $self->unRecordID($id); }
 
-          let tag_sym = self.get_node_qname(&child, state);
+          let tag_sym = get_node_qname(&child);
           // TODO: do NOT allocate
           let tag = arena::to_string(tag_sym);
-          let mut new = self.open_element_at(node, &tag, Some(attributes), None, state)?;
-          self.append_tree(&mut new, child.get_child_nodes(), state)?;
-          self.close_element_at(&mut new, state)?;
+          let mut new = self.open_element_at(node, &tag, Some(attributes), None)?;
+          self.append_tree(&mut new, child.get_child_nodes())?;
+          self.close_element_at(&mut new)?;
         },
         Some(NodeType::DocumentFragNode) => {
-          self.append_tree(node, child.get_child_nodes(), state)?;
+          self.append_tree(node, child.get_child_nodes())?;
         },
         Some(NodeType::TextNode) => {
           node.append_text(&child.get_content())?;
@@ -3429,4 +3265,120 @@ impl IntoVDQS for &str {
 }
 impl IntoVDQS for VecDeque<String> {
   fn into_vdqs(self) -> VecDeque<String> { self }
+}
+
+
+// containment checks are package-level (and maybe can be moved in a new submodule?)
+
+pub fn can_contain(node: &Node, child: &str) -> bool {
+  let tag = model!().get_node_qname(node);
+  model_mut!().can_contain_sym(tag, arena::pin(child))
+}
+
+pub fn can_contain_qname(tag: &str, child: &str) -> bool {
+  model!().can_contain(tag, child)
+}
+
+pub fn can_contain_sym(node: &Node, child: SymbolU32) -> bool {
+  let tag = model!().get_node_qname(node);
+  model_mut!().can_contain_sym(tag, child)
+}
+pub fn can_contain_qsym(tag: SymbolU32, child: SymbolU32) -> bool {
+  model_mut!().can_contain_sym(tag, child)
+}
+
+/// Can an element with (qualified name) $tag contain a $childtag element indirectly?
+/// That is, by openning some number of autoOpen'able tags?
+/// And if so, return the tag to open.
+pub fn can_contain_indirect(
+  tag: SymbolU32,
+  child: SymbolU32,
+) -> Option<SymbolU32> {
+  // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
+  // node. $child = $model->getNodeQName($child) if ref $child;    // In case
+  // child is a node.
+
+  if state!().indirect_model.is_none() {
+    state_mut!().indirect_model = Some(state_mut!().compute_indirect_model());
+  }
+
+  // returning inner_node
+  match state!().indirect_model.as_ref().unwrap().get(&tag) {
+    Some(sub_m) => sub_m.get(&child).copied(),
+    None => None,
+  }
+}
+
+pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
+  let child_sym = arena::pin(child);
+  sym_can_contain_somehow(model!().get_node_qname(node), child_sym)
+}
+
+pub fn can_contain_somehow(tag: &str, child: &str) -> bool {
+  let tag_sym = arena::pin(tag);
+  let child_sym = arena::pin(child);
+  sym_can_contain_somehow(tag_sym, child_sym)
+}
+
+pub fn sym_can_contain_somehow(
+  tag: SymbolU32,
+  child: SymbolU32,
+) -> bool {
+  model_mut!().can_contain_sym(tag, child)
+    || can_contain_indirect(tag, child).is_some()
+}
+
+pub fn can_node_have_attribute(node: &Node, attrib: &str) -> bool {
+  let qname = model!().get_node_qname(node);
+  model!().can_have_attribute(qname, arena::pin(attrib))
+}
+pub fn can_have_attribute(tag: &str, attrib: &str) -> bool {
+  model!()
+    .can_have_attribute(arena::pin(tag), arena::pin(attrib))
+}
+pub fn sym_can_have_attribute(
+  tag: SymbolU32,
+  attrib: SymbolU32,
+) -> bool {
+  model!().can_have_attribute(tag, attrib)
+}
+
+// Dirty little secrets:
+//  You can generically allow an element to autoClose using Tag.
+// OR you can indicate a specific node can autoClose, or forbid it, using
+// the _autoclose or _noautoclose attributes!
+pub fn can_auto_close(node: &Node) -> bool {
+  // text or comments auto close
+  // otherwise must be element
+  // without _noautoclose
+  // and either with _autoclose
+  // OR it has autoClose set on tag properties
+  match node.get_type() {
+    Some(NodeType::TextNode) | Some(NodeType::CommentNode) => true,
+    Some(NodeType::ElementNode) => {
+      if !node.has_attribute("_noautoclose") {
+        if node.has_attribute("_autoclose") {
+          true
+        } else if let Some(props) = state!().tag_properties.get(&get_node_qname(node)) {
+          props.auto_close.unwrap_or(false)
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+    },
+    _ => false,
+  }
+}
+/// Get the node's qualified name in standard form
+/// Ie. using the registered prefix for that namespace.
+/// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
+/// NOTE: Should Deprecate! (use model)
+pub fn get_node_qname(node: &Node) -> SymbolU32 {
+  model!().get_node_qname(node)
+}
+pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
+where FnR: FnOnce(&str) -> R {
+  model!().with_node_qname(node, caller)
 }

@@ -1,7 +1,7 @@
 //! t1 font encoding
 use crate::package::*;
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   DeclareFontMap!(
     "T1",
     mixvec![

@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(_state, {
+LoadDefinitions!({
   //TODO
 
   //**********************************************************************
@@ -13,14 +13,14 @@ LoadDefinitions!(_state, {
   // However, since people abuse this, and we're really not quite TeX,
   // we really can't do it Right.
   // Even a \begin{array} ends up expanding into a $ !!!
-  DefMacro!("\\eqno", sub[gullet,(),state] {
+  DefMacro!("\\eqno", sub[()] {
     // my $locator  = $gullet->getLocator;
     let mut stuff    = Vec::new();
     // This is risky!!!
-    while let Some(t) = gullet.read_x_token(Some(false), false, state)? {
+    while let Some(t) = gullet.read_x_token(Some(false), false)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        if let Some(balanced_arg) = gullet.read_balanced(false, state)? {
+        if let Some(balanced_arg) = gullet.read_balanced(false)? {
           stuff.extend(balanced_arg.unlist());
         }
         stuff.push(T_END!());
@@ -38,7 +38,7 @@ LoadDefinitions!(_state, {
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
         // This seems needed within AmSTeX environs
       {
-        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)], gullet, state)?.unlist();
+        let mut invoked = Invocation!(T_CS!("\\@@eqno"), vec![Tokens::new(stuff)])?.unlist();
         invoked.push(t);
         return Ok(Tokens::new(invoked));
       } else {

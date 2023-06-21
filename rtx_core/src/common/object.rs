@@ -1,7 +1,5 @@
 use crate::common::error::*;
 use crate::common::locator::Locator;
-use crate::state::State;
-use crate::stomach::Stomach;
 use crate::tokens::Tokens;
 use crate::Digested;
 ///======================================================================
@@ -27,32 +25,19 @@ pub trait Object {
 
   // These should really only make sense for Data objects within the
   // processing stream.
-  fn be_digested(self, _stomach: &mut Stomach, _state: &mut State) -> Result<Digested>
+  fn be_digested(self) -> Result<Digested>
   where
     Self: Sized,
     Self: Debug,
   {
     panic!(
-      "Was it really intended to digest? We don't know how! {self:?} {:?}",
-      self.get_locator()
+      "Was it really intended to digest? We don't know how! {self:?}"
     );
   }
-
-  // fn be_absorbed(&self, _document: Document) { unimplemented!() }
   fn get_locator(&self) -> Option<Cow<Locator>>;
-  fn get_location(&self) -> String {
-    if let Some(loc) = self.get_locator() {
-      if *loc == Locator::default() {
-        String::new()
-      } else {
-        s!("at {}", loc)
-      }
-    } else {
-      String::new()
-    }
-  }
+
   /// each concrete object needs to provide its own path back to tokens
-  fn revert(&self, _state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     unimplemented!();
   }
 }

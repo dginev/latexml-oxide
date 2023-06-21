@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(_state, {
+LoadDefinitions!({
   //======================================================================
 
   // Special Characters.
@@ -67,7 +67,7 @@ LoadDefinitions!(_state, {
     "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP'",
     "and @role!='OPEN' and @role!='CLOSE'",
     "])]"),
-  replace => sub[document, nodes, _state] {
+  replace => sub[document, nodes] {
     let node = nodes.pop().unwrap();
     let mut replacement = node.clone();
     let content     = node.get_content();
@@ -84,12 +84,12 @@ LoadDefinitions!(_state, {
   // TeX's ligatures handled by rewrite regexps.
   // Note: applied in reverse order of definition (latest defined applied first!)
   // Note also, these area only applied in text content, not in attributes!
-  DefPrimitive!("\\@@endash", sub[stomach,(),state] {
+  DefPrimitive!("\\@@endash", sub[()] {
     Tbox::new(arena::pin_static("\u{2013}"), None, None,
-      Tokens!(T_CS!("\\@@endash")), HashMap::default(), state); });
-  DefPrimitive!("\\@@emdash", sub[stomach,(),state] {
+      Tokens!(T_CS!("\\@@endash")), HashMap::default()); });
+  DefPrimitive!("\\@@emdash", sub[()] {
     Tbox::new(arena::pin_static("\u{2014}"), None, None,
-      Tokens!(T_CS!("\\@@emdash")), HashMap::default(), state); });
+      Tokens!(T_CS!("\\@@emdash")), HashMap::default()); });
 
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
@@ -112,7 +112,7 @@ LoadDefinitions!(_state, {
 
   DefConstructor!("\\TeX", r###"<ltx:text class='ltx_TeX_logo'
     cssstyle='letter-spacing:-0.2em; margin-right:0.2em'>T<ltx:text yoffset='-0.4ex'>E</ltx:text>X</ltx:text>"###,
-    sizer => sub[_whatsit, _state] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
+    sizer => sub[_whatsit] { Ok((Dimension!("1.9em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
   DefPrimitive!("\\i", "\u{0131}"); // LATIN SMALL LETTER DOTLESS I
   DefPrimitive!("\\j", "\u{0237}");
 

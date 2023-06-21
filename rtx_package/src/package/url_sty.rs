@@ -2,7 +2,7 @@ use crate::package::*;
 
 static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   AssignValue!("BASE_URL", "");
 
   // Ignorable stuff, since we're not doing linebreaks.
@@ -38,21 +38,21 @@ LoadDefinitions!(state, {
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
-  DefMacro!("\\@Url Token", sub[gullet, (cmd), state] {
+  DefMacro!("\\@Url Token", sub[ (cmd)] {
     let perc = vec!['%'];
-    state.begin_semiverbatim(Some(&perc));
-    let mut open = gullet.read_token(state)?.unwrap();
+    state_mut!().begin_semiverbatim(Some(&perc));
+    let mut open = gullet.read_token()?.unwrap();
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet.read_balanced(false, state)?.unwrap_or_default()
+      gullet.read_balanced(false)?.unwrap_or_default()
     } else {
       open = open.as_other();
       close = open.clone();
-      gullet.read_until_token(close.clone(), state)?
+      gullet.read_until_token(close.clone())?
     };
-    state.end_semiverbatim()?;
+    state_mut!().end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
       .map(|t| t.as_other()).collect();
 
@@ -64,25 +64,25 @@ LoadDefinitions!(state, {
         Tokens!(open),
         Tokens!(close),
         Tokens::new(toks),
-        Tokens::new(url_wrapped)], gullet)?.unlist();
+        Tokens::new(url_wrapped)])?.unlist();
     invocation_tokens.push(T_CS!("\\endgroup"));
     Ok(Tokens::new(invocation_tokens))
   });
 
   // Define \Url, in case its used; won't be represented as nicely
-  DefMacro!("\\Url", sub[gullet, _args, _state] {
-    gullet.unread_one(T_OTHER!("\\Url"));
+  DefMacro!("\\Url", sub[_args] {
+    gullet_mut!().unread_one(T_OTHER!("\\Url"));
     Ok(Tokens!(T_CS!("\\@Url")))
   });
 
   // \@@Url cmd {open}{close}{url}{formattedurl}
   DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
     "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    properties => sub[_stomach, args, state] {
+    properties => sub[ args] {
       unref!(args => cmd, open, close, url, formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
-        "href" => compose_url(&state.lookup_string("BASE_URL"), &url.to_string(), None).into(),
+        "href" => compose_url(&state!().lookup_string("BASE_URL"), &url.to_string(), None).into(),
         // TODO: why was class a sub {}??
         "class"=> ltx_cmd.into()
       ))
@@ -97,10 +97,9 @@ LoadDefinitions!(state, {
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
-  DefPrimitive!("\\urldef{}", sub[stomach, (cmd), url_state] {
+  DefPrimitive!("\\urldef{}", sub[(cmd)] {
     let cmd = cmd.to_string();
-    let expansion : Vec<Digested> = stomach.digest_next_body(Some(T_CS!("\\endgroup")), url_state)?;
-    let gullet = stomach.get_gullet_mut();
+    let expansion : Vec<Digested> = stomach::digest_next_body(Some(T_CS!("\\endgroup")))?;
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });

@@ -1,7 +1,7 @@
 use crate::package::*;
 use std::cmp::Ordering;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
 
   // See the pdfTeX User's Manual
@@ -92,10 +92,10 @@ LoadDefinitions!(state, {
   DefMacro!("\\pdfmdfivesum Number {}", None);
   DefMacro!("\\pdf@mdfivesum Number {}", None);
   DefMacro!("\\pdf@filemdfivesum Number {}", None);
-  DefMacro!("\\pdffilesize{}", sub[gullet,(file),state] {
+  DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
-    let filepath = Expand!(file,gullet,state).to_string();
-    if let Some(path) = find_file(&filepath,None,state) {
+    let filepath = Expand!(file,gullet).to_string();
+    if let Some(path) = find_file(&filepath,None) {
       unimplemented!();
       // let stat = stat $path;
       // (defined $stat[7]) ? Explode($stat[7]) : ();
@@ -141,7 +141,7 @@ LoadDefinitions!(state, {
   DefMacro!("\\pdfinfo{}", None);
 
   // Ugh, what a mess of ugly syntax....
-  DefParameterType!(OpenActionSpecification, reader => reader!(_gullet, _args, _extra, _state, {
+  DefParameterType!(OpenActionSpecification, reader => reader!(_gullet, _args, _extra,{
   unimplemented!(); ()
   //   my ($gullet) = @_;
   //   if (my $key = $gullet->readKeyword('openaction')) {
@@ -237,7 +237,7 @@ LoadDefinitions!(state, {
 
   DefMacro!("\\expanded Expanded", "#1");
 
-  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[gullet, (first,second), state] {
+  DefMacro!("\\pdfstrcmp Expanded Expanded", sub[ (first,second)] {
     match first.to_string().cmp(&second.to_string()) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),

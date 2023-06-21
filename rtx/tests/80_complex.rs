@@ -10,7 +10,7 @@ mod helpers;
 ///**********************************************************************
 use rtx::util::test::*;
 use rtx_core::common::error::*;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 use rtx_core::stomach::Stomach;
 use std::rc::Rc;
 
@@ -26,12 +26,10 @@ fn can_complex() {
 
 pub fn complex_tests_dispatch(
   filename: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Option<Result<()>> {
+  ) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "xii.tex" => Some(helpers::xii_tex::load_definitions(stomach, state)),
+    "xii.tex" => Some(helpers::xii_tex::load_definitions(stomach)),
     _ => None,
   }
 }

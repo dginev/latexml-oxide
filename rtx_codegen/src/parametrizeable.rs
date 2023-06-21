@@ -32,7 +32,7 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
   if prototype.is_empty() {
     quote!(()).into()
   } else {
-    match parse_prototype(&prototype, None) {
+    match parse_prototype(&prototype) {
       Ok((cs, params_opt)) => {
         let csname = cs.with_cs_name(ToString::to_string);
         let proto_types: Vec<_> = if let Some(ref params) = params_opt {
@@ -58,18 +58,17 @@ pub fn compile_prototype_for(input: DeriveInput) -> TokenStream {
           Vec::new()
         };
         let quoted_params = if let Some(params) = params_opt {
-          quote!(Some(#params.init(outer_state!())?))
+          quote!(Some(#params.init()?))
         } else {
           quote!(None)
         };
         let inneri = format_ident!("{}", inner);
         quote!(
           macro_rules! this_prototype {
-          (sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ]
+          (sub [( $($var:ident),* )]
             $body:block $($input:tt)*) => {
             let these_parameters = #quoted_params;
-            #inneri!(#csname, these_parameters, sub [ $gullet, ( $($var),* ):(#(#proto_types),*),
-              $inner_state ] $body $($input)*)
+            #inneri!(#csname, these_parameters, sub [( $($var),* ):(#(#proto_types),*)] $body $($input)*)
           }
         }
         )
@@ -95,7 +94,7 @@ pub fn compile_prototype(input: DeriveInput) -> TokenStream {
   if prototype.is_empty() {
     panic!("Must never call on empty prototype?! input was {prototype}");
   } else {
-    match parse_prototype(&prototype, None) {
+    match parse_prototype(&prototype) {
       Ok((cs, params_opt)) => match params_opt {
         Some(params) => quote!(
           macro_rules! this_cs_and_parameters {

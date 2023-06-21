@@ -1,28 +1,28 @@
 use crate::package::*;
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
   // This should be fairly compact vertically.
   DefConstructor!("\\@shortstack@cr",
     "</ltx:p><ltx:p>",
     properties   => { stored_map!("isBreak" => true) },
     reversion    => Tokens!(T_CS!("\\\\"), T_CR!()),
-    before_digest => sub[stomach,state] { stomach.egroup(state)?; },
-    after_digest  => sub[stomach,_args,state] { stomach.bgroup(state); });
+    before_digest => sub[stomach] { stomach.egroup()?; },
+    after_digest  => sub[_args] { stomach.bgroup(); });
 
   DefConstructor!("\\shortstack[]{}  OptionalMatch:* [Dimension]",
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
   bounded      => true,
   sizer        => "#2",
-  before_digest => sub[stomach, state] { reenter_text_mode(false, stomach.get_gullet_mut(), state);
+  before_digest => sub[stomach] { reenter_text_mode(false, gullet_mut!());
     // then RE-RE-define this one!!!
     Let!("\\\\", "\\@shortstack@cr");
-    AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None, state).into());
-    AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None, state).into());
-    stomach.bgroup(state); },
-  after_digest => sub[stomach,_whatsit,state] {
+    AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());
+    AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
+    stomach.bgroup(); },
+  after_digest => sub[_whatsit] {
     // TODO
     // $_[1]->getSize;    # precompute while binding in effect
-    stomach.egroup(state)?; },
+    stomach.egroup()?; },
   // Note: does not get layout=vertical, since linebreaks are explicit
   // TODO
   // properties => { align => sub { ($_[1] ? $alignments{ ToString($_[1]) } : undef); },

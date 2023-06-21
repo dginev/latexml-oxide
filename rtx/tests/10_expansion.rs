@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use rtx::tex_tests;
 use rtx_core::common::error::Result;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 use rtx_core::stomach::Stomach;
 use rtx_package::package;
 
@@ -23,13 +23,11 @@ static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 
 pub fn expansion_tests_dispatch(
   filename: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Option<Result<()>> {
+  ) -> Option<Result<()>> {
   match filename {
-    "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions(stomach, state)),
-    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions(stomach, state)),
-    other => package::dispatch(other, stomach, state),
+    "whichinput.tex" => Some(helpers::whichinput_tex::load_definitions(stomach)),
+    "whichcache.tex" => Some(helpers::whichcache_tex::load_definitions(stomach)),
+    other => package::dispatch(other),
   }
 }
 

@@ -19,13 +19,13 @@ macro_rules! compile_replacement {
 /// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_prototype_for_typed_macro {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+  ($prototype:literal, sub [ ( $($var:ident),* )] $body:block
     $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedMacro"]
     struct _DummyP;
-    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
+    this_prototype!(sub [ ( $($var),* ) ] $body $($input)*);
   }};
 }
 
@@ -33,13 +33,13 @@ macro_rules! compile_prototype_for_typed_macro {
 #[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Primitive closures
 macro_rules! compile_prototype_for_typed_primitive {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+  ($prototype:literal, sub [( $($var:ident),* )] $body:block
     $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedPrimitive"]
     struct _DummyP;
-    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
+    this_prototype!(sub [ ( $($var),* )] $body $($input)*);
   }};
 }
 
@@ -47,13 +47,13 @@ macro_rules! compile_prototype_for_typed_primitive {
 #[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Conditional closures
 macro_rules! compile_prototype_for_typed_conditional {
-  ($prototype:literal, sub [ $gullet:ident, ( $($var:ident),* ), $inner_state:ident ] $body:block
+  ($prototype:literal, sub [( $($var:ident),* )] $body:block
     $($input:tt)*) => {{
     #[derive(CompilePrototypeFor)]
     #[prototype=$prototype]
     #[inner="TypedConditional"]
     struct _DummyP;
-    this_prototype!(sub [ $gullet, ( $($var),* ), $inner_state ] $body $($input)*);
+    this_prototype!(sub [( $($var),* )] $body $($input)*);
   }};
 }
 
@@ -157,7 +157,7 @@ macro_rules! parameter_rust_type {
   (CSName) => {Token};
   (Variable) => {ArgWrap};
   // For now return the raw Tokens for KeyVals, until we figure out how to
-  // do TryInto with access to the current "State" object.
+  // do TryInto with access to the current "state:: object.
   (OptionalKeyVals) => {Option<KeyVals>};
   (KeyVals) => {KeyVals};
   ($other:ident) => {$other};

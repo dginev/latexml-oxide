@@ -1,6 +1,6 @@
 use crate::package::*;
 #[rustfmt::skip]
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.9.1 Figures and Tables
   //======================================================================
@@ -70,9 +70,9 @@ LoadDefinitions!(state, {
     r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
   );
 
-  DefPrimitive!("\\lx@note@caption@label{}", sub[stomach,(label),state] {
+  DefPrimitive!("\\lx@note@caption@label{}", sub[(label)] {
     let label = label.to_string();
-    maybe_note_label(&label, state); });
+    maybe_note_label(&label); });
 
   DefMacro!(
     "\\@caption@@@{}{}{}",
@@ -80,24 +80,23 @@ LoadDefinitions!(state, {
   );
 
   // Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
-  DefPrimitive!("\\@@add@caption@counters", sub[stomach, (), state] {
-    let captype = stomach.digest(T_CS!("\\@captype"), state)?.to_string();
-    let props   = ref_step_counter(&captype, false, stomach, state)?;
-    let inlist  = stomach.digest(T_CS!(s!("\\ext@{}", captype)), state)?.to_string();
-    state.assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
-    state.assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
-    state.assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
+  DefPrimitive!("\\@@add@caption@counters", sub[ ()] {
+    let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
+    let props   = ref_step_counter(&captype, false)?;
+    let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
+    state_mut!().assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
+    state_mut!().assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
+    state_mut!().assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
-  before_digest => sub[stomach, _state] {
-    Error!("unexpected", "\\caption", stomach,
-      "Use of \\caption outside any known float"); });
+  before_digest => {
+    Error!("unexpected", "\\caption", "Use of \\caption outside any known float"); });
 
   // Note that even without \caption, we'd probably like to have xml:id.
-  Tag!("ltx:figure", after_close => sub[document, node, state] { document.generate_id(node, "fig", state)?; });
-  Tag!("ltx:table",  after_close => sub[document, node, state] { document.generate_id(node, "tab", state)?; });
-  Tag!("ltx:float",  after_close => sub[document, node, state] { document.generate_id(node, "tab", state)?; });
+  Tag!("ltx:figure", after_close => sub[document, node] { document.generate_id(node, "fig")?; });
+  Tag!("ltx:table",  after_close => sub[document, node] { document.generate_id(node, "tab")?; });
+  Tag!("ltx:float",  after_close => sub[document, node] { document.generate_id(node, "tab")?; });
 
   // # These may need to float up to where they're allowed,
   // # or they may need to close <p> or similar.
@@ -117,8 +116,8 @@ LoadDefinitions!(state, {
   "###,
     properties   => { map!("layout" => "vertical".into()) },
     before_digest => { DefMacro!("\\@captype", "figure"); },
-    after_digest  => sub[stomach, tag, state] {
-      rescue_caption_counters("figure", tag, stomach, state);
+    after_digest  => sub[ tag] {
+      rescue_caption_counters("figure", tag);
     }
   );
   // DefEnvironment('{figure*}[]',
@@ -133,9 +132,8 @@ LoadDefinitions!(state, {
     "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     // TODO:
     // properties   => { layout => 'vertical' },
-    before_digest => sub[_stomach,istate] {
-      DefMacro!("\\@captype", "table"); },
-    after_digest  => sub[stomach,whatsit,state] { rescue_caption_counters("table", whatsit, stomach, state); });
+    before_digest => { DefMacro!("\\@captype", "table"); },
+    after_digest  => sub[whatsit] { rescue_caption_counters("table", whatsit); });
   // DefEnvironment('{table*}[]',
   //   "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>"
   //     . "#tags"

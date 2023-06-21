@@ -6,7 +6,6 @@ mod data;
 mod parser;
 mod pragmatics;
 mod semantics;
-mod syntax;
 mod util;
 
 pub use parser::text_form;

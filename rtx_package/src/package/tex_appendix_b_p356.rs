@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
     //======================================================================
   // TeX Book, Appendix B. p. 356
 

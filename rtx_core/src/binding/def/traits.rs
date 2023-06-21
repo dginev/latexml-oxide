@@ -18,7 +18,7 @@ use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
 use crate::keyvals::KeyVals;
 use crate::list::List;
-use crate::state::Scope;
+use crate::state::{Scope};
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -107,7 +107,7 @@ impl IntoOption<Option<Scope>> for String {
 // TODO: Sizers need a lot more work, likely a complete rethink about organization.
 impl IntoOption<Option<SizingClosure>> for i64 {
   fn into_option(self) -> Option<SizingClosure> {
-    Some(Rc::new(move |_, _| {
+    Some(Rc::new(move |_| {
       Ok((
         Dimension::new(self),
         Dimension::new(self),
@@ -122,8 +122,8 @@ impl IntoOption<Option<SizingClosure>> for &str {
       None
     } else if let Some(stripped) = self.strip_prefix('#') {
       let arg = stripped.parse::<usize>().unwrap_or(1);
-      Some(Rc::new(move |w, state| match w.get_arg(arg) {
-        Some(arg) => arg.compute_size(HashMap::default(), state),
+      Some(Rc::new(move |w| match w.get_arg(arg) {
+        Some(arg) => arg.compute_size(HashMap::default()),
         None => Ok((
           Dimension::default(),
           Dimension::default(),
@@ -131,7 +131,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         )),
       }))
     } else if self.is_empty() || self == "0" {
-      Some(Rc::new(|_, _| {
+      Some(Rc::new(|_| {
         Ok((
           Dimension::default(),
           Dimension::default(),
@@ -141,19 +141,18 @@ impl IntoOption<Option<SizingClosure>> for &str {
     } else {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
-      Some(Rc::new(move |w, state| {
+      Some(Rc::new(move |w| {
         let font = if let Stored::Font(ref font) = *w.get_property("font").unwrap() {
           font.clone()
         } else {
-          state.lookup_font().unwrap()
+          state!().lookup_font().unwrap()
         };
         font.compute_boxes_size(
           &[Digested::from(Tbox {
             text: arena::pin(&sized_data),
             ..Tbox::default()
           })],
-          HashMap::default(),
-          state,
+          HashMap::default()
         )
       }))
     }

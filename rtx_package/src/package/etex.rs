@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   // See http://tex.loria.fr/moteurs/etex_ref.html
   // Or better yet, see the full manual
   // http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
@@ -10,14 +10,14 @@ LoadDefinitions!(outer_state, {
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
-  DefPrimitive!("\\protected", sub[_stomach, _args, state] {
-    state.set_prefix("protected");
+  DefPrimitive!("\\protected", sub[ _args] {
+    state_mut!().set_prefix("protected");
   },
   is_prefix => true);
 
   // \detokenize
-  DefMacro!("\\detokenize GeneralText", sub[gullet, (text), state] {
-    Explode!(writable_tokens(&text, state))
+  DefMacro!("\\detokenize GeneralText", sub[ (text)] {
+    Explode!(writable_tokens(&text))
   });
 
   // When building an expanded token list, the tokens resulting from the expansion
@@ -30,16 +30,17 @@ LoadDefinitions!(outer_state, {
   // 3.2. Provision for re-scanning already read text
 
   // \readline; like \read, but only spaces & other
-  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[gullet, (port, token), state] {
+  DefMacro!("\\readline Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
     let file_key = format!("input_file:{port}");
-    let mouth_opt = if let Some(Stored::Mouth(mouth)) = LookupValue!(&file_key) {
+    let state = state!();
+    let mouth_opt = if let Some(Stored::Mouth(mouth)) = state.lookup_value(&file_key) {
       Some(Rc::clone(mouth)) } else { None };
     if let Some(mouth) = mouth_opt {
-      let mut raw_line = mouth.borrow_mut().read_raw_line(false, state).unwrap_or_default();
+      let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       // DG: Can't we do this \endlinechar check in readRawLine ?!
       // DG:  and can't we make it *faster* ?
-      if let Some(eol) = state.lookup_definition(&T_CS!("\\endlinechar"))? {
-        let eolv   = eol.value_of(Vec::new(), state).unwrap_or_default().value_of();
+      if let Some(eol) = state!().lookup_definition(&T_CS!("\\endlinechar"))? {
+        let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
         if (eolv > 0) && (eolv <= 255) {
           raw_line.push(eolv as u8 as char);
         }
@@ -51,9 +52,9 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefMacro!("\\scantokens GeneralText", sub[gullet, (tokens), state] {
+  DefMacro!("\\scantokens GeneralText", sub[ (tokens)] {
     gullet.open_mouth(
-      Mouth::new(&writable_tokens(&tokens, state), None, state)?, true);
+      Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });
 
@@ -65,19 +66,19 @@ LoadDefinitions!(outer_state, {
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
-    getter => sub[_args, state] { state.get_frame_depth() });
+    getter => sub[_args] { state!().get_frame_depth() });
 
   // \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
-  DefConditional!("\\ifcsname CSName", sub[gullet, (t), state] {
-    state.lookup_meaning(&t).is_some()
+  DefConditional!("\\ifcsname CSName", sub[ (t)] {
+    state!().lookup_meaning(&t).is_some()
   });
 
   // \ifdefined <token>
-  DefConditional!("\\ifdefined Token", sub[gullet, (t), state] {
-    state.lookup_meaning(&t).is_some()
+  DefConditional!("\\ifdefined Token", sub[ (t)] {
+    state!().lookup_meaning(&t).is_some()
   });
 
   // # ???
@@ -88,11 +89,11 @@ LoadDefinitions!(outer_state, {
   // # but since we don't manage Pages...
 
   DefPrimitive!("\\marks Number GeneralText", None);
-  DefMacro!("\\topmarks Number", sub[gullet, (num), state] {});
-  DefMacro!("\\firstmarks Number", sub[gullet, (num), state] {});
-  DefMacro!("\\botmarks Number", sub[gullet, (num), state] {});
-  DefMacro!("\\splitfirstmarks Number", sub[gullet, (num), state] {});
-  DefMacro!("\\splitbotmarks Number", sub[gullet, (num), state] {});
+  DefMacro!("\\topmarks Number", sub[ (num)] {});
+  DefMacro!("\\firstmarks Number", sub[ (num)] {});
+  DefMacro!("\\botmarks Number", sub[ (num)] {});
+  DefMacro!("\\splitfirstmarks Number", sub[ (num)] {});
+  DefMacro!("\\splitbotmarks Number", sub[ (num)] {});
 
   // #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -158,13 +159,13 @@ LoadDefinitions!(outer_state, {
   //     return; });
 
   // \unless someif
-  DefConditional!("\\unless Token", sub[gullet, (if_token), state] {
-    if let Some(Stored::Conditional(defn)) = state.lookup_definition_stored(&if_token)? {
+  DefConditional!("\\unless Token", sub[ (if_token)] {
+    if let Some(Stored::Conditional(defn)) = state!().lookup_definition_stored(&if_token)? {
       if defn.conditional_type == ConditionalType::If {
         if let Some(ref test) = defn.test {
           // Invert the if's test!
-          let args = defn.read_arguments(gullet, state)?;
-          return Ok(!(test(gullet, args, state)?));
+          let args = defn.read_arguments()?;
+          return Ok(!(test(gullet, args)?));
         }
       }
     }
@@ -180,12 +181,11 @@ LoadDefinitions!(outer_state, {
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
   fn etex_readexpr(
-    gullet: &mut Gullet,
+
     rtype: RegisterType,
-    state: &mut State,
   ) -> Result<RegisterValue> {
-    let value = etex_readexpr_i(gullet, rtype, 0, state)?;
-    if let Some(token) = gullet.read_token(state)? {
+    let value = etex_readexpr_i(gullet, rtype, 0)?;
+    if let Some(token) = gullet.read_token()? {
       // Skip \relax
       if token != *TOKEN_RELAX {
         gullet.unread_one(token);
@@ -195,19 +195,18 @@ LoadDefinitions!(outer_state, {
   }
 
   fn etex_readexpr_i(
-    gullet: &mut Gullet,
+
     rtype: RegisterType,
     prec: usize,
-    state: &mut State,
   ) -> Result<RegisterValue> {
     // Read a first value
-    let token = match gullet.read_x_non_space(state)? {
+    let token = match gullet.read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };
     let mut value = if token == T_OTHER!("(") {
-      let i_value = etex_readexpr_i(gullet, rtype, 0, state)?;
-      let close = gullet.read_x_token(None, false, state)?;
+      let i_value = etex_readexpr_i(gullet, rtype, 0)?;
+      let close = gullet.read_x_token(None, false)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
         unimplemented!();
@@ -218,24 +217,24 @@ LoadDefinitions!(outer_state, {
     } else {
       // Read core TeX value/register
       gullet.unread_one(token);
-      gullet.read_value(rtype, state)?
+      gullet.read_value(rtype)?
     };
 
     // Now check for a following operator(s) & operand(s) (respecting precedence)
-    while let Some(next) = gullet.read_x_non_space(state)? {
+    while let Some(next) = gullet.read_x_non_space()? {
       if next == *TOKEN_RELAX {
         gullet.unread_one(next); // leave the \relax for top-level to strip off.
         break;
       } else if next == T_OTHER!("+") && prec < 1 {
-        value = value.add(etex_readexpr_i(gullet, rtype, 1, state)?);
+        value = value.add(etex_readexpr_i(gullet, rtype, 1)?);
       } else if next == T_OTHER!("-") && prec < 1 {
-        value = value.subtract(etex_readexpr_i(gullet, rtype, 1, state)?);
+        value = value.subtract(etex_readexpr_i(gullet, rtype, 1)?);
       } else if next == T_OTHER!("*") && prec < 2 {
         // multiplier should be pure number
-        value = value.multiply(etex_readexpr_i(gullet, RegisterType::Number, 2, state)?);
+        value = value.multiply(etex_readexpr_i(gullet, RegisterType::Number, 2)?);
       } else if next == T_OTHER!("/") && prec < 2 {
         // denominator should be pure number
-        value = value.divideround(etex_readexpr_i(gullet, RegisterType::Number, 2, state)?);
+        value = value.divideround(etex_readexpr_i(gullet, RegisterType::Number, 2)?);
       } else {
         // anything else, we're done.
         gullet.unread_one(next);
@@ -245,29 +244,29 @@ LoadDefinitions!(outer_state, {
     Ok(value)
   }
 
-  DefParameterType!(NumExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Number, state)?
+  DefParameterType!(NumExpr, sub[ _inner, _extra] {
+    etex_readexpr(gullet, RegisterType::Number)?
   });
-  DefParameterType!(DimExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Dimension, state)?
+  DefParameterType!(DimExpr, sub[ _inner, _extra] {
+    etex_readexpr(gullet, RegisterType::Dimension)?
   });
-  DefParameterType!(GlueExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Glue, state)?
+  DefParameterType!(GlueExpr, sub[ _inner, _extra] {
+    etex_readexpr(gullet, RegisterType::Glue)?
   });
-  DefParameterType!(MuExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::MuGlue, state)?
+  DefParameterType!(MuExpr, sub[ _inner, _extra] {
+    etex_readexpr(gullet, RegisterType::MuGlue)?
   });
 
-  DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args, _state] {
+  DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args] {
     args.remove(0).expect_number()
   });
-  DefRegister!("\\dimexpr DimExpr", Dimension::new(0), getter => sub[args, _state] {
+  DefRegister!("\\dimexpr DimExpr", Dimension::new(0), getter => sub[args] {
     args.remove(0).expect_dimension()
   });
-  DefRegister!("\\glueexpr GlueExpr", Glue::new(0), getter => sub[args, _state] {
+  DefRegister!("\\glueexpr GlueExpr", Glue::new(0), getter => sub[args] {
     args.remove(0).expect_glue()
   });
-  DefRegister!("\\muexpr MuExpr", MuGlue::new(0), getter => sub[args, _state] {
+  DefRegister!("\\muexpr MuExpr", MuGlue::new(0), getter => sub[args] {
     args.remove(0).expect_mu_glue()
   });
 

@@ -1,7 +1,7 @@
 use crate::package::*;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 
-LoadDefinitions!(stomach, state, {
+LoadDefinitions!( {
 
   // Ignore the options
   for option in ["in","cm","plain", "empty", "headings", "myheadings"] {

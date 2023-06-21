@@ -9,7 +9,7 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
-use crate::state::{State, STD_STATE};
+use crate::state;
 use crate::tokens::Tokens;
 use crate::{Digested, RegisterValue};
 
@@ -21,13 +21,11 @@ pub struct Dimension(pub i64);
 
 impl Object for Dimension {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     Ok(Tokens::new(ExplodeText!(&self.to_string())))
   }
   fn be_digested(
-    self,
-    _stomach: &mut crate::stomach::Stomach,
-    _state: &mut State,
+    self
   ) -> Result<Digested>
   where
     Self: Sized,
@@ -52,7 +50,7 @@ impl fmt::Display for Dimension {
 }
 
 impl Dimension {
-  pub fn spec_to_f64(spec: &str, state_opt: Option<&State>) -> Result<f64> {
+  pub fn spec_to_f64(spec: &str) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)
     } else if let Some(cap) = SPEC_RE.captures(spec) {
@@ -60,10 +58,7 @@ impl Dimension {
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
       let num: f64 = num_str.parse::<f64>().expect(&num_str);
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-      let converted_unit = match state_opt {
-        Some(state) => state.convert_unit(&unit),
-        None => STD_STATE.borrow().convert_unit(&unit),
-      };
+      let converted_unit = state!().convert_unit(&unit);
       Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other
@@ -76,10 +71,9 @@ impl Dimension {
       Ok(kround(spec.parse::<f64>().expect(spec)) as f64)
     }
   }
-  pub fn from_str(spec: &str, state: &State) -> Result<Dimension> {
+  pub fn from_str(spec: &str) -> Result<Dimension> {
     Ok(Dimension::new_f64(Dimension::spec_to_f64(
-      spec,
-      Some(state),
+      spec
     )?))
   }
 }

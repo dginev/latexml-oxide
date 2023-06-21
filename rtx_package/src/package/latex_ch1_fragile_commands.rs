@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   RawTeX!(
     r###"
 \def\@ignorefalse{\global\let\if@ignore\iffalse}

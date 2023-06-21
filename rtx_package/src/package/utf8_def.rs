@@ -231,7 +231,7 @@ const UPPER_HALF_PLANE_CODES: [u32; 155] = [
   241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
 ];
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // Undo disabling all the upper half plane (ascii) chars
   for code in UPPER_HALF_PLANE_CODES {
     let thischar = char::from_u32(code).unwrap();
@@ -244,9 +244,9 @@ LoadDefinitions!(state, {
 
   for row in PRECOMPUTED_UC_LC {
     let (upper, upper_code, lower, lower_code) = row;
-    state.assign_lccode(upper, lower_code, Some(Scope::Global));
-    state.assign_uccode(upper, upper_code, Some(Scope::Global));
-    state.assign_lccode(lower, lower_code, Some(Scope::Global));
-    state.assign_uccode(lower, upper_code, Some(Scope::Global));
+    state_mut!().assign_lccode(upper, lower_code, Some(Scope::Global));
+    state_mut!().assign_uccode(upper, upper_code, Some(Scope::Global));
+    state_mut!().assign_lccode(lower, lower_code, Some(Scope::Global));
+    state_mut!().assign_uccode(lower, upper_code, Some(Scope::Global));
   }
 });

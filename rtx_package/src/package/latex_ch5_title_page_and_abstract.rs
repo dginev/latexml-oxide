@@ -2,7 +2,7 @@ use crate::package::*;
 use libxml::tree::NodeType;
 
 #[rustfmt::skip]
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.5.4 The Title Page and Abstract
   //======================================================================
@@ -27,7 +27,7 @@ LoadDefinitions!(state, {
   );
 
   // Sanitize person names for (obvious) punctuation abuse at start+end
-  Tag!("ltx:personname", after_close => sub[_document, node, _state] {
+  Tag!("ltx:personname", after_close => sub[_document, node] {
     if let Some(mut first) = node.get_first_child() {
       if first.get_type() == Some(NodeType::TextNode) {
         let first_text = first.get_content();
@@ -68,8 +68,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\and", " and ");
 
   AssignValue!("NUMBER_OF_AUTHORS" => 0);
-  DefPrimitive!("\\lx@count@author", sub[stomach, (), state] {
-    let current = state.lookup_int("NUMBER_OF_AUTHORS");
+  DefPrimitive!("\\lx@count@author", sub[ ()] {
+    let current = state!().lookup_int("NUMBER_OF_AUTHORS");
     AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
   });
   DefMacro!(
@@ -81,30 +81,30 @@ LoadDefinitions!(state, {
   r"\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}");
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
-  DefConstructor!("\\lx@author@prefix", sub[document, _args, _props, state] {
+  DefConstructor!("\\lx@author@prefix", sub[document, _args, _props] {
     let mut node   = document.get_element().unwrap();
-    let nauthors   = state.lookup_int("NUMBER_OF_AUTHORS");
-    let i          = document.findnodes("//ltx:creator[@role='author']", None, state).len() as i64;
+    let nauthors   = state!().lookup_int("NUMBER_OF_AUTHORS");
+    let i          = document.findnodes("//ltx:creator[@role='author']", None).len() as i64;
     if i <= 1 { }
     else if i == nauthors {
-      let author_conj = Digest!(T_CS!("\\lx@author@conj"), state)?;
+      let author_conj = Digest!(T_CS!("\\lx@author@conj"))?;
       document.set_attribute(&mut node, "before", &author_conj.to_string())?;
 
     } else {
-      let author_sep = Digest!(T_CS!("\\lx@author@sep"), state)?;
+      let author_sep = Digest!(T_CS!("\\lx@author@sep"))?;
       document.set_attribute(&mut node, "before", &author_sep.to_string())?;
     }
   });
 
   DefMacro!("\\@author", "\\@empty");
   DefMacro!("\\author{}", "\\def\\@author{#1}\\lx@make@authors@anded{#1}", locked => true);
-  DefMacro!("\\lx@make@authors@anded{}", sub[gullet, (authors), state] {
+  DefMacro!("\\lx@make@authors@anded{}", sub[ (authors)] {
     and_split(T_CS!("\\lx@author"), authors)
   });
-  DefPrimitive!("\\ltx@authors@oneline", sub[stomach, (), state] {
+  DefPrimitive!("\\ltx@authors@oneline", sub[ ()] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
   });
-  DefPrimitive!("\\ltx@authors@multiline", sub[stomach, (), state] {
+  DefPrimitive!("\\ltx@authors@multiline", sub[ ()] {
     AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
   });
 
@@ -154,15 +154,15 @@ LoadDefinitions!(state, {
   // Probably there are other places (eg in titlepage?) that should force the close??
 
   DefEnvironment!("{abstract}", "",
-    after_digest_begin => sub[stomach, _args, state] {
+    after_digest_begin => sub[ _args] {
       AssignValue!("inPreamble" => false);
       AddToMacro!("\\@startsection@hook", "\\maybe@end@abstract");
     },
-    after_digest => sub[stomach, _args, state] {
-      let abstract_title = stomach.digest(Tokens!(T_CS!("\\format@title@abstract"),
-        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()), state)?;
-      let regurgitated = List::new(stomach.box_list.clone(), state);
-      let frontmatter = match state.lookup_value_mut("frontmatter") {
+    after_digest => sub[ _args] {
+      let abstract_title = stomach::digest(Tokens!(T_CS!("\\format@title@abstract"),
+        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()))?;
+      let regurgitated = List::new(stomach.box_list.clone());
+      let frontmatter = match state!().lookup_value_mut("frontmatter") {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => Fatal!(TexPool, Expected, stomach,
              "Global TeX Frontmatter hash was not available, should never happen"),
@@ -177,8 +177,8 @@ LoadDefinitions!(state, {
   );
   // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
   AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
-  DefMacro!("\\abstract", sub[gullet, _args, state] {
-    if gullet.if_next(&TOKEN_BEGIN, state)? {
+  DefMacro!("\\abstract", sub[ _args] {
+    if gullet.if_next(&TOKEN_BEGIN)? {
       T_CS!("\\abstract@onearg")
     } else {
       T_CS!("\\begin{abstract}")
@@ -225,9 +225,9 @@ LoadDefinitions!(state, {
     mode => "text"
   );
 
-  DefConstructor!("\\maybe@end@title", sub[document,_args,_props,state] {
-    if document.is_closeable("ltx:titlepage", state).is_some() {
-      document.close_element("ltx:titlepage", state)?;
+  DefConstructor!("\\maybe@end@title", sub[document,_args,_props] {
+    if document.is_closeable("ltx:titlepage").is_some() {
+      document.close_element("ltx:titlepage")?;
     }
   });
 

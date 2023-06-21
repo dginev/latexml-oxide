@@ -1,6 +1,6 @@
 use crate::package::*;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   LoadPool!("LaTeX");
 });

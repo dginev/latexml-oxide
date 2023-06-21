@@ -1,5 +1,5 @@
 use crate::package::*;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 //**********************************************************************
 // See amsldoc
 //
@@ -10,7 +10,7 @@ use rtx_core::state::State;
 // DG:
 // TODO: Most of this binding is not ported yet.
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
   // sub-packages:

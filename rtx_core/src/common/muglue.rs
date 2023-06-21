@@ -2,7 +2,6 @@ use super::glue::{glue_string, new_setup, spec_setup, FillCode};
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::register::RegisterType;
-use crate::state::State;
 use crate::{Locator, Object};
 use std::borrow::Cow;
 use std::fmt;
@@ -91,10 +90,9 @@ impl MuGlue {
     pfill: Option<FillCode>,
     minus: Option<f64>,
     mfill: Option<FillCode>,
-    state: &State,
   ) -> Self {
     let (skip, plus, pfill, minus, mfill) =
-      spec_setup(spec, plus, pfill, minus, mfill, "mu", state);
+      spec_setup(spec, plus, pfill, minus, mfill, "mu");
     MuGlue {
       skip,
       plus,

@@ -2,15 +2,15 @@ use crate::package::*;
 
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r",\s*").unwrap());
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // Apparently LaTeX does NOT define \magnification,
   // and babel uses that to determine whether we're runing LaTeX!!!
   Let!("\\magnification", "\\@undefined");
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
-  DefConditional!("\\if@compatibility", sub [gullet, (), state] {
-    state.lookup_bool("2.09_COMPATIBILITY") });
+  DefConditional!("\\if@compatibility", sub [gullet, ()] {
+    state!().lookup_bool("2.09_COMPATIBILITY") });
   DefMacro!("\\@compatibilitytrue", "");
   DefMacro!("\\@compatibilityfalse", "");
 
@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
         Some(opts) => OPTS_REGEX.split(&opts.to_string()).map(ToString::to_string).collect(),
@@ -30,18 +30,16 @@ LoadDefinitions!(state, {
       };
       load_class(&(whatsit.get_arg(2).unwrap().to_string()),
                 class_opts,
-                Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")),
-                stomach,
-                state)?;
+                Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))
   });
 
   AssignValue!("@unusedoptionlist", Stored::VecString(Vec::new()));
-  DefPrimitive!("\\warn@unusedclassoptions", sub[stomach,_args,state] {
-    if let Some(Stored::VecString(unused)) = state.lookup_value("@unusedoptionlist") {
+  DefPrimitive!("\\warn@unusedclassoptions", sub[_args] {
+    if let Some(Stored::VecString(unused)) = state!().lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
         Info!("unexpected", "options", stomach,
               "Unused global options: {}",unused.join(","));
-        state.assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
+        state_mut!().assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
       }
     }
   });
@@ -86,7 +84,7 @@ LoadDefinitions!(state, {
 
   // sub onlyPreamble {
   //   my ($cs) = @_;
-  //   Error('unexpected', $cs, $STATE->getStomach,
+  //   Error('unexpected', $cs, $state::>getStomach,
   //     "The current command '" . ToString($cs) . "' can only appear in the preamble")
   //     unless LookupValue("inPreamble");
   //   return; }

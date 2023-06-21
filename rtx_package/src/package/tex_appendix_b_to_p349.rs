@@ -12,13 +12,13 @@ static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
   || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
 );
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Alignments
   //
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", sub[doc,_a,state] { Error!("unexpected", "&", doc, "Stray alignment \"&\""); });
+  DefConstructor!("&", sub[doc,_a] { Error!("unexpected", "&", doc, "Stray alignment \"&\""); });
 
   //**********************************************************************
   // Plain;  Extracted from Appendix B.
@@ -43,7 +43,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\@ASSERT@MEANING{}{}", "#2",
     reversion      => "#2",
-    after_construct => sub[document,whatsit,_state] {
+    after_construct => sub[document,whatsit] {
       let node    = document.get_node().clone(); // This should be the wrapper just added.
       let meaning = whatsit.get_arg(1).unwrap().to_string();
       add_meaning_rec(document, node, meaning)?;
@@ -110,7 +110,7 @@ LoadDefinitions!(state, {
   // If we could accommodate multiple roles, maybe a separate role could be set on the tokens
   // (a period could be a PERIOD or a DECIMAL_SEPARATOR, eg)
 
-  DefMathLigature!(matcher => sub[document, node, state] {
+  DefMathLigature!(matcher => sub[document, node] {
   let lang = document.get_node_language(node);
   let lang = lang.split('-').next().unwrap(); // strip off region code, if any.
   let dec     = DECIMAL_SEP.get(lang).unwrap_or(&".");
@@ -122,7 +122,7 @@ LoadDefinitions!(state, {
   let mut node_ref = node;
   let mut current;
   loop {
-    let qn = state.model.get_node_qname(node_ref);
+    let qn = model!().get_node_qname(node_ref);
     if qn == arena::pin_static("ltx:XMTok") || qn == arena::pin_static("ltx:XMWrap") {
       let r = node_ref.get_attribute("role").unwrap_or_default();
       let f    = document.get_node_font(node_ref);
@@ -208,7 +208,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // Combine letters, when the fonts are right. (sorta related to mathcode)
   // well, maybe a letter followed by letters & digits?
-  DefMathLigature!(matcher => sub [document,node_opt,state] {
+  DefMathLigature!(matcher => sub [document,node_opt] {
     //  let mut chars :Vec<char> = Vec::new();
      let font  = document.get_node_font(node_opt);
      let mut this_node;
@@ -217,7 +217,7 @@ LoadDefinitions!(state, {
        let mut n      = 0;
        let mut text = String::new();
        loop {
-         if state.model.with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
+         if state::model.with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || document.get_node_font(node_mut) != font
           || node_mut.has_attribute("name") {
             break;
@@ -306,52 +306,52 @@ LoadDefinitions!(state, {
 
   //======================================================================
   // TeX Book, Appendix B, p. 347
-  DefPrimitive!("\\wlog{}", sub[stomach,(arg),state] {
-    let mut gullet = stomach.get_gullet_mut();
-    let message = Expand!(arg,gullet,state);
+  DefPrimitive!("\\wlog{}", sub[(arg)] {
+    let mut gullet = gullet_mut!();
+    let message = Expand!(arg,gullet);
     eprintln!("{message}");
     Ok(Vec::new())
   }, locked => true);
   // From plain.tex
-  DefPrimitive!("\\newcount Token", sub[stomach, (name), state] {
+  DefPrimitive!("\\newcount Token", sub[ (name)] {
     DefRegister!(name, None, Number::new(0), allocate=>"\\count");
   });
-  DefPrimitive!("\\newdimen Token", sub[stomach, (name), state] {
+  DefPrimitive!("\\newdimen Token", sub[ (name)] {
     DefRegister!(name, None, Dimension::new(0), allocate=>"\\dimen");
   });
-  DefPrimitive!("\\newskip Token", sub[stomach, (name), state] {
+  DefPrimitive!("\\newskip Token", sub[ (name)] {
     DefRegister!(name, None, Glue::new(0), allocate=>"\\skip");
   });
-  DefPrimitive!("\\newmuskip Token", sub[stomach, (name), state] {
+  DefPrimitive!("\\newmuskip Token", sub[ (name)] {
     DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
   });
-  DefPrimitive!("\\newtoks Token", sub[stomach, (name), state] {
+  DefPrimitive!("\\newtoks Token", sub[ (name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
   });
 
   AssignValue!("allocated_boxes" => false);
-  DefPrimitive!("\\newbox DefToken", sub[stomach, (t), state] {
-    let n = state.lookup_int("allocated_boxes");
+  DefPrimitive!("\\newbox DefToken", sub[ (t)] {
+    let n = state!().lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
-    let empty_list = List::new(Vec::new(), state);
+    let empty_list = List::new(Vec::new());
     AssignValue!(&s!("box{}",n), empty_list);
     DefRegister!(t, None, Number(n));
   });
-  DefPrimitive!("\\newhelp Token {}", sub[stomach,(token,arg),state] {
-    state.assign_value(&token.to_string(), arg, None);
+  DefPrimitive!("\\newhelp Token {}", sub[(token,arg)] {
+    state_mut!().assign_value(&token.to_string(), arg, None);
   });
-  DefPrimitive!("\\newtoks Token", sub[stomach,(name),state] {
+  DefPrimitive!("\\newtoks Token", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
   });
 
   // the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // which means they actually work quite differently
   DefRegister!("\\allocationnumber" => Number::new(0));
-  DefPrimitive!("\\alloc@@ {}", sub[stomach, (atype), state] {
+  DefPrimitive!("\\alloc@@ {}", sub[ (atype)] {
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(&c).value_of();
-    state.assign_value(&c, n + 1, Some(Scope::Global));
-    state.assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
+    state_mut!().assign_value(&c, n + 1, Some(Scope::Global));
+    state_mut!().assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
     Ok(Vec::new())
   });
   DefMacro!(
@@ -387,7 +387,7 @@ LoadDefinitions!(state, {
                     {128}");
 
   // This implementation is quite wrong
-  DefPrimitive!("\\newinsert Token", sub[_stomach, (t), state] {
+  DefPrimitive!("\\newinsert Token", sub[ (t)] {
     DefRegister!(t, None, Number::new(0));
   });
   // \alloc@, \ch@ck
@@ -407,8 +407,8 @@ LoadDefinitions!(state, {
   //======================================================================
   // TeX Book, Appendix B, p. 348
 
-  DefMacro!("\\newif DefToken", sub[gullet, (cs), state] {
-    def_conditional(cs, None,None,ConditionalOptions::default(),gullet,state)
+  DefMacro!("\\newif DefToken", sub[ (cs)] {
+    def_conditional(cs, None,None,ConditionalOptions::default(),gullet)
   });
 
   // See the section Registers & Parameters, above for setting default values.
@@ -429,7 +429,7 @@ LoadDefinitions!(state, {
   DefRegister!("\\interfootnotelinepenalty", Number(100));
 
   DefMacro!("\\magstephalf", "1095");
-  DefMacro!("\\magstep{}", sub[gullet, (mag), state] {
+  DefMacro!("\\magstep{}", sub[ (mag)] {
     Explode!(match mag.to_string().as_str() {
       "0" => "1000",
       "1" => "1200",

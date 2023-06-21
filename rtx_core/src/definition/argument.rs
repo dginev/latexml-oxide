@@ -14,8 +14,6 @@ use crate::common::object::Object;
 use crate::definition::register::RegisterValue;
 use crate::definition::Digested;
 use crate::keyvals::KeyVals;
-use crate::state::State;
-use crate::stomach::Stomach;
 use crate::token::Token;
 use crate::tokens::{Tokens, NO_BORROWED_TOKENS};
 use crate::Locator;
@@ -71,36 +69,36 @@ impl Object for ArgWrap {
       RegisterDefinition(_) | None => Option::None,
     }
   }
-  fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+  fn be_digested(self) -> Result<Digested> {
     use ArgWrap::*;
     // TODO: Should we just "do nothing" for the None cases, instead of panicking?
     match self {
-      Token(t) => t.be_digested(stomach, state),
-      Tokens(t) => t.be_digested(stomach, state),
-      Number(t) => t.be_digested(stomach, state),
-      Float(t) => t.be_digested(stomach, state),
-      Dimension(t) => t.be_digested(stomach, state),
-      Glue(t) => t.be_digested(stomach, state),
-      MuGlue(t) => t.be_digested(stomach, state),
-      MuDimension(t) => t.be_digested(stomach, state),
-      KV(kv) => kv.be_digested(stomach, state),
+      Token(t) => t.be_digested(),
+      Tokens(t) => t.be_digested(),
+      Number(t) => t.be_digested(),
+      Float(t) => t.be_digested(),
+      Dimension(t) => t.be_digested(),
+      Glue(t) => t.be_digested(),
+      MuGlue(t) => t.be_digested(),
+      MuDimension(t) => t.be_digested(),
+      KV(kv) => kv.be_digested(),
       None => Ok(Digested::default()),
       AlignmentTemplate(_) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
     }
   }
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     use ArgWrap::*;
     match self {
       Token(t) => Ok(Tokens!(t.clone())),
       Tokens(t) => Ok(t.clone()),
-      Number(t) => t.revert(state),
-      Float(t) => t.revert(state),
-      Dimension(t) => t.revert(state),
-      Glue(t) => t.revert(state),
-      MuGlue(t) => t.revert(state),
-      MuDimension(t) => t.revert(state),
-      KV(kv) => kv.revert(state),
+      Number(t) => t.revert(),
+      Float(t) => t.revert(),
+      Dimension(t) => t.revert(),
+      Glue(t) => t.revert(),
+      MuGlue(t) => t.revert(),
+      MuDimension(t) => t.revert(),
+      KV(kv) => kv.revert(),
       None => Ok(Tokens!()),
       AlignmentTemplate(_) => unimplemented!(),
       RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct reversion I think
@@ -157,13 +155,13 @@ impl ArgWrap {
     }
   }
 
-  pub fn as_tokens<'a>(&'a self, state: &mut State) -> Result<Option<Cow<'a, Tokens>>> {
+  pub fn as_tokens(&self) -> Result<Option<Cow<Tokens>>> {
     use ArgWrap::*;
     let result = match self {
       Token(t) => Some(Cow::Owned(Tokens!(t.clone()))), // ? avoid the clone ?
       Tokens(tks) => Some(Cow::Borrowed(tks)),
       Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => {
-        Some(Cow::Owned(self.revert(state)?))
+        Some(Cow::Owned(self.revert()?))
       },
       None => Some(Cow::Borrowed(NO_BORROWED_TOKENS)),
       AlignmentTemplate(_) => unimplemented!(),
@@ -293,18 +291,18 @@ impl ArgWrap {
       _ => panic!("ArgWrap::to_mu_glue not (yet?) defined on {:?}", self),
     }
   }
-  pub fn expected_keyvals(self, state: &mut State) -> KeyVals {
-    match self.try_to_keyvals(state) {
+  pub fn expected_keyvals(self) -> KeyVals {
+    match self.try_to_keyvals() {
       Ok(t) => t,
       Err(e) => panic!("{e}"),
     }
   }
 
-  pub fn try_to_keyvals(self, state: &mut State) -> Result<KeyVals> {
+  pub fn try_to_keyvals(self) -> Result<KeyVals> {
     use ArgWrap::*;
     match self {
       KV(v) => Ok(*v),
-      Tokens(tks) => Ok(tks.to_keyvals(state)),
+      Tokens(tks) => Ok(tks.to_keyvals()),
       None => Ok(KeyVals::default()),
       _ => panic!("ArgWrap::to_keyvals not (yet?) defined on {:?}", self),
     }

@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //**********************************************************************
   // LaTeX Hook
   //**********************************************************************
@@ -8,7 +8,7 @@ LoadDefinitions!(state, {
   RelaxNGSchema!("LaTeXML");
   Tag!("ltx:section", auto_close => true);
   Tag!("ltx:document", auto_close => true, auto_open => true);
-  Tag!("ltx:document", after_open => sub[document,root,_state] {
+  Tag!("ltx:document", after_open => sub[document,root] {
     let mut bg_to_set = None;
     if let Some(bg) = document.get_node_font(root).get_background() {
       if bg != "white" {
@@ -46,7 +46,7 @@ LoadDefinitions!(state, {
     });
   }
   // TODO: Port and use `DefAutoload` instead of this single-purpose macro
-  DefPrimitive!("\\@load@latex@pool", sub[stomach, (), state] {
+  DefPrimitive!("\\@load@latex@pool", sub[ ()] {
     input_definitions(
       "LaTeX",
       InputDefinitionOptions {
@@ -57,8 +57,7 @@ LoadDefinitions!(state, {
       // or we can't invoke any RawTeX-like macros in the pool
       // due to multiple mutable borrows of stomach!
       stomach,
-      state,
-    )?;
+      )?;
   });
 
   for _ltx3trigger in ["\\ExplSyntaxOn","\\ProvidesExplClass","\\ProvidesExplPackage"] {

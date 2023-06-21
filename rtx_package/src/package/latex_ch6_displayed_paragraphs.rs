@@ -4,14 +4,14 @@ use crate::package::*;
 // C.6 Displayed Paragraphs
 //**********************************************************************
 
-LoadDefinitions!(state, {
-  DefEnvironment!("{center}", sub[document, _args, props, state] {
-    document.maybe_close_element("ltx:p", state)?;
+LoadDefinitions!({
+  DefEnvironment!("{center}", sub[document, _args, props] {
+    document.maybe_close_element("ltx:p")?;
     // this starts a new vertical block
-    aligning_environment("center", "ltx_centering", document, props, state)?;
+    aligning_environment("center", "ltx_centering", document, props)?;
     Ok(())
   },   // aligning will take care of \\\\ "rows"
-  before_digest => sub[gullet, state] {
+  before_digest => sub[gullet] {
     Let!("\\par", "\\inner@par");
     Let!("\\\\", "\\inner@par");
   });
@@ -39,10 +39,10 @@ LoadDefinitions!(state, {
   // The current method seems to work right for these operators # appearing within the typical
   // environments.  HOWEVER, it doesn't work for a simple \bgroup or \begingroup!!! # (they don't
   // create a node! or even a whatsit!)
-  DefConstructor!("\\centering", sub[doc,_args,state] {
-  state.assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
-  before_digest => sub[gullet,state] {
-    state.unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
+  DefConstructor!("\\centering", sub[doc,_args] {
+  state_mut!().assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
+  before_digest => sub[gullet] {
+    state::unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
   });
   // DefConstructorI('\raggedright', undef,
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },
@@ -51,10 +51,10 @@ LoadDefinitions!(state, {
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },
   //   beforeDigest => sub { UnshiftValue(beforeAfterGroup => T_CS('\@add@raggedleft')); });
 
-  DefConstructor!("\\@add@centering", sub[document,args,state] {
-    if let Some(Stored::Node(node)) = state.lookup_value("ALIGNING_NODE") {
+  DefConstructor!("\\@add@centering", sub[document,args] {
+    if let Some(Stored::Node(node)) = state!().lookup_value("ALIGNING_NODE") {
       for mut child in node.get_child_elements() {
-        set_align_or_class(document, &mut child, "center", "ltx_centering", state)?;
+        set_align_or_class(document, &mut child, "center", "ltx_centering")?;
       }
     }
   });

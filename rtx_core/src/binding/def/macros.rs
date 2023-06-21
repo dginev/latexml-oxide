@@ -62,11 +62,9 @@ macro_rules! transfer_opt_default {
 /// create a PrimitiveClosure from the pieces, with a forced empty return value
 #[macro_export]
 macro_rules! primitiveproc {
-  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => (Rc::new(
-    |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>, $inner_state:&mut State| {
-      BindInnerState!($stomach, $inner_state);
+  ($args:ident, $body:block) => (Rc::new(
+    |$stomach:&mut Stomach, mut $args : Vec<ArgWrap>| {
       $body
-      end_state_frame!();
       Ok(Vec::new())
     }
   ))
@@ -75,43 +73,30 @@ macro_rules! primitiveproc {
 #[macro_export]
 macro_rules! before_digest {
   ($(sub)? $body:block) => {
-    vec![before_digest_single!(stomach, state, $body)]
-  };
-  ($stomach:ident, $state:ident, $body:block) => {
-    vec![before_digest_single!($stomach, $state, $body)]
+    vec![before_digest_single!( $body)]
   };
 }
 
 #[macro_export]
 macro_rules! before_digest_single {
-  ($stomach:ident, $state:ident, $body:block) => {
-    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
-      BindInnerState!($stomach, $state);
-      let macro_out = $body;
-      end_state_frame!();
-      macro_out.into_digested_result()
-    })
+  ($body:block) => {
+    Rc::new(move || $body.into_digested_result())
   };
 }
 
 #[macro_export]
 macro_rules! before_digest_simple {
-  ($stomach:ident, $state:ident, $body:block) => {
-    Rc::new(move |$stomach: &mut Stomach, $state: &mut State| {
-      let macro_out = $body;
-      macro_out.into_digested_result()
-    })
+  ($body:block) => {
+    Rc::new(move || $body.into_digested_result())
   };
 }
 
 #[macro_export]
 macro_rules! tagsub {
-  ($document:ident, $node:ident, $state:ident, $body:block) => {
+  ($document:ident, $node:ident, $body:block) => {
     vec![Rc::new(
-      |$document: &mut Document, mut $node: &mut Node, $state: &mut State| -> Result<()> {
-        BindInnerState!($state);
+      |$document: &mut Document, mut $node: &mut Node| -> Result<()> {
         $body
-        end_state_frame!();
         Ok(())
       },
     )]
@@ -120,12 +105,10 @@ macro_rules! tagsub {
 
 #[macro_export]
 macro_rules! sizersub {
-  ($whatsit:ident, $state:ident, $body:block) => {
+  ($whatsit:ident, $body:block) => {
     Rc::new(
-      |$whatsit: &Whatsit, $state: &mut State| -> Result<(Dimension, Dimension, Dimension)> {
-        BindInnerState!($state);
+      |$whatsit: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
         let macro_out = $body;
-        end_state_frame!();
         macro_out
       },
     )
@@ -134,12 +117,10 @@ macro_rules! sizersub {
 
 #[macro_export]
 macro_rules! rewrite_replace_sub {
-  ($document:ident, $nodes:ident, $state:ident, $body:block) => {
+  ($document:ident, $nodes:ident, $body:block) => {
   Some(Rc::new(
-    |$document: &mut Document, mut $nodes: Vec<&mut Node>, $state: &mut State| -> Result<()> {
-      BindInnerState!($state);
+    |$document: &mut Document, mut $nodes: Vec<&mut Node>| -> Result<()> {
       $body
-      end_state_frame!();
       Ok(())
     },
   ))
@@ -149,30 +130,26 @@ macro_rules! rewrite_replace_sub {
 #[macro_export]
 macro_rules! noreplacement {
   () => {
-    |doc, whatsit, props, state| Ok(())
+    |doc, whatsit, props| Ok(())
   };
 }
 
 #[macro_export]
 macro_rules! replacement {
-  ($doc:ident, $args:ident, $props:ident, $state:ident, $body:block) => (
+  ($doc:ident, $args:ident, $props:ident, $body:block) => (
     move |$doc:&mut Document,$args: &Vec<Option<Digested>>,
-      $props: &HashMap<String, Stored>, $state: &mut State| -> Result<()> {
-    BindInnerState!($state);
+      $props: &HashMap<String, Stored>| -> Result<()> {
     $body
-    end_state_frame!();
     Ok(())
   })
 }
 
 #[macro_export]
 macro_rules! construct {
-  ($doc:ident, $whatsit:ident, $state:ident, $body:block) => {
+  ($doc:ident, $whatsit:ident, $body:block) => {
   vec![Rc::new(
-    move |$doc: &mut Document, $whatsit: &Whatsit, $state: &mut State| -> Result<()> {
-      BindInnerState!($state);
+    move |$doc: &mut Document, $whatsit: &Whatsit| -> Result<()> {
       $body
-      end_state_frame!();
       Ok(())
     }
   )]
@@ -180,34 +157,28 @@ macro_rules! construct {
 
 #[macro_export]
 macro_rules! properties {
-  (sub [ $stomach:ident, $args:ident, $inner_state:ident ] $body:block) => {
-    properties!($stomach, $args, $inner_state, $body)
+  (sub [$args:ident] $body:block) => {
+    properties!($args, $body)
   };
-  ($stomach:ident, $args:ident, $inner_state:ident, $body:block) => {
+  ($args:ident, $body:block) => {
     Rc::new(
-      move |$stomach: &mut Stomach,
-            mut $args: &Vec<Option<Digested>>,
-            $inner_state: &mut State|
+      move |mut $args: &Vec<Option<Digested>>|
             -> Result<HashMap<String, Stored>> {
-        WithInnerState!($body, $stomach, $inner_state)
+        $body
       },
     )
   };
   ($(sub)? $body:block) => {
     Rc::new(
-      move |stomach: &mut Stomach,
-            args: &Vec<Option<Digested>>,
-            state: &mut State|
+      move |_args: &Vec<Option<Digested>>|
             -> Result<HashMap<String, Stored>> {
-        WithInnerState!($body, stomach, state).into_properties_result()
+        $body.into_properties_result()
       },
     )
   };
   ($value:expr) => {
     Rc::new(
-      move |_stomach: &mut Stomach,
-            _args: &Vec<Option<Digested>>,
-            _state: &mut State|
+      move |_args: &Vec<Option<Digested>>|
             -> Result<HashMap<String, Stored>> { Ok($value.clone()) },
     )
   };
@@ -216,57 +187,47 @@ macro_rules! properties {
 #[macro_export]
 macro_rules! after_digest {
   ($(sub)? $body:block) => {
-    vec![after_digest_single!(stomach, whatsit, state, $body)]
+    vec![after_digest_single!(_whatsit, $body)]
   };
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
-    vec![after_digest_single!($stomach, $whatsit, $state, $body)]
+  ($whatsit:ident, $body:block) => {
+    vec![after_digest_single!($whatsit, $body)]
   };
 }
 
 #[macro_export]
 macro_rules! after_digest_single {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
+  ($whatsit:ident, $body:block) => {
     Rc::new(
-      move |$stomach: &mut Stomach,
-            $whatsit: &mut Whatsit,
-            $state: &mut State|
-            -> Result<Vec<Digested>> {
-        WithInnerState!($body, $stomach, $state).into_digested_result()
-      },
+      move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() },
     )
   };
 }
 #[macro_export]
 macro_rules! after_digest_simple {
-  ($stomach:ident, $whatsit:ident, $state:ident, $body:block) => {
+  ($whatsit:ident, $body:block) => {
     Rc::new(
-      move |$stomach: &mut Stomach,
-            $whatsit: &mut Whatsit,
-            $state: &mut State|
-            -> Result<Vec<Digested>> { $body.into_digested_result() },
+      move |$whatsit: &mut Whatsit| -> Result<Vec<Digested>> { $body.into_digested_result() },
     )
   };
 }
 
 #[macro_export]
 macro_rules! reader {
-  ($gullet:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
+  ($gullet:ident, $inner:ident, $extra:ident, $body:block) => {
     Rc::new(
       |$gullet: &mut Gullet,
        $inner: Option<&Parameters>,
-       $extra: &[Tokens],
-       $state: &mut State|
-       -> Result<ArgWrap> { WithInnerState!($body, $state).into_result_argwrap() },
+       $extra: &[Tokens]|
+       -> Result<ArgWrap> { $body.into_result_argwrap() },
     )
   };
 }
 
 #[macro_export]
 macro_rules! predigest {
-  ($stomach:ident, $arg:ident, $state:ident, $body:block) => {
-    Some(Rc::new(
-      |$stomach: &mut Stomach, $arg: ArgWrap, $state: &mut State| -> Result<Option<Digested>> {
-        WithInnerState!($body, $stomach, $state).into_digested_option_result()
+  ($arg:ident, $body:block) => {
+    Some(Rc::new(|$arg: ArgWrap| -> Result<Option<Digested>> {
+        $body.into_digested_option_result()
       },
     ))
   };
@@ -275,10 +236,10 @@ macro_rules! predigest {
 /// A closure for obtaining a `RegisterValue`, usually owned by a `Register` getter.
 #[macro_export]
 macro_rules! getter {
-  ($args: ident, $state:ident, $body:block) => {
+  ($args: ident, $body:block) => {
     Some(Rc::new(
-      move |mut $args: Vec<ArgWrap>, $state: &mut State| -> Option<RegisterValue> {
-        WithInnerState!($body, $state).into_register_value_option()
+      move |mut $args: Vec<ArgWrap>| -> Option<RegisterValue> {
+        $body.into_register_value_option()
       },
     ))
   };
@@ -286,17 +247,17 @@ macro_rules! getter {
 
 #[macro_export]
 macro_rules! setter {
-  ($value:ident, $args: ident, $state:ident, $body:block) => {
+  ($value:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>, $state: &mut State| {
-        WithInnerState!($body, $state)
+      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
+        $body
       },
     ))
   };
-  ($value:ident, $scope:ident, $args: ident, $state:ident, $body:block) => {
+  ($value:ident, $scope:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>, $state: &mut State| {
-        WithInnerState!($body, $state)
+      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
+        $body
       },
     ))
   };
@@ -304,32 +265,21 @@ macro_rules! setter {
 
 #[macro_export]
 macro_rules! reversion {
-  ($gullet:ident, $arg:ident, $inner:ident, $extra:ident, $state:ident, $body:block) => {
+  ($gullet:ident, $arg:ident, $inner:ident, $extra:ident, $body:block) => {
     Some(Rc::new(
       |mut $arg: Vec<Token>,
        $inner: Option<&Parameters>,
-       $extra: &[Tokens],
-       $state: &State|
-       -> Result<Tokens> {
-        BindInnerState!($state);
-        let macro_out = $body;
-        end_state_frame!();
-        macro_out
-      },
+       $extra: &[Tokens]
+       -> Result<Tokens> $body ,
     ))
   };
 }
 
 #[macro_export]
 macro_rules! reversion_digested {
-  ($whatsit:ident, $args:ident, $state:ident, $body:block) => {
+  ($whatsit:ident, $args:ident, $body:block) => {
     Some(Reversion::Closure(Rc::new(
-      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>, $state: &State| -> Result<Tokens> {
-        BindInnerState!($state);
-        let macro_out = $body;
-        end_state_frame!();
-        macro_out
-      },
+      move |$whatsit: &Whatsit, $args: &Vec<Option<Digested>>| -> Result<Tokens> $body,
     )))
   };
 }
@@ -487,64 +437,47 @@ macro_rules! Roman {
 
 #[macro_export]
 macro_rules! requireMath {
-  ($cs_name:expr) => {{
-    bind_state_mut!(st);
-    requireMath!($cs_name, st)
-  }};
-  ($cs_name:expr, $state_arg:ident) => {
-    if !$state_arg.lookup_bool("IN_MATH") {
+  ($cs_name:expr) => {
+    if ! state!().lookup_bool("IN_MATH") {
       let message = s!("{} should only appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, message);
+      Warn!("unexpected", "mode", message);
     }
   };
 }
 #[macro_export]
 macro_rules! forbidMath {
-  ($cs_name:expr) => {{
-    bind_state_mut!(st);
-    forbidMath!($cs_name, st)
-  }};
-  ($cs_name:expr, $state_arg:ident) => {
-    if $state_arg.lookup_bool("IN_MATH") {
+  ($cs_name:expr) => {
+    if state!().lookup_bool("IN_MATH") {
       let message = s!("{} should not appear in math mode", $cs_name);
-      Warn!("unexpected", "mode", None, message);
+      Warn!("unexpected", "mode", message);
+    }
+  }
+}
+
+#[macro_export]
+macro_rules! AssignRegister {
+  ($cs:literal, $value:expr) => {
+    AssignRegister!($cs,$value,Vec::new())
+  };
+  ($cs:literal, $value:expr, $args:expr) => {
+    let value_ident = { $value };
+    if let Some(defn) = state_mut!().lookup_register_definition(&T_CS!($cs)) {
+      (*defn).set_value(value_ident, None, $args);
+    } else {
+      let message = s!("The control sequence {} is not a register", $cs);
+      Warn!("expected", "register", message);
     }
   };
 }
 
 #[macro_export]
-macro_rules! AssignRegister {
-  ($cs:literal, $value:expr) => {{
-    let value_ident = { $value };
-    bind_state_mut!(stmch, st);
-    AssignRegister!($cs, value_ident, Vec::new(), st);
-  }};
-  ($cs:literal, $value:ident, $args:expr, $state_arg: ident) => {{
-    if let Some(defn) = $state_arg.lookup_register_definition(&T_CS!($cs)) {
-      (*defn).set_value($value, None, $args, $state_arg);
-    } else {
-      let message = s!("The control sequence {} is not a register", $cs);
-      Warn!("expected", "register", None, message);
-    }
-  }};
-  ($cs:literal, $value:expr, $args:expr, $state_arg: ident) => {{
-    let value_ident = { $value };
-    AssignRegister!($cs, value_ident, $args, $state_arg);
-  }};
-}
-
-#[macro_export]
 macro_rules! SetCounter {
-  ($ctr:expr, $value:expr) => {{
-    bind_state_mut!(stmch, st);
-    SetCounter!($ctr, $value,  stmch, st);
-  }};
-  ($ctr:expr, $value:expr, $stomach:ident, $state_arg:ident) => {
-    $state_arg.assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
-    $state_arg.after_assignment($stomach.get_gullet_mut());
+  ($ctr:expr, $value:expr) => {
+    state_mut!().assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
+    state_mut!().after_assignment();
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
       Tokens::new(Explode!($value.value_of())),
       Some(ExpandableOptions{ scope: Some(Scope::Global),
-         ..ExpandableOptions::default()}), $state_arg)?;
+         ..ExpandableOptions::default()}))?;
   }
 }

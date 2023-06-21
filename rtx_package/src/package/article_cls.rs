@@ -1,7 +1,7 @@
 use crate::package::*;
-use rtx_core::state::State;
+use rtx_core::{state_mut,state};
 #[rustfmt::skip]
-LoadDefinitions!(stomach, state, {
+LoadDefinitions!( {
   LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling
@@ -40,8 +40,8 @@ LoadDefinitions!(stomach, state, {
   // TODO:
   // DeclareOption!("openbib",
   // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
-  // }); DeclareOption!("leqno", || { state.assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
-  // }); DeclareOption!("fleqn", || { state.assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
+  // }); DeclareOption!("leqno", || { state_mut!().assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
+  // }); DeclareOption!("fleqn", || { state_mut!().assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
   // });
 
   ProcessOptions!();
@@ -107,5 +107,5 @@ LoadDefinitions!(stomach, state, {
   DefMacro!("\\appendix", "\\@appendix");
 
   // Actually we should be using section counter
-  DefPrimitive!("\\@appendix", sub[stomach,(),state] { start_appendices("section", state); });
+  DefPrimitive!("\\@appendix", sub[()] { start_appendices("section"); });
 });

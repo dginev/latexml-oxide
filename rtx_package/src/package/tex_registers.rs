@@ -8,15 +8,15 @@ use chrono::prelude::*;
 // Values are from Appendix B, pp. 348-349 (for whatever its worth)
 //======================================================================
 #[rustfmt::skip]
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Integer registers; TeXBook p. 272-273
   DefRegister!("\\tracingmacros", Number!(0),
     getter => { LookupNumber!("TRACINGMACROS") },
-    setter => sub[value, scope, _args, state] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
+    setter => sub[value, scope, _args] { AssignValue!("TRACINGMACROS" => value.value_of(), scope); });
   DefRegister!("\\tracingcommands", Number!(0),
     getter => { LookupNumber!("TRACINGCOMMANDS") },
-    setter => sub[value, scope, _args, state] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope); });
+    setter => sub[value, scope, _args] { AssignValue!("TRACINGCOMMANDS" => value.value_of(), scope); });
 
   DefRegister!("\\pretolerance", Number!(100));
   DefRegister!("\\tolerance", Number!(200));

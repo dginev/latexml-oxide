@@ -1,5 +1,5 @@
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // Some of the requirements not yet applicable/supported in latexml
   //TODO: RequirePackage!("ltxcmds");
   //RequirePackage("iftex");
@@ -176,7 +176,7 @@ LoadDefinitions!(state, {
   //   pdfauthortitle   => '',                                # photoshop:AuthorsPosition
   //   pdfcaptionwriter => '',                                # photoshop:CaptionWriter !?!?!?
   //   pdfcopyright     => ['dcterms:rights', 'content'],     # & xmpRights:Marked
-  //   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:WebStatement
+  //   pdflicenseurl    => ['cc:licence',     'resource'],    # xmpRights:Webstate::ent
   //   pdfmetalang      => '',                                # dcterms:language ??
   // );
   // date=>dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
@@ -234,18 +234,18 @@ LoadDefinitions!(state, {
   // \url{url} from url.sty... well sorta
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
-  DefMacro!("\\@Url Token", sub[gullet,(cmd),state] {
-    let open = gullet.read_token(state)?.unwrap();
-    state.begin_semiverbatim(Some(&['%']));
-    state.let_i(&T_CS!("~"), &T_OTHER!("~"), None, gullet); // Needs special protection?
+  DefMacro!("\\@Url Token", sub[(cmd)] {
+    let open = gullet.read_token()?.unwrap();
+    state_mut!().begin_semiverbatim(Some(&['%']));
+    state_mut!().let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
-        gullet.read_balanced(true, state)?.unwrap_or_default()) // Expand as we go!
+        gullet.read_balanced(true)?.unwrap_or_default()) // Expand as we go!
     } else {
       ( T_OTHER!("{"), T_OTHER!("}"),
         Tokens!(open.as_other()) )
     };
-    state.end_semiverbatim()?;
+    state_mut!().end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter()
       .filter(|t| t.get_catcode() != Catcode::SPACE)
       // Identical with url's \@Url except, let CS's through!
@@ -259,7 +259,7 @@ LoadDefinitions!(state, {
         Tokens!(open),
         Tokens!(close),
         Tokens::new(toks),
-        Tokens::new(url_wrapped)], gullet)?.unlist();
+        Tokens::new(url_wrapped)])?.unlist();
     invocation_tokens.push(T_CS!("\\endgroup"));
     Tokens::new(invocation_tokens)
   });
@@ -268,7 +268,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\nolinkurl Semiverbatim", "#1");
 
   // \hyperbaseurl{url}
-  DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[stomach,(url),state] {
+  DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
   AssignValue!("BASE_URL" => url.to_string()); });
 
   // \hyperimage{imageurl}{text}
@@ -301,7 +301,7 @@ LoadDefinitions!(state, {
 
   // sub localized_anchor {
   //   my ($document, $whatsit) = @_;
-  //   my $model      = $STATE->getModel;
+  //   my $model      = $state::>getModel;
   //   my $node       = $document->getNode;
   //   my @candidates = ($node);
   //   my $candidate;
@@ -433,14 +433,14 @@ LoadDefinitions!(state, {
   DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
   "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
     show='autoref' labelref='#label' _force_font='true'/>",
-  properties => sub[_stomach, args, _state] {
+  properties => sub[args] {
     let refarg = &args[1];
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
   });
 
-  DefMacro!("\\lx@autorefnum@@{}", sub[gullet,(ttype),state] {
+  DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
-    let mut tokens = if state.lookup_definition(&T_CS!(s!("\\{type_s}autorefname")))?.is_some() {
+    let mut tokens = if state!().lookup_definition(&T_CS!(s!("\\{type_s}autorefname")))?.is_some() {
       vec![T_CS!(format!("\\{type_s}autorefname")), T_CS!("\\nobreakspace")]
     } else {
       Vec::new()
@@ -453,7 +453,7 @@ LoadDefinitions!(state, {
     };
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
-    if state.lookup_definition(&pcounter)?.is_some() {
+    if state!().lookup_definition(&pcounter)?.is_some() {
       tokens.push(pcounter);
     }
     tokens.push(thecounter);
@@ -577,7 +577,7 @@ LoadDefinitions!(state, {
   // \hypercalcbp{dimen}
   // DefMacro('\hypercalcbp{Dimension}', sub {
   //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen->valueOf / $STATE->convertUnit('bp')); });
+  //     Explode($dimen->valueOf / $state::>convertUnit('bp')); });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour

@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::borrow::Cow;
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -10,12 +10,10 @@ use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
-use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
 use crate::document::Document;
 use crate::util::pathname;
-use crate::Locator;
 use libxml::tree::Node;
 
 use super::arena::{
@@ -61,9 +59,18 @@ pub struct Model {
   pub tagprop: HashMap<SymbolU32, TagFrame>,
 }
 
-impl Object for Model {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
+#[thread_local]
+pub static MODEL : Lazy<RefCell<Model>> = Lazy::new(|| RefCell::new(Model::new()));
+
+#[macro_export]
+macro_rules! model {
+  () => ((*$crate::common::model::MODEL).borrow())
 }
+#[macro_export]
+macro_rules! model_mut {
+  () => ((*$crate::common::model::MODEL).borrow_mut())
+}
+
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
@@ -99,7 +106,7 @@ impl Model {
     let mut name = String::new();
     if self.schema_data.is_none() {
       // TODO: Return this code path to normal once we properly load schemas
-      Warn!("expected", "<model>", None, "TODO");
+      Warn!("expected", "<model>", "TODO");
       // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
       // // article ??? or what ? undef gives problems!
 
@@ -138,7 +145,7 @@ impl Model {
           let message = arena::with(schema_type, |schema_type_str| {
             s!("Can't load a schema of type {schema_type_str:?}")
           });
-          Error!("unknown", "schematype", self, message)
+          Error!("unknown", "schematype", message)
         }
       },
     };
@@ -278,7 +285,6 @@ impl Model {
       Warn!(
         "malformed",
         namespace,
-        self,
         "No prefix has been registered for namespace (in document)",
         message2
       );
@@ -316,7 +322,7 @@ impl Model {
         s!("No namespace has been registered for prefix '{dp_str}' (in document)")
       });
       let msg2 = s!("Using '{ns_str}' instead");
-      let err = || {Error!("malformed", docprefix, self, msg1, msg2); Ok(()) };
+      let err = || {Error!("malformed", docprefix, msg1, msg2); Ok(()) };
       err().ok();
     }
     if ns_str.is_empty() {
@@ -378,7 +384,6 @@ impl Model {
       Error!(
         "malformed",
         codeprefix,
-        self,
         s!("No namespace has been registered for prefix '{codeprefix}' (in code)"),
         s!("Using '{example_namespace}' instead")
       );

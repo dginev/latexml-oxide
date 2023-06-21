@@ -1,9 +1,9 @@
-use rtx_package::*;
-
-LoadDefinitions!(state, {
-  DefMacro!("\\where", "Section 1",           scope => "section:1");
-  DefMacro!("\\where", "Subsection 2.1",      scope => "subsection:2.1");
-  DefMacro!("\\where", "Labelled subsection", scope => "label:labelled");
-  DefMacro!("\\where", "Section 3",           scope => "section:3");
-  DefMacro!("\\where", "Equation 1",          scope => "equation:1");
-});
+|u|s|e| |r|t|x|_|p|a|c|k|a|g|e|:|:|*|;|
+|
+|L|o|a|d|D|e|f|i|n|i|t|i|o|n|s|!|(|s|t|a|t|e|,| |{|
+| | |D|e|f|M|a|c|r|o|!|(|"|\|\|w|h|e|r|e|"|,| |"|S|e|c|t|i|o|n| |1|"|,| | | | | | | | | | | |s|c|o|p|e| |=|>| |"|s|e|c|t|i|o|n|:|1|"|)|;|
+| | |D|e|f|M|a|c|r|o|!|(|"|\|\|w|h|e|r|e|"|,| |"|S|u|b|s|e|c|t|i|o|n| |2|.|1|"|,| | | | | | |s|c|o|p|e| |=|>| |"|s|u|b|s|e|c|t|i|o|n|:|2|.|1|"|)|;|
+| | |D|e|f|M|a|c|r|o|!|(|"|\|\|w|h|e|r|e|"|,| |"|L|a|b|e|l|l|e|d| |s|u|b|s|e|c|t|i|o|n|"|,| |s|c|o|p|e| |=|>| |"|l|a|b|e|l|:|l|a|b|e|l|l|e|d|"|)|;|
+| | |D|e|f|M|a|c|r|o|!|(|"|\|\|w|h|e|r|e|"|,| |"|S|e|c|t|i|o|n| |3|"|,| | | | | | | | | | | |s|c|o|p|e| |=|>| |"|s|e|c|t|i|o|n|:|3|"|)|;|
+| | |D|e|f|M|a|c|r|o|!|(|"|\|\|w|h|e|r|e|"|,| |"|E|q|u|a|t|i|o|n| |1|"|,| | | | | | | | | | |s|c|o|p|e| |=|>| |"|e|q|u|a|t|i|o|n|:|1|"|)|;|
+|}|)|;|

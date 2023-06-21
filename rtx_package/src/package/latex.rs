@@ -10,7 +10,7 @@
 ///**********************************************************************
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //**********************************************************************
   // Organized following
   //  "LaTeX: A Document Preparation System"

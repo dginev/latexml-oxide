@@ -5,17 +5,15 @@ use libxml::tree::Node;
 use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
-use crate::state::{Scope, State};
+use crate::state::{Scope};
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
-use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
-use crate::Digested;
+use crate::{Digested, state};
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
@@ -93,15 +91,15 @@ impl Definition for Expandable {
   fn get_alias(&self) -> Option<&String> { self.alias.as_ref() }
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
-  fn invoke(&self, gullet: &mut Gullet, once_only: bool, state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, once_only: bool) -> Result<Tokens> {
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let tracing = state.lookup_int("TRACINGMACROS") > 0;
-    let profiled = state.lookup_bool("PROFILING");
+    let tracing = state!().lookup_int("TRACINGMACROS") > 0;
+    let profiled = state!().lookup_bool("PROFILING");
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
         let args = if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(gullet, Some(self), state)?
+          parms.read_arguments(Some(self))?
         } else {
           Vec::new()
         };
@@ -109,7 +107,7 @@ impl Definition for Expandable {
           // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
           unimplemented!();
         }
-        let result = closure(gullet, args, state)?;
+        let result = closure(args)?;
         if tracing {
           //$LaTeXML::DEBUG{tracing}) {    # More involved...
           unimplemented!();
@@ -155,13 +153,13 @@ impl Definition for Expandable {
           }
         } else {
           let args = if let Some(ref parms) = self.paramlist {
-            parms.read_arguments(gullet, Some(self), state)?
+            parms.read_arguments(Some(self))?
           } else {
             Vec::new()
           };
           let mut args_tks = Vec::new();
           for arg in args.iter() {
-            args_tks.push(arg.as_tokens(state)?);
+            args_tks.push(arg.as_tokens()?);
           }
           // for "real" macros, make sure all args are Tokens
           // let r;
@@ -187,7 +185,7 @@ impl Definition for Expandable {
       None => {
         // we always need to read the arguments, for e.g. things like \@gobble
         if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(gullet, Some(self), state)?;
+          parms.read_arguments(Some(self))?;
         }
         Ok(NO_TOKENS)
       },
@@ -195,7 +193,7 @@ impl Definition for Expandable {
   }
 
   // Not implemented for expandable
-  fn invoke_primitive(&self, _gullet: &mut Stomach, _state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     Ok(Vec::new())
   }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { None }
@@ -204,7 +202,6 @@ impl Definition for Expandable {
     &self,
     _document: &mut Document,
     _whatsit: &Whatsit,
-    _state: &mut State,
   ) -> Result<Vec<Node>> {
     fatal!(
       Definition,
@@ -219,8 +216,7 @@ impl Expandable {
     cs: Token,
     paramlist: Option<Parameters>,
     expansion: T,
-    traits: Option<ExpandableOptions>,
-    state: &State,
+    traits: Option<ExpandableOptions>
   ) -> Result<Self> {
     let mut expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_default();
@@ -239,9 +235,9 @@ impl Expandable {
       paramlist,
       expansion,
       // locator           => $source->getLocator,
-      is_protected: traits.protected || state.get_prefix("protected"),
-      is_outer: traits.outer || state.get_prefix("outer"),
-      is_long: traits.long || state.get_prefix("long"),
+      is_protected: traits.protected || state!().get_prefix("protected"),
+      is_outer: traits.outer || state!().get_prefix("outer"),
+      is_long: traits.long || state!().get_prefix("long"),
       ..Expandable::default()
     })
   }

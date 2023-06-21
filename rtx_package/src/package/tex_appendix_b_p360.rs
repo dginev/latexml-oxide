@@ -6,8 +6,8 @@ use crate::package::*;
 // \choose, et al, already handle above.
 // Note that in TeX, all 4 args get digested(!)
 // and the choice is made when absorbing!
-LoadDefinitions!(_state, {
-  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args,_state] {
+LoadDefinitions!({
+  DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args] {
     unimplemented!();
     //   my ($document, $d, $t, $s, $ss, %props) = @_;
     //   my $style  = $props{mathstyle};

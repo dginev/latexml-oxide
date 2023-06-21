@@ -1,32 +1,32 @@
 use crate::package::*;
 use rtx_core::document::helpers::prune_empty_para;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
-  DefConstructor!("\\indent", sub[document,whatsit,state] {
+  DefConstructor!("\\indent", sub[document,whatsit] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node,state);
+      let tag = document.get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
-      } else if document.sym_can_contain_somehow(tag,para_tag,state) {
+      } else if document.sym_can_contain_somehow(tag,para_tag) {
         // Used in a position where a paragraph can be started, start
-        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None, state)?;
+        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_indent")), None)?;
       }
       // Otherwise ignore.
     }
   });
-  DefConstructor!("\\noindent", sub[document,whatsit,state] {
+  DefConstructor!("\\noindent", sub[document,whatsit] {
     if let Some(mut node) = document.get_element() {
-      let tag = document.get_node_qname(&node,state);
+      let tag = document.get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
-      } else if document.sym_can_contain_somehow(tag, para_tag ,state) {
+      } else if document.sym_can_contain_somehow(tag, para_tag ) {
         // Used in a position where a paragraph can be started, start
-        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None, state)?;
+        document.open_element("ltx:para", Some(string_map!("class"=>"ltx_noindent")), None)?;
       }
       // Otherwise ignore.
     }
@@ -41,12 +41,12 @@ LoadDefinitions!(state, {
   skippable_props.insert(s!("alignmentSkippable"), true.into());
 
   DefConstructor!("\\normal@par",
-    sub[document, _args, props, state] {
+    sub[document, _args, props] {
       if !prop_bool!(props, "inPreamble") {
-        document.maybe_close_element("ltx:p", state)?;
+        document.maybe_close_element("ltx:p")?;
         let element = document.get_element();
         if let Some(mut node) = element {
-          let qname = document.get_node_qname(&node, state);
+          let qname = document.get_node_qname(&node);
           // Only set on the para about to close, if unknown!
           if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
@@ -54,27 +54,27 @@ LoadDefinitions!(state, {
               document.set_attribute(&mut node, "class", class_str))?;
           } else if qname == arena::pin_static("ltx:figure") {
             // insert breaks in figures, for vertically separating subfigures
-            document.insert_element("ltx:break",Vec::new(), None, state)?;
+            document.insert_element("ltx:break",Vec::new(), None)?;
           }
         }
-        document.maybe_close_element("ltx:para", state)?;
+        document.maybe_close_element("ltx:para")?;
       }
     },
-    after_digest => sub[stomach, whatsit, state] {
+    after_digest => sub[ whatsit] {
       let in_preamble = LookupBool!("inPreamble");
       if in_preamble {
         whatsit.set_property("inPreamble", true);
         Ok(Vec::new())
       } else {
-        if let Some(c) = state.lookup_value("next_para_class") {
+        if let Some(c) = state!().lookup_value("next_para_class") {
           // Check if flags were set by prior \par:
           whatsit.set_property("class", c.clone());
-          state.assign_value("next_para_class", Stored::None, None);
+          state_mut!().assign_value("next_para_class", Stored::None, None);
         }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if state.lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
+        if state_mut!().lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
-          state.assign_value("next_para_class", "ltx_noindent", None);
+          state_mut!().assign_value("next_para_class", "ltx_noindent", None);
         }
         // Vertical adjustments
         if let Some(Stored::Tokens(vadj)) = RemoveValue!("vAdjust") {
@@ -92,23 +92,23 @@ LoadDefinitions!(state, {
 
   // OTOH, sometimes \par is just a minimalistic "start a new line"
   // This should be closer for those cases.
-  DefConstructor!("\\inner@par", sub[document, _args, _props, state] {
+  DefConstructor!("\\inner@par", sub[document, _args, _props] {
     Debug!("inner@par invoked!\n");
-    if document.maybe_close_element("ltx:p", state)?.is_some() {
-    } else if document.can_contain(document.get_node(), "ltx:break", state) {
-      document.insert_element("ltx:break", Vec::new(), None, state)?;
+    if document.maybe_close_element("ltx:p")?.is_some() {
+    } else if document.can_contain(document.get_node(), "ltx:break") {
+      document.insert_element("ltx:break", Vec::new(), None)?;
     }
   });
 
   Tag!("ltx:para", auto_close => true, auto_open => true,
-  after_close => sub[document, node, state] {
-    prune_empty_para(document, node, state)?;
+  after_close => sub[document, node] {
+    prune_empty_para(document, node)?;
   });
   Tag!("ltx:p", auto_close => true, auto_open => true,
-    after_close => sub[document, node, _state] {
+    after_close => sub[document, node] {
       document.trim_node_whitespace(node)?;
   });
 
   // \dump ???
-  DefPrimitive!("\\end", sub[stomach, (), state] { stomach.get_gullet_mut().flush(state); });
+  DefPrimitive!("\\end", sub[ ()] { gullet_mut!().flush(); });
 });

@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate rtx_codegen;
 use rtx_core::common::error::*;
-use rtx_core::state::State;
-use rtx_core::stomach::Stomach;
 
 // =======================
 // Adding custom bindings:
@@ -12,11 +10,11 @@ use rtx_core::stomach::Stomach;
 pub mod mytemplate_sty;
 pub mod scopemacro_sty;
 
-pub fn dispatch(filename: &str, stomach: &mut Stomach, state: &mut State) -> Option<Result<()>> {
+pub fn dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
     // II. Connect the filename to the `load_definitions` function of your .rs binding:
-    "mytemplate.sty" => Some(mytemplate_sty::load_definitions(stomach, state)),
-    "scopemacro.sty" => Some(scopemacro_sty::load_definitions(stomach, state)),
+    "mytemplate.sty" => Some(mytemplate_sty::load_definitions()),
+    "scopemacro.sty" => Some(scopemacro_sty::load_definitions()),
     _ => None,
   }
 }

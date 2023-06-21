@@ -5,7 +5,6 @@ use crate::common::error::*;
 use crate::common::store::Stored;
 use crate::digested::Digested;
 use crate::list::List;
-use crate::state::State;
 use crate::BoxOps;
 
 use rustc_hash::FxHashMap as HashMap;
@@ -33,19 +32,19 @@ use crate::common::numeric_ops::NumericOps;
 /// The & is still needed to allocate the cells in those rows.
 /// And in fact they need not even be empty! TeX will just pile them up!
 /// However, in HTML the spanned rows ARE omitted!
-pub fn normalize_alignment(alignment: &mut Alignment, state: &mut State) -> Result<()> {
+pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   if !alignment.is_normalized {
-    normalize_cell_sizes(alignment, state)?;
+    normalize_cell_sizes(alignment)?;
     normalize_mark_spans(alignment)?;
     normalize_prune_rows(alignment)?;
-    normalize_prune_columns(alignment, state)?;
+    normalize_prune_columns(alignment)?;
     normalize_sum_sizes(alignment)?;
     alignment.is_normalized = true;
   }
   Ok(())
 }
 /// Compute (approximate) sizes of all cells
-pub fn normalize_cell_sizes(alignment: &mut Alignment, state: &mut State) -> Result<()> {
+pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
   // Examines: boxes, align, vattach
   // Sets: cached_width, cached_height, cached_depth (per cell) & empty
   for row in &mut alignment.rows {
@@ -56,8 +55,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment, state: &mut State) -> Res
           Some(stored_map!(
             "align" => cell.align.map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )),
-          state,
-        )?;
+              )?;
         // Debug("CELL (" . join(',', map { $_ . "=" . ToString($$cell{$_}); } qw(align width
         // vattach))     . ") size " . showSize($w,  $h,  $d)
         //     . " csize " . showSize($cw, $ch, $cd)
@@ -187,7 +185,7 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
 }
 /// Scan for and remove empty columns
 /// but copying borders and adjusting rowspan's & colspan's appropriately.
-pub fn normalize_prune_columns(alignment: &mut Alignment, state: &mut State) -> Result<()> {
+pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
   if alignment.is_math || alignment.properties.contains_key("preserve_structure") {
     // Don't remove empty columns from math.
     return Ok(());
@@ -275,7 +273,7 @@ pub fn normalize_prune_columns(alignment: &mut Alignment, state: &mut State) -> 
               // Copy boxes over, in case side effects?
               let mut new_boxes = prev.boxes.as_mut().map(|b| b.unlist()).unwrap_or_default();
               new_boxes.extend(preserve);
-              prev.boxes = Some(Digested::from(List::new(new_boxes, state)));
+              prev.boxes = Some(Digested::from(List::new(new_boxes)));
             }
           }
         }
