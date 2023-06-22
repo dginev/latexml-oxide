@@ -83,8 +83,8 @@ impl Stomach {
 
   /// Adds a new stack frame for a TeX group.
   pub fn push_stack_frame(&mut self, nobox: bool) {
-    let current_token = state!().get_current_token().unwrap().clone();
-    state_mut!().push_frame();
+    let current_token = {state!().get_current_token().unwrap().clone()};
+    state::push_frame();
     state::assign_value(
       "beforeAfterGroup",
       Stored::VecDequeStored(VecDeque::new()),
@@ -110,7 +110,7 @@ impl Stomach {
   }
   /// Removes the last/current stack frame, ending a TeX group
   pub fn pop_stack_frame(&mut self, nobox: bool) -> Result<()> {
-    if let Some(Stored::VecDequeStored(beforeafter)) = state_mut!().remove_value("beforeAfterGroup") {
+    if let Some(Stored::VecDequeStored(beforeafter)) = state::remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
         for beforeafter_frame in beforeafter.into_iter() {
@@ -131,7 +131,7 @@ impl Stomach {
         self.box_list.extend(result);
       }
     }
-    let after = state_mut!().remove_value("afterGroup");
+    let after = state::remove_value("afterGroup");
     state_mut!().pop_frame()?;
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
@@ -139,8 +139,8 @@ impl Stomach {
     if let Some(Stored::VecDequeStored(after_entries)) = after {
       for entry in after_entries.into_iter().rev() {
         match entry {
-          Stored::Tokens(t) => gullet_mut!().unread(t),
-          Stored::Token(t) => gullet_mut!().unread_one(t),
+          Stored::Tokens(t) => gullet::unread(t),
+          Stored::Token(t) => gullet::unread_one(t),
           other => panic!(r"\aftergroup should be used with tokens, got instead: {other:?}"),
         };
       }
@@ -152,7 +152,7 @@ impl Stomach {
   pub fn current_frame_message(&self) -> String {
     let target = if state!().is_value_bound("MODE", Some(0)) {
       // SET mode in CURRENT frame ?
-      Cow::Owned(s!("mode-switch to {}", state!().lookup_string("MODE")))
+      Cow::Owned(s!("mode-switch to {}", state::lookup_string("MODE")))
     } else if state!().lookup_bool("groupNonBoxing") {
       // Current frame is a non-boxing group?
       Cow::Borrowed("non-boxing group")
@@ -160,7 +160,7 @@ impl Stomach {
       Cow::Borrowed("boxing group")
     };
 
-    let initiator = if let Some(t) = state!().lookup_token("groupInitiator") {
+    let initiator = if let Some(t) = state::lookup_token("groupInitiator") {
       t.stringify()
     } else {
       String::new()
@@ -183,24 +183,24 @@ impl Stomach {
     // to find all the places to manage it.
     // So, let's try this for now...
     // was $LaTeXML::ALIGN_STATE
-    state_mut!().increment_align_group_count();
+    state::increment_align_group_count();
   }
   /// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there, and also
   /// decrementing the level of boxing.
   pub fn egroup(&mut self) -> Result<()> {
-    if state!().lookup_bool("groupNonBoxing") {
+    if state::lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
       Error!(
         "unexpected",
-        state!().get_current_token().unwrap(),
+        {state!().get_current_token().unwrap()},
         "Attempt to close boxing group"
       );
     } else {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false)?;
     }
-    state_mut!().decrement_align_group_count();
+    state::decrement_align_group_count();
     Ok(())
   }
   /// Begin a new level of binding by pushing a new stack frame.
@@ -208,11 +208,11 @@ impl Stomach {
   /// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there.
   pub fn endgroup(&mut self) -> Result<()> {
-    if !state!().lookup_bool("groupNonBoxing") {
+    if !state::lookup_bool("groupNonBoxing") {
       // or group was opened with \bgroup
       Error!(
         "unexpected",
-        state!().get_current_token().unwrap().to_string(),
+        {state!().get_current_token().unwrap().to_string()},
         s!(
           "Attempt to close non-boxing group; {}",
           self.current_frame_message()
@@ -232,7 +232,7 @@ impl Stomach {
   /// Useful for environments, where the group has already been established.
   /// (presumably, in the long run, modes & groups should be much less coupled)
   pub fn set_mode(&mut self, mode: &str) -> Result<()> {
-    let prevmode = state!().lookup_string("MODE");
+    let prevmode = state::lookup_string("MODE");
     let ismath = mode.ends_with("math");
     state::assign_value("MODE", arena::pin(mode), Some(Scope::Local));
     state::assign_value("IN_MATH", ismath, Some(Scope::Local));
@@ -256,13 +256,14 @@ impl Stomach {
         },
         ..Font::default()
       });
-      state_mut!().assign_font(Rc::new(new_font), Some(Scope::Local));
+      state::assign_font(Rc::new(new_font), Some(Scope::Local));
     } else {
       let curfont = state!().lookup_font().unwrap();
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
-      if let Some(Stored::Font(saved_font)) = state!().lookup_value("savedfont") {
-        state_mut!().assign_font(
+      let saved_opt = state!().lookup_value("savedfont").cloned();
+      if let Some(Stored::Font(saved_font)) = saved_opt {
+        state::assign_font(
           Rc::new(saved_font.merge(Font {
             color: curfont.color.clone(),
             bg: curfont.bg.clone(),
@@ -288,12 +289,12 @@ impl Stomach {
   /// currently in `mode`.  This also ends a level of grouping.
   pub fn end_mode(&mut self, mode: &str) -> Result<()> {
     // Last stack frame was NOT a mode switch!?!?!
-    if !state!().is_value_bound("MODE", Some(0)) || (state!().lookup_string_sym("MODE") != arena::pin(mode)) {
+    if !state!().is_value_bound("MODE", Some(0)) || (state::lookup_string_sym("MODE") != arena::pin(mode)) {
       // Or was a mode switch to a different mode
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        state!().lookup_string("MODE")
+        state::lookup_string("MODE")
       );
       let category = match state!().get_current_token() {
         Some(ref token) => token.to_string(),
@@ -337,7 +338,7 @@ pub fn digest<T: Into<Tokens>>(
     return Ok(Digested::default());
   }
   gullet::reading_from_mouth(Mouth::default(), || {
-    gullet_mut!().unread(tokens);
+    gullet::unread(tokens);
     state::clear_prefixes(); // prefixes shouldn't apply here.
     let mode = if state::lookup_bool("IN_MATH") {
       TexMode::Math
@@ -406,7 +407,7 @@ pub fn digest_next_body(
     {
       // at least \over calls in here without the intent to passing through the alignment.
       // So if we already have some digested boxes available, return them here.
-      gullet_mut!().unread_one(token);
+      gullet::unread_one(token);
       return Ok(stomach_mut!().expire_local_box_list());
     }
     // normal case
@@ -487,8 +488,8 @@ pub fn raw_tex(text: &str) -> Result<()> {
       let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
       state::local_current_token(token.clone());
-      stomach_mut!().token_stack.push(token.clone());
-      if stomach!().token_stack.len() > MAXSTACK {
+      { stomach_mut!().token_stack.push(token.clone()); }
+      if { stomach!().token_stack.len() } > MAXSTACK {
         fatal!(
           Stomach,
           Recursion,
@@ -539,7 +540,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
           // (? I think)
           let invoked_meaning = meaning.invoke( false)?;
           if !invoked_meaning.is_empty() {
-            { gullet_mut!().unread(invoked_meaning); }
+            { gullet::unread(invoked_meaning); }
           }
           // replace the token by it's expansion!!!
           maybe_token = gullet::read_x_token(None, false)?
@@ -551,7 +552,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
         Some(Stored::Conditional(meaning)) => {
           // Conditionals are "expandable", use the regular invoke.
           let invoked_meaning = meaning.invoke(false)?;
-          gullet_mut!().unread(invoked_meaning);
+          gullet::unread(invoked_meaning);
           maybe_token = gullet::read_x_token(None, false)?
               .map(Cow::Owned);
           stomach_mut!().token_stack.pop();
@@ -706,3 +707,11 @@ pub fn raw_tex(text: &str) -> Result<()> {
       },
     }
   }
+
+  pub fn bgroup() { stomach_mut!().bgroup() }
+  pub fn egroup() -> Result<()> { stomach_mut!().egroup() }
+  pub fn begingroup() { stomach_mut!().begingroup() }
+  pub fn endgroup() -> Result<()> { stomach_mut!().endgroup() }
+  pub fn set_mode(mode: &str) -> Result<()> { stomach_mut!().set_mode(mode) }
+  pub fn begin_mode(mode: &str) -> Result<()> { stomach_mut!().begin_mode(mode) }
+  pub fn end_mode(mode: &str) -> Result<()> { stomach_mut!().end_mode(mode) }

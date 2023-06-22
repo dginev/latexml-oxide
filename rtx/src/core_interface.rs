@@ -238,7 +238,7 @@ impl DigestionAPI for Core {
       document.mark_xmnode_visibility()?;
       document.load_labels_for_rewrite()?;
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
-      if let Some(Stored::VecDequeStored(rules)) = state_mut!().remove_value("DOCUMENT_REWRITE_RULES") {
+      if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
           // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
           // (TODO: obviously, this could be avoided if they never needed mutable

@@ -150,13 +150,13 @@ LoadDefinitions!({
 
   // Note that these are NOT expandable, even though the "return" tokens!
   DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
-    gullet_mut!().unread_vec(
+    gullet::unread_vec(
       tokens.unlist().into_iter()
         .map(uppercase_token)
         .collect());
   });
   DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
-    gullet_mut!().unread_vec(
+    gullet::unread_vec(
       tokens.unlist().into_iter()
         .map(lowercase_token)
         .collect::<Vec<Token>>());

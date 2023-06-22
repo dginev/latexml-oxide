@@ -113,7 +113,7 @@ LoadDefinitions!({
     // this happens only once per conversion, so not a big deal to keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
-    let mut frontmatter = match state_mut!().remove_value("frontmatter") {
+    let mut frontmatter = match state::remove_value("frontmatter") {
       Some(Stored::HashTagData(frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };

@@ -85,8 +85,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go
     // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
-    let mut stomach = stomach_mut!();
-    while let Some(prev) = stomach.box_list.pop() {
+    while let Some(prev) = { stomach_mut!().box_list.pop() } {
       if prev.get_property_bool("isSpace") {
         prevspace = true; // a space avoids double-scripts
         putback.push_front(prev); // put back? assuming it will add rpadding to previous???
@@ -146,7 +145,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         break;
       }
     }
-    stomach.box_list.extend(putback);
+    { stomach_mut!().box_list.extend(putback); }
     MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
@@ -168,13 +167,13 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     let script = stuff.remove(0); // ONLY the first box is the script!
 
     if !script.is_empty()? {
-      let mut properties = stored_map!(
+      let mut properties = {stored_map!(
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b) }
           else { Stored::None },                      // for sizing/positioning
-        "scriptlevel" => stomach.get_script_level(),
-        "level"       => stomach.get_boxing_level()
-      );
+        "scriptlevel" => stomach!().get_script_level(),
+        "level"       => stomach!().get_boxing_level()
+      )};
       if let Some(pvs) = prevscript {
         properties.insert("prevscript".to_string(), pvs.into());
       }

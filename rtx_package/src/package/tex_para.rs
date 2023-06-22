@@ -77,7 +77,7 @@ LoadDefinitions!({
           { state::assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        if let Some(Stored::Tokens(vadj)) = { state_mut!().remove_value("vAdjust") } {
+        if let Some(Stored::Tokens(vadj)) = { state::remove_value("vAdjust") } {
           state::assign_value("vAdjust", Tokens!(), Some(Scope::Global));
           Ok(vec![ Digest!(vadj)? ])
         } else {

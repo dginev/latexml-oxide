@@ -371,7 +371,7 @@ LoadDefinitions!({
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 fn escapechar() -> String {
-  let code: i64 = match state_mut!().lookup_register("\\escapechar", Vec::new()).unwrap() {
+  let code: i64 = match state::lookup_register("\\escapechar", Vec::new()).unwrap() {
     Some(RegisterValue::Number(v)) => v.value_of(),
     _ => -1,
   };

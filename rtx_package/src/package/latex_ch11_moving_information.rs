@@ -45,13 +45,12 @@ LoadDefinitions!({
       .map(|ctr| s!("scopes_for_counter:{}", ctr));
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
-      let mut state = state_mut!();
-      state.unshift_value(&ctr_key, vec![scope.clone()]);
-      state.activate_scope(arena::pin(scope));
-      stomach_mut!().begin_mode("text")?;
+      state::unshift_value(&ctr_key, vec![scope.clone()]);
+      state::activate_scope(arena::pin(scope));
+      stomach::begin_mode("text")?;
       let current_label = stomach::digest(Tokens!(T_CS!("\\@currentlabel")))?;
       state::assign_value(&label_key, current_label, Some(Scope::Global));
-      stomach_mut!().end_mode("text")?;
+      stomach::end_mode("text")?;
     }
   }
   );
@@ -176,7 +175,6 @@ LoadDefinitions!({
   Tag!("ltx:bibliography", auto_close => true);
 
   DefMacro!("\\par@in@bibliography", {
-    let mut gullet = gullet_mut!();
     gullet::skip_spaces()?;
     if let Some(tok) = gullet::read_token()? {
       // If next token is another \par, or a REAL \bibitem,
@@ -185,7 +183,7 @@ LoadDefinitions!({
       if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
         Ok(Tokens!(tok))
       } else {
-        gullet.unread_one(tok);
+        gullet::unread_one(tok);
         Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
       }
     } else {
@@ -321,10 +319,10 @@ LoadDefinitions!({
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
       Ok(map!("bibrefs" => clean_bib_key(&keys.to_string()).into(),
-        "separator" => match state!().lookup_tokens("CITE_SEPARATOR") {
+        "separator" => match state::lookup_tokens("CITE_SEPARATOR") {
           Some(sep) => stomach::digest(sep)?.to_string().into(),
           None => String::new().into() },
-        "yyseparator" => match state!().lookup_tokens("CITE_YY_SEPARATOR") {
+        "yyseparator" => match state::lookup_tokens("CITE_YY_SEPARATOR") {
           Some(yysep) => stomach::digest(yysep)?.to_string().into(),
           None => String::new().into() }
       ))
@@ -335,16 +333,16 @@ LoadDefinitions!({
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>", mode => "text");
 
   DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
-    let style = state!().lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
-    let open = state!().lookup_tokens("CITE_OPEN");
+    let style = state::lookup_tokens("CITE_STYLE").unwrap_or_else(|| Tokens!());
+    let open = state::lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or_else(|| Tokens!());
-    let close = state!().lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
+    let close = state::lookup_tokens("CITE_CLOSE").unwrap_or_else(|| Tokens!());
     let mut post_tokens = match post_opt {
       Some(tks) => tks.unlist(),
       None => Vec::new()
     };
     if !post_tokens.is_empty() {
-      let ns = state!().lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_else(|| Tokens!());
+      let ns = state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_else(|| Tokens!());
       let mut post_wrapped = ns.unlist();
       post_wrapped.push(T_SPACE!());
       post_wrapped.extend(post_tokens);

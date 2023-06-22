@@ -60,7 +60,7 @@ LoadDefinitions!({
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
       if state!().lookup_bool("IN_MATH") {
-        let mode = state!().lookup_string("MODE");
+        let mode = state::lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
           stomach_mut!().end_mode(&mode)?;
         } else { // otherwise, just unset the flag?

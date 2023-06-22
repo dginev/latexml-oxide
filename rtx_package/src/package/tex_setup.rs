@@ -18,7 +18,7 @@ LoadDefinitions!({
   //======================================================================
   // DOCUMENTID is the ID of the document
   // AND prefixes IDs on all other elements.
-  let doc_id = state!().lookup_string("DOCUMENTID");
+  let doc_id = state::lookup_string("DOCUMENTID");
   if !doc_id.is_empty() {
     // Wrap in T_OTHER so funny chars don't screw up (no space!)
     let doc_id_token = T_OTHER!(doc_id);
@@ -261,7 +261,7 @@ LoadDefinitions!({
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!(RequireBrace, sub[_inner, _extra] {
     gullet::read_token()?.map(|tok| {
-      gullet_mut!().unread_one(tok.clone());
+      gullet::unread_one(tok.clone());
       if tok.get_catcode() != Catcode::BEGIN {
         let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
         err().ok();
@@ -502,7 +502,7 @@ LoadDefinitions!({
       if !toks.is_empty() {
         token = Some(toks.remove(0));
         if !toks.is_empty() {
-          gullet_mut!().unread(Tokens::new(toks));
+          gullet::unread(Tokens::new(toks));
         }
       } else {
         token = None;
@@ -615,7 +615,7 @@ LoadDefinitions!({
     if let Some(token) = token_opt {
       let cc = token.get_catcode();
       if ! matches!(cc, SPACE | EOL | COMMENT) {
-        gullet_mut!().unread_one(token);
+        gullet::unread_one(token);
       }
     }
     // Strip outer "" ???
@@ -706,7 +706,7 @@ LoadDefinitions!({
       gullet::read_until(&Tokens!(T_OTHER!(")"))).map(Some)
     } else {
       if let Some(tok) = tok_opt {
-        gullet_mut!().unread_one(tok);
+        gullet::unread_one(tok);
       }
       Ok(None)
     }

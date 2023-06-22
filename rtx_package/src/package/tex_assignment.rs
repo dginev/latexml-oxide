@@ -181,7 +181,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
-    gullet_mut!().unread(Tokens!(token1,token2.clone()));
+    gullet::unread(Tokens!(token1,token2.clone()));
     Let!(cs, token2);
   });
 

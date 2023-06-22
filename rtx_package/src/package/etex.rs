@@ -187,7 +187,7 @@ LoadDefinitions!({
     if let Some(token) = gullet::read_token()? {
       // Skip \relax
       if token != *TOKEN_RELAX {
-        gullet_mut!().unread_one(token);
+        gullet::unread_one(token);
       }
     }
     Ok(value)

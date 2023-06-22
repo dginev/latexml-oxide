@@ -71,7 +71,7 @@ LoadDefinitions!({
 
   // Define \Url, in case its used; won't be represented as nicely
   DefMacro!("\\Url", {
-    gullet_mut!().unread_one(T_OTHER!("\\Url"));
+    gullet::unread_one(T_OTHER!("\\Url"));
     Ok(Tokens!(T_CS!("\\@Url")))
   });
 
@@ -82,7 +82,7 @@ LoadDefinitions!({
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
-        "href" => compose_url(&state!().lookup_string("BASE_URL"), &url.to_string(), None).into(),
+        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),
         // TODO: why was class a sub {}??
         "class"=> ltx_cmd.into()
       ))

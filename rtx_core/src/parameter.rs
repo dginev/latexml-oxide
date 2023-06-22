@@ -13,7 +13,7 @@ use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::mouth::Mouth;
-use crate::{state,state_mut,gullet,gullet_mut};
+use crate::{state,state_mut,gullet};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -339,7 +339,7 @@ impl Parameter {
         if let Some(value) = value_arg.owned_tokens() {
           let neutralized = gullet::reading_from_mouth(Mouth::default(),
                     move || {
-              gullet_mut!().unread(value);
+              gullet::unread(value);
               let mut tokens = Vec::new();
               loop {
                 match gullet::read_x_token(Some(true), true) {
@@ -526,7 +526,7 @@ impl Parameters {
     // start with empty mouth
     let reader_mouth = Mouth::new("", None)?;
     gullet::reading_from_mouth(reader_mouth, || {
-      gullet_mut!().unread(value_tokens); // but put back tokens to be read
+      gullet::unread(value_tokens); // but put back tokens to be read
       let values = self.read_arguments(None)?;
       gullet::skip_spaces()?;
       Ok(values)

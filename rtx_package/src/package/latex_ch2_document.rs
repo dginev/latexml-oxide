@@ -67,7 +67,7 @@ LoadDefinitions!({
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
-      if let Some(ops) = state!().lookup_tokens("@at@end@document") {
+      if let Some(ops) = state::lookup_tokens("@at@end@document") {
         boxes.push(stomach::digest(ops)?);
       }
       // Should we try to indent the last paragraph? If so, it goes like this:

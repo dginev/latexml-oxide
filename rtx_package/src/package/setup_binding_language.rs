@@ -844,31 +844,31 @@ macro_rules! DefAccent {
 #[macro_export]
 macro_rules! LookupBool {
   ($name:expr) => {{
-    state!().lookup_bool($name)
+    state::lookup_bool($name)
   }};
 }
 #[macro_export]
 macro_rules! LookupFont {
   () => {{
-    state!().lookup_font()
+    state::lookup_font()
   }};
 }
 #[macro_export]
 macro_rules! LookupString {
   ($name:expr) => {{
-    state!().lookup_string($name)
+    state::lookup_string($name)
   }};
 }
 #[macro_export]
 macro_rules! LookupNumber {
   ($name:expr) => {{
-    state!().lookup_number($name)
+    state::lookup_number($name)
   }};
 }
 #[macro_export]
 macro_rules! LookupTokens {
   ($name:expr) => {{
-    state!().lookup_tokens($name)
+    state::lookup_tokens($name)
   }};
 }
 #[macro_export]
@@ -892,7 +892,7 @@ macro_rules! AssignValue {
 #[macro_export]
 macro_rules! RemoveValue {
   ($name:expr) => {{
-    state_mut!().remove_value($name)
+    state::remove_value($name)
   }};
 }
 #[macro_export]
@@ -947,7 +947,7 @@ macro_rules! LookupMappingKeys {
 #[macro_export]
 macro_rules! LookupCatcode {
   ($c:expr) => {{
-    state!().lookup_catcode($c)
+    state::lookup_catcode($c)
   }};
 }
 #[macro_export]
@@ -965,13 +965,13 @@ macro_rules! AssignCatcode {
 #[macro_export]
 macro_rules! LookupMeaning {
   ($name:expr) => {
-    state!().lookup_meaning($name)
+    state::lookup_meaning($name)
   }
 }
 #[macro_export]
 macro_rules! LookupDefinition {
   ($name:expr) => {
-    state!().lookup_definition($name)?
+    state::lookup_definition($name)?
   }
 }
 #[macro_export]
@@ -983,7 +983,7 @@ macro_rules! InstallDefinition {
 #[macro_export]
 macro_rules! XEquals {
   ($token1:expr, $token2:expr) => {
-    state!().x_equals($token1, $token2)
+    state::x_equals($token1, $token2)
   }
 }
 #[macro_export]

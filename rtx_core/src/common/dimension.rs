@@ -71,12 +71,18 @@ impl Dimension {
       Ok(kround(spec.parse::<f64>().expect(spec)) as f64)
     }
   }
-  pub fn from_str(spec: &str) -> Result<Dimension> {
+}
+
+impl std::str::FromStr for Dimension {
+  type Err = crate::common::Error;
+  fn from_str(spec: &str) -> Result<Dimension> {
     Ok(Dimension::new_f64(Dimension::spec_to_f64(
       spec
     )?))
   }
 }
+
+
 // Dimension!() macro is in setup.rs, since it binds state
 
 // This is Knuth's print_scaled (See TeX the Program, \S 103)

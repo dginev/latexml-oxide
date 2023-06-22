@@ -33,8 +33,8 @@ LoadDefinitions!({
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
-    let before_opt = state!().lookup_tokens(&format!("@environment@{name}@beforebegin"));
-    let after_opt  = state!().lookup_tokens(&format!("@environment@{name}@atbegin"));
+    let before_opt = state::lookup_tokens(&format!("@environment@{name}@beforebegin"));
+    let after_opt  = state::lookup_tokens(&format!("@environment@{name}@atbegin"));
 
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
@@ -65,8 +65,8 @@ LoadDefinitions!({
 
   DefMacro!("\\end {}", sub[(env)]{
     let name = Expand!(env).to_string();
-    let before = state!().lookup_tokens(&s!("@environment@{name}@atend"));
-    let after = state!().lookup_tokens(&s!("@environment@{name}@afterend"));
+    let before = state::lookup_tokens(&s!("@environment@{name}@atend"));
+    let after = state::lookup_tokens(&s!("@environment@{name}@afterend"));
     let mut t = T_CS!(s!("\\end{{{name}}}"));
     let mut out_tokens = Vec::new();
     if is_defined_token(&t) {

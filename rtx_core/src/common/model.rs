@@ -716,3 +716,48 @@ impl Model {
     self.schema_class.insert(arena::pin(classname), content);
   }
 }
+
+pub(crate) fn compute_indirect_model_aux(
+  tag: SymbolU32,
+  start_opt: Option<SymbolU32>,
+  desirability: usize,
+  openable: &mut HashSet<SymbolU32>,
+  desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
+) {
+  let start = match start_opt {
+    Some(s) => s,
+    None => *EMPTY_SYM,
+  };
+
+  // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
+  // move ownership of the tag strings into the tag_contents vector.
+  // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
+  let tag_contents: Vec<SymbolU32> = model!().get_tag_contents(&tag);
+
+  for kid in tag_contents {
+    if desc
+      .entry(kid)
+      .or_insert_with(HashMap::default)
+      .contains_key(&start)
+    {
+      continue;
+    } // Already solved
+
+    if start != *EMPTY_SYM {
+      desc
+        .entry(kid)
+        .or_insert_with(HashMap::default)
+        .insert(start, desirability);
+    }
+
+    if kid != *H_PCDATA_SYM && openable.contains(&kid) {
+      let inner = if start != *EMPTY_SYM {
+        start
+      } else {
+        kid
+      };
+
+      compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
+    }
+  }
+}

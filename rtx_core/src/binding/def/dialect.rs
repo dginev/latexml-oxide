@@ -965,7 +965,7 @@ pub fn def_environment(
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
   let atbegin_hook_closure = before_digest_simple!( {
-    if let Some(b) = state!().lookup_tokens(&atbegin_key) {
+    if let Some(b) = state::lookup_tokens(&atbegin_key) {
       vec![stomach::digest(b.unlist())?]
     } else {
       Vec::new()
@@ -1049,7 +1049,7 @@ pub fn def_environment(
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
   let unexpected_end_closure = after_digest_simple!( _whatsit, {
-    let env = state!().lookup_string("current_environment");
+    let env = state::lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
       let message2 = s!(
@@ -1097,7 +1097,7 @@ pub fn def_environment(
   let mut before_digest_for_endenv = options.before_digest_end;
   let atend_key = s!("@environment@{name}@atend");
   let atend_hook_closure = before_digest_simple!( {
-    if let Some(e) = state!().lookup_tokens(&atend_key) {
+    if let Some(e) = state::lookup_tokens(&atend_key) {
       vec![stomach::digest(e.unlist())?]
     } else {
       Vec::new()
@@ -1175,8 +1175,7 @@ pub fn get_xmarg_id() -> Result<Tokens> {
   def_macro(
     T_CS!("\\@@XMARG@ID"),
     None,
-    Tokens!(Explode!(state_mut!()
-      .lookup_register("\\c@@XMARG", Vec::new())?
+    Tokens!(Explode!(state::lookup_register("\\c@@XMARG", Vec::new())?
       .unwrap()
       .value_of())),
     Some(ExpandableOptions {

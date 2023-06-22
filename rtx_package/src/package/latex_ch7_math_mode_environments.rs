@@ -116,7 +116,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     }
   }
   // Now install the tags in $whatsit or current Row, as appropriate.
-  let props = match state_mut!().remove_value("EQUATIONROW_TAGS") {
+  let props = match state::remove_value("EQUATIONROW_TAGS") {
     Some(Stored::HashStored(hs)) => hs,
     _ => HashMap::default(),
   };
@@ -149,16 +149,16 @@ LoadDefinitions!({
   alias        => "$$",
   before_digest => {
     stomach_mut!().begin_mode("display_math")?;
-    if let Some(RegisterValue::Tokens(everymath_toks)) = state_mut!().lookup_register("\\everymath", Vec::new())? {
+    if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
       let everymath_toks = everymath_toks.unlist();
       if !everymath_toks.is_empty() {
-        gullet_mut!().unread(Tokens::new(everymath_toks));
+        gullet::unread(Tokens::new(everymath_toks));
       }
     }
-    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state_mut!().lookup_register("\\everydisplay", Vec::new())? {
+    if let Some(RegisterValue::Tokens(everydisplay_toks)) = state::lookup_register("\\everydisplay", Vec::new())? {
       let everydisplay_toks = everydisplay_toks.unlist();
       if !everydisplay_toks.is_empty() {
-        gullet_mut!().unread(Tokens::new(everydisplay_toks));
+        gullet::unread(Tokens::new(everydisplay_toks));
       }
     }
   },

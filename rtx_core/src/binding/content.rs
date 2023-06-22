@@ -523,7 +523,7 @@ fn load_tex_definitions(
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
   state_mut!().unlocked = false;
-  let content_str = state!().lookup_string(&s!("{pathname}_contents"));
+  let content_str = state::lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() {
     None
   } else {
@@ -572,7 +572,7 @@ pub fn load_tex_content(
   };
 
   // Open a mouth for that TeX content
-  let cached = state!().lookup_string(&s!("{path}_contents"));
+  let cached = state::lookup_string(&s!("{path}_contents"));
   let cached_opt = if cached.is_empty() {
     None
   } else {
@@ -709,7 +709,7 @@ fn execute_option_internal(option: &str) -> Result<bool> {
       None,
       )?;
 
-    let unused = match state_mut!().remove_vecdeque("@unusedoptionlist") {
+    let unused = match state::remove_vecdeque("@unusedoptionlist") {
       Some(list) => list
         .into_iter()
         .filter(|item| {
@@ -938,7 +938,7 @@ pub fn find_file(
 
 fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
-  let cached = state!().lookup_string(&s!("{}_contents", file));
+  let cached = state::lookup_string(&s!("{}_contents", file));
   if !cached.is_empty() {
     Some(file.to_string())
   } else if pathname::is_absolute(file) {

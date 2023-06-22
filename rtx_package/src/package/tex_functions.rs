@@ -59,9 +59,9 @@ pub fn today() -> Result<String> {
     "December",
   ];
   let month =
-    month_names[state_mut!().lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
-  let day = state_mut!().lookup_register("\\day", vec![])?.unwrap().value_of();
-  let year = state_mut!().lookup_register("\\year", vec![])?.unwrap().value_of();
+    month_names[state::lookup_register("\\month", vec![])?.unwrap().value_of() as usize - 1];
+  let day = state::lookup_register("\\day", vec![])?.unwrap().value_of();
+  let year = state::lookup_register("\\year", vec![])?.unwrap().value_of();
   Ok(s!("{} {}, {}", month, day, year))
 }
 
@@ -284,22 +284,21 @@ pub fn decode_math_char(
 pub fn read_box_contents(
   everybox_opt: Option<Tokens>,
 ) -> Result<Tokens> {
-  let mut gullet = gullet_mut!();
   while let Some(t) = gullet::read_token()? {
     if t.get_catcode() == Catcode::BEGIN {
       break;
     } // Skip till { or \bgroup
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
-  match state_mut!().remove_value("BeforeNextBox") {
-    Some(Stored::Tokens(tokens)) => gullet.unread(tokens),
-    Some(Stored::Token(token)) => gullet.unread_one(token),
+  match state::remove_value("BeforeNextBox") {
+    Some(Stored::Tokens(tokens)) => gullet::unread(tokens),
+    Some(Stored::Token(token)) => gullet::unread_one(token),
     None | Some(Stored::None) => {},
     Some(other) => panic!("afterAssignment should be a token, got: {}", other),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
-    gullet.unread(everybox);
+    gullet::unread(everybox);
   }
   Ok(Tokens!())
 }

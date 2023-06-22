@@ -81,7 +81,7 @@ pub fn new_counter(
   if !within.is_empty() {
     let clwithin = s!("\\cl@{}", within);
     let clunwithin = s!("\\cl@UN{}", within);
-    let mut x = if let Some(cl) = state!().lookup_tokens(&clwithin) {
+    let mut x = if let Some(cl) = state::lookup_tokens(&clwithin) {
       cl.unlist()
     } else {
       Vec::new()
@@ -94,7 +94,7 @@ pub fn new_counter(
       Some(Scope::Global),
     );
 
-    let mut unx = if let Some(clun) = state!().lookup_tokens(&clunwithin) {
+    let mut unx = if let Some(clun) = state::lookup_tokens(&clunwithin) {
       clun.unlist()
     } else {
       Vec::new()
@@ -159,7 +159,7 @@ pub fn new_counter(
       Some(Scope::Global),
     );
   } else {
-    prefix = state!().lookup_string(&s!("@ID@prefix@{}", ctr));
+    prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr));
     if prefix.is_empty() {
       prefix = ctr.to_string();
     }
@@ -234,7 +234,7 @@ pub fn new_counter(
 }
 /// Fetches the value associated with the counter C<$ctr>.
 pub fn counter_value(ctr: &str) -> Result<Number> {
-  match state_mut!().lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
+  match state::lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
     None => {
       let message = s!("Counter {} was not defined; assuming 0", ctr);
       Warn!("undefined", ctr, message);
@@ -275,7 +275,7 @@ pub fn step_counter(
     Some(Scope::Global),
     Vec::new()
   )?;
-  state_mut!().after_assignment();
+  state::after_assignment();
   let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
@@ -289,7 +289,7 @@ pub fn step_counter(
 
   // and reset any within counters!
   if !noreset {
-    if let Some(nested) = state!().lookup_tokens(&s!("\\cl@{ctr}")) {
+    if let Some(nested) = state::lookup_tokens(&s!("\\cl@{ctr}")) {
       for c in nested.unlist() {
         reset_counter(&c)?;
       }
@@ -307,17 +307,20 @@ pub fn ref_step_counter(
   ctype: &str,
   noreset: bool,
   ) -> Result<HashMap<String, Stored>> {
-  let ctr = match state!().lookup_mapping("counter_for_type", ctype) {
+  let state = state!();
+  let meaning = state.lookup_mapping("counter_for_type", ctype);
+  let ctr = match meaning  {
     Some(Stored::String(ctr)) => arena::to_string(*ctr),
     _ => ctype.to_string(),
   };
+  drop(state);
   step_counter(&ctr, noreset)?;
   maybe_preempt_refnum(&ctr, false);
 
   let the_ctr_id = s!("\\the{ctr}@ID");
   let the_ctr = s!("\\the{ctr}");
 
-  let has_id: bool = if let Some(iddef) = state!().lookup_definition(&T_CS!(&the_ctr_id))? {
+  let has_id: bool = if let Some(iddef) = state::lookup_definition(&T_CS!(&the_ctr_id))? {
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
@@ -381,7 +384,7 @@ pub fn ref_step_counter(
     receiver,
     Some(Scope::Local),
   );
-  state_mut!().activate_scope(scope);
+  state::activate_scope(scope);
 
   Ok(map!(
     "tags" => Stored::Digested(tags),
@@ -432,7 +435,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     //     }
     //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
     // Some(Scope::Global), ..ExpandableOptions::default()}));   }
-    //   state_mut!().remove_value("PEEKED_LABEL"); // CONSUME the label
+    //   state::remove_value("PEEKED_LABEL"); // CONSUME the label
     //   state::assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
     // consumed the label
   }
@@ -444,10 +447,10 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
 pub fn maybe_note_label(label: &str) {
   if state!().lookup_value("LABEL_MAPPING_HOOK").is_some() {
     let label = clean_label(label, Some(""));
-    let processed = state!().lookup_string("PROCESSED_LABEL");
+    let processed = state::lookup_string("PROCESSED_LABEL");
     if processed.is_empty() || processed != label {
       // Only if not already processed
-      state_mut!().remove_value("PROCESSED_LABEL");
+      state::remove_value("PROCESSED_LABEL");
       state::assign_value(
         "PEEKED_LABEL",
         Stored::String(arena::pin(label)),
@@ -458,13 +461,12 @@ pub fn maybe_note_label(label: &str) {
 }
 
 fn deactivate_counter_scope(ctr: &str) {
-  //  print STDERR "Unusing scopes for $ctr\n";
-  if let Some(Stored::VecDequeStored(stored_scopes)) =
-    state!().lookup_value(&s!("scopes_for_counter:{ctr}"))
+  let scopes = { state!().lookup_value(&s!("scopes_for_counter:{ctr}")).cloned() };
+  if let Some(Stored::VecDequeStored(stored_scopes)) = scopes
   {
-    for scope_stored in stored_scopes.clone() {
+    for scope_stored in stored_scopes {
       if let Stored::String(scope) = scope_stored {
-        state_mut!().deactivate_scope(scope);
+        state::deactivate_scope(scope);
       } else {
         panic!("assignmenet scopes should be stored as strings, got: {scope_stored:?}");
       }
@@ -473,9 +475,10 @@ fn deactivate_counter_scope(ctr: &str) {
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  if let Some(Stored::VecString(stored_counters)) = state!().lookup_value(&s!("nested_counters_{ctr}"))
+  let nested = { state!().lookup_value(&s!("nested_counters_{ctr}")).cloned() };
+  if let Some(Stored::VecString(stored_counters)) = nested
   {
-    for inner_ctr in stored_counters.clone() {
+    for inner_ctr in stored_counters {
       deactivate_counter_scope(&inner_ctr);
     }
   }
@@ -530,7 +533,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
     }),
   )?;
   // and reset any within counters!
-  let nested = state!().lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
+  let nested = state::lookup_tokens(&s!("\\cl@{ctr}")).unwrap_or_default();
   for c in nested.unlist() {
     reset_counter(&c)?;
   }
@@ -541,7 +544,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 pub fn ref_step_item_counter(
   tag_opt: Option<&Tokens>,
   ) -> Result<HashMap<String, Stored>> {
-  let counter = state!().lookup_string("itemcounter");
+  let counter = state::lookup_string("itemcounter");
   let n = state!().lookup_int("itemization_items");
   state::assign_value("itemization_items", n + 1, None);
   let mut attr: HashMap<String, Stored> = HashMap::default();
@@ -642,7 +645,7 @@ pub fn begin_itemize(
   counter: Option<&str>,
   options: BeginItemizeOptions,
   ) -> Result<HashMap<String, Stored>> {
-  let outercounter = state!().lookup_string("itemcounter");
+  let outercounter = state::lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
     state!().lookup_int(&s!("{outercounter}level"))
   } else {
@@ -751,17 +754,17 @@ pub fn rescue_caption_counters(
   captype: &str,
   whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
-  if let Some(tags) = state_mut!().remove_value(tagskey) {
+  if let Some(tags) = state::remove_value(tagskey) {
     state::assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{captype}_id");
-  if let Some(id) = state_mut!().remove_value(&idkey) {
+  if let Some(id) = state::remove_value(&idkey) {
     state::assign_value(&idkey, false, Some(Scope::Global));
     whatsit.set_property("id", id);
   }
   let inlistkey = s!("{captype}_inlist");
-  if let Some(inlist) = state_mut!().remove_value(&inlistkey) {
+  if let Some(inlist) = state::remove_value(&inlistkey) {
     state::assign_value(&inlistkey, false, Some(Scope::Global));
     whatsit.set_property("inlist", inlist);
   }

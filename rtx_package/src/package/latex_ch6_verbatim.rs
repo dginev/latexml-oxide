@@ -39,7 +39,7 @@ LoadDefinitions!({
     before_digest => {
       stomach_mut!().bgroup();
       let mut stuff = Vec::new();
-      if let Some(b) = state!().lookup_tokens("@environment@verbatim@atbegin") {
+      if let Some(b) = state::lookup_tokens("@environment@verbatim@atbegin") {
         stuff.push(stomach::digest(b.unlist())?);
       }
       AssignValue!("current_environment", "verbatim");
@@ -68,7 +68,7 @@ LoadDefinitions!({
           lines.push(arena::pin(pre));
           let mut post_tokens = Tokenize!(post).unlist();
           post_tokens.push(T_CR!());
-          gullet_mut!().unread(Tokens::new(post_tokens));
+          gullet::unread(Tokens::new(post_tokens));
           break;
         } else {
           lines.push(arena::pin(s!("{}\n", line)));
@@ -80,7 +80,7 @@ LoadDefinitions!({
         }
       }
       // Note last line ends up as Whatsit's "trailer"
-      if let Some(b) = state!().lookup_tokens("@environment@verbatim@atend") {
+      if let Some(b) = state::lookup_tokens("@environment@verbatim@atend") {
         lines.push(arena::pin(stomach::digest(b)?.to_string()));
       }
       stomach_mut!().egroup()?;
@@ -110,7 +110,6 @@ LoadDefinitions!({
     let mut init = None;
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     let space_sym = arena::pin_static(" ");
-    let mut gullet = gullet_mut!();
     while let Some(maybe_init) = gullet::read_token()? {
       if maybe_init.get_sym() != space_sym {
         init = Some(maybe_init);

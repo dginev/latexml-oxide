@@ -253,16 +253,16 @@ impl Gullet {
         .map(|v| v.is_pseudo())
         .unwrap_or(false)
     {
-      gullet_mut!().unread_one(T_CS!("\\@row@after"));
+      unread_one(T_CS!("\\@row@after"));
     }
     if let Some(arg) = arg_opt {
       // slippery - to unread {arg} we first unread } then arg then {, as we push to the front.
-      gullet_mut!().unread_one(T_END!());
-      gullet_mut!().unread(arg);
-      gullet_mut!().unread_one(T_BEGIN!());
+      unread_one(T_END!());
+      unread(arg);
+      unread_one(T_BEGIN!());
     }
-    gullet_mut!().unread_one(token);
-    gullet_mut!().unread(post);
+    unread_one(token);
+    unread(post);
     state::expire_current_token();
     Ok(())
   }
@@ -638,7 +638,7 @@ impl Gullet {
         // All matched!!!
         return Ok(Some(keyword.to_string()));
       } else {
-        gullet_mut!().unread(matched.into()); // Put 'em back and try next!
+        unread(matched.into()); // Put 'em back and try next!
       }
     }
     Ok(None)
@@ -662,7 +662,7 @@ impl Gullet {
           Some(t) => t,
           None => {
             // Ran out!
-            gullet_mut!().unread(Tokens::new(tokens));
+            unread(Tokens::new(tokens));
             return Ok(Tokens!()); // Not more correct, but maybe less confusing?
           },
         };
@@ -697,7 +697,7 @@ impl Gullet {
             Some(t) => t,
             None => {
               // Ran out!
-              gullet_mut!().unread(Tokens::new(tokens));
+              unread(Tokens::new(tokens));
               return Ok(Tokens!()); // Not more correct, but maybe less confusing?
             },
           };
@@ -751,7 +751,7 @@ impl Gullet {
         if let Some(runtime) = gullet_mut!().mouth.as_mut() {
           runtime.pushback.push_front(token); // Unread
         } else {
-          fatal!(Mouth, NotFound, "No Mouth in gullet::read_until_brace")
+          fatal!(Mouth, NotFound, "No Mouth in read_until_brace")
         }
         break;
       } else {
@@ -816,7 +816,7 @@ impl Gullet {
         if t.get_catcode() == Catcode::OTHER && t.get_sym() == arena::pin_static("[") {
           Ok(Some(read_until(&Tokens!(T_OTHER!("]")))?))
         } else {
-          gullet_mut!().unread_one(t);
+          unread_one(t);
           Ok(default)
         }
       },
@@ -830,7 +830,7 @@ impl Gullet {
       if let Some(mouth) = gullet_mut!().mouth.as_mut() {
         mouth.pushback.push_front(tok); // Unread
       } else {
-        fatal!(Mouth, NotFound, "No Mouth found in gullet::if_next")
+        fatal!(Mouth, NotFound, "No Mouth found in if_next")
       }
     }
     Ok(is_next)
@@ -874,15 +874,15 @@ impl Gullet {
               let args = defn.read_arguments()?;
               Ok(defn.value_of(args))
             } else {
-              gullet_mut!().unread_one(token); // Unread
+              unread_one(token); // Unread
               Ok(None)
             }
           } else {
-            gullet_mut!().unread_one(token); // Unread
+            unread_one(token); // Unread
             Ok(None)
           }
         } else {
-          gullet_mut!().unread_one(token); // Unread
+          unread_one(token); // Unread
           Ok(None)
         }
       },
@@ -915,7 +915,7 @@ impl Gullet {
                   // Unread non-space and end
                   match gullet_mut!().mouth.as_mut() {
                     Some(mouth) => mouth.pushback.push_front(space_token),
-                    None => fatal!(Mouth, NotFound, "No Mouth in gullet::read_match"),
+                    None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
                   }
                   break;
                 } else {
@@ -932,7 +932,7 @@ impl Gullet {
         for matched_token in matched.into_iter().rev() {
           match gullet_mut!().mouth.as_mut() {
             Some(mouth) => mouth.pushback.push_front(matched_token), // Put 'em back and try next!
-            None => fatal!(Mouth, NotFound, "No Mouth in gullet::read_match"),
+            None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
           }
         }
       }
@@ -968,7 +968,7 @@ impl Gullet {
       );
       Warn!("expected", "<number>", message);
       if let Some(next) = next {
-        gullet_mut!().unread_one(next);
+        unread_one(next);
       }
       Ok(Number::new(0))
     }
@@ -1007,7 +1007,7 @@ impl Gullet {
           let s_char = s.chars().next().unwrap();
           Ok(Some(Number::new(s_char as i64))) //  Only a character token!!! NOT expanded!!!!
         } else {
-          gullet_mut!().unread_one(token); // Unread
+          unread_one(token); // Unread
           read_internal_integer()
         }
       },
@@ -1030,13 +1030,13 @@ impl Gullet {
     let n_opt: Option<f64> = if !string.is_empty() {
       if let Some(t) = token {
         if t.get_catcode() != Catcode::SPACE {
-          gullet_mut!().unread_one(t);
+          unread_one(t);
         }
       }
       Some(string.parse::<f64>().expect(&string))
     } else {
       if let Some(t) = token {
-        gullet_mut!().unread_one(t); // Unread
+        unread_one(t); // Unread
       }
       read_normal_integer()?
         .map(|v| v.value_of() as f64)
@@ -1338,7 +1338,7 @@ impl Gullet {
           if defn.is_expandable() {
             let x = defn.invoke(false)?;
             if !x.is_empty() {
-              gullet_mut!().unread(x);
+              unread(x);
             }
             read_tokens_value()
           } else {
@@ -1353,7 +1353,7 @@ impl Gullet {
 
   pub fn skip_spaces() -> Result<()> {
     if let Some(t) = read_non_space()? {
-      gullet_mut!().unread_one(t);
+      unread_one(t);
     }
     Ok(())
   }
@@ -1361,7 +1361,7 @@ impl Gullet {
   pub fn skip_one_space() -> Result<()> {
     if let Some(token) = read_token()? {
       if token.get_catcode() != Catcode::SPACE {
-        gullet_mut!().unread_one(token);
+        unread_one(token);
       }
     }
     Ok(())
@@ -1393,7 +1393,7 @@ impl Gullet {
       if sym == arena::pin_static("-") {
         sign = !sign;
       } else if (sym != arena::pin_static("+")) && t.get_catcode() != Catcode::SPACE {
-        gullet_mut!().unread_one(t); // Unread and end
+        unread_one(t); // Unread and end
         break;
       }
     }
@@ -1414,7 +1414,7 @@ impl Gullet {
         result.push(digit);
       } else {
         if !(skip && token.get_catcode() == Catcode::SPACE) {
-          gullet_mut!().unread_one(token);
+          unread_one(token);
         }
         break;
       }
@@ -1441,13 +1441,13 @@ impl Gullet {
       let factor_f64: f64 = factor.parse::<f64>().unwrap_or(0.0);
       if let Some(token) = token_opt {
         if token.get_catcode() != Catcode::SPACE {
-          gullet_mut!().unread_one(token);
+          unread_one(token);
         }
       }
       Ok(Some(factor_f64))
     } else {
       if let Some(token) = token_opt {
-        gullet_mut!().unread_one(token);
+        unread_one(token);
       }
       match read_normal_integer()? {
         None => Ok(None),
@@ -1461,7 +1461,7 @@ impl Gullet {
     reading_from_mouth(
       Mouth::default(),
       move || -> Result<Tokens> {
-        { gullet_mut!().unread(tokens); }
+        { unread(tokens); }
         let mut expanded = Vec::new();
         while let Some(t) = read_x_token(Some(false), false)? {
           expanded.push(t);
@@ -1618,4 +1618,20 @@ pub fn flush() {
     autoclose: true,
   });
   g.mouthstack = VecDeque::new();
+}
+
+pub fn unread(tokens: Tokens) {
+  gullet_mut!().unread(tokens)
+}
+/// same as `unread`, but drains the `tokens` from its contents
+pub fn unread_mut(tokens: &mut Tokens) {
+  gullet_mut!().unread_mut(tokens)
+}
+/// same as `unread`, but only for a single `Token`
+pub fn unread_one(token: Token) {
+  gullet_mut!().unread_one(token)
+}
+/// same as `unread`, but does not require the Tokens wrapper
+pub fn unread_vec(tokens: Vec<Token>) {
+  gullet_mut!().unread_vec(tokens)
 }

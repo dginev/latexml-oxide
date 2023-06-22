@@ -360,7 +360,7 @@ pub fn alignment_bindings(
   xml_attributes: HashMap<String, String>
 ) {
   let mode = if mode.is_empty() {
-    state!().lookup_string("MODE")
+    state::lookup_string("MODE")
   } else {
     mode
   };
@@ -587,7 +587,7 @@ pub fn digest_alignment_column(
       last_token.clone().unwrap()
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
-    gullet_mut!().unread(to_unread);
+    gullet::unread(to_unread);
     while let Some(token) = gullet::read_x_token(Some(false), false)?
     {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token) {

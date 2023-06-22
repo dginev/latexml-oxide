@@ -29,8 +29,9 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::{model,model_mut,gullet_mut};
+use crate::{model,model_mut};
 use crate::mouth;
+use crate::gullet;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::util::pathname;
@@ -1420,7 +1421,7 @@ impl State {
   /// cs that have been let to other `executable' tokens.
   /// Returns a definition object, or a "self inserting" token.
   /// Used for digestion.
-  pub fn lookup_digestable_definition<'def>(&'def mut self, token: &'def Token) -> Option<Stored> {
+  pub fn lookup_digestable_definition<'def>(&'def self, token: &'def Token) -> Option<Stored> {
     let cc = token.get_catcode();
     let t_sym = token.get_sym();
     let is_active_or_cs = cc.is_active_or_cs();
@@ -1828,10 +1829,7 @@ impl State {
 
     for tag in model!().get_sym_tags() {
       let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
-      {
-        self.compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
-      }
-
+      crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
       let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
       for kid in desc_keys {
         let mut best = 0; // Find best path to $kid.
@@ -1869,52 +1867,6 @@ impl State {
     }
 
     imodel
-  }
-
-  fn compute_indirect_model_aux(
-    &mut self,
-    tag: SymbolU32,
-    start_opt: Option<SymbolU32>,
-    desirability: usize,
-    openable: &mut HashSet<SymbolU32>,
-    desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
-  ) {
-    let start = match start_opt {
-      Some(s) => s,
-      None => *EMPTY_SYM,
-    };
-
-    // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
-    // move ownership of the tag strings into the tag_contents vector.
-    // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<SymbolU32> = model!().get_tag_contents(&tag);
-
-    for kid in tag_contents {
-      if desc
-        .entry(kid)
-        .or_insert_with(HashMap::default)
-        .contains_key(&start)
-      {
-        continue;
-      } // Already solved
-
-      if start != *EMPTY_SYM {
-        desc
-          .entry(kid)
-          .or_insert_with(HashMap::default)
-          .insert(start, desirability);
-      }
-
-      if kid != *H_PCDATA_SYM && openable.contains(&kid) {
-        let inner = if start != *EMPTY_SYM {
-          start
-        } else {
-          kid
-        };
-
-        self.compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
-      }
-    }
   }
 
   /// Initialize various stomach parameters, preload, etc.
@@ -1977,8 +1929,8 @@ impl State {
   /// run the accumulated directives from `\afterassignment`
   pub fn after_assignment(&mut self) {
     match self.remove_value("afterAssignment") {
-      Some(Stored::Tokens(after)) => gullet_mut!().unread(after),
-      Some(Stored::Token(after)) => gullet_mut!().unread_one(after),
+      Some(Stored::Tokens(after)) => gullet::unread(after),
+      Some(Stored::Token(after)) => gullet::unread_one(after),
       None | Some(Stored::None) => {},
       Some(other) => panic!("unexpected in after_assignment: {other:?}"),
     }
@@ -2225,10 +2177,13 @@ pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
   value: T,
   scope: S,
 ) { state_mut!().assign_value_sym(key,value,scope); }
-pub fn lookup_definition<'def>(key: &'def Token) -> Result<Option<Rc<dyn Definition>>> {
+
+pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {
   state!().lookup_definition(key)
 }
-
+pub fn assign_font(font: Rc<Font>, scope: Option<Scope>) {
+  state_mut!().assign_font(font,scope)
+}
 /// a variant of `lookup_value` that casts the value into `Number`
 pub fn lookup_number(key: &str) -> Option<Number> {
   state!().lookup_number(key)
@@ -2268,7 +2223,8 @@ pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<Regi
 
 pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
   let cs = T_CS!(cs);
-  if let Some(defn) = lookup_definition(&cs)? {
+  let defn_opt = lookup_definition(&cs)?;
+  if let Some(defn) = defn_opt {
     if defn.is_register() {
       defn.set_value(value, scope, parameters);
       return Ok(());
@@ -2281,6 +2237,13 @@ pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, para
 
 pub fn lookup_register_definition(key: &Token) -> Option<Rc<Register>> {
   state!().lookup_register_definition(key)
+}
+/// Recognizes mathactive tokens in math mode and also looks for
+/// cs that have been let to other `executable' tokens.
+/// Returns a definition object, or a "self inserting" token.
+/// Used for digestion.
+pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
+  state!().lookup_digestable_definition(token)
 }
 pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
   state!().lookup_expandable(token,toplevel)
@@ -2308,15 +2271,45 @@ pub fn local_current_token(token: Token) { state_mut!().local_current_token(toke
 /// expires the most recent (localized) current token.
 pub fn expire_current_token() { state_mut!().expire_current_token() }
 pub fn after_assignment() { state_mut!().after_assignment(); }
-pub fn get_smuggle_the() -> bool { state!().get_smuggle_the() }
+
 pub fn has_meaning(token: &Token) -> bool {
   state!().lookup_meaning(token).is_some()
 }
 pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
   state_mut!().push_value(key,value)
 }
+pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
+  state_mut!().unshift_value(key, values)
+}
+pub fn remove_value(key: &str) -> Option<Stored> {
+  state_mut!().remove_value(key)
+}
+pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
+  state_mut!().remove_vecdeque(key)
+}
+pub fn push_frame() {
+  state_mut!().push_frame()
+}
+/// Ends the current level of grouping.
+/// Note that this is lower level than `\egroup`;
+pub fn pop_frame() -> Result<()> {
+  state_mut!().pop_frame()
+}
+
 pub fn lookup_bool(key: &str) -> bool {
   state!().lookup_bool(key)
+}
+pub fn lookup_string_sym(key: &str) -> SymbolU32 {
+  state!().lookup_string_sym(key)
+}
+
+/// like `lookup_value`, but casts the entry into a String (empty if None)
+pub fn lookup_string(key: &str) -> String {
+  state!().lookup_string(key)
+}
+/// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
+pub fn lookup_int(key: &str) -> i64 {
+  state!().lookup_int(key)
 }
 pub fn lookup_catcode(c: char) -> Option<Catcode> {
   state!().lookup_catcode(c)
@@ -2326,9 +2319,43 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
 pub fn assign_catcode(key: char, value: Catcode, scope: Option<Scope>) {
   state_mut!().assign_catcode(key,value,scope);
 }
+pub fn activate_scope(scope: SymbolU32) {
+  state_mut!().activate_scope(scope)
+}
+pub fn deactivate_scope(scope: SymbolU32) {
+  state_mut!().deactivate_scope(scope)
+}
+pub fn lookup_font() -> Option<Rc<Font>> {
+  state!().lookup_font()
+}
 pub fn clear_prefixes() { state_mut!().clear_prefixes(); }
 pub fn let_i(
   token1: &Token,
   token2: &Token,
   scope: Option<Scope>,
 ) { state_mut!().let_i(token1, token2, scope) }
+/// `XEquals` check for two token arguments
+pub fn x_equals(token1: &Token, token2: &Token) -> bool {
+  state!().x_equals(token1,token2)
+}
+
+pub fn set_ifframe(if_frame: Option<Rc<RefCell<IfFrame>>>) {
+  state_mut!().set_ifframe(if_frame);
+}
+
+/// retrieves the most recent (originally Perl-local) `IfFrame`
+pub fn get_ifframe() -> Option<Rc<RefCell<IfFrame>>> {
+  state!().get_ifframe()
+}
+/// expires the most recent (originally Perl-local) `IfFrame`
+pub fn expire_ifframe() {
+  state_mut!().expire_ifframe()
+}
+/// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
+pub fn set_smuggle_the(smuggle_the: bool) {
+  state_mut!().set_smuggle_the(smuggle_the)
+}
+/// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
+pub fn get_smuggle_the() -> bool {
+  state!().get_smuggle_the()
+}

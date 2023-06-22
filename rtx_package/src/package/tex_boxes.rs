@@ -15,7 +15,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
-    if let Some(after_token) = state_mut!().remove_value("afterAssignment") {
+    if let Some(after_token) = state::remove_value("afterAssignment") {
       state::assign_value("BeforeNextBox", after_token, None);
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
@@ -40,7 +40,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\box Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = state_mut!().remove_value(&box_key) {
+    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
       Ok(vec![stuff])
     } else {
       Ok(Vec::new())
@@ -100,14 +100,14 @@ LoadDefinitions!({
     optional => true);
 
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
-      read_box_contents(state!().lookup_tokens("\\everyhbox"))
+      read_box_contents(state::lookup_tokens("\\everyhbox"))
     },
     predigest => sub[arg] {
       predigest_box_contents(arg)
     });
 
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
-      read_box_contents(state!().lookup_tokens("\\everyvbox"))
+      read_box_contents(state::lookup_tokens("\\everyvbox"))
     },
     predigest => sub[arg] {
       predigest_box_contents( arg)

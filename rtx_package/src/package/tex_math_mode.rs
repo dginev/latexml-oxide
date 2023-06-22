@@ -17,7 +17,7 @@ LoadDefinitions!({
     None, {
       let mut op = "\\@@BEGININLINEMATH";
       {
-        let mode = state!().lookup_string("MODE");
+        let mode = state::lookup_string("MODE");
         Debug!("T_MATH primitive current mode: {:?}", mode);
         if mode == "display_math" {
           if gullet::if_next(&TOKEN_MATH)? {
@@ -65,10 +65,10 @@ LoadDefinitions!({
       stomach_mut!().begin_mode("display_math")?;
       // TODO:
       // if let Some(everymath_toks) = state!().lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
-      //   gullet_mut!().unread(everymath_toks);
+      //   gullet::unread(everymath_toks);
       // }
       // if let Some(everydisplay_toks) = state!().lookup_definition(T_CS!("\\everydisplay")).value_of().unlist() {
-      //   gullet_mut!().unread(everydisplay_toks);
+      //   gullet::unread(everydisplay_toks);
       // }
     },
     capture_body  => true
@@ -83,10 +83,10 @@ LoadDefinitions!({
     reversion    => Tokens!(T_MATH!()),
     before_digest => {
       stomach_mut!().begin_mode("inline_math")?;
-      if let Some(RegisterValue::Tokens(everymath_toks)) = state_mut!().lookup_register("\\everymath", Vec::new())? {
+      if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
         let everymath_toks = everymath_toks.unlist();
         if !everymath_toks.is_empty() {
-          gullet_mut!().unread(Tokens::new(everymath_toks));
+          gullet::unread(Tokens::new(everymath_toks));
         }
       }
     },

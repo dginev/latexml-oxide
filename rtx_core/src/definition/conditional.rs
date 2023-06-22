@@ -179,7 +179,7 @@ impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
     // TODO!!! Implement in full
     // Keep a stack of the conditionals we are processing.
-    let mut ifid = state!().lookup_int("if_count");
+    let mut ifid = state::lookup_int("if_count");
     ifid += 1;
     state::assign_value("if_count", ifid, Some(Scope::Global));
     // TODO:
@@ -193,12 +193,12 @@ impl Conditional {
       elses: false,
       ifid,
     }));
-    state_mut!().set_ifframe(Some(Rc::clone(&if_frame)));
-    state_mut!().unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
+    state::set_ifframe(Some(Rc::clone(&if_frame)));
+    state::unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
     let args = self.read_arguments()?;
 
-    state!().get_ifframe().unwrap().borrow_mut().parsing = false;
-    let tracing = state!().lookup_bool("TRACINGCOMMANDS");
+    state::get_ifframe().unwrap().borrow_mut().parsing = false;
+    let tracing = state::lookup_bool("TRACINGCOMMANDS");
     //   print STDERR '{' . $self->tracingCSName . "} [#$ifid]\n" if $tracing;
     //   print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref test) = self.test {
@@ -220,7 +220,7 @@ impl Conditional {
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
     }
-    state_mut!().expire_ifframe();
+    state::expire_ifframe();
     Ok(Tokens!())
   }
 
@@ -323,9 +323,8 @@ impl Conditional {
   }
 
   fn invoke_else(&self) -> Result<Tokens> {
-    let mut state = state_mut!();
-    let stack_frame_opt =
-      if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
+    let stack_frame_opt = {
+      if let Some(Stored::VecDequeStored(stack)) = state_mut!().lookup_value_mut("if_stack") {
         if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
           Some(Rc::clone(stack_frame))
         } else {
@@ -333,12 +332,12 @@ impl Conditional {
         }
       } else {
         None
-      };
-    let local_token = state.get_current_token().unwrap();
+      }};
+    let local_token = { state!().get_current_token().unwrap().clone() };
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
+        Ok(Tokens!(T_RELAX!(), local_token))
       } else if stack_frame.borrow().elses {
         // Already seen an \else's at this level?
         let message = s!(
@@ -352,13 +351,13 @@ impl Conditional {
         Error!("unexpected", local_token_str, message);
         Ok(Tokens!())
       } else {
-        state_mut!().set_ifframe(Some(Rc::clone(&stack_frame)));
+        state::set_ifframe(Some(Rc::clone(&stack_frame)));
         let _t = self.skip_conditional_body(0);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
         //       if $state::>lookupValue('TRACINGCOMMANDS');
-        state_mut!().expire_ifframe();
+        state::expire_ifframe();
         Ok(Tokens!())
       }
     } else {
