@@ -265,8 +265,9 @@ LoadDefinitions!({
 
   DefMacro!("\\csname CSName", sub[(token)] {
     if state!().lookup_meaning(&token).is_none() {
+      let relax_meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
       state_mut!().assign_meaning(&token,
-        state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
+        relax_meaning, None);
     }
     token
   });
@@ -277,13 +278,13 @@ LoadDefinitions!({
 
   DefMacro!("\\expandafter Token Token", sub[(tok, xtok)] {
     let mut tokens : Vec<Token> = vec![tok];
-    if let Some(defn) = state!().lookup_expandable(&xtok, false)? {
-      state_mut!().local_current_token(xtok);
+    if let Some(defn) = state::lookup_expandable(&xtok, false)? {
+      state::local_current_token(xtok);
       let invoked = defn.invoke( true)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
       }
-      state_mut!().expire_current_token();
+      state::expire_current_token();
     } else if state!().lookup_meaning(&xtok).is_none() {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)

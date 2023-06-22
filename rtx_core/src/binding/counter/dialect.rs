@@ -66,16 +66,16 @@ pub fn new_counter(
 
   def_register(T_CS!(&cctr), None, Number::new(0),
     Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}))?;
-  state_mut!().assign_value(&cctr, Number::new(0), Some(Scope::Global));
+  state::assign_value(&cctr, Number::new(0), Some(Scope::Global));
   state_mut!().after_assignment();
   if state!().lookup_value(&clctr).is_none() {
-    state_mut!().assign_value(&clctr, Tokens!(), Some(Scope::Global));
+    state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
   def_register(T_CS!(&cunctr), None, Number::new(0), None)?;
-  state_mut!().assign_value(&cunctr, Number::new(0), Some(Scope::Global));
+  state::assign_value(&cunctr, Number::new(0), Some(Scope::Global));
   if state!().lookup_value(&clunctr).is_none() {
-    state_mut!().assign_value(&clunctr, Tokens!(), Some(Scope::Global));
+    state::assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
 
   if !within.is_empty() {
@@ -88,7 +88,7 @@ pub fn new_counter(
     };
     let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(&unctr)];
     clwithin_tokens.append(&mut x);
-    state_mut!().assign_value(
+    state::assign_value(
       &clwithin,
       Stored::Tokens(Tokens::new(clwithin_tokens)),
       Some(Scope::Global),
@@ -102,7 +102,7 @@ pub fn new_counter(
     let mut clunwithin_tokens = vec![T_CS!(unctr)];
     clunwithin_tokens.append(&mut unx);
 
-    state_mut!().assign_value(
+    state::assign_value(
       &clunwithin,
       Stored::Tokens(Tokens::new(clunwithin_tokens)),
       Some(Scope::Global),
@@ -111,7 +111,7 @@ pub fn new_counter(
 
   if let Some(ref options) = options_opt {
     if !options.nested.is_empty() {
-      state_mut!().assign_value(
+      state::assign_value(
         &s!("nested_counters_{}", ctr),
         options.nested.clone(),
         Some(Scope::Global),
@@ -153,7 +153,7 @@ pub fn new_counter(
     Some(ref opt) => opt.idprefix.to_string(),
   };
   if !prefix.is_empty() {
-    state_mut!().assign_value(
+    state::assign_value(
       &s!("@ID@prefix@{}", ctr),
       prefix.to_string(),
       Some(Scope::Global),
@@ -246,7 +246,7 @@ pub fn counter_value(ctr: &str) -> Result<Number> {
 /// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
   let v = counter_value(ctr)?.add(value);
-  state_mut!().assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
+  state::assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
   state_mut!().after_assignment();
   let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
@@ -269,7 +269,7 @@ pub fn step_counter(
   let value = counter_value(ctr)?;
   let newvalue = value.add(Number::new(1));
   let c_ctr = s!("\\c@{ctr}");
-  state_mut!().assign_register(
+  state::assign_register(
     &c_ctr,
     newvalue.into(),
     Some(Scope::Global),
@@ -371,12 +371,12 @@ pub fn ref_step_counter(
   deactivate_counter_scope(&ctr);
 
   // And install the scope (if any) for this reference number.
-  state_mut!().assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
+  state::assign_value("current_counter", ctr.to_string(), Some(Scope::Local));
 
   let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();
   receiver.push_front(Stored::String(scope));
-  state_mut!().assign_value(
+  state::assign_value(
     &s!("scopes_for_counter:{ctr}"),
     receiver,
     Some(Scope::Local),
@@ -403,14 +403,14 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
     if !norefnum && state!().lookup_meaning(&hj_refnum).is_some() {
-      state_mut!().let_i(
+      state::let_i(
         &T_CS!(s!("\\the{ctr}")),
         &hj_refnum,
         Some(Scope::Global)
       );
     }
     if state!().lookup_meaning(&hj_id).is_some() {
-      state_mut!().let_i(
+      state::let_i(
         &T_CS!(s!("\\the{ctr}@ID")),
         &hj_id,
         Some(Scope::Global)
@@ -422,18 +422,18 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
     //   if !norefnum && fixedrefnum {
     //     if !state!().lookup_neaning(hj_refnum) {    // Save for later
-    //       state_mut!().let_i(&hj_refnum, T_CS!(s!("\\the{}",ctr)), Some(Scope::Global));
+    //       state::let_i(&hj_refnum, T_CS!(s!("\\the{}",ctr)), Some(Scope::Global));
     //     }
     //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
     // Some(Scope::Global), ..ExpandableOptions::default()}));   }
     //   if fixedid {
     //     if state!().lookup_meaning(&hj_id).is_none() {        // Save for later
-    //       state_mut!().let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
+    //       state::let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
     //     }
     //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
     // Some(Scope::Global), ..ExpandableOptions::default()}));   }
     //   state_mut!().remove_value("PEEKED_LABEL"); // CONSUME the label
-    //   state_mut!().assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
+    //   state::assign_value("PROCESSED_LABEL", label, Some(Scope::Global));    // Note that we've
     // consumed the label
   }
 }
@@ -448,7 +448,7 @@ pub fn maybe_note_label(label: &str) {
     if processed.is_empty() || processed != label {
       // Only if not already processed
       state_mut!().remove_value("PROCESSED_LABEL");
-      state_mut!().assign_value(
+      state::assign_value(
         "PEEKED_LABEL",
         Stored::String(arena::pin(label)),
         Some(Scope::Global),
@@ -516,9 +516,9 @@ pub fn ref_step_id(
 pub fn reset_counter(ctr: &Token) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
-  state_mut!().assign_register(&c_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+  state::assign_register(&c_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
   if ctr.with_str(|cstr| !cstr.starts_with("UN")) { // but not UN
-    state_mut!().assign_register(&c_un_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
+    state::assign_register(&c_un_ctr, Number::new(0).into(), Some(Scope::Global), Vec::new())?;
   }
   def_macro(
     T_CS!(ctr_id),
@@ -543,7 +543,7 @@ pub fn ref_step_item_counter(
   ) -> Result<HashMap<String, Stored>> {
   let counter = state!().lookup_string("itemcounter");
   let n = state!().lookup_int("itemization_items");
-  state_mut!().assign_value("itemization_items", n + 1, None);
+  state::assign_value("itemization_items", n + 1, None);
   let mut attr: HashMap<String, Stored> = HashMap::default();
   if n > 0 {
     if let Some(sep) = state!().lookup_dimension("\\itemsep") {
@@ -657,9 +657,9 @@ pub fn begin_itemize(
       .lookup_dimension("\\lx@default@itemsep")
       .unwrap_or_default()
       .into());
-  state_mut!().assign_value("itemization_level", listlevel, None);
-  state_mut!().assign_value(&s!("{counter}level"), level, None);
-  state_mut!().assign_value("itemization_items", 0, None);
+  state::assign_value("itemization_level", listlevel, None);
+  state::assign_value(&s!("{counter}level"), level, None);
+  state::assign_value("itemization_items", 0, None);
   let listpostfix = roman!(listlevel).to_string();
   let postfix = roman!(level).to_string();
   let mut usecounter = counter.to_string();
@@ -668,10 +668,10 @@ pub fn begin_itemize(
   }
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));
-    state_mut!().let_i(&T_CS!("\\item"), &itype_cs, None);
+    state::let_i(&T_CS!("\\item"), &itype_cs, None);
   }
   // In case within odd environment.
-  state_mut!().let_i(&T_CS!("\\par"), &T_CS!("\\normal@par"), None);
+  state::let_i(&T_CS!("\\par"), &T_CS!("\\normal@par"), None);
   def_macro(
     T_CS!("\\@listctr"),
     None,
@@ -680,7 +680,7 @@ pub fn begin_itemize(
   )?;
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
-  state_mut!().assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
+  state::assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
   let listcounter = s!("@itemize{listpostfix}");
   if state!().lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
     //Create new list counters as needed
@@ -704,7 +704,7 @@ pub fn begin_itemize(
     if let Some(Stored::Tokens(tks)) = state!().lookup_value(&cs_name) {
       cl_toks.extend(tks.clone().unlist());
     }
-    state_mut!().assign_value(
+    state::assign_value(
       &cs_name,
       Stored::Tokens(Tokens::new(cl_toks)),
       Some(Scope::Global),
@@ -752,17 +752,17 @@ pub fn rescue_caption_counters(
   whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
   if let Some(tags) = state_mut!().remove_value(tagskey) {
-    state_mut!().assign_value(tagskey, false, Some(Scope::Global));
+    state::assign_value(tagskey, false, Some(Scope::Global));
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{captype}_id");
   if let Some(id) = state_mut!().remove_value(&idkey) {
-    state_mut!().assign_value(&idkey, false, Some(Scope::Global));
+    state::assign_value(&idkey, false, Some(Scope::Global));
     whatsit.set_property("id", id);
   }
   let inlistkey = s!("{captype}_inlist");
   if let Some(inlist) = state_mut!().remove_value(&inlistkey) {
-    state_mut!().assign_value(&inlistkey, false, Some(Scope::Global));
+    state::assign_value(&inlistkey, false, Some(Scope::Global));
     whatsit.set_property("inlist", inlist);
   }
 }

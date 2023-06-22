@@ -117,7 +117,7 @@ LoadDefinitions!({
       Some(Stored::HashTagData(frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
-    state_mut!().assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
+    state::assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
 
     // order is important here, first go through frontmatter_elements, then any leftover keys.
     let custom_keys: Vec<String> = frontmatter
@@ -148,7 +148,7 @@ LoadDefinitions!({
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
-    after_digest => { state_mut!().assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+    after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
 
   // TeX.pool.ltxml, line 5421
   // Maintain a list of classes that apply to the document root.

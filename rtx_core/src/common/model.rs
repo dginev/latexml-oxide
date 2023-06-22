@@ -71,6 +71,11 @@ macro_rules! model_mut {
   () => ((*$crate::common::model::MODEL).borrow_mut())
 }
 
+pub fn initialize() {
+  let mut global_model = MODEL.borrow_mut();
+  *global_model = Model::new();
+}
+
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();

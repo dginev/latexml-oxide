@@ -16,7 +16,7 @@ LoadDefinitions!({
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
     if let Some(after_token) = state_mut!().remove_value("afterAssignment") {
-      state_mut!().assign_value("BeforeNextBox", after_token, None);
+      state::assign_value("BeforeNextBox", after_token, None);
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
     // Should afterDigest be responsible for resetting flags?
@@ -34,7 +34,7 @@ LoadDefinitions!({
     } else {
       Stored::None
     };
-    state_mut!().assign_value(&format!("box{}", number.value_of()), stuff, scope);
+    state::assign_value(&format!("box{}", number.value_of()), stuff, scope);
     rest
   });
 

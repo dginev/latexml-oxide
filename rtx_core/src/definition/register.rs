@@ -21,7 +21,7 @@ use crate::gullet;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator, state,state_mut};
+use crate::{Digested, Locator, state};
 
 use super::argument::ArgWrap;
 
@@ -498,7 +498,7 @@ impl Definition for Register {
            .join("");
           Cow::Owned(format!("{}{args_string}",self.address))
         };
-        state_mut!().assign_value(&loc, value, scope);
+        state::assign_value(&loc, value, scope);
       }
     }
   }
@@ -523,7 +523,7 @@ impl Definition for Register {
 
     self.borrow().set_value(value, None, args);
 
-    state_mut!().after_assignment();
+    state::after_assignment();
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 

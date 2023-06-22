@@ -459,7 +459,7 @@ macro_rules! AssignRegister {
   };
   ($cs:literal, $value:expr, $args:expr) => {
     let value_ident = { $value };
-    if let Some(defn) = state_mut!().lookup_register_definition(&T_CS!($cs)) {
+    if let Some(defn) = state::lookup_register_definition(&T_CS!($cs)) {
       (*defn).set_value(value_ident, None, $args);
     } else {
       let message = s!("The control sequence {} is not a register", $cs);
@@ -471,7 +471,7 @@ macro_rules! AssignRegister {
 #[macro_export]
 macro_rules! SetCounter {
   ($ctr:expr, $value:expr) => {
-    state_mut!().assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
+    state::assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
     state_mut!().after_assignment();
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
       Tokens::new(Explode!($value.value_of())),

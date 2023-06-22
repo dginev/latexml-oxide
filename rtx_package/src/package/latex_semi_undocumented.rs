@@ -116,7 +116,7 @@ LoadDefinitions!({
   Let!("\\@@ifdefinable", "\\@ifdefinable");
 
   DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(token, iftoken)] {
-    state_mut!().let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None);
+    state::let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None);
     iftoken.unlist()
   });
 
@@ -180,7 +180,7 @@ LoadDefinitions!({
     "\\lx@paragraphsign\\lx@ignorehardspaces"
   );
 
-  DefPrimitive!("\\@@end", { gullet_mut!().flush() });
+  DefPrimitive!("\\@@end", { gullet::flush() });
 
   // DG: TODO Maybe split these out?
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

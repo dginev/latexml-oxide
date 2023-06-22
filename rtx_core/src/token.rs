@@ -15,7 +15,7 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
-use crate::{state,state_mut};
+use crate::{state};
 use crate::tokens::Tokens;
 use crate::{fatal, Digested, Fatal};
 
@@ -878,7 +878,7 @@ impl Token {
   }
 
   pub fn to_register(&self) -> Option<Rc<Register>> {
-    state_mut!().lookup_register_definition(self)
+    state::lookup_register_definition(self)
   }
 
   pub fn to_number(&self) -> Number {

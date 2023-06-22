@@ -38,7 +38,7 @@ LoadDefinitions!({
       if !unused.is_empty() {
         Info!("unexpected", "options",
               "Unused global options: {}",unused.join(","));
-        state_mut!().assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
+        state::assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
       }
     }
   });

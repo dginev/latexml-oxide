@@ -396,7 +396,7 @@ pub fn alignment_bindings(
   });
   state_mut!().assign_alignment(alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
-  state_mut!().let_i(
+  state::let_i(
     &T_MATH!(),
     &if is_math {
       T_CS!("\\@dollar@in@mathmode")

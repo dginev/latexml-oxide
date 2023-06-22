@@ -40,7 +40,7 @@ LoadDefinitions!({
   // environments.  HOWEVER, it doesn't work for a simple \bgroup or \begingroup!!! # (they don't
   // create a node! or even a whatsit!)
   DefConstructor!("\\centering", sub[doc,_args] {
-  state_mut!().assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
+  state::assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
   before_digest => {
     state_mut!().unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
   });

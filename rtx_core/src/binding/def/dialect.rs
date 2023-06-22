@@ -159,7 +159,7 @@ pub fn def_conditional(
           Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
           None
         )?;
-        state_mut!().let_i(&cs, &T_CS!("\\iffalse"), None);
+        state::let_i(&cs, &T_CS!("\\iffalse"), None);
       } else {
         //  For \ifcase, the parameter list better be a single Number !!
         state::install_definition(
@@ -183,7 +183,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state_mut!().assign_value(&locked_key, true, None);
+    state::assign_value(&locked_key, true, None);
   }
   Ok(())
 }
@@ -225,7 +225,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     scope,
   );
   if let Some(locked_key) = locked_key_opt {
-    state_mut!().assign_value(&locked_key, true, Some(Scope::Global));
+    state::assign_value(&locked_key, true, Some(Scope::Global));
   }
   Ok(())
 }
@@ -273,7 +273,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   }
   // Assign, but do not RE-assign
   if !has_address_option || state!().lookup_value(&address).is_none() {
-    state_mut!().assign_value(&address, value.clone(), Some(Scope::Global));
+    state::assign_value(&address, value.clone(), Some(Scope::Global));
   }
 
   let register_type: RegisterType = (&value).into();
@@ -382,7 +382,7 @@ pub fn def_primitive(
     scope,
   );
   if options_locked {
-    state_mut!().assign_value(&s!("{}:locked", cs_name), true, None);
+    state::assign_value(&s!("{}:locked", cs_name), true, None);
   }
   Ok(())
 }
@@ -922,7 +922,7 @@ pub fn def_constructor(
   state::install_definition(constructor, scope);
 
   if is_locked {
-    state_mut!().assign_value(&locked_key, true, None);
+    state::assign_value(&locked_key, true, None);
   }
 }
 
@@ -983,7 +983,7 @@ pub fn def_environment(
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!( {
-    state_mut!().assign_value("current_environment", env_name.clone(), None);
+    state::assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(
       T_CS!("\\@currenvir"),
@@ -1158,10 +1158,10 @@ pub fn def_environment(
   state::install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
-    state_mut!().assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
-    state_mut!().assign_value(&s!("\\end{{{}}}:locked", &name), true, None);
-    state_mut!().assign_value(&s!("\\{}:locked", &name), true, None);
-    state_mut!().assign_value(&s!("\\end{}:locked", &name), true, None);
+    state::assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
+    state::assign_value(&s!("\\end{{{}}}:locked", &name), true, None);
+    state::assign_value(&s!("\\{}:locked", &name), true, None);
+    state::assign_value(&s!("\\end{}:locked", &name), true, None);
   }
 }
 
@@ -1345,7 +1345,7 @@ pub fn def_math(
     transfer_opt_default!(replace, options, math_attr_hash);
     transfer_opt_default!(mathstyle, options, math_attr_hash);
     transfer_opt_default!(stretchy, options, math_attr_hash);
-    state_mut!().assign_value(
+    state::assign_value(
       &s!("math_token_attributes_{}", csname),
       math_attr_hash,
       Some(Scope::Global),
@@ -1369,7 +1369,7 @@ pub fn def_math(
     def_math_constructor(cs, paramlist, presentation, options)?;
   }
   if locked {
-    state_mut!().assign_value(&format!("{csname}:locked"), true, None);
+    state::assign_value(&format!("{csname}:locked"), true, None);
   }
   Ok(())
 }
@@ -1472,9 +1472,9 @@ pub fn allocate_register(rtype:&str) -> Result<Option<String>> {
     _ => ""
   };
   if !addr.is_empty() { // addr is a Register but MUST be stored as \count<#>
-    if let Some(n) = state!().lookup_number(addr) {
+    if let Some(n) = state::lookup_number(addr) {
       let next = n.value_of() + 1;
-      state_mut!().assign_value(addr, Number::new(next), Some(Scope::Global));
+      state::assign_value(addr, Number::new(next), Some(Scope::Global));
       Ok(Some(format!("{rtype}{next}")))
     }
     else {

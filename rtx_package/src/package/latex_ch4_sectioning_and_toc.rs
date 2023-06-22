@@ -64,7 +64,7 @@ LoadDefinitions!({
         if mode.contains("math") { // double-check we're really in math
           stomach_mut!().end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
-          state_mut!().assign_value("IN_MATH", false, Some(Scope::Global));
+          state::assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
       // Main logic

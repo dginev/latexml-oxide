@@ -336,7 +336,7 @@ LoadDefinitions!({
     DefRegister!(t, None, Number(n));
   });
   DefPrimitive!("\\newhelp Token {}", sub[(token,arg)] {
-    state_mut!().assign_value(&token.to_string(), arg, None);
+    state::assign_value(&token.to_string(), arg, None);
   });
   DefPrimitive!("\\newtoks Token", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
@@ -348,8 +348,8 @@ LoadDefinitions!({
   DefPrimitive!("\\alloc@@ {}", sub[(atype)] {
     let c = s!("allocation @{}", atype);
     let n = LookupRegisterOrDefault!(&c).value_of();
-    state_mut!().assign_value(&c, n + 1, Some(Scope::Global));
-    state_mut!().assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
+    state::assign_value(&c, n + 1, Some(Scope::Global));
+    state::assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
     Ok(Vec::new())
   });
   DefMacro!(
@@ -422,7 +422,10 @@ LoadDefinitions!({
   DefRegister!("\\normallineskip", Glue!("1pt"));
   DefRegister!("\\normallineskiplimit", Dimension!("0pt"));
   DefRegister!("\\jot", Dimension!("3pt"));
-  DefRegister!("\\lx@default@jot", LookupRegister!("\\jot"));
+
+  let jot_val = LookupRegister!("\\jot");
+
+  DefRegister!("\\lx@default@jot", jot_val);
   DefRegister!("\\interdisplaylinepenalty", Number(100));
   DefRegister!("\\interfootnotelinepenalty", Number(100));
 

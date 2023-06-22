@@ -244,7 +244,7 @@ impl Document {
   }
 
   fn finalize_rec(&mut self, node: &mut Node) -> Result<()> {
-    let qname = model!().get_node_qname(node);
+    let qname = get_node_qname(node);
     let local_font = self.get_local_font().unwrap();
     // _standalone_font is typically for metadata that gets extracted out of context
     let mut declared_font = if node.has_attribute("_standalone_font") {
@@ -322,14 +322,14 @@ impl Document {
         self.finalize_rec(&mut child)?;
         // Also check if child is  FONT_ELEMENT_NAME  AND has no attributes
         // AND providing node can contain that child's content, we'll collapse it.
-        if (model!().get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
+        if (get_node_qname(&child) == arena::pin_static(FONT_ELEMENT_NAME))
           && !was_forcefont
           && child.get_attributes().is_empty()
         {
           let grandchildren = child.get_child_nodes();
           if grandchildren
             .iter()
-            .all(|gchild| can_contain_qsym(qname, model!().get_node_qname(gchild)))
+            .all(|gchild| can_contain_qsym(qname, get_node_qname(gchild)))
           {
             Debug!(
               "will replace {} grandchildren nodes in finalize_rec",
@@ -671,7 +671,7 @@ impl Document {
     let mut node = self.node.clone();
     let mut cant_close = Vec::new();
     while node.get_type() != Some(NodeType::DocumentNode) {
-      let t = model!().get_node_qname(&node);
+      let t = get_node_qname(&node);
       // autoclose until node of same name BUT also close nodes opened' for font
       // switches!
       if t == qsym
@@ -757,7 +757,7 @@ impl Document {
         if node_type == Some(NodeType::DocumentNode) || node_type.is_none() {
           return None;
         }
-        let this_qname = model!().get_node_qname(node);
+        let this_qname = get_node_qname(node);
         if this_qname == arena::pin(&qname) {
           break 'inner;
         }
@@ -811,7 +811,7 @@ impl Document {
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       let message = s!("Attempt to close {:?}, which isn't open", node.get_name());
-      arena::with(model!().get_node_qname(node), |qname_str| {
+      arena::with(get_node_qname(node), |qname_str| {
         {Error!("malformed", qname_str, message)};
         Ok(())
       })?;
@@ -820,7 +820,7 @@ impl Document {
       // Found node.
       if !cant_close.is_empty() {
         // But found has intervening non-auto-closeable nodes!!
-        let qname = model!().get_node_qname(node);
+        let qname = get_node_qname(node);
         let message = s!(
           "Closing {:?} whose open descendents do not auto-close. Descendants are: {:?}",
           qname,
@@ -871,7 +871,7 @@ impl Document {
     if t == Some(NodeType::DocumentNode) {
       // Didn't find $qname at all!!
       if strict {
-        let qname = model!().get_node_qname(node);
+        let qname = get_node_qname(node);
         arena::with(qname, |qname_str| {
           let message = s!(
             "Attempt to close {}, which isn't open. Currently in {:?}",
@@ -1168,7 +1168,7 @@ impl Document {
     } else {
       MATH_TOKEN_NAME
     };
-    let cur_qname = model!().get_node_qname(&self.node);
+    let cur_qname = get_node_qname(&self.node);
     let text = if is_space && !text.is_empty() && text.chars().all(|c| c.is_whitespace()) {
       "" // Make empty hint, of only spaces
     } else {
@@ -1298,7 +1298,7 @@ impl Document {
             break;
           }
         }
-        if model!().get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
+        if get_node_qname(&n) != element_sym || n.has_attribute("_noautoclose") {
           break;
         }
         match n.get_parent() {
@@ -1378,13 +1378,13 @@ impl Document {
   /// If we're closing a node that can take font switches and it contains
   /// a single FONT_ELEMENT_NAME node; pull it up.
   fn auto_collapse_children(&mut self, node: &mut Node) -> Result<()> {
-    let qname = model!().get_node_qname(node);
+    let qname = get_node_qname(node);
     if qname != *CAPTURE_SYM {
       let mut c = node.get_child_nodes();
       // with single child, AND, $node can have all the attributes that the child has (but at least
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
-        && (model!().get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
+        && (get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
         && model!()
           .can_have_attribute(qname, *FONT_SYM)
         && c[0]
@@ -1693,7 +1693,7 @@ impl Document {
   ) -> Result<Node> {
     let qsym = arena::pin(qname);
     self.close_text_internal()?; // Close any current text node.
-    let cur_qname = model!().get_node_qname(&self.node);
+    let cur_qname = get_node_qname(&self.node);
     // If `qname` is allowed at the current point, we're done.
     if can_contain_qsym(cur_qname, qsym) {
       return Ok(self.node.clone());
@@ -1734,7 +1734,7 @@ impl Document {
         let parent_opt = node.get_parent();
         let parent_name = match parent_opt {
           None => *EMPTY_SYM,
-          Some(ref p) => model!().get_node_qname(p),
+          Some(ref p) => get_node_qname(p),
         };
         if sym_can_contain_somehow(parent_name, qsym) {
           close_to = Some(node);
@@ -1852,7 +1852,7 @@ impl Document {
       // No colon; no namespace (the common case!)
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
-      let qname = model!().get_node_qname(&self.node);
+      let qname = get_node_qname(&self.node);
       if key.starts_with('_') || model!().can_have_attribute(qname, arena::pin(key)) {
         self.node.set_attribute(key, value)?
       };
@@ -3083,7 +3083,7 @@ impl Document {
   ) -> Result<()> {
     // If node doesn't already have an id, and can
     // but isn't a _Capture_ node (which ultimately should disappear)
-    let qname = model!().get_node_qname(node);
+    let qname = get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
       && model!().can_have_attribute(qname, *XML_ID_SYM)
       && (qname != *CAPTURE_SYM)
@@ -3297,13 +3297,14 @@ pub fn can_contain_indirect(
   // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model->getNodeQName($child) if ref $child;    // In case
   // child is a node.
-
-  if state!().indirect_model.is_none() {
-    state_mut!().indirect_model = Some(state_mut!().compute_indirect_model());
+  let mut state = state_mut!();
+  if state.indirect_model.is_none() {
+    let i_model = state.compute_indirect_model();
+    state.indirect_model = Some(i_model);
   }
 
   // returning inner_node
-  match state!().indirect_model.as_ref().unwrap().get(&tag) {
+  match state.indirect_model.as_ref().unwrap().get(&tag) {
     Some(sub_m) => sub_m.get(&child).copied(),
     None => None,
   }

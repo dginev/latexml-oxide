@@ -7,18 +7,21 @@ use std::rc::Rc;
 use rtx_core::common::arena;
 use rtx_core::common::error::{self, note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
+use rtx_core::common::model;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::stomach;
+use rtx_core::gullet;
 use rtx_core::state::{Scope, Stored}; // State
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE, state,state_mut,model_mut,gullet_mut};
+use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE,
+     state,state_mut,model_mut,stomach_mut, gullet_mut};
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
 use rtx_package::{
@@ -60,16 +63,19 @@ impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     // first, reset the error REPORT singleton
     error::init_report();
-    // now handle state
-    state_mut!().initialize_stomach();
+    // now handle conversion state
+    gullet_mut!().initialize();
+    stomach_mut!().initialize();
+    // should we reset the model also?
+    model::initialize();
     // let paths = state::search_paths;
-    state_mut!().assign_value("InitialPreloads", true, Some(Scope::Global));
+    state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
       input_definitions(
         &preload,
         InputDefinitionOptions::default())?;
     }
-    state_mut!().assign_value("InitialPreloads", false, Some(Scope::Global));
+    state::assign_value("InitialPreloads", false, Some(Scope::Global));
     Ok(())
   }
 
@@ -265,13 +271,12 @@ impl DigestionAPI for Core {
 
   fn digest_internal(&mut self) -> Result<Digested> {
     let mut boxes = Vec::new();
-    let mut gullet = gullet_mut!();
-    while gullet.has_more_input() {
+    while gullet::has_more_input() {
       let next_bodies: Vec<Digested> = stomach::digest_next_body(None)?;
       // info!(target:"core:digest_next_body", "\n{:?}\n----\n",next_bodies);
       boxes.extend(next_bodies);
     }
-    gullet_mut!().flush();
+    gullet::flush();
     Ok(Digested::from(List::new(boxes)))
   }
 
@@ -335,10 +340,10 @@ impl DigestionAPI for Core {
     {
 
       if !pathname::is_literaldata(&request) {
-        state_mut!().assign_value("SOURCEFILE", request.clone(), None);
+        state::assign_value("SOURCEFILE", request.clone(), None);
       }
       if !dir.is_empty() {
-        state_mut!().assign_value("SOURCEDIRECTORY", dir.clone(), None);
+        state::assign_value("SOURCEDIRECTORY", dir.clone(), None);
       }
       {
         let mut state = state_mut!();

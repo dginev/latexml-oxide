@@ -78,12 +78,12 @@ macro_rules! DeclareFontMap {
   ($name:expr, $map:expr, $family:expr) => {{
     let mapname = s!("{}_{}_fontmap", $name, $family);
     let map: Rc<[Option<char>]> = $map;
-    state_mut!().assign_value(&mapname, map, Some(Scope::Global));
+    state::assign_value(&mapname, map, Some(Scope::Global));
   }};
   ($name:expr, $map:expr) => {{
     let mapname = s!("{}_fontmap", $name);
     let map: Rc<[Option<char>]> = $map;
-    state_mut!().assign_value(&mapname, map, Some(Scope::Global));
+    state::assign_value(&mapname, map, Some(Scope::Global));
   }};
 }
 
@@ -427,15 +427,17 @@ macro_rules! LookupRegister {
   ($cs:expr) => {
     LookupRegister!($cs, Vec::new())
   };
-  ($cs:expr, $parameters:expr) => {
-    if let Some(defn) = state_mut!().lookup_register_definition(&T_CS!($cs)) {
-      defn.value_of($parameters).unwrap_or_default()
+  ($cs:expr, $parameters:expr) => {{
+    let params = { $parameters };
+    let defn_opt = { state::lookup_register_definition(&T_CS!($cs)) };
+    if let Some(defn) = defn_opt {
+      defn.value_of(params).unwrap_or_default()
     } else {
       let message = s!("The control sequence {:?} is not a register", $cs);
       Warn!("expected", "register", message);
       RegisterValue::default()
     }
-  };
+  }};
 }
 
 #[macro_export]
@@ -444,7 +446,7 @@ macro_rules! LookupRegisterOrDefault {
     LookupRegisterOrDefault!($cs, Vec::new())
   };
   ($cs:expr, $parameters:expr) => {
-    if let Some(defn) = state!().lookup_register_definition(&T_CS!($cs)) {
+    if let Some(defn) = { state::lookup_register_definition(&T_CS!($cs)) } {
       defn.value_of($parameters).unwrap_or_default()
     } else {
       RegisterValue::default()
@@ -878,13 +880,13 @@ macro_rules! AssignValue {
     AssignValue!($name, $value, $scope)
   };
   ($name:expr, $value:expr) => {{
-    state_mut!().assign_value($name, $value, None)
+    state::assign_value($name, $value, None)
   }};
   ($name:expr, $value:expr, $scope:expr) => {{
-    state_mut!().assign_value($name, $value, $scope)
+    state::assign_value($name, $value, $scope)
   }};
   ($name:expr, $value:expr, $scope:expr) => {
-    state_mut!().assign_value($name, $value, $scope)
+    state::assign_value($name, $value, $scope)
   };
 }
 #[macro_export]
@@ -1006,7 +1008,7 @@ macro_rules! IsDefinable {
 #[macro_export]
 macro_rules! Let {
   ($token1:literal, $token2:literal) => {{
-    state_mut!().let_i(
+    state::let_i(
       &T_CS!($token1),
       &T_CS!($token2),
       None
@@ -1014,17 +1016,17 @@ macro_rules! Let {
   }};
   // half-packaged args
   ($token1:literal, $token2:expr) => {{
-    state_mut!().let_i(&T_CS!($token1), &$token2, None);
+    state::let_i(&T_CS!($token1), &$token2, None);
   }};
   ($token1:expr, $token2:literal) => {{
-    state_mut!().let_i(&$token1, &T_CS!($token2), None);
+    state::let_i(&$token1, &T_CS!($token2), None);
   }};
   // internal form, pre-packaged arguments
   ($token1:expr, $token2:expr) => {{
-    state_mut!().let_i(&$token1, &$token2, None);
+    state::let_i(&$token1, &$token2, None);
   }};
   ($token1:expr, $token2:expr, $scope:expr) => {{
-    state_mut!().let_i(&$token1, &$token2, $scope);
+    state::let_i(&$token1, &$token2, $scope);
   }};
 }
 
@@ -1040,7 +1042,7 @@ macro_rules! DigestIf {
 #[macro_export]
 macro_rules! AfterAssignment {
   () => {
-    state_mut!().after_assignment()
+    state::after_assignment()
   };
 }
 
@@ -1247,21 +1249,9 @@ macro_rules! DefRegister {
 #[macro_export]
 macro_rules! defi_register {
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
-    let value = {
-      {
-        $value
-      }
-    }; // allow to reborrow state::
+    let value = { $value };
     def_register($cs, $paramlist, value, $options)?
   }};
-  ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {
-    let value = {
-      {
-        $value
-      }
-    }; // allow to reborrow state::
-    def_register($cs, $paramlist, value, $options)?
-  };
 }
 
 #[macro_export]
@@ -1580,19 +1570,19 @@ macro_rules! DeclareOption {
   ($option:expr, $tex:literal) => {
     let tokenized;
     compile_tokenize_internal!(tokenized, $tex);
-    state_mut!().push_value("@declaredoptions", $option)?;
+    state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
     def_macro(T_CS!(cs),None,tokenized,None)?;
   };
   ($option:expr, $tokenized:ident) => {
-    state_mut!().push_value("@declaredoptions", $option.to_string())?;
+    state::push_value("@declaredoptions", $option.to_string())?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
     def_macro(T_CS!(cs),None, $tokenized, None)?;
   };
   ($option:expr, $(sub)? $body:block) => {
-    state_mut!().push_value("@declaredoptions", $option)?;
+    state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
     let code: PrimitiveClosure = Rc::new(move |_args| $body.into_digested_result());
@@ -1616,8 +1606,7 @@ macro_rules! AddToMacro {
   }};
   ($cs:ident, $tokens:ident) => {{
     // Needs error checking!
-    let st = state!();
-    let defn = st.lookup_definition(&$cs)?;
+    let defn = state::lookup_definition(&$cs)?;
     if defn.is_none() || !defn.as_ref().unwrap().is_expandable() {
       let message = s!("{} is not an expandable control sequence", $cs);
       let message2 = "Ignoring addition";

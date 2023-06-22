@@ -264,7 +264,7 @@ impl Mouth {
         _ => None,
       };
       state_mut!().assign_catcode('@', Catcode::LETTER, None);
-      state_mut!().assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
+      state::assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
   }
   pub fn finish(&mut self) {
@@ -278,7 +278,7 @@ impl Mouth {
         state_mut!().assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state_mut!().assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
+        state::assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
       }
     }
     if self.notes {

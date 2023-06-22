@@ -205,8 +205,8 @@ pub fn tabular_bindings(
     properties,
     xml_attributes
   );
-  state_mut!().let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
-  state_mut!().let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
+  state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
+  state::let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
   // NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!
   for name in [

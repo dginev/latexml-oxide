@@ -13,7 +13,7 @@ LoadDefinitions!({
   // Deferred reuse of Whatsit
   DefConstructor!("\\SaveBox{}", "#1",
     after_digest => sub[whatsit] {
-      state_mut!().assign_value("SAVED_WHATSIT", whatsit.get_arg(1), Some(Scope::Global)); });
+      state::assign_value("SAVED_WHATSIT", whatsit.get_arg(1), Some(Scope::Global)); });
   DefConstructor!("\\UseBox", "#savedbox",
     properties => { Ok(stored_map!("savedbox" => state!().lookup_value("SAVED_WHATSIT"))) });
 

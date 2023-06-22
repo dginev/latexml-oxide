@@ -15,11 +15,11 @@ use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
 use crate::list::List;
 use crate::mouth::{Mouth, MouthOptions};
-use crate::state::{Scope};
+use crate::state::{self, Scope};
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{Digested, TexMode, gullet, gullet_mut, state, state_mut};
+use crate::{Digested, TexMode, gullet, gullet_mut, state_mut};
 
 static MAXSTACK: usize = 200;
 
@@ -49,6 +49,13 @@ macro_rules! stomach_mut {
 }
 
 impl Stomach {
+  pub fn initialize(&mut self) {
+    self.boxing      = Vec::new();
+    self.token_stack = Vec::new();
+    self.box_list = Vec::new();
+    self.localized_box_list = Vec::new();
+    state_mut!().initialize_stomach();
+  }
   /// get the current boxing level
   pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
   /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
@@ -78,20 +85,20 @@ impl Stomach {
   pub fn push_stack_frame(&mut self, nobox: bool) {
     let current_token = state!().get_current_token().unwrap().clone();
     state_mut!().push_frame();
-    state_mut!().assign_value(
+    state::assign_value(
       "beforeAfterGroup",
       Stored::VecDequeStored(VecDeque::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state_mut!().assign_value(
+    state::assign_value(
       "afterGroup",
       Stored::VecDequeStored(VecDeque::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state_mut!().assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
-    state_mut!().assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-    state_mut!().assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
-    state_mut!().assign_value(
+    state::assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
+    state::assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
+    state::assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
+    state::assign_value(
       "groupInitiatorLocator",
       gullet!().get_locator().unwrap().into_owned(),
       Some(Scope::Local),
@@ -227,16 +234,16 @@ impl Stomach {
   pub fn set_mode(&mut self, mode: &str) -> Result<()> {
     let prevmode = state!().lookup_string("MODE");
     let ismath = mode.ends_with("math");
-    state_mut!().assign_value("MODE", arena::pin(mode), Some(Scope::Local));
-    state_mut!().assign_value("IN_MATH", ismath, Some(Scope::Local));
+    state::assign_value("MODE", arena::pin(mode), Some(Scope::Local));
+    state::assign_value("IN_MATH", ismath, Some(Scope::Local));
     if mode == prevmode {
     } else if ismath {
       let curfont = state!().lookup_font().unwrap();
       // When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
-      state_mut!().assign_value("savedfont", curfont.clone(), Some(Scope::Local));
+      state::assign_value("savedfont", curfont.clone(), Some(Scope::Local));
       // see get_script_level()
-      state_mut!().assign_value("script_base_level", self.boxing.len(), None);
+      state::assign_value("script_base_level", self.boxing.len(), None);
       let isdisplay = mode.starts_with("display");
       let new_font = state!().lookup_mathfont().unwrap().merge(Font {
         color: curfont.color.clone(),
@@ -331,8 +338,8 @@ pub fn digest<T: Into<Tokens>>(
   }
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet_mut!().unread(tokens);
-    state_mut!().clear_prefixes(); // prefixes shouldn't apply here.
-    let mode = if state!().lookup_bool("IN_MATH") {
+    state::clear_prefixes(); // prefixes shouldn't apply here.
+    let mode = if state::lookup_bool("IN_MATH") {
       TexMode::Math
     } else {
       TexMode::Text
@@ -373,12 +380,14 @@ pub fn digest<T: Into<Tokens>>(
 pub fn digest_next_body(
   terminal_opt: Option<Token>,
 ) -> Result<Vec<Digested>> {
-  let start_location = gullet!().get_locator().unwrap().into_owned();
-  let init_depth = stomach!().boxing.len();
+
+  let start_location = { gullet!().get_locator().unwrap().into_owned() };
+
+  let init_depth = { stomach!().boxing.len() };
   let mut found_token = false;
   let mut found_terminal = false;
   stomach_mut!().new_local_box_list();
-  let alignment_opt = state!().lookup_alignment();
+  let alignment_opt = state::lookup_alignment();
   // TODO: bookkeep for "expected" warning
   //let mut aug = Vec::new();
 
@@ -440,8 +449,8 @@ pub fn digest_next_body(
 pub fn raw_tex(text: &str) -> Result<()> {
   // It could be as simple as this, except if catcodes get changed, it's too late!!!
   //  Digest(TokenizeInternal($text));
-  let savedcc = state!().lookup_catcode('@').unwrap_or(Catcode::OTHER);
-  state_mut!().assign_catcode('@', Catcode::LETTER, None);
+  let savedcc = state::lookup_catcode('@').unwrap_or(Catcode::OTHER);
+  state::assign_catcode('@', Catcode::LETTER, None);
   let raw_tex_mouth = Mouth::new(
     text,
     Some(MouthOptions {
@@ -458,7 +467,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
     Ok(())
   })?;
 
-  state_mut!().assign_catcode('@', savedcc, None);
+  state::assign_catcode('@', savedcc, None);
   Ok(())
 }
 
@@ -477,9 +486,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
     while maybe_token.is_some() {
       let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
-      {
-        state_mut!().local_current_token(token.clone());
-      }
+      state::local_current_token(token.clone());
       stomach_mut!().token_stack.push(token.clone());
       if stomach!().token_stack.len() > MAXSTACK {
         fatal!(
@@ -538,7 +545,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
           maybe_token = gullet::read_x_token(None, false)?
             .map(Cow::Owned);
           stomach_mut!().token_stack.pop();
-          state_mut!().expire_current_token();
+          state::expire_current_token();
           continue;
         },
         Some(Stored::Conditional(meaning)) => {
@@ -588,7 +595,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
           );
         },
       }
-      state_mut!().expire_current_token();
+      state::expire_current_token();
       break;
     }
     stomach_mut!().token_stack.pop();
@@ -633,7 +640,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
       );
 
       let mut gullet = gullet_mut!();
-      state_mut!().let_i(token, &T_CS!("\\iffalse"), None);
+      state::let_i(token, &T_CS!("\\iffalse"), None);
       gullet.unread_one(token.clone()); // Retry
       Ok(Vec::new())
     } else {

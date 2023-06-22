@@ -262,9 +262,9 @@ LoadDefinitions!({
       }
       // TODO: Must we store the (currently &mut) Whatsit?
       // let whatsit_stored = Stored::Digested(whatsit.into());
-      state_mut!().assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),
+      state::assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),
         Some(Scope::Global));
-      // state_mut!().assign_value(&s!("xref:{}@size", xmid),
+      // state::assign_value(&s!("xref:{}@size", xmid),
       //   whatsit.get_size(None), Some(Scope::Global));
   });
 

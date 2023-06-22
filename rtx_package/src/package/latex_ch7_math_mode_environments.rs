@@ -10,7 +10,7 @@ use crate::package::*;
 // #   postset => boolean
 // #   deferretract=>boolean
 fn prepare_equation_counter(options: HashMap<String, Stored>) {
-  state_mut!().assign_value(
+  state::assign_value(
     "EQUATION_NUMBERING",
     Stored::HashStored(options),
     Some(Scope::Global),
@@ -42,20 +42,20 @@ fn before_equation() -> Result<()> {
       ref_step_id(&ctr)?
     };
     tags.insert("preset".to_owned(), true.into());
-    state_mut!().assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
+    state::assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
   } else {
-    state_mut!().assign_value(
+    state::assign_value(
       "EQUATIONROW_TAGS",
       Stored::HashStored(HashMap::default()),
       Some(Scope::Global),
     );
   }
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\@@ENDDISPLAYMATH"),
     &T_CS!("\\lx@eDM@in@equation"),
     None
   );
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\@@BEGINDISPLAYMATH"),
     &T_CS!("\\lx@bDM@in@equation"),
     None

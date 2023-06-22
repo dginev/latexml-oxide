@@ -66,7 +66,6 @@ LoadDefinitions!({
   // Need to handle "at" too!!!
   DefPrimitive!("\\font Token SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
-    let mut gullet = gullet_mut!();
     let name = name_arg.to_string();
     let props_opt = if let Some(mut props) = font::decode_fontname(&name,
       gullet::read_keyword(&["at"])?
@@ -114,7 +113,7 @@ LoadDefinitions!({
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
-        let defn_opt = state_mut!().lookup_register_definition(&defn_token);
+        let defn_opt = state::lookup_register_definition(&defn_token);
         state_mut!().local_current_token(defn_token);
         if let Some(defn) = defn_opt {
           let summand = gullet::read_value(defn.register_type().unwrap())?;
@@ -135,7 +134,7 @@ LoadDefinitions!({
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      if let Some(defn) = state_mut!().lookup_register_definition(&varname) {
+      if let Some(defn) = state::lookup_register_definition(&varname) {
         let defn_args : Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.multiply(scale), None, defn_args);
@@ -155,7 +154,7 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
-      if let Some(defn) = state_mut!().lookup_register_definition(&varname) {
+      if let Some(defn) = state::lookup_register_definition(&varname) {
         let defn_value = defn.value_of(inner).unwrap_or_default();
         let mut denominator = scale.value_f64();
         if denominator == 0.0 {
@@ -336,7 +335,8 @@ LoadDefinitions!({
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
-  state_mut!().assign_meaning(&cs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(),None);
+  let relax_meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
+  { state_mut!().assign_meaning(&cs, relax_meaning,None); }
   let num = gullet::read_number()?;
   let address = s!("{address_type}{}", num.value_of());
   let options = Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()});

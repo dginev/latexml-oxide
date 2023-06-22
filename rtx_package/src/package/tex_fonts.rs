@@ -20,7 +20,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state_mut!().assign_value(&s!("textfont_{fam}"), font, scope);
+    state::assign_value(&s!("textfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
@@ -30,7 +30,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state_mut!().assign_value(&s!("scriptfont_{fam}"), font, scope);
+    state::assign_value(&s!("scriptfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
@@ -40,7 +40,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state_mut!().assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
+    state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
   });
 
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
@@ -385,7 +385,8 @@ setter => sub[value,_scope,args] {
   // (including the preassignment to \relax!)
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
+    let meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
+    { state_mut!().assign_meaning(&newcs, meaning, None); }
     let value = gullet::read_number()?;
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
@@ -445,7 +446,8 @@ setter => sub[value,_scope,args] {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    state_mut!().assign_meaning(&newcs, state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
+    let meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
+    { state_mut!().assign_meaning(&newcs, meaning, None); }
     let value  = gullet::read_number().unwrap();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16)?;

@@ -342,7 +342,7 @@ impl Alignment {
       stomach_mut!().box_list.push(row_before);
     }
     self.in_row = true;
-    state_mut!().assign_value("alignmentStartColumn", 0, None); // ???
+    state::assign_value("alignmentStartColumn", 0, None); // ???
     Ok(())
   }
 
@@ -369,7 +369,7 @@ impl Alignment {
     }
     stomach_mut!().bgroup(); // Grouping around CELL!
                            // Note: a VERY round-about way of tracking the column spanning!
-    state_mut!().assign_value("alignmentStartColumn", self.current_column_number(), None);
+    state::assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
     state_mut!().set_align_group_count(1000000);
     self.in_column = true;
@@ -669,7 +669,7 @@ pub fn read_alignment_template() -> Result<Template> {
         break;
       }
       gullet.unread_one(last_op);
-    } else if let Some(defn) = state!().lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
+    } else if let Some(defn) = state::lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
       let invoked = defn.invoke(true)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {

@@ -181,7 +181,7 @@ impl Conditional {
     // Keep a stack of the conditionals we are processing.
     let mut ifid = state!().lookup_int("if_count");
     ifid += 1;
-    state_mut!().assign_value("if_count", ifid, Some(Scope::Global));
+    state::assign_value("if_count", ifid, Some(Scope::Global));
     // TODO:
     // if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) {
     //   Fatal('timeout', 'if_limit', $self,

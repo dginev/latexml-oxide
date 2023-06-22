@@ -50,7 +50,7 @@ LoadDefinitions!({
       state.activate_scope(arena::pin(scope));
       stomach_mut!().begin_mode("text")?;
       let current_label = stomach::digest(Tokens!(T_CS!("\\@currentlabel")))?;
-      state_mut!().assign_value(&label_key, current_label, Some(Scope::Global));
+      state::assign_value(&label_key, current_label, Some(Scope::Global));
       stomach_mut!().end_mode("text")?;
     }
   }
@@ -640,26 +640,26 @@ LoadDefinitions!({
 // bibliographies with blank lines!
 // So, let's do some redirection!
 fn setup_pseudo_bibitem() {
-  state_mut!().let_i(&T_CS!("\\save@bibitem"), &T_CS!("\\bibitem"), None);
-  state_mut!().let_i(&T_CS!("\\save@par"), &T_CS!("\\par"), None);
-  state_mut!().let_i(
+  state::let_i(&T_CS!("\\save@bibitem"), &T_CS!("\\bibitem"), None);
+  state::let_i(&T_CS!("\\save@par"), &T_CS!("\\par"), None);
+  state::let_i(
     &T_CS!("\\bibitem"),
     &T_CS!("\\restoring@bibitem"),
     None
   );
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\par"),
     &T_CS!("\\par@in@bibliography"),
     None
   );
   // Moreover some people use \item instead of \bibitem
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\item"),
     &T_CS!("\\item@in@bibliography"),
     None
   );
   // And protect from redefinitions.
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\newblock"),
     &T_CS!("\\lx@bibnewblock"),
     None
@@ -683,7 +683,7 @@ fn begin_bibliography_clean(
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
   let bibnumber = 1 + state!().lookup_int("n_bibliographies");
-  state_mut!().assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
+  state::assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
   if !docid.is_empty() {
     docid += ".";

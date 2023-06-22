@@ -24,7 +24,7 @@ pub fn reenter_text_mode(vertical_mode: bool) {
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
       let vec = tks.unlist_ref();
-      state_mut!().let_i(&vec[0], &vec[1], None);
+      state::let_i(&vec[0], &vec[1], None);
     }
   }
   if let Some(value) = mode_bindings {
@@ -972,12 +972,12 @@ pub fn make_generic_message(
   kind: &str,
   ) -> Result<()> {
   stomach_mut!().bgroup();
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\string"),
     None
   );
-  state_mut!().let_i(
+  state::let_i(
     &T_CS!("\\MessageBreak"),
     &T_CS!("\\ltx@hard@MessageBreak"),
     None

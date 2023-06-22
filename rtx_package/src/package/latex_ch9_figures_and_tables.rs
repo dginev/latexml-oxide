@@ -84,9 +84,9 @@ LoadDefinitions!({
     let captype = stomach::digest(T_CS!("\\@captype"))?.to_string();
     let props   = ref_step_counter(&captype, false)?;
     let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
-    state_mut!().assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
-    state_mut!().assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
-    state_mut!().assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
+    state::assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
+    state::assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
+    state::assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",

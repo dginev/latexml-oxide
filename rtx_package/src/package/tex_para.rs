@@ -66,19 +66,19 @@ LoadDefinitions!({
         whatsit.set_property("inPreamble", true);
         Ok(Vec::new())
       } else {
-        if let Some(c) = state!().lookup_value("next_para_class") {
+        if let Some(c) = {state!().lookup_value("next_para_class").cloned()} {
           // Check if flags were set by prior \par:
-          whatsit.set_property("class", c.clone());
-          state_mut!().assign_value("next_para_class", Stored::None, None);
+          whatsit.set_property("class", c);
+          { state::assign_value("next_para_class", Stored::None, None); }
         }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if state_mut!().lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
+        if state::lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
-          state_mut!().assign_value("next_para_class", "ltx_noindent", None);
+          { state::assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        if let Some(Stored::Tokens(vadj)) = RemoveValue!("vAdjust") {
-          AssignValue!("vAdjust", Tokens!(), Some(Scope::Global));
+        if let Some(Stored::Tokens(vadj)) = { state_mut!().remove_value("vAdjust") } {
+          state::assign_value("vAdjust", Tokens!(), Some(Scope::Global));
           Ok(vec![ Digest!(vadj)? ])
         } else {
           Ok(Vec::new())
@@ -110,5 +110,5 @@ LoadDefinitions!({
   });
 
   // \dump ???
-  DefPrimitive!("\\end", sub[()] { gullet_mut!().flush(); });
+  DefPrimitive!("\\end", sub[()] { gullet::flush(); });
 });

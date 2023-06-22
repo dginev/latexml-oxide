@@ -138,7 +138,7 @@ LoadDefinitions!({
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[(t)] {
-    state_mut!().assign_value("afterAssignment", t, Some(Scope::Global));
+    state::assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }

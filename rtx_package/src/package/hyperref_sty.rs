@@ -237,7 +237,7 @@ LoadDefinitions!({
   DefMacro!("\\@Url Token", sub[(cmd)] {
     let open = gullet::read_token()?.unwrap();
     state_mut!().begin_semiverbatim(Some(&['%']));
-    state_mut!().let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
+    state::let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         gullet::read_balanced(true)?.unwrap_or_default()) // Expand as we go!

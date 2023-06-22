@@ -22,7 +22,7 @@ use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::DigestedData;
-use crate::{state,state_mut};
+use crate::{state};
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -79,6 +79,13 @@ macro_rules! gullet_mut {
 }
 
 impl Gullet {
+  /// Initialize (or reset, if reentrant) a Gullet to its default empty state
+  pub fn initialize(&mut self) {
+    self.mouth = None;
+    self.mouthstack = VecDeque::new();
+    self.pending_comments = VecDeque::new();
+    self.pushback_has_smuggled_the = false;
+  }
   /// User feedback for where something (error?) occurred.
   pub fn get_locator(&self) -> Option<Cow<Locator>> {
     let mut runtime_opt = self.mouth.as_ref();
@@ -120,32 +127,6 @@ impl Gullet {
         }
       }
       runtime.mouth.finish(); // then finish the mouth (it'll get closed on next read)
-    }
-  }
-
-  /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
-  /// Flush all sources (close all pending mouth's)
-  pub fn flush(&mut self) {
-    if let Some(ref mut runtime) = self.mouth {
-      runtime.mouth.finish();
-    }
-    while !self.mouthstack.is_empty() {
-      if let Some(mut entry) = self.mouthstack.pop_front() {
-        entry.mouth.finish();
-      }
-    }
-    self.mouth = Some(MouthRuntime {
-      mouth: Mouth::default(),
-      pushback: VecDeque::new(),
-      autoclose: true,
-    });
-    self.mouthstack = VecDeque::new();
-  }
-
-  pub fn has_more_input(&mut self) -> bool {
-    match self.mouth {
-      Some(ref mut runtime) => runtime.mouth.has_more_input(),
-      None => false,
     }
   }
 
@@ -254,9 +235,9 @@ impl Gullet {
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
-    state_mut!().local_current_token(token.clone());
+    state::local_current_token(token.clone());
     let post = alignment.get_column_after();
-    state_mut!().set_align_group_count(1000000);
+    state::set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
     let arg_opt = if (vtype == "cr") && hidden {
       // \hidden@cr gets an argument as payload!!!!!
@@ -282,7 +263,7 @@ impl Gullet {
     }
     gullet_mut!().unread_one(token);
     gullet_mut!().unread(post);
-    state_mut!().expire_current_token();
+    state::expire_current_token();
     Ok(())
   }
 
@@ -334,9 +315,9 @@ impl Gullet {
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref nextt) = next_token {
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
-        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
+        if (state::align_group_count() == 0) && state::has_reading_alignment() {
           if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-            let reading_alignment = state!().get_reading_alignment().unwrap();
+            let reading_alignment = state::get_reading_alignment().unwrap();
             if let DigestedData::Alignment(data) = reading_alignment.data() {
               handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
             } else {
@@ -432,7 +413,7 @@ impl Gullet {
       // -- check if smuggled for \the
       let mut token = next_token.unwrap();
       if token.has_smuggled() {
-        if token.get_catcode() != Catcode::SmuggleTHE || state!().get_smuggle_the() {
+        if token.get_catcode() != Catcode::SmuggleTHE || state::get_smuggle_the() {
           return Ok(Some(token));
         } else {
           return Ok(token.take_smuggled().map(|t| *t));
@@ -441,17 +422,17 @@ impl Gullet {
       // --
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
-      let check_alignment_data =
-        if (state!().align_group_count() == 0) && state!().has_reading_alignment() {
+      let check_alignment_data = {
+        if state::align_group_count() == 0 && state::has_reading_alignment() {
           if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-            let reading_alignment = state!().get_reading_alignment().unwrap();
+            let reading_alignment = state::get_reading_alignment().unwrap();
             Some((reading_alignment, atype, ahidden))
           } else {
             None
           }
         } else {
           None
-        };
+        }};
       if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
         if let DigestedData::Alignment(data) = reading_alignment.data() {
           handle_template(data.borrow_mut(), token, atype, ahidden)?;
@@ -460,16 +441,16 @@ impl Gullet {
         }
         // And *then* continue the main loop checks
       } else if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state!().lookup_definition(&token)? {
+        if let Some(defn) = state::lookup_definition(&token)? {
           if (toplevel || !defn.is_protected()) && defn.is_expandable() {
             // is this the right logic here? don't expand unless digesting?
-            state_mut!().local_current_token(token);
+            state::local_current_token(token);
             invoke_for_read_x_token(defn)?;
-            state_mut!().expire_current_token();
+            state::expire_current_token();
             continue;
           }
         }
-        if token.get_catcode() == Catcode::CS && state!().lookup_meaning(&token).is_none() {
+        if token.get_catcode() == Catcode::CS && !state::has_meaning(&token) {
           return Ok(Some(state::generate_error_stub(&token)?)); // cs SHOULD have defn by now;
                                                                      // report early!
         } else {
@@ -589,7 +570,7 @@ impl Gullet {
   pub fn read_balanced(expanded: bool) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
-    state_mut!().local_align_group_count(1000000);
+    state::local_align_group_count(1000000);
     // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
     while let Some(t) = if expanded {
       read_x_token(Some(false), true)?
@@ -621,10 +602,10 @@ impl Gullet {
       Error!(
         "expected",
         "}",
-        "Gullet->readBalanced ran out of input in an unbalanced state::"
+        "Gullet->readBalanced ran out of input in an unbalanced state"
       );
     }
-    state_mut!().expire_align_group_count();
+    state::expire_align_group_count();
     if tokens.is_empty() {
       Ok(None)
     } else {
@@ -883,7 +864,7 @@ impl Gullet {
     match read_x_token(None, false)? {
       None => Ok(None),
       Some(token) => {
-        if let Some(defn) = state_mut!().lookup_register_definition(&token) {
+        if let Some(defn) = state::lookup_register_definition(&token) {
           if let Some(mut register_type) = defn.register_type() {
             if register_type == RegisterType::CharDef {
               // CharDefs treated as numbers here
@@ -1337,7 +1318,7 @@ impl Gullet {
             Some(tks) => Ok(tks),
             None => Ok(Tokens!()),
           }
-        } else if let Some(defn) = state_mut!().lookup_register_definition(&token) {
+        } else if let Some(defn) = state::lookup_register_definition(&token) {
           match defn.register_type() {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
               // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
@@ -1351,7 +1332,7 @@ impl Gullet {
             },
             _ => Ok(Tokens!(token)),
           }
-        } else if let Some(defn) = state!().lookup_definition(&token)? {
+        } else if let Some(defn) = state::lookup_definition(&token)? {
           // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
           // way to circumvent? Is it slow in the first place?
           if defn.is_expandable() {
@@ -1524,7 +1505,7 @@ fn handle_marker(marker_token: Token) {
       // Were in before-column template
       // let alignment = state!().lookup_alignment();
       // Debug("Halign $alignment: alignment state::=> 0") if $LaTeXML::DEBUG{halign};
-      state_mut!().set_align_group_count(0);
+      state::set_align_group_count(0);
     }, // switch to column proper!
     "after-column" => { // Were in before-column template
        // let alignment = state!().lookup_alignment();
@@ -1546,7 +1527,7 @@ where
 {
   let mouth_source = mouth.get_source().to_string();
   { gullet_mut!().open_mouth(mouth, false); } // only allow mouth to be explicitly closed here.
-  let results: R = reader()?;
+  let results: R = { reader()? };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   let mut gullet = gullet_mut!();
   loop {
@@ -1610,4 +1591,31 @@ where
     }
   }
   Ok(results)
+}
+
+pub fn has_more_input() -> bool {
+  match gullet_mut!().mouth {
+    Some(ref mut runtime) => runtime.mouth.has_more_input(),
+    None => false,
+  }
+}
+
+/// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
+/// Flush all sources (close all pending mouth's)
+pub fn flush() {
+  let mut g = gullet_mut!();
+  if let Some(ref mut runtime) = g.mouth {
+    runtime.mouth.finish();
+  }
+  while !g.mouthstack.is_empty() {
+    if let Some(mut entry) = g.mouthstack.pop_front() {
+      entry.mouth.finish();
+    }
+  }
+  g.mouth = Some(MouthRuntime {
+    mouth: Mouth::default(),
+    pushback: VecDeque::new(),
+    autoclose: true,
+  });
+  g.mouthstack = VecDeque::new();
 }

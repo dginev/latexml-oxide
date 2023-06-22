@@ -340,9 +340,9 @@ fn assign_lookup_mapping() {
 #[test]
 fn push_pop_daemon_frames() {
   // TODO
-  // state_mut!().assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
+  // state::assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
   // state_mut!().push_daemon_frame();
-  // state_mut!().assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
+  // state::assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
   // match state!().lookup_value("daemon_mode") {
   //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
   //   Some(& Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),

@@ -11,10 +11,10 @@ LoadDefinitions!({
   //   \end{document}
 
   DefMacro!("\\AtBeginDocument{}", sub[(rules)] {
-    state_mut!().push_value("@at@begin@document", rules)
+    state::push_value("@at@begin@document", rules)
   });
   DefMacro!("\\AtEndDocument{}", sub[(rules)] {
-    state_mut!().push_value("@at@end@document", rules)
+    state::push_value("@at@end@document", rules)
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
@@ -37,18 +37,18 @@ LoadDefinitions!({
     stomach_mut!().begin_mode("text")?;
     // we need to re-bind in order to nest calls to the binding macro machinery
     DefMacro!("\\@currenvir", "document");
-    state_mut!().assign_value("current_environment", "document", None);
+    state::assign_value("current_environment", "document", None);
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     let mut boxes = Vec::new();
-    if let Some(ops) = state!().lookup_tokens("@document@preamble@atend") {
+    if let Some(ops) = state::lookup_tokens("@document@preamble@atend") {
       boxes.push(stomach::digest(ops)?);
     }
-    if let Some(ops) = state!().lookup_tokens("@at@begin@document") {
+    if let Some(ops) = state::lookup_tokens("@at@begin@document") {
       boxes.push(stomach::digest(ops)?);
     }
-    state_mut!().assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
-    if let Some(ops) = state!().lookup_tokens("@document@preamble@afterend") {
+    state::assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
+    if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
       boxes.push(stomach::digest(ops)?);
     }
     whatsit.set_font(state!().lookup_font().unwrap()); // Start w/ whatever font was last selected.
@@ -104,7 +104,7 @@ LoadDefinitions!({
   //         "Attempt to end document with open groups, environments or conditionals", @lines);
   //     }
       stomach_mut!().end_mode("text")?;
-      gullet_mut!().flush();
+      gullet::flush();
       boxes
   });
 

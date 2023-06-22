@@ -172,7 +172,7 @@ pub fn input_definitions(
   }
 
   if !current_options.is_empty() {
-    state_mut!().assign_value(
+    state::assign_value(
       &s!("{}_loaded_with_options", filename),
       current_options,
       Some(Scope::Global),
@@ -186,7 +186,7 @@ pub fn input_definitions(
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
-    state_mut!().assign_value(&loaded_flag, true, Some(Scope::Global));
+    state::assign_value(&loaded_flag, true, Some(Scope::Global));
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
     // available binding dispatcher, in both contributed and core binding names
@@ -288,9 +288,9 @@ fn _load_binding(
 
           // TODO: is this still true?
           // Note (only!) that the binding version of this was loaded; still could load raw tex!
-          state_mut!().assign_value(&loaded_key, true, Some(Scope::Global));
+          state::assign_value(&loaded_key, true, Some(Scope::Global));
           // if a binding load succeeded, mark the generic request as loaded.
-          state_mut!().assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+          state::assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
             Err(e) => Err(e),
@@ -506,7 +506,7 @@ fn load_tex_definitions(
     if state!().lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
-    state_mut!().assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+    state::assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -514,10 +514,10 @@ fn load_tex_definitions(
   // And that if we're interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
   let was_including_styles = state!().lookup_bool("INCLUDE_STYLES");
-  state_mut!().assign_value("INTERPRETING_DEFINITIONS", true, None);
+  state::assign_value("INTERPRETING_DEFINITIONS", true, None);
   // If we're reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
-  state_mut!().assign_value("INCLUDE_STYLES", true, None);
+  state::assign_value("INCLUDE_STYLES", true, None);
   // When set, this variable allows redefinitions of locked defns.
   // It is set in before/after methods to allow local rebinding of commands
   // but loading of sources & bindings is typically done in before/after methods of constructors!
@@ -553,8 +553,8 @@ fn load_tex_definitions(
     },
   )?;
 
-  state_mut!().assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
-  state_mut!().assign_value("INCLUDE_STYLES", was_including_styles, None);
+  state::assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
+  state::assign_value("INCLUDE_STYLES", was_including_styles, None);
   Ok(())
 }
 
@@ -601,21 +601,19 @@ fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
 pub fn process_options() -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
-  let state = state!();
-  let name = if state.lookup_definition(&currname_token)?.is_some() {
+  let name = if state::lookup_definition(&currname_token)?.is_some() {
     do_expand(currname_token)?.to_string()
   } else {
     String::new()
   };
-  let ext = if state.lookup_definition(&currext_token)?.is_some() {
+  let ext = if state::lookup_definition(&currext_token)?.is_some() {
     do_expand(currext_token)?.to_string()
   } else {
     String::new()
   };
   let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
-
-  let declared_options: VecDeque<Stored> = state
-    .lookup_vecdeque("@declaredoptions")
+  let state = state!();
+  let declared_options: VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions")
     .unwrap_or(&empty_vdq)
     .clone();
   let opt_key = s!("opt@{}.{}", name, ext);
@@ -689,9 +687,10 @@ pub fn process_options() -> Result<()> {
   for option in requested_options.iter() {
     execute_default_option_internal(option)?;
   }
+  drop(state); // re-allow mutable borrows on state
   // Now, undefine the handlers?
   for option in declared_options.iter() {
-    state_mut!().let_i(
+    state::let_i(
       &T_CS!(s!("\\ds@{}", option)),
       &T_RELAX!(),
       None
@@ -723,7 +722,7 @@ fn execute_option_internal(option: &str) -> Result<bool> {
         .collect(),
       None => VecDeque::new(),
     };
-    state_mut!().assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
+    state::assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
     stomach::digest(cs)?;
     Ok(true)
   } else {
@@ -745,7 +744,7 @@ fn execute_default_option_internal(
 }
 
 fn reset_options() -> Result<()> {
-  state_mut!().assign_value(
+  state::assign_value(
     "@declaredoptions",
     Stored::VecDequeStored(VecDeque::new()),
     None,
@@ -755,7 +754,7 @@ fn reset_options() -> Result<()> {
   } else {
     "\\@unknownoptionerror"
   };
-  state_mut!().let_i(&T_CS!("\\default@ds"), &T_CS!(opt_unused_cs), None);
+  state::let_i(&T_CS!("\\default@ds"), &T_CS!(opt_unused_cs), None);
   Ok(())
 }
 
@@ -1195,7 +1194,7 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
   let fail_key = s!("{encoding}_fontmap_failed_to_load");
   let failed_flag = state!().lookup_bool(&fail_key);
   if !failed_flag {
-    state_mut!().assign_value(&fail_key, true, None); // Stop recursion?
+    state::assign_value(&fail_key, true, None); // Stop recursion?
     input_definitions(
       &encoding.to_lowercase(),
       InputDefinitionOptions {
@@ -1206,9 +1205,9 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
     )?;
     if state!().has_value(&s!("{encoding}_fontmap")) {
       // Got map?
-      state_mut!().assign_value(&fail_key, false, None);
+      state::assign_value(&fail_key, false, None);
     } else {
-      state_mut!().assign_value(&fail_key, true, Some(Scope::Global));
+      state::assign_value(&fail_key, true, Some(Scope::Global));
     }
   }
   Ok(())

@@ -430,11 +430,11 @@ LoadDefinitions!({
       DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
-      state_mut!().let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
+      state::let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
       DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
-      state_mut!().let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
-      state_mut!().let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
-      state_mut!().let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
+      state::let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
+      state::let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+      state::let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       // Having prepared, read in the argument, expanding as we go
       let arg = gullet::read_balanced(true)?;
       state_mut!().end_semiverbatim()?;
@@ -526,7 +526,7 @@ LoadDefinitions!({
   DefParameterType!(Variable, sub[_inner, _extra] {
     let token_opt = gullet::read_x_token(None, false)?;
     let defn_opt = match token_opt {
-      Some(ref token) => state_mut!().lookup_register_definition(token),
+      Some(ref token) => state::lookup_register_definition(token),
       None => None
     };
     if let Some(defn) = defn_opt {
@@ -568,7 +568,7 @@ LoadDefinitions!({
     let token = gullet::read_x_token(None, false)?;
     let defn = match token {
       None => None,
-      Some(ref t) => state_mut!().lookup_register_definition(t)
+      Some(ref t) => state::lookup_register_definition(t)
     };
     match defn {
       Some(register) => {
@@ -1069,7 +1069,7 @@ LoadDefinitions!({
     if IsDefined!(&cs) {
       Ok(else_token)
     } else {
-      state_mut!().let_i(&cs, &T_RELAX!(), None); // Yuck, but traditional!
+      state::let_i(&cs, &T_RELAX!(), None); // Yuck, but traditional!
       Ok(if_token)
     }
   });

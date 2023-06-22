@@ -23,7 +23,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
-  state_mut!().assign_value("INPUT_ENCODING", encoding.to_string(), None);
+  state::assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
   def_macro(
     T_CS!("\\inputencodingname"),

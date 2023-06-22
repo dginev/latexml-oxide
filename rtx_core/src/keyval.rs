@@ -24,7 +24,7 @@ use crate::state::State;
 // use crate::document::Document;
 // use crate::list::List;
 use crate::mouth::tokenize;
-use crate::{state,state_mut};
+use crate::{state};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -87,7 +87,7 @@ pub fn keyval_get<'a>(qname: &str, prop: &str, state: &'a State) -> Option<&'a S
 }
 
 pub fn keyval_set(qname: &str, prop: &str, value: Stored) {
-  state_mut!().assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
+  state::assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
 }
 
 //======================================================================

@@ -29,7 +29,7 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::gullet_mut;
+use crate::{model,model_mut,gullet_mut};
 use crate::mouth;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -247,7 +247,6 @@ pub struct State {
   undo: VecDeque<UndoFrame>,
   // state::ul runtime - data structures
   /// the schema-derived model used for the current document
-  pub model: Model,
   prefixes: HashMap<SymbolU32, bool>, // ?
   pub tag_properties: HashMap<SymbolU32, TagOptions>,
   /// an optional indirect model for long-distance relationships
@@ -305,7 +304,6 @@ impl Default for State {
       // Table bookkeeping
       undo: undo_vdq,
       // state::ul runtime - data structures
-      model: Model::default(),
       prefixes: HashMap::default(),
       tag_properties: HashMap::default(),
       indirect_model: None,
@@ -426,9 +424,9 @@ impl State {
     }
 
     // Basic defaults
-    let model = match options.model {
-      None => Model::default(),
-      Some(m) => m,
+    if let Some(model) = options.model {
+      let mut global_model = model_mut!();
+      *global_model = model;
     };
     let verbosity = options.verbosity.unwrap_or(0);
     // let strict = options.strict.unwrap_or(false);
@@ -454,7 +452,6 @@ impl State {
     let mut state = State {
       value: value_table,
       catcode: catcodes_typed,
-      model,
       verbosity,
       // strict,
       // include_comments,
@@ -955,7 +952,7 @@ impl State {
     self.assign_value("Alignment", alignment, scope);
   }
 
-  pub fn lookup_register(&mut self, cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+  pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
     let cs = T_CS!(cs);
     Ok(
     if let Some(defn) = self.lookup_definition(&cs)? {
@@ -971,19 +968,6 @@ impl State {
       // Warn!("expected", "register", message);
       None
     })
-  }
-
-  pub fn assign_register(&mut self, cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
-    let cs = T_CS!(cs);
-    if let Some(defn) = self.lookup_definition(&cs)? {
-      if defn.is_register() {
-        defn.set_value(value, scope, parameters);
-        return Ok(());
-      }
-    }
-    Warn!("expected", "register",
-        format!("The control sequence '{cs}' is not a register"));
-    Ok(())
   }
 
   pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
@@ -1834,7 +1818,7 @@ impl State {
     let mut imodel: IndirectModel = HashMap::default();
     // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
     let mut openable: HashSet<SymbolU32> = HashSet::default();
-    for tag in self.model.get_sym_tags() {
+    for tag in model!().get_sym_tags() {
       if let Some(x) = self.tag_properties.get(&tag) {
         if let Some(true) = x.auto_open {
           openable.insert(tag);
@@ -1842,7 +1826,7 @@ impl State {
       }
     }
 
-    for tag in self.model.get_sym_tags() {
+    for tag in model!().get_sym_tags() {
       let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
       {
         self.compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
@@ -1876,7 +1860,7 @@ impl State {
       }
     }
     // PATCHUP
-    if self.model.permissive {
+    if model!().permissive {
       // !!! Alarm!!!
       imodel
         .entry(arena::pin_static("#Document"))
@@ -1903,7 +1887,7 @@ impl State {
     // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
     // move ownership of the tag strings into the tag_contents vector.
     // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
-    let tag_contents: Vec<SymbolU32> = self.model.get_tag_contents(&tag);
+    let tag_contents: Vec<SymbolU32> = model!().get_tag_contents(&tag);
 
     for kid in tag_contents {
       if desc
@@ -1961,7 +1945,6 @@ impl State {
     token1: &Token,
     token2: &Token,
     scope: Option<Scope>,
-
   ) {
     let meaning = if token2.get_dont_expand().is_some() {
       Cow::Owned(Stored::Token(token2.clone()))
@@ -2153,12 +2136,11 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // info!("-- installing definition for: {:?}", token);
 
   // TODO, .is_none() should be a real false check
-  let state = state!();
-  let is_cs_locked = state.lookup_bool(&cs_locked);
-  let is_state_unlocked = state.lookup_bool("UNLOCKED");
+  let is_cs_locked = lookup_bool(&cs_locked);
+  let is_state_unlocked = lookup_bool("UNLOCKED");
 
   if is_cs_locked && !is_state_unlocked {
-    if let Some(Stored::String(s)) = state.lookup_value("SOURCEFILE") {
+    if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
         txt == "Anonymous String"
@@ -2169,9 +2151,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       return;
     }
   }
-  drop(state);
-  let mut state = state_mut!();
-  state.assign_internal(TableName::Meaning, cs_sym, definition, scope);
+  state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
 }
 
 /// Generate a stub definition for an undefined control-sequence,
@@ -2209,7 +2189,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       )?,
       Some(Scope::Global),
     );
-    state_mut!().let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+    let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
   } else {
     Error!(
       "undefined",
@@ -2232,3 +2212,123 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
   }
   Ok(token.clone())
 }
+
+
+// TODO: Move this to a prelude.
+
+pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
+  key: &str, value: T, scope: S) {
+  state_mut!().assign_value(key, value, scope);
+}
+pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
+  key: SymbolU32,
+  value: T,
+  scope: S,
+) { state_mut!().assign_value_sym(key,value,scope); }
+pub fn lookup_definition<'def>(key: &'def Token) -> Result<Option<Rc<dyn Definition>>> {
+  state!().lookup_definition(key)
+}
+
+/// a variant of `lookup_value` that casts the value into `Number`
+pub fn lookup_number(key: &str) -> Option<Number> {
+  state!().lookup_number(key)
+}
+/// a variant of `lookup_value` that casts the value into `Dimension`
+pub fn lookup_dimension(key: &str) -> Option<Dimension> {
+  state!().lookup_dimension(key)
+}
+/// a variant of `lookup_value` that only recognizes a `Stored::Glue`
+pub fn lookup_glue(key: &str) -> Option<Glue> {
+  state!().lookup_glue(key)
+}
+/// a variant of `lookup_value` that only recognizes a `Stored::Glue`
+pub fn lookup_muglue(key: &str) -> Option<MuGlue> {
+  state!().lookup_muglue(key)
+}
+/// a variant of `lookup_value` that casts the response into `Tokens`
+pub fn lookup_tokens(key: &str) -> Option<Tokens> {
+  state!().lookup_tokens(key)
+}
+/// a variant of `lookup_value` that only recognizes a `Stored::Token`
+pub fn lookup_token(key: &str) -> Option<Token> {
+  state!().lookup_token(key).cloned()
+}
+
+pub fn lookup_alignment() -> Option<Digested> {
+  state!().lookup_alignment()
+}
+
+pub fn assign_alignment(alignment: Alignment, scope: Option<Scope>) {
+  state_mut!().assign_alignment(alignment, scope)
+}
+
+pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+  state!().lookup_register(cs,parameters)
+}
+
+pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
+  let cs = T_CS!(cs);
+  if let Some(defn) = lookup_definition(&cs)? {
+    if defn.is_register() {
+      defn.set_value(value, scope, parameters);
+      return Ok(());
+    }
+  }
+  Warn!("expected", "register",
+      format!("The control sequence '{cs}' is not a register"));
+  Ok(())
+}
+
+pub fn lookup_register_definition(key: &Token) -> Option<Rc<Register>> {
+  state!().lookup_register_definition(key)
+}
+pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
+  state!().lookup_expandable(token,toplevel)
+}
+pub fn increment_align_group_count() {
+  state_mut!().increment_align_group_count()
+}
+pub fn decrement_align_group_count() {
+  state_mut!().decrement_align_group_count()
+}
+pub fn align_group_count() -> i32 {
+  state!().align_group_count()
+}
+pub fn set_align_group_count(v: i32) {
+  state_mut!().set_align_group_count(v)
+}
+pub fn get_reading_alignment() -> Option<Digested> { state!().get_reading_alignment() }
+pub fn has_reading_alignment() -> bool { state!().has_reading_alignment() }
+pub fn local_align_group_count(v: i32) { state_mut!().local_align_group_count(v) }
+pub fn expire_align_group_count() -> Option<i32> {
+  state_mut!().expire_align_group_count()
+}
+/// localizes a new current token. see `Stomach::invoke_token`
+pub fn local_current_token(token: Token) { state_mut!().local_current_token(token) }
+/// expires the most recent (localized) current token.
+pub fn expire_current_token() { state_mut!().expire_current_token() }
+pub fn after_assignment() { state_mut!().after_assignment(); }
+pub fn get_smuggle_the() -> bool { state!().get_smuggle_the() }
+pub fn has_meaning(token: &Token) -> bool {
+  state!().lookup_meaning(token).is_some()
+}
+pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
+  state_mut!().push_value(key,value)
+}
+pub fn lookup_bool(key: &str) -> bool {
+  state!().lookup_bool(key)
+}
+pub fn lookup_catcode(c: char) -> Option<Catcode> {
+  state!().lookup_catcode(c)
+}
+
+/// assigns a Catcode for a given character
+pub fn assign_catcode(key: char, value: Catcode, scope: Option<Scope>) {
+  state_mut!().assign_catcode(key,value,scope);
+}
+pub fn clear_prefixes() { state_mut!().clear_prefixes(); }
+pub fn let_i(
+  token1: &Token,
+  token2: &Token,
+  scope: Option<Scope>,
+) { state_mut!().let_i(token1, token2, scope) }
