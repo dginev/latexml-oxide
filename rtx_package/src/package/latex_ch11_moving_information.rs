@@ -627,7 +627,6 @@ LoadDefinitions!({
       let content = Expand!(stuff);
       eprintln!("{content}\n");
     }
-    ()
   });
   DefPrimitive!("\\typein[]{}", None);
 });

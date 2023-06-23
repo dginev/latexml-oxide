@@ -91,12 +91,10 @@ LoadDefinitions!({
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
     eprintln!("{}",gullet.get_locator().unwrap_or_default());
-    ()
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();
     Debug!("Box {n} = {:?}", state!().lookup_value(&s!("box{n}")));
-    ()
   });
   DefPrimitive!("\\showlists", None);
   DefPrimitive!("\\showthe Token", None);

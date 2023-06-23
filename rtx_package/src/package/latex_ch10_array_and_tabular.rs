@@ -132,7 +132,6 @@ LoadDefinitions!({
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", cols_vec);
       }
-      ()
     },
     sizer      => 0, alias => "\\cline",
     // properties => { "isHorizontalRule" => true }

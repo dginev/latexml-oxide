@@ -760,24 +760,24 @@ LoadDefinitions!({
   );
 
   // A variation: Digest until we encounter a given token!
-  DefParameterType!(DigestUntil, sub[_inner, _untils] {
-      gullet::skip_spaces()?;
-      Ok(Tokens!())
-    },
-    // TODO: To implement this natively, we need "untils" i.e.
-    // "extra" passed into "predigest" as well.
-    predigest => {
-      unimplemented!();
-      //   let ismath = state!().lookup_bool("IN_MATH");
-      //   stomach::digest_next_body(Some(until))?
-    //   my @list   = $state::>getStomach->digestNextBody($until);
-    //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
-    //   List(@list, mode => ($ismath ? 'math' : 'text'));
-      ()
-    },
-    reversion => sub[args,_inner,_extra] {
-      Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
-  );
+  // DefParameterType!(DigestUntil, sub[_inner, _untils] {
+  //     gullet::skip_spaces()?;
+  //     Ok(Tokens!())
+  //   },
+  //   // TODO: To implement this natively, we need "untils" i.e.
+  //   // "extra" passed into "predigest" as well.
+  //   predigest => {
+  //     unimplemented!();
+  //     //   let ismath = state!().lookup_bool("IN_MATH");
+  //     //   stomach::digest_next_body(Some(until))?
+  //   //   my @list   = $state::>getStomach->digestNextBody($until);
+  //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
+  //   //   List(@list, mode => ($ismath ? 'math' : 'text'));
+  //     ()
+  //   },
+  //   reversion => sub[args,_inner,_extra] {
+  //     Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) }
+  // );
 
   // Reads until the current group has ended.
   // This is useful for environment-like constructs,

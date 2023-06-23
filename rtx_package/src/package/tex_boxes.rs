@@ -211,7 +211,6 @@ LoadDefinitions!({
         // } else if let Some(s) = GetKeyVal!(spec, "spread") {
         //   whatsit.set_height(tbox.get_height().add(s));
         // }
-        ()
     }
   );
 
@@ -230,7 +229,6 @@ LoadDefinitions!({
       //   elsif (my $s = GetKeyVal($spec, 'spread')) {
       //     $whatsit->setHeight($box->getHeight->add($s)); }
       //   return; });
-      ()
     }
   );
 

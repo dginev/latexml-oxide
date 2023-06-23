@@ -62,8 +62,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
     "<?latexml class='#2' ?#1(options='#1')?>",
-    before_digest => { unimplemented!(); Ok(Vec::new()) }
-    // beforeDigest => sub { onlyPreamble('\LoadClass'); },
+    before_digest => { only_preamble("\\LoadClass") }
     // afterDigest  => sub { my ($stomach, $whatsit) = @_;
     //   my $options = $whatsit->getArg(1);
     //   my $class   = ToString($whatsit->getArg(2));
@@ -81,7 +80,6 @@ LoadDefinitions!({
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    ()
   });
 
   // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
@@ -89,13 +87,13 @@ LoadDefinitions!({
     let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    () });
+  });
 
   DefMacro!("\\ProvidesFile{}[]", sub[(file, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{file}"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    () });
+  });
 
   // anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
@@ -115,26 +113,23 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(name, options)] {
-    unimplemented!();
-    // $name = ToString($name);
-    // $name =~ s/\s+//g;
-    // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(name, options)] {
+  //   // $name = ToString($name);
+  //   // $name =~ s/\s+//g;
+  //   // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
+  //   Ok(Vec::new())
+  // });
 
-  DefPrimitive!("\\PassOptionsToClass{}{}", sub[(name, options)] {
-    unimplemented!();
-    // $name = ToString($name);
-    // $name =~ s/\s+//g;
-    // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\PassOptionsToClass{}{}", sub[(name, options)] {
+  //   // $name = ToString($name);
+  //   // $name =~ s/\s+//g;
+  //   // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
+  //   Ok(Vec::new())
+  // });
 
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
-  before_digest => { unimplemented!(); Ok(Vec::new()) }
-  // beforeDigest => sub { onlyPreamble('\RequirePackage'); },
+  before_digest => { only_preamble("\\RequirePackage") }
   // afterDigest  => sub { my ($stomach, $whatsit) = @_;
   //   my $package = ToString($whatsit->getArg(1));
   //   $package =~ s/\s+//g;
@@ -143,21 +138,19 @@ LoadDefinitions!({
   );
 
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
-    before_digest => { unimplemented!(); Ok(Vec::new()) }
-    // beforeDigest => sub { onlyPreamble('\LoadClassWithOptions'); },
+    before_digest => { only_preamble("\\LoadClassWithOptions") }
     // afterDigest  => sub { my ($stomach, $whatsit) = @_;
     //   my $class = ToString($whatsit->getArg(1));
     //   $class =~ s/\s+//g;
     //   LoadClass($class, withoptions => 1);
     //   return; });
   );
-  DefPrimitive!("\\@onefilewithoptions {} [][] {}",
-  sub[(name,option1,option2,ext)] {
-    unimplemented!();
-    // InputDefinitions(ToString(Expand($name)),
-    //    type => ToString(Expand($ext)), options => $option1);
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\@onefilewithoptions {} [][] {}",
+  // sub[(name,option1,option2,ext)] {
+  //   // InputDefinitions(ToString(Expand($name)),
+  //   //    type => ToString(Expand($ext)), options => $option1);
+  //   Ok(Vec::new())
+  // });
 
   DefMacro!("\\CurrentOption", None);
 
