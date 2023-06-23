@@ -32,8 +32,8 @@ LoadDefinitions!({
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
     let token_opt = gullet::read_x_token(Some(false), false)?.map(|t| {
       // Also resolve \let variants:
-      if let Some(Stored::Token(ref meaning)) = state!().lookup_meaning(&t).as_deref() {
-        meaning.clone()
+      if let Some(Stored::Token(meaning)) = lookup_meaning(&t) {
+        meaning
       } else {
         t
       }});
@@ -66,7 +66,7 @@ LoadDefinitions!({
   });
 
   DefConditional!("\\ifx Token Token", sub[(left,right)] {
-    state!().x_equals(&left, &right)
+    x_equals(&left, &right)
   });
 
   DefConditional!("\\ifvoid Number", sub[(arg)] { classify_box(arg)?.is_empty() });
@@ -113,7 +113,7 @@ LoadDefinitions!({
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
-      state!().lookup_meaning(&token).map(|d| d.into_owned())
+      lookup_meaning(&token)
     } {
       // First, if this definition is a primitive|conditional|constructor,
       // check to see if it has an alias, which would allow us to work with a token
@@ -242,7 +242,7 @@ LoadDefinitions!({
       }
       match token.get_catcode() {
         Catcode::CS => {
-          if state!().lookup_definition(&token)?.is_some() {
+          if lookup_definition(&token)?.is_some() {
             let message =
               s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
                 token);
@@ -264,9 +264,9 @@ LoadDefinitions!({
   }));
 
   DefMacro!("\\csname CSName", sub[(token)] {
-    if state!().lookup_meaning(&token).is_none() {
-      let relax_meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
-      state_mut!().assign_meaning(&token,
+    if lookup_meaning(&token).is_none() {
+      let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+      assign_meaning(&token,
         relax_meaning, None);
     }
     token
@@ -278,14 +278,14 @@ LoadDefinitions!({
 
   DefMacro!("\\expandafter Token Token", sub[(tok, xtok)] {
     let mut tokens : Vec<Token> = vec![tok];
-    if let Some(defn) = state::lookup_expandable(&xtok, false)? {
+    if let Some(defn) = lookup_expandable(&xtok, false)? {
       state::local_current_token(xtok);
       let invoked = defn.invoke( true)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
       }
       state::expire_current_token();
-    } else if state!().lookup_meaning(&xtok).is_none() {
+    } else if lookup_meaning(&xtok).is_none() {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
@@ -328,7 +328,7 @@ LoadDefinitions!({
       tks.remove(0);
       tks.pop();
       // and load LaTeX.pool if not already
-      if !state!().lookup_bool("LaTeX.pool_loaded") {
+      if !lookup_bool("LaTeX.pool_loaded") {
         LoadPool!("LaTeX");
       }
     }

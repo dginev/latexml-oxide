@@ -11,8 +11,8 @@ LoadDefinitions!({
     sizer      => "\u{2026}",
     reversion  => "\\ldots",
     properties => {
-      if state!().lookup_bool("IN_MATH") {
-        let new_font = state!().lookup_font().unwrap().merge(
+      if lookup_bool("IN_MATH") {
+        let new_font = lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
           .specialize("\u{2026}"));
         Ok(stored_map!("font" => new_font)) // Since not DefMath!

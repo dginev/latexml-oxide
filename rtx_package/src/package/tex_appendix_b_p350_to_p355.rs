@@ -188,7 +188,7 @@ LoadDefinitions!({
 
   DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
   before_digest=>{
-    state_mut!().after_assignment();
+    after_assignment();
     Ok(Vec::new())
   });
   DefMacro!("\\supereject", "\\par\\LTX@newpage");

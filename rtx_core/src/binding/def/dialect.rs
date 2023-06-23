@@ -26,13 +26,14 @@ use crate::definition::{
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
-use crate::state::{Scope, Stored};
+use crate::state::*;
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
 use crate::*;
+
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -73,8 +74,8 @@ pub fn is_defined(name: &str) -> bool {
 
 /// Token variant of `is_defined`. Defined in the LaTeX-y sense of also not being let to \relax.
 pub fn is_defined_token(cs: &Token) -> bool {
-  match state!().lookup_meaning(cs) {
-    Some(store) => match store.as_ref() {
+  match lookup_meaning(cs) {
+    Some(store) => match store {
       Stored::Token(_) => true,
       Stored::Expandable(ref m) => m.get_cs_name() != "\\relax",
       Stored::Primitive(ref m) => m.get_cs_name() != "\\relax",
@@ -87,11 +88,10 @@ pub fn is_defined_token(cs: &Token) -> bool {
 
 /// Check if the `token` is not yet defined, or let to `\relax`
 pub fn is_definable(token: &Token) -> bool {
-  let state = state_mut!();
-  let meaning = state.lookup_meaning(token);
+  let meaning = lookup_meaning(token);
   token.with_str(|name| name != "\\relax" && !name.starts_with("\\end"))
-    && (meaning.is_none() || (meaning == state.lookup_meaning(&TOKEN_RELAX))
-        || state.lookup_bool("2.09_COMPATIBILITY"))
+    && (meaning.is_none() || (meaning == lookup_meaning(&TOKEN_RELAX))
+        || lookup_bool("2.09_COMPATIBILITY"))
 }
 
 /// unconditionally wraps a CS token around a string
@@ -204,7 +204,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.with_str(|s| s.len()) == 1 {
-    state_mut!().assign_mathcode(
+    assign_mathcode(
       cs.with_str(|cstr| cstr.chars().next().unwrap()),
       0x8000u16,
       scope.clone(),
@@ -578,7 +578,7 @@ pub fn def_math_primitive(
         let locator = gullet!().get_locator().unwrap().into_owned();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
-        let state_font = state!().lookup_font().unwrap();
+        let state_font = lookup_font().unwrap();
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
           state_font
@@ -648,8 +648,7 @@ pub fn def_math_constructor(
   options.font = Some(FontDirective::Closure(if is_mathstyle {
     Rc::new(move |_whatsit| {
       Ok(
-        state!()
-          .lookup_font()
+        lookup_font()
           .unwrap()
           .merge(Font {
             mathstyle: mathstyle_for_font
@@ -663,8 +662,7 @@ pub fn def_math_constructor(
   } else {
     Rc::new(move |_whatsit| {
       Ok(
-        state!()
-          .lookup_font()
+        lookup_font()
           .unwrap()
           .specialize(&presentation_for_font),
       )
@@ -1006,7 +1004,7 @@ pub fn def_environment(
 
   let push_frame_closure = Rc::new(
     |_document: &mut Document, _whatsit: &Whatsit| {
-      state_mut!().push_frame();
+      push_frame();
       Ok(())
     },
   );
@@ -1017,7 +1015,7 @@ pub fn def_environment(
 
   let pop_frame_closure = Rc::new(
     |_document: &mut Document, _whatsit: &Whatsit| {
-      state_mut!().pop_frame()?;
+      pop_frame()?;
       Ok(())
     },
   );
@@ -1429,8 +1427,7 @@ fn transfer_common_constructor_options(
       if let Some(mathstyle) = options.mathstyle {
         Rc::new(move |_whatsit| {
           Ok(
-            state!()
-              .lookup_font()
+            lookup_font()
               .unwrap()
               .merge(Font {
                 mathstyle: Some(Cow::Owned(mathstyle.clone())),
@@ -1442,8 +1439,7 @@ fn transfer_common_constructor_options(
       } else {
         Rc::new(move |_whatsit| {
           Ok(
-            state!()
-              .lookup_font()
+            lookup_font()
               .unwrap()
               .specialize(&presentation_for_font),
           )

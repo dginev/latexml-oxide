@@ -18,7 +18,7 @@ use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
 use crate::keyvals::KeyVals;
 use crate::list::List;
-use crate::state::{Scope};
+use crate::state::{Scope,lookup_font};
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -145,7 +145,7 @@ impl IntoOption<Option<SizingClosure>> for &str {
         let font = if let Stored::Font(ref font) = *w.get_property("font").unwrap() {
           font.clone()
         } else {
-          state!().lookup_font().unwrap()
+          lookup_font().unwrap()
         };
         font.compute_boxes_size(
           &[Digested::from(Tbox {

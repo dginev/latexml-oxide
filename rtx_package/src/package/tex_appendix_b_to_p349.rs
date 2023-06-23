@@ -329,7 +329,7 @@ LoadDefinitions!({
 
   AssignValue!("allocated_boxes" => false);
   DefPrimitive!("\\newbox DefToken", sub[(t)] {
-    let n = state!().lookup_int("allocated_boxes");
+    let n = lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     let empty_list = List::new(Vec::new());
     AssignValue!(&s!("box{}",n), empty_list);

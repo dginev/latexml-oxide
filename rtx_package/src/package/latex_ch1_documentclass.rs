@@ -9,7 +9,7 @@ LoadDefinitions!({
   //**********************************************************************
   // Basic \documentclass & \documentstyle
 
-  DefConditional!("\\if@compatibility", { state!().lookup_bool("2.09_COMPATIBILITY") });
+  DefConditional!("\\if@compatibility", { lookup_bool("2.09_COMPATIBILITY") });
   DefMacro!("\\@compatibilitytrue", "");
   DefMacro!("\\@compatibilityfalse", "");
 

@@ -28,10 +28,11 @@ use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
-use crate::{state,state_mut,model,model_mut,TexMode};
+use crate::{model,model_mut,state,state_mut,TexMode};
+use crate::state::*;
 
 use crate::document::resource::Resource;
-use crate::document::tag::{TagConstructionClosure, TagOptionName, TagOptions};
+use crate::document::tag::{TagConstructionClosure, TagOptionName};
 use crate::Tbox;
 use crate::{BoxOps, Digested, DigestedData};
 
@@ -180,7 +181,7 @@ impl Document {
     } else {
       let mut context = XPath::new(&self.document, HashMap::default());
       for (prefix, ns) in &model!().code_namespaces {
-        // TODO: Is this too slow? We may need to store an active context in the state::as an
+        // TODO: Is this too slow? We may need to store an active context in the state as an
         // alternative
         arena::with(*prefix, |p_str| {
           arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
@@ -306,7 +307,7 @@ impl Document {
     }
     // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
     if qname != arena::pin_static("ltx:document")
-      && state!().lookup_bool("GENERATE_IDS")
+      && lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
       && arena::with(qname, |qname_str| {
         can_have_attribute(qname_str, "xml:id")
@@ -934,16 +935,8 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = state_mut!()
-      .tag_properties
-      .entry(tag)
-      .or_insert_with(TagOptions::default)
-      .clone();
-    // let ns_hash  = ((defined $p) && $state::>lookupMapping('TAG_PROPERTIES', $p .
-    // ':*')) || {};
-    let all_hash = state_mut!().tag_properties.entry(*LTX_STAR_SYM)
-      .or_insert_with(TagOptions::default)
-      .clone();
+    let tag_hash = get_tag_property(tag);
+    let all_hash = get_tag_property(*LTX_STAR_SYM);
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -1518,7 +1511,7 @@ impl Document {
   // New state::y (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
   fn apply_math_ligatures(&mut self, node: &mut Node) -> Result<()> {
-    let checked_out_ligatures = state_mut!().checkout_value("MATH_LIGATURES");
+    let checked_out_ligatures = checkout_value("MATH_LIGATURES");
     if let Some(Stored::VecDequeStored(ref stored_ligatures)) = checked_out_ligatures {
       let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
       while !ligatures.is_empty() {
@@ -1539,14 +1532,14 @@ impl Document {
         ligatures = next_ligatures;
         if !matched {
           if let Some(value) = checked_out_ligatures {
-            state_mut!().checkin_value("MATH_LIGATURES", value);
+            checkin_value("MATH_LIGATURES", value);
           }
           return Ok(());
         }
       }
     }
     if let Some(value) = checked_out_ligatures {
-      state_mut!().checkin_value("MATH_LIGATURES", value);
+      checkin_value("MATH_LIGATURES", value);
     }
     Ok(())
   }
@@ -2909,7 +2902,7 @@ impl Document {
   }
 
   pub fn process_pending_resources(&mut self) -> Result<()> {
-    let resources: Vec<Resource> = state_mut!().pending_resources.drain(..).collect();
+    let resources: Vec<Resource> = { state_mut!().pending_resources.drain(..).collect() };
     for resource in resources {
       self.add_resource(resource)?;
     }
@@ -3297,14 +3290,13 @@ pub fn can_contain_indirect(
   // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model->getNodeQName($child) if ref $child;    // In case
   // child is a node.
-  let mut state = state_mut!();
-  if state.indirect_model.is_none() {
-    let i_model = state.compute_indirect_model();
-    state.indirect_model = Some(i_model);
+  if !has_indirect_model() {
+    let i_model = compute_indirect_model();
+    set_indirect_model(i_model);
   }
 
   // returning inner_node
-  match state.indirect_model.as_ref().unwrap().get(&tag) {
+  match state!().indirect_model.as_ref().unwrap().get(&tag) {
     Some(sub_m) => sub_m.get(&child).copied(),
     None => None,
   }

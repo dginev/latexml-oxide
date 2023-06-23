@@ -14,7 +14,7 @@ LoadDefinitions!({
   sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     if !IsDefinable!(&cs_token) {
-      if !state!().has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
+      if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);
       }

@@ -16,7 +16,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
-use crate::state;
+use crate::state::{get_dual_branch,lookup_font};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
@@ -241,7 +241,7 @@ impl Object for Whatsit {
   fn revert(&self) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if let Some(this_branch) = state!().get_dual_branch() {
+    let saved_opt = if let Some(this_branch) = get_dual_branch() {
       if let Some(ref dual_reversion) = self.dual_reversion {
         dual_reversion.get(this_branch).cloned()
       } else {
@@ -421,7 +421,7 @@ impl BoxOps for Whatsit {
       let font = if let Stored::Font(ref sf) = *self.get_property("font").unwrap() {
         sf.clone()
       } else {
-        state!().lookup_font().unwrap()
+        lookup_font().unwrap()
       };
       font.compute_boxes_size(&boxes, options)
     }

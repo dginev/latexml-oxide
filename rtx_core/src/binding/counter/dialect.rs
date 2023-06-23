@@ -24,7 +24,8 @@ use crate::definition::{ExpansionBody};
 use crate::mouth;
 use crate::stomach;
 use crate::definition::Definition;
-use crate::{state,state_mut};
+use crate::{state};
+use crate::state::*;
 use crate::state::{Scope, Stored};
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -60,14 +61,14 @@ pub fn new_counter(
   let clctr = s!("\\cl@{}", ctr);
   let cunctr = s!("\\c@{}", unctr);
   let clunctr = s!("\\cl@{}", unctr);
-  if !within.is_empty() && within != "document" && state!().lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none() {
+  if !within.is_empty() && within != "document" && lookup_definition(&T_CS!(s!("\\c@{within}")))?.is_none() {
     new_counter(within, "", None)?;
   }
 
   def_register(T_CS!(&cctr), None, Number::new(0),
     Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}))?;
   state::assign_value(&cctr, Number::new(0), Some(Scope::Global));
-  state_mut!().after_assignment();
+  after_assignment();
   if state!().lookup_value(&clctr).is_none() {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
@@ -136,7 +137,7 @@ pub fn new_counter(
     }),
   )?;
   let p_ctr_cs = T_CS!(&s!("\\p@{}", ctr));
-  if state!().lookup_definition(&p_ctr_cs)?.is_none() {
+  if lookup_definition(&p_ctr_cs)?.is_none() {
     def_macro(
       p_ctr_cs,
       None,
@@ -247,7 +248,7 @@ pub fn counter_value(ctr: &str) -> Result<Number> {
 pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
   let v = counter_value(ctr)?.add(value);
   state::assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
-  state_mut!().after_assignment();
+  after_assignment();
   let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
     id_cs,
@@ -405,14 +406,14 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
-    if !norefnum && state!().lookup_meaning(&hj_refnum).is_some() {
+    if !norefnum && lookup_meaning(&hj_refnum).is_some() {
       state::let_i(
         &T_CS!(s!("\\the{ctr}")),
         &hj_refnum,
         Some(Scope::Global)
       );
     }
-    if state!().lookup_meaning(&hj_id).is_some() {
+    if lookup_meaning(&hj_id).is_some() {
       state::let_i(
         &T_CS!(s!("\\the{ctr}@ID")),
         &hj_id,
@@ -430,7 +431,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     //     def_macro(T_CS!(s!("\\the{}",ctr)), None, fixedrefnum, Some(ExpandableOptions { scope:
     // Some(Scope::Global), ..ExpandableOptions::default()}));   }
     //   if fixedid {
-    //     if state!().lookup_meaning(&hj_id).is_none() {        // Save for later
+    //     if lookup_meaning(&hj_id).is_none() {        // Save for later
     //       state::let_i(&hj_id, T_CS!(s!("\\the{}@ID",ctr)), Some(Scope::Global));
     //     }
     //     def_macro(T_CS!(s!("\\the{}@ID",ctr)), None, fixedid, Some(ExpandableOptions { scope:
@@ -498,7 +499,7 @@ pub fn ref_step_id(
   let unctr = s!("UN{ctr}");
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
-  let cunctr_val = state!().lookup_number(&s!("\\c@{unctr}")).unwrap().value_of();
+  let cunctr_val = lookup_number(&s!("\\c@{unctr}")).unwrap().value_of();
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
     None,
@@ -545,12 +546,12 @@ pub fn ref_step_item_counter(
   tag_opt: Option<&Tokens>,
   ) -> Result<HashMap<String, Stored>> {
   let counter = state::lookup_string("itemcounter");
-  let n = state!().lookup_int("itemization_items");
+  let n = lookup_int("itemization_items");
   state::assign_value("itemization_items", n + 1, None);
   let mut attr: HashMap<String, Stored> = HashMap::default();
   if n > 0 {
-    if let Some(sep) = state!().lookup_dimension("\\itemsep") {
-      let default_opt = state!().lookup_dimension("\\lx@default@itemsep");
+    if let Some(sep) = lookup_dimension("\\itemsep") {
+      let default_opt = lookup_dimension("\\lx@default@itemsep");
       if default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
         attr.insert("itemsep".to_string(), sep.into());
       }
@@ -647,17 +648,16 @@ pub fn begin_itemize(
   ) -> Result<HashMap<String, Stored>> {
   let outercounter = state::lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
-    state!().lookup_int(&s!("{outercounter}level"))
+    lookup_int(&s!("{outercounter}level"))
   } else {
     0
   };
   let counter = counter.unwrap_or("@item");
-  let listlevel = state!().lookup_int("itemization_level") + 1; // level for this list overall
-  let level = state!().lookup_int(&s!("{counter}level")) + 1; // level for lists of specific type
+  let listlevel = lookup_int("itemization_level") + 1; // level for this list overall
+  let level = lookup_int(&s!("{counter}level")) + 1; // level for lists of specific type
   AssignRegister!(
     "\\itemsep",
-    state!()
-      .lookup_dimension("\\lx@default@itemsep")
+    lookup_dimension("\\lx@default@itemsep")
       .unwrap_or_default()
       .into());
   state::assign_value("itemization_level", listlevel, None);
@@ -685,7 +685,7 @@ pub fn begin_itemize(
   // And that the items within this list's id's are relative to this (new) list.
   state::assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
   let listcounter = s!("@itemize{listpostfix}");
-  if state!().lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
+  if lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
     //Create new list counters as needed
     new_counter(&listcounter, "", None)?;
   }
@@ -733,7 +733,7 @@ pub fn begin_itemize(
       series = s;
       // TODO:
       // SetCounter!(usecounter,
-      //   state!().lookup_int(&s!("enumitem_series_{}_last",series)),
+      //   lookup_int(&s!("enumitem_series_{}_last",series)),
       //   state::;
     }
   } else {

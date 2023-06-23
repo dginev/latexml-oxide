@@ -11,8 +11,8 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     "HTEXT_MODE_BINDINGS"
   };
   let text_key = "TEXT_MODE_BINDINGS";
-  let mode_bindings = state_mut!().checkout_value(mode_key);
-  let text_bindings = state_mut!().checkout_value(text_key);
+  let mode_bindings = checkout_value(mode_key);
+  let text_bindings = checkout_value(text_key);
   let mut bindings: VecDeque<&Stored> = match mode_bindings {
     Some(Stored::VecDequeStored(ref vdq)) => vdq.iter().collect::<VecDeque<&Stored>>(),
     _ => VecDeque::new(),
@@ -28,10 +28,10 @@ pub fn reenter_text_mode(vertical_mode: bool) {
     }
   }
   if let Some(value) = mode_bindings {
-    state_mut!().checkin_value(mode_key, value);
+    checkin_value(mode_key, value);
   }
   if let Some(value) = text_bindings {
-    state_mut!().checkin_value(text_key, value);
+    checkin_value(text_key, value);
   }
 }
 
@@ -207,7 +207,7 @@ pub fn do_def(
       }))?,
     scope
   );
-  state_mut!().after_assignment();
+  after_assignment();
   Ok(())
 }
 
@@ -218,7 +218,7 @@ pub fn classify_box(boxnum: Number) -> Result<&'static str> {Ok(
   match state!().lookup_value(&s!("box{}", boxnum.value_of())) {
     Some(Stored::Digested(ref d)) => match d.data() {
       DigestedData::Whatsit(ref w)
-        if w.borrow().definition == state!().lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
+        if w.borrow().definition == lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
       {
         "vbox"
       },
@@ -326,17 +326,17 @@ pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str) -> Vec<Token> {
 
 pub fn p_revert<T>(arg: T) -> Result<Tokens>
 where T: Sized + Object {
-  state_mut!().set_dual_branch("presentation");
+  set_dual_branch("presentation");
   let result = arg.revert();
-  state_mut!().expire_dual_branch();
+  expire_dual_branch();
   result
 }
 
 pub fn c_revert<T>(arg: T) -> Result<Tokens>
 where T: Sized + Object {
-  state_mut!().set_dual_branch("content");
+  set_dual_branch("content");
   let result = arg.revert();
-  state_mut!().expire_dual_branch();
+  expire_dual_branch();
   result
 }
 
@@ -877,9 +877,9 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
   }
   let mut result = String::new();
   let cased = if is_upper {
-    state!().lookup_uccode(thischar.unwrap())
+    lookup_uccode(thischar.unwrap())
   } else {
-    state!().lookup_lccode(thischar.unwrap())
+    lookup_lccode(thischar.unwrap())
   };
   if let Some(code) = cased {
     if code != 0 {
@@ -903,7 +903,7 @@ fn either_case_token(token: Token, is_upper: bool) -> Token {
 
 /// a candidate for use by \hskip, \hspace, etc... ?
 pub fn dimension_to_spaces(dimen: &Dimension) -> Cow<'static, str> {
-  let fs = state!().lookup_font().unwrap().get_size(); // 1 em
+  let fs = lookup_font().unwrap().get_size(); // 1 em
   let pt = dimen.pt_value(None);
   let ems = pt / fs.unwrap();
   if ems < 0.01 {

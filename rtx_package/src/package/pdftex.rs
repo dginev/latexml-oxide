@@ -141,15 +141,11 @@ LoadDefinitions!({
   DefMacro!("\\pdfinfo{}", None);
 
   // Ugh, what a mess of ugly syntax....
-  // DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
-  // unimplemented!(); ()
-  //   my ($gullet) = @_;
-  //   if (my $key = $gullet->readKeyword('openaction')) {
-  //     if (my $action = $gullet->readKeyword('user', 'goto')) {
-  //       // etc....
-  //     } } },
-  // optional => 1, undigested => 1);
-  // }), optional => true);
+  DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
+    if let Some(key) = read_keyword(&["openaction"])? {
+      if let Some(action) = read_keyword(&["user", "goto"])? {
+        // etc....
+      } } }), optional => true);
 
   DefMacro!("\\pdfcatalog{} OpenActionSpecification", "");
   DefMacro!("\\pdfnames{}", "");

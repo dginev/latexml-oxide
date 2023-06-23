@@ -188,7 +188,7 @@ LoadDefinitions!({
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
   let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // If EITHER the raw TeX or ltxml version of this file was loaded.
-  if state!().lookup_bool(&s!("{path}_loaded")) || state!().lookup_bool(&s!("{path}_binding_loaded")) {
+  if lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_binding_loaded")) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")

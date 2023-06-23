@@ -16,7 +16,7 @@ use crate::common::store::Stored;
 use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
-use crate::state::{Scope};
+use crate::state::*;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -268,7 +268,7 @@ impl Conditional {
         Some(ConditionalType::If) => level += 1, //  Found a \ifxx of some sort
         Some(ConditionalType::Fi) => {
           // Found a \fi
-          let local_frame = state!().get_ifframe();
+          let local_frame = get_ifframe();
           let mut state = state_mut!();
           if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
             if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
@@ -298,7 +298,7 @@ impl Conditional {
             }
           } else if other_type == ConditionalType::Else && nskips != 0 {
             // Found \else and we're looking for one?
-            let local_frame = state!().get_ifframe();
+            let local_frame = get_ifframe();
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             if let Some(Stored::VecDequeStored(stack)) = state!().lookup_value("if_stack") {
               if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
@@ -391,13 +391,13 @@ impl Conditional {
         Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
       } else {
         // "expand" by removing the stack entry for this level
-        state_mut!().set_ifframe(Some(stack_frame));
-        state_mut!().shift_value("if_stack")?; // Done with this frame
+        set_ifframe(Some(stack_frame));
+        shift_value("if_stack")?; // Done with this frame
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
         // "]\n"       if $state::>lookupValue('TRACINGCOMMANDS');
-        state_mut!().expire_ifframe();
+        expire_ifframe();
         Ok(Tokens!())
       }
     } else {

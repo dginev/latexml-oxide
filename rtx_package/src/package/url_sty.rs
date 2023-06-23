@@ -40,7 +40,7 @@ LoadDefinitions!({
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
   DefMacro!("\\@Url Token", sub[(cmd)] {
     let perc = vec!['%'];
-    state_mut!().begin_semiverbatim(Some(&perc));
+   begin_semiverbatim(Some(&perc));
     let mut open = gullet::read_token()?.unwrap();
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
@@ -52,7 +52,7 @@ LoadDefinitions!({
       close = open.clone();
       gullet::read_until_token(close.clone())?
     };
-    state_mut!().end_semiverbatim()?;
+    end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
       .map(|t| t.as_other()).collect();
 

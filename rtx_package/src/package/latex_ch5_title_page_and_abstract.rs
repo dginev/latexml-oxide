@@ -69,7 +69,7 @@ LoadDefinitions!({
 
   AssignValue!("NUMBER_OF_AUTHORS" => 0);
   DefPrimitive!("\\lx@count@author", sub[()] {
-    let current = state!().lookup_int("NUMBER_OF_AUTHORS");
+    let current = lookup_int("NUMBER_OF_AUTHORS");
     AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
   });
   DefMacro!(
@@ -83,7 +83,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@author@conj", "\\qquad");
   DefConstructor!("\\lx@author@prefix", sub[document, _args, _props] {
     let mut node   = document.get_element().unwrap();
-    let nauthors   = state!().lookup_int("NUMBER_OF_AUTHORS");
+    let nauthors   = lookup_int("NUMBER_OF_AUTHORS");
     let i          = document.findnodes("//ltx:creator[@role='author']", None).len() as i64;
     if i <= 1 { }
     else if i == nauthors {

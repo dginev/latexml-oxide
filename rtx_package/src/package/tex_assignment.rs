@@ -114,7 +114,7 @@ LoadDefinitions!({
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
         let defn_opt = state::lookup_register_definition(&defn_token);
-        state_mut!().local_current_token(defn_token);
+        local_current_token(defn_token);
         if let Some(defn) = defn_opt {
           let summand = gullet::read_value(defn.register_type().unwrap())?;
           let defn_args : Vec<ArgWrap> = inner.clone();
@@ -125,7 +125,7 @@ LoadDefinitions!({
           defn_token_str);
           Error!("expected","definition", message);
         }
-        state_mut!().expire_current_token();
+        expire_current_token();
       }
     }
   });
@@ -244,14 +244,14 @@ LoadDefinitions!({
     getter => sub[args] {
       unpack_opt!(args => num);
       let refchar = (num.expect_number().value_of() as u8) as char;
-      let code = state!().lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
+      let code = lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
     setter => sub[value, scope, args] {
       unpack_opt!(args => num);
       let c_char = (num.expect_number().value_of() as u8) as char;
       let c_code : Catcode = From::from(value.value_of() as u8);
-      state_mut!().assign_catcode(c_char, c_code, scope);
+      assign_catcode(c_char, c_code, scope);
     }
   );
 
@@ -260,7 +260,7 @@ LoadDefinitions!({
     getter => sub[args] {
       let ch_code   = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch_code as char;
-      let code = match state!().lookup_mathcode(&ch.to_string()) {
+      let code = match lookup_mathcode(&ch.to_string()) {
         None => ch_code,
         Some(code) => code as u8
       };
@@ -269,59 +269,58 @@ LoadDefinitions!({
     setter => sub[value, scope, args] {
       let ch = args.remove(0).expect_number().value_of() as u8;
       let ch : char = ch as char;
-      state_mut!().assign_mathcode(ch, value.value_of() as u16, scope);
+      assign_mathcode(ch, value.value_of() as u16, scope);
     }
   );
 
   DefRegister!("\\sfcode Number", Number::new(0),
     getter=> sub[args] {
-    let code = state!().lookup_sfcode(args[0].value_of() as u8 as char);
+    let code = lookup_sfcode(args[0].value_of() as u8 as char);
       Number::new(code.unwrap_or_default() as i64)
     },
     setter => sub[value, scope, args] {
-      state_mut!().assign_sfcode(args[0].value_of() as u8 as char,
+      assign_sfcode(args[0].value_of() as u8 as char,
         value.value_of() as u16, scope); });
 
   DefRegister!("\\lccode Number", Number::new(0),
   getter=> sub[args] {
-    let code = state!().lookup_lccode(args[0].value_of() as u8 as char);
+    let code = lookup_lccode(args[0].value_of() as u8 as char);
     Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, scope, args] {
-    state_mut!().assign_lccode(args[0].value_of() as u8 as char,
+    assign_lccode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
 
   DefRegister!("\\uccode Number", Number::new(0),
   getter=> sub[args] {
-    let code = state!().lookup_uccode(args[0].value_of() as u8 as char);
+    let code = lookup_uccode(args[0].value_of() as u8 as char);
     Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, scope, args] {
-    state_mut!().assign_uccode(args[0].value_of() as u8 as char,
+    assign_uccode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
 
   // Not used anywhere (yet)
   DefRegister!("\\delcode Number", Number::new(0),
   getter=> sub[args] {
-    let code = state!().lookup_delcode(args[0].value_of() as u8 as char);
+    let code = lookup_delcode(args[0].value_of() as u8 as char);
     Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, scope, args] {
-    state_mut!().assign_delcode(args[0].value_of() as u8 as char,
+    assign_delcode(args[0].value_of() as u8 as char,
       value.value_of() as u16, scope);
   });
 
   // Remember, we're assigning a NUMBER (codepoint) to a CHARACTER!
   {
-    let mut state = state_mut!();
     for letter in b'A'..=b'Z' {
       //FYI: 0x20 == 32
-      state.assign_lccode(letter, letter + 32, Some(Scope::Global));
-      state.assign_uccode(letter, letter, Some(Scope::Global));
-      state.assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
-      state.assign_uccode(letter + 32, letter, Some(Scope::Global));
+      assign_lccode(letter, letter + 32, Some(Scope::Global));
+      assign_uccode(letter, letter, Some(Scope::Global));
+      assign_lccode(letter + 32, letter + 32, Some(Scope::Global));
+      assign_uccode(letter + 32, letter, Some(Scope::Global));
     }
   }
 
@@ -335,12 +334,12 @@ LoadDefinitions!({
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
-  let relax_meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
-  { state_mut!().assign_meaning(&cs, relax_meaning,None); }
+  let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+  { assign_meaning(&cs, relax_meaning,None); }
   let num = gullet::read_number()?;
   let address = s!("{address_type}{}", num.value_of());
   let options = Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()});
   def_register(cs, None, init, options)?;
-  state_mut!().after_assignment();
+  after_assignment();
   Ok(())
 }

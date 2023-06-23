@@ -86,7 +86,7 @@ LoadDefinitions!({
         Warn!("expected","character","\\@makeother called on empty argument?");
         return Ok(Tokens!());
       }};
-    state_mut!().assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
+    assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
   RawTeX!(

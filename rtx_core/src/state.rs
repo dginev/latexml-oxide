@@ -73,7 +73,7 @@ pub enum Scope {
 pub enum TableName {
   /// token meaning
   Meaning,
-  /// all state::ul values
+  /// all stateful values
   Value,
   /// catcode bindings
   Catcode,
@@ -223,12 +223,12 @@ pub struct Localized {
   pub build_template: Vec<Template>,
 }
 
-/// The state::efficiently maintain the bindings in a TeX-like fashion.
+/// The state efficiently maintain the bindings in a TeX-like fashion.
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
-// TODO: Maybe the right Rust metaphor here is to chunk state::into a tuple of independent data:
-// struct state::Gullet, Stomach, Model, state::ables, Sessionstate::;
+// TODO: Maybe the right Rust metaphor here is to chunk state into a tuple of independent data:
+// struct State, Gullet, Stomach, Model, StateTables, SessionSstate;
 // maybe not...
 pub struct State {
   // Tables
@@ -246,7 +246,7 @@ pub struct State {
   delcode: Table,
   // Table bookkeeping
   undo: VecDeque<UndoFrame>,
-  // state::ul runtime - data structures
+  // stateful runtime - data structures
   /// the schema-derived model used for the current document
   prefixes: HashMap<SymbolU32, bool>, // ?
   pub tag_properties: HashMap<SymbolU32, TagOptions>,
@@ -254,7 +254,7 @@ pub struct State {
   pub indirect_model: Option<IndirectModel>,
   /// Document-related resources declared during core conversion, pending until XML is finalized
   pub pending_resources: Vec<Resource>,
-  // state::ul runtime - simple fields
+  // stateful runtime - simple fields
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
@@ -304,12 +304,12 @@ impl Default for State {
       delcode: HashMap::default(),
       // Table bookkeeping
       undo: undo_vdq,
-      // state::ul runtime - data structures
+      // stateful runtime - data structures
       prefixes: HashMap::default(),
       tag_properties: HashMap::default(),
       indirect_model: None,
       pending_resources: Vec::new(),
-      // state::ul runtime - simple fields
+      // stateful runtime - simple fields
       verbosity: 0,
       unlocked: true,
       input_encoding: None,
@@ -354,7 +354,7 @@ macro_rules! sty_state_mut {
   () => ((*$crate::state::STY_STATE).borrow_mut())
 }
 
-/// state::fields allowed for customization during construction
+/// state fields allowed for customization during construction
 #[derive(Default)]
 pub struct StateOptions {
   pub model: Option<Model>,
@@ -463,7 +463,7 @@ impl State {
       nomathparse,
       ..State::default()
     };
-    // TODO: should these be *fields* in state:: or really as in Perl - globally assigned values?
+    // TODO: should these be *fields* in state or really as in Perl - globally assigned values?
     state.assign_value(
       "DOCUMENTID",
       options.documentid.unwrap_or_default(),
@@ -503,6 +503,15 @@ impl State {
       Delcode => &mut self.delcode,
       Stash => &mut self.stash,
       StashActive => &mut self.stash_active,
+    }
+  }
+
+  // needed for assign_internal, so keeping it as a object method
+  /// gets the current value of a named prefix
+  pub fn get_prefix(&self, prefix: &str) -> bool {
+    match self.prefixes.get(&arena::pin(prefix)) {
+      Some(b) => *b,
+      _ => false,
     }
   }
 
@@ -633,6 +642,18 @@ impl State {
     }
   }
 
+  /// assigns a `Stored` value at the given key and scope
+  pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
+    &mut self,
+    key: &str,
+    value: T,
+    scope: S,
+    ) {
+    let value = value.into();
+    let scope = scope.into();
+    let key_sym = arena::pin(key);
+    self.assign_internal(TableName::Value, key_sym, value, scope);
+  }
   //======================================================================
   /// fetches a Stored value at the given key, from the Value table
   pub fn lookup_value(&self, key: &str) -> Option<&Stored> {
@@ -664,420 +685,29 @@ impl State {
       },
     }
   }
-
-  /// inline lookup_value after which globally assign an empty Tokens() to undo
-  pub fn remove_value<'lv>(&'lv mut self, key: &'lv str) -> Option<Stored> {
-    let key_sym = arena::pin(key);
-    match self.value.get_mut(&key_sym) {
-      None => None,
-      Some(vvec) => match vvec.front_mut() {
-        None | Some(&mut Stored::None) => Option::None,
-        Some(found) => Some(std::mem::take(found)),
-      },
-    }
-  }
-
-  /// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
-  pub fn checkout_value(&mut self, key: &str) -> Option<Stored> {
-    match self.value.get_mut(&arena::pin(key)) {
-      None => None,
-      Some(vvec) => vvec.front_mut().map(std::mem::take),
-    }
-  }
-  /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
-  pub fn checkin_value(&mut self, key: &str, value: Stored) {
-    match self.value.get_mut(&arena::pin(key)) {
-      None => unimplemented!(),
-      Some(vvec) => match vvec.front_mut() {
-        None => unimplemented!(),
-        Some(found) => {
-          match found {
-            Stored::None => std::mem::replace(found, value),
-            _ => panic!("checkin_value should only be called after checkout_value"),
-          };
-        },
-      },
-    }
-  }
-
-  /// assigns a `Stored` value at the given key and scope
-  pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
-    &mut self,
-    key: &str,
-    value: T,
-    scope: S,
-  ) {
-    let value = value.into();
-    let scope = scope.into();
-    let key_sym = arena::pin(key);
-    self.assign_internal(TableName::Value, key_sym, value, scope);
-  }
-
-  /// assigns a `Stored` value at the given (arena ticket!) key and scope
-  pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
-    &mut self,
-    key: SymbolU32,
-    value: T,
-    scope: S,
-  ) {
-    let value = value.into();
-    let scope = scope.into();
-    self.assign_internal(TableName::Value, key, value, scope);
-  }
-
-  /// manage a (global) list of values
-  pub fn push_value<T: Into<Stored>>(&mut self, key: &str, value: T) -> Result<()> {
-    let key_sym = arena::pin(key);
-    let value = value.into();
-    if !self.value.contains_key(&key_sym) {
-      self.assign_internal(
-        TableName::Value,
-        key_sym,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      );
-    }
-    match self.value.get_mut(&key_sym).unwrap().front_mut() {
-      Some(&mut Stored::VecDequeStored(ref mut front)) => front.push_back(value),
-      // auto-vivify, if None
-      Some(ref mut field) if matches!(field, Stored::None) => {
-        let mut new_vdq = VecDeque::new();
-        new_vdq.push_back(value);
-        **field = Stored::VecDequeStored(new_vdq);
-      },
-      other => {
-        let message =
-          s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
-        Error!("State", "Stored", message);
-      },
-    }
-    Ok(())
-  }
-
-  /// pops the last value in a named `Stored::VecDequeStored` queue, if any
-  pub fn pop_value(&mut self, key: &str) -> Result<Option<Stored>> {
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
-      self.assign_internal(
-        TableName::Value,
-        key_sym,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      );
-    }
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(&key_sym).unwrap().front_mut()
-    {
-      Ok(front.pop_back())
-    } else {
-      Error!(
-        "State",
-        "Stored",
-        "BUG: Tried to pop_value from a non-vecdeque value key!"
-      );
-      Ok(None)
-    }
-  }
-
-  /// Check if the Value table contains a given key
-  pub fn has_value(&self, key: &str) -> bool {
-    let key_sym = arena::pin(key);
-    match self.value.get(&key_sym) {
-      None => false,
-      Some(list) => match list.front() {
-        None => false,
-        Some(v) => !matches!(v, &Stored::None),
-      },
-    }
-  }
-
-  /// Pushes Tokens into a `Stored::Tokens` value when defined,
-  /// or assigns when new.
-  pub fn push_tokens(&mut self, key: &str, value: Tokens) {
-    match self.lookup_value_mut(key) {
-      Some(Stored::Tokens(ref mut tks)) => tks.unlist_mut().extend(value.unlist()),
-      None | Some(Stored::None) => self.assign_value(key, Stored::Tokens(value), None),
-      Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
-    }
-  }
-
-  /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
-  pub fn lookup_bool(&self, key: &str) -> bool {
-    match self.lookup_value(key) {
-      None => false,
-      Some(v) => v.into(),
-    }
-  }
-
-  /// like `lookup_value`, but casts the entry into a SymbolU32 from the string interner
-  ///  (`EMPTY_SYM` if None)
-  pub fn lookup_string_sym(&self, key: &str) -> SymbolU32 {
-    match self.lookup_value(key) {
-      None => *EMPTY_SYM,
-      Some(Stored::String(v)) => *v,
-      Some(other) => arena::pin(other.to_string()),
-    }
-  }
-
-  /// like `lookup_value`, but casts the entry into a String (empty if None)
-  pub fn lookup_string(&self, key: &str) -> String {
-    match self.lookup_value(key) {
-      None => String::new(),
-      Some(v) => v.into(),
-    }
-  }
-  /// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
-  pub fn lookup_int(&self, key: &str) -> i64 {
-    match self.lookup_value(key) {
-      Some(Stored::Int(i)) => *i,
-      Some(Stored::Bool(true)) => 1, // this is Perl's boolean -> integer semantics
-      Some(Stored::Number(n)) => n.value_of(),
-      _ => 0,
-    }
-  }
+  /// like `lookup_value` but only recognizes `Stored::VecString`
+  // TODO: consider switching to Rc<[String]>
   pub fn lookup_vec_string<'lvec>(&'lvec self, key: &'lvec str) -> Option<&Vec<String>> {
     match self.lookup_value(key) {
       Some(Stored::VecString(v)) => Some(v),
       _ => None,
     }
   }
+  /// like `lookup_value` but only recognizes `Stored::VecDequeStored`
   pub fn lookup_vecdeque<'lvdq>(&'lvdq self, key: &'lvdq str) -> Option<&VecDeque<Stored>> {
     match self.lookup_value(key) {
       None | Some(Stored::None) => None,
       Some(v) => v.into(),
     }
   }
-  pub fn remove_vecdeque<'lvdq>(&'lvdq mut self, key: &'lvdq str) -> Option<VecDeque<Stored>> {
-    match self.remove_value(key) {
-      Some(Stored::VecDequeStored(v)) => Some(v),
-      _ => None,
-    }
-  }
-  /// convenience method to lookup the current value at the "font" key
-  pub fn lookup_font(&self) -> Option<Rc<Font>> {
-    match self.lookup_value_sym(&FONT_SYM) {
-      None | Some(Stored::None) => None,
-      Some(f) => f.into(),
-    }
-  }
-  /// convenience method to lookup the current value at the "mathfont" key
-  pub fn lookup_mathfont(&self) -> Option<Rc<Font>> {
-    match self.lookup_value("mathfont") {
-      None | Some(Stored::None) => None,
-      Some(v) => v.into(),
-    }
-  }
-
-  /// a convenience method to globally asign a `Font` to the "font" key
-  pub fn assign_font(&mut self, font: Rc<Font>, scope: Option<Scope>) {
-    self.assign_value("font", Stored::Font(font), scope);
-  }
-
   pub fn lookup_font_info(&self, key: &Token) -> Result<Option<&Stored>> {
-    let key_str = if let Some(defn) = self.lookup_definition(key)? {
+    let key_str = if let Some(defn) = lookup_definition(key)? {
       s!("fontinfo_{}", defn.get_cs_name())
     } else {
       s!("fontinfo_{key}")
     };
     Ok(self.lookup_value(&key_str))
   }
-
-  /// a variant of `lookup_value` that casts the value into `Number`
-  pub fn lookup_number(&self, key: &str) -> Option<Number> {
-    match self.lookup_value(key) {
-      None | Some(Stored::None) => None,
-      Some(v) => v.into(),
-    }
-  }
-  /// a variant of `lookup_value` that casts the value into `Dimension`
-  pub fn lookup_dimension(&self, key: &str) -> Option<Dimension> {
-    match self.lookup_value(key) {
-      None | Some(Stored::None) => None,
-      Some(v) => v.into(),
-    }
-  }
-  /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
-  pub fn lookup_glue(&self, key: &str) -> Option<Glue> {
-    match self.lookup_value(key) {
-      Some(Stored::Glue(v)) => Some(*v),
-      None | Some(Stored::None) => None,
-      Some(other) => panic!("State lookup expected Glue, found: {other:?}"),
-    }
-  }
-  /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
-  pub fn lookup_muglue(&self, key: &str) -> Option<MuGlue> {
-    match self.lookup_value(key) {
-      Some(Stored::MuGlue(v)) => Some(*v),
-      None | Some(Stored::None) => None,
-      Some(other) => panic!("State lookup expected MuGlue, found: {other:?}"),
-    }
-  }
-  /// a variant of `lookup_value` that casts the response into `Tokens`
-  pub fn lookup_tokens(&self, key: &str) -> Option<Tokens> {
-    match self.lookup_value(key) {
-      None | Some(Stored::None) => None,
-      Some(Stored::Tokens(v)) => Some(v.clone()),
-      Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
-      Some(Stored::String(sym)) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
-      Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
-      _ => None,
-    }
-  }
-  /// a variant of `lookup_value` that only recognizes a `Stored::Token`
-  pub fn lookup_token(&self, key: &str) -> Option<&Token> {
-    match self.lookup_value(key) {
-      Some(Stored::Token(t)) => Some(t),
-      _ => None,
-    }
-  }
-
-  pub fn lookup_alignment(&self) -> Option<Digested> {
-    // Can only be a token or definition; we want defns!
-    // is this the right logic here? don't expand unless digesting?
-    self.lookup_value("Alignment").and_then(|v| {
-      if let Stored::Digested(d) = v {
-        if matches!(d.data(), DigestedData::Alignment(_)) {
-          // for now clone the Digested object (approx. an Rc<_> clone)
-          // instead of returning &Digested, to simplify lifetime checks
-          Some(d.clone())
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    })
-  }
-
-  pub fn assign_alignment(&mut self, alignment: Alignment, scope: Option<Scope>) {
-    self.assign_value("Alignment", alignment, scope);
-  }
-
-  pub fn lookup_register(&self, cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
-    let cs = T_CS!(cs);
-    Ok(
-    if let Some(defn) = self.lookup_definition(&cs)? {
-      if defn.is_register() {
-        defn.value_of(parameters)
-      } else {
-        let message = s!("The control sequence '{}' is not a register", cs);
-        Warn!("expected", "register", message);
-        None
-      }
-    } else {
-      // let message = s!("The control sequence '{}' is not defined", cs);
-      // Warn!("expected", "register", message);
-      None
-    })
-  }
-
-  pub fn lookup_expandable(&self, token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
-    // Can only be a token or definition; we want defns!
-    // is this the right logic here? don't expand unless digesting?
-    Ok(self
-      .lookup_definition(token)?
-      .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())))
-  }
-
-  /// Whether token must be wrapped as dont_expand
-  pub fn is_dont_expandable(&self, token: &Token) -> bool {
-    // Basically: a CS or Active token that is either not defined, or is expandable
-    // (but not \let to a token)
-    if token.get_catcode().is_active_or_cs() {
-      let lookupname = token.text;
-      if lookupname != *EMPTY_SYM {
-        match self.meaning.get(&lookupname) {
-          Some(entry) => {
-            if let Some(def) = entry.front() {
-              // the expandable variants are allowed
-              matches!(
-                def,
-                Stored::Expandable(_) | Stored::Conditional(_) | Stored::None
-              )
-            } else {
-              // undefined is allowed too (this is *really* subtle -- took some debugging of
-              // etoolbox) both an empty VDQ, a VDQ with an entry present but matching
-              // Stored::Noney, OR a completely missing VDQ are allowed "undefined" cases, each of
-              // which flagging as "true"
-              true
-            }
-          },
-          None => true,
-        }
-      } else {
-        true
-      }
-    } else {
-      false
-    }
-  }
-
-  pub fn lookup_conditional(&self, token: &Token) -> Option<ConditionalType> {
-    let lookupname = token.get_executable_name();
-    if lookupname.is_empty() {
-      None
-    } else if let Some(entry) = self.meaning.get(&arena::pin(lookupname)) {
-      if let Some(Stored::Conditional(defn)) = entry.front() {
-        // Can only be a token or definition; we only want defns that have conditional_type
-        Some(defn.conditional_type)
-      } else {
-        None
-      }
-    } else {
-      None
-    }
-  }
-
-  pub fn unshift_value<T: Into<Stored>>(&mut self, key: &str, values: Vec<T>) {
-    let values_iter = values.into_iter().map(Into::into);
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
-      self.assign_internal(
-        TableName::Value,
-        key_sym,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      )
-    }
-    let receiver = self.value.get_mut(&key_sym).unwrap().front_mut();
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) = receiver {
-      for value in values_iter.rev() {
-        // preserving order unshift, as Perl's
-        front.push_front(value)
-      }
-    } else {
-      panic!(
-        "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} \
-         got: {receiver:?}"
-      );
-    }
-  }
-
-  pub fn shift_value(&mut self, key: &str) -> Result<Option<Stored>> {
-    let key_sym = arena::pin(key);
-    if !self.value.contains_key(&key_sym) {
-      self.assign_internal(
-        TableName::Value,
-        key_sym,
-        Stored::VecDequeStored(VecDeque::new()),
-        Some(Scope::Global),
-      )
-    }
-    Ok(
-    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-      self.value.get_mut(&key_sym).unwrap().front_mut()
-    {
-      front.pop_front()
-    } else {
-      Error!(
-        "State",
-        "Stored",
-        "BUG: Tried to shift_value from a non-vecdeque value key!"
-      );
-      None
-    })
-  }
-
   /// manage a (global) hash of values
   pub fn lookup_mapping(&self, map: &str, key: &str) -> Option<&Stored> {
     let map_sym = arena::pin(map);
@@ -1088,30 +718,6 @@ impl State {
         _ => None,
       },
     }
-  }
-
-  pub fn assign_mapping<T: Into<Stored>>(&mut self, map: &str, key: &str, value: Option<T>) {
-    let map_sym = arena::pin(map);
-    if !self.value.contains_key(&map_sym) || self.value[&map_sym].is_empty() {
-      self.assign_internal(
-        TableName::Value,
-        map_sym,
-        Stored::HashStored(HashMap::default()),
-        Some(Scope::Global),
-      );
-    }
-    let map_store = self.value.get_mut(&map_sym).unwrap();
-    // TODO: What is the right abstraction here? this is hacky
-    let mut stub_hash = HashMap::default();
-    let mapping = match *map_store.front_mut().unwrap() {
-      Stored::HashStored(ref mut mapping) => mapping,
-      _ => &mut stub_hash,
-    };
-
-    match value {
-      None => mapping.remove(key),
-      Some(v) => mapping.insert(key.to_string(), v.into()),
-    };
   }
 
   pub fn lookup_mapping_keys(&self, map: &str) -> Vec<&str> {
@@ -1134,203 +740,6 @@ impl State {
     }
   }
 
-  //======================================================================
-  /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
-  /// that frame (0 is the topmost).
-  pub fn is_value_bound(&self, key: &str, frame_opt: Option<usize>) -> bool {
-    let key_sym = arena::pin(key);
-    match frame_opt {
-      Some(frame) => self
-        .undo
-        .get(frame)
-        .as_ref()
-        .unwrap()
-        .table(TableName::Value)
-        .contains_key(&key_sym),
-      None => !self
-        .value
-        .get(&key_sym)
-        .unwrap_or(&VecDeque::new())
-        .is_empty(),
-    }
-  }
-
-  //======================================================================
-  /// Lookup & assign a character's Catcode
-  pub fn lookup_catcode(&self, c: char) -> Option<Catcode> {
-    // speedup over variant with allocation
-    // i.e. "let s = c.to_string();"
-    let s = arena::pin_char(c);
-    match self.catcode.get(&s) {
-      None => None,
-      Some(cvec) => match cvec.front() {
-        Some(Stored::Catcode(cc)) => Some(*cc),
-        Some(_) => unimplemented!(), // best to fail hard if we set a nonsence value
-        _ => None,
-      },
-    }
-  }
-
-  /// assigns a Catcode for a given character
-  pub fn assign_catcode(&mut self, key: char, value: Catcode, scope: Option<Scope>) {
-    let s = arena::pin_char(key);
-    self.assign_internal(TableName::Catcode, s, Stored::Catcode(value), scope);
-  }
-  /// like `lookup_catcode` but targets Mathcode and its table
-  pub fn lookup_mathcode(&self, key: &str) -> Option<u16> {
-    let key_sym = arena::pin(key);
-    match self.mathcode.get(&key_sym) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  pub fn lookup_mathcode_sym(&self, key_sym: &SymbolU32) -> Option<u16> {
-    match self.mathcode.get(key_sym) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  /// like `assign_catcode` but targets Mathcode and its table
-  pub fn assign_mathcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
-    self.assign_internal(
-      TableName::Mathcode,
-      arena::pin_char(key),
-      Stored::Charcode(value.into()),
-      scope,
-    );
-  }
-  /// like `lookup_catcode` but targets Sfcode and its table
-  pub fn lookup_sfcode(&self, key: char) -> Option<u16> {
-    match self.sfcode.get(&arena::pin_char(key)) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  /// like `assign_catcode` but targets Sfcode and its table
-  pub fn assign_sfcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
-    self.assign_internal(
-      TableName::Sfcode,
-      arena::pin_char(key),
-      Stored::Charcode(value.into()),
-      scope,
-    );
-  }
-  /// like `lookup_catcode` but targets Lccode and its table
-  pub fn lookup_lccode(&self, key: char) -> Option<u16> {
-    match self.lccode.get(&arena::pin_char(key)) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  /// like `assign_catcode` but targets Lccode and its table
-  pub fn assign_lccode<T: Into<u16>, C: Into<char>>(
-    &mut self,
-    key: C,
-    value: T,
-    scope: Option<Scope>,
-  ) {
-    let c: char = key.into();
-    self.assign_internal(
-      TableName::Lccode,
-      arena::pin_char(c),
-      Stored::Charcode(value.into()),
-      scope,
-    );
-  }
-  /// like `lookup_catcode` but targets Uccode and its table
-  pub fn lookup_uccode(&self, key: char) -> Option<u16> {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.uccode.get(&s) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  /// like `assign_catcode` but targets Uccode and its table
-  pub fn assign_uccode<T: Into<u16>, C: Into<char>>(
-    &mut self,
-    key: C,
-    value: T,
-    scope: Option<Scope>,
-  ) {
-    let c: char = key.into();
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(c.encode_utf8(&mut tmp));
-    self.assign_internal(TableName::Uccode, s, Stored::Charcode(value.into()), scope);
-  }
-  /// like `lookup_catcode` but targets Delcode and its table
-  pub fn lookup_delcode(&self, key: char) -> Option<u16> {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    match self.delcode.get(&s) {
-      Some(c) => match c.front() {
-        Some(Stored::Charcode(codeval)) => Some(*codeval),
-        _ => None,
-      },
-      None => None,
-    }
-  }
-  /// like `assign_catcode` but targets Delcode and its table
-  pub fn assign_delcode<T: Into<u16>>(&mut self, key: char, value: T, scope: Option<Scope>) {
-    let mut tmp = [0u8; 3];
-    let s = arena::pin(key.encode_utf8(&mut tmp));
-    self.assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
-  }
-  /// Get the `Meaning' of a token.  For active control sequences
-  /// this may give the definition object (if defined) or another token (if \let) or undef
-  /// Any other token is returned as is.
-  pub fn lookup_meaning(&self, token: &Token) -> Option<Cow<Stored>> {
-    if token.get_catcode().is_active_or_cs()
-      && !token.has_smuggled()
-      && token.text != *EMPTY_SYM
-    {
-      match self.meaning.get(&token.text) {
-        Some(entry) => match entry.front() {
-          None | Some(Stored::None) => None,
-          Some(other) => Some(Cow::Borrowed(other)),
-        },
-        None => None,
-      }
-    } else {
-      Some(Cow::Owned(Stored::Token(token.clone())))
-    }
-  }
-
-  /// $meaning should be a definition (for defining active control sequences)
-  /// or another token, for \let
-  pub fn assign_meaning<T: Into<Stored>>(
-    &mut self,
-    token: &Token,
-    meaning: T,
-    scope: Option<Scope>,
-  ) {
-    let meaning = meaning.into();
-    // HACK!!!????
-    // short-circuit guard to avoid e.g. T_MATH let to itself
-    if let Stored::Token(ref mt) = meaning {
-      if token == mt {
-        return;
-      }
-    }
-    let csname_sym = token.pin_cs_name();
-    self.assign_internal(TableName::Meaning, csname_sym, meaning, scope);
-  }
-
   fn lookup_definition_internal<'def>(&'def self, key: &'def Token) -> Option<&VecDeque<Stored>> {
     let cc = key.get_catcode();
     let name = key.get_sym();
@@ -1350,699 +759,11 @@ impl State {
       None
     }
   }
-
-  /// used for expansion & various queries
-  /// Since we're not doing digestion here, we don't need to handle mathactive,
-  /// nor cs let to executable tokens
-  /// This returns a definition object, or undef
-  pub fn lookup_definition<'def>(&'def self, key: &'def Token) -> Result<Option<Rc<dyn Definition>>> {Ok(
-    if let Some(defs) = self.lookup_definition_internal(key) {
-      match defs.front() {
-        Some(Stored::Conditional(entry)) => Some(entry.clone()),
-        Some(Stored::Constructor(entry)) => Some(entry.clone()),
-        Some(Stored::Expandable(entry)) => Some(entry.clone()),
-        Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
-        Some(Stored::Primitive(entry)) => Some(entry.clone()),
-        Some(Stored::Register(entry)) => Some(entry.clone()),
-        Some(Stored::None) | Some(Stored::Token(_)) | None => None,
-        Some(v) => {
-          let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", message);
-          None
-        },
-      }
-    } else {
-      None
-    })
-  }
-
-  /// Returns a definition as `Stored` so that one can call `.read_arguments`,
-  /// which can't be specialized during compile-time over a trait object
-  /// Instead we'll dispatch via `Stored` at runtime, to allow generic calls
-  pub fn lookup_definition_stored<'def>(&'def self, key: &'def Token) -> Result<Option<Stored>> {Ok(
-    match self.lookup_definition_internal(key) {
-      Some(defs) => match defs.front() {
-        // Still, good time to handle the Token case and catch weird storage errors
-        Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
-        Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Rc::clone(entry))),
-        Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Rc::clone(entry))),
-        Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Rc::clone(entry))),
-        Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Rc::clone(entry))),
-        Some(Stored::Register(entry)) => Some(Stored::Register(Rc::clone(entry))),
-        Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
-          cs: key.with_str(|k| T_CS!(k)),
-          paramlist: None,
-          expansion: entry.clone().into(),
-          ..Expandable::default()
-        }))),
-        Some(v) => {
-          let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
-          Error!("unexpected", "value", message);
-          None
-        },
-        None => None,
-      },
-      _ => None,
-    })
-  }
-
-  /// A specialized version of `lookup_definition` for registers, since we can't adequately perform
-  /// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
-  pub fn lookup_register_definition(&self, key: &Token) -> Option<Rc<Register>> {
-    match self.lookup_definition_internal(key) {
-      Some(defs) => match defs.front() {
-        Some(Stored::Register(entry)) => Some(Rc::clone(entry)),
-        _ => None,
-      },
-      _ => None,
-    }
-  }
-  /// Recognizes mathactive tokens in math mode and also looks for
-  /// cs that have been let to other `executable' tokens.
-  /// Returns a definition object, or a "self inserting" token.
-  /// Used for digestion.
-  pub fn lookup_digestable_definition<'def>(&'def self, token: &'def Token) -> Option<Stored> {
-    let cc = token.get_catcode();
-    let t_sym = token.get_sym();
-    let is_active_or_cs = cc.is_active_or_cs();
-    let lookup_sym = if is_active_or_cs
-      || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
-        && self.lookup_bool("IN_MATH")
-        && (self.lookup_mathcode_sym(&t_sym).unwrap_or(0) == 0x8000))
-    {
-      t_sym
-    } else {
-      arena::pin(cc.name())
-    };
-    // Debug!("Looking up digestable {:?}", lookupname);
-    let entry_opt = self.meaning.get(&lookup_sym);
-    if lookup_sym != *EMPTY_SYM
-      && entry_opt.is_some()
-      && !entry_opt.as_ref().unwrap().is_empty()
-    {
-      // Debug!("Found definition for: {:?}", lookupname);
-      if let Some(entry) = entry_opt {
-        if let Some(front) = entry.front() {
-          if let Stored::Token(ref t) = front {
-            let lookup_sym = if t.has_smuggled() {
-              arena::pin_static("\\relax")
-            } else {
-              arena::pin(t.get_executable_primitive_name().unwrap_or_default())
-            };
-            if let Some(retry_entry) = self.meaning.get(&lookup_sym) {
-              // special case,
-              // If a cs has been let to an executable token, lookup ITS defn.
-              return retry_entry.front().cloned();
-            }
-          }
-          // if a regular definition, just return.
-          return Some(front.clone());
-        }
-      }
-    } else if is_active_or_cs {
-      return None;
-    }
-    Some(token.into())
-  }
-
-  // NOTE: Common usage patterns seem to be to lookup
-  //   expandable definitions
-  //   register values
-  //   conditionals
-  //   digestibles
-  // or just variants on testing defined-ness
-  // May be will introduce more clarity (possibly efficiency)
-  // to collect those more uniformly and implement here, or in Package
-
-  //======================================================================
-  /// Starts a new level of grouping.
-  /// Note that this is lower level than C<\bgroup>;
-  pub fn push_frame(&mut self) {
-    // Easy: just push a new undo frame.
-    self.undo.push_front(UndoFrame::default());
-  }
-  /// Ends the current level of grouping.
-  /// Note that this is lower level than `\egroup`;
-  pub fn pop_frame(&mut self) -> Result<()> {
-    if self.undo.front().as_ref().unwrap().locked {
-      fatal!(
-        TargetUnexpected,
-        Endgroup,
-        "attempt to pop last locked stack frame"
-      );
-    // Fatal('unexpected', '<endgroup>', $self->getStomach,
-    // "Attempt to pop last locked stack frame"); }
-    } else {
-      let popped_frame = self.undo.pop_front().unwrap();
-      for table_name in TableName::variants() {
-        let undo_table = popped_frame.table(*table_name);
-        let state_table = self.table_mut(*table_name);
-        for (key, undo_count) in undo_table.iter() {
-          // Typically only 1 value to shift off the table, unless scopes have been activated.
-          let named_table = state_table.get_mut(key).unwrap();
-          for _ in 0..*undo_count {
-            named_table.pop_front();
-          }
-        }
-      }
-    }
-    Ok(())
-  }
-
-  /// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
-  /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
-  /// This may give incorrect results for some special environments (e.g. minipage)
-  pub fn get_frame_depth(&self) -> usize {
-    self.undo.iter().filter(|frame| !frame.locked).count() - 1
-  }
-  /// begins a semiverbatim frame, neutralizing the usual + requested characters
-  pub fn begin_semiverbatim(&mut self, extraspecials: Option<&[char]>) {
-    // Is this a good/safe enough shorthand, or should we really be doing beginMode?
-    self.push_frame();
-    self.assign_value("MODE", "text", None);
-    self.assign_value("IN_MATH", false, None);
-    let mut all_specials: Vec<char> = Vec::new();
-    if let Some(extra) = extraspecials {
-      for special in extra {
-        all_specials.push(*special);
-      }
-    }
-    if let Some(Stored::VecChar(specials_store)) = self.lookup_value("SPECIALS") {
-      for special_char in specials_store {
-        all_specials.push(*special_char);
-      }
-    }
-
-    for special_char in all_specials {
-      self.assign_catcode(special_char, Catcode::OTHER, Some(Scope::Local));
-    }
-    // TODO:
-    // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
-    // try to stay as ASCII as possible
-    if let Some(ref current_font) = self.lookup_font() {
-      let local_font = current_font.merge(fontmap!(encoding => "ASCII"));
-      self.assign_font(Rc::new(local_font), Some(Scope::Local));
-    }
-  }
-  /// end by just calling `pop_frame`
-  pub fn end_semiverbatim(&mut self) -> Result<()> { self.pop_frame() }
-
-  //   #======================================================================
-
-  // sub pushDaemonFrame {
-  //   my ($self) = @_;
-  //   my $frame = {};
-  //   unshift(@{ $$self{undo} }, $frame);
-  //   # Push copys of data for any data that is mutable;
-  //   # Only the value & stash tables need to be to be checked.
-  //   # NOTE ??? No...
-  //   foreach my $table (qw(value stash)) {
-  //     if (my $hash = $$self{$table}) {
-  //       foreach my $key (keys %$hash) {
-  //         my $value = $$hash{$key}[0];
-  //         my $type  = ref $value;
-  // if (($type eq 'HASH') || ($type eq 'ARRAY')) {    # Only concerned with mutable perl
-  // data?                                                           # Local assignment
-  //           $$frame{$table}{$key} = 1;                      # Note new value in this frame.
-  //           unshift(@{ $$hash{$key} }, daemon_copy($value)); } } } }    # And push new binding.
-  //       # Record the contents of LaTeXML::Package::Pool as preloaded
-  //   my $pool_preloaded_hash = { map { $_ => 1 } keys %LaTeXML::Package::Pool:: };
-  //   $self->assignValue('_PRELOADED_POOL_', $pool_preloaded_hash, 'global');
-  //   # Now mark the top frame as LOCKED!!!
-  //   $$frame{_FRAME_LOCK_} = 1;
-  //   return; }
-
-  // sub daemon_copy {
-  //   my ($ob) = @_;
-  //   if (ref $ob eq 'HASH') {
-  //     my %hash = map { ($_ => daemon_copy($$ob{$_})) } keys %$ob;
-  //     return \%hash; }
-  //   elsif (ref $ob eq 'ARRAY') {
-  //     return [map { daemon_copy($_) } @$ob]; }
-  //   else {
-  //     return $ob; } }
-
-  // sub popDaemonFrame {
-  //   my ($self) = @_;
-  //   while (!$$self{undo}[0]{_FRAME_LOCK_}) {
-  //     $self->popFrame; }
-  //   if (scalar(@{ $$self{undo} } > 1)) {
-  //     delete $$self{undo}[0]{_FRAME_LOCK_};
-  //     # Any non-preloaded Pool routines should be wiped away, as we
-  //     # might want to reuse the Pool namespaces for the next run.
-  //     my $pool_preloaded_hash = $self->lookupValue('_PRELOADED_POOL_');
-  //     $self->assignValue('_PRELOADED_POOL_', undef, 'global');
-  //     foreach my $subname (keys %LaTeXML::Package::Pool::) {
-  //       unless (exists $$pool_preloaded_hash{$subname}) {
-  //         undef $LaTeXML::Package::Pool::{$subname};
-  //         delete $LaTeXML::Package::Pool::{$subname};
-  //       } }
-  //     # Finally, pop the frame
-  //     $self->popFrame; }
-  //   else {
-  //     Fatal('unexpected', '<endgroup>', $self->getStomach,
-  //       "Daemon Attempt to pop last stack frame"); }
-  //   return; }
-
-  // ======================================================================
-  /// Set one of the definition prefixes global, etc (only global matters!)
-  pub fn set_prefix(&mut self, prefix: &str) { self.prefixes.insert(arena::pin(prefix), true); }
-  /// gets the current value of a named prefix
-  pub fn get_prefix(&self, prefix: &str) -> bool {
-    match self.prefixes.get(&arena::pin(prefix)) {
-      Some(b) => *b,
-      _ => false,
-    }
-  }
-  /// clears the global prefixes
-  pub fn clear_prefixes(&mut self) { self.prefixes = HashMap::default(); }
-
-  // #======================================================================
-  ///
-  pub fn activate_scope(&mut self, scope: SymbolU32) {
-    // do not re-activate if already active.
-    if let Some(stash_active_entry) = self.stash_active.get(&scope) {
-      if !stash_active_entry.is_empty() {
-        return;
-      }
-    }
-
-    self.assign_internal(
-      TableName::StashActive,
-      scope,
-      Stored::Bool(true),
-      Some(Scope::Local),
-    );
-    // Also, we need to take ownership of the stashed data, so that we can assign it.
-    // TODO: Potential to optimize?
-    // Also x2, we are using a shared "Stored" interface for all data that passes through
-    // assign_internal, but that causes both uncertainty and overhead in the Stash table
-    // specifically. TODO x2: Maybe a more ambitious refactor will separate out the Stash logic
-    // and use "StashTable" directly instead of Stored::Stash(StashTable) ?
-
-    let mut actions = Vec::new();
-
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope).map(|x| x.iter().next()) {
-      for (table_name, key, value) in defns {
-        // copy the values out from the stashed defns, so that Rust
-        // is calm we are borrowing safely.
-
-        actions.push((*table_name, key.to_owned(), value.clone()));
-      }
-    }
-    // Here we ALWAYS push the stashed values into the table
-    // since they may be popped off by deactivateScope
-    for (table_name, key, value) in actions {
-      let frame = &mut self.undo[0];
-      let frame_table = frame.table_mut(table_name);
-      let entry = frame_table.entry(key).or_insert(0);
-      *entry += 1; // Note that this many values must be undone
-      let key_table = self
-        .table_mut(table_name)
-        .entry(key)
-        .or_insert_with(VecDeque::new);
-      key_table.push_front(value); // And push new binding.
-    }
-  }
-
-  // Probably, in most cases, the assignments made by activateScope
-  // will be undone by egroup or popping frames.
-  // But they can also be undone explicitly
-
-  /// Removes any definitions that were associated with the named `scope`.
-  /// Normally not needed, since a scopes definitions are locally bound anyway.
-  pub fn deactivate_scope(&mut self, scope: SymbolU32) {
-    let scope_exists = match self.stash_active.get(&scope) {
-      None => false,
-      Some(v) => !v.is_empty(),
-    };
-    if !scope_exists {
-      return;
-    }
-
-    self.assign_internal(
-      TableName::StashActive,
-      scope,
-      Stored::Bool(false),
-      Some(Scope::Global),
-    );
-
-    let mut collected = Vec::new();
-    if let Some(Some(Stored::Stash(defns))) = self.stash.get(&scope).map(|x| x.iter().next()) {
-      for (table_name, key, value) in defns {
-        collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
-      }
-    }
-
-    for (table_name, key, value) in collected {
-      let front_is_value = if let Some(table_entry_peek) = self.table(table_name).get(&key) {
-        if let Some(table_front) = table_entry_peek.front() {
-          *table_front == value
-        } else {
-          false
-        }
-      } else {
-        false
-      };
-      let table_entry = self.table_mut(table_name).entry(key).or_default();
-      if front_is_value {
-        // Here we're popping off the values pushed by activateScope
-        // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
-        (*table_entry).pop_front();
-
-        if let Some(frame) = self.undo.front_mut() {
-          let frame_table = frame.table_mut(table_name);
-          let frame_count = frame_table.entry(key).or_default();
-          *frame_count -= 1;
-        }
-      } else {
-        let message = arena::with(key, |key_str| {
-          s!(
-          "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
-           is {:?}",
-          key_str,
-          table_name,
-          value,
-          table_entry
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<String>>()
-            .join(", ")
-        )
-        });
-        arena::with(key, |key_str| {
-          Warn!("internal", key_str, message)
-        });
-      }
-    }
-  }
-  /// return all known named scopes
-  pub fn get_known_scopes(&self) -> Vec<SymbolU32> {
-    self.stash.keys().copied().collect::<Vec<_>>()
-  }
-  /// return the currently activated named scopes
-  pub fn get_active_scopes(&self) -> Vec<SymbolU32> {
-    self.stash_active.keys().copied().collect::<Vec<_>>()
-  }
-
-  //======================================================================
-  // Units.
-  // Put here since it could concievably evolve to depend on the current font.
-  /// convert a unit name into a `f64` scaling factor over `sp`
-  pub fn convert_unit(&self, unit_arg: &str) -> f64 {
-    let unit = unit_arg.to_lowercase();
-    // Eventually try to track font size?
-    match unit.as_str() {
-      "em" => self.lookup_font().unwrap().get_em_width() as f64,
-      "ex" => self.lookup_font().unwrap().get_ex_height() as f64,
-      "mu" => self.lookup_font().unwrap().get_mu_width() as f64,
-      u => match UNITS.get(u) {
-        Some(sp) => *sp,
-        None => {
-          let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
-          Warn!("expected", "<unit>", message);
-          *UNITS.get("pt").unwrap()
-        },
-      },
-    }
-  }
-
-  // ======================================================================
-
-  // sub getStatus {
-  //   my ($self, $type) = @_;
-  //   return $$self{status}{$type}; }
-
-  // sub getStatusMessage {
-  //   my ($self) = @_;
-  //   my $status = $$self{status};
-  //   my @report = ();
-  // push(@report, colorizeString("$$status{warning} warning" . ($$status{warning} > 1 ? 's' :
-  // ''), 'warning'))     if $$status{warning};
-  // push(@report, colorizeString("$$status{error} error" . ($$status{error} > 1 ? 's' : ''),
-  // 'error'))     if $$status{error};
-  //   push(@report, "$$status{fatal} fatal error" . ($$status{fatal} > 1 ? 's' : ''))
-
-  //     if $$status{fatal};
-  //   my @undef = ($$status{undefined} ? keys %{ $$status{undefined} } : ());
-  //   push(@report, colorizeString(scalar(@undef) . " undefined macro" . (@undef > 1 ? 's' : '')
-  //         . "[" . join(', ', @undef) . "]", 'details'))
-  //     if @undef;
-  //   my @miss = ($$status{missing} ? keys %{ $$status{missing} } : ());
-  //   push(@report, colorizeString(scalar(@miss) . " missing file" . (@miss > 1 ? 's' : '')
-  //         . "[" . join(', ', @miss) . "]", 'details'))
-  //     if @miss;
-  //   return join('; ', @report) || colorizeString('No obvious problems', 'success'); }
-
-  // sub getStatusCode {
-  //   my ($self) = @_;
-  //   my $status = $$self{status};
-  //   my $code;
-  //   if ($$status{fatal} && $$status{fatal} > 0) {
-  //     $code = 3; }
-  //   elsif ($$status{error} && $$status{error} > 0) {
-  //     $code = 2; }
-  //   elsif ($$status{warning} && $$status{warning} > 0) {
-  //     $code = 1; }
-  //   else {
-  //     $code = 0; }
-  //   return $code; }
-  // #======================================================================
-
-  /// The indirect model includes all elements allowed as direct children,
-  /// and all descendents of a node that can be inserted after
-  /// auto_open-ing intermediate elements.
-  /// This model therefor includes information from the Schema, as well as
-  /// auto_open information that may be introduced in binding files.
-  // [Thus it should NOT be modifying the Model object, which may cover several documents]
-  pub fn compute_indirect_model(&mut self) -> IndirectModel {
-    let mut imodel: IndirectModel = HashMap::default();
-    // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
-    let mut openable: HashSet<SymbolU32> = HashSet::default();
-    for tag in model!().get_sym_tags() {
-      if let Some(x) = self.tag_properties.get(&tag) {
-        if let Some(true) = x.auto_open {
-          openable.insert(tag);
-        }
-      }
-    }
-
-    for tag in model!().get_sym_tags() {
-      let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
-      crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
-      let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
-      for kid in desc_keys {
-        let mut best = 0; // Find best path to $kid.
-        let desc_kid_keys: Vec<SymbolU32> = desc
-          .entry(kid)
-          .or_insert_with(HashMap::default)
-          .keys()
-          .copied()
-          .collect();
-        // desc_kid_keys.sort(); // TODO: why sort?
-        for start in desc_kid_keys {
-          let start_entry = {
-            let kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
-            *kid_entry.entry(start.to_owned()).or_insert(0)
-          };
-          if start_entry > best {
-            imodel
-              .entry(tag)
-              .or_insert_with(HashMap::default)
-              .insert(kid, start.to_owned());
-            {
-              best = desc[&kid][&start];
-            }
-          }
-        }
-      }
-    }
-    // PATCHUP
-    if model!().permissive {
-      // !!! Alarm!!!
-      imodel
-        .entry(arena::pin_static("#Document"))
-        .or_insert_with(HashMap::default)
-        .insert(*H_PCDATA_SYM, *LTX_P_SYM);
-    }
-
-    imodel
-  }
-
-  /// Initialize various stomach parameters, preload, etc.
-  pub fn initialize_stomach(&mut self) {
-    self.assign_value("MODE", "text", Some(Scope::Global));
-    self.assign_value("IN_MATH", false, Some(Scope::Global));
-    self.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
-    self.assign_value(
-      "afterGroup",
-      Stored::VecDequeStored(VecDeque::new()),
-      Some(Scope::Global),
-    );
-    self.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-    self.assign_value(
-      "groupInitiator",
-      String::from("Initialization"),
-      Some(Scope::Global),
-    );
-    // Setup default fonts.
-    self.assign_value("font", Font::text_default(), Some(Scope::Global));
-    self.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
-  }
-
-  // Package helpers used in core need to be localized here -- as state::methods
-  /// `Let` macro setter
-  pub fn let_i(
-    &mut self,
-    token1: &Token,
-    token2: &Token,
-    scope: Option<Scope>,
-  ) {
-    let meaning = if token2.get_dont_expand().is_some() {
-      Cow::Owned(Stored::Token(token2.clone()))
-    } else {
-      self
-        .lookup_meaning(token2)
-        .unwrap_or(Cow::Owned(Stored::None))
-    };
-    self.assign_meaning(token1, meaning.into_owned(), scope);
-    self.after_assignment();
-  }
-  /// `XEquals` check for two token arguments
-  pub fn x_equals(&self, token1: &Token, token2: &Token) -> bool {
-    let def1_opt = self.lookup_meaning(token1); // # token, definition object or None
-    let def2_opt = self.lookup_meaning(token2); // ditto
-    match (def1_opt, def2_opt) {
-      (Some(def1), Some(def2)) => *def1 == *def2, // If both have defns, must be same defn!
-      (None, None) => true,                       // true if both undefined
-      (_, _) => false,                            // False, if only one has 'meaning'
-    }
-  }
-
-  /// simple id generator for a ligature
-  pub fn generate_ligature_id(&mut self) -> usize {
-    let id = 1 + self.lookup_int("autogen_ligature_id");
-    self.assign_value("autogen_ligature_id", Stored::Int(id), Scope::Global);
-    id as usize
-  }
-
-  /// run the accumulated directives from `\afterassignment`
-  pub fn after_assignment(&mut self) {
-    match self.remove_value("afterAssignment") {
-      Some(Stored::Tokens(after)) => gullet::unread(after),
-      Some(Stored::Token(after)) => gullet::unread_one(after),
-      None | Some(Stored::None) => {},
-      Some(other) => panic!("unexpected in after_assignment: {other:?}"),
-    }
-  }
-
-  // Ported from Perl's "local" declarations
-
-  /// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
-  pub fn set_ifframe(&mut self, if_frame: Option<Rc<RefCell<IfFrame>>>) {
-    self.localized.if_frames.push(if_frame);
-  }
-
-  /// retrieves the most recent (originally Perl-local) `IfFrame`
-  pub fn get_ifframe(&self) -> Option<Rc<RefCell<IfFrame>>> {
-    match self.localized.if_frames.last() {
-      Some(Some(frame)) => Some(Rc::clone(frame)),
-      _ => None,
-    }
-  }
-  /// expires the most recent (originally Perl-local) `IfFrame`
-  pub fn expire_ifframe(&mut self) { self.localized.if_frames.pop(); }
-  /// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-  pub fn set_smuggle_the(&mut self, smuggle_the: bool) {
-    self.localized.smuggle_the.push(smuggle_the);
-  }
-  /// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-  pub fn get_smuggle_the(&self) -> bool {
-    match self.localized.smuggle_the.last() {
-      Some(v) => *v,
-      _ => false,
-    }
-  }
-  /// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-  pub fn expire_smuggle_the(&mut self) { self.localized.smuggle_the.pop(); }
-  /// localizes a new current token. see `Stomach::invoke_token`
-  pub fn local_current_token(&mut self, token: Token) { self.localized.current_token.push(token); }
-  /// expires the most recent (localized) current token.
-  pub fn expire_current_token(&mut self) { self.localized.current_token.pop(); }
   /// gets the (localized) current token
-  pub fn get_current_token(&self) -> Option<&Token> { self.localized.current_token.last() }
-
-  /// sets the (localized) flag for "dual branch"
-  pub fn set_dual_branch(&mut self, mode: &'static str) { self.localized.dual_branch.push(mode); }
-  /// expire (localized) flag for "dual branch"
-  pub fn expire_dual_branch(&mut self) { self.localized.dual_branch.pop(); }
-  /// get the current value for "dual branch"
-  pub fn get_dual_branch(&self) -> Option<&'static str> {
-    self.localized.dual_branch.last().cloned()
-  }
-
-  pub fn increment_align_group_count(&mut self) {
-    match self.localized.align_group_count.last_mut() {
-      Some(v) => *v += 1,
-      None => {
-        self.localized.align_group_count.push(1);
-      },
-    }
-  }
-  pub fn decrement_align_group_count(&mut self) {
-    match self.localized.align_group_count.last_mut() {
-      Some(v) => *v -= 1,
-      None => {
-        self.localized.align_group_count.push(-1);
-      },
-    }
-  }
-  pub fn align_group_count(&self) -> i32 {
-    self
-      .localized
-      .align_group_count
-      .last()
-      .copied()
-      .unwrap_or_default()
-  }
-  pub fn set_align_group_count(&mut self, v: i32) {
-    if let Some(gc) = self.localized.align_group_count.last_mut() {
-      *gc = v;
-    } else {
-      self.localized.align_group_count.push(v);
-    }
-  }
-  pub fn local_align_group_count(&mut self, v: i32) { self.localized.align_group_count.push(v); }
-  pub fn expire_align_group_count(&mut self) -> Option<i32> {
-    self.localized.align_group_count.pop()
-  }
-
-  pub fn get_reading_alignment(&self) -> Option<Digested> {
-    self.localized.reading_alignment.last().map(Clone::clone)
-  }
-  pub fn has_reading_alignment(&self) -> bool { !self.localized.reading_alignment.is_empty() }
-  pub fn local_reading_alignment(&mut self, alignment: &Digested) {
-    self.localized.reading_alignment.push(alignment.clone());
-  }
-  pub fn expire_reading_alignment(&mut self) -> Option<Digested> {
-    self.localized.reading_alignment.pop()
-  }
-
-  pub fn local_build_template(&mut self, template: Template) {
-    self.localized.build_template.push(template);
-  }
-  pub fn set_build_template(&mut self, template: Template) {
-    *self
-      .localized
-      .build_template
-      .last_mut()
-      .expect("set_build_template should not be called before the first local_build_template") =
-      template;
-  }
+  pub fn get_current_token(&self) -> Option<&Token> { self.localized.current_token.last()  }
   pub fn current_build_template(&mut self) -> Option<&mut Template> {
     self.localized.build_template.last_mut()
   }
-  pub fn take_build_template(&mut self) -> Option<Template> { self.localized.build_template.pop() }
 }
 
 static mut USES_STY : bool = false;
@@ -2166,59 +887,271 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 }
 
 
-// TODO: Move this to a prelude.
+// SAFETY
+// any method which does not return a borrowed piece of data should be package-level
+// so that the global singleton State can get locked+unlocked during the same call
+// thus entirely AVOIDING possible runtime panics due to RefCell lock races.
+// TODO: Should this be a prelude?
 
+/// assigns a `Stored` value at the given key and scope
 pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(
-  key: &str, value: T, scope: S) {
-  state_mut!().assign_value(key, value, scope);
+  key: &str,
+  value: T,
+  scope: S,
+  ) {
+  state_mut!().assign_value(key,value,scope)
 }
+
+/// assigns a `Stored` value at the given (arena ticket!) key and scope
 pub fn assign_value_sym<T: Into<Stored>, S: Into<Option<Scope>>>(
   key: SymbolU32,
   value: T,
   scope: S,
-) { state_mut!().assign_value_sym(key,value,scope); }
+) {
+  let value = value.into();
+  let scope = scope.into();
+  state_mut!().assign_internal(TableName::Value, key, value, scope);
+}
 
-pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {
-  state!().lookup_definition(key)
+/// inline lookup_value after which globally assign an empty Tokens() to undo
+pub fn remove_value(key: &str) -> Option<Stored> {
+  let key_sym = arena::pin(key);
+  match state_mut!().value.get_mut(&key_sym) {
+    None => None,
+    Some(vvec) => match vvec.front_mut() {
+      None | Some(&mut Stored::None) => Option::None,
+      Some(found) => Some(std::mem::take(found)),
+    },
+  }
 }
+/// Replaces the value in question with `Stored::None` (see `checkin_value` for returning it)
+pub fn checkout_value(key: &str) -> Option<Stored> {
+  match state_mut!().value.get_mut(&arena::pin(key)) {
+    None => None,
+    Some(vvec) => vvec.front_mut().map(std::mem::take),
+  }
+}
+/// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
+pub fn checkin_value(key: &str, value: Stored) {
+  match state_mut!().value.get_mut(&arena::pin(key)) {
+    None => unimplemented!(),
+    Some(vvec) => match vvec.front_mut() {
+      None => unimplemented!(),
+      Some(found) => {
+        match found {
+          Stored::None => std::mem::replace(found, value),
+          _ => panic!("checkin_value should only be called after checkout_value"),
+        };
+      },
+    },
+  }
+}
+/// manage a (global) list of values
+pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
+  let key_sym = arena::pin(key);
+  let value = value.into();
+  let mut state = state_mut!();
+  if !state.value.contains_key(&key_sym) {
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    );
+  }
+  match state.value.get_mut(&key_sym).unwrap().front_mut() {
+    Some(&mut Stored::VecDequeStored(ref mut front)) => front.push_back(value),
+    // auto-vivify, if None
+    Some(ref mut field) if matches!(field, Stored::None) => {
+      let mut new_vdq = VecDeque::new();
+      new_vdq.push_back(value);
+      **field = Stored::VecDequeStored(new_vdq);
+    },
+    other => {
+      let message =
+        s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
+      Error!("State", "Stored", message);
+    },
+  }
+  Ok(())
+}
+/// pops the last value in a named `Stored::VecDequeStored` queue, if any
+pub fn pop_value(key: &str) -> Result<Option<Stored>> {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  if !state.value.contains_key(&key_sym) {
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    );
+  }
+  if let Some(&mut Stored::VecDequeStored(ref mut front)) =
+    state.value.get_mut(&key_sym).unwrap().front_mut()
+  {
+    Ok(front.pop_back())
+  } else {
+    Error!(
+      "State",
+      "Stored",
+      "BUG: Tried to pop_value from a non-vecdeque value key!"
+    );
+    Ok(None)
+  }
+}
+/// Check if the Value table contains a given key
+pub fn has_value(key: &str) -> bool {
+  let key_sym = arena::pin(key);
+  match state!().value.get(&key_sym) {
+    None => false,
+    Some(list) => match list.front() {
+      None => false,
+      Some(v) => !matches!(v, &Stored::None),
+    },
+  }
+}
+/// Pushes Tokens into a `Stored::Tokens` value when defined,
+/// or assigns when new.
+pub fn push_tokens(key: &str, value: Tokens) {
+  let mut state = state_mut!();
+  match state.lookup_value_mut(key) {
+    Some(Stored::Tokens(ref mut tks)) => tks.unlist_mut().extend(value.unlist()),
+    None | Some(Stored::None) => state.assign_value(key, Stored::Tokens(value), None),
+    Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
+  }
+}
+/// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
+pub fn lookup_bool(key: &str) -> bool {
+  let state = state!();
+  match state.lookup_value(key) {
+    None => false,
+    Some(v) => v.into(),
+  }
+}
+/// like `lookup_value`, but casts the entry into a SymbolU32 from the string interner
+///  (`EMPTY_SYM` if None)
+pub fn lookup_string_sym(key: &str) -> SymbolU32 {
+  let state = state!();
+  match state.lookup_value(key) {
+    None => *EMPTY_SYM,
+    Some(Stored::String(v)) => *v,
+    Some(other) => arena::pin(other.to_string()),
+  }
+}
+/// like `lookup_value`, but casts the entry into a String (empty if None)
+pub fn lookup_string(key: &str) -> String {
+  let state = state!();
+  match state.lookup_value(key) {
+    None => String::new(),
+    Some(v) => v.into(),
+  }
+}
+/// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
+pub fn lookup_int(key: &str) -> i64 {
+  let state = state!();
+  match state.lookup_value(key) {
+    Some(Stored::Int(i)) => *i,
+    Some(Stored::Bool(true)) => 1, // this is Perl's boolean -> integer semantics
+    Some(Stored::Number(n)) => n.value_of(),
+    _ => 0,
+  }
+}
+
+pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
+  match remove_value(key) {
+    Some(Stored::VecDequeStored(v)) => Some(v),
+    _ => None,
+  }
+}
+/// convenience method to lookup the current value at the "font" key
+pub fn lookup_font() -> Option<Rc<Font>> {
+  match state!().lookup_value_sym(&FONT_SYM) {
+    None | Some(Stored::None) => None,
+    Some(f) => f.into(),
+  }
+}
+/// convenience method to lookup the current value at the "mathfont" key
+pub fn lookup_mathfont() -> Option<Rc<Font>> {
+  match state!().lookup_value("mathfont") {
+    None | Some(Stored::None) => None,
+    Some(v) => v.into(),
+  }
+}
+
+/// a convenience method to globally asign a `Font` to the "font" key
 pub fn assign_font(font: Rc<Font>, scope: Option<Scope>) {
-  state_mut!().assign_font(font,scope)
+  assign_value("font", Stored::Font(font), scope);
 }
+
 /// a variant of `lookup_value` that casts the value into `Number`
 pub fn lookup_number(key: &str) -> Option<Number> {
-  state!().lookup_number(key)
+  match state!().lookup_value(key) {
+    None | Some(Stored::None) => None,
+    Some(v) => v.into(),
+  }
 }
 /// a variant of `lookup_value` that casts the value into `Dimension`
 pub fn lookup_dimension(key: &str) -> Option<Dimension> {
-  state!().lookup_dimension(key)
+  match state!().lookup_value(key) {
+    None | Some(Stored::None) => None,
+    Some(v) => v.into(),
+  }
 }
 /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
 pub fn lookup_glue(key: &str) -> Option<Glue> {
-  state!().lookup_glue(key)
+  match state!().lookup_value(key) {
+    Some(Stored::Glue(v)) => Some(*v),
+    None | Some(Stored::None) => None,
+    Some(other) => panic!("State lookup expected Glue, found: {other:?}"),
+  }
 }
 /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
 pub fn lookup_muglue(key: &str) -> Option<MuGlue> {
-  state!().lookup_muglue(key)
+  match state!().lookup_value(key) {
+    Some(Stored::MuGlue(v)) => Some(*v),
+    None | Some(Stored::None) => None,
+    Some(other) => panic!("State lookup expected MuGlue, found: {other:?}"),
+  }
 }
 /// a variant of `lookup_value` that casts the response into `Tokens`
 pub fn lookup_tokens(key: &str) -> Option<Tokens> {
-  state!().lookup_tokens(key)
+  match state!().lookup_value(key) {
+    None | Some(Stored::None) => None,
+    Some(Stored::Tokens(v)) => Some(v.clone()),
+    Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
+    Some(Stored::String(sym)) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
+    Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
+    _ => None,
+  }
 }
 /// a variant of `lookup_value` that only recognizes a `Stored::Token`
 pub fn lookup_token(key: &str) -> Option<Token> {
-  state!().lookup_token(key).cloned()
+  match state!().lookup_value(key) {
+    Some(Stored::Token(t)) => Some(t.clone()),
+    _ => None,
+  }
 }
 
 pub fn lookup_alignment() -> Option<Digested> {
-  state!().lookup_alignment()
+  // Can only be a token or definition; we want defns!
+  // is this the right logic here? don't expand unless digesting?
+  state!().lookup_value("Alignment").and_then(|v| {
+    if let Stored::Digested(d) = v {
+      if matches!(d.data(), DigestedData::Alignment(_)) {
+        // for now clone the Digested object (approx. an Rc<_> clone)
+        // instead of returning &Digested, to simplify lifetime checks
+        Some(d.clone())
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  })
 }
-
 pub fn assign_alignment(alignment: Alignment, scope: Option<Scope>) {
-  state_mut!().assign_alignment(alignment, scope)
-}
-
-pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
-  state!().lookup_register(cs,parameters)
+  assign_value("Alignment", alignment, scope);
 }
 
 pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, parameters: Vec<ArgWrap>) -> Result<()> {
@@ -2234,128 +1167,1063 @@ pub fn assign_register(cs:&str, value: RegisterValue, scope: Option<Scope>, para
       format!("The control sequence '{cs}' is not a register"));
   Ok(())
 }
+pub fn lookup_register(cs: &str, parameters: Vec<ArgWrap>) -> Result<Option<RegisterValue>> {
+  let cs = T_CS!(cs);
+  Ok(
+  if let Some(defn) = lookup_definition(&cs)? {
+    if defn.is_register() {
+      defn.value_of(parameters)
+    } else {
+      let message = s!("The control sequence '{}' is not a register", cs);
+      Warn!("expected", "register", message);
+      None
+    }
+  } else {
+    // let message = s!("The control sequence '{}' is not defined", cs);
+    // Warn!("expected", "register", message);
+    None
+  })
+}
 
+pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
+  // Can only be a token or definition; we want defns!
+  // is this the right logic here? don't expand unless digesting?
+  Ok(lookup_definition(token)?
+    .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())))
+}
+
+/// Whether token must be wrapped as dont_expand
+pub fn is_dont_expandable(token: &Token) -> bool {
+  // Basically: a CS or Active token that is either not defined, or is expandable
+  // (but not \let to a token)
+  if token.get_catcode().is_active_or_cs() {
+    let lookupname = token.text;
+    if lookupname != *EMPTY_SYM {
+      match state!().meaning.get(&lookupname) {
+        Some(entry) => {
+          if let Some(def) = entry.front() {
+            // the expandable variants are allowed
+            matches!(
+              def,
+              Stored::Expandable(_) | Stored::Conditional(_) | Stored::None
+            )
+          } else {
+            // undefined is allowed too (this is *really* subtle -- took some debugging of
+            // etoolbox) both an empty VDQ, a VDQ with an entry present but matching
+            // Stored::Noney, OR a completely missing VDQ are allowed "undefined" cases, each of
+            // which flagging as "true"
+            true
+          }
+        },
+        None => true,
+      }
+    } else {
+      true
+    }
+  } else {
+    false
+  }
+}
+
+pub fn lookup_conditional(token: &Token) -> Option<ConditionalType> {
+  let lookupname = token.get_executable_name();
+  if lookupname.is_empty() {
+    None
+  } else if let Some(entry) = state!().meaning.get(&arena::pin(lookupname)) {
+    if let Some(Stored::Conditional(defn)) = entry.front() {
+      // Can only be a token or definition; we only want defns that have conditional_type
+      Some(defn.conditional_type)
+    } else {
+      None
+    }
+  } else {
+    None
+  }
+}
+
+pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
+  let values_iter = values.into_iter().map(Into::into);
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  if !state.value.contains_key(&key_sym) {
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    )
+  }
+  let receiver = state.value.get_mut(&key_sym).unwrap().front_mut();
+  if let Some(&mut Stored::VecDequeStored(ref mut front)) = receiver {
+    for value in values_iter.rev() {
+      // preserving order unshift, as Perl's
+      front.push_front(value)
+    }
+  } else {
+    panic!(
+      "unshift_value can only work on a Stored::VecDequeStored receiver. Instead, key {key:?} \
+       got: {receiver:?}"
+    );
+  }
+}
+
+pub fn shift_value(key: &str) -> Result<Option<Stored>> {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  if !state.value.contains_key(&key_sym) {
+    state.assign_internal(
+      TableName::Value,
+      key_sym,
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    )
+  }
+  Ok(
+  if let Some(&mut Stored::VecDequeStored(ref mut front)) =
+    state.value.get_mut(&key_sym).unwrap().front_mut()
+  {
+    front.pop_front()
+  } else {
+    Error!(
+      "State",
+      "Stored",
+      "BUG: Tried to shift_value from a non-vecdeque value key!"
+    );
+    None
+  })
+}
+
+pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
+  let map_sym = arena::pin(map);
+  let mut state = state_mut!();
+  if !state.value.contains_key(&map_sym) || state.value[&map_sym].is_empty() {
+    state.assign_internal(
+      TableName::Value,
+      map_sym,
+      Stored::HashStored(HashMap::default()),
+      Some(Scope::Global),
+    );
+  }
+  let map_store = state.value.get_mut(&map_sym).unwrap();
+  // TODO: What is the right abstraction here? this is hacky
+  let mut stub_hash = HashMap::default();
+  let mapping = match *map_store.front_mut().unwrap() {
+    Stored::HashStored(ref mut mapping) => mapping,
+    _ => &mut stub_hash,
+  };
+
+  match value {
+    None => mapping.remove(key),
+    Some(v) => mapping.insert(key.to_string(), v.into()),
+  };
+}
+
+//======================================================================
+/// Was `name` bound?  If  `frame` is given, check only whether it is bound in
+/// that frame (0 is the topmost).
+pub fn is_value_bound(key: &str, frame_opt: Option<usize>) -> bool {
+  let key_sym = arena::pin(key);
+  match frame_opt {
+    Some(frame) => state!()
+      .undo
+      .get(frame)
+      .as_ref()
+      .unwrap()
+      .table(TableName::Value)
+      .contains_key(&key_sym),
+    None => !state!()
+      .value
+      .get(&key_sym)
+      .unwrap_or(&VecDeque::new())
+      .is_empty(),
+  }
+}
+
+//======================================================================
+/// Lookup & assign a character's Catcode
+pub fn lookup_catcode(c: char) -> Option<Catcode> {
+  // speedup over variant with allocation
+  // i.e. "let s = c.to_string();"
+  let s = arena::pin_char(c);
+  match state!().catcode.get(&s) {
+    None => None,
+    Some(cvec) => match cvec.front() {
+      Some(Stored::Catcode(cc)) => Some(*cc),
+      Some(_) => unimplemented!(), // best to fail hard if we set a nonsence value
+      _ => None,
+    },
+  }
+}
+
+/// assigns a Catcode for a given character
+pub fn assign_catcode(key: char, value: Catcode, scope: Option<Scope>) {
+  let s = arena::pin_char(key);
+  state_mut!().assign_internal(TableName::Catcode, s, Stored::Catcode(value), scope);
+}
+/// like `lookup_catcode` but targets Mathcode and its table
+pub fn lookup_mathcode(key: &str) -> Option<u16> {
+  let key_sym = arena::pin(key);
+  match state!().mathcode.get(&key_sym) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+pub fn lookup_mathcode_sym(key_sym: &SymbolU32) -> Option<u16> {
+  match state!().mathcode.get(key_sym) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+/// like `assign_catcode` but targets Mathcode and its table
+pub fn assign_mathcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
+  state_mut!().assign_internal(
+    TableName::Mathcode,
+    arena::pin_char(key),
+    Stored::Charcode(value.into()),
+    scope,
+  );
+}
+/// like `lookup_catcode` but targets Sfcode and its table
+pub fn lookup_sfcode(key: char) -> Option<u16> {
+  match state!().sfcode.get(&arena::pin_char(key)) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+/// like `assign_catcode` but targets Sfcode and its table
+pub fn assign_sfcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
+  state_mut!().assign_internal(
+    TableName::Sfcode,
+    arena::pin_char(key),
+    Stored::Charcode(value.into()),
+    scope,
+  );
+}
+/// like `lookup_catcode` but targets Lccode and its table
+pub fn lookup_lccode(key: char) -> Option<u16> {
+  match state!().lccode.get(&arena::pin_char(key)) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+/// like `assign_catcode` but targets Lccode and its table
+pub fn assign_lccode<T: Into<u16>, C: Into<char>>(
+    key: C,
+  value: T,
+  scope: Option<Scope>,
+) {
+  let c: char = key.into();
+  state_mut!().assign_internal(
+    TableName::Lccode,
+    arena::pin_char(c),
+    Stored::Charcode(value.into()),
+    scope,
+  );
+}
+/// like `lookup_catcode` but targets Uccode and its table
+pub fn lookup_uccode(key: char) -> Option<u16> {
+  let mut tmp = [0u8; 3];
+  let s = arena::pin(key.encode_utf8(&mut tmp));
+  match state!().uccode.get(&s) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+/// like `assign_catcode` but targets Uccode and its table
+pub fn assign_uccode<T: Into<u16>, C: Into<char>>(
+    key: C,
+  value: T,
+  scope: Option<Scope>,
+) {
+  let c: char = key.into();
+  let mut tmp = [0u8; 3];
+  let s = arena::pin(c.encode_utf8(&mut tmp));
+  state_mut!().assign_internal(TableName::Uccode, s, Stored::Charcode(value.into()), scope);
+}
+/// like `lookup_catcode` but targets Delcode and its table
+pub fn lookup_delcode(key: char) -> Option<u16> {
+  let mut tmp = [0u8; 3];
+  let s = arena::pin(key.encode_utf8(&mut tmp));
+  match state!().delcode.get(&s) {
+    Some(c) => match c.front() {
+      Some(Stored::Charcode(codeval)) => Some(*codeval),
+      _ => None,
+    },
+    None => None,
+  }
+}
+/// like `assign_catcode` but targets Delcode and its table
+pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
+  let mut tmp = [0u8; 3];
+  let s = arena::pin(key.encode_utf8(&mut tmp));
+  state_mut!().assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
+}
+/// Get the `Meaning' of a token.  For active control sequences
+/// this may give the definition object (if defined) or another token (if \let) or undef
+/// Any other token is returned as is.
+pub fn lookup_meaning(token: &Token) -> Option<Stored> {
+  if token.get_catcode().is_active_or_cs()
+    && !token.has_smuggled()
+    && token.text != *EMPTY_SYM
+  {
+    match state!().meaning.get(&token.text) {
+      Some(entry) => match entry.front() {
+        None | Some(Stored::None) => None,
+        Some(other) => Some(other.clone()),
+      },
+      None => None,
+    }
+  } else {
+    Some(Stored::Token(token.clone()))
+  }
+}
+
+/// $meaning should be a definition (for defining active control sequences)
+/// or another token, for \let
+pub fn assign_meaning<T: Into<Stored>>(
+    token: &Token,
+  meaning: T,
+  scope: Option<Scope>,
+) {
+  let meaning = meaning.into();
+  // HACK!!!????
+  // short-circuit guard to avoid e.g. T_MATH let to itself
+  if let Stored::Token(ref mt) = meaning {
+    if token == mt {
+      return;
+    }
+  }
+  let csname_sym = token.pin_cs_name();
+  state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
+}
+
+pub fn has_meaning(token: &Token) -> bool {
+  lookup_meaning(token).is_some()
+}
+
+/// used for expansion & various queries
+/// Since we're not doing digestion here, we don't need to handle mathactive,
+/// nor cs let to executable tokens
+/// This returns a definition object, or undef
+pub fn lookup_definition(key: &Token) -> Result<Option<Rc<dyn Definition>>> {Ok(
+  if let Some(defs) = state!().lookup_definition_internal(key) {
+    match defs.front() {
+      Some(Stored::Conditional(entry)) => Some(entry.clone()),
+      Some(Stored::Constructor(entry)) => Some(entry.clone()),
+      Some(Stored::Expandable(entry)) => Some(entry.clone()),
+      Some(Stored::MathPrimitive(entry)) => Some(entry.clone()),
+      Some(Stored::Primitive(entry)) => Some(entry.clone()),
+      Some(Stored::Register(entry)) => Some(entry.clone()),
+      Some(Stored::None) | Some(Stored::Token(_)) | None => None,
+      Some(v) => {
+        let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
+        Error!("unexpected", "value", message);
+        None
+      },
+    }
+  } else {
+    None
+  })
+}
+
+/// Returns a definition as `Stored` so that one can call `.read_arguments`,
+/// which can't be specialized during compile-time over a trait object
+/// Instead we'll dispatch via `Stored` at runtime, to allow generic calls
+pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {Ok(
+  match state!().lookup_definition_internal(key) {
+    Some(defs) => match defs.front() {
+      // Still, good time to handle the Token case and catch weird storage errors
+      Some(Stored::Conditional(entry)) => Some(Stored::Conditional(Rc::clone(entry))),
+      Some(Stored::Constructor(entry)) => Some(Stored::Constructor(Rc::clone(entry))),
+      Some(Stored::Expandable(entry)) => Some(Stored::Expandable(Rc::clone(entry))),
+      Some(Stored::MathPrimitive(entry)) => Some(Stored::MathPrimitive(Rc::clone(entry))),
+      Some(Stored::Primitive(entry)) => Some(Stored::Primitive(Rc::clone(entry))),
+      Some(Stored::Register(entry)) => Some(Stored::Register(Rc::clone(entry))),
+      Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
+        cs: key.with_str(|k| T_CS!(k)),
+        paramlist: None,
+        expansion: entry.clone().into(),
+        ..Expandable::default()
+      }))),
+      Some(v) => {
+        let message = s!("in lookup_definition for {:?}. Value was: {:?}", key, v);
+        Error!("unexpected", "value", message);
+        None
+      },
+      None => None,
+    },
+    _ => None,
+  })
+}
+
+/// A specialized version of `lookup_definition` for registers, since we can't adequately perform
+/// multi-dispatch when we have a "Self: Sized" for the Definition trait object.
 pub fn lookup_register_definition(key: &Token) -> Option<Rc<Register>> {
-  state!().lookup_register_definition(key)
+  match state!().lookup_definition_internal(key) {
+    Some(defs) => match defs.front() {
+      Some(Stored::Register(entry)) => Some(Rc::clone(entry)),
+      _ => None,
+    },
+    _ => None,
+  }
 }
 /// Recognizes mathactive tokens in math mode and also looks for
 /// cs that have been let to other `executable' tokens.
 /// Returns a definition object, or a "self inserting" token.
 /// Used for digestion.
 pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
-  state!().lookup_digestable_definition(token)
+  let cc = token.get_catcode();
+  let t_sym = token.get_sym();
+  let is_active_or_cs = cc.is_active_or_cs();
+  let lookup_sym = if is_active_or_cs
+    || ((cc == Catcode::LETTER || (cc == Catcode::OTHER))
+      && lookup_bool("IN_MATH")
+      && (lookup_mathcode_sym(&t_sym).unwrap_or(0) == 0x8000))
+  {
+    t_sym
+  } else {
+    arena::pin(cc.name())
+  };
+  // Debug!("Looking up digestable {:?}", lookupname);
+  let state = state!();
+  let entry_opt = state.meaning.get(&lookup_sym);
+  if lookup_sym != *EMPTY_SYM
+    && entry_opt.is_some()
+    && !entry_opt.as_ref().unwrap().is_empty()
+  {
+    // Debug!("Found definition for: {:?}", lookupname);
+    if let Some(entry) = entry_opt {
+      if let Some(front) = entry.front() {
+        if let Stored::Token(ref t) = front {
+          let lookup_sym = if t.has_smuggled() {
+            arena::pin_static("\\relax")
+          } else {
+            arena::pin(t.get_executable_primitive_name().unwrap_or_default())
+          };
+          if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
+            // special case,
+            // If a cs has been let to an executable token, lookup ITS defn.
+            return retry_entry.front().cloned();
+          }
+        }
+        // if a regular definition, just return.
+        return Some(front.clone());
+      }
+    }
+  } else if is_active_or_cs {
+    return None;
+  }
+  Some(token.into())
 }
-pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn Definition>>> {
-  state!().lookup_expandable(token,toplevel)
-}
-pub fn increment_align_group_count() {
-  state_mut!().increment_align_group_count()
-}
-pub fn decrement_align_group_count() {
-  state_mut!().decrement_align_group_count()
-}
-pub fn align_group_count() -> i32 {
-  state!().align_group_count()
-}
-pub fn set_align_group_count(v: i32) {
-  state_mut!().set_align_group_count(v)
-}
-pub fn get_reading_alignment() -> Option<Digested> { state!().get_reading_alignment() }
-pub fn has_reading_alignment() -> bool { state!().has_reading_alignment() }
-pub fn local_align_group_count(v: i32) { state_mut!().local_align_group_count(v) }
-pub fn expire_align_group_count() -> Option<i32> {
-  state_mut!().expire_align_group_count()
-}
-/// localizes a new current token. see `Stomach::invoke_token`
-pub fn local_current_token(token: Token) { state_mut!().local_current_token(token) }
-/// expires the most recent (localized) current token.
-pub fn expire_current_token() { state_mut!().expire_current_token() }
-pub fn after_assignment() { state_mut!().after_assignment(); }
 
-pub fn has_meaning(token: &Token) -> bool {
-  state!().lookup_meaning(token).is_some()
-}
-pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
-  state_mut!().push_value(key,value)
-}
-pub fn unshift_value<T: Into<Stored>>(key: &str, values: Vec<T>) {
-  state_mut!().unshift_value(key, values)
-}
-pub fn remove_value(key: &str) -> Option<Stored> {
-  state_mut!().remove_value(key)
-}
-pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
-  state_mut!().remove_vecdeque(key)
-}
+// NOTE: Common usage patterns seem to be to lookup
+//   expandable definitions
+//   register values
+//   conditionals
+//   digestibles
+// or just variants on testing defined-ness
+// May be will introduce more clarity (possibly efficiency)
+// to collect those more uniformly and implement here, or in Package
+
+//======================================================================
+/// Starts a new level of grouping.
+/// Note that this is lower level than C<\bgroup>;
 pub fn push_frame() {
-  state_mut!().push_frame()
+  // Easy: just push a new undo frame.
+  state_mut!().undo.push_front(UndoFrame::default());
 }
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
 pub fn pop_frame() -> Result<()> {
-  state_mut!().pop_frame()
+  let mut state = state_mut!();
+  if state.undo.front().as_ref().unwrap().locked {
+    fatal!(
+      TargetUnexpected,
+      Endgroup,
+      "attempt to pop last locked stack frame"
+    );
+  // Fatal('unexpected', '<endgroup>', $self->getStomach,
+  // "Attempt to pop last locked stack frame"); }
+  } else {
+    let popped_frame = state.undo.pop_front().unwrap();
+    for table_name in TableName::variants() {
+      let undo_table = popped_frame.table(*table_name);
+      let state_table = state.table_mut(*table_name);
+      for (key, undo_count) in undo_table.iter() {
+        // Typically only 1 value to shift off the table, unless scopes have been activated.
+        let named_table = state_table.get_mut(key).unwrap();
+        for _ in 0..*undo_count {
+          named_table.pop_front();
+        }
+      }
+    }
+  }
+  Ok(())
 }
 
-pub fn lookup_bool(key: &str) -> bool {
-  state!().lookup_bool(key)
+/// Determine depth of group nesting created by {,},\bgroup,\egroup,\begingroup,\endgroup
+/// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
+/// This may give incorrect results for some special environments (e.g. minipage)
+pub fn get_frame_depth() -> usize {
+  state!().undo.iter().filter(|frame| !frame.locked).count() - 1
 }
-pub fn lookup_string_sym(key: &str) -> SymbolU32 {
-  state!().lookup_string_sym(key)
+/// begins a semiverbatim frame, neutralizing the usual + requested characters
+pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
+  // Is this a good/safe enough shorthand, or should we really be doing beginMode?
+  push_frame();
+  assign_value("MODE", "text", None);
+  assign_value("IN_MATH", false, None);
+  let mut all_specials: Vec<char> = Vec::new();
+  if let Some(extra) = extraspecials {
+    for special in extra {
+      all_specials.push(*special);
+    }
+  }
+  {
+    if let Some(Stored::VecChar(specials_store)) = state!().lookup_value("SPECIALS") {
+      for special_char in specials_store {
+        all_specials.push(*special_char);
+      }
+    }
+  }
+
+  for special_char in all_specials {
+    assign_catcode(special_char, Catcode::OTHER, Some(Scope::Local));
+  }
+  // TODO:
+  // self.assign_mathcode('\'' => 0x8000, Some(Scope::Local));
+  // try to stay as ASCII as possible
+  if let Some(ref current_font) = lookup_font() {
+    let local_font = current_font.merge(fontmap!(encoding => "ASCII"));
+    assign_font(Rc::new(local_font), Some(Scope::Local));
+  }
+}
+/// end by just calling `pop_frame`
+pub fn end_semiverbatim() -> Result<()> { pop_frame() }
+
+//   #======================================================================
+
+// sub pushDaemonFrame {
+//   my ($self) = @_;
+//   my $frame = {};
+//   unshift(@{ $$self{undo} }, $frame);
+//   # Push copys of data for any data that is mutable;
+//   # Only the value & stash tables need to be to be checked.
+//   # NOTE ??? No...
+//   foreach my $table (qw(value stash)) {
+//     if (my $hash = $$self{$table}) {
+//       foreach my $key (keys %$hash) {
+//         my $value = $$hash{$key}[0];
+//         my $type  = ref $value;
+// if (($type eq 'HASH') || ($type eq 'ARRAY')) {    # Only concerned with mutable perl
+// data?                                                           # Local assignment
+//           $$frame{$table}{$key} = 1;                      # Note new value in this frame.
+//           unshift(@{ $$hash{$key} }, daemon_copy($value)); } } } }    # And push new binding.
+//       # Record the contents of LaTeXML::Package::Pool as preloaded
+//   my $pool_preloaded_hash = { map { $_ => 1 } keys %LaTeXML::Package::Pool:: };
+//   $self->assignValue('_PRELOADED_POOL_', $pool_preloaded_hash, 'global');
+//   # Now mark the top frame as LOCKED!!!
+//   $$frame{_FRAME_LOCK_} = 1;
+//   return; }
+
+// sub daemon_copy {
+//   my ($ob) = @_;
+//   if (ref $ob eq 'HASH') {
+//     my %hash = map { ($_ => daemon_copy($$ob{$_})) } keys %$ob;
+//     return \%hash; }
+//   elsif (ref $ob eq 'ARRAY') {
+//     return [map { daemon_copy($_) } @$ob]; }
+//   else {
+//     return $ob; } }
+
+// sub popDaemonFrame {
+//   my ($self) = @_;
+//   while (!$$self{undo}[0]{_FRAME_LOCK_}) {
+//     $self->popFrame; }
+//   if (scalar(@{ $$self{undo} } > 1)) {
+//     delete $$self{undo}[0]{_FRAME_LOCK_};
+//     # Any non-preloaded Pool routines should be wiped away, as we
+//     # might want to reuse the Pool namespaces for the next run.
+//     my $pool_preloaded_hash = $self->lookupValue('_PRELOADED_POOL_');
+//     $self->assignValue('_PRELOADED_POOL_', undef, 'global');
+//     foreach my $subname (keys %LaTeXML::Package::Pool::) {
+//       unless (exists $$pool_preloaded_hash{$subname}) {
+//         undef $LaTeXML::Package::Pool::{$subname};
+//         delete $LaTeXML::Package::Pool::{$subname};
+//       } }
+//     # Finally, pop the frame
+//     $self->popFrame; }
+//   else {
+//     Fatal('unexpected', '<endgroup>', $self->getStomach,
+//       "Daemon Attempt to pop last stack frame"); }
+//   return; }
+
+// ======================================================================
+/// Set one of the definition prefixes global, etc (only global matters!)
+pub fn set_prefix(prefix: &str) { state_mut!().prefixes.insert(arena::pin(prefix), true); }
+/// gets the current value of a named prefix
+pub fn get_prefix(prefix: &str) -> bool {
+  state!().get_prefix(prefix)
 }
 
-/// like `lookup_value`, but casts the entry into a String (empty if None)
-pub fn lookup_string(key: &str) -> String {
-  state!().lookup_string(key)
-}
-/// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
-pub fn lookup_int(key: &str) -> i64 {
-  state!().lookup_int(key)
-}
-pub fn lookup_catcode(c: char) -> Option<Catcode> {
-  state!().lookup_catcode(c)
-}
+/// clears the global prefixes
+pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 
-/// assigns a Catcode for a given character
-pub fn assign_catcode(key: char, value: Catcode, scope: Option<Scope>) {
-  state_mut!().assign_catcode(key,value,scope);
-}
+// #======================================================================
+///
 pub fn activate_scope(scope: SymbolU32) {
-  state_mut!().activate_scope(scope)
+  let mut state = state_mut!();
+  // do not re-activate if already active.
+  if let Some(stash_active_entry) = state.stash_active.get(&scope) {
+    if !stash_active_entry.is_empty() {
+      return;
+    }
+  }
+
+  state.assign_internal(
+    TableName::StashActive,
+    scope,
+    Stored::Bool(true),
+    Some(Scope::Local),
+  );
+  // Also, we need to take ownership of the stashed data, so that we can assign it.
+  // TODO: Potential to optimize?
+  // Also x2, we are using a shared "Stored" interface for all data that passes through
+  // assign_internal, but that causes both uncertainty and overhead in the Stash table
+  // specifically. TODO x2: Maybe a more ambitious refactor will separate out the Stash logic
+  // and use "StashTable" directly instead of Stored::Stash(StashTable) ?
+
+  let mut actions = Vec::new();
+
+  if let Some(Some(Stored::Stash(defns))) = state.stash.get(&scope).map(|x| x.iter().next()) {
+    for (table_name, key, value) in defns {
+      // copy the values out from the stashed defns, so that Rust
+      // is calm we are borrowing safely.
+
+      actions.push((*table_name, key.to_owned(), value.clone()));
+    }
+  }
+  // Here we ALWAYS push the stashed values into the table
+  // since they may be popped off by deactivateScope
+  for (table_name, key, value) in actions {
+    let frame = &mut state.undo[0];
+    let frame_table = frame.table_mut(table_name);
+    let entry = frame_table.entry(key).or_insert(0);
+    *entry += 1; // Note that this many values must be undone
+    let key_table = state
+      .table_mut(table_name)
+      .entry(key)
+      .or_insert_with(VecDeque::new);
+    key_table.push_front(value); // And push new binding.
+  }
 }
+
+// Probably, in most cases, the assignments made by activateScope
+// will be undone by egroup or popping frames.
+// But they can also be undone explicitly
+
+/// Removes any definitions that were associated with the named `scope`.
+/// Normally not needed, since a scopes definitions are locally bound anyway.
 pub fn deactivate_scope(scope: SymbolU32) {
-  state_mut!().deactivate_scope(scope)
+  let mut state = state_mut!();
+  let scope_exists = match state.stash_active.get(&scope) {
+    None => false,
+    Some(v) => !v.is_empty(),
+  };
+  if !scope_exists {
+    return;
+  }
+
+  state.assign_internal(
+    TableName::StashActive,
+    scope,
+    Stored::Bool(false),
+    Some(Scope::Global),
+  );
+
+  let mut collected = Vec::new();
+  if let Some(Some(Stored::Stash(defns))) = state.stash.get(&scope).map(|x| x.iter().next()) {
+    for (table_name, key, value) in defns {
+      collected.push((table_name.to_owned(), key.to_owned(), value.to_owned()));
+    }
+  }
+
+  for (table_name, key, value) in collected {
+    let front_is_value = if let Some(table_entry_peek) = state.table(table_name).get(&key) {
+      if let Some(table_front) = table_entry_peek.front() {
+        *table_front == value
+      } else {
+        false
+      }
+    } else {
+      false
+    };
+    let table_entry = state.table_mut(table_name).entry(key).or_default();
+    if front_is_value {
+      // Here we're popping off the values pushed by activateScope
+      // to (possibly) reveal a local assignment in the same frame, preceding activateScope.
+      (*table_entry).pop_front();
+
+      if let Some(frame) = state.undo.front_mut() {
+        let frame_table = frame.table_mut(table_name);
+        let frame_count = frame_table.entry(key).or_default();
+        *frame_count -= 1;
+      }
+    } else {
+      let message = arena::with(key, |key_str| {
+        s!(
+        "Unassigning wrong value for {} from table {} in deactivateScopevalue is {:?} but stack \
+          is {:?}",
+        key_str,
+        table_name,
+        value,
+        table_entry
+          .iter()
+          .map(ToString::to_string)
+          .collect::<Vec<String>>()
+          .join(", ")
+      )
+      });
+      arena::with(key, |key_str| {
+        Warn!("internal", key_str, message)
+      });
+    }
+  }
 }
-pub fn lookup_font() -> Option<Rc<Font>> {
-  state!().lookup_font()
+/// return all known named scopes
+pub fn get_known_scopes() -> Vec<SymbolU32> {
+  state!().stash.keys().copied().collect::<Vec<_>>()
 }
-pub fn clear_prefixes() { state_mut!().clear_prefixes(); }
+/// return the currently activated named scopes
+pub fn get_active_scopes() -> Vec<SymbolU32> {
+  state!().stash_active.keys().copied().collect::<Vec<_>>()
+}
+
+//======================================================================
+// Units.
+// Put here since it could concievably evolve to depend on the current font.
+/// convert a unit name into a `f64` scaling factor over `sp`
+pub fn convert_unit(unit_arg: &str) -> f64 {
+  let unit = unit_arg.to_lowercase();
+  // Eventually try to track font size?
+  match unit.as_str() {
+    "em" => lookup_font().unwrap().get_em_width() as f64,
+    "ex" => lookup_font().unwrap().get_ex_height() as f64,
+    "mu" => lookup_font().unwrap().get_mu_width() as f64,
+    u => match UNITS.get(u) {
+      Some(sp) => *sp,
+      None => {
+        let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
+        Warn!("expected", "<unit>", message);
+        *UNITS.get("pt").unwrap()
+      },
+    },
+  }
+}
+
+// ======================================================================
+
+// sub getStatus {
+//   my ($self, $type) = @_;
+//   return $$self{status}{$type}; }
+
+// sub getStatusMessage {
+//   my ($self) = @_;
+//   my $status = $$self{status};
+//   my @report = ();
+// push(@report, colorizeString("$$status{warning} warning" . ($$status{warning} > 1 ? 's' :
+// ''), 'warning'))     if $$status{warning};
+// push(@report, colorizeString("$$status{error} error" . ($$status{error} > 1 ? 's' : ''),
+// 'error'))     if $$status{error};
+//   push(@report, "$$status{fatal} fatal error" . ($$status{fatal} > 1 ? 's' : ''))
+
+//     if $$status{fatal};
+//   my @undef = ($$status{undefined} ? keys %{ $$status{undefined} } : ());
+//   push(@report, colorizeString(scalar(@undef) . " undefined macro" . (@undef > 1 ? 's' : '')
+//         . "[" . join(', ', @undef) . "]", 'details'))
+//     if @undef;
+//   my @miss = ($$status{missing} ? keys %{ $$status{missing} } : ());
+//   push(@report, colorizeString(scalar(@miss) . " missing file" . (@miss > 1 ? 's' : '')
+//         . "[" . join(', ', @miss) . "]", 'details'))
+//     if @miss;
+//   return join('; ', @report) || colorizeString('No obvious problems', 'success'); }
+
+// sub getStatusCode {
+//   my ($self) = @_;
+//   my $status = $$self{status};
+//   my $code;
+//   if ($$status{fatal} && $$status{fatal} > 0) {
+//     $code = 3; }
+//   elsif ($$status{error} && $$status{error} > 0) {
+//     $code = 2; }
+//   elsif ($$status{warning} && $$status{warning} > 0) {
+//     $code = 1; }
+//   else {
+//     $code = 0; }
+//   return $code; }
+// #======================================================================
+
+/// The indirect model includes all elements allowed as direct children,
+/// and all descendents of a node that can be inserted after
+/// auto_open-ing intermediate elements.
+/// This model therefor includes information from the Schema, as well as
+/// auto_open information that may be introduced in binding files.
+// [Thus it should NOT be modifying the Model object, which may cover several documents]
+pub fn compute_indirect_model() -> IndirectModel {
+  let mut imodel: IndirectModel = HashMap::default();
+  // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
+  let mut openable: HashSet<SymbolU32> = HashSet::default();
+  for tag in model!().get_sym_tags() {
+    if let Some(x) = state!().tag_properties.get(&tag) {
+      if let Some(true) = x.auto_open {
+        openable.insert(tag);
+      }
+    }
+  }
+
+  for tag in model!().get_sym_tags() {
+    let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
+    crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
+    let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
+    for kid in desc_keys {
+      let mut best = 0; // Find best path to $kid.
+      let desc_kid_keys: Vec<SymbolU32> = desc
+        .entry(kid)
+        .or_insert_with(HashMap::default)
+        .keys()
+        .copied()
+        .collect();
+      // desc_kid_keys.sort(); // TODO: why sort?
+      for start in desc_kid_keys {
+        let start_entry = {
+          let kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
+          *kid_entry.entry(start.to_owned()).or_insert(0)
+        };
+        if start_entry > best {
+          imodel
+            .entry(tag)
+            .or_insert_with(HashMap::default)
+            .insert(kid, start.to_owned());
+          {
+            best = desc[&kid][&start];
+          }
+        }
+      }
+    }
+  }
+  // PATCHUP
+  if model!().permissive {
+    // !!! Alarm!!!
+    imodel
+      .entry(arena::pin_static("#Document"))
+      .or_insert_with(HashMap::default)
+      .insert(*H_PCDATA_SYM, *LTX_P_SYM);
+  }
+
+  imodel
+}
+
+/// Initialize various stomach parameters, preload, etc.
+pub fn initialize_stomach() {
+  let mut state = state_mut!();
+  state.assign_value("MODE", "text", Some(Scope::Global));
+  state.assign_value("IN_MATH", false, Some(Scope::Global));
+  state.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
+  state.assign_value(
+    "afterGroup",
+    Stored::VecDequeStored(VecDeque::new()),
+    Some(Scope::Global),
+  );
+  state.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
+  state.assign_value(
+    "groupInitiator",
+    String::from("Initialization"),
+    Some(Scope::Global),
+  );
+  // Setup default fonts.
+  state.assign_value("font", Font::text_default(), Some(Scope::Global));
+  state.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
+}
+
+// Package helpers used in core need to be localized here -- as state methods
+/// `Let` macro setter
 pub fn let_i(
   token1: &Token,
   token2: &Token,
   scope: Option<Scope>,
-) { state_mut!().let_i(token1, token2, scope) }
+) {
+  let meaning = if token2.get_dont_expand().is_some() {
+    Stored::Token(token2.clone())
+  } else {
+    lookup_meaning(token2)
+      .unwrap_or(Stored::None)
+  };
+  assign_meaning(token1, meaning, scope);
+  after_assignment();
+}
 /// `XEquals` check for two token arguments
 pub fn x_equals(token1: &Token, token2: &Token) -> bool {
-  state!().x_equals(token1,token2)
+  let def1_opt = lookup_meaning(token1); // # token, definition object or None
+  let def2_opt = lookup_meaning(token2); // ditto
+  match (def1_opt, def2_opt) {
+    (Some(def1), Some(def2)) => def1 == def2, // If both have defns, must be same defn!
+    (None, None) => true,                       // true if both undefined
+    (_, _) => false,                            // False, if only one has 'meaning'
+  }
 }
 
+/// simple id generator for a ligature
+pub fn generate_ligature_id() -> usize {
+  let id = 1 + lookup_int("autogen_ligature_id");
+  assign_value("autogen_ligature_id", Stored::Int(id), Scope::Global);
+  id as usize
+}
+
+/// run the accumulated directives from `\afterassignment`
+pub fn after_assignment() {
+  match remove_value("afterAssignment") {
+    Some(Stored::Tokens(after)) => gullet::unread(after),
+    Some(Stored::Token(after)) => gullet::unread_one(after),
+    None | Some(Stored::None) => {},
+    Some(other) => panic!("unexpected in after_assignment: {other:?}"),
+  }
+}
+
+// Ported from Perl's "local" declarations
+
+/// sets a (originally Perl-local) `IfFrame` that needs to be manually expired.
 pub fn set_ifframe(if_frame: Option<Rc<RefCell<IfFrame>>>) {
-  state_mut!().set_ifframe(if_frame);
+  state_mut!().localized.if_frames.push(if_frame);
 }
 
 /// retrieves the most recent (originally Perl-local) `IfFrame`
 pub fn get_ifframe() -> Option<Rc<RefCell<IfFrame>>> {
-  state!().get_ifframe()
+  match state!().localized.if_frames.last() {
+    Some(Some(frame)) => Some(Rc::clone(frame)),
+    _ => None,
+  }
 }
 /// expires the most recent (originally Perl-local) `IfFrame`
-pub fn expire_ifframe() {
-  state_mut!().expire_ifframe()
-}
+pub fn expire_ifframe() { state_mut!().localized.if_frames.pop(); }
 /// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
 pub fn set_smuggle_the(smuggle_the: bool) {
-  state_mut!().set_smuggle_the(smuggle_the)
+  state_mut!().localized.smuggle_the.push(smuggle_the);
 }
 /// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
 pub fn get_smuggle_the() -> bool {
-  state!().get_smuggle_the()
+  match state!().localized.smuggle_the.last() {
+    Some(v) => *v,
+    _ => false,
+  }
+}
+/// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
+pub fn expire_smuggle_the() { state_mut!().localized.smuggle_the.pop(); }
+/// localizes a new current token. see `Stomach::invoke_token`
+pub fn local_current_token(token: Token) { state_mut!().localized.current_token.push(token); }
+/// expires the most recent (localized) current token.
+pub fn expire_current_token() { state_mut!().localized.current_token.pop(); }
+/// gets the (localized) current token
+pub fn get_current_token() -> Option<Token> { state!().localized.current_token.last().cloned() }
+
+/// sets the (localized) flag for "dual branch"
+pub fn set_dual_branch(mode: &'static str) { state_mut!().localized.dual_branch.push(mode); }
+/// expire (localized) flag for "dual branch"
+pub fn expire_dual_branch() { state_mut!().localized.dual_branch.pop(); }
+/// get the current value for "dual branch"
+pub fn get_dual_branch() -> Option<&'static str> {
+  state!().localized.dual_branch.last().cloned()
+}
+
+pub fn increment_align_group_count() {
+  let mut state = state_mut!();
+  match state.localized.align_group_count.last_mut() {
+    Some(v) => *v += 1,
+    None => {
+      state.localized.align_group_count.push(1);
+    },
+  }
+}
+pub fn decrement_align_group_count() {
+  let mut state = state_mut!();
+  match state.localized.align_group_count.last_mut() {
+    Some(v) => *v -= 1,
+    None => {
+      state.localized.align_group_count.push(-1);
+    },
+  }
+}
+pub fn align_group_count() -> i32 {
+  state!()
+    .localized
+    .align_group_count
+    .last()
+    .copied()
+    .unwrap_or_default()
+}
+pub fn set_align_group_count(v: i32) {
+  let mut state = state_mut!();
+  if let Some(gc) = state.localized.align_group_count.last_mut() {
+    *gc = v;
+  } else {
+    state.localized.align_group_count.push(v);
+  }
+}
+pub fn local_align_group_count(v: i32) { state_mut!().localized.align_group_count.push(v); }
+pub fn expire_align_group_count() -> Option<i32> {
+  state_mut!().localized.align_group_count.pop()
+}
+
+pub fn get_reading_alignment() -> Option<Digested> {
+  state!().localized.reading_alignment.last().map(Clone::clone)
+}
+pub fn has_reading_alignment() -> bool { ! state!().localized.reading_alignment.is_empty() }
+pub fn local_reading_alignment(alignment: &Digested) {
+  state_mut!().localized.reading_alignment.push(alignment.clone());
+}
+pub fn expire_reading_alignment() -> Option<Digested> {
+  state_mut!().localized.reading_alignment.pop()
+}
+
+pub fn local_build_template(template: Template) {
+  state_mut!().localized.build_template.push(template);
+}
+pub fn set_build_template(template: Template) {
+  *state_mut!()
+    .localized
+    .build_template
+    .last_mut()
+    .expect("set_build_template should not be called before the first local_build_template") =
+    template;
+}
+pub fn take_build_template() -> Option<Template> { state_mut!().localized.build_template.pop() }
+
+pub fn get_tag_property(tag: SymbolU32) -> TagOptions {
+  state_mut!()
+  .tag_properties
+  .entry(tag)
+  .or_insert_with(TagOptions::default)
+  .clone()
+}
+
+pub fn has_indirect_model() -> bool {
+  state!().indirect_model.is_some()
+}
+pub fn set_indirect_model(im: IndirectModel) {
+  let mut state = state_mut!();
+  state.indirect_model = Some(im);
 }

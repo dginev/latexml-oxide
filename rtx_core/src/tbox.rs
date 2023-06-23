@@ -13,7 +13,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
-use crate::{state};
+use crate::state::{lookup_bool,lookup_font};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
@@ -77,7 +77,7 @@ impl Tbox {
   ) -> Self {
     let font = match font_opt {
       Some(f) => f,
-      None => state!().lookup_font().unwrap(),
+      None => lookup_font().unwrap(),
     };
     // let locator = $state::>getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
@@ -107,7 +107,7 @@ impl Tbox {
         .entry("depth".to_string())
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
-    if state!().lookup_bool("IN_MATH") {
+    if lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), "math".into());
       if text != empty_sym {
         if let Some(Stored::HashString(attr)) = state!().lookup_value(&arena::with(text, |text_str| {

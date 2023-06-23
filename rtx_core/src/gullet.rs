@@ -23,6 +23,7 @@ use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::DigestedData;
 use crate::{state};
+use crate::state::*;
 
 use crate::definition::conditional::ConditionalType;
 use crate::definition::register::{RegisterType, RegisterValue};
@@ -231,13 +232,13 @@ impl Gullet {
     hidden: bool,
   ) -> Result<()> {
     // eprintln!("Halign: ALIGNMENT Column ended at {} type {vtype} [{}]",token.stringify(),
-    // state!().lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
+    // lookup_meaning(&token).unwrap());     . "@ " . ToString($self->getLocator))
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
-    state::local_current_token(token.clone());
+    local_current_token(token.clone());
     let post = alignment.get_column_after();
-    state::set_align_group_count(1000000);
+    set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
     let arg_opt = if (vtype == "cr") && hidden {
       // \hidden@cr gets an argument as payload!!!!!
@@ -263,7 +264,7 @@ impl Gullet {
     }
     unread_one(token);
     unread(post);
-    state::expire_current_token();
+    expire_current_token();
     Ok(())
   }
 
@@ -315,9 +316,9 @@ impl Gullet {
       // Wow!!!!! See TeX the Program \S 309
       if let Some(ref nextt) = next_token {
         // SHOULD count nesting of { }!!! when SCANNED (not digested)
-        if (state::align_group_count() == 0) && state::has_reading_alignment() {
+        if (align_group_count() == 0) && has_reading_alignment() {
           if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-            let reading_alignment = state::get_reading_alignment().unwrap();
+            let reading_alignment = get_reading_alignment().unwrap();
             if let DigestedData::Alignment(data) = reading_alignment.data() {
               handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
             } else {
@@ -413,7 +414,7 @@ impl Gullet {
       // -- check if smuggled for \the
       let mut token = next_token.unwrap();
       if token.has_smuggled() {
-        if token.get_catcode() != Catcode::SmuggleTHE || state::get_smuggle_the() {
+        if token.get_catcode() != Catcode::SmuggleTHE || get_smuggle_the() {
           return Ok(Some(token));
         } else {
           return Ok(token.take_smuggled().map(|t| *t));
@@ -423,9 +424,9 @@ impl Gullet {
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
       let check_alignment_data = {
-        if state::align_group_count() == 0 && state::has_reading_alignment() {
+        if align_group_count() == 0 && has_reading_alignment() {
           if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-            let reading_alignment = state::get_reading_alignment().unwrap();
+            let reading_alignment = get_reading_alignment().unwrap();
             Some((reading_alignment, atype, ahidden))
           } else {
             None
@@ -441,17 +442,17 @@ impl Gullet {
         }
         // And *then* continue the main loop checks
       } else if token.get_catcode().is_active_or_cs() {
-        if let Some(defn) = state::lookup_definition(&token)? {
+        if let Some(defn) = lookup_definition(&token)? {
           if (toplevel || !defn.is_protected()) && defn.is_expandable() {
             // is this the right logic here? don't expand unless digesting?
-            state::local_current_token(token);
+            local_current_token(token);
             invoke_for_read_x_token(defn)?;
-            state::expire_current_token();
+            expire_current_token();
             continue;
           }
         }
-        if token.get_catcode() == Catcode::CS && !state::has_meaning(&token) {
-          return Ok(Some(state::generate_error_stub(&token)?)); // cs SHOULD have defn by now;
+        if token.get_catcode() == Catcode::CS && !has_meaning(&token) {
+          return Ok(Some(generate_error_stub(&token)?)); // cs SHOULD have defn by now;
                                                                      // report early!
         } else {
           return Ok(Some(token));
@@ -570,7 +571,7 @@ impl Gullet {
   pub fn read_balanced(expanded: bool) -> Result<Option<Tokens>> {
     let mut tokens = Vec::new();
     let mut level = 1;
-    state::local_align_group_count(1000000);
+    local_align_group_count(1000000);
     // my $startloc = ($$self{verbosity} > 0) && $self->getLocator;
     while let Some(t) = if expanded {
       read_x_token(Some(false), true)?
@@ -605,7 +606,7 @@ impl Gullet {
         "Gullet->readBalanced ran out of input in an unbalanced state"
       );
     }
-    state::expire_align_group_count();
+    expire_align_group_count();
     if tokens.is_empty() {
       Ok(None)
     } else {
@@ -772,7 +773,7 @@ impl Gullet {
         token = token.without_dont_expand();
       }
       if token.get_catcode().is_active_or_cs() {
-        if let Some(cond_type) = state!().lookup_conditional(&token) {
+        if let Some(cond_type) = lookup_conditional(&token) {
           return Ok(Some((token, cond_type)));
         }
       }
@@ -864,7 +865,7 @@ impl Gullet {
     match read_x_token(None, false)? {
       None => Ok(None),
       Some(token) => {
-        if let Some(defn) = state::lookup_register_definition(&token) {
+        if let Some(defn) = lookup_register_definition(&token) {
           if let Some(mut register_type) = defn.register_type() {
             if register_type == RegisterType::CharDef {
               // CharDefs treated as numbers here
@@ -1118,7 +1119,7 @@ impl Gullet {
   fn read_unit() -> Result<Option<f64>> {
     let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
       skip_one_space()?;
-      Some(state!().convert_unit(&u))
+      Some(convert_unit(&u))
     } else if let Some(u) = read_internal_integer()? {
       Some(u.value_of() as f64) // These are coerced to number=>sp
     } else if let Some(u) = read_internal_dimension()? {
@@ -1131,7 +1132,7 @@ impl Gullet {
         &["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"],
           )? {
         skip_one_space()?;
-        Some(state!().convert_unit(&u))
+        Some(convert_unit(&u))
       } else {
         None
       }
@@ -1318,7 +1319,7 @@ impl Gullet {
             Some(tks) => Ok(tks),
             None => Ok(Tokens!()),
           }
-        } else if let Some(defn) = state::lookup_register_definition(&token) {
+        } else if let Some(defn) = lookup_register_definition(&token) {
           match defn.register_type() {
             Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
               // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
@@ -1332,7 +1333,7 @@ impl Gullet {
             },
             _ => Ok(Tokens!(token)),
           }
-        } else if let Some(defn) = state::lookup_definition(&token)? {
+        } else if let Some(defn) = lookup_definition(&token)? {
           // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
           // way to circumvent? Is it slow in the first place?
           if defn.is_expandable() {
@@ -1476,18 +1477,15 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
     Catcode::ALIGN => Some((token.clone(), "align", false)),
     Catcode::CS => {
       // Embedded version of Equals, knowing both are tokens
-      let state = state!();
-      let defn = state
-        .lookup_meaning(token)
-        .unwrap_or_else(|| Cow::Owned(Stored::Token(token.clone())));
+      let defn = lookup_meaning(token)
+        .unwrap_or_else(|| Stored::Token(token.clone()));
       COLUMN_ENDS.with(|ends| {
         for end in ends {
           let e = &end.0;
           // Would be nice to cache the defns, but don't know when they're present & constant!
           if defn
-            == state
-              .lookup_meaning(e)
-              .unwrap_or_else(|| Cow::Owned(Stored::Token(e.clone())))
+            == lookup_meaning(e)
+              .unwrap_or_else(|| Stored::Token(e.clone()))
           {
             return Some(end.clone());
           }
@@ -1503,13 +1501,13 @@ fn handle_marker(marker_token: Token) {
   marker_token.with_str(|arg| match arg {
     "before-column" => {
       // Were in before-column template
-      // let alignment = state!().lookup_alignment();
-      // Debug("Halign $alignment: alignment state::=> 0") if $LaTeXML::DEBUG{halign};
-      state::set_align_group_count(0);
+      // let alignment = lookup_alignment();
+      // Debug("Halign $alignment: alignment => 0") if $LaTeXML::DEBUG{halign};
+      set_align_group_count(0);
     }, // switch to column proper!
     "after-column" => { // Were in before-column template
-       // let alignment = state!().lookup_alignment();
-       // Debug("Halign $alignment: alignment state:: after column") if $LaTeXML::DEBUG{halign};
+       // let alignment = lookup_alignment();
+       // Debug("Halign $alignment: alignment  after column") if $LaTeXML::DEBUG{halign};
     },
     _ => {},
   });

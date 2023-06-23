@@ -1,5 +1,5 @@
 use crate::package::*;
-use rtx_core::{state_mut,state};
+use rtx_core::{state};
 #[rustfmt::skip]
 LoadDefinitions!( {
   LoadPool!("LaTeX");
@@ -40,8 +40,8 @@ LoadDefinitions!( {
   // TODO:
   // DeclareOption!("openbib",
   // || { RequireResource!(None, type: "text/css", content: ".ltx_bibblock{display:block;}");
-  // }); DeclareOption!("leqno", || { state_mut!().assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
-  // }); DeclareOption!("fleqn", || { state_mut!().assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
+  // }); DeclareOption!("leqno", || { assign_mapping("DOCUMENT_CLASSES", "ltx_leqno": 1);
+  // }); DeclareOption!("fleqn", || { assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn": 1);
   // });
 
   ProcessOptions!();

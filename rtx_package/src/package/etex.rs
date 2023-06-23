@@ -11,7 +11,7 @@ LoadDefinitions!({
   // \protected associates with the next defn
   // (note that it isn't actually used anywhere).
   DefPrimitive!("\\protected", {
-    state_mut!().set_prefix("protected");
+    set_prefix("protected");
   },
   is_prefix => true);
 
@@ -39,7 +39,7 @@ LoadDefinitions!({
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       // DG: Can't we do this \endlinechar check in readRawLine ?!
       // DG:  and can't we make it *faster* ?
-      if let Some(eol) = state!().lookup_definition(&T_CS!("\\endlinechar"))? {
+      if let Some(eol) = lookup_definition(&T_CS!("\\endlinechar"))? {
         let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
         if (eolv > 0) && (eolv <= 255) {
           raw_line.push(eolv as u8 as char);
@@ -66,19 +66,19 @@ LoadDefinitions!({
 
   // \currentgrouplevel
   DefRegister!("\\currentgrouplevel", Number!(0), readonly => true,
-    getter => { state!().get_frame_depth() });
+    getter => { get_frame_depth() });
 
   // \currentgrouptype returns group types from 0..16 ; but what IS a "group type"?
   DefRegister!("\\currentgrouptype", Number!(0), readonly => true);
 
   // \ifcsname stuff \endcsname
   DefConditional!("\\ifcsname CSName", sub[(t)] {
-    state!().lookup_meaning(&t).is_some()
+    lookup_meaning(&t).is_some()
   });
 
   // \ifdefined <token>
   DefConditional!("\\ifdefined Token", sub[(t)] {
-    state!().lookup_meaning(&t).is_some()
+    lookup_meaning(&t).is_some()
   });
 
   // # ???
@@ -160,7 +160,7 @@ LoadDefinitions!({
 
   // \unless someif
   DefConditional!("\\unless Token", sub[(if_token)] {
-    if let Some(Stored::Conditional(defn)) = state!().lookup_definition_stored(&if_token)? {
+    if let Some(Stored::Conditional(defn)) = lookup_definition_stored(&if_token)? {
       if defn.conditional_type == ConditionalType::If {
         if let Some(ref test) = defn.test {
           // Invert the if's test!

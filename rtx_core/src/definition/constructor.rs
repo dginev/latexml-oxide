@@ -8,7 +8,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope};
+use crate::state::*;
 
 use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
@@ -21,7 +21,6 @@ use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested, Locator};
 use crate::stomach::digest_next_body;
-use crate::{state};
 
 /// configuration for creating a new Constructor
 #[derive(Clone)]
@@ -201,8 +200,8 @@ impl Definition for Constructor {
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
-    let state_font = state!().lookup_font();
-    let ismath = state!().lookup_bool("IN_MATH");
+    let state_font = lookup_font();
+    let ismath = lookup_bool("IN_MATH");
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {

@@ -16,7 +16,7 @@ LoadDefinitions!({
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state!().lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -26,7 +26,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state!().lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -36,7 +36,7 @@ LoadDefinitions!({
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
   getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state!().lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
@@ -68,7 +68,7 @@ LoadDefinitions!({
   getter => sub[args] {
     let n = args.remove(0).expect_number();
     let boxid = format!("box{}", n.value_of());
-    let mut stuff = state_mut!().checkout_value(&boxid);
+    let mut stuff = checkout_value(&boxid);
     let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
       match thebox.get_width(None) {
         Ok(v) => v,
@@ -82,7 +82,7 @@ LoadDefinitions!({
       Some(RegisterValue::Dimension(Dimension::default()))
     }};
     if let Some(thebox) = stuff {
-      state_mut!().checkin_value(&boxid, thebox);
+      checkin_value(&boxid, thebox);
     }
     result
   },
@@ -385,8 +385,8 @@ setter => sub[value,_scope,args] {
   // (including the preassignment to \relax!)
   DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    let meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
-    { state_mut!().assign_meaning(&newcs, meaning, None); }
+    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    { assign_meaning(&newcs, meaning, None); }
     let value = gullet::read_number()?;
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
@@ -417,7 +417,7 @@ setter => sub[value,_scope,args] {
       let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
       if let Some(glyph) = glyph_opt {
         whatsit.set_property("glyph", glyph);
-        whatsit.set_property("font", state!().lookup_font().unwrap().specialize(&glyph.to_string()));
+        whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
       }
       if let Some(role) = role_opt {
         whatsit.set_property("role", role);
@@ -435,7 +435,7 @@ setter => sub[value,_scope,args] {
     let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph",glyph);
-      whatsit.set_property("font", state!().lookup_font().unwrap().specialize(&glyph.to_string()));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
     }
     if let Some(role) = role_opt {
       whatsit.set_property("role", role);
@@ -446,8 +446,8 @@ setter => sub[value,_scope,args] {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    let meaning = state!().lookup_meaning(&TOKEN_RELAX).unwrap().into_owned();
-    { state_mut!().assign_meaning(&newcs, meaning, None); }
+    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    { assign_meaning(&newcs, meaning, None); }
     let value  = gullet::read_number().unwrap();
     // eprintln!(" ** {} + {}", value,csname);
     let (role, glyph) = decode_math_char(value.value_of() as u16)?;
@@ -465,7 +465,7 @@ setter => sub[value,_scope,args] {
       DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
         properties => glyph_props,
-        font => { Ok(state!().lookup_font().unwrap().specialize(&glyph_str)) }
+        font => { Ok(lookup_font().unwrap().specialize(&glyph_str)) }
         // reversion => {
         //   Ok(Tokens::new(
         //     if (glyph_c as usize) < 128 {
@@ -493,7 +493,7 @@ setter => sub[value,_scope,args] {
 
       let mut glyph_buf: [u8; 4] = [0; 4];
       let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
-      whatsit.set_property("font", state!().lookup_font().unwrap().specialize(glyph_str));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
     }
   });
 });

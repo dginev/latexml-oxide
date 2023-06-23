@@ -39,6 +39,7 @@ use crate::document::{get_node_qname,with_node_qname,Document};
 use crate::mouth::Mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
+use crate::state::*;
 use crate::{BoxOps,gullet,gullet_mut,stomach,stomach_mut,state,state_mut};
 
 use libxml::tree::{Node, NodeType};
@@ -371,7 +372,7 @@ impl Alignment {
                            // Note: a VERY round-about way of tracking the column spanning!
     state::assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
-    state_mut!().set_align_group_count(1000000);
+    set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
   }
@@ -637,7 +638,7 @@ impl PartialEq for Alignment {
 pub fn read_alignment_template() -> Result<Template> {
   let mut gullet = gullet_mut!();
   gullet::skip_spaces()?;
-  state_mut!().local_build_template(Template::default());
+  local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
   while let Some(open) = gullet::read_token()? {
@@ -669,7 +670,7 @@ pub fn read_alignment_template() -> Result<Template> {
         break;
       }
       gullet.unread_one(last_op);
-    } else if let Some(defn) = state::lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
+    } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
       let invoked = defn.invoke(true)?;
       gullet.unread(invoked);
     } else if cc == Catcode::BEGIN {
@@ -692,7 +693,7 @@ pub fn read_alignment_template() -> Result<Template> {
     .current_build_template()
     .unwrap()
     .set_reversion(Tokens::new(tokens));
-  Ok(state_mut!().take_build_template().unwrap())
+  Ok(take_build_template().unwrap())
 }
 
 pub fn parse_alignment_template(

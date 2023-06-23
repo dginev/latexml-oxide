@@ -172,11 +172,11 @@ LoadDefinitions!({
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
   before_digest => {
-    state_mut!().push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
+    push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
   },
   after_digest => sub[whatsit] {
     // let kv     = whatsit.get_arg(1);
-    if let Some(Stored::HashStored(xmargs)) = state_mut!().pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
+    if let Some(Stored::HashStored(xmargs)) = pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
     }
     // TODO:

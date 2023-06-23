@@ -412,7 +412,7 @@ LoadDefinitions!({
       let right = stuff.remove(0);
       unimplemented!(); // TODO:
       // stuff.push(
-      //   Whatsit::new(state!().lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
+      //   Whatsit::new(lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
       //     // locator => $gullet->getLocator,
       //     font => right.get_font(), is_math => true));
       Ok(stuff)

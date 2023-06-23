@@ -9,7 +9,7 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
-use crate::state;
+use crate::state::*;
 use crate::tokens::Tokens;
 use crate::{Digested, RegisterValue};
 
@@ -58,7 +58,7 @@ impl Dimension {
       let num_str = cap.get(1).map_or(String::new(), |m| m.as_str().to_string());
       let num: f64 = num_str.parse::<f64>().expect(&num_str);
       let unit = cap.get(2).map_or(String::new(), |m| m.as_str().to_string());
-      let converted_unit = state!().convert_unit(&unit);
+      let converted_unit = convert_unit(&unit);
       Ok(fixpoint(num, Some(converted_unit)) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other

@@ -14,7 +14,7 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::stomach;
 use rtx_core::gullet;
-use rtx_core::state::{Scope, Stored}; // State
+use rtx_core::state::*;
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
@@ -194,7 +194,7 @@ impl DigestionAPI for Core {
       let state = state!();
       if !state.search_paths.is_empty() {
         {
-          if state.lookup_bool("INCLUDE_COMMENTS") {
+          if lookup_bool("INCLUDE_COMMENTS") {
             let paths_string = state
               .search_paths
               .iter()
@@ -232,7 +232,7 @@ impl DigestionAPI for Core {
     document.absorb(&digested, None)?;
     note_end("Building");
 
-    let has_rewrites = state!().has_value("DOCUMENT_REWRITE_RULES");
+    let has_rewrites = has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
       document.mark_xmnode_visibility()?;

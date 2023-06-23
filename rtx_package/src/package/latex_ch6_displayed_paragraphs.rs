@@ -42,7 +42,7 @@ LoadDefinitions!({
   DefConstructor!("\\centering", sub[doc,_args] {
   state::assign_value("ALIGNING_NODE", doc.get_element().unwrap(), None); },
   before_digest => {
-    state_mut!().unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
+    unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
   });
   // DefConstructorI('\raggedright', undef,
   //   sub { AssignValue(ALIGNING_NODE => $_[0]->getElement); return; },

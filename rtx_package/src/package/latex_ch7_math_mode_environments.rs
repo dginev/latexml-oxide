@@ -201,7 +201,7 @@ LoadDefinitions!({
     Tokens!(T_CS!("\\protect"), T_CS!("\\@ensuremath"))
   );
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state!().lookup_bool("IN_MATH") {
+    if lookup_bool("IN_MATH") {
       stuff.unlist()
     } else {
       let mut result = vec![T_MATH!()];

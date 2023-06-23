@@ -25,7 +25,7 @@ LoadDefinitions!({
     } else {
       None
     };
-    state_mut!().clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
+    clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
     let mut rest = if let Some(xtoken) = gullet::read_x_token(None, false)? {
         stomach::invoke_token(&xtoken)?
     } else { Vec::new() };
@@ -261,7 +261,7 @@ LoadDefinitions!({
   //   my $d = ($depth  ? $depth->ptValue  : undef);
   //   $h -= $d if $h && $d;    # - ??
 
-    if let Some(_alignment) = state!().lookup_alignment() {
+    if let Some(_alignment) = lookup_alignment() {
   //     if (((!defined $h) && (!defined $w)) || ((defined $h) && ($h > 20))
   //       || ((defined $h) && (defined $w) && ($h > 3 * $w))) {
   // This isXxxxRule property is to determine if it is used for separating rules within alignments
@@ -315,7 +315,7 @@ LoadDefinitions!({
 
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
-  let color_opt = state!().lookup_font().and_then(|f| f.get_color()
+  let color_opt = lookup_font().and_then(|f| f.get_color()
     .map(|c| c.clone().into_owned()));
   if let Some(color) = color_opt {
     if color != "black" {

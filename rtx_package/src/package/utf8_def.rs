@@ -244,9 +244,9 @@ LoadDefinitions!({
 
   for row in PRECOMPUTED_UC_LC {
     let (upper, upper_code, lower, lower_code) = row;
-    state_mut!().assign_lccode(upper, lower_code, Some(Scope::Global));
-    state_mut!().assign_uccode(upper, upper_code, Some(Scope::Global));
-    state_mut!().assign_lccode(lower, lower_code, Some(Scope::Global));
-    state_mut!().assign_uccode(lower, upper_code, Some(Scope::Global));
+    assign_lccode(upper, lower_code, Some(Scope::Global));
+    assign_uccode(upper, upper_code, Some(Scope::Global));
+    assign_lccode(lower, lower_code, Some(Scope::Global));
+    assign_uccode(lower, upper_code, Some(Scope::Global));
   }
 });

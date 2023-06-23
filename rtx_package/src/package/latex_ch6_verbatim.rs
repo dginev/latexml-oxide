@@ -20,13 +20,13 @@ LoadDefinitions!({
   ); // Close enough?
   DefConstructor!("\\lx@@verbatim", "<ltx:verbatim font='#font'>",
   before_digest => {
-    state_mut!().begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+   begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     merge_font(fontmap!(family => "typewriter", series => "medium", shape => "upright"));
-    state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
+    assign_catcode(' ', Catcode::ACTIVE, None);  // Do NOT (necessarily) skip spaces after \verb!!!
     Let!(&T_ACTIVE!(' '), T_SPACE!());
   });
   DefConstructor!(r"\lx@end@verbatim", "</ltx:verbatim>",
-    before_digest => { state_mut!().end_semiverbatim()?; });
+    before_digest => { end_semiverbatim()?; });
 
   // Close enough?
   // verbatim is a bit of special case;
@@ -104,9 +104,9 @@ LoadDefinitions!({
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", {
-    state_mut!().begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+   begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     // Do NOT (necessarily) skip spaces after \verb!!!
-    state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);
+    assign_catcode(' ', Catcode::ACTIVE, None);
     let mut init = None;
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     let space_sym = arena::pin_static(" ");
@@ -130,10 +130,10 @@ LoadDefinitions!({
     }
     if let Some(init_token) = init {
       let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
-      state_mut!().assign_catcode(init_ch, Catcode::ACTIVE, None);
+      assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
       let body = gullet::read_until(&delim)?;
-      state_mut!().end_semiverbatim()?;
+      end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\@hidden@bgroup")];
       if starred {
@@ -149,14 +149,14 @@ LoadDefinitions!({
     } else { // typically something read too far got \verb and the content is somewhere else..?
       Error!("expected", "delimiter",
         "Verbatim argument lost\n Bindings for preceding code is probably broken");
-      state_mut!().end_semiverbatim()?;
+      end_semiverbatim()?;
       Ok(Tokens!())
     }
   });
 
   DefPrimitive!("\\lx@use@visiblespace", sub[()] {
     // Do NOT (necessarily) skip spaces after \verb!!!
-    state_mut!().assign_catcode(' ', Catcode::ACTIVE, None);
+    assign_catcode(' ', Catcode::ACTIVE, None);
     // Visible space
     Let!(&T_ACTIVE!(' '), T_OTHER!("\u{2423}"));
   });

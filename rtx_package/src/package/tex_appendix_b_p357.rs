@@ -40,7 +40,7 @@ LoadDefinitions!({
   DefPrimitive!("\\!", {
     Tbox::new(arena::pin_static("\u{200B}"), None, None, Tokens!(T_CS!("\\!")),  // zero width space
       stored_map!("name"  => "negthinspace", "isSpace" => true,
-      "width" => state!().lookup_dimension("\\thinmuskip").unwrap().negate()))
+      "width" => lookup_dimension("\\thinmuskip").unwrap().negate()))
   });
 
   DefPrimitive!("\\>", {

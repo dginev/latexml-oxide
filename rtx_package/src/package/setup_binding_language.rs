@@ -14,7 +14,7 @@ macro_rules! LoadDefinitions {
 #[macro_export]
 macro_rules! DefParameterTypeWO {
   ($name:ident, $param:expr) => {
-    state_mut!().assign_mapping(
+    assign_mapping(
       "PARAMETER_TYPES",
       stringify!($name),
       Some(Stored::Parameter(Rc::new($param))),
@@ -184,8 +184,8 @@ macro_rules! DefMathLigature {
         Ok(None)
       }
     }));
-    let id = state_mut!().generate_ligature_id();
-    state_mut!().unshift_value("MATH_LIGATURES", vec![Ligature {
+    let id = generate_ligature_id();
+    unshift_value("MATH_LIGATURES", vec![Ligature {
       id,
       matcher,
       code: None,
@@ -194,10 +194,10 @@ macro_rules! DefMathLigature {
     }]);
   }};
   (matcher => sub[$document:ident, $node:ident] $code:block) => {{
-    let id = state_mut!().generate_ligature_id();
+    let id = generate_ligature_id();
     let matcher : Option<LigatureMatcher> = Some(Rc::new(
       |$document: &mut Document, $node: &mut Node| $code));
-      state_mut!().unshift_value("MATH_LIGATURES", vec![Ligature {
+      unshift_value("MATH_LIGATURES", vec![Ligature {
         id,
         matcher,
         code: None,
@@ -775,8 +775,8 @@ macro_rules! DefLigature {
     #[allow(clippy::trivial_regex)]
     let regex_compiled = Regex::new($regex).unwrap();
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
-    let new_ligature_id = state_mut!().generate_ligature_id();
-    state_mut!().unshift_value(
+    let new_ligature_id = generate_ligature_id();
+    unshift_value(
       "TEXT_LIGATURES",
       vec![Ligature {
         id: new_ligature_id,
@@ -789,8 +789,8 @@ macro_rules! DefLigature {
   };
   ($regex:expr, $replacement:expr) => {
     let regex_compiled = Regex::new($regex).unwrap();
-    let new_ligature_id = state_mut!().generate_ligature_id();
-    state_mut!().unshift_value(
+    let new_ligature_id = generate_ligature_id();
+    unshift_value(
       "TEXT_LIGATURES",
       vec![Ligature {
         id: new_ligature_id,
@@ -821,9 +821,9 @@ macro_rules! DefAccent {
     }
     // Used for converting a char used as an above-accent to a combining char (See \accent)
     if options.get("above").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
-      state_mut!().assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
+      assign_mapping("accent_combiner_above", $standalonechar, Some($combiningchar));
     } else {
-      state_mut!().assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
+      assign_mapping("accent_combiner_below", $standalonechar, Some($combiningchar));
     }
     let plain_param = Some(Parameters::new(vec![Parameter {
       name: Cow::Borrowed("Plain"), spec: Cow::Borrowed("{}"), ..Parameter::default()
@@ -898,22 +898,22 @@ macro_rules! RemoveValue {
 #[macro_export]
 macro_rules! PushValue {
   ($name:expr => $values:expr) => {{
-    state_mut!().push_value($name, $values)?
+    push_value($name, $values)?
   }};
   ($name:expr, $values:expr) => {{
-    state_mut!().push_value($name, $values)?
+    push_value($name, $values)?
   }};
 }
 #[macro_export]
 macro_rules! PopValue {
   ($name:expr) => {{
-    state_mut!().pop_value($name)
+    pop_value($name)
   }};
 }
 #[macro_export]
 macro_rules! UnshiftValue {
   ($name:expr, $values:expr) => {{
-    state_mut!().unshift_value($name, $values)
+    unshift_value($name, $values)
   }};
 }
 #[macro_export]
@@ -925,7 +925,7 @@ macro_rules! ShiftValue {
 #[macro_export]
 macro_rules! AssignMapping {
   ($map:expr, $key:expr => $value:expr) => {
-    state_mut!().assign_mapping($map, $key, $value.into())
+    assign_mapping($map, $key, $value.into())
   };
 }
 #[macro_export]
@@ -934,7 +934,7 @@ macro_rules! AssignMeaning {
     AssignMeaning!($key, $val, None)
   };
   ($key:expr, $val:expr, $scope: expr) => {{
-    state_mut!().assign_meaning($key, $val, $scope)
+    assign_meaning($key, $val, $scope)
   }};
 }
 
@@ -959,7 +959,7 @@ macro_rules! AssignCatcode {
     AssignCatcode!($c, $catcode, None)
   }};
   ($c:expr, $catcode:expr, $scope:expr) => {{
-    state_mut!().assign_catcode($c, $catcode, $scope)
+    assign_catcode($c, $catcode, $scope)
   }};
 }
 #[macro_export]
@@ -1551,7 +1551,7 @@ macro_rules! Today {
 #[macro_export]
 macro_rules! SetPrefix {
   ($prefix:literal) => {{
-    state_mut!().set_prefix($prefix);
+    set_prefix($prefix);
   }};
 }
 

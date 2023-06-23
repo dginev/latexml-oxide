@@ -144,7 +144,7 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !state!().lookup_bool("inPreamble") {
+  if !lookup_bool("inPreamble") {
     Error!(
       "unexpected",
       cs,
@@ -165,11 +165,10 @@ pub fn tabular_bindings(
     }
   }
   if !xml_attributes.contains_key("colsep") {
-    let sep_opt = state!().lookup_dimension("\\tabcolsep");
+    let sep_opt = lookup_dimension("\\tabcolsep");
     if let Some(sep) = sep_opt {
       if sep.value_of()
-        != state!()
-          .lookup_dimension("\\lx@default@tabcolsep")
+        != lookup_dimension("\\lx@default@tabcolsep")
           .unwrap()
           .value_of()
       {
@@ -192,8 +191,7 @@ pub fn tabular_bindings(
   if !properties.contains_key("strut") {
     properties.insert(
       String::from("strut"),
-      state_mut!()
-        .lookup_register("\\baselineskip", Vec::new())?
+      lookup_register("\\baselineskip", Vec::new())?
         .unwrap()
         .multiply(Float::new_f64(1.5))
         .into(),
@@ -216,7 +214,7 @@ pub fn tabular_bindings(
     "@column@after",
   ] {
     let cs = T_CS!(s!("\\{name}"));
-    let cs_def = state!().lookup_definition(&cs)?.unwrap();
+    let cs_def = lookup_definition(&cs)?.unwrap();
     let mut expansion = cs_def.get_expansion().cloned().unwrap_or_default();
     expansion.push(T_CS!(s!("\\@tabular{name}")));
     def_macro(cs, None, expansion, None)?;

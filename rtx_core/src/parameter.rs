@@ -13,7 +13,8 @@ use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::mouth::Mouth;
-use crate::{state,state_mut,gullet};
+use crate::{state,gullet};
+use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -246,13 +247,13 @@ impl Parameter {
 
   pub fn setup_catcodes(&self) {
     if self.semiverbatim.is_some() {
-      state_mut!().begin_semiverbatim(self.semiverbatim.as_deref());
+      begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
   pub fn revert_catcodes(&self) -> Result<()> {
     if self.semiverbatim.is_some() {
-      state_mut!().end_semiverbatim()?;
+      end_semiverbatim()?;
     }
     Ok(())
   }

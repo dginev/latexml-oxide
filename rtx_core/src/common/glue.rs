@@ -7,7 +7,7 @@ use std::fmt;
 use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
 use crate::definition::register::RegisterType;
-use crate::state;
+use crate::state::*;
 use crate::{Locator, Object};
 
 use super::dimension::fixedformat;
@@ -272,7 +272,7 @@ pub fn spec_setup(
         }
         fixpoint(f, None) // in mu
       } else {
-        fixpoint(f, Some(state!().convert_unit(unit)))
+        fixpoint(f, Some(convert_unit(unit)))
       };
 
       let mut plus = if punit.is_empty() {
@@ -289,7 +289,7 @@ pub fn spec_setup(
         Some(fixpoint(p, None))
       } else {
         pfill = None; // ? 0
-        Some(fixpoint(p, Some(state!().convert_unit(punit))))
+        Some(fixpoint(p, Some(convert_unit(punit))))
       };
 
       let mut minus = if munit.is_empty() {
@@ -306,7 +306,7 @@ pub fn spec_setup(
         Some(fixpoint(m, None))
       } else {
         mfill = None; // 0
-        Some(fixpoint(m, Some(state!().convert_unit(munit))))
+        Some(fixpoint(m, Some(convert_unit(munit))))
       };
 
       if punit.is_empty() {
@@ -314,7 +314,7 @@ pub fn spec_setup(
         plus = Some(fixpoint(p, None));
         pfill = Some(pfcode);
       } else {
-        plus = Some(fixpoint(p, Some(state!().convert_unit(punit))));
+        plus = Some(fixpoint(p, Some(convert_unit(punit))));
         pfill = None;
       }
       if munit.is_empty() {
@@ -322,7 +322,7 @@ pub fn spec_setup(
         minus = Some(fixpoint(m, None));
         mfill = Some(mfcode);
       } else {
-        minus = Some(fixpoint(m, Some(state!().convert_unit(munit))));
+        minus = Some(fixpoint(m, Some(convert_unit(munit))));
         mfill = None;
       }
       (skip, plus, pfill, minus, mfill)

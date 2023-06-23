@@ -12,8 +12,8 @@ LoadDefinitions!({
     let name = { Expand!(name).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
     if IsDefined!(&name_cs) {
-      let is_locked = state!().lookup_bool(&s!("\\{}:locked",name)) ||
-       state!().lookup_bool(&s!("\\begin{{{}}}:locked",name));
+      let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
+       lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
         Info!("ignore", name, message);
@@ -32,8 +32,8 @@ LoadDefinitions!({
   sub[(star, name, nargs, opt, begin, end)] {
     let mut gullet = gullet_mut!();
     let name = Expand!(name).to_string();
-    let is_locked = state!().lookup_bool(&s!("\\{}:locked",name)) ||
-       state!().lookup_bool(&s!("\\begin{{{}}}:locked",name));
+    let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
+       lookup_bool(&s!("\\begin{{{}}}:locked",name));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));

@@ -436,7 +436,7 @@ macro_rules! Roman {
 #[macro_export]
 macro_rules! requireMath {
   ($cs_name:expr) => {
-    if ! state!().lookup_bool("IN_MATH") {
+    if ! $crate::state::lookup_bool("IN_MATH") {
       let message = s!("{} should only appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }
@@ -445,7 +445,7 @@ macro_rules! requireMath {
 #[macro_export]
 macro_rules! forbidMath {
   ($cs_name:expr) => {
-    if state!().lookup_bool("IN_MATH") {
+    if $crate::state::lookup_bool("IN_MATH") {
       let message = s!("{} should not appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
     }
@@ -472,7 +472,7 @@ macro_rules! AssignRegister {
 macro_rules! SetCounter {
   ($ctr:expr, $value:expr) => {
     state::assign_register(&s!("\\c@{}",$ctr), $value.into(), Some(Scope::Global), Vec::new())?;
-    state_mut!().after_assignment();
+    after_assignment();
     def_macro(T_CS!(s!("\\@{}@ID",$ctr)), None,
       Tokens::new(Explode!($value.value_of())),
       Some(ExpandableOptions{ scope: Some(Scope::Global),

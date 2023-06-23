@@ -282,7 +282,7 @@ LoadDefinitions!({
         tokens.push(token);
         tokens.extend(gullet::read_balanced(false)?.unwrap_or_default().unlist());
         tokens.push(T_END!());
-      } else if let Some(defn) = state!().lookup_definition_stored(&token)? {
+      } else if let Some(defn) = lookup_definition_stored(&token)? {
         let args = defn.read_arguments()?;
         tokens.extend(Invocation!(token, args).unlist());
       } else {
@@ -324,7 +324,7 @@ LoadDefinitions!({
   // Whenever possible, use this `DefExpanded` parameter type directly, rather than hand-crafting a
   // new one.
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      state_mut!().set_smuggle_the(true);
+      set_smuggle_the(true);
       let expanded = if let Some(token) = gullet::read_x_token(None, false)? {
         if token.get_catcode() == Catcode::BEGIN {
           gullet::read_balanced(true)?.unwrap_or_default()
@@ -335,7 +335,7 @@ LoadDefinitions!({
         Error!("Expected", "DefExpanded", "Expected <DefExpanded> here");
         Tokens!()
       };
-      state_mut!().expire_smuggle_the();
+      expire_smuggle_the();
       Ok(expanded)
     },
     pack_parameters => true,
@@ -402,9 +402,9 @@ LoadDefinitions!({
   // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!(Verbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;
-      state_mut!().begin_semiverbatim(Some(&['%', '\\']));
+     begin_semiverbatim(Some(&['%', '\\']));
       let arg = gullet::read_balanced(false)?;
-      state_mut!().end_semiverbatim()?;
+      end_semiverbatim()?;
       Ok(arg)
     },
     before_digest => {
@@ -425,7 +425,7 @@ LoadDefinitions!({
   // Read Verbatim, but allows expanding command sequences
   DefParameterType!(HyperVerbatim, sub[_inner, _extra] {
       gullet::read_until(&Tokens!(T_BEGIN!()))?;
-      state_mut!().begin_semiverbatim(Some(&['%']));
+     begin_semiverbatim(Some(&['%']));
       DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
       DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
@@ -437,7 +437,7 @@ LoadDefinitions!({
       state::let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       // Having prepared, read in the argument, expanding as we go
       let arg = gullet::read_balanced(true)?;
-      state_mut!().end_semiverbatim()?;
+      end_semiverbatim()?;
       arg
     },
     before_digest => {
@@ -730,7 +730,7 @@ LoadDefinitions!({
       Ok(Tokens!())
     },
     predigest => sub[_arg] {
-      let ismath = state!().lookup_bool("IN_MATH");
+      let ismath = lookup_bool("IN_MATH");
       let mut list = Vec::new();
       let mut next_token = None;
       while let Some(token) = gullet::read_x_token(Some(false), false )? {
@@ -768,7 +768,7 @@ LoadDefinitions!({
   //   // "extra" passed into "predigest" as well.
   //   predigest => {
   //     unimplemented!();
-  //     //   let ismath = state!().lookup_bool("IN_MATH");
+  //     //   let ismath = lookup_bool("IN_MATH");
   //     //   stomach::digest_next_body(Some(until))?
   //   //   my @list   = $state::>getStomach->digestNextBody($until);
   //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
@@ -788,7 +788,7 @@ LoadDefinitions!({
       Ok(Tokens!()) // all done in predigestion
     },
     predigest => {
-      let ismath   = state!().lookup_bool("IN_MATH");
+      let ismath   = lookup_bool("IN_MATH");
       let mut list     = stomach::digest_next_body(None)?;
       // In most (all?) cases, we're really looking for a single Whatsit here...
       list.retain(|tbox| !tbox.is_comment());

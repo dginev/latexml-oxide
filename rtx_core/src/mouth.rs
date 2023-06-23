@@ -20,11 +20,11 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope};
+use crate::{state};
+use crate::state::*;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
-use crate::{state,state_mut};
 
 static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
@@ -258,13 +258,13 @@ impl Mouth {
       None
     };
     if self.fordefinitions {
-      self.saved_at_cc = state!().lookup_catcode('@');
+      self.saved_at_cc = lookup_catcode('@');
       self.saved_include_comments = match state!().lookup_value("INCLUDE_COMMENTS") {
         Some(Stored::Bool(x)) => Some(*x),
         _ => None,
       };
-      state_mut!().assign_catcode('@', Catcode::LETTER, None);
-      state::assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
+      assign_catcode('@', Catcode::LETTER, None);
+      assign_value("INCLUDE_COMMENTS", false, Some(Scope::Local));
     }
   }
   pub fn finish(&mut self) {
@@ -275,10 +275,10 @@ impl Mouth {
     self.nchars = 0;
     if self.fordefinitions {
       if let Some(cc) = self.saved_at_cc {
-        state_mut!().assign_catcode('@', cc, None);
+        assign_catcode('@', cc, None);
       }
       if let Some(sic) = self.saved_include_comments {
-        state::assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
+        assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
       }
     }
     if self.notes {
@@ -369,7 +369,7 @@ impl Mouth {
     self.colno += 1;
     if let Some(ch) = ch_opt {
       let mut ch = *ch;
-      let mut cc = state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+      let mut cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       // Possible convert ^^x
       if cc == Catcode::SUPER && Some(&ch) == self.chars.get(self.colno) {
         let c1_opt = self.chars.get(self.colno + 1);
@@ -400,7 +400,7 @@ impl Mouth {
           self.splice(self.colno - 1..self.colno + 2, &[ch]);
           self.nchars -= 2;
         }
-        cc = state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER);
+        cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
       }
       Some((ch, cc))
     } else {
@@ -426,8 +426,8 @@ impl Mouth {
         self.colno = 0;
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
-        let read_mode = state!().lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = if let Some(defn) = state!().lookup_definition(&CS_ENDLINECHAR).unwrap() {
+        let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
+        let eolch = if let Some(defn) = lookup_definition(&CS_ENDLINECHAR).unwrap() {
           if defn.is_register() {
             if let Some(eol) = defn.value_of(Vec::new()) {
               let eol = eol.value_of() as i16;
@@ -449,7 +449,7 @@ impl Mouth {
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {
-            state!().lookup_catcode(ch).unwrap_or(Catcode::OTHER)
+            lookup_catcode(ch).unwrap_or(Catcode::OTHER)
           } else {
             Catcode::OTHER
           };
@@ -487,7 +487,7 @@ impl Mouth {
         while self.colno < self.nchars {
           let cc_next = match self.chars.get(self.colno) {
             None => Catcode::OTHER,
-            Some(c) => match state!().lookup_catcode(*c) {
+            Some(c) => match lookup_catcode(*c) {
               Some(cc) => cc,
               None => Catcode::OTHER,
             },
@@ -503,7 +503,7 @@ impl Mouth {
           return Some(T_MARKER!("EOL"));
         }
         // Sneak a comment out, every so often.
-        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && state!().lookup_bool("INCLUDE_COMMENTS") {
+        if (self.lineno % READLINE_PROGRESS_QUANTUM) == 0 && lookup_bool("INCLUDE_COMMENTS") {
           return Some(T_COMMENT!(s!(
             "**** {} Line {} ****",
             &self.shortsource,
@@ -679,7 +679,7 @@ impl Mouth {
     // but it makes nicer XML with occasional \n. Hopefully, this is harmless?
     let token = if self.colno == 1 {
       T_CS!("\\par")
-    } else if state!().lookup_int("PRESERVE_NEWLINES") > 0 {
+    } else if lookup_int("PRESERVE_NEWLINES") > 0 {
       Token!("\n", Catcode::SPACE)
     } else {
       T_SPACE!()
@@ -710,9 +710,9 @@ impl Mouth {
       comment.push(*c);
     }
     let trimmed_comment = comment.trim();
-    if !trimmed_comment.is_empty() && state!().lookup_bool("INCLUDE_COMMENTS") {
+    if !trimmed_comment.is_empty() && lookup_bool("INCLUDE_COMMENTS") {
       Some(T_COMMENT!(trimmed_comment))
-    } else if state!().lookup_int("PRESERVE_NEWLINES") > 1 {
+    } else if lookup_int("PRESERVE_NEWLINES") > 1 {
       Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {
       None

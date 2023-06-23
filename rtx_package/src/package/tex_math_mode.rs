@@ -64,10 +64,10 @@ LoadDefinitions!({
     before_digest => {
       stomach_mut!().begin_mode("display_math")?;
       // TODO:
-      // if let Some(everymath_toks) = state!().lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
+      // if let Some(everymath_toks) = lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
       //   gullet::unread(everymath_toks);
       // }
-      // if let Some(everydisplay_toks) = state!().lookup_definition(T_CS!("\\everydisplay")).value_of().unlist() {
+      // if let Some(everydisplay_toks) = lookup_definition(T_CS!("\\everydisplay")).value_of().unlist() {
       //   gullet::unread(everydisplay_toks);
       // }
     },
@@ -104,12 +104,12 @@ LoadDefinitions!({
 
       let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
         if let Some(body) = tbox.get_body()? {
-          state_mut!().set_dual_branch("presentation");
+          set_dual_branch("presentation");
           let tex = body.untex()?;
-          state_mut!().expire_dual_branch();
-          state_mut!().set_dual_branch("content");
+          expire_dual_branch();
+          set_dual_branch("content");
           let ctex = body.untex()?;
-          state_mut!().expire_dual_branch();
+          expire_dual_branch();
           if ctex != tex {
             document.set_attribute(node, "content-tex", &ctex)?;
           }

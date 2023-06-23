@@ -5,7 +5,7 @@ use libxml::tree::Node;
 use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
-use crate::state::{Scope};
+use crate::state::*;
 
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
 use crate::document::Document;
@@ -93,8 +93,8 @@ impl Definition for Expandable {
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
-    let tracing = state!().lookup_int("TRACINGMACROS") > 0;
-    let profiled = state!().lookup_bool("PROFILING");
+    let tracing = lookup_int("TRACINGMACROS") > 0;
+    let profiled = lookup_bool("PROFILING");
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.

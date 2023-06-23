@@ -3,6 +3,7 @@ use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
+use crate::state::*;
 use crate::state;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use once_cell::sync::Lazy;
@@ -944,7 +945,7 @@ impl Font {
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let fillwidth = match options.get("width") {
       Some(Stored::Int(fw)) => Some(*fw),
-      None => match state!().lookup_definition(&T_CS!("\\textwidth"))? {
+      None => match lookup_definition(&T_CS!("\\textwidth"))? {
         Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
         None => None,
       },
@@ -952,14 +953,12 @@ impl Font {
     };
     let _maxwidth = fillwidth.unwrap_or_default();
     //   # baselineskip, lineskip ??
-    let _baseline = state!()
-      .lookup_definition(&T_CS!("\\baselineskip"))?
+    let _baseline = lookup_definition(&T_CS!("\\baselineskip"))?
       .expect("baseline skip should aways be defined")
       .value_of(Vec::new())
       .expect("\\baselineskip should always have a value.")
       .value_of();
-    let _lineskip = state!()
-      .lookup_definition(&T_CS!("\\lineskip"))?
+    let _lineskip = lookup_definition(&T_CS!("\\lineskip"))?
       .expect("lineskip should always be defined")
       .value_of(Vec::new())
       .expect("\\lineskip should always have a value.")
@@ -1094,7 +1093,7 @@ pub fn decode(
   let encoding = match encoding_opt {
     Some(enc) => Cow::Owned(enc),
     None => {
-      font = state!().lookup_font();
+      font = lookup_font();
       if let Some(ref font) = font {
         match font.get_encoding() {
           None => Cow::Borrowed(""),
@@ -1107,7 +1106,6 @@ pub fn decode(
   };
 
   let mut map: Option<Fontmap> = None;
-  let state = state!();
   if !encoding.is_empty() {
     preload_font_map(&encoding).expect("preloading a font map should succeed?");
     if let Some(encmap) = load_font_map(&encoding) {
@@ -1115,7 +1113,7 @@ pub fn decode(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          if let Some(fmap) = state.lookup_value(&s!("{encoding}_{family}_fontmap")) {
+          if let Some(fmap) = state!().lookup_value(&s!("{encoding}_{family}_fontmap")) {
             map = fmap.into(); // Use the family specific map, if any.
           }
         }
@@ -1155,11 +1153,10 @@ pub fn decode_string(
   if string == empty_sym {
     return empty_sym;
   }
-  let state = state!();
   let mut font = None;
   let encoding = match encoding_opt {
     None => {
-      font = state.lookup_font();
+      font = lookup_font();
       if let Some(ref font) = font {
         font.get_encoding().unwrap_or(&Cow::Borrowed(""))
       } else {
@@ -1177,7 +1174,7 @@ pub fn decode_string(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          if let Some(fmap) = state.lookup_value(&s!("{}_{}_fontmap", encoding, family)) {
+          if let Some(fmap) = state!().lookup_value(&s!("{}_{}_fontmap", encoding, family)) {
             map = fmap.into(); // Use the family specific map, if any.
           }
         }

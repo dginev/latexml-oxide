@@ -68,7 +68,7 @@ LoadDefinitions!({
           if gullet::read_keyword(&["+"])?.is_none() {
             Error!("expected", "+", "Missing + in multido variables");
           }
-          let needs_negate = state!().lookup_int("\\multido@count") < 0;
+          let needs_negate = lookup_int("\\multido@count") < 0;
           let step = match vtype.as_str() {
             "d" => {
               let mut stepv = gullet::read_dimension()?;

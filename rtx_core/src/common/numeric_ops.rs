@@ -72,7 +72,7 @@ pub trait NumericOps {
   fn px_value(self, prec: Option<u8>) -> f64
   where Self: Sized {
     // TODO: continue...
-    // let dpi = state!().lookup_int("DPI") || 100
+    // let dpi = lookup_int("DPI") || 100
     let dpi = 100.0;
     round_to((self.value_f64() / UNITY_F64) * (dpi / 72.27), prec)
   }

@@ -15,11 +15,11 @@ use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
 use crate::list::List;
 use crate::mouth::{Mouth, MouthOptions};
-use crate::state::{self, Scope};
+use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{Digested, TexMode, gullet, gullet_mut, state_mut};
+use crate::{Digested, TexMode, gullet, gullet_mut};
 
 static MAXSTACK: usize = 200;
 
@@ -54,7 +54,7 @@ impl Stomach {
     self.token_stack = Vec::new();
     self.box_list = Vec::new();
     self.localized_box_list = Vec::new();
-    state_mut!().initialize_stomach();
+    initialize_stomach();
   }
   /// get the current boxing level
   pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
@@ -73,9 +73,9 @@ impl Stomach {
   pub fn regurgitate(&mut self) -> Vec<Digested> { self.box_list.drain(..).collect() }
 
   //**********************************************************************
-  // Maintaining state::
+  // Maintaining state
   //**********************************************************************
-  // state::changes that the Stomach needs to moderate and know about (?)
+  // state changes that the Stomach needs to moderate and know about (?)
 
   //======================================================================
   // Dealing with TeX's bindings & grouping.
@@ -84,21 +84,21 @@ impl Stomach {
   /// Adds a new stack frame for a TeX group.
   pub fn push_stack_frame(&mut self, nobox: bool) {
     let current_token = {state!().get_current_token().unwrap().clone()};
-    state::push_frame();
-    state::assign_value(
+    push_frame();
+    assign_value(
       "beforeAfterGroup",
       Stored::VecDequeStored(VecDeque::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state::assign_value(
+    assign_value(
       "afterGroup",
       Stored::VecDequeStored(VecDeque::new()),
       Some(Scope::Local),
     ); // ALWAYS bind this!
-    state::assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
-    state::assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-    state::assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
-    state::assign_value(
+    assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
+    assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
+    assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
+    assign_value(
       "groupInitiatorLocator",
       gullet!().get_locator().unwrap().into_owned(),
       Some(Scope::Local),
@@ -110,7 +110,7 @@ impl Stomach {
   }
   /// Removes the last/current stack frame, ending a TeX group
   pub fn pop_stack_frame(&mut self, nobox: bool) -> Result<()> {
-    if let Some(Stored::VecDequeStored(beforeafter)) = state::remove_value("beforeAfterGroup") {
+    if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup") {
       if !beforeafter.is_empty() {
         let mut result = Vec::new();
         for beforeafter_frame in beforeafter.into_iter() {
@@ -131,8 +131,8 @@ impl Stomach {
         self.box_list.extend(result);
       }
     }
-    let after = state::remove_value("afterGroup");
-    state_mut!().pop_frame()?;
+    let after = remove_value("afterGroup");
+    pop_frame()?;
     if !nobox {
       self.boxing.pop(); // For begingroup/endgroup
     }
@@ -150,17 +150,17 @@ impl Stomach {
 
   /// explain the current frame
   pub fn current_frame_message(&self) -> String {
-    let target = if state!().is_value_bound("MODE", Some(0)) {
+    let target = if is_value_bound("MODE", Some(0)) {
       // SET mode in CURRENT frame ?
-      Cow::Owned(s!("mode-switch to {}", state::lookup_string("MODE")))
-    } else if state!().lookup_bool("groupNonBoxing") {
+      Cow::Owned(s!("mode-switch to {}", lookup_string("MODE")))
+    } else if lookup_bool("groupNonBoxing") {
       // Current frame is a non-boxing group?
       Cow::Borrowed("non-boxing group")
     } else {
       Cow::Borrowed("boxing group")
     };
 
-    let initiator = if let Some(t) = state::lookup_token("groupInitiator") {
+    let initiator = if let Some(t) = lookup_token("groupInitiator") {
       t.stringify()
     } else {
       String::new()
@@ -183,13 +183,13 @@ impl Stomach {
     // to find all the places to manage it.
     // So, let's try this for now...
     // was $LaTeXML::ALIGN_STATE
-    state::increment_align_group_count();
+    increment_align_group_count();
   }
   /// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there, and also
   /// decrementing the level of boxing.
   pub fn egroup(&mut self) -> Result<()> {
-    if state::lookup_bool("groupNonBoxing") {
+    if lookup_bool("groupNonBoxing") {
       // or group was opened with \begingroup
       Error!(
         "unexpected",
@@ -200,7 +200,7 @@ impl Stomach {
       // Don't pop if there's an error; maybe we'll recover?
       self.pop_stack_frame(false)?;
     }
-    state::decrement_align_group_count();
+    decrement_align_group_count();
     Ok(())
   }
   /// Begin a new level of binding by pushing a new stack frame.
@@ -208,7 +208,7 @@ impl Stomach {
   /// End a level of binding by popping the last stack frame,
   /// undoing whatever bindings appeared there.
   pub fn endgroup(&mut self) -> Result<()> {
-    if !state::lookup_bool("groupNonBoxing") {
+    if !lookup_bool("groupNonBoxing") {
       // or group was opened with \bgroup
       Error!(
         "unexpected",
@@ -232,20 +232,20 @@ impl Stomach {
   /// Useful for environments, where the group has already been established.
   /// (presumably, in the long run, modes & groups should be much less coupled)
   pub fn set_mode(&mut self, mode: &str) -> Result<()> {
-    let prevmode = state::lookup_string("MODE");
+    let prevmode = lookup_string("MODE");
     let ismath = mode.ends_with("math");
-    state::assign_value("MODE", arena::pin(mode), Some(Scope::Local));
-    state::assign_value("IN_MATH", ismath, Some(Scope::Local));
+    assign_value("MODE", arena::pin(mode), Some(Scope::Local));
+    assign_value("IN_MATH", ismath, Some(Scope::Local));
     if mode == prevmode {
     } else if ismath {
-      let curfont = state!().lookup_font().unwrap();
+      let curfont = lookup_font().unwrap();
       // When entering math mode, we set the font to the default math font,
       // and save the text font for any embedded text.
-      state::assign_value("savedfont", curfont.clone(), Some(Scope::Local));
+      assign_value("savedfont", curfont.clone(), Some(Scope::Local));
       // see get_script_level()
-      state::assign_value("script_base_level", self.boxing.len(), None);
+      assign_value("script_base_level", self.boxing.len(), None);
       let isdisplay = mode.starts_with("display");
-      let new_font = state!().lookup_mathfont().unwrap().merge(Font {
+      let new_font = lookup_mathfont().unwrap().merge(Font {
         color: curfont.color.clone(),
         bg: curfont.bg.clone(),
         size: curfont.size,
@@ -256,14 +256,14 @@ impl Stomach {
         },
         ..Font::default()
       });
-      state::assign_font(Rc::new(new_font), Some(Scope::Local));
+      assign_font(Rc::new(new_font), Some(Scope::Local));
     } else {
-      let curfont = state!().lookup_font().unwrap();
+      let curfont = lookup_font().unwrap();
       // When entering text mode, we should set the font to the text font in use before the math
       // but inherit color and size
       let saved_opt = state!().lookup_value("savedfont").cloned();
       if let Some(Stored::Font(saved_font)) = saved_opt {
-        state::assign_font(
+        assign_font(
           Rc::new(saved_font.merge(Font {
             color: curfont.color.clone(),
             bg: curfont.bg.clone(),
@@ -289,14 +289,14 @@ impl Stomach {
   /// currently in `mode`.  This also ends a level of grouping.
   pub fn end_mode(&mut self, mode: &str) -> Result<()> {
     // Last stack frame was NOT a mode switch!?!?!
-    if !state!().is_value_bound("MODE", Some(0)) || (state::lookup_string_sym("MODE") != arena::pin(mode)) {
+    if !is_value_bound("MODE", Some(0)) || (lookup_string_sym("MODE") != arena::pin(mode)) {
       // Or was a mode switch to a different mode
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        state::lookup_string("MODE")
+        lookup_string("MODE")
       );
-      let category = match state!().get_current_token() {
+      let category = match get_current_token() {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
       };
@@ -339,8 +339,8 @@ pub fn digest<T: Into<Tokens>>(
   }
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
-    state::clear_prefixes(); // prefixes shouldn't apply here.
-    let mode = if state::lookup_bool("IN_MATH") {
+    clear_prefixes(); // prefixes shouldn't apply here.
+    let mode = if lookup_bool("IN_MATH") {
       TexMode::Math
     } else {
       TexMode::Text
@@ -388,7 +388,7 @@ pub fn digest_next_body(
   let mut found_token = false;
   let mut found_terminal = false;
   stomach_mut!().new_local_box_list();
-  let alignment_opt = state::lookup_alignment();
+  let alignment_opt = lookup_alignment();
   // TODO: bookkeep for "expected" warning
   //let mut aug = Vec::new();
 
@@ -450,8 +450,8 @@ pub fn digest_next_body(
 pub fn raw_tex(text: &str) -> Result<()> {
   // It could be as simple as this, except if catcodes get changed, it's too late!!!
   //  Digest(TokenizeInternal($text));
-  let savedcc = state::lookup_catcode('@').unwrap_or(Catcode::OTHER);
-  state::assign_catcode('@', Catcode::LETTER, None);
+  let savedcc = lookup_catcode('@').unwrap_or(Catcode::OTHER);
+  assign_catcode('@', Catcode::LETTER, None);
   let raw_tex_mouth = Mouth::new(
     text,
     Some(MouthOptions {
@@ -468,7 +468,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
     Ok(())
   })?;
 
-  state::assign_catcode('@', savedcc, None);
+  assign_catcode('@', savedcc, None);
   Ok(())
 }
 
@@ -487,7 +487,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
     while maybe_token.is_some() {
       let token = maybe_token.take().unwrap().into_owned();
       // info!(target:"invoke_token", "{:?}", token);
-      state::local_current_token(token.clone());
+      local_current_token(token.clone());
       { stomach_mut!().token_stack.push(token.clone()); }
       if { stomach!().token_stack.len() } > MAXSTACK {
         fatal!(
@@ -506,9 +506,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
       // API is identical. However, as the types are different, Rust
       // constrains us here, we need separate match arms for each
       // distinctly typed enum case.
-      let digestable_def = {
-        state_mut!().lookup_digestable_definition(&token)
-      };
+      let digestable_def = lookup_digestable_definition(&token);
       match digestable_def {
         None => {
           result = invoke_token_undefined(&token)?;
@@ -545,8 +543,8 @@ pub fn raw_tex(text: &str) -> Result<()> {
           // replace the token by it's expansion!!!
           maybe_token = gullet::read_x_token(None, false)?
             .map(Cow::Owned);
-          stomach_mut!().token_stack.pop();
-          state::expire_current_token();
+          { stomach_mut!().token_stack.pop(); }
+          expire_current_token();
           continue;
         },
         Some(Stored::Conditional(meaning)) => {
@@ -555,22 +553,22 @@ pub fn raw_tex(text: &str) -> Result<()> {
           gullet::unread(invoked_meaning);
           maybe_token = gullet::read_x_token(None, false)?
               .map(Cow::Owned);
-          stomach_mut!().token_stack.pop();
-          { state_mut!().expire_current_token(); }
+          { stomach_mut!().token_stack.pop(); }
+          expire_current_token();
           continue;
         },
         Some(Stored::Constructor(meaning)) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive()?;
           if !meaning.is_prefix() {
-            state_mut!().clear_prefixes(); // Clear prefixes unless we just set one.
+            clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         Some(Stored::Primitive(meaning)) => {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive()?;
           if !meaning.is_prefix() {
-            state_mut!().clear_prefixes(); // Clear prefixes unless we just set one.
+            clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         Some(Stored::MathPrimitive(meaning)) => {
@@ -578,14 +576,14 @@ pub fn raw_tex(text: &str) -> Result<()> {
           // Otherwise, a normal primitive or constructor
           result = meaning.invoke_primitive()?;
           if !meaning.is_prefix() {
-            state_mut!().clear_prefixes(); // Clear prefixes unless we just set one.
+            clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         Some(Stored::Register(meaning)) => {
           // Registers are special primitives
           result = meaning.invoke_primitive()?;
           if !meaning.is_prefix() {
-            state_mut!().clear_prefixes(); // Clear prefixes unless we just set one.
+            clear_prefixes(); // Clear prefixes unless we just set one.
           }
         },
         meaning => {
@@ -596,7 +594,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
           );
         },
       }
-      state::expire_current_token();
+      expire_current_token();
       break;
     }
     stomach_mut!().token_stack.pop();
@@ -621,7 +619,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
         "Defining it now as with \\newif"
       );
       // install stub definitions for new conditional
-      state::install_definition(
+      install_definition(
         Expandable::new(
           T_CS!(s!("\\{}true", name)),
           None,
@@ -630,7 +628,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
               )?,
         None,
       );
-      state::install_definition(
+      install_definition(
         Expandable::new(
           T_CS!(s!("\\{}false", name)),
           None,
@@ -641,7 +639,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
       );
 
       let mut gullet = gullet_mut!();
-      state::let_i(token, &T_CS!("\\iffalse"), None);
+      let_i(token, &T_CS!("\\iffalse"), None);
       gullet.unread_one(token.clone()); // Retry
       Ok(Vec::new())
     } else {
@@ -652,7 +650,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
         &message,
         "Defining it now as <ltx:ERROR/>"
       );
-      state::install_definition(
+      install_definition(
         Constructor {
           cs: token.clone(),
           paramlist: None,
@@ -670,11 +668,11 @@ pub fn raw_tex(text: &str) -> Result<()> {
 
   fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
     let cc = meaning.get_catcode();
-    let font = state!().lookup_font();
-    state_mut!().clear_prefixes(); // prefixes shouldn't apply here.
+    let font = lookup_font();
+    clear_prefixes(); // prefixes shouldn't apply here.
     match cc {
       Catcode::SPACE => {
-        if state!().lookup_bool("IN_MATH") {
+        if lookup_bool("IN_MATH") {
           Ok(None)
         } else {
           Ok(Some(Digested::from(Tbox::new(

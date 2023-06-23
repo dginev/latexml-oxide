@@ -11,8 +11,9 @@ use crate::common::font::{Font, Fontmap};
 use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
 use crate::mouth::{Mouth, MouthOptions};
+use crate::gullet::do_expand;
 use crate::parameter::{Parameter, Parameters};
-use crate::state::{Scope, Stored};
+use crate::state::*;
 use crate::token::*;
 use crate::util::pathname::{self, PathnameFindOptions};
 use crate::*;
@@ -72,12 +73,12 @@ pub fn input_definitions(
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   let prevname =
-    if options.handleoptions && state!().lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
       gullet::do_expand(T_CS!("\\@currname"))?.to_string()
     } else {
       String::new()
     };
-  let prevext = if options.handleoptions && state!().lookup_definition(&T_CS!("\\@currext"))?.is_some()
+  let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some()
   {
     gullet::do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
@@ -267,11 +268,11 @@ fn _load_binding(
   ) -> Result<bool> {
   // avoid double-loads, but be binding-specific
   let loaded_key = s!("{request}_binding_loaded");
-  if state!().lookup_bool(&loaded_key) {
+  if lookup_bool(&loaded_key) {
     return Ok(true);
   }
-  // TODO? || state!().lookup_bool(&s!("{trequest}_loaded"))
-  //|| state!().lookup_bool(&s!("{name}_loaded")) || state!().lookup_bool(&s!("{ltxname}_loaded"));
+  // TODO? || lookup_bool(&s!("{trequest}_loaded"))
+  //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = if internal {
     state!().bindings_dispatch.as_ref().map(Rc::clone)
@@ -318,7 +319,7 @@ fn before_input_handle_options(
 
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
-    if !prevname.is_empty() && state!().has_value(&s!("opt@{}.{}", prevname, prevext)) {
+    if !prevname.is_empty() && has_value(&s!("opt@{}.{}", prevname, prevext)) {
       // Only pass those class options that are declared by the package!
       if let Some(declared_options) = state!().lookup_vecdeque("@declaredoptions") {
         let mut topass = Vec::new();
@@ -357,7 +358,7 @@ fn before_input_handle_options(
 
   // Note which packages are pretending to be classes.
   if options.as_class {
-    state_mut!().push_value("@masquerading@as@class", arena::pin(name))?;
+    push_value("@masquerading@as@class", arena::pin(name))?;
   }
   let current_opt_val = match state!().lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
     Some(vdq) => {
@@ -454,7 +455,7 @@ pub fn input(
   // }
   // // Next special case: If we were currently reading a "known" style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
-  if state!().lookup_bool("INTERPRETING_DEFINITIONS") {
+  if lookup_bool("INTERPRETING_DEFINITIONS") {
     input_definitions(
       &clean_req,
       InputDefinitionOptions::default())
@@ -503,17 +504,17 @@ fn load_tex_definitions(
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if state!().lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
+    if lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
     state::assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
-  let was_interpreting = state!().lookup_bool("INTERPRETING_DEFINITIONS");
+  let was_interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
   // And that if we're interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
-  let was_including_styles = state!().lookup_bool("INCLUDE_STYLES");
+  let was_including_styles = lookup_bool("INCLUDE_STYLES");
   state::assign_value("INTERPRETING_DEFINITIONS", true, None);
   // If we're reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
@@ -595,7 +596,7 @@ pub fn load_tex_content(
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
 fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
-  state_mut!().push_value(&s!("opt@{}.{}", name, ext), options)
+  push_value(&s!("opt@{}.{}", name, ext), options)
 }
 
 pub fn process_options() -> Result<()> {
@@ -701,7 +702,7 @@ pub fn process_options() -> Result<()> {
 
 fn execute_option_internal(option: &str) -> Result<bool> {
   let cs = T_CS!(s!("\\ds@{}", option));
-  if state!().lookup_definition(&cs)?.is_some() {
+  if lookup_definition(&cs)?.is_some() {
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
@@ -793,7 +794,7 @@ pub fn require_package(
   ) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
   if options.notex.is_none()
-    && !state!().lookup_bool("INCLUDE_STYLES")
+    && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
   {
     options.notex = Some(true);
@@ -962,7 +963,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
     let paths: Vec<String> = state!().search_paths.iter().cloned().collect();
     let _urlbase = state!().lookup_value("URLBASE");
-    let nopaths = state!().lookup_bool("REMOTE_REQUEST");
+    let nopaths = lookup_bool("REMOTE_REQUEST");
     let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
     // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
@@ -1052,8 +1053,8 @@ pub fn select_relaxng_schema(
 }
 
 pub fn merge_font(font: Font) {
-  let new_font = state!().lookup_font().unwrap().merge(font);
-  state_mut!().assign_font(Rc::new(new_font), Some(Scope::Local));
+  let new_font = lookup_font().unwrap().merge(font);
+  assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
 pub fn digest_text(stuff: Tokens) -> Result<Digested> {
@@ -1071,14 +1072,14 @@ pub fn digest_literal<T: Into<Tokens>>(
   // valid changes of state::)
   stomach_mut!().begin_mode("text")?;
 
-  let font = state!().lookup_font().unwrap(); // TODO: raise error if font missing
-  state_mut!().assign_font(
+  let font = lookup_font().unwrap(); // TODO: raise error if font missing
+  assign_font(
     Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 
   let value = stomach::digest(stuff);
-  state_mut!().assign_font(font, None);
+  assign_font(font, None);
   stomach_mut!().end_mode("text")?;
   value
 }
@@ -1086,7 +1087,7 @@ pub fn digest_literal<T: Into<Tokens>>(
 pub fn digest_if(
   token: Token,
   ) -> Result<Option<Digested>> {
-  if state!().lookup_definition(&token)?.is_some() {
+  if lookup_definition(&token)?.is_some() {
     match stomach::digest(Tokens!(token)) {
       Ok(t) => Ok(Some(t)),
       Err(e) => Err(e),
@@ -1102,7 +1103,7 @@ pub fn build_invocation<T: Into<Token>>(
 ) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
-  if let Some(defn) = state!().lookup_definition(&token)? {
+  if let Some(defn) = lookup_definition(&token)? {
     let mut invoked_tokens = vec![token];
     let mut reverted_args = if let Some(params) = defn.get_parameters() {
       params.revert_arguments(args)?
@@ -1131,12 +1132,6 @@ pub fn build_invocation<T: Into<Token>>(
     invoked_tokens.append(&mut wrapped_args);
     Ok(Tokens::new(invoked_tokens))
   }
-}
-
-pub fn do_expand<T: Into<Tokens>>(
-  tokens: T
-) -> Result<Tokens> {
-  gullet::do_expand(tokens)
 }
 
 /// Convert a LaTeX-style argument spec to our Package form.
@@ -1192,7 +1187,7 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
     return Ok(());
   }
   let fail_key = s!("{encoding}_fontmap_failed_to_load");
-  let failed_flag = state!().lookup_bool(&fail_key);
+  let failed_flag = lookup_bool(&fail_key);
   if !failed_flag {
     state::assign_value(&fail_key, true, None); // Stop recursion?
     input_definitions(
@@ -1203,7 +1198,7 @@ pub fn preload_font_map(encoding: &str) -> Result<()> {
         ..InputDefinitionOptions::default()
       }
     )?;
-    if state!().has_value(&s!("{encoding}_fontmap")) {
+    if has_value(&s!("{encoding}_fontmap")) {
       // Got map?
       state::assign_value(&fail_key, false, None);
     } else {

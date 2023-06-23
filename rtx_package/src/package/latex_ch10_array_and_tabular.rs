@@ -17,7 +17,7 @@ LoadDefinitions!({
   DefRegister!("\\tabcolsep", Dimension!("6pt"));
   DefMacro!("\\arraystretch", None, T_OTHER!("1"));
   Let!("\\@tabularcr", "\\@alignment@newline");
-  if ! state!().has_value("GUESS_TABULAR_HEADERS") {
+  if ! has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }
 
@@ -58,7 +58,7 @@ LoadDefinitions!({
     before_digest => { stomach_mut!().bgroup(); },
     sizer        => "#3",
     after_digest  => sub[whatsit] {
-      if let Some(alignment) = state!().lookup_alignment() {
+      if let Some(alignment) = lookup_alignment() {
         if let DigestedData::Alignment(data) = alignment.data() {
           let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
           else { translate_attachment(String::new()) };
@@ -128,7 +128,7 @@ LoadDefinitions!({
           cols_vec.push(this_num);
         }
       }
-      if let Some(alignment_stored) = state!().lookup_alignment() {
+      if let Some(alignment_stored) = lookup_alignment() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", cols_vec);
       }

@@ -12,6 +12,6 @@ LoadDefinitions!({
       </ltx:XMApp>"
       // TODO
     // sizer      => sub[whatsit] { frac_sizer(whatsit.get_arg(1), whatsit.get_arg(2)) },
-    // properties => { "mathstyle" => state!().lookup_font().get_mathstyle() }
+    // properties => { "mathstyle" => lookup_font().get_mathstyle() }
   );
 });

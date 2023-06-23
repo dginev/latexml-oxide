@@ -10,32 +10,39 @@ use std::collections::VecDeque;
 
 #[test]
 fn basic_state_init() {
-  let state = State::new(StateOptions::default());
-  assert_eq!(state.lookup_catcode('@'), None); // OTHER
+  {
+    let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());
+  }
+  assert_eq!(lookup_catcode('@'), None); // OTHER
 
-  let state_std = State::new(StateOptions {
-    catcodes: Some(Catcodes::Standard),
-    ..StateOptions::default()
-  });
-  assert_eq!(state_std.lookup_catcode('@'), None); // OTHER
-  assert_eq!(state_std.lookup_catcode('\\'), Some(Catcode::ESCAPE));
+  {
+    let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions {
+      catcodes: Some(Catcodes::Standard),
+      ..StateOptions::default()
+    });
+  }
+  assert_eq!(lookup_catcode('@'), None); // OTHER
+  assert_eq!(lookup_catcode('\\'), Some(Catcode::ESCAPE));
 
-  let std_sty = State::new(StateOptions {
-    catcodes: Some(Catcodes::Style),
-    ..StateOptions::default()
-  });
-  assert_eq!(std_sty.lookup_catcode('@'), Some(Catcode::LETTER));
+  use_sty_state();
+  assert_eq!(lookup_catcode('@'), Some(Catcode::LETTER));
+  use_main_state();
 }
 
 #[test]
 fn assign_lookup_value() {
-  let mut state = State::new(StateOptions::default());
+  {
+    let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());
+  }
   // initially missing
-  assert!(!state.has_value("STRICT"));
+  assert!(!has_value("STRICT"));
 
   let strict_value = "testing strict";
-  state.assign_value("STRICT", strict_value, None);
-  match state.lookup_value("STRICT") {
+  assign_value("STRICT", strict_value, None);
+  match STATE.borrow().lookup_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value after assignment"),
     Some(&Stored::String(ref received_value)) => {
       assert_eq!(arena::to_string(*received_value), strict_value)
@@ -47,8 +54,8 @@ fn assign_lookup_value() {
   hash_val.insert(s!("a"), Stored::Bool(true));
   let hash_store = Stored::HashStored(hash_val);
 
-  state.assign_value("hashref_test", hash_store, Some(Scope::Global));
-  match state.lookup_value("hashref_test") {
+  assign_value("hashref_test", hash_store, Some(Scope::Global));
+  match STATE.borrow().lookup_value("hashref_test") {
     None => panic!("Couldn't lookup hashref_test value after assignment"),
     Some(&Stored::HashStored(ref received_hash)) => match received_hash.get("a") {
       None => panic!("Assigned hash was missing key!"),
@@ -58,7 +65,7 @@ fn assign_lookup_value() {
     Some(_) => panic!("Looked up value of hashref_test didn't match assignment value"),
   };
 
-  match state.remove_value("STRICT") {
+  match remove_value("STRICT") {
     None => panic!("Couldn't lookup STRICT value on removal"),
     Some(Stored::String(received_value)) => {
       arena::with(received_value, |str| assert_eq!(str, strict_value))
@@ -67,17 +74,18 @@ fn assign_lookup_value() {
   };
 
   // missing after removal
-  assert!(!state.has_value("STRICT"));
+  assert!(!has_value("STRICT"));
 }
 
 #[test]
 fn scoped_assign_lookup_value() {
   // Let us try some scoped assignments:
   // First, can we push/pop frames?
-  let mut state = State::new(StateOptions::default());
-  assert!(!state.has_value("foo"));
-  state.assign_value("foo", s!("bar"), Some(Scope::Global));
-  match state.lookup_value("foo") {
+  { let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());}
+  assert!(!has_value("foo"));
+  assign_value("foo", s!("bar"), Some(Scope::Global));
+  match STATE.borrow().lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
       assert_eq!(rstr, "bar", "global assignment should have value bar")
@@ -85,10 +93,10 @@ fn scoped_assign_lookup_value() {
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  state.push_frame();
+  push_frame();
 
-  state.assign_value("foo", s!("baz"), Some(Scope::Local));
-  match state.lookup_value("foo") {
+  assign_value("foo", s!("baz"), Some(Scope::Local));
+  match STATE.borrow().lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
       assert_eq!(rstr, "baz", "local assignment should have value baz")
@@ -96,8 +104,8 @@ fn scoped_assign_lookup_value() {
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  state.assign_value("foo", s!("overwrite"), Some(Scope::Local));
-  match state.lookup_value("foo") {
+  assign_value("foo", s!("overwrite"), Some(Scope::Local));
+  match STATE.borrow().lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
       assert_eq!(
@@ -108,9 +116,9 @@ fn scoped_assign_lookup_value() {
     Some(_) => panic!("Looked up value of foo didn't match assignment value"),
   };
 
-  assert!(state.pop_frame().is_ok());
+  assert!(pop_frame().is_ok());
 
-  match state.lookup_value("foo") {
+  match STATE.borrow().lookup_value("foo") {
     None => panic!("Couldn't lookup foo value after assignment"),
     Some(&Stored::String(ref received_value)) => arena::with(*received_value, |rstr| {
       assert_eq!(rstr, "bar", "global assignment should have value bar")
@@ -121,17 +129,18 @@ fn scoped_assign_lookup_value() {
 
 #[test]
 fn assign_lookup_arrays() {
-  let mut state = State::new(StateOptions::default());
+  { let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());}
   let mock_vec = ["a", "b", "c"]
     .iter()
     .map(|x| Stored::String(arena::pin(x)))
     .collect::<VecDeque<Stored>>();
-  state.assign_value(
+  assign_value(
     "SEARCHPATHS",
     Stored::VecDequeStored(mock_vec.clone()),
     None,
   );
-  match state.lookup_value("SEARCHPATHS") {
+  match STATE.borrow().lookup_value("SEARCHPATHS") {
     None => panic!("Couldn't lookup SEARCHPATHS value after assignment"),
     Some(&Stored::VecDequeStored(ref received_value)) => assert_eq!(
       received_value, &mock_vec,
@@ -140,21 +149,21 @@ fn assign_lookup_arrays() {
     Some(_) => panic!("Looked up value of SEARCHPATHS didn't match assignment value"),
   };
 
-  state.unshift_value(
+  unshift_value(
     "empty_key",
     vec![Stored::String(arena::pin_static("mydir"))],
   );
-  let shifted = state.shift_value("empty_key").unwrap();
+  let shifted = shift_value("empty_key").unwrap();
   if let Some(Stored::String(shifted)) = shifted {
     arena::with(shifted, |shifted_str| {
       assert_eq!(shifted_str, "mydir", "shift/unshift new key")
     });
   } else {
-    panic!("state.shift_value returned wrong/no Stored")
+    panic!("shift_value returned wrong/no Stored")
   }
 
-  state.unshift_value("SEARCHPATHS", vec![Stored::String(arena::pin_static("d"))]);
-  if let Some(vdq) = state.lookup_vecdeque("SEARCHPATHS") {
+  unshift_value("SEARCHPATHS", vec![Stored::String(arena::pin_static("d"))]);
+  if let Some(vdq) = STATE.borrow().lookup_vecdeque("SEARCHPATHS") {
     let mut vdq_expected = VecDeque::new();
     for entry in &["d", "a", "b", "c"] {
       vdq_expected.push_back(Stored::String(arena::pin_static(entry)));
@@ -165,33 +174,33 @@ fn assign_lookup_arrays() {
   }
 
   assert_eq!(
-    state.shift_value("SEARCHPATHS").unwrap(),
+    shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("d"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS").unwrap(),
+    pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("c"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS").unwrap(),
+    shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("a"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS").unwrap(),
+    pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("b"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS").unwrap(),
+    shift_value("SEARCHPATHS").unwrap(),
     None,
     "shift searchpaths None"
   );
-  assert_eq!(state.pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
+  assert_eq!(pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
   assert_eq!(
-    state.lookup_value("SEARCHPATHS"),
+    STATE.borrow().lookup_value("SEARCHPATHS"),
     Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
@@ -200,43 +209,43 @@ fn assign_lookup_arrays() {
     .iter()
     .map(|x| Stored::String(arena::pin_static(x)))
     .collect::<VecDeque<Stored>>();
-  state.assign_value("SEARCHPATHS", Stored::VecDequeStored(vdq.clone()), None);
+  assign_value("SEARCHPATHS", Stored::VecDequeStored(vdq.clone()), None);
   let new_d = Stored::String(arena::pin_static("d"));
-  assert!(state.push_value("SEARCHPATHS", new_d.clone()).is_ok());
+  assert!(push_value("SEARCHPATHS", new_d.clone()).is_ok());
   vdq.push_back(new_d.clone());
   assert_eq!(
-    state.lookup_value("SEARCHPATHS"),
+    STATE.borrow().lookup_value("SEARCHPATHS"),
     Some(&Stored::VecDequeStored(vdq)),
     "push works as intended"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS").unwrap(),
+    pop_value("SEARCHPATHS").unwrap(),
     Some(new_d),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS").unwrap(),
+    shift_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("a"))),
     "shift searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS").unwrap(),
+    pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("c"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.pop_value("SEARCHPATHS").unwrap(),
+    pop_value("SEARCHPATHS").unwrap(),
     Some(Stored::String(arena::pin_static("b"))),
     "pop searchpaths"
   );
   assert_eq!(
-    state.shift_value("SEARCHPATHS").unwrap(),
+    shift_value("SEARCHPATHS").unwrap(),
     None,
     "shift searchpaths None"
   );
-  assert_eq!(state.pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
+  assert_eq!(pop_value("SEARCHPATHS").unwrap(), None, "pop searchpaths None");
   assert_eq!(
-    state.lookup_value("SEARCHPATHS"),
+    STATE.borrow().lookup_value("SEARCHPATHS"),
     Some(&Stored::VecDequeStored(VecDeque::new())),
     "lookup searchpaths []"
   );
@@ -244,22 +253,23 @@ fn assign_lookup_arrays() {
 
 #[test]
 fn install_definition_and_meaning() {
-  let mut state = State::new(StateOptions::default());
-  state.initialize_stomach();
+  { let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());}
+  initialize_stomach();
   let job_definition = Expandable {
     cs: T_CS!("\\jobname"),
     paramlist: None,
     //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
     expansion: Tokens::new(Explode!("name")).into(),
     locator: Locator::new("00_unit_test.rs".to_string(), 180, 1, 188, 5),
-    is_protected: state.get_prefix("protected"),
+    is_protected: get_prefix("protected"),
     ..Expandable::default()
   };
 
   // Assign a Meaning
-  state.assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
+  assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
   if let Some(Stored::Expandable(ref stored_meaning)) =
-    state.lookup_meaning(&T_CS!("\\foobar")).as_deref()
+    lookup_meaning(&T_CS!("\\foobar"))
   {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
                                                        // definition for CS \jobname
@@ -268,21 +278,19 @@ fn install_definition_and_meaning() {
   }
 
   let looked_up_meaning = {
-    state
-      .lookup_meaning(&T_CS!("\\foobar"))
+    lookup_meaning(&T_CS!("\\foobar"))
       .unwrap()
-      .into_owned()
   };
   {
-    state.assign_meaning(
+    assign_meaning(
       &T_CS!("\\foolet"),
       looked_up_meaning.clone(),
       Some(Scope::Local),
     );
   }
   assert_eq!(
-    state.lookup_meaning(&T_CS!("\\foolet")).as_deref(),
-    Some(&looked_up_meaning),
+    lookup_meaning(&T_CS!("\\foolet")),
+    Some(looked_up_meaning),
     "Meanings match"
   );
 }
@@ -383,10 +391,10 @@ fn texy_ops() {
 
 #[test]
 fn semiverbatim() {
-  let mut state = State::new(StateOptions::default());
+  { let mut state = STATE.borrow_mut();
+    *state = State::new(StateOptions::default());}
   // TODO: Test with char catcodes
 
-  state.begin_semiverbatim(None);
-
-  assert!(state.end_semiverbatim().is_ok());
+  begin_semiverbatim(None);
+  assert!(end_semiverbatim().is_ok());
 }

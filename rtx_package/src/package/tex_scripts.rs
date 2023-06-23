@@ -68,7 +68,7 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
 fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
   //   let mut gullet = gullet_mut!();
   //   gullet::skip_spaces();
-  let font = state!().lookup_font().unwrap();
+  let font = lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
     let mut putback = VecDeque::new();
     let mut nscripts = 0;
@@ -181,7 +181,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         properties.insert("font".to_string(), font.into());
       }
       let mut with_script = vec![Digested::from(Whatsit {
-        definition: state!().lookup_definition(&T_CS!(cs))?.unwrap(),
+        definition: lookup_definition(&T_CS!(cs))?.unwrap(),
         args: vec![Some(script)],
         properties,
         // TODO:
@@ -191,7 +191,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       with_script.extend(stuff);
       stuff = with_script;
     }
-    state_mut!().assign_font(font, Some(Scope::Local)); // revert
+    assign_font(font, Some(Scope::Local)); // revert
     Ok(stuff)
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
@@ -271,7 +271,7 @@ fn script_sizer(
       base_size.2.value_of() as f64,
     )
   } else {
-    let nominal_size = state!().lookup_font().unwrap().get_nominal_size();
+    let nominal_size = lookup_font().unwrap().get_nominal_size();
     (
       nominal_size.0.value_of() as f64,
       nominal_size.1.value_of() as f64,

@@ -623,7 +623,7 @@ LoadDefinitions!({
   // #======================================================================
 
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if state!().lookup_int("VERBOSITY") > -1 {
+    if lookup_int("VERBOSITY") > -1 {
       let content = Expand!(stuff);
       eprintln!("{content}\n");
     }
@@ -679,7 +679,7 @@ fn begin_bibliography_clean(
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
-  let bibnumber = 1 + state!().lookup_int("n_bibliographies");
+  let bibnumber = 1 + lookup_int("n_bibliographies");
   state::assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
   if !docid.is_empty() {

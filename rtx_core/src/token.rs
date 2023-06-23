@@ -16,6 +16,7 @@ use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
 use crate::{state};
+use crate::state::is_dont_expandable;
 use crate::tokens::Tokens;
 use crate::{fatal, Digested, Fatal};
 
@@ -814,7 +815,7 @@ impl Token {
         Fatal!(Parameter, Unexpected, msg);
       },
       Catcode::CS | Catcode::ACTIVE => {
-        if state!().is_dont_expandable(&self) {
+        if is_dont_expandable(&self) {
           Ok(Token {
             text: arena::pin_static("\\relax"),
             code: Catcode::CS,

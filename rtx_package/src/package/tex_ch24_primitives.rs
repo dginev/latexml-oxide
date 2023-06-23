@@ -28,7 +28,7 @@ LoadDefinitions!({
     stomach_mut!().bgroup();
     let open = Tbox::new(arena::pin_static(""), None, None,
         Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
-    let mode = Some(if state!().lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
+    let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
     let body = stomach::digest_next_body(None)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
@@ -141,7 +141,7 @@ LoadDefinitions!({
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }
   DefPrimitive!("\\aftergroup Token", sub[(t)] {
-    state_mut!().push_value("afterGroup", t)
+    push_value("afterGroup", t)
   });
 
   // \uppercase<general text>, \lowercase<general text>
@@ -161,7 +161,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\message{}", sub [(message)] {
-    if state!().lookup_int("VERBOSITY") > -1 {
+    if lookup_int("VERBOSITY") > -1 {
       eprintln!("{}", writable_tokens(&do_expand(message)?));
     }
   });
@@ -423,9 +423,7 @@ LoadDefinitions!({
   DefPrimitive!("\\insert Number", None);
   // \vadjust<filler>{<vertical mode material>}
   // Note: \vadjust ignores in vertical mode...
-  DefPrimitive!("\\vadjust {}", sub[(arg)] {
-    state_mut!().push_tokens("vAdjust", arg);
-  });
+  DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });
 
   //======================================================================
   // Remaining Vertical Mode primitives in Ch.24, pp.281--283

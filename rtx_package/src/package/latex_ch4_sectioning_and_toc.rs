@@ -59,7 +59,7 @@ LoadDefinitions!({
     sub[(type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if state!().lookup_bool("IN_MATH") {
+      if lookup_bool("IN_MATH") {
         let mode = state::lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
           stomach_mut!().end_mode(&mode)?;
@@ -83,7 +83,7 @@ LoadDefinitions!({
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if level_int > CounterValue!("secnumdepth").value_of() ||
-        state!().lookup_bool("no_number_sections") {
+        lookup_bool("no_number_sections") {
         // No number, but in TOC
         tokens = vec![
           T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),

@@ -51,7 +51,7 @@ LoadDefinitions!({
     if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
       boxes.push(stomach::digest(ops)?);
     }
-    whatsit.set_font(state!().lookup_font().unwrap()); // Start w/ whatever font was last selected.
+    whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     boxes
   });
 
@@ -75,7 +75,7 @@ LoadDefinitions!({
       // Now we check whether we're down to the last stack frame.
       // It is common for unclosed { or even environments
       // and we want to at least compress & avoid unnecessary errors & warnings.
-      let _nframes = state!().get_frame_depth();
+      let _nframes = get_frame_depth();
       //     my $ifstack;
       //     if ($state::>isValueBound('current_environment', 0)
       //       && ($state::>valueInFrame('current_environment', 0) eq 'document')

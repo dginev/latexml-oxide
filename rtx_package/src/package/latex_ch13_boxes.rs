@@ -26,7 +26,7 @@ LoadDefinitions!({
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
   DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
-    match state!().lookup_definition(&cs)? {
+    match lookup_definition(&cs)? {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
         Warn!("undefined", cs, message);

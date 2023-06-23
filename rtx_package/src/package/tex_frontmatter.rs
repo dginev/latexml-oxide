@@ -31,7 +31,7 @@ LoadDefinitions!({
     Some(Scope::Global)
   );
 
-  DefConditional!("\\if@in@preamble", { state!().lookup_bool("inPreamble") });
+  DefConditional!("\\if@in@preamble", { lookup_bool("inPreamble") });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -131,7 +131,7 @@ LoadDefinitions!({
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
-        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), state!().lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default()).into());
+        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default()).into());
         for (tag, attr, stuff) in list {
           document.open_element(&tag, attr, None)?;
           // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')

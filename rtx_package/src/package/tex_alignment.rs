@@ -79,7 +79,7 @@ LoadDefinitions!({
     sizer => "#alignment",
     after_digest => sub[whatsit] {
       stomach_mut!().bgroup();
-      if let Some(alignment) = state!().lookup_alignment() {
+      if let Some(alignment) = lookup_alignment() {
         whatsit.set_property("alignment", Stored::Digested(alignment));
         digest_alignment_body(whatsit)?;
       }
@@ -135,8 +135,8 @@ LoadDefinitions!({
 
     skipspaces: bool,
   ) -> Result<(bool, Option<Tokens>)> {
-    if state!().lookup_alignment().is_some() {
-      state_mut!().local_align_group_count(1000000);
+    if lookup_alignment().is_some() {
+      local_align_group_count(1000000);
       let mut gullet = gullet_mut!();
       if skipspaces {
         gullet::skip_spaces()?;
@@ -157,7 +157,7 @@ LoadDefinitions!({
       if let Some(next) = next_opt {
         gullet.unread_one(next);
       }
-      state_mut!().expire_align_group_count();
+      expire_align_group_count();
       Ok((star, optional))
     } else {
       Err(
@@ -218,7 +218,7 @@ LoadDefinitions!({
   // AND add the spacing to the alignment!!!
   DefConstructor!("\\@alignment@newline@markertall {Dimension}", "",
   after_digest => sub[whatsit] {
-  if let Some(alignment) = state!().lookup_alignment() {
+  if let Some(alignment) = lookup_alignment() {
     let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
     let current_row = alignment_mut.current_row_mut().unwrap();
     let padding = if let Some(arg) = whatsit.get_arg(1) {
@@ -254,7 +254,7 @@ LoadDefinitions!({
   DefMacro!("\\hline", "\\noalign{\\@@alignment@hline}");
   DefConstructor!("\\@@alignment@hline", "",
     after_digest => sub[_whatsit] {
-      if let Some(alignment_stored) = state!().lookup_alignment() {
+      if let Some(alignment_stored) = lookup_alignment() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()
           .add_line("t", Vec::new());
       }
@@ -263,12 +263,12 @@ LoadDefinitions!({
     sizer      => 0, alias => "\\hline");
 
   DefMacro!("\\@tabular@begin@heading", {
-  if let Some(alignment_stored) = state!().lookup_alignment() {
+  if let Some(alignment_stored) = lookup_alignment() {
     alignment_stored.alignment_cell().unwrap().borrow_mut()
       .set_in_tabular_head();
   }});
   DefMacro!("\\@tabular@end@heading", {
-  if let Some(alignment_stored) = state!().lookup_alignment() {
+  if let Some(alignment_stored) = lookup_alignment() {
     alignment_stored.alignment_cell().unwrap().borrow_mut()
       .unset_in_tabular_head();
   }});
@@ -282,7 +282,7 @@ LoadDefinitions!({
   // This is the "normal" case: $ appearing with an alignment that is in text mode.
   // It's just like regular $, except it doesn't look for $$ (no display math).
   DefPrimitive!("\\@dollar@in@textmode", {
-    let mathcs = if state!().lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
+    let mathcs = if lookup_bool("IN_MATH") { T_CS!("\\@@ENDINLINEMATH") }
       else {T_CS!("\\@@BEGININLINEMATH") };
     stomach::invoke_token(&mathcs)
   });
@@ -321,7 +321,7 @@ LoadDefinitions!({
   //       $tokens->unlist,
   //       ($column ? afterCellUnlist($$column{after}) : ())); });
 
-  DefConditional!("\\if@in@alignment", { state!().lookup_alignment().is_some() });
+  DefConditional!("\\if@in@alignment", { lookup_alignment().is_some() });
 
   // DefPrimitive('\@alignment@bindings AlignmentTemplate []', sub {
   //     my ($stomach, $template, $mode) = @_;
@@ -394,7 +394,7 @@ pub fn alignment_bindings(
     properties,
     xml_attributes,
   });
-  state_mut!().assign_alignment(alignment, None);
+  assign_alignment(alignment, None);
   // Debug("Halign $alignment: New " . $template->show) if $LaTeXML::DEBUG{halign};
   state::let_i(
     &T_MATH!(),
@@ -413,8 +413,8 @@ pub fn digest_alignment_body(
   // Now read & digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
-  state_mut!().local_align_group_count(0);
-  let alignment_stored = if let Some(alignment) = state!().lookup_alignment() {
+  local_align_group_count(0);
+  let alignment_stored = if let Some(alignment) = lookup_alignment() {
     alignment
   } else {
     Error!(
@@ -424,7 +424,7 @@ pub fn digest_alignment_body(
     );
     return Ok(());
   };
-  state_mut!().local_reading_alignment(&alignment_stored);
+  local_reading_alignment(&alignment_stored);
   whatsit.set_property("alignment", Stored::Digested(alignment_stored.clone()));
 
   // Debug!("Halign {}: BODY Processing...",alignment) if $LaTeXML::DEBUG{halign};
@@ -501,8 +501,8 @@ pub fn digest_alignment_body(
     .set_content_reversion(Tokens!(creversion));
   //   Debug("Halign $alignment: BODY DONE!\n"
   //       . "=> " . join(',', map { Stringify($_); } @reversion)) if $LaTeXML::DEBUG{halign};
-  state_mut!().expire_align_group_count();
-  state_mut!().expire_reading_alignment();
+  expire_align_group_count();
+  expire_reading_alignment();
   Ok(())
 }
 
@@ -515,7 +515,7 @@ pub fn digest_alignment_column(
   lastwascr: bool,
   ) -> DigestedColumn {
   stomach_mut!().new_local_box_list();
-  let ismath = state!().lookup_bool("IN_MATH");
+  let ismath = lookup_bool("IN_MATH");
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
   //       . "(" . ($ismath ? " math" : " text") . ")") if $LaTeXML::DEBUG{halign};
@@ -677,9 +677,9 @@ pub fn extract_alignment_column(
 ) -> Result<Digested> {
   let mut boxes = VecDeque::new();
   boxes.extend(in_box.unlist());
-  let is_math = state!().lookup_bool("IN_MATH");
+  let is_math = lookup_bool("IN_MATH");
   //Note: $n0,$n1 is a VERY round-about way of tracking the column spanning!
-  let n0 = state!().lookup_int("alignmentStartColumn") as usize + 1;
+  let n0 = lookup_int("alignmentStartColumn") as usize + 1;
   let n1 = alignment.current_column_number();
   let colspec = alignment.get_column(n0).unwrap();
   let mut align = colspec.align.unwrap_or(Align::Left);
