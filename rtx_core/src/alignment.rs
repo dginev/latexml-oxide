@@ -41,7 +41,7 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::state::*;
 use crate::stomach::*;
-use crate::{BoxOps,gullet,gullet_mut,stomach,state,state_mut};
+use crate::{BoxOps,gullet,stomach,state,state_mut};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -637,7 +637,6 @@ impl PartialEq for Alignment {
 
 /// a reader for the Template parameter type
 pub fn read_alignment_template() -> Result<Template> {
-  let mut gullet = gullet_mut!();
   gullet::skip_spaces()?;
   local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
@@ -646,7 +645,7 @@ pub fn read_alignment_template() -> Result<Template> {
     if open.get_catcode() == Catcode::BEGIN {
       nopens += 1;
     } else {
-      gullet.unread_one(open);
+      gullet::unread_one(open);
       break;
     }
   }
@@ -670,13 +669,13 @@ pub fn read_alignment_template() -> Result<Template> {
       if nopens <= 0 {
         break;
       }
-      gullet.unread_one(last_op);
+      gullet::unread_one(last_op);
     } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
       let invoked = defn.invoke(true)?;
-      gullet.unread(invoked);
+      gullet::unread(invoked);
     } else if cc == Catcode::BEGIN {
       if let Some(balanced_tks) = gullet::read_balanced(false)? {
-        gullet.unread(balanced_tks);
+        gullet::unread(balanced_tks);
       }
     } else {
       Warn!(

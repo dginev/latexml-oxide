@@ -255,7 +255,7 @@ fn assign_lookup_arrays() {
 fn install_definition_and_meaning() {
   { let mut state = STATE.borrow_mut();
     *state = State::new(StateOptions::default());}
-  initialize_stomach();
+  ::rtx_core::stomach::initialize_stomach();
   let job_definition = Expandable {
     cs: T_CS!("\\jobname"),
     paramlist: None,

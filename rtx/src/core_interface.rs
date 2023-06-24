@@ -21,7 +21,7 @@ use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
 use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE,
-     state,state_mut,model_mut,stomach_mut, gullet_mut};
+     state,state_mut,model};
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
 use rtx_package::{
@@ -62,10 +62,10 @@ pub trait DigestionAPI {
 impl DigestionAPI for Core {
   fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
     // first, reset the error REPORT singleton
-    error::init_report();
+    error::initialize_report();
     // now handle conversion state
-    gullet_mut!().initialize();
-    stomach_mut!().initialize();
+    gullet::initialize_gullet();
+    stomach::initialize_stomach();
     // should we reset the model also?
     model::initialize();
     // let paths = state::search_paths;
@@ -180,7 +180,7 @@ impl DigestionAPI for Core {
         .iter()
         .map(String::as_str)
         .collect::<Vec<&str>>();
-      let default_model_load = match model_mut!().schema_data {
+      let default_model_load = match model!().schema_data {
         None => true,
         Some(ref v) => v.last() == Some(&arena::pin_static("LaTeXML")),
       };
@@ -189,7 +189,7 @@ impl DigestionAPI for Core {
         load_model!("LaTeXML");
       } else {
         // Eager-load at runtime
-        model_mut!().load_schema(schema_paths.as_slice())?; // If needed?
+        model::load_schema(schema_paths.as_slice())?; // If needed?
       }
       let state = state!();
       if !state.search_paths.is_empty() {

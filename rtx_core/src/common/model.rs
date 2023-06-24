@@ -103,10 +103,10 @@ impl Model {
     }
   }
 
-  pub fn load_schema(&mut self, search_paths: &[&str]) -> Result<&Option<Relaxng>> {
+  pub fn load_schema(&mut self, search_paths: &[&str]) -> Result<()> {
     // Only load once
     if self.schema.is_some() {
-      return Ok(&self.schema);
+      return Ok(());
     }
     let mut name = String::new();
     if self.schema_data.is_none() {
@@ -180,7 +180,7 @@ impl Model {
       self.describe_model()
     }
 
-    Ok(&self.schema)
+    Ok(())
   }
   pub fn describe_model(&self) {}
 
@@ -760,4 +760,8 @@ pub(crate) fn compute_indirect_model_aux(
       compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
     }
   }
+}
+
+pub fn load_schema(search_paths: &[&str]) -> Result<()> {
+  model_mut!().load_schema(search_paths)
 }

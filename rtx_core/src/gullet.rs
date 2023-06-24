@@ -1524,7 +1524,7 @@ where
   FnR: FnOnce() -> Result<R>,
 {
   let mouth_source = mouth.get_source().to_string();
-  { gullet_mut!().open_mouth(mouth, false); } // only allow mouth to be explicitly closed here.
+  open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
   let results: R = { reader()? };
   // `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it
   let mut gullet = gullet_mut!();
@@ -1632,4 +1632,12 @@ pub fn unread_one(token: Token) {
 /// same as `unread`, but does not require the Tokens wrapper
 pub fn unread_vec(tokens: Vec<Token>) {
   gullet_mut!().unread_vec(tokens)
+}
+
+pub fn open_mouth(mouth: Mouth, autoclose: bool) {
+  gullet_mut!().open_mouth(mouth, autoclose)
+}
+
+pub fn initialize_gullet() {
+  gullet_mut!().initialize()
 }

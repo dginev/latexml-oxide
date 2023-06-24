@@ -137,7 +137,6 @@ LoadDefinitions!({
   ) -> Result<(bool, Option<Tokens>)> {
     if lookup_alignment().is_some() {
       local_align_group_count(1000000);
-      let mut gullet = gullet_mut!();
       if skipspaces {
         gullet::skip_spaces()?;
       }
@@ -155,7 +154,7 @@ LoadDefinitions!({
         next_opt = None;
       }
       if let Some(next) = next_opt {
-        gullet.unread_one(next);
+        gullet::unread_one(next);
       }
       expire_align_group_count();
       Ok((star, optional))

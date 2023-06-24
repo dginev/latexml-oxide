@@ -278,11 +278,11 @@ fn _load_binding(
   // TODO? || lookup_bool(&s!("{trequest}_loaded"))
   //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
-  let taken_dispatcher = if internal {
+  let taken_dispatcher = {if internal {
     state!().bindings_dispatch.as_ref().map(Rc::clone)
   } else {
     state!().extra_bindings_dispatch.as_ref().map(Rc::clone)
-  };
+  }};
   match taken_dispatcher {
     Some(ref dispatcher) => {
       let result_opt = dispatcher(request);
@@ -616,14 +616,11 @@ pub fn process_options() -> Result<()> {
   } else {
     String::new()
   };
-  let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
-  let state = state!();
-  let declared_options: VecDeque<Stored> = state.lookup_vecdeque("@declaredoptions")
-    .unwrap_or(&empty_vdq)
-    .clone();
+  let declared_options: VecDeque<Stored> = lookup_vecdeque("@declaredoptions")
+    .unwrap_or_default();
   let opt_key = s!("opt@{}.{}", name, ext);
-  let current_options = state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
-  let class_options = state.lookup_vecdeque("class_options").unwrap_or(&empty_vdq);
+  let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
+  let class_options = lookup_vecdeque("class_options").unwrap_or_default();
   // Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
@@ -692,7 +689,6 @@ pub fn process_options() -> Result<()> {
   for option in requested_options.iter() {
     execute_default_option_internal(option)?;
   }
-  drop(state); // re-allow mutable borrows on state
   // Now, undefine the handlers?
   for option in declared_options.iter() {
     let_i(

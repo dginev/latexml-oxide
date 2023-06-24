@@ -313,9 +313,9 @@ LoadDefinitions!({
         kv = wrapped;
       }
       let mut gullet = gullet_mut!();
-      gullet.unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
-      gullet.unread_vec(kv);
-      gullet.unread_one(T_CS!("\\ltx@special@graphics"));
+      gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
+      gullet::unread_vec(kv);
+      gullet::unread_one(T_CS!("\\ltx@special@graphics"));
     } else {
       Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }

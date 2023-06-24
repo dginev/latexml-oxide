@@ -1,5 +1,4 @@
 use crate::package::*;
-use rtx_core::{state};
 
 fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\cyra", "\u{0430}");
@@ -100,7 +99,7 @@ fn setup_cyrillic() -> Result<()> {
   Ok(())
 }
 
-LoadDefinitions!( {
+LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
@@ -116,8 +115,7 @@ LoadDefinitions!( {
 
   ProcessOptions!();
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if let Some(font_encodings_ref) = state!().lookup_vecdeque("font_encodings") {
-    let font_encodings: VecDeque<Stored> = font_encodings_ref.clone();
+  if let Some(font_encodings) = lookup_vecdeque("font_encodings") {
     if !font_encodings.is_empty() {
       setup_cyrillic()?;
       for encoding_stored in font_encodings.into_iter() {

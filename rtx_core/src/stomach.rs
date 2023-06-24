@@ -19,7 +19,7 @@ use crate::state::*;
 use crate::tbox::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
-use crate::{Digested, TexMode, gullet, gullet_mut};
+use crate::{Digested, TexMode, gullet};
 
 static MAXSTACK: usize = 200;
 
@@ -49,13 +49,33 @@ macro_rules! stomach_mut {
 }
 
 impl Stomach {
+  /// Initialize various stomach parameters, preload, etc.
   pub fn initialize(&mut self) {
     self.boxing      = Vec::new();
     self.token_stack = Vec::new();
     self.box_list = Vec::new();
     self.localized_box_list = Vec::new();
-    initialize_stomach();
+
+    let mut state = state_mut!();
+    state.assign_value("MODE", "text", Some(Scope::Global));
+    state.assign_value("IN_MATH", false, Some(Scope::Global));
+    state.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
+    state.assign_value(
+      "afterGroup",
+      Stored::VecDequeStored(VecDeque::new()),
+      Some(Scope::Global),
+    );
+    state.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
+    state.assign_value(
+      "groupInitiator",
+      String::from("Initialization"),
+      Some(Scope::Global),
+    );
+    // Setup default fonts.
+    state.assign_value("font", Font::text_default(), Some(Scope::Global));
+    state.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
   }
+
   /// get the current boxing level
   pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
   /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
@@ -652,9 +672,8 @@ fn invoke_token_undefined(
       None,
     );
 
-    let mut gullet = gullet_mut!();
     let_i(token, &T_CS!("\\iffalse"), None);
-    gullet.unread_one(token.clone()); // Retry
+    gullet::unread_one(token.clone()); // Retry
     Ok(Vec::new())
   } else {
     let message = s!("The token {} is not defined.", token.stringify());
@@ -718,4 +737,8 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
             ))))
     },
   }
+}
+
+pub fn initialize_stomach() {
+  stomach_mut!().initialize()
 }

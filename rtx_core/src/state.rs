@@ -1021,6 +1021,10 @@ pub fn push_tokens(key: &str, value: Tokens) {
     Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
   }
 }
+
+pub fn lookup_value(key:&str) -> Option<Stored> {
+  state!().lookup_value(key).cloned()
+}
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
 pub fn lookup_bool(key: &str) -> bool {
   let state = state!();
@@ -1495,6 +1499,14 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
     }
   } else {
     Some(Stored::Token(token.clone()))
+  }
+}
+
+/// like `lookup_value` but only recognizes `Stored::VecDequeStored`
+pub fn lookup_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
+  match state!().lookup_value(key) {
+    None | Some(Stored::None) => None,
+    Some(v) => <Option<&VecDeque<Stored>>>::from(v).cloned()
   }
 }
 
@@ -2041,28 +2053,6 @@ pub fn compute_indirect_model() -> IndirectModel {
   }
 
   imodel
-}
-
-/// Initialize various stomach parameters, preload, etc.
-pub fn initialize_stomach() {
-  let mut state = state_mut!();
-  state.assign_value("MODE", "text", Some(Scope::Global));
-  state.assign_value("IN_MATH", false, Some(Scope::Global));
-  state.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
-  state.assign_value(
-    "afterGroup",
-    Stored::VecDequeStored(VecDeque::new()),
-    Some(Scope::Global),
-  );
-  state.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-  state.assign_value(
-    "groupInitiator",
-    String::from("Initialization"),
-    Some(Scope::Global),
-  );
-  // Setup default fonts.
-  state.assign_value("font", Font::text_default(), Some(Scope::Global));
-  state.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
 }
 
 // Package helpers used in core need to be localized here -- as state methods

@@ -77,7 +77,7 @@ pub fn get_status(status: LogStatus) -> usize {
   }
 }
 
-pub fn init_report() {
+pub fn initialize_report() {
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
 }

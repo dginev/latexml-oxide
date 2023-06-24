@@ -53,7 +53,7 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
-    gullet_mut!().open_mouth(
+    gullet::open_mouth(
       Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });
@@ -198,7 +198,6 @@ LoadDefinitions!({
     prec: usize,
   ) -> Result<RegisterValue> {
     // Read a first value
-    let mut gullet = gullet_mut!();
     let token = match gullet::read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
@@ -215,14 +214,14 @@ LoadDefinitions!({
       i_value
     } else {
       // Read core TeX value/register
-      gullet.unread_one(token);
+      gullet::unread_one(token);
       gullet::read_value(rtype)?
     };
 
     // Now check for a following operator(s) & operand(s) (respecting precedence)
     while let Some(next) = gullet::read_x_non_space()? {
       if next == *TOKEN_RELAX {
-        gullet.unread_one(next); // leave the \relax for top-level to strip off.
+        gullet::unread_one(next); // leave the \relax for top-level to strip off.
         break;
       } else if next == T_OTHER!("+") && prec < 1 {
         value = value.add(etex_readexpr_i( rtype, 1)?);
@@ -236,7 +235,7 @@ LoadDefinitions!({
         value = value.divideround(etex_readexpr_i( RegisterType::Number, 2)?);
       } else {
         // anything else, we're done.
-        gullet.unread_one(next);
+        gullet::unread_one(next);
         break;
       }
     }
