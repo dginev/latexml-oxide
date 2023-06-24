@@ -327,11 +327,14 @@ pub fn expire_local_box_list() -> Vec<Digested> {
   buffer
 }
 
-pub fn extend_box_list(arg: Vec<Digested>) {
+pub fn extend_box_list<I>(arg: I) where I: IntoIterator<Item = Digested> {
   stomach_mut!().box_list.extend(arg)
 }
 pub fn push_box_list(arg: Digested) {
   stomach_mut!().box_list.push(arg)
+}
+pub fn pop_box_list() -> Option<Digested> {
+  stomach_mut!().box_list.pop()
 }
 
 // **********************************************************************

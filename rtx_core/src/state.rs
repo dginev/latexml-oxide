@@ -1116,11 +1116,16 @@ pub fn lookup_muglue(key: &str) -> Option<MuGlue> {
 }
 /// a variant of `lookup_value` that casts the response into `Tokens`
 pub fn lookup_tokens(key: &str) -> Option<Tokens> {
-  match state!().lookup_value(key) {
+  let state = state!();
+  match state.lookup_value(key) {
     None | Some(Stored::None) => None,
     Some(Stored::Tokens(v)) => Some(v.clone()),
     Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
-    Some(Stored::String(sym)) => Some(mouth::tokenize_internal(&arena::to_string(*sym))),
+    Some(Stored::String(sym)) => {
+      let astr = arena::to_string(*sym);
+      drop(state);
+      Some(mouth::tokenize_internal(&astr))
+    },
     Some(Stored::VecDequeStored(v)) => Stored::VecDequeStored(v.clone()).into(),
     _ => None,
   }

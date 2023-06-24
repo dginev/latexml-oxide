@@ -398,7 +398,7 @@ LoadDefinitions!({
   // Ah, but the Effect is to join 2 "relations" into one!
   DefPrimitive!("\\joinrel", {
     gullet::skip_spaces()?;
-    if let Some(left) = stomach_mut!().box_list.pop() {
+    if let Some(_left) = pop_box_list() {
       let mut stuff = Vec::new();
       while let Some(tok) = gullet::read_x_token(Some(false),false)? {
         stuff = stomach::invoke_token(&tok)?;
@@ -409,7 +409,7 @@ LoadDefinitions!({
       if stuff.is_empty() {
         return Ok(Vec::new()); // no-op ????
       }
-      let right = stuff.remove(0);
+      let _right = stuff.remove(0);
       unimplemented!(); // TODO:
       // stuff.push(
       //   Whatsit::new(lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
@@ -428,7 +428,7 @@ LoadDefinitions!({
     document.absorb(left,None)?;
     document.absorb(right,None)?;
     // Now if last 2 items are XMTok, replace by a single token with joined content (& attr?)
-    let node  = document.get_node();
+    let _node  = document.get_node();
     unimplemented!(); // TODO:
     // let nodes = document.get_child_elements(node);
     // if nodes.len() >= 2 {

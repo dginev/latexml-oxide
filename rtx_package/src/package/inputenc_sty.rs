@@ -9,7 +9,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   //   AssignCatcode!(ch, Catcode::ACTIVE);
   //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
   // }
-  state_mut!().input_encoding = None; // Disable the state::level decoding, if any.
+  { state_mut!().input_encoding = None;} // Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
   input_definitions(
@@ -23,7 +23,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
-  state::assign_value("INPUT_ENCODING", encoding.to_string(), None);
+  assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
   def_macro(
     T_CS!("\\inputencodingname"),
@@ -49,7 +49,7 @@ LoadDefinitions!({
 
   DefMacro!("\\IeC{}", "#1");
 
-  DefMacro!("\\@inpenc@undefined", sub[()] {
+  DefMacro!("\\@inpenc@undefined", {
     let message = s!("Keyboard character used is undefined in inputencoding {}",
       state!().input_encoding.as_ref().unwrap());
     Error!("unexpected", "<char>", message);

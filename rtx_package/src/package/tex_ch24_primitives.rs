@@ -412,9 +412,9 @@ LoadDefinitions!({
   // Worrisome, but...
   DefPrimitive!("\\unskip", {
     // pop until a non-empty box is found
-    while let Some(last_box) = stomach_mut!().box_list.pop() {
+    while let Some(last_box) = pop_box_list() {
       if !last_box.is_empty()? {
-        stomach_mut!().box_list.push(last_box);
+        push_box_list(last_box);
         break;
       }
     }

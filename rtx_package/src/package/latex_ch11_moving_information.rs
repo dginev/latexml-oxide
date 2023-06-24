@@ -680,7 +680,7 @@ fn begin_bibliography_clean(
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
   let bibnumber = 1 + lookup_int("n_bibliographies");
-  state::assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
+  assign_value("n_bibliographies", bibnumber, Some(Scope::Global));
   let mut docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
   if !docid.is_empty() {
     docid += ".";
@@ -696,9 +696,11 @@ fn begin_bibliography_clean(
     whatsit.set_property("titlefont", title.get_font()?.unwrap());
     whatsit.set_property("title", title);
   }
-  let state = state!();
-  whatsit.set_property("bibstyle", state.lookup_value("BIBSTYLE"));
-  whatsit.set_property("citestyle", state.lookup_value("CITE_STYLE"));
+  {
+    let state = state!();
+    whatsit.set_property("bibstyle", state.lookup_value("BIBSTYLE"));
+    whatsit.set_property("citestyle", state.lookup_value("CITE_STYLE"));
+  }
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv");
   Ok(())

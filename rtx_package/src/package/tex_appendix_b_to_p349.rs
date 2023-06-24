@@ -18,7 +18,7 @@ LoadDefinitions!({
   //
   // & gives an error except within the right context
   // (which should redefine it!)
-  DefConstructor!("&", sub[doc,_a] { Error!("unexpected", "&", "Stray alignment \"&\""); });
+  DefConstructor!("&", { Error!("unexpected", "&", "Stray alignment \"&\""); });
 
   //**********************************************************************
   // Plain;  Extracted from Appendix B.

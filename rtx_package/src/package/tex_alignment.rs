@@ -332,17 +332,17 @@ LoadDefinitions!({
   // But note that \halign does NOT remove this trailing space!
   DefPrimitive!("\\@@eat@space", {
     let mut save = Vec::new();
-    while let Some(tbox) = stomach_mut!().box_list.pop() {
+    while let Some(tbox) = pop_box_list() {
       if tbox.get_property_bool("alignmentSkippable")
         || tbox.get_property_bool("isFill") {
         save.push(tbox);
       } else if !tbox.is_empty()? {
-        stomach_mut!().box_list.push(tbox);
+        push_box_list(tbox);
         break;
       }
     }
     if !save.is_empty() {
-      stomach_mut!().box_list.extend(save);
+      extend_box_list(save);
     }
     Ok(Vec::new())
   });
@@ -559,7 +559,7 @@ pub fn digest_alignment_column(
         // \puts something in vertical list
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(token)?;
-        stomach_mut!().box_list.extend(invoked);
+        extend_box_list(invoked);
       } else {
         break;
       }
@@ -620,7 +620,7 @@ pub fn digest_alignment_column(
         // Else, we're getting some actual content for the column
         // eprintln!("Halign: COLUMN invoking {}", token.stringify());// if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(&token)?;
-        stomach_mut!().box_list.extend(invoked);
+        extend_box_list(invoked);
         // eprintln!("Halign: COLUMN {} ==> {}",token.stringify(),
         // List::new(stomach.box_list.clone()).stringify()); //       if
         // $LaTeXML::DEBUG{halign};

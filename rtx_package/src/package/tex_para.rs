@@ -5,7 +5,7 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // These determine whether the _next_ paragraph gets indented!
   // thus it needs \par to check whether such indentation has been set.
-  DefConstructor!("\\indent", sub[document,whatsit] {
+  DefConstructor!("\\indent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");
@@ -18,7 +18,7 @@ LoadDefinitions!({
       // Otherwise ignore.
     }
   });
-  DefConstructor!("\\noindent", sub[document,whatsit] {
+  DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
       let para_tag = arena::pin_static("ltx:para");

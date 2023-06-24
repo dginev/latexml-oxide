@@ -41,7 +41,7 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::state::*;
 use crate::stomach::*;
-use crate::{BoxOps,gullet,gullet_mut,stomach,stomach_mut,state,state_mut};
+use crate::{BoxOps,gullet,gullet_mut,stomach,state,state_mut};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -341,7 +341,7 @@ impl Alignment {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
       let row_before = stomach::digest(T_CS!("\\@row@before"))?;
-      stomach_mut!().box_list.push(row_before);
+      push_box_list(row_before);
     }
     self.in_row = true;
     state::assign_value("alignmentStartColumn", 0, None); // ???

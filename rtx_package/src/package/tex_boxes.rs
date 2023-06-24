@@ -10,7 +10,7 @@ LoadDefinitions!({
   // \setbox<number>=\hbox to <dimen>{<horizontal mode material>}
 
   DefPrimitive!("\\lastbox", {// Hopefully, the correct box got seen!
-    stomach_mut!().box_list.pop().map(|b| vec![b]).unwrap_or_default()
+    pop_box_list().map(|b| vec![b]).unwrap_or_default()
   });
 
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {

@@ -8,7 +8,6 @@ use crate::package::*;
 LoadDefinitions!({
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star_opt, name, nargs, opt, begin, end)] {
-    let mut gullet = gullet_mut!();
     let name = { Expand!(name).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
     if IsDefined!(&name_cs) {
@@ -30,7 +29,6 @@ LoadDefinitions!({
 
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star, name, nargs, opt, begin, end)] {
-    let mut gullet = gullet_mut!();
     let name = Expand!(name).to_string();
     let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));

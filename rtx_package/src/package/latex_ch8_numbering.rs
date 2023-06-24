@@ -23,7 +23,6 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\newcounter{}[]", sub[(cs, default_opt)] {
-    let mut gullet = gullet_mut!();
     let default = if let Some(tks) = default_opt {
       if !tks.is_empty() {
         Expand!(tks)
@@ -37,7 +36,6 @@ LoadDefinitions!({
     NewCounter!(cs_expanded, &default.to_string());
   });
   DefPrimitive!("\\setcounter{}{Number}", sub[(cs, default)] {
-    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     SetCounter!(cs_expanded, default);
   });
@@ -46,12 +44,10 @@ LoadDefinitions!({
     AddToCounter!(cs_expanded, default);
   });
   DefPrimitive!("\\stepcounter{}",    sub[(cs)] {
-    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     StepCounter!(cs_expanded, false)?;
   });
   DefPrimitive!("\\refstepcounter{}", sub[(cs)] {
-    let mut gullet = gullet_mut!();
     let cs_expanded = &Expand!(cs).to_string();
     RefStepCounter!(cs_expanded, false)?;
   });

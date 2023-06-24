@@ -377,11 +377,10 @@ macro_rules! DefPrimitive {
 
   // Case: closure block with implicit arguments
   ($proto:expr, $body:block $($input:tt)*) => {{
-    #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
     let replacement_closure =  Rc::new(
-      move |args: Vec<ArgWrap>| {
+      move |_args: Vec<ArgWrap>| {
         $body.into_digested_result()
       });
     def_primitive(cs, params, Some(replacement_closure), options)?;
@@ -505,24 +504,32 @@ macro_rules! DefConstructor {
   }};
   ($proto:literal, sub [ $document:ident, $args:ident ]
     $body:block $($input:tt)*) => {{
-    #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    let props : ConstructorOptions;
+    let _props : ConstructorOptions;
     let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
-      replacement!($document, $args, props, $body)));
+      replacement!($document, $args, _props, $body)));
     let (cs, params) = parse_prototype!($proto);
     def_constructor(cs, params, compiled_replacement, options);
   }};
   ($proto:literal, sub [ $document:ident] $body:block $($input:tt)*) => {{
-    #![allow(unused_variables)]
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
-    let props : ConstructorOptions;
-    let args : Option<Parameters> = None;
+    let _props : ConstructorOptions;
+    let _args : Option<Parameters> = None;
     let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
-      replacement!($document, args, props, $body)));
+      replacement!($document, _args, _props, $body)));
     let (cs, params) = parse_prototype!($proto);
     def_constructor(cs, params, compiled_replacement, options);
   }};
+  ($proto:literal, $body:block $($input:tt)*) => {{
+    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let _props : ConstructorOptions;
+    let _args : Option<Parameters> = None;
+    let compiled_replacement : Option<ReplacementClosure> = Some(Rc::new(
+      replacement!(_document, _args, _props, $body)));
+    let (cs, params) = parse_prototype!($proto);
+    def_constructor(cs, params, compiled_replacement, options);
+  }};
+
   // Literal replacement flavors
   ($proto:expr, $replacement:literal) => {{
     let (cs, params) = parse_prototype!($proto);

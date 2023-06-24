@@ -66,14 +66,15 @@ LoadDefinitions!({
     wrapped_tokens.push(T_END!());
     let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
-    let mut state = state_mut!();
-    let frontmatter = match state.lookup_value_mut("frontmatter") {
-      Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
-    };
-    let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
-    f_entry.push(entry);
-
+    {
+      let mut state = state_mut!();
+      let frontmatter = match state.lookup_value_mut("frontmatter") {
+        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
+      };
+      let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
+      f_entry.push(entry);
+    }
     AssignValue!("inPreamble", inpreamble);
   });
 
