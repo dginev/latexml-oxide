@@ -408,11 +408,11 @@ LoadDefinitions!({
       Ok(arg)
     },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(family => "typewriter");
     },
     after_digest => {
-      stomach_mut!().egroup()?;
+      egroup()?;
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
@@ -441,10 +441,10 @@ LoadDefinitions!({
       arg
     },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(family => "typewriter"); },
     after_digest => {
-      stomach_mut!().egroup()?; },
+      egroup()?; },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];
       reverted.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
@@ -975,10 +975,10 @@ LoadDefinitions!({
   // What I'd really like are some sort of parameter modifiers, mathstyle, font... until...?
   DefParameterType!(DisplayStyle, sub[_inner, _extra] { gullet::read_arg() },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(mathstyle => "display");
     },
-    after_digest => { stomach_mut!().egroup()?; },
+    after_digest => { egroup()?; },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
@@ -1012,10 +1012,10 @@ LoadDefinitions!({
   DefParameterType!(InScriptStyle, sub[_inner, _extra] {
       gullet::read_arg() },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(scripted => true);
     },
-    after_digest => { stomach_mut!().egroup()?; },
+    after_digest => { egroup()?; },
     reversion => sub[arg, _inner, _extra] {
         Ok(Tokens!(T_BEGIN!(), Tokens::new(arg).revert(), T_END!()))
     });
@@ -1026,11 +1026,11 @@ LoadDefinitions!({
       gullet::read_optional(None)
     },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(scripted => true);
     },
     after_digest => {
-      stomach_mut!().egroup()?;
+      egroup()?;
     },
     optional => true,
     reversion => sub[arg,_inner,_extra] {
@@ -1046,11 +1046,11 @@ LoadDefinitions!({
       gullet::read_arg()
     },
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       MergeFont!(fraction => true);
     },
     after_digest => {
-      stomach_mut!().egroup()?;
+      egroup()?;
     },
     reversion => sub[arg,_inner,_extra] {
       let mut reverted = vec![T_BEGIN!()];

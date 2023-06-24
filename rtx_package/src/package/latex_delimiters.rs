@@ -119,7 +119,7 @@ LoadDefinitions!({
         || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
         Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
-        stomach_mut!().egroup()?;
+        egroup()?;
       }
     },
     reversion => None);

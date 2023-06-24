@@ -12,6 +12,7 @@ use crate::binding::def::traits::{IntoDigestedResult, IntoOption};
 use crate::common::arena;
 use crate::common::font::Font;
 use crate::common::number::Number;
+use crate::common::error::*;
 use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
 use crate::definition::constructor::{Constructor, ConstructorOptions};
 use crate::definition::expandable::{Expandable, ExpandableOptions};
@@ -20,6 +21,7 @@ use crate::definition::primitive::{Primitive, PrimitiveOptions};
 use crate::definition::register::{
   Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
 };
+use crate::common::numeric_ops::NumericOps;
 use crate::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
   ExpansionBody, FontDirective, PrimitiveClosure, ReplacementClosure, Reversion, SizingClosure,
@@ -27,12 +29,14 @@ use crate::definition::{
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::state::*;
+use crate::{state,gullet};
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use crate::*;
+use crate::mouth;
+use crate::stomach::*;
 
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
@@ -122,7 +126,7 @@ pub fn def_conditional(
     String::new()
   };
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
-    state::install_definition(
+    install_definition(
       Conditional {
         cs: cs.clone(),
         paramlist,
@@ -159,10 +163,10 @@ pub fn def_conditional(
           Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
           None
         )?;
-        state::let_i(&cs, &T_CS!("\\iffalse"), None);
+        let_i(&cs, &T_CS!("\\iffalse"), None);
       } else {
         //  For \ifcase, the parameter list better be a single Number !!
-        state::install_definition(
+        install_definition(
           Conditional {
             cs,
             paramlist,
@@ -183,7 +187,7 @@ pub fn def_conditional(
   }
 
   if let Some(true) = options.locked {
-    state::assign_value(&locked_key, true, None);
+    assign_value(&locked_key, true, None);
   }
   Ok(())
 }
@@ -220,12 +224,12 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   } else {
     cs
   };
-  state::install_definition(
+  install_definition(
     Expandable::new(defcs, paramlist, expansion, Some(options))?,
     scope,
   );
   if let Some(locked_key) = locked_key_opt {
-    state::assign_value(&locked_key, true, Some(Scope::Global));
+    assign_value(&locked_key, true, Some(Scope::Global));
   }
   Ok(())
 }
@@ -273,11 +277,11 @@ pub fn def_register<T: Into<RegisterValue>>(
   }
   // Assign, but do not RE-assign
   if !has_address_option || state!().lookup_value(&address).is_none() {
-    state::assign_value(&address, value.clone(), Some(Scope::Global));
+    assign_value(&address, value.clone(), Some(Scope::Global));
   }
 
   let register_type: RegisterType = (&value).into();
-  state::install_definition(
+  install_definition(
     Register {
       cs,
       address,
@@ -300,7 +304,7 @@ pub fn def_register<T: Into<RegisterValue>>(
 /// Primitive control sequences generate Boxes or Lists, generally
 /// containing basic Unicode content, rather than structured XML.
 /// Primitive control sequences are also executed for side effect during digestion,
-/// effecting changes to the `state::.
+/// effecting changes to the `.
 pub fn def_primitive(
   cs: Token,
   paramlist: Option<Parameters>,
@@ -328,12 +332,12 @@ pub fn def_primitive(
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
     let begin_mode_closure = before_digest_simple!({
-      stomach_mut!().begin_mode(&mode_clone)?;
+      begin_mode(&mode_clone)?;
     });
     before_digest_env.push(begin_mode_closure);
   } else if options.bounded {
     let bgroup_closure = before_digest_simple!({
-      stomach_mut!().bgroup();
+      bgroup();
     });
     before_digest_env.push(bgroup_closure);
   }
@@ -351,12 +355,12 @@ pub fn def_primitive(
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
     let end_mode_closure: DigestionClosure = after_digest_simple!(_whatsit, {
-      stomach_mut!().end_mode(&mode_clone)?;
+      end_mode(&mode_clone)?;
     });
     after_digest_env.push(end_mode_closure);
   } else if options.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
-      stomach_mut!().egroup()?;
+      egroup()?;
     });
     after_digest_env.push(egroup_closure);
   }
@@ -367,7 +371,7 @@ pub fn def_primitive(
     cs
   };
 
-  state::install_definition(
+  install_definition(
     Primitive {
       cs: defcs,
       paramlist,
@@ -382,7 +386,7 @@ pub fn def_primitive(
     scope,
   );
   if options_locked {
-    state::assign_value(&s!("{}:locked", cs_name), true, None);
+    assign_value(&s!("{}:locked", cs_name), true, None);
   }
   Ok(())
 }
@@ -411,7 +415,7 @@ pub fn def_math_dual(
   let captured_cont_cs = cont_cs.clone();
   let captured_pres_cs = pres_cs.clone();
   let captured_pres = presentation.clone();
-  state::install_definition(
+  install_definition(
     Expandable::new(
       defcs,
       paramlist.clone(),
@@ -475,7 +479,7 @@ pub fn def_math_dual(
   );
 
   // Make the presentation macro.
-  state::install_definition(
+  install_definition(
     Expandable::new(
       pres_cs,
       paramlist.clone(),
@@ -554,7 +558,7 @@ pub fn def_math_dual(
   };
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut content_constructor);
-  state::install_definition(content_constructor, scope);
+  install_definition(content_constructor, scope);
   Ok(())
 }
 
@@ -570,7 +574,7 @@ pub fn def_math_primitive(
   let reqfont_opt = options.font.clone();
   let moved_options = options.clone();
 
-  state::install_definition(
+  install_definition(
     MathPrimitive {
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
@@ -781,7 +785,7 @@ pub fn def_math_constructor(
   };
   let scope = options.scope.clone();
   transfer_common_constructor_options(&cs, &presentation, options, &mut constructor);
-  state::install_definition(constructor, scope);
+  install_definition(constructor, scope);
   Ok(())
 }
 
@@ -808,7 +812,7 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token>
     ..ExpandableOptions::default()
   };
   // scope should be \x@protect?
-  state::install_definition(
+  install_definition(
     Expandable::new(cs, None, expansion, Some(options))?,
     scope,
   );
@@ -855,12 +859,12 @@ pub fn def_constructor(
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
     let begin_mode_closure = before_digest_simple!( {
-      stomach_mut!().begin_mode(&mode_clone)?;
+      begin_mode(&mode_clone)?;
     });
     before_digest_closures.push(begin_mode_closure);
   } else if options.bounded {
     let bgroup_closure = before_digest_simple!( {
-      stomach_mut!().bgroup();
+      bgroup();
     });
     before_digest_closures.push(bgroup_closure);
   }
@@ -889,12 +893,12 @@ pub fn def_constructor(
   if let Some(ref mode) = options.mode {
     let mode_clone = mode.clone();
     let end_mode_closure: DigestionClosure = after_digest_simple!( _whatsit, {
-      stomach_mut!().end_mode(&mode_clone)?;
+      end_mode(&mode_clone)?;
     });
     after_digest_closures.push(end_mode_closure);
   } else if options.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!( _whatsit, {
-      stomach_mut!().egroup()?;
+      egroup()?;
     });
     after_digest_closures.push(egroup_closure);
   }
@@ -917,10 +921,10 @@ pub fn def_constructor(
     // long
     ..Constructor::default()
   };
-  state::install_definition(constructor, scope);
+  install_definition(constructor, scope);
 
   if is_locked {
-    state::assign_value(&locked_key, true, None);
+    assign_value(&locked_key, true, None);
   }
 }
 
@@ -958,13 +962,13 @@ pub fn def_environment(
     before_digest_env.push(forbid_math_closure);
   }
   let bgroup_closure = before_digest_simple!( {
-    stomach_mut!().bgroup();
+    bgroup();
   });
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
   let atbegin_hook_closure = before_digest_simple!( {
-    if let Some(b) = state::lookup_tokens(&atbegin_key) {
-      vec![stomach::digest(b.unlist())?]
+    if let Some(b) = lookup_tokens(&atbegin_key) {
+      vec![digest(b.unlist())?]
     } else {
       Vec::new()
     }
@@ -974,14 +978,14 @@ pub fn def_environment(
   if let Some(ref mode) = options.mode {
     let bmode = mode.clone();
     let mode_closure = before_digest_simple!( {
-      stomach_mut!().set_mode(&bmode)?;
+      set_mode(&bmode)?;
     });
     before_digest_env.push(mode_closure);
   }
 
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!( {
-    state::assign_value("current_environment", env_name.clone(), None);
+    assign_value("current_environment", env_name.clone(), None);
     let body = T_LETTER!(env_name.clone());
     def_macro(
       T_CS!("\\@currenvir"),
@@ -1041,13 +1045,13 @@ pub fn def_environment(
     reversion: options.reversion,
     alias: options.alias,
   });
-  state::install_definition(begin_name_constructor, options.scope.clone());
+  install_definition(begin_name_constructor, options.scope.clone());
 
   let mut after_digest_env = options.after_digest.clone();
   let name_clone = name.to_string();
   let end_name_clone = end_name.to_string();
   let unexpected_end_closure = after_digest_simple!( _whatsit, {
-    let env = state::lookup_string("current_environment");
+    let env = lookup_string("current_environment");
     if env.is_empty() || name_clone != env {
       let message1 = s!("Can't close environment {}", name_clone);
       let message2 = s!(
@@ -1075,7 +1079,7 @@ pub fn def_environment(
       let emode = mode;
       let emode_closure = Rc::new(
         move |_whatsit: &mut Whatsit| {
-          stomach_mut!().end_mode(&emode)?;
+          end_mode(&emode)?;
           Ok(Vec::new())
         },
       );
@@ -1084,7 +1088,7 @@ pub fn def_environment(
     None => {
       let egroup_closure = Rc::new(
         |_whatsit: &mut Whatsit| {
-          stomach_mut!().egroup()?;
+          egroup()?;
           Ok(Vec::new())
         },
       );
@@ -1095,8 +1099,8 @@ pub fn def_environment(
   let mut before_digest_for_endenv = options.before_digest_end;
   let atend_key = s!("@environment@{name}@atend");
   let atend_hook_closure = before_digest_simple!( {
-    if let Some(e) = state::lookup_tokens(&atend_key) {
-      vec![stomach::digest(e.unlist())?]
+    if let Some(e) = lookup_tokens(&atend_key) {
+      vec![digest(e.unlist())?]
     } else {
       Vec::new()
     }
@@ -1111,7 +1115,7 @@ pub fn def_environment(
     after_digest: after_digest_env,
     ..Constructor::default() // TODO ? fill in missing ones
   });
-  state::install_definition(end_envname_constructor, options.scope.clone());
+  install_definition(end_envname_constructor, options.scope.clone());
 
   // For the uncommon case opened by \csname env\endcsname
   let name_constructor = Rc::new(Constructor {
@@ -1125,9 +1129,9 @@ pub fn def_environment(
     //   $options{beforeDigest}),
     // afterDigest     => flatten($options{afterDigestBegin}),
     // afterDigestBody => flatten($options{afterDigestBody}),
-    // beforeConstruct => flatten(sub { state::>pushFrame; }, $options{beforeConstruct}),
+    // beforeConstruct => flatten(sub { >pushFrame; }, $options{beforeConstruct}),
     // Curiously, it's the \begin whose afterConstruct gets called.
-    // afterConstruct => flatten($options{afterConstruct}, sub { state::>popFrame; }),
+    // afterConstruct => flatten($options{afterConstruct}, sub { >popFrame; }),
     nargs: options.nargs,
     capture_body: true,
     properties: options.properties.clone(),
@@ -1136,11 +1140,11 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   });
-  state::install_definition(name_constructor, options.scope.clone());
+  install_definition(name_constructor, options.scope.clone());
   let end_name = s!("\\end{}", &name);
   let mut after_digest_end = options.after_digest;
   after_digest_end.push(after_digest_simple!( _whatsit, {
-    stomach_mut!().egroup()?;
+    egroup()?;
   }));
 
   let end_name_constructor = Constructor {
@@ -1153,13 +1157,13 @@ pub fn def_environment(
     // ), $options{scope});
     ..Constructor::default()
   };
-  state::install_definition(Rc::new(end_name_constructor), options.scope);
+  install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
-    state::assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
-    state::assign_value(&s!("\\end{{{}}}:locked", &name), true, None);
-    state::assign_value(&s!("\\{}:locked", &name), true, None);
-    state::assign_value(&s!("\\end{}:locked", &name), true, None);
+    assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
+    assign_value(&s!("\\end{{{}}}:locked", &name), true, None);
+    assign_value(&s!("\\{}:locked", &name), true, None);
+    assign_value(&s!("\\end{}:locked", &name), true, None);
   }
 }
 
@@ -1173,7 +1177,7 @@ pub fn get_xmarg_id() -> Result<Tokens> {
   def_macro(
     T_CS!("\\@@XMARG@ID"),
     None,
-    Tokens!(Explode!(state::lookup_register("\\c@@XMARG", Vec::new())?
+    Tokens!(Explode!(lookup_register("\\c@@XMARG", Vec::new())?
       .unwrap()
       .value_of())),
     Some(ExpandableOptions {
@@ -1342,7 +1346,7 @@ pub fn def_math(
     transfer_opt_default!(replace, options, math_attr_hash);
     transfer_opt_default!(mathstyle, options, math_attr_hash);
     transfer_opt_default!(stretchy, options, math_attr_hash);
-    state::assign_value(
+    assign_value(
       &s!("math_token_attributes_{}", csname),
       math_attr_hash,
       Some(Scope::Global),
@@ -1366,7 +1370,7 @@ pub fn def_math(
     def_math_constructor(cs, paramlist, presentation, options)?;
   }
   if locked {
-    state::assign_value(&format!("{csname}:locked"), true, None);
+    assign_value(&format!("{csname}:locked"), true, None);
   }
   Ok(())
 }
@@ -1396,7 +1400,7 @@ fn transfer_common_constructor_options(
     })];
   if !options.nogroup {
     before_digest_closures.push(before_digest_simple!( {
-      stomach_mut!().bgroup();
+      bgroup();
     }));
   }
   if let Some(font) = options.font {
@@ -1414,7 +1418,7 @@ fn transfer_common_constructor_options(
   let mut after_digest_closures = options.after_digest;
   if !options.nogroup {
     after_digest_closures.push(after_digest_simple!( _args, {
-      stomach_mut!().egroup()?;
+      egroup()?;
     }));
   }
   cons.after_digest = after_digest_closures;
@@ -1467,9 +1471,9 @@ pub fn allocate_register(rtype:&str) -> Result<Option<String>> {
     _ => ""
   };
   if !addr.is_empty() { // addr is a Register but MUST be stored as \count<#>
-    if let Some(n) = state::lookup_number(addr) {
+    if let Some(n) = lookup_number(addr) {
       let next = n.value_of() + 1;
-      state::assign_value(addr, Number::new(next), Some(Scope::Global));
+      assign_value(addr, Number::new(next), Some(Scope::Global));
       Ok(Some(format!("{rtype}{next}")))
     }
     else {

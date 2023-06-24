@@ -37,7 +37,7 @@ LoadDefinitions!({
 
   DefConstructor!(T_CS!("\\begin{verbatim}"), None, "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
     before_digest => {
-      stomach_mut!().bgroup();
+      bgroup();
       let mut stuff = Vec::new();
       if let Some(b) = state::lookup_tokens("@environment@verbatim@atbegin") {
         stuff.push(stomach::digest(b.unlist())?);
@@ -83,7 +83,7 @@ LoadDefinitions!({
       if let Some(b) = state::lookup_tokens("@environment@verbatim@atend") {
         lines.push(arena::pin(stomach::digest(b)?.to_string()));
       }
-      stomach_mut!().egroup()?;
+      egroup()?;
       lines.push(arena::pin_static("\\end{verbatim}"));
       let boxes = lines.into_iter().map(|line|
         Tbox::new(line, font.clone(), loc.clone()

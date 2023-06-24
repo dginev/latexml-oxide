@@ -34,7 +34,7 @@ LoadDefinitions!({
     }
   },
   after_digest => sub[whatsit] {
-    stomach_mut!().begin_mode("text")?;
+    begin_mode("text")?;
     // we need to re-bind in order to nest calls to the binding macro machinery
     DefMacro!("\\@currenvir", "document");
     state::assign_value("current_environment", "document", None);
@@ -103,7 +103,7 @@ LoadDefinitions!({
   //       Warn('unexpected', '\end{document}', $stomach,
   //         "Attempt to end document with open groups, environments or conditionals", @lines);
   //     }
-      stomach_mut!().end_mode("text")?;
+      end_mode("text")?;
       gullet::flush();
       boxes
   });

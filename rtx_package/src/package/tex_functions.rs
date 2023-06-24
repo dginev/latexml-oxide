@@ -970,7 +970,7 @@ pub fn make_generic_message(
   args: Vec<Tokens>,
   kind: &str,
   ) -> Result<()> {
-  stomach_mut!().bgroup();
+  bgroup();
   state::let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\string"),
@@ -989,7 +989,7 @@ pub fn make_generic_message(
     message.push_str(&arg_str);
   }
 
-  stomach_mut!().egroup()?;
+  egroup()?;
   //   return ('latex', $cmd, $stomach, $message);
   match kind {
     "error" => {

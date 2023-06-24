@@ -148,7 +148,7 @@ LoadDefinitions!({
   </ltx:equation>",
   alias        => "$$",
   before_digest => {
-    stomach_mut!().begin_mode("display_math")?;
+    begin_mode("display_math")?;
     if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
       let everymath_toks = everymath_toks.unlist();
       if !everymath_toks.is_empty() {

@@ -25,7 +25,7 @@ LoadDefinitions!({
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
   DefPrimitive!("{", sub[()] {
-    stomach_mut!().bgroup();
+    bgroup();
     let open = Tbox::new(arena::pin_static(""), None, None,
         Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
     let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
@@ -50,7 +50,7 @@ LoadDefinitions!({
 
   DefPrimitive!("}", {
     let f = LookupFont!();
-    stomach_mut!().egroup()?;
+    egroup()?;
     Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
   });
 
@@ -58,7 +58,7 @@ LoadDefinitions!({
   // more than just bgroup, egroup,
   // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
-    before_digest => { stomach_mut!().bgroup(); },
+    before_digest => { bgroup(); },
     capture_body => true,
     reversion=> sub[whatsit,_args] {
       if let Some(body) = whatsit.get_body()? {
@@ -67,17 +67,17 @@ LoadDefinitions!({
     }
   );
   DefConstructor!("\\@hidden@egroup", "",
-    after_digest => { stomach_mut!().egroup()?; },
+    after_digest => { egroup()?; },
     reversion => ""
   );
 
   DefPrimitive!(
   "\\begingroup", {
-    stomach_mut!().begingroup();
+    begingroup();
   });
   DefPrimitive!(
   "\\endgroup", {
-    stomach_mut!().endgroup()?;
+    endgroup()?;
   });
 
   // Debugging aids; Ignored!
@@ -214,9 +214,11 @@ LoadDefinitions!({
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
     sub[(port, token)] {
-    if let Some(Stored::Mouth(mouth_stored)) = state!().lookup_value(&format!("input_file:{port}")) {
-      let mouth_obj = Rc::clone(mouth_stored);
-      stomach_mut!().bgroup();
+    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = state!().lookup_value(&format!("input_file:{port}")) {
+      Some(Rc::clone(mouth_stored))
+    } else { None };
+    if let Some(mouth_obj) = mouth_opt {
+      bgroup();
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
       AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
@@ -236,7 +238,7 @@ LoadDefinitions!({
           break;
         }
       }
-      stomach_mut!().egroup()?;
+      egroup()?;
       DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
     }
   });

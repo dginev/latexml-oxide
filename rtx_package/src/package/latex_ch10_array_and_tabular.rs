@@ -51,11 +51,11 @@ LoadDefinitions!({
     locked => true);
   DefMacro!("\\endtabular", r"\@tabular@after\@finish@alignment\@end@tabular",
     locked => true);
-  DefPrimitive!("\\@end@tabular", { stomach_mut!().egroup()?; });
+  DefPrimitive!("\\@end@tabular", { egroup()?; });
   DefConstructor!("\\@@tabular[] Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
-    before_digest => { stomach_mut!().bgroup(); },
+    before_digest => { bgroup(); },
     sizer        => "#3",
     after_digest  => sub[whatsit] {
       if let Some(alignment) = lookup_alignment() {
@@ -80,7 +80,7 @@ LoadDefinitions!({
   //   before_digest => { stomach.bgroup(); },
   //   reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*",
   //   mode         => "text");
-  DefPrimitive!("\\@end@tabular@", { stomach_mut!().egroup()?; });
+  DefPrimitive!("\\@end@tabular@", { egroup()?; });
   Let!("\\multicolumn", "\\@multicolumn");
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
@@ -170,10 +170,10 @@ LoadDefinitions!({
     r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\@start@alignment"
   );
   DefMacro!("\\endarray", None, r"\@finish@alignment\@end@array");
-  DefPrimitive!("\\@end@array", { stomach_mut!().egroup()?; });
+  DefPrimitive!("\\@end@array", { egroup()?; });
   DefConstructor!("\\@@array[] Undigested DigestedBody",
     "#3",
-    before_digest => { stomach_mut!().bgroup(); },
+    before_digest => { bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
 
   DefMacro!("\\@tabarray", r"\m@th\@@array[c]");

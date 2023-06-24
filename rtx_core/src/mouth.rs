@@ -818,6 +818,7 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   let result = Mouth::new(text, None)
     .unwrap()
     .read_tokens();
+  
   state::use_main_state();
   result
 }

@@ -14,11 +14,11 @@ LoadDefinitions!({
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
     gullet::read_until(&until[0]) },
   before_digest => {
-    stomach_mut!().bgroup();
+    bgroup();
     MergeFont!(mathstyle => "script");
   },
   after_digest => {
-    stomach_mut!().egroup()?; },
+    egroup()?; },
   reversion => sub[args,_inner,_extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!())) });
 

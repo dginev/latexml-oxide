@@ -78,12 +78,12 @@ LoadDefinitions!({
       }},
     sizer => "#alignment",
     after_digest => sub[whatsit] {
-      stomach_mut!().bgroup();
+      bgroup();
       if let Some(alignment) = lookup_alignment() {
         whatsit.set_property("alignment", Stored::Digested(alignment));
         digest_alignment_body(whatsit)?;
       }
-      stomach_mut!().egroup()?;
+      egroup()?;
     }
   );
 
@@ -104,7 +104,7 @@ LoadDefinitions!({
 
   // Handled directly in alignments, but must be defined as non-macros
   DefPrimitive!("\\noalign", {
-      stomach_mut!().bgroup();
+      bgroup();
       Error!("unexpected", "\\noalign", "\\noalign cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
@@ -112,13 +112,13 @@ LoadDefinitions!({
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
   DefPrimitive!("\\omit", {
       Error!("unexpected", "\\omit", "\\omit cannot be used here");
-      stomach_mut!().bgroup();
+      bgroup();
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
       Let!(&T_CS!("\\omit"),    T_RELAX!());
       Let!(&T_CS!("\\span"),    T_RELAX!()); });
   DefPrimitive!("\\span", {
-      stomach_mut!().bgroup();
+      bgroup();
       Error!("unexpected", "\\span", "\\span cannot be used here");
       Let!(&T_ALIGN!(),          T_RELAX!());
       Let!(&T_CS!("\\noalign"), T_RELAX!());
@@ -514,7 +514,7 @@ pub fn digest_alignment_column(
   alignment: &RefCell<Alignment>,
   lastwascr: bool,
   ) -> DigestedColumn {
-  stomach_mut!().new_local_box_list();
+  new_local_box_list();
   let ismath = lookup_bool("IN_MATH");
   // Scan for leading \omit, skipping over (& saving) \hline.
   //   Debug("Halign $alignment: COLUMN starting scan "
@@ -552,7 +552,7 @@ pub fn digest_alignment_column(
         let next_arg = gullet::read_arg()?;
         let r = stomach::digest(next_arg)?;
         alignment.borrow_mut().end_row()?;
-        stomach_mut!().expire_local_box_list();
+        expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
                                                                        // row???
       } else if *token == T_CS!("\\hidden@noalign") {
@@ -570,7 +570,7 @@ pub fn digest_alignment_column(
       || last_token == Some(T_END!())
       || last_token == Some(T_CS!("\\@close@alignment"))
     {
-      stomach_mut!().expire_local_box_list();
+      expire_local_box_list();
       return Ok((None, last_token, None, false));
     }
     // Next column, unless spanning (then combine columns)
@@ -599,7 +599,7 @@ pub fn digest_alignment_column(
         } else {
           // Debug("Halign $alignment: COLUMN ended with " . Stringify($token) . "\n"
           //     . "  => " . ToString(List(@LaTeXML::LIST))) if $LaTeXML::DEBUG{halign};
-          let current_list = stomach_mut!().expire_local_box_list();
+          let current_list = expire_local_box_list();
           let mut out_list = List::new(current_list);
           out_list.mode = Some(if ismath { TexMode::Math } else { TexMode::Text });
           return Ok((
@@ -627,7 +627,7 @@ pub fn digest_alignment_column(
       }
     }
   }
-  stomach_mut!().expire_local_box_list();
+  expire_local_box_list();
   Ok((None, None, None, false))
 }
 

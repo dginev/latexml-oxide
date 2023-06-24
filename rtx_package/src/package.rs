@@ -57,7 +57,7 @@ pub use rtx_core::mouth::{Mouth, MouthOptions};
 pub use rtx_core::parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure};
 pub use rtx_core::rewrite::{Rewrite, RewriteOptions};
 pub use rtx_core::state::*;
-pub use rtx_core::stomach::Stomach;
+pub use rtx_core::stomach::*;
 pub use rtx_core::tbox::Tbox;
 pub use rtx_core::token::*;
 pub use rtx_core::tokens::Tokens;

@@ -62,7 +62,7 @@ LoadDefinitions!({
       if lookup_bool("IN_MATH") {
         let mode = state::lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
-          stomach_mut!().end_mode(&mode)?;
+          end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
           state::assign_value("IN_MATH", false, Some(Scope::Global));
         }

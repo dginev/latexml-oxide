@@ -142,8 +142,8 @@ LoadDefinitions!({
 
   // Ugh, what a mess of ugly syntax....
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
-    if let Some(key) = read_keyword(&["openaction"])? {
-      if let Some(action) = read_keyword(&["user", "goto"])? {
+    if let Some(_key) = read_keyword(&["openaction"])? {
+      if let Some(_action) = read_keyword(&["user", "goto"])? {
         // etc....
       } } }), optional => true);
 

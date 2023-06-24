@@ -30,11 +30,11 @@ LoadDefinitions!({
   // Start an anonymous list (often misused)
   DefConstructor!("\\lx@list",
     "<ltx:itemize>",
-    before_digest => { stomach_mut!().bgroup(); });
+    before_digest => { bgroup(); });
   // Close the anonymous list if we're still within one.
   DefConstructor!("\\endlx@list", sub[document] {
     document.maybe_close_element("ltx:itemize")?; },
-    before_digest => { stomach_mut!().egroup()?; });
+    before_digest => { egroup()?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",

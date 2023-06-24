@@ -6,8 +6,8 @@ LoadDefinitions!({
     "</ltx:p><ltx:p>",
     properties   => { stored_map!("isBreak" => true) },
     reversion    => Tokens!(T_CS!("\\\\"), T_CR!()),
-    before_digest => { stomach_mut!().egroup()?; },
-    after_digest  => { stomach_mut!().bgroup(); });
+    before_digest => { egroup()?; },
+    after_digest  => { bgroup(); });
 
   DefConstructor!("\\shortstack[]{}  OptionalMatch:* [Dimension]",
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
@@ -18,11 +18,11 @@ LoadDefinitions!({
     Let!("\\\\", "\\@shortstack@cr");
     AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());
     AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
-    stomach_mut!().bgroup(); },
+    bgroup(); },
   after_digest => sub[_whatsit] {
     // TODO
     // $_[1]->getSize;    # precompute while binding in effect
-    stomach_mut!().egroup()?; },
+    egroup()?; },
   // Note: does not get layout=vertical, since linebreaks are explicit
   // TODO
   // properties => { align => sub { ($_[1] ? $alignments{ ToString($_[1]) } : undef); },

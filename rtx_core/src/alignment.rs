@@ -40,6 +40,7 @@ use crate::mouth::Mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::state::*;
+use crate::stomach::*;
 use crate::{BoxOps,gullet,gullet_mut,stomach,stomach_mut,state,state_mut};
 
 use libxml::tree::{Node, NodeType};
@@ -335,7 +336,7 @@ impl Alignment {
 
   ) -> Result<()> {
     self.new_row();
-    stomach_mut!().bgroup(); // Grouping around ROW!
+    bgroup(); // Grouping around ROW!
     if pseudorow {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
@@ -352,7 +353,7 @@ impl Alignment {
       if self.in_column {
         self.end_column()?;
       }
-      stomach_mut!().egroup()?; // Grouping around ROW!
+      egroup()?; // Grouping around ROW!
       self.in_row = false;
     }
     Ok(()) //  Digest(T_CS('\@row@after'));
@@ -368,7 +369,7 @@ impl Alignment {
     } else if pseudorow {
       self.current_row_mut().unwrap().set_pseudo();
     }
-    stomach_mut!().bgroup(); // Grouping around CELL!
+    bgroup(); // Grouping around CELL!
                            // Note: a VERY round-about way of tracking the column spanning!
     state::assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
@@ -379,7 +380,7 @@ impl Alignment {
 
   pub fn end_column(&mut self) -> Result<()> {
     if self.in_column {
-      stomach_mut!().egroup()?; // Grouping around CELL!
+      egroup()?; // Grouping around CELL!
       self.in_column = false;
     }
     Ok(())

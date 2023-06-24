@@ -62,7 +62,7 @@ LoadDefinitions!({
   </ltx:equation>",
     reversion         => Tokens!(T_MATH!(),T_MATH!()),
     before_digest => {
-      stomach_mut!().begin_mode("display_math")?;
+      begin_mode("display_math")?;
       // TODO:
       // if let Some(everymath_toks) = lookup_definition(T_CS!("\\everymath")).value_of().unlist() {
       //   gullet::unread(everymath_toks);
@@ -76,13 +76,13 @@ LoadDefinitions!({
 
   DefConstructor!(T_CS!("\\@@ENDDISPLAYMATH"), None, None,
     reversion => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => { stomach_mut!().end_mode("display_math")?; });
+    before_digest => { end_mode("display_math")?; });
 
   DefConstructor!("\\@@BEGININLINEMATH",
     "<ltx:Math mode=\"inline\"><ltx:XMath>#body</ltx:XMath></ltx:Math>",
     reversion    => Tokens!(T_MATH!()),
     before_digest => {
-      stomach_mut!().begin_mode("inline_math")?;
+      begin_mode("inline_math")?;
       if let Some(RegisterValue::Tokens(everymath_toks)) = state::lookup_register("\\everymath", Vec::new())? {
         let everymath_toks = everymath_toks.unlist();
         if !everymath_toks.is_empty() {
@@ -93,7 +93,7 @@ LoadDefinitions!({
     capture_body => true);
 
   DefConstructor!(T_CS!("\\@@ENDINLINEMATH"), None, None,
-    before_digest => { stomach_mut!().end_mode("inline_math")?; },
+    before_digest => { end_mode("inline_math")?; },
     reversion    => Tokens!(T_MATH!())
   );
 
