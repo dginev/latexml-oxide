@@ -39,13 +39,11 @@ pub struct Stomach {
 #[thread_local]
 pub static STOMACH : Lazy<RefCell<Stomach>> = Lazy::new(|| RefCell::new(Stomach::default()));
 
-#[macro_export]
 macro_rules! stomach {
-  () => ((*$crate::stomach::STOMACH).borrow())
+  () => ((*STOMACH).borrow())
 }
-#[macro_export]
 macro_rules! stomach_mut {
-  () => ((*$crate::stomach::STOMACH).borrow_mut())
+  () => ((*STOMACH).borrow_mut())
 }
 
 impl Stomach {
@@ -74,22 +72,6 @@ impl Stomach {
     assign_value("font", Font::text_default(), Some(Scope::Global));
     assign_value("mathfont", Font::math_default(), Some(Scope::Global));
   }
-
-  /// get the current boxing level
-  pub fn get_boxing_level(&self) -> usize { self.boxing.len() }
-  /// ScriptLevel is similar to boxing level, but relative to current Math mode's level
-  /// This is used for the scriptpos attribute to recognize overlapping sccripts.
-  /// Making it relative to the math's level avoids unnecessary changes
-  pub fn get_script_level(&self) -> usize {
-    let boxlevel = self.boxing.len();
-    with_value("script_base_level",|val_opt|
-      if let Some(Stored::Int(prevlevel)) = val_opt {
-        boxlevel - (*prevlevel as usize) + 1
-      } else {
-        boxlevel
-      })
-  }
-
   //**********************************************************************
 }
 
@@ -741,4 +723,26 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
 
 pub fn initialize_stomach() {
   stomach_mut!().initialize()
+}
+pub fn set_stomach(new_stomach: Stomach) {
+  let mut singleton = stomach_mut!();
+  *singleton = new_stomach;
+}
+pub fn clone_box_list() -> Vec<Digested> {
+  stomach!().box_list.clone()
+}
+
+/// get the current boxing level
+pub fn get_boxing_level() -> usize { stomach!().boxing.len() }
+/// ScriptLevel is similar to boxing level, but relative to current Math mode's level
+/// This is used for the scriptpos attribute to recognize overlapping sccripts.
+/// Making it relative to the math's level avoids unnecessary changes
+pub fn get_script_level() -> usize {
+  let boxlevel = get_boxing_level();
+  with_value("script_base_level",|val_opt|
+    if let Some(Stored::Int(prevlevel)) = val_opt {
+      boxlevel - (*prevlevel as usize) + 1
+    } else {
+      boxlevel
+    })
 }

@@ -142,8 +142,7 @@ impl Core {
       nomathparse: options.nomathparse,
       ..StateOptions::default()
     };
-    let mut stomach = stomach_mut!();
-    *stomach = Stomach::default();
+    stomach::set_stomach(Stomach::default());
     set_state(State::new(state_options));
     Core {
       preload

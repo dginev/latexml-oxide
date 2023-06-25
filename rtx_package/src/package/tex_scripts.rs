@@ -171,8 +171,8 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b) }
           else { Stored::None },                      // for sizing/positioning
-        "scriptlevel" => stomach!().get_script_level(),
-        "level"       => stomach!().get_boxing_level()
+        "scriptlevel" => get_script_level(),
+        "level"       => get_boxing_level()
       )};
       if let Some(pvs) = prevscript {
         properties.insert("prevscript".to_string(), pvs.into());

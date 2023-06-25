@@ -161,7 +161,7 @@ LoadDefinitions!({
     after_digest => {
       let abstract_title = stomach::digest(Tokens!(T_CS!("\\format@title@abstract"),
         T_BEGIN!(), T_CS!("\\abstractname"), T_END!()))?;
-      let regurgitated = List::new(stomach!().box_list.clone());
+      let regurgitated = List::new(clone_box_list());
 
       with_value_mut("frontmatter",|frontmatter_opt| {
         let frontmatter = match frontmatter_opt {
