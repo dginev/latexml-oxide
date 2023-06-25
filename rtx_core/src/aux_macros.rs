@@ -78,6 +78,7 @@ macro_rules! some {
 /// A variant on `vec!` where each argument receives an additional `.into()` call
 /// best used with an outer context that explicitly provides the expected type, such as
 /// ```
+/// # use std::rc::Rc;
 /// # use rtx_core::common::store::Stored;
 /// # use rtx_core::mixvec;
 /// let stored_vec : Vec<Stored> = mixvec!(1, true, "string");
@@ -92,8 +93,9 @@ macro_rules! mixvec {
 /// A variant on `mixvec!` where each argument receives an additional `.into()` call
 /// best used with an outer context that explicitly provides the expected type, such as
 /// ```
+/// # use std::rc::Rc;
 /// # use rtx_core::common::store::Stored;
-/// # use rtx_core::mixvec;
+/// # use rtx_core::mixrc;
 /// let stored_vec : Rc<[Stored]> = mixrc!(1, true, "string");
 /// ```
 #[macro_export]

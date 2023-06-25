@@ -469,16 +469,16 @@ setter => sub[value,_scope,args] {
       DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
         properties => glyph_props,
-        font => { Ok(lookup_font().unwrap().specialize(&glyph_str)) }
-        // reversion => {
-        //   Ok(Tokens::new(
-        //     if (glyph_c as usize) < 128 {
-        //       vec![CharToken!(glyph_c,Catcode::OTHER)]
-        //     } else {
-        //       let v = value.value_of().to_string();
-        //       vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
-        //     }))
-        // }
+        font => { Ok(lookup_font().unwrap().specialize(&glyph_str)) },
+        reversion => sub[_w,_a] {
+          Ok(Tokens::new(
+            if (glyph_c as usize) < 128 {
+              vec![CharToken!(glyph_c,Catcode::OTHER)]
+            } else {
+              let v = value.value_of().to_string();
+              vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
+            }))
+        }
       );
     }
     state::install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
