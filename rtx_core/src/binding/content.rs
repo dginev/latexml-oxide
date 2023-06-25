@@ -20,7 +20,7 @@ use crate::state::*;
 use crate::token::*;
 use crate::gullet;
 use crate::stomach::*;
-use crate::{gullet_mut,model_mut};
+use crate::model_mut;
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -585,7 +585,7 @@ pub fn load_tex_content(
   } else {
     Some(cached)
   };
-  gullet_mut!().open_mouth(
+  gullet::open_mouth(
     Mouth::create(
       path,
       MouthOptions {

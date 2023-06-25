@@ -93,7 +93,7 @@ LoadDefinitions!({
   sub[(cs, encoding, nargs, opts, expansion)] {
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
-    let mut gullet = gullet_mut!();
+
     let encoding = Expand!(encoding);
     if !IsDefined!(&cs) {    // If not already defined...
       DefMacro!(cs, None, Some(s!(r#"""
@@ -220,7 +220,7 @@ LoadDefinitions!({
     //   T_BEGIN!(), T_CS!("\\default@family"), *T_END,
     //   T_BEGIN!(), T_CS!("\\default@series"), *T_END,
     //   T_BEGIN!(), T_CS!("\\default@shape"),  *T_END);
-    let mut gullet = gullet_mut!();
+
     let e = Expand!(encoding);
     DefMacro!(T_CS!("\\LastDeclaredEncoding"), None, e.clone());
     DefMacro!(T_CS!(s!("\\T@{}", e)), None, x);

@@ -398,7 +398,7 @@ setter => sub[value,_scope,args] {
     DefPrimitive!(internalcs.clone(), None, sub[args] {
       let decoded = font::decode(value.value_of() as u8, None, false)
         .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
-      let mut gullet = gullet_mut!();
+
       Tbox::new(decoded,
         None,
         None,

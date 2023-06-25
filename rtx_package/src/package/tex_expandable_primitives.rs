@@ -339,7 +339,7 @@ LoadDefinitions!({
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
   DefMacro!(T_CS!("\\endinput"), None, {
-    gullet_mut!().flush_mouth();
+    gullet::flush_mouth();
   });
 
   // \the<internal quantity>

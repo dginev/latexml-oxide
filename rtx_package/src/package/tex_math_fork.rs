@@ -17,7 +17,7 @@ LoadDefinitions!({
     // my $locator  = $gullet->getLocator;
     let mut stuff    = Vec::new();
     // This is risky!!!
-    let mut gullet = gullet_mut!();
+
     while let Some(t) = gullet::read_x_token(Some(false), false)? {
       if t == T_BEGIN!() {
         stuff.push(t);

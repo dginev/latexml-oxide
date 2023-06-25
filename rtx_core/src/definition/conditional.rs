@@ -188,7 +188,7 @@ impl Conditional {
     //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
     let if_frame = Rc::new(RefCell::new(IfFrame {
       token: get_current_token().unwrap(),
-      start: gullet!().get_locator().unwrap().into_owned(),
+      start: gullet::get_locator().unwrap(),
       parsing: true,
       elses: false,
       ifid,
@@ -255,7 +255,7 @@ impl Conditional {
   ) -> Result<Tokens> {
     let mut level = 1;
     let mut n_ors = 0;
-    let _start = gullet!().get_locator();
+    let _start = gullet::get_locator();
     // NOTE: Open-coded manipulation of if_stack!
     // [we're only reading tokens & looking up, so state::shouldn't change behind our backs]
     loop {

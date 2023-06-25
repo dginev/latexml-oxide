@@ -30,7 +30,7 @@ LoadDefinitions!({
   DefMacro!("\\@ifnext@n {}{}{}", sub[(tokens,if_toks,else_toks)] {
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
-    let mut gullet = gullet_mut!();
+
     while let Some(t) = gullet::read_token()? {
       if t == toks[0] {
         toks.pop_front();

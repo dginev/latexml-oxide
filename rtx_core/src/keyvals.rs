@@ -530,7 +530,7 @@ impl KeyVals {
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    let startloc = gullet!().get_locator().unwrap().into_owned();
+    let startloc = gullet::get_locator().unwrap();
 
     // set and read tokens
     let _open = gullet::read_token();

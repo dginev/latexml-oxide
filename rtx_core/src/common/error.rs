@@ -198,7 +198,7 @@ macro_rules! generate_message {
     format!(
       "{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet!().get_location(),
+      $crate::gullet::get_location(),
       file!(),
       line!(),
       column!()
@@ -208,7 +208,7 @@ macro_rules! generate_message {
     format!(
       "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet!().get_location(),
+      $crate::gullet::get_location(),
       $detail,
       file!(),
       line!(),
@@ -219,7 +219,7 @@ macro_rules! generate_message {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet!().get_location(),
+      $crate::gullet::get_location(),
       $detail,
       $detail2,
       file!(),

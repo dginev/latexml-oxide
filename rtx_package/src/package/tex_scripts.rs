@@ -66,7 +66,7 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
 // 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
 fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
-  //   let mut gullet = gullet_mut!();
+  //
   //   gullet::skip_spaces();
   let font = lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
@@ -404,7 +404,7 @@ LoadDefinitions!({
   DefMacro!("'", {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
-    let mut gullet = gullet_mut!();
+
     while gullet::if_next(&T_OTHER!("'"))? {
       gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
@@ -424,7 +424,7 @@ LoadDefinitions!({
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
-    let mut gullet = gullet_mut!();
+
     while gullet::if_next(&prime_token)? {
       gullet::read_token()?;
       sup.push(T_CS!("\\prime"));

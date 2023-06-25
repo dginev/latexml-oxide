@@ -224,7 +224,7 @@ LoadDefinitions!({
 
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
-    let mut gullet = gullet_mut!();
+
     for i in 0..n.value_of() {
       gullet::read_dimension()?;
       gullet::read_dimension()?;
@@ -234,7 +234,7 @@ LoadDefinitions!({
   });
 
   DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=> {
-    Number::new(gullet!().get_locator().map(|l| l.from_line as i64).unwrap_or(0))
+    Number::new(gullet::get_locator().map(|l| l.from_line as i64).unwrap_or(0))
   });
 
   DefRegister!("\\badness", Number::new(0), readonly => true);

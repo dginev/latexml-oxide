@@ -82,7 +82,6 @@ LoadDefinitions!({
 
   // Debugging aids; Ignored!
   DefPrimitive!("\\show Token", sub[(arg)] {
-    let mut gullet = gullet_mut!();
     let lhs = if arg.get_catcode() == Catcode::CS {
       s!("{arg}=")
     } else { String::new() };
@@ -90,7 +89,7 @@ LoadDefinitions!({
     let rhs = writable_tokens(&Expand!(stuff));
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
-    eprintln!("{}",gullet.get_locator().unwrap_or_default());
+    eprintln!("{}",get_locator().unwrap_or_default());
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();
@@ -168,7 +167,7 @@ LoadDefinitions!({
 
   DefRegister!("\\errhelp", Tokens!());
   DefPrimitive!("\\errmessage{}", sub[(args)] {
-    let mut gullet = gullet_mut!();
+
     let message = Expand!(args);
     let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
     eprintln!("{}: {}", message, help);
@@ -314,7 +313,7 @@ LoadDefinitions!({
         wrapped.push(T_OTHER!("]"));
         kv = wrapped;
       }
-      let mut gullet = gullet_mut!();
+
       gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
       gullet::unread_vec(kv);
       gullet::unread_one(T_CS!("\\ltx@special@graphics"));

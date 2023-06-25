@@ -69,13 +69,11 @@ pub struct Gullet {
 #[thread_local]
 pub static GULLET : Lazy<RefCell<Gullet>> = Lazy::new(|| RefCell::new(Gullet::default()));
 
-#[macro_export]
 macro_rules! gullet {
-  () => ((*$crate::gullet::GULLET).borrow())
+  () => ((*GULLET).borrow())
 }
-#[macro_export]
 macro_rules! gullet_mut {
-  () => ((*$crate::gullet::GULLET).borrow_mut())
+  () => ((*GULLET).borrow_mut())
 }
 
 impl Gullet {
@@ -1636,7 +1634,21 @@ pub fn unread_vec(tokens: Vec<Token>) {
 pub fn open_mouth(mouth: Mouth, autoclose: bool) {
   gullet_mut!().open_mouth(mouth, autoclose)
 }
+pub fn flush_mouth() {
+  gullet_mut!().flush_mouth()
+}
 
 pub fn initialize_gullet() {
   gullet_mut!().initialize()
+}
+pub fn get_locator() -> Option<Locator> {
+  gullet!().get_locator().map(Cow::into_owned)
+}
+pub fn get_location() -> String {
+  gullet!().get_location()
+}
+
+pub fn with_mouth_mut<FnR,R>(caller: FnR) -> R
+where FnR: FnOnce(Option<&mut Mouth>) -> R {
+  caller(gullet_mut!().get_mouth_mut())
 }

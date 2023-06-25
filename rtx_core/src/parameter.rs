@@ -32,7 +32,7 @@ pub type ReaderClosure = Rc<ReaderFn>;
 // as we have calls into reversions from arbitrary binding closures, at ALL phases.
 // Compromise: use the gated Stomach in state::whenever you need gullet in reversion, as in
 // let mut stomach = state::stomach.borrow_mut();
-// let mut gullet = gullet_mut!();
+//
 //
 pub type ReversionClosure =
   Rc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens]) -> Result<Tokens>>;

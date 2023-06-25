@@ -106,7 +106,7 @@ pub fn push_stack_frame(nobox: bool) {
   assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
   assign_value(
     "groupInitiatorLocator",
-    gullet!().get_locator().unwrap().into_owned(),
+    gullet::get_locator().unwrap(),
     Some(Scope::Local),
   );
   if !nobox {
@@ -398,7 +398,7 @@ pub fn digest_next_body(
   terminal_opt: Option<Token>,
 ) -> Result<Vec<Digested>> {
 
-  let start_location = { gullet!().get_locator().unwrap().into_owned() };
+  let start_location = { gullet::get_locator().unwrap() };
 
   let init_depth = { stomach!().boxing.len() };
   let mut found_token = false;
@@ -693,7 +693,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         Ok(Some(Digested::from(Tbox::new(
           meaning.get_sym(),
           font,
-          gullet!().get_locator().map(|l| l.into_owned()),
+          gullet::get_locator(),
           Tokens!(meaning),
           HashMap::default(),
                 ))))

@@ -579,7 +579,7 @@ pub fn def_math_primitive(
       cs: cs.clone(),
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |_args| {
-        let locator = gullet!().get_locator().unwrap().into_owned();
+        let locator = gullet::get_locator().unwrap();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = lookup_font().unwrap();

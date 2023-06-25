@@ -85,7 +85,7 @@ LoadDefinitions!({
     let s = dimension_to_spaces(&length);
     if !s.is_empty() {
       let length_tokens = length.revert()?;
-      let mut gullet = gullet_mut!();
+
       let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
       Tbox::new(arena::pin(&s), None, None, tokens,
         stored_map!("width" => length, "isSpace" => true));

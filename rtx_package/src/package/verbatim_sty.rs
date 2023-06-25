@@ -133,11 +133,11 @@ LoadDefinitions!({
       gullet::reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
             || -> Result<Tokens> {
           let mut lines = Vec::new();
-          if let Some(mouth) = gullet_mut!().get_mouth_mut() {
+          gullet::with_mouth_mut(|mouth_opt| if let Some(mouth) = mouth_opt {
             while let Some(line) = mouth.read_raw_line(false) {
               lines.push(line);
             }
-          }
+          });
           let mut tokens = Vec::new();
           for line in lines.into_iter() {
             tokens.push(T_CS!("\\verbatim@startline"));

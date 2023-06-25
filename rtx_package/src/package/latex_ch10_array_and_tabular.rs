@@ -34,7 +34,7 @@ LoadDefinitions!({
     if let Some(va) = attrs.get("vattach") {
       attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
-    let mut gullet = gullet_mut!();
+
     tabular_bindings(template, HashMap::default(), attrs)?;
   });
 

@@ -39,7 +39,7 @@ LoadDefinitions!({
     let reader_mouth = Mouth::new("", None)?;
     let read_result : Result<Vec<Token>> =
     gullet::reading_from_mouth(reader_mouth, || {
-      let mut gullet = gullet_mut!();
+
       gullet::unread(variables);
       let mut inits : Vec<Token> = Vec::new();
       let mut steps = Vec::new();
