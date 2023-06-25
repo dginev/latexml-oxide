@@ -804,9 +804,12 @@ pub fn tokenize(text: &str) -> Tokens {
   if text.is_empty() {
     return NO_TOKENS;
   }
-  Mouth::new(text, None)
+  state::use_std_state();
+  let result = Mouth::new(text, None)
       .unwrap()
-      .read_tokens()
+      .read_tokens();
+  state::use_main_state();
+  result
 }
 pub fn tokenize_internal(text: &str) -> Tokens {
   // special case! empty input is empty Tokens
@@ -814,11 +817,9 @@ pub fn tokenize_internal(text: &str) -> Tokens {
     return NO_TOKENS;
   }
   state::use_sty_state();
-
   let result = Mouth::new(text, None)
     .unwrap()
     .read_tokens();
-
   state::use_main_state();
   result
 }

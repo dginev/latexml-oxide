@@ -61,7 +61,7 @@ pub trait DigestionAPI {
 
 impl DigestionAPI for Core {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
-    // first, reset the error REPORT singleton
+    // reset the error REPORT singleton
     error::initialize_report();
     // now handle conversion state
     gullet::initialize_gullet();

@@ -524,7 +524,7 @@ pub fn invoke_token<'a>(
     // distinctly typed enum case.
     let digestable_def = lookup_digestable_definition(&token);
     match digestable_def {
-      None => {
+      None | Some(Stored::None) => {
         result = invoke_token_undefined(&token)?;
       },
       Some(Stored::Token(meaning)) => {

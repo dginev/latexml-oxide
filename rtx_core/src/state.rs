@@ -327,6 +327,11 @@ impl Default for State {
 }
 
 #[thread_local]
+static STD_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+  catcodes: Some(Catcodes::Standard),
+  ..StateOptions::default()
+})));
+#[thread_local]
 static STY_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
   catcodes: Some(Catcodes::Style),
   ..StateOptions::default()
@@ -343,13 +348,11 @@ macro_rules! state {
 macro_rules! state_mut {
   () => ((*STATE).borrow_mut())
 }
-#[macro_export]
-macro_rules! sty_state {
-  () => ((*STY_STATE).borrow())
-}
-#[macro_export]
 macro_rules! sty_state_mut {
   () => ((*STY_STATE).borrow_mut())
+}
+macro_rules! std_state_mut {
+  () => ((*STD_STATE).borrow_mut())
 }
 
 /// state fields allowed for customization during construction
@@ -770,25 +773,52 @@ impl State {
   }
 }
 
-static mut USES_STY : bool = false;
+#[derive(Debug,Copy,Clone,PartialEq)]
+enum RotateState {
+  Main,
+  Std,
+  Sty
+}
+#[thread_local]
+static mut STATE_IN_USE : RotateState = RotateState::Main;
+
 pub fn use_sty_state() {
   unsafe {
-    if !USES_STY {
+    if STATE_IN_USE != RotateState::Sty {
       let mut sty_state = sty_state_mut!();
       let mut main_state = state_mut!();
       std::mem::swap(&mut *sty_state, &mut *main_state);
-      USES_STY = true;
+      STATE_IN_USE = RotateState::Sty;
+    }
+  }
+}
+pub fn use_std_state() {
+  unsafe {
+    if STATE_IN_USE != RotateState::Std {
+      let mut std_state = std_state_mut!();
+      let mut main_state = state_mut!();
+      std::mem::swap(&mut *std_state, &mut *main_state);
+      STATE_IN_USE = RotateState::Std;
     }
   }
 }
 pub fn use_main_state() {
   unsafe {
-    if USES_STY {
-      let mut sty_state = sty_state_mut!();
-      let mut main_state = state_mut!();
-      std::mem::swap(&mut *sty_state, &mut *main_state);
-      USES_STY = false;
-    }
+    match STATE_IN_USE {
+      RotateState::Sty => {
+        let mut sty_state = sty_state_mut!();
+        let mut main_state = state_mut!();
+        std::mem::swap(&mut *sty_state, &mut *main_state);
+        STATE_IN_USE = RotateState::Main;
+      },
+      RotateState::Std => {
+        let mut std_state = std_state_mut!();
+        let mut main_state = state_mut!();
+        std::mem::swap(&mut *std_state, &mut *main_state);
+        STATE_IN_USE = RotateState::Main;
+      }
+      RotateState::Main => {}
+    };
   }
 }
 
