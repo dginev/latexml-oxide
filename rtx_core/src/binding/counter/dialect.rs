@@ -26,7 +26,6 @@ use crate::stomach;
 use crate::definition::Definition;
 use crate::{state};
 use crate::state::*;
-use crate::state::{Scope, Stored};
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -69,13 +68,13 @@ pub fn new_counter(
     Some(RegisterOptions{allocate: Some(String::from("\\count")), ..RegisterOptions::default()}))?;
   state::assign_value(&cctr, Number::new(0), Some(Scope::Global));
   after_assignment();
-  if state!().lookup_value(&clctr).is_none() {
+  if !has_value(&clctr) {
     state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
 
   def_register(T_CS!(&cunctr), None, Number::new(0), None)?;
   state::assign_value(&cunctr, Number::new(0), Some(Scope::Global));
-  if state!().lookup_value(&clunctr).is_none() {
+  if !has_value(&clunctr) {
     state::assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
 
@@ -308,13 +307,12 @@ pub fn ref_step_counter(
   ctype: &str,
   noreset: bool,
   ) -> Result<HashMap<String, Stored>> {
-  let state = state!();
-  let meaning = state.lookup_mapping("counter_for_type", ctype);
-  let ctr = match meaning  {
-    Some(Stored::String(ctr)) => arena::to_string(*ctr),
-    _ => ctype.to_string(),
-  };
-  drop(state);
+
+  let ctr = with_mapping("counter_for_type", ctype, |meaning|
+    match meaning  {
+      Some(Stored::String(ctr)) => arena::to_string(*ctr),
+      _ => ctype.to_string(),
+    });
   step_counter(&ctr, noreset)?;
   maybe_preempt_refnum(&ctr, false);
 
@@ -402,7 +400,7 @@ pub fn ref_step_counter(
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
-  if let Some(_mapper) = state!().lookup_value("LABEL_MAPPING_HOOK") {
+  if has_value("LABEL_MAPPING_HOOK") {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
@@ -420,8 +418,8 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
         Some(Scope::Global)
       );
     }
-    let _label = state!().lookup_value("PEEKED_LABEL");
     // TODO: Continue once we know the type of "mapper"
+    // let _label = state!().lookup_value("PEEKED_LABEL");
     unimplemented!();
     //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
     //   if !norefnum && fixedrefnum {
@@ -446,7 +444,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
 pub fn maybe_note_label(label: &str) {
-  if state!().lookup_value("LABEL_MAPPING_HOOK").is_some() {
+  if has_value("LABEL_MAPPING_HOOK") {
     let label = clean_label(label, Some(""));
     let processed = state::lookup_string("PROCESSED_LABEL");
     if processed.is_empty() || processed != label {
@@ -462,7 +460,7 @@ pub fn maybe_note_label(label: &str) {
 }
 
 fn deactivate_counter_scope(ctr: &str) {
-  let scopes = { state!().lookup_value(&s!("scopes_for_counter:{ctr}")).cloned() };
+  let scopes = lookup_value(&s!("scopes_for_counter:{ctr}"));
   if let Some(Stored::VecDequeStored(stored_scopes)) = scopes
   {
     for scope_stored in stored_scopes {
@@ -476,7 +474,7 @@ fn deactivate_counter_scope(ctr: &str) {
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  let nested = { state!().lookup_value(&s!("nested_counters_{ctr}")).cloned() };
+  let nested = lookup_value(&s!("nested_counters_{ctr}"));
   if let Some(Stored::VecString(stored_counters)) = nested
   {
     for inner_ctr in stored_counters {
@@ -492,10 +490,10 @@ fn deactivate_counter_scope(ctr: &str) {
 pub fn ref_step_id(
   ctype: &str,
   ) -> Result<HashMap<String, Stored>> {
-  let ctr = match state!().lookup_mapping("counter_for_type", ctype) {
+  let ctr = with_mapping("counter_for_type", ctype, |mapping| match mapping  {
     Some(map) => map.to_string(),
     None => ctype.to_string(),
-  };
+  });
   let unctr = s!("UN{ctr}");
   step_counter(&unctr, false)?;
   maybe_preempt_refnum(&ctr, true);
@@ -704,8 +702,8 @@ pub fn begin_itemize(
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
     let cs_name = s!("\\cl@{outerusecounter}");
-    if let Some(Stored::Tokens(tks)) = state!().lookup_value(&cs_name) {
-      cl_toks.extend(tks.clone().unlist());
+    if let Some(Stored::Tokens(tks)) = lookup_value(&cs_name) {
+      cl_toks.extend(tks.unlist());
     }
     state::assign_value(
       &cs_name,

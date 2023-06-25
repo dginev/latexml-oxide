@@ -41,7 +41,7 @@ use crate::token::Catcode;
 use crate::tokens::Tokens;
 use crate::state::*;
 use crate::stomach::*;
-use crate::{BoxOps,gullet,stomach,state,state_mut};
+use crate::{BoxOps,gullet,stomach};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -344,7 +344,7 @@ impl Alignment {
       push_box_list(row_before);
     }
     self.in_row = true;
-    state::assign_value("alignmentStartColumn", 0, None); // ???
+    assign_value("alignmentStartColumn", 0, None); // ???
     Ok(())
   }
 
@@ -371,7 +371,7 @@ impl Alignment {
     }
     bgroup(); // Grouping around CELL!
                            // Note: a VERY round-about way of tracking the column spanning!
-    state::assign_value("alignmentStartColumn", self.current_column_number(), None);
+    assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
     set_align_group_count(1000000);
     self.in_column = true;
@@ -689,10 +689,8 @@ pub fn read_alignment_template() -> Result<Template> {
     }
   }
   tokens.push(T_END!());
-  state_mut!()
-    .current_build_template()
-    .unwrap()
-    .set_reversion(Tokens::new(tokens));
+  with_current_build_template(|template_opt| template_opt.unwrap()
+    .set_reversion(Tokens::new(tokens)));
   Ok(take_build_template().unwrap())
 }
 

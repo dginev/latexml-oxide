@@ -567,10 +567,10 @@ impl Definition for Register {
           .join("");
         Cow::Owned(format!("{}{args_string}",self.address))
       };
-      match state!().lookup_value(&key) {
+      state::with_value(&key,|v_opt| match v_opt {
         Some(v) => v.into(),
         None => self.default.clone(),
-      }
+      })
     }
   }
   fn register_type(&self) -> Option<RegisterType> { Some(self.register_type) }

@@ -22,7 +22,6 @@ use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::DigestedData;
-use crate::{state};
 use crate::state::*;
 
 use crate::definition::conditional::ConditionalType;
@@ -964,7 +963,7 @@ impl Gullet {
       let next = read_token()?;
       let message = s!(
         "Missing number, treated as zero while processing {:?}, next token is {:?}",
-        state!().get_current_token().unwrap(),
+        get_current_token().unwrap(),
         next
       );
       Warn!("expected", "<number>", message);
@@ -1102,7 +1101,7 @@ impl Gullet {
     } else {
       let message = s!(
         "Missing number, treated as zero. while processing {:?}",
-        state!().get_current_token().unwrap()
+        get_current_token().unwrap()
       );
       Warn!("expected", "<number>", message);
       Ok(Dimension::new(0))

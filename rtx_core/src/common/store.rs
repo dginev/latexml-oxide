@@ -968,6 +968,11 @@ impl From<&Stored> for Option<Rc<[Option<char>]>> {
     }
   }
 }
+impl From<Stored> for Option<Rc<[Option<char>]>> {
+  fn from(value: Stored) -> Option<Rc<[Option<char>]>> {
+    (&value).into()
+  }
+}
 
 impl<'a> From<&'a Stored> for Option<RegisterValue> {
   fn from(value: &'a Stored) -> Option<RegisterValue> {

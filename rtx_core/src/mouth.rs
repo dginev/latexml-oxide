@@ -259,8 +259,8 @@ impl Mouth {
     };
     if self.fordefinitions {
       self.saved_at_cc = lookup_catcode('@');
-      self.saved_include_comments = match state!().lookup_value("INCLUDE_COMMENTS") {
-        Some(Stored::Bool(x)) => Some(*x),
+      self.saved_include_comments = match lookup_value("INCLUDE_COMMENTS") {
+        Some(Stored::Bool(x)) => Some(x),
         _ => None,
       };
       assign_catcode('@', Catcode::LETTER, None);
@@ -332,7 +332,7 @@ impl Mouth {
         // just not going to be a sane way forward. we will first decode
         // the read-in bytes to the right String form, and THEN split lines.
         // as such, decoding is the first action taken on bytes read in from a file.
-        if let Some(ref _encoding) = state!().input_encoding {
+        if let Some(ref _encoding) = get_input_encoding() {
           // TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
           // chars to space(?).
@@ -818,7 +818,7 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   let result = Mouth::new(text, None)
     .unwrap()
     .read_tokens();
-  
+
   state::use_main_state();
   result
 }

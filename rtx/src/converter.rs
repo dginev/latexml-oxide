@@ -4,8 +4,9 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
-use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut, state_mut};
-use rtx_package::package;
+use rtx_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
+use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
+use rtx_package::{package};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -44,13 +45,13 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Add default package bindings
-    state_mut!().bindings_dispatch = Some(Rc::new(package::dispatch));
+    set_bindings_dispatch(Rc::new(package::dispatch));
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
-      state_mut!().extra_bindings_dispatch = Some(closure.clone())
+      set_extra_bindings_dispatch(closure.clone());
     }
     // Prepare LaTeXML object
-    self.core.initialize_state(vec![s!("TeX.pool")])?;
+    self.core.initialize_singletons(vec![s!("TeX.pool")])?;
     self.ready = true;
     Ok(())
   }

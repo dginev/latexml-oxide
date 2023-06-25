@@ -79,7 +79,7 @@ use crate::common::store::Stored;
 use crate::definition::register::RegisterValue;
 use crate::digested::{Digested, DigestedData};
 use crate::document::Document;
-use crate::state::{State, StateOptions};
+use crate::state::{State, StateOptions, set_state};
 use crate::stomach::Stomach;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
@@ -144,8 +144,7 @@ impl Core {
     };
     let mut stomach = stomach_mut!();
     *stomach = Stomach::default();
-    let mut state = state_mut!();
-    *state = State::new(state_options);
+    set_state(State::new(state_options));
     Core {
       preload
     }

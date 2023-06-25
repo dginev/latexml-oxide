@@ -24,11 +24,12 @@ use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::model::{can_contain_sym};
 use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
-use crate::{model,model_mut,state,state_mut,TexMode};
+use crate::{model,model_mut, TexMode};
 use crate::state::*;
 
 use crate::document::resource::Resource;
@@ -236,7 +237,7 @@ impl Document {
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root)?;
-      if let Some(Stored::String(prefixes)) = state!().lookup_value("RDFa_prefixes") {
+      if let Some(Stored::String(prefixes)) = lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes));
       }
       self.expire_local_font();
@@ -1139,7 +1140,7 @@ impl Document {
   }
 
   // Internals
-  fn set_rdfa_prefixes(&mut self, _prefixes: Option<&SymbolU32>) {}
+  fn set_rdfa_prefixes(&mut self, _prefixes: Option<SymbolU32>) {}
 
   pub fn insert_math_token(
     &mut self,
@@ -1327,7 +1328,8 @@ impl Document {
       let font = self.get_node_font(&parent);
       let ocontent = self.node.get_content();
       let mut content = Cow::Borrowed(&ocontent);
-      if let Some(Stored::VecDequeStored(ligatures)) = state!().lookup_value("TEXT_LIGATURES") {
+      with_value("TEXT_LIGATURES", |value_opt|
+      if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test {
@@ -1338,7 +1340,7 @@ impl Document {
             content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
           }
         }
-      }
+      });
       if *content != ocontent {
         self.node.set_content(&content)?;
       }
@@ -1502,7 +1504,7 @@ impl Document {
     // my $font = $self->getNodeFont($node);
     node.append_text(text)?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
-    if !state!().nomathparse {
+    if !get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
     }
     Ok(node)
@@ -1640,7 +1642,7 @@ impl Document {
     let mut levels = match levels_opt {
       None => {
         // Default depth is based on verbosity
-        if state!().verbosity <= 1 {
+        if current_verbosity() <= 1 {
           Some(5)
         } else {
           None
@@ -2902,11 +2904,11 @@ impl Document {
   }
 
   pub fn process_pending_resources(&mut self) -> Result<()> {
-    let resources: Vec<Resource> = { state_mut!().pending_resources.drain(..).collect() };
+    let resources: Vec<Resource> = take_pending_resources();
     for resource in resources {
       self.add_resource(resource)?;
     }
-    state_mut!().pending_resources = Vec::new();
+    reset_pending_resources();
     Ok(())
   }
 
@@ -3265,27 +3267,27 @@ impl IntoVDQS for VecDeque<String> {
 
 pub fn can_contain(node: &Node, child: &str) -> bool {
   let tag = model!().get_node_qname(node);
-  model_mut!().can_contain_sym(tag, arena::pin(child))
+  can_contain_sym(tag, arena::pin(child))
 }
 
 pub fn can_contain_qname(tag: &str, child: &str) -> bool {
   model!().can_contain(tag, child)
 }
 
-pub fn can_contain_sym(node: &Node, child: SymbolU32) -> bool {
+pub fn node_can_contain_sym(node: &Node, child: SymbolU32) -> bool {
   let tag = model!().get_node_qname(node);
-  model_mut!().can_contain_sym(tag, child)
+  can_contain_sym(tag, child)
 }
 pub fn can_contain_qsym(tag: SymbolU32, child: SymbolU32) -> bool {
-  model_mut!().can_contain_sym(tag, child)
+  can_contain_sym(tag, child)
 }
 
-/// Can an element with (qualified name) $tag contain a $childtag element indirectly?
+/// Can an element with (qualified name) `tag` contain a `childtag` element indirectly?
 /// That is, by openning some number of autoOpen'able tags?
 /// And if so, return the tag to open.
 pub fn can_contain_indirect(
   tag: SymbolU32,
-  child: SymbolU32,
+  childtag: SymbolU32,
 ) -> Option<SymbolU32> {
   // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model->getNodeQName($child) if ref $child;    // In case
@@ -3295,11 +3297,7 @@ pub fn can_contain_indirect(
     set_indirect_model(i_model);
   }
 
-  // returning inner_node
-  match state!().indirect_model.as_ref().unwrap().get(&tag) {
-    Some(sub_m) => sub_m.get(&child).copied(),
-    None => None,
-  }
+  get_indirect_model_relationship(tag,childtag)
 }
 
 pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
@@ -3317,7 +3315,7 @@ pub fn sym_can_contain_somehow(
   tag: SymbolU32,
   child: SymbolU32,
 ) -> bool {
-  model_mut!().can_contain_sym(tag, child)
+  can_contain_sym(tag, child)
     || can_contain_indirect(tag, child).is_some()
 }
 
@@ -3352,10 +3350,14 @@ pub fn can_auto_close(node: &Node) -> bool {
       if !node.has_attribute("_noautoclose") {
         if node.has_attribute("_autoclose") {
           true
-        } else if let Some(props) = state!().tag_properties.get(&get_node_qname(node)) {
-          props.auto_close.unwrap_or(false)
         } else {
-          false
+          with_tag_property(get_node_qname(node), |props_opt|
+            if let Some(props) = props_opt {
+              props.auto_close.unwrap_or(false)
+            } else {
+              false
+            }
+          )
         }
       } else {
         false

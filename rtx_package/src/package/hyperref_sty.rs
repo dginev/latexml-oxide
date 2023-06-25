@@ -446,12 +446,9 @@ LoadDefinitions!({
       Vec::new()
     };
 
-    let state = state!();
-    let counter = state.lookup_mapping("counter_for_type",&type_s);
-    let counter_str = match counter {
-      Some(c) => c.to_string(),
-      None => type_s
-    };
+    let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
+      mapping_opt.map(ToString::to_string)).unwrap_or(type_s);
+
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
     if lookup_definition(&pcounter)?.is_some() {

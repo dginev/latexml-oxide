@@ -66,7 +66,7 @@ LoadDefinitions!({
         whatsit.set_property("inPreamble", true);
         Ok(Vec::new())
       } else {
-        if let Some(c) = {state!().lookup_value("next_para_class").cloned()} {
+        if let Some(c) = lookup_value("next_para_class") {
           // Check if flags were set by prior \par:
           whatsit.set_property("class", c);
           { state::assign_value("next_para_class", Stored::None, None); }

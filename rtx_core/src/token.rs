@@ -760,14 +760,19 @@ impl Token {
           return T_OTHER!(s);
         }
       }
-      if let Some(Stored::VecChar(ref specials_list)) = state!().lookup_value("SPECIALS") {
-        for special in specials_list.iter() {
-          if *special == ch {
-            let mut tmp = [0u8; 3];
-            let s = ch.encode_utf8(&mut tmp);
-            return T_OTHER!(s);
+      let maybe_return = state::with_value("SPECIALS", |specials_opt| {
+        if let Some(Stored::VecChar(ref specials_list)) = specials_opt {
+          for special in specials_list.iter() {
+            if *special == ch {
+              let mut tmp = [0u8; 3];
+              let s = ch.encode_utf8(&mut tmp);
+              return Some(T_OTHER!(s));
+            }
           }
         }
+        None});
+      if let Some(token) = maybe_return {
+        return token;
       }
     }
     self

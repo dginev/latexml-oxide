@@ -13,7 +13,7 @@ use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::mouth::Mouth;
-use crate::{state,gullet};
+use crate::{gullet};
 use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -129,70 +129,75 @@ impl Parameter {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let state = state!();
-    let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let descriptor: Option<Rc<Parameter>>;
-    if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
-      descriptor = Some(Rc::clone(d_lookup));
-    } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
-      let basetype = captures.get(1).map_or("", |m| m.as_str());
-      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(&s!("Read{}", &self.name)) {
-          Some(reader) => Some(Rc::new(Parameter {
-            reader,
-            optional: true,
-            ..Parameter::default()
-          })),
-          None => match Parameter::check_reader_function(&s!("Read{}", basetype)) {
+    let mut descriptor: Option<Rc<Parameter>> = with_mapping("PARAMETER_TYPES", &self.name, |looked_up_mapping|
+      if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
+        Some(Rc::clone(d_lookup))
+      } else {
+        None
+      });
+    if descriptor.is_none() {
+      if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
+        let basetype = captures.get(1).map_or("", |m| m.as_str());
+        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
+        match basetype_param_opt {
+          Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
+          _ => match Parameter::check_reader_function(&s!("Read{}", &self.name)) {
+            Some(reader) => Ok(Some(Rc::new(Parameter {
+              reader,
+              optional: true,
+              ..Parameter::default()
+            }))),
+            None => match Parameter::check_reader_function(&s!("Read{}", basetype)) {
+              Some(reader) => Ok(Some(Rc::new(Parameter {
+                reader,
+                optional: true,
+                novalue: true,
+                ..Parameter::default()
+              }))),
+              None => fatal!(
+                Parameter,
+                Init,
+                s!("Can't initialize parameter {:?}, unknown?", self.name)
+              ),
+            },
+          },
+        })?;
+        self.optional = true;
+      } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
+        let basetype = captures.get(1).map_or("", |m| m.as_str());
+        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
+        match basetype_param_opt {
+          Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
+          _ => match Parameter::check_reader_function(&self.name) {
             Some(reader) => Some(Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
               ..Parameter::default()
             })),
-            None => fatal!(
-              Parameter,
-              Init,
-              s!("Can't initialize parameter {:?}, unknown?", self.name)
-            ),
+            None => Parameter::check_reader_function(&s!("Read{}", basetype)).map(|reader| {
+              Rc::new(Parameter {
+                reader,
+                optional: true,
+                novalue: true,
+                ..Parameter::default()
+              })
+            }),
           },
-        },
-      };
-      self.optional = true;
-    } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
-      let basetype = captures.get(1).map_or("", |m| m.as_str());
-      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(&self.name) {
-          Some(reader) => Some(Rc::new(Parameter {
-            reader,
-            optional: true,
-            novalue: true,
-            ..Parameter::default()
-          })),
-          None => Parameter::check_reader_function(&s!("Read{}", basetype)).map(|reader| {
+        });
+        if let Some(ref _desc) = descriptor {
+          self.novalue = true;
+          self.optional = true;
+        }
+      } else {
+        descriptor =
+          Parameter::check_reader_function(&s!("Read{}", &self.name)).map(|reader| {
             Rc::new(Parameter {
               reader,
-              optional: true,
-              novalue: true,
               ..Parameter::default()
             })
-          }),
-        },
-      };
-      if let Some(ref _desc) = descriptor {
-        self.novalue = true;
-        self.optional = true;
+          });
       }
-    } else {
-      descriptor =
-        Parameter::check_reader_function(&s!("Read{}", &self.name)).map(|reader| {
-          Rc::new(Parameter {
-            reader,
-            ..Parameter::default()
-          })
-        });
     }
     match descriptor {
       Some(descriptor) => {
@@ -238,11 +243,12 @@ impl Parameter {
     // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't
     // possible But what is the exact purpose of seeking through the pool namespace? Wouldn't
     // any parameter be already assigned in the state::
-    if let Some(Stored::Parameter(param)) = state!().lookup_mapping("PARAMETER_TYPES", name) {
-      Some(param.reader.clone())
-    } else {
-      None
-    }
+    with_mapping("PARAMETER_TYPES", name, |param_opt|
+      if let Some(Stored::Parameter(param)) = param_opt {
+        Some(param.reader.clone())
+      } else {
+        None
+      })
   }
 
   pub fn setup_catcodes(&self) {

@@ -26,11 +26,11 @@ use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
 use crate::parameter::Parameters;
-use crate::state::{Scope};
+use crate::state::{Scope, set_unlocked_state};
 use crate::token::Token;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
-use crate::{Digested,state_mut};
+use crate::{Digested};
 
 pub type ExpansionClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<bool>>;
@@ -288,7 +288,7 @@ pub trait Definition: Object {
   fn execute_before_digest(
     &self
   ) -> Result<Vec<Digested>> {
-    state_mut!().unlocked = true;
+    set_unlocked_state();
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
@@ -301,7 +301,7 @@ pub trait Definition: Object {
     &self,
     whatsit: &mut Whatsit,
   ) -> Result<Vec<Digested>> {
-    state_mut!().unlocked = true;
+    set_unlocked_state();
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
       for post in post_list.iter() {
@@ -316,7 +316,7 @@ pub trait Definition: Object {
 
     whatsit: &mut Whatsit,
   ) -> Result<Vec<Digested>> {
-    state_mut!().unlocked = true;
+    set_unlocked_state();
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
       // info!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(),

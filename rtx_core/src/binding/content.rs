@@ -20,7 +20,7 @@ use crate::state::*;
 use crate::token::*;
 use crate::gullet;
 use crate::stomach::*;
-use crate::{state,state_mut,gullet_mut,model_mut};
+use crate::{gullet_mut,model_mut};
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -92,17 +92,18 @@ pub fn input_definitions(
   // IF as_class is true
   // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
   if options.handleoptions && options.withoptions.is_some() {
-    if let Some(vdq) = state!().lookup_vecdeque("@masquerading@as@class") {
-      if vdq.iter().any(|x| {
-        if let Stored::String(ref v) = x {
-          arena::with(*v, |str| str == prevname)
-        } else {
-          false
+    with_vecdeque("@masquerading@as@class", |vdq_opt| {
+      if let Some(vdq) = vdq_opt {
+        if vdq.iter().any(|x| {
+          if let Stored::String(ref v) = x {
+            arena::with(*v, |str| str == prevname)
+          } else {
+            false
+          }
+        }) {
+          options.as_class = true;
         }
-      }) {
-        options.as_class = true;
-      }
-    }
+      }});
   }
   if options.noltxml {
     options.raw = true; // so it will be read as raw by Gullet.
@@ -125,9 +126,9 @@ pub fn input_definitions(
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) =
-      state!().lookup_value(&s!("{filename}_loaded_with_options"))
+      lookup_value(&s!("{filename}_loaded_with_options"))
     {
-      if arena::with(*prevoptions, |prev_str| current_options != prev_str) {
+      if arena::with(prevoptions, |prev_str| current_options != prev_str) {
         let message = s!(
           "Option clash for file {} with options {:?}, previously loaded with {:?}",
           filename,
@@ -279,9 +280,9 @@ fn _load_binding(
   //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = {if internal {
-    state!().bindings_dispatch.as_ref().map(Rc::clone)
+    get_bindings_dispatch()
   } else {
-    state!().extra_bindings_dispatch.as_ref().map(Rc::clone)
+    get_extra_bindings_dispatch()
   }};
   match taken_dispatcher {
     Some(ref dispatcher) => {
@@ -325,8 +326,8 @@ fn before_input_handle_options(
   if let Some(with_options_to_pass) = options.withoptions.take() {
     if !prevname.is_empty() && has_value(&s!("opt@{}.{}", prevname, prevext)) {
       // Only pass those class options that are declared by the package!
-      if let Some(declared_options) = state!().lookup_vecdeque("@declaredoptions") {
-        let mut topass = Vec::new();
+      let mut topass = Vec::new();
+      with_vecdeque("@declaredoptions",|vdq_opt| if let Some(declared_options) = vdq_opt {
         for op in with_options_to_pass.into_iter() {
           if declared_options.iter().any(|x| {
             if let Stored::String(val) = x {
@@ -338,9 +339,9 @@ fn before_input_handle_options(
             topass.push(op)
           }
         }
-        if !topass.is_empty() {
-          pass_options(name, as_type, topass)?;
-        }
+      });
+      if !topass.is_empty() {
+        pass_options(name, as_type, topass)?;
       }
     }
   }
@@ -364,20 +365,21 @@ fn before_input_handle_options(
   if options.as_class {
     push_value("@masquerading@as@class", arena::pin(name))?;
   }
-  let current_opt_val = match state!().lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
-    Some(vdq) => {
-      let mut pieces = String::new();
-      for x in vdq.iter() {
-        if let Stored::String(val) = x {
-          arena::with(*val, |str| pieces.push_str(str));
+  let current_opt_val = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq_opt|
+    match vdq_opt {
+      Some(vdq) => {
+        let mut pieces = String::new();
+        for x in vdq.iter() {
+          if let Stored::String(val) = x {
+            arena::with(*val, |str| pieces.push_str(str));
+          }
+          pieces.push(',');
         }
-        pieces.push(',');
-      }
-      pieces.pop();
-      pieces
-    },
-    None => String::new(),
-  };
+        pieces.pop();
+        pieces
+      },
+      None => String::new()
+    });
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
@@ -527,7 +529,7 @@ fn load_tex_definitions(
   // It is set in before/after methods to allow local rebinding of commands
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
-  state_mut!().unlocked = false;
+  set_locked_state();
   let content_str = lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() {
     None
@@ -851,7 +853,7 @@ pub fn require_resource(mut resource: Resource) {
   // if (document.is_some()) {
   //   document.as_mut().unwrap().add_resource(resource, resource);
   // } else {
-  state_mut!().pending_resources.push(resource);
+  push_pending_resource(resource);
   // }
 }
 
@@ -961,10 +963,10 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
     // (3) BUT we want to avoid kpsewhich if we can, since it's slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-    let paths: Vec<String> = state!().search_paths.iter().cloned().collect();
-    let _urlbase = state!().lookup_value("URLBASE");
-    let nopaths = lookup_bool("REMOTE_REQUEST");
-    let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
+    let paths: Vec<String> = get_search_paths();
+    // let _urlbase = state!().lookup_value("URLBASE");
+    // let _nopaths = lookup_bool("REMOTE_REQUEST");
+    // let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
     // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
@@ -1015,18 +1017,14 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
 //======================================================================
 
 pub fn install_tag(tag: &str, mut properties: TagOptions) {
-  let mut state = state_mut!();
-  let options = state
-    .tag_properties
-    .entry(arena::pin(tag))
-    .or_insert_with(TagOptions::default);
+  let tag_ticket = arena::pin(tag);
+  with_tag_property_mut(tag_ticket, |options| {
   if properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;
   }
   if properties.auto_close.is_some() {
     options.auto_close = properties.auto_close;
   }
-
   for name in &TagOptionName::all() {
     if name.is_prepend() {
       options.prepend(name, properties.remove(name));
@@ -1035,7 +1033,7 @@ pub fn install_tag(tag: &str, mut properties: TagOptions) {
     } else {
       // we'll handle the regular ones out of the loop
     }
-  }
+  }});
 }
 
 /// Selects the RelaxNG schema defining the XML output language
@@ -1174,7 +1172,7 @@ pub fn convert_latex_args(
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
   preload_font_map(encoding).expect("preloading font map should succeed.");
-  if let Some(map) = state!().lookup_value(&s!("{encoding}_fontmap")) {
+  if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
     map.into()
   } else {
     None
@@ -1182,8 +1180,8 @@ pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
 }
 pub fn preload_font_map(encoding: &str) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
-  let sym = arena::pin(s!("{encoding}_fontmap"));
-  if state!().lookup_value_sym(&sym).is_some() {
+  let key = s!("{encoding}_fontmap");
+  if has_value(&key) {
     return Ok(());
   }
   let fail_key = s!("{encoding}_fontmap_failed_to_load");

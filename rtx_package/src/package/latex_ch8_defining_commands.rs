@@ -200,8 +200,8 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
     let fontkey = s!("fontdeclarations@{}", name.to_string());
-    let font : Option<Font> = if let Some(Stored::Font(value)) = state!().lookup_value(&fontkey) {
-      Some((**value).clone())
+    let font : Option<Font> = if let Some(Stored::Font(value)) = lookup_value(&fontkey) {
+      Some((*value).clone())
     } else {
       None
     };

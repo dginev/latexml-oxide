@@ -9,7 +9,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   //   AssignCatcode!(ch, Catcode::ACTIVE);
   //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
   // }
-  { state_mut!().input_encoding = None;} // Disable the state::level decoding, if any.
+  state::set_input_encoding(None); // Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
   input_definitions(
@@ -50,8 +50,10 @@ LoadDefinitions!({
   DefMacro!("\\IeC{}", "#1");
 
   DefMacro!("\\@inpenc@undefined", {
-    let message = s!("Keyboard character used is undefined in inputencoding {}",
-      state!().input_encoding.as_ref().unwrap());
+    let enc_sym = get_input_encoding().unwrap();
+    let message = arena::with(enc_sym, |enc|
+     s!("Keyboard character used is undefined in inputencoding {}",
+      enc));
     Error!("unexpected", "<char>", message);
   });
 

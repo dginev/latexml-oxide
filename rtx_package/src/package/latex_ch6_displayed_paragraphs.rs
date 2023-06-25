@@ -52,7 +52,7 @@ LoadDefinitions!({
   //   beforeDigest => sub { UnshiftValue(beforeAfterGroup => T_CS('\@add@raggedleft')); });
 
   DefConstructor!("\\@add@centering", sub[document] {
-    let node_opt = state!().lookup_value("ALIGNING_NODE").cloned();
+    let node_opt = lookup_value("ALIGNING_NODE");
     if let Some(Stored::Node(node)) = node_opt {
       for mut child in node.get_child_elements() {
         set_align_or_class(document, &mut child, "center", "ltx_centering")?;

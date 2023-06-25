@@ -52,17 +52,19 @@ LoadDefinitions!({
   DefRegister!("\\ht Number", Dimension::new(0),
   getter => sub[args] {
     let n = args.remove(0).expect_number();
-    if let Some(Stored::Digested(thebox)) = state!().lookup_value(&format!("box{}", n.value_of())) {
+    with_value(&format!("box{}", n.value_of()), |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.get_height()
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
-    }},
+    })},
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
-    }});
+    })});
 
   DefRegister!("\\wd Number", Dimension::default(),
   getter => sub[args] {
@@ -89,25 +91,27 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
-    }});
+    })});
 
   DefRegister!("\\dp Number", Dimension::new(0),
   getter => sub[args] {
     let n = args.remove(0).expect_number();
-    if let Some(Stored::Digested(thebox)) =
-      state!().lookup_value(&format!("box{}", n.value_of())) {
+    with_value(&format!("box{}", n.value_of()),|val_opt|
+      if let Some(Stored::Digested(thebox)) = val_opt {
         thebox.get_depth()
       } else {
         Some(RegisterValue::Dimension(Dimension::default()))
-      }},
+      })},
 setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    if let Some(Stored::Digested(thebox)) = state_mut!().lookup_value_mut(&boxkey) {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);
-    }});
+    })});
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>

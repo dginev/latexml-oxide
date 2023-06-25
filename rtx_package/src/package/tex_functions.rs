@@ -38,9 +38,8 @@ pub fn reenter_text_mode(vertical_mode: bool) {
 // Similarly, for metadata appearing within peculiar environments, fonts, etc
 // You'll typically want this within a group or bounded=>1.
 pub fn neutralize_font() {
-  let mut state = state_mut!();
-  state.assign_value("font", Font::text_default(), Some(Scope::Local));
-  state.assign_value("mathfont", Font::math_default(), Some(Scope::Local));
+  assign_value("font", Font::text_default(), Some(Scope::Local));
+  assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
 pub fn today() -> Result<String> {
@@ -214,18 +213,20 @@ pub fn do_def(
 // Kinda rough: We don't really keep track of modes as carefully as TeX does.
 // We'll assume that a box is horizontal if there's anything at all,
 // but it's not a vbox (!?!?)
-pub fn classify_box(boxnum: Number) -> Result<&'static str> {Ok(
-  match state!().lookup_value(&s!("box{}", boxnum.value_of())) {
-    Some(Stored::Digested(ref d)) => match d.data() {
-      DigestedData::Whatsit(ref w)
-        if w.borrow().definition == lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
-      {
-        "vbox"
+pub fn classify_box(boxnum: Number) -> Result<&'static str> {
+  with_value(&s!("box{}", boxnum.value_of()), |val_opt| Ok(
+    match val_opt  {
+      Some(Stored::Digested(ref d)) => match d.data() {
+        DigestedData::Whatsit(ref w)
+          if w.borrow().definition == lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
+        {
+          "vbox"
+        },
+        _ => "hbox",
       },
-      _ => "hbox",
-    },
-    _ => "",
-  })
+      _ => "",
+    }
+  ))
 }
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
@@ -238,44 +239,46 @@ pub fn decode_math_char(
   n %= 16 * 256;
   let fam: u16 = n / 256;
   n %= 256;
-  let state = state!();
-  let font = state.lookup_value(&s!("textfont_{fam}"))
+  let font = lookup_value(&s!("textfont_{fam}"))
     .unwrap_or_else(|| {
-        state.lookup_value(&s!("scriptfont_{fam}"))
+        lookup_value(&s!("scriptfont_{fam}"))
         .unwrap_or_else(|| {
-          state
-            .lookup_value(&s!("scriptscriptfont_{fam}"))
-            .unwrap_or(&Stored::Bool(false))
+          lookup_value(&s!("scriptscriptfont_{fam}"))
+            .unwrap_or(Stored::Bool(false))
         })
     });
   // TODO: This function is called with n=20,000, how is the char cast sensible here? Consult Bruce.
   // TODO: confusing types, the 256 arithmetic implies larger than u8 inputs, what for?
   let c = n as u8 as char;
-  // // If no specific class, Lookup properties from a DefMath?
-  let charinfo = state.lookup_value(&s!("math_token_attributes_{}", c));
-  let fontinfo = state.lookup_font_info(&T_CS!(font.to_string()))?;
-  let mut role = MATH_CLASS_ROLE[class as usize];
+  // If no specific class, Lookup properties from a DefMath?
+  let role = MATH_CLASS_ROLE[class as usize];
 
-  if role.is_empty() {
-    if let Some(Stored::HashString(ref info)) = charinfo {
-      role = &info[role];
-    }
-  }
   let role_opt = if role.is_empty() {
-    None
-  } else {
-    Some(role.to_string())
-  };
-  let font_opt = if let Some(Stored::Font(ref info)) = fontinfo {
-    if let Some(ref data) = info.encoding {
-      font::decode(n as u8, Some(data.to_string()), false)
+    with_value(&s!("math_token_attributes_{}", c), |charinfo| {
+      let inner_role = if let Some(Stored::HashString(ref info)) = charinfo {
+        &info[role]
+      } else { role };
+      if inner_role.is_empty() {
+        None
+      } else {
+        Some(inner_role.to_string())
+      }})
     } else {
-      Some(c)
-    }
-  } else {
-    None
-  };
-
+      Some(role.to_string())
+    };
+  let font_opt =
+    with_font_info(&T_CS!(font.to_string()), |fontinfo| {
+      let cinfo = if let Some(Stored::Font(ref info)) = fontinfo? {
+        if let Some(ref data) = info.encoding {
+          font::decode(n as u8, Some(data.to_string()), false)
+        } else {
+          Some(c)
+        }
+      } else {
+        None
+      };
+      // Interesting, the compiler needs the explicit error type here?
+      Ok::<Option<char>,rtx_core::Error>(cinfo) })?;
   Ok((role_opt, font_opt))
 }
 
@@ -450,7 +453,7 @@ pub fn insert_block(
       && crows.len() == 1
       && model!()
         .with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
-      && document::can_contain_sym(
+      && document::node_can_contain_sym(
         &blocknode.get_parent().unwrap(),
         model!().get_node_qname(&crows[0]),
           )
@@ -464,7 +467,7 @@ pub fn insert_block(
       document.unwrap_nodes(rows.remove(0))?;
       document.unwrap_nodes(blocknode)?;
     } else if rows.len() == 1
-      && document::can_contain_sym(
+      && document::node_can_contain_sym(
         &blocknode.get_parent().unwrap(),
         model!().get_node_qname(&rows[0]),
           )

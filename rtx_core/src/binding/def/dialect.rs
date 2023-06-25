@@ -29,7 +29,7 @@ use crate::definition::{
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::state::*;
-use crate::{state,gullet};
+use crate::{gullet};
 use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -276,7 +276,7 @@ pub fn def_register<T: Into<RegisterValue>>(
     address = cs.to_string();
   }
   // Assign, but do not RE-assign
-  if !has_address_option || state!().lookup_value(&address).is_none() {
+  if !has_address_option || !has_value(&address) {
     assign_value(&address, value.clone(), Some(Scope::Global));
   }
 
@@ -1056,12 +1056,11 @@ pub fn def_environment(
       let message1 = s!("Can't close environment {}", name_clone);
       let message2 = s!(
         "Current are {} ",
-        state!()
-          .lookup_stacked_values("current_environment")
+        with_stacked_values("current_environment", |vals| vals
           .iter()
           .map(|x| s!("{:?}", x))
           .collect::<Vec<String>>()
-          .join(", ")
+          .join(", "))
       );
       Error!(
         "unexpected",

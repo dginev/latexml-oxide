@@ -13,7 +13,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
-use crate::state::{lookup_bool,lookup_font};
+use crate::state::{lookup_bool,lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
@@ -110,15 +110,15 @@ impl Tbox {
     if lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), "math".into());
       if text != empty_sym {
-        if let Some(Stored::HashString(attr)) = state!().lookup_value(&arena::with(text, |text_str| {
-          s!("math_token_attributes_{}", text_str)
-        })) {
+        with_value(&arena::with(text, |text_str| {
+          s!("math_token_attributes_{}", text_str) }), |value_opt|
+        if let Some(Stored::HashString(attr)) = value_opt {
           for (key, value) in attr.iter() {
             properties
               .entry(key.to_string())
               .or_insert_with(|| Stored::String(arena::pin(value)));
           }
-        }
+        });
       }
       let font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
       Tbox {

@@ -13,7 +13,7 @@ use crate::parameter::Parameters;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
-use crate::{Digested, state};
+use crate::{Digested};
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
@@ -230,15 +230,14 @@ impl Expandable {
       ExpansionBody::Tokens(tks) if tks.is_empty() => None,
       other => Some(other),
     };
-    let state = state!();
     Ok(Expandable {
       cs,
       paramlist,
       expansion,
       // locator           => $source->getLocator,
-      is_protected: traits.protected || state.get_prefix("protected"),
-      is_outer: traits.outer || state.get_prefix("outer"),
-      is_long: traits.long || state.get_prefix("long"),
+      is_protected: traits.protected || get_prefix("protected"),
+      is_outer: traits.outer || get_prefix("outer"),
+      is_long: traits.long || get_prefix("long"),
       ..Expandable::default()
     })
   }

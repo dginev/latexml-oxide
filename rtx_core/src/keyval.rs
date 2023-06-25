@@ -62,15 +62,15 @@ impl KeyVal {
   // Property access
   //======================================================================
 
-  pub fn get_prop<'a>(&self, key: &str, state: &'a State) -> Option<&'a Stored> {
-    state.lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
+  pub fn get_prop(&self, key: &str) -> Option<Stored> {
+    state::lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
   }
   pub fn get_default(&self) -> Option<Stored> {
-    self.get_prop("default", &state!()).map(|v| (*v).clone())
+    self.get_prop("default")
   }
   pub fn get_type(&self) -> Option<Rc<Parameter>> {
-    match self.get_prop("type", &state!()) {
-      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
+    match self.get_prop("type") {
+      Some(Stored::Parameter(p)) => Some(p),
       _ => None,
     }
   }

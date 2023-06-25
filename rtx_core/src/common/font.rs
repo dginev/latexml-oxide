@@ -4,7 +4,6 @@ use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
 use crate::common::store::Stored;
 use crate::state::*;
-use crate::state;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use once_cell::sync::Lazy;
 /// Note that this has evolved way beynond just "font",
@@ -1113,9 +1112,10 @@ pub fn decode(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          if let Some(fmap) = state!().lookup_value(&s!("{encoding}_{family}_fontmap")) {
+          with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt|
+          if let Some(fmap) = fmap_opt {
             map = fmap.into(); // Use the family specific map, if any.
-          }
+          });
         }
       }
     }
@@ -1174,9 +1174,10 @@ pub fn decode_string(
       map = Some(encmap);
       if let Some(ref font) = font {
         if let Some(family) = (*font).get_family() {
-          if let Some(fmap) = state!().lookup_value(&s!("{}_{}_fontmap", encoding, family)) {
-            map = fmap.into(); // Use the family specific map, if any.
-          }
+          with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt|
+            if let Some(fmap) = fmap_opt {
+              map = fmap.into(); // Use the family specific map, if any.
+          });
         }
       }
     }

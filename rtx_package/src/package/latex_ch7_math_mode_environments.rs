@@ -20,21 +20,20 @@ fn prepare_equation_counter(options: HashMap<String, Stored>) {
 fn before_equation() -> Result<()> {
   let mut has_preset = false;
   let mut is_numbered = false;
-  let ctr = if let Some(Stored::HashStored(ref mut numbering)) =
-    state_mut!().lookup_value_mut("EQUATION_NUMBERING")
-  {
-    numbering.insert("in_equation".to_owned(), true.into());
-    // MaybePeekLabel();
-    is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
-    has_preset = numbering.contains_key("preset");
-    match numbering.get("counter") {
-      Some(Stored::String(v)) => arena::to_string(*v),
-      Some(other) => panic!("eq counter should be stored as string, was instead: {other:?}"),
-      _ => String::from("equation"),
-    }
-  } else {
-    String::from("equation")
-  };
+  let ctr = with_value_mut("EQUATION_NUMBERING", |val_opt|
+    if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+      numbering.insert("in_equation".to_owned(), true.into());
+      // MaybePeekLabel();
+      is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
+      has_preset = numbering.contains_key("preset");
+      match numbering.get("counter") {
+        Some(Stored::String(v)) => arena::to_string(*v),
+        Some(other) => panic!("eq counter should be stored as string, was instead: {other:?}"),
+        _ => String::from("equation"),
+      }
+    } else {
+      String::from("equation")
+    });
   if has_preset {
     let mut tags = if is_numbered {
       ref_step_counter(&ctr, false)?
@@ -67,9 +66,10 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
   let mut ctr: Option<String> = None;
   let mut tags_numbered_update = false;
   let mut is_aligned = false;
-  if let Some(Stored::HashStored(ref numbering)) = state!().lookup_value("EQUATION_NUMBERING") {
+  with_value("EQUATION_NUMBERING", |eq_num_opt|
+  if let Some(Stored::HashStored(ref numbering)) = eq_num_opt {
     is_aligned = matches!(numbering.get("aligned"), Some(&Stored::Bool(true)));
-    if let Some(Stored::HashStored(ref tags)) = state!().lookup_value("EQUATIONROW_TAGS") {
+    with_value("EQUATIONROW_TAGS", |tags_opt| if let Some(Stored::HashStored(ref tags)) = tags_opt {
       ctr = Some(
         tags
           .get("counter")
@@ -96,24 +96,27 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
       {
         tags_numbered_update = true;
       }
-    }
-  }
+    });
+  });
 
-  if let Some(Stored::HashStored(ref mut numbering)) = state_mut!().lookup_value_mut("EQUATION_NUMBERING")
-  {
-    numbering.insert("in_equation".to_string(), Stored::Bool(false));
-  }
+  with_value_mut("EQUATION_NUMBERING", |eq_num_opt|
+    if let Some(Stored::HashStored(ref mut numbering)) = eq_num_opt
+    {
+      numbering.insert("in_equation".to_string(), Stored::Bool(false));
+    });
   if tags_numbered_update {
     let invoked_tags = build_invocation(
       T_CS!("\\lx@make@tags"),
       vec![Some(Tokens::new(Explode!(ctr.unwrap())))]
       )?;
     let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
-    if let Some(Stored::HashStored(ref mut tags)) = state_mut!().lookup_value_mut("EQUATIONROW_TAGS") {
-      // TODO: Invocation!() feels really awkward to use, should we reinvent it?
-      // especially the magical `.into()` that it does behind the scenes is concerning.
-      tags.insert("tags".to_string(), stored_tags_update);
-    }
+    with_value_mut("EQUATIONROW_TAGS", |tags_opt|
+      if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
+        // TODO: Invocation!() feels really awkward to use, should we reinvent it?
+        // especially the magical `.into()` that it does behind the scenes is concerning.
+        tags.insert("tags".to_string(), stored_tags_update);
+      }
+    );
   }
   // Now install the tags in $whatsit or current Row, as appropriate.
   let props = match state::remove_value("EQUATIONROW_TAGS") {

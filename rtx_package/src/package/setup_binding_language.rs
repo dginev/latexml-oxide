@@ -946,12 +946,6 @@ macro_rules! AssignMeaning {
 }
 
 #[macro_export]
-macro_rules! LookupMappingKeys {
-  ($map:expr) => {
-    state!().lookup_mapping_keys($map)
-  };
-}
-#[macro_export]
 macro_rules! LookupCatcode {
   ($c:expr) => {{
     state::lookup_catcode($c)

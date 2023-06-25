@@ -71,10 +71,10 @@ LoadDefinitions!({
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
-      let ctr = match state!().lookup_value(&s!("counter_for_{stype}")) {
+      let ctr = with_value(&s!("counter_for_{stype}"), |value_opt| match value_opt {
         Some(v) => v.to_string(),
         None => stype
-      };
+      });
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![

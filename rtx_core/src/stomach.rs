@@ -56,24 +56,23 @@ impl Stomach {
     self.box_list = Vec::new();
     self.localized_box_list = Vec::new();
 
-    let mut state = state_mut!();
-    state.assign_value("MODE", "text", Some(Scope::Global));
-    state.assign_value("IN_MATH", false, Some(Scope::Global));
-    state.assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
-    state.assign_value(
+    assign_value("MODE", "text", Some(Scope::Global));
+    assign_value("IN_MATH", false, Some(Scope::Global));
+    assign_value("PRESERVE_NEWLINES", Stored::Int(1), Some(Scope::Global));
+    assign_value(
       "afterGroup",
       Stored::VecDequeStored(VecDeque::new()),
       Some(Scope::Global),
     );
-    state.assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
-    state.assign_value(
+    assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
+    assign_value(
       "groupInitiator",
       String::from("Initialization"),
       Some(Scope::Global),
     );
     // Setup default fonts.
-    state.assign_value("font", Font::text_default(), Some(Scope::Global));
-    state.assign_value("mathfont", Font::math_default(), Some(Scope::Global));
+    assign_value("font", Font::text_default(), Some(Scope::Global));
+    assign_value("mathfont", Font::math_default(), Some(Scope::Global));
   }
 
   /// get the current boxing level
@@ -83,11 +82,12 @@ impl Stomach {
   /// Making it relative to the math's level avoids unnecessary changes
   pub fn get_script_level(&self) -> usize {
     let boxlevel = self.boxing.len();
-    if let Some(Stored::Int(prevlevel)) = state!().lookup_value("script_base_level") {
-      boxlevel - (*prevlevel as usize) + 1
-    } else {
-      boxlevel
-    }
+    with_value("script_base_level",|val_opt|
+      if let Some(Stored::Int(prevlevel)) = val_opt {
+        boxlevel - (*prevlevel as usize) + 1
+      } else {
+        boxlevel
+      })
   }
 
   //**********************************************************************
@@ -219,7 +219,7 @@ pub fn egroup() -> Result<()> {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
-      {state!().get_current_token().unwrap()},
+      get_current_token().unwrap(),
       "Attempt to close boxing group"
     );
   } else {
@@ -238,7 +238,7 @@ pub fn endgroup() -> Result<()> {
     // or group was opened with \bgroup
     Error!(
       "unexpected",
-      {state!().get_current_token().unwrap().to_string()},
+      get_current_token().unwrap().to_string(),
       s!(
         "Attempt to close non-boxing group; {}",
         current_frame_message()
@@ -287,7 +287,7 @@ pub fn set_mode(mode: &str) -> Result<()> {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math
     // but inherit color and size
-    let saved_opt = state!().lookup_value("savedfont").cloned();
+    let saved_opt = lookup_value("savedfont");
     if let Some(Stored::Font(saved_font)) = saved_opt {
       assign_font(
         Rc::new(saved_font.merge(Font {

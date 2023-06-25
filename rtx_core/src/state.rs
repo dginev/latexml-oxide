@@ -327,31 +327,29 @@ impl Default for State {
 }
 
 #[thread_local]
-pub static STY_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+static STY_STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
   catcodes: Some(Catcodes::Style),
   ..StateOptions::default()
 })));
 #[thread_local]
-pub static STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
+static STATE : Lazy<RefCell<State>> = Lazy::new(|| RefCell::new(State::new(StateOptions {
   catcodes: Some(Catcodes::Standard),
   ..StateOptions::default()
 })));
 
-#[macro_export]
 macro_rules! state {
-  () => ((*$crate::state::STATE).borrow())
+  () => ((*STATE).borrow())
 }
-#[macro_export]
 macro_rules! state_mut {
-  () => ((*$crate::state::STATE).borrow_mut())
+  () => ((*STATE).borrow_mut())
 }
 #[macro_export]
 macro_rules! sty_state {
-  () => ((*$crate::state::STY_STATE).borrow())
+  () => ((*STY_STATE).borrow())
 }
 #[macro_export]
 macro_rules! sty_state_mut {
-  () => ((*$crate::state::STY_STATE).borrow_mut())
+  () => ((*STY_STATE).borrow_mut())
 }
 
 /// state fields allowed for customization during construction
@@ -764,6 +762,13 @@ impl State {
   pub fn current_build_template(&mut self) -> Option<&mut Template> {
     self.localized.build_template.last_mut()
   }
+
+  pub fn ensure_tag_property(&mut self, tag: SymbolU32) -> &mut TagOptions {
+    self
+    .tag_properties
+    .entry(tag)
+    .or_insert_with(TagOptions::default)
+  }
 }
 
 static mut USES_STY : bool = false;
@@ -1024,6 +1029,14 @@ pub fn push_tokens(key: &str, value: Tokens) {
 
 pub fn lookup_value(key:&str) -> Option<Stored> {
   state!().lookup_value(key).cloned()
+}
+pub fn with_value<R, FnR>(key:&str, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R  {
+  caller(state!().lookup_value(key))
+}
+pub fn with_value_mut<R, FnR>(key:&str, caller: FnR) -> R
+where FnR: FnOnce(Option<&mut Stored>) -> R  {
+  caller(state_mut!().lookup_value_mut(key))
 }
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
 pub fn lookup_bool(key: &str) -> bool {
@@ -1508,6 +1521,11 @@ pub fn lookup_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
     None | Some(Stored::None) => None,
     Some(v) => <Option<&VecDeque<Stored>>>::from(v).cloned()
   }
+}
+
+pub fn with_vecdeque<R, FnR>(key: &str, caller: FnR) -> R
+where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R  {
+  caller(state!().lookup_vecdeque(key))
 }
 
 /// $meaning should be a definition (for defining active control sequences)
@@ -2133,7 +2151,7 @@ pub fn local_current_token(token: Token) { state_mut!().localized.current_token.
 /// expires the most recent (localized) current token.
 pub fn expire_current_token() { state_mut!().localized.current_token.pop(); }
 /// gets the (localized) current token
-pub fn get_current_token() -> Option<Token> { state!().localized.current_token.last().cloned() }
+pub fn get_current_token() -> Option<Token> { state!().get_current_token().cloned() }
 
 /// sets the (localized) flag for "dual branch"
 pub fn set_dual_branch(mode: &'static str) { state_mut!().localized.dual_branch.push(mode); }
@@ -2208,11 +2226,20 @@ pub fn set_build_template(template: Template) {
 pub fn take_build_template() -> Option<Template> { state_mut!().localized.build_template.pop() }
 
 pub fn get_tag_property(tag: SymbolU32) -> TagOptions {
-  state_mut!()
-  .tag_properties
-  .entry(tag)
-  .or_insert_with(TagOptions::default)
-  .clone()
+  state_mut!().ensure_tag_property(tag).clone()
+}
+pub fn ensure_tag_property(tag: SymbolU32) {
+  state_mut!().ensure_tag_property(tag);
+}
+
+pub fn with_tag_property<R, FnR>(tag: SymbolU32, caller: FnR) -> R
+where FnR: FnOnce(Option<&TagOptions>) -> R  {
+    caller(state!().tag_properties.get(&tag))
+}
+pub fn with_tag_property_mut<R, FnR>(tag: SymbolU32, caller: FnR) -> R
+where FnR: FnOnce(&mut TagOptions) -> R  {
+  ensure_tag_property(tag);
+  caller(state_mut!().tag_properties.get_mut(&tag).unwrap())
 }
 
 pub fn has_indirect_model() -> bool {
@@ -2221,4 +2248,125 @@ pub fn has_indirect_model() -> bool {
 pub fn set_indirect_model(im: IndirectModel) {
   let mut state = state_mut!();
   state.indirect_model = Some(im);
+}
+pub fn get_nomathparse_flag() -> bool {
+  state!().nomathparse
+}
+pub fn set_nomathparse_flag(val: bool) {
+  let mut state = state_mut!();
+  state.nomathparse = val;
+}
+
+pub fn current_verbosity() -> i32 {
+  state!().verbosity
+}
+
+pub fn push_pending_resource(value: Resource) {
+  state_mut!().pending_resources.push(value);
+}
+pub fn take_pending_resources() -> Vec<Resource> {
+  state_mut!().pending_resources.drain(..).collect()
+}
+pub fn reset_pending_resources() {
+  state_mut!().pending_resources = Vec::new();
+}
+pub fn get_indirect_model_relationship(tag: SymbolU32, childtag: SymbolU32) -> Option<SymbolU32> {
+  match state!().indirect_model.as_ref().unwrap().get(&tag) {
+    Some(sub_m) => sub_m.get(&childtag).copied(),
+    None => None,
+  }
+}
+
+pub fn get_bindings_dispatch() -> Option<BindingDispatcher> {
+  state!().bindings_dispatch.as_ref().map(Rc::clone)
+}
+pub fn get_extra_bindings_dispatch() -> Option<BindingDispatcher> {
+  state!().extra_bindings_dispatch.as_ref().map(Rc::clone)
+}
+pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
+  let mut state = state_mut!();
+  state.bindings_dispatch = Some(dispatcher);
+}
+pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
+  let mut state = state_mut!();
+  state.extra_bindings_dispatch = Some(dispatcher);
+}
+
+pub fn set_locked_state() {
+  state_mut!().unlocked = false;
+}
+pub fn set_unlocked_state() {
+  state_mut!().unlocked = true;
+}
+
+pub fn get_search_paths() -> Vec<String> {
+  state!().search_paths.iter().cloned().collect()
+}
+pub fn with_search_paths<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(&VecDeque<String>) -> R {
+  caller(&state!().search_paths)
+}
+pub fn add_search_path(path: String) {
+  let mut state = state_mut!();
+  state.search_paths.push_back(path);
+}
+pub fn search_paths_push_front(path:String) {
+  let mut state = state_mut!();
+  state.search_paths.push_front(path);
+}
+pub fn has_search_paths() -> bool {
+  ! state!().search_paths.is_empty()
+}
+pub fn get_graphics_paths() -> Vec<String> {
+  state!().graphics_paths.iter().cloned().collect()
+}
+pub fn graphics_paths_push_front(path:String) {
+  let mut state = state_mut!();
+  state.graphics_paths.push_front(path);
+}
+
+pub fn with_current_build_template<R, FnR>(caller: FnR) -> R
+where FnR: FnOnce(Option<&mut Template>) -> R  {
+  caller(state_mut!().localized.build_template.last_mut())
+}
+
+/// manage a (global) hash of values
+pub fn with_mapping<R,FnR>(map: &str, key: &str, caller: FnR) -> R
+where FnR: FnOnce(Option<&Stored>) -> R {
+  let map_sym = arena::pin(map);
+  caller(match state!().value.get(&map_sym) {
+    None => None,
+    Some(map_vec) => match map_vec.front() {
+      Some(Stored::HashStored(h)) => h.get(key),
+      _ => None,
+    },
+  })
+}
+
+pub fn with_mapping_keys<R,FnR>(map: &str, caller: FnR) -> R
+where FnR: FnOnce(Vec<&str>) -> R {
+  caller(state!().lookup_mapping_keys(map))
+}
+
+pub fn with_font_info<R,FnR>(key: &Token, caller: FnR) -> R
+  where FnR: FnOnce(Result<Option<&Stored>>) -> R {
+   caller(state!().lookup_font_info(key))
+}
+
+pub fn get_input_encoding() -> Option<SymbolU32> {
+  state!().input_encoding.as_ref().map(arena::pin)
+}
+pub fn set_input_encoding(val: Option<String>) {
+  let mut state = state_mut!();
+  state.input_encoding = val;
+}
+
+pub fn with_stacked_values<R,FnR>(key: &str, caller: FnR) -> R
+where FnR: FnOnce(Vec<&Stored>) -> R {
+  caller(state!().lookup_stacked_values(key))
+}
+
+pub fn set_state(incoming_state: State) {
+  let mut global_state = state_mut!();
+  *global_state = incoming_state;
 }

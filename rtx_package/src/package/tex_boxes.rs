@@ -20,7 +20,7 @@ LoadDefinitions!({
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
     // Should afterDigest be responsible for resetting flags?
-    let scope = if state!().get_prefix("global") {
+    let scope = if get_prefix("global") {
       Some(Scope::Global)
     } else {
       None
@@ -49,9 +49,8 @@ LoadDefinitions!({
 
   DefPrimitive!("\\copy Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = state!().lookup_value(&box_key) {
-      let cloned_stuff : Digested = (*stuff).clone();
-      Ok(vec![cloned_stuff])
+    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+      Ok(vec![stuff])
     } else {
       Ok(Vec::new())
     }
@@ -60,9 +59,9 @@ LoadDefinitions!({
   DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
     // analog to \box for now.
     let box_key   = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(ref stuff)) = state!().lookup_value(&box_key) {
-      adjust_box_color(stuff)?;
-      if stuff.is_empty()? { Digested::from(List::default()) } else { stuff.clone() }
+    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+      adjust_box_color(&stuff)?;
+      if stuff.is_empty()? { Digested::from(List::default()) } else { stuff }
     } else {
       Digested::from(List::default())
     }

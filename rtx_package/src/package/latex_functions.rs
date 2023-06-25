@@ -160,8 +160,8 @@ pub fn tabular_bindings(
   mut xml_attributes: HashMap<String, String>
 ) -> Result<()> {
   if !properties.contains_key("guess_headers") {
-    if let Some(v) = state!().lookup_value("GUESS_TABULAR_HEADERS") {
-      properties.insert(String::from("guess_headers"), v.clone());
+    if let Some(v) = lookup_value("GUESS_TABULAR_HEADERS") {
+      properties.insert(String::from("guess_headers"), v);
     }
   }
   if !xml_attributes.contains_key("colsep") {

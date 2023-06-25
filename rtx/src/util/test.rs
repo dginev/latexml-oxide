@@ -9,8 +9,7 @@ use std::sync::Once;
 use crate::core_interface::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
-use rtx_core::{state_mut};
-use rtx_core::{s, Core, CoreOptions};
+use rtx_core::{s, Core, CoreOptions, state};
 use rtx_math_parser::node_to_grammar_lexemes;
 use rtx_package::{package,load_model};
 use rtx_codegen::LoadModel;
@@ -132,13 +131,13 @@ fn process_texfile(
     ..CoreOptions::default()
   });
   // Add the package bindings
-  state_mut!().bindings_dispatch = Some(Rc::new(package::dispatch));
+  state::set_bindings_dispatch(Rc::new(package::dispatch));
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to
   // compiled functions, hence the rust-native pass
-  if extra_bindings_dispatcher.is_some() {
-    state_mut!().extra_bindings_dispatch = extra_bindings_dispatcher;
+  if let Some(dispatcher) = extra_bindings_dispatcher {
+    state::set_extra_bindings_dispatch(dispatcher);
   }
   match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
@@ -188,7 +187,7 @@ pub fn new_test_engine() -> Core {
     ..CoreOptions::default()
   });
   load_model!("LaTeXML");
-  state_mut!().bindings_dispatch = Some(Rc::new(package::dispatch));
+  state::set_bindings_dispatch(Rc::new(package::dispatch));
   core_engine
 }
 

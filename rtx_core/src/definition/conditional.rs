@@ -21,7 +21,7 @@ use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::Digested;
-use crate::{gullet, state, state_mut};
+use crate::{gullet,state};
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -129,7 +129,7 @@ impl Definition for Conditional {
       _ => {
         let message = s!(
           "Unknown conditional control sequence {}",
-          state!().get_current_token().unwrap().stringify()
+          get_current_token().unwrap().stringify()
         );
         Error!("unexpected", self.cs, message);
         Ok(Tokens!())
@@ -187,7 +187,7 @@ impl Conditional {
     //   Fatal('timeout', 'if_limit', $self,
     //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
     let if_frame = Rc::new(RefCell::new(IfFrame {
-      token: state!().get_current_token().unwrap().clone(),
+      token: get_current_token().unwrap(),
       start: gullet!().get_locator().unwrap().into_owned(),
       parsing: true,
       elses: false,
@@ -269,23 +269,28 @@ impl Conditional {
         Some(ConditionalType::Fi) => {
           // Found a \fi
           let local_frame = get_ifframe();
-          let mut state = state_mut!();
-          if let Some(Stored::VecDequeStored(stack)) = state.lookup_value_mut("if_stack") {
-            if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-              if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
-                // But is it for a condition nested in the test clause?
-                // then DO pop that conditional's frame; it's DONE!
-              } else {
-                level -= 1;
-                if level == 0 {
-                  // otherwise, if no more nesting, we're done.
-                  // Done with this frame, keep it removed
-                  return Ok(t); // AND Return the finishing token.
+          let maybe_last = with_value_mut("if_stack",|value_opt| {
+            if let Some(Stored::VecDequeStored(stack)) = value_opt {
+              if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
+                if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
+                  // But is it for a condition nested in the test clause?
+                  // then DO pop that conditional's frame; it's DONE!
                 } else {
-                  stack.push_front(stack_frame.into());
+                  level -= 1;
+                  if level == 0 {
+                    // otherwise, if no more nesting, we're done.
+                    // Done with this frame, keep it removed
+                    return Some(t); // AND Return the finishing token.
+                  } else {
+                    stack.push_front(stack_frame.into());
+                  }
                 }
               }
             }
+            None
+          });
+          if let Some(t) = maybe_last {
+            return Ok(t);
           }
         },
         Some(other_type) => {
@@ -300,14 +305,20 @@ impl Conditional {
             // Found \else and we're looking for one?
             let local_frame = get_ifframe();
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
-            if let Some(Stored::VecDequeStored(stack)) = state!().lookup_value("if_stack") {
-              if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
-                if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
-                  // No need to actually call elseHandler, but note that we've seen an \else!
-                  stack_frame.borrow_mut().elses = true;
-                  return Ok(t);
+            let maybe_last = with_value("if_stack", |stack_opt| {
+              if let Some(Stored::VecDequeStored(stack)) = stack_opt {
+                if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
+                  if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
+                    // No need to actually call elseHandler, but note that we've seen an \else!
+                    stack_frame.borrow_mut().elses = true;
+                    return Some(t);
+                  }
                 }
               }
+              None
+            });
+            if let Some(t) = maybe_last {
+              return Ok(t);
             }
           }
         },
@@ -323,8 +334,8 @@ impl Conditional {
   }
 
   fn invoke_else(&self) -> Result<Tokens> {
-    let stack_frame_opt = {
-      if let Some(Stored::VecDequeStored(stack)) = state_mut!().lookup_value_mut("if_stack") {
+    let stack_frame_opt = with_value_mut("if_stack", |stack_opt|
+      if let Some(Stored::VecDequeStored(stack)) = stack_opt {
         if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
           Some(Rc::clone(stack_frame))
         } else {
@@ -332,8 +343,8 @@ impl Conditional {
         }
       } else {
         None
-      }};
-    let local_token = { state!().get_current_token().unwrap().clone() };
+      });
+    let local_token = get_current_token().unwrap();
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
@@ -374,21 +385,20 @@ impl Conditional {
 
   fn invoke_fi(&self) -> Result<Tokens> {
     let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> =
-      if let Some(Stored::VecDequeStored(ref stack)) = state!().lookup_value("if_stack") {
-        if let Some(Stored::IfFrame(frame)) = stack.front() {
-          Some(Rc::clone(frame))
+      with_value("if_stack", |stack_opt|
+        if let Some(Stored::VecDequeStored(ref stack)) = stack_opt {
+          if let Some(Stored::IfFrame(frame)) = stack.front() {
+            Some(Rc::clone(frame))
+          } else {
+            None
+          }
         } else {
           None
-        }
-      } else {
-        None
-      };
+        });
     if let Some(stack_frame) = stack_frame_opt {
       if stack_frame.borrow().parsing {
         // Defer expanding the \else if we're still parsing the test
-        let state = state!();
-        let local_token = state.get_current_token().unwrap();
-        Ok(Tokens!(T_RELAX!(), (*local_token).clone()))
+        Ok(Tokens!(T_RELAX!(), get_current_token().unwrap()))
       } else {
         // "expand" by removing the stack entry for this level
         set_ifframe(Some(stack_frame));
@@ -403,7 +413,7 @@ impl Conditional {
     } else {
       let message = s!(
         "Didn't expect a {:?} since we seem not to be in a conditional",
-        state!().get_current_token().unwrap().stringify()
+        get_current_token().unwrap().stringify()
       );
       Error!("unexpected", "fi", message);
       Ok(Tokens!())

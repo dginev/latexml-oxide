@@ -256,10 +256,10 @@ LoadDefinitions!({
       let xmid = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let arg = whatsit.get_arg(2);
       let reversion_key = s!("xref:{}@reversion", xmid);
-      if let Some(Stored::HashStored(ref mut pending)) =
-        state_mut!().lookup_value_mut("PENDING_DUAL_XMARGS") {
+      with_value_mut("PENDING_DUAL_XMARGS", |pending_opt|
+        if let Some(Stored::HashStored(ref mut pending)) = pending_opt  {
           pending.insert(xmid, arg.into());
-      }
+        });
       // TODO: Must we store the (currently &mut) Whatsit?
       // let whatsit_stored = Stored::Digested(whatsit.into());
       state::assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),

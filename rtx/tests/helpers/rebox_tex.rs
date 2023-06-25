@@ -15,7 +15,7 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       state::assign_value("SAVED_WHATSIT", whatsit.get_arg(1), Some(Scope::Global)); });
   DefConstructor!("\\UseBox", "#savedbox",
-    properties => { Ok(stored_map!("savedbox" => state!().lookup_value("SAVED_WHATSIT"))) });
+    properties => { Ok(stored_map!("savedbox" => lookup_value("SAVED_WHATSIT"))) });
 
   // Some math macros that create ltx:XMDual's for testing
   DefMath!("\\parens{}",   "(#1)", meaning => "parentheses");

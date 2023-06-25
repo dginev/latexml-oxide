@@ -66,15 +66,16 @@ LoadDefinitions!({
     wrapped_tokens.push(T_END!());
     let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
-    {
-      let mut state = state_mut!();
-      let frontmatter = match state.lookup_value_mut("frontmatter") {
+    with_value_mut("frontmatter", |val_opt| {
+      let frontmatter = match val_opt {
         Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
         _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
       };
       let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
       f_entry.push(entry);
-    }
+      Ok(())
+    })?;
+
     AssignValue!("inPreamble", inpreamble);
   });
 
@@ -155,7 +156,7 @@ LoadDefinitions!({
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root] {
-    let classes = LookupMappingKeys!("DOCUMENT_CLASSES").join(" ");
+    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| keys.join(" "));
     if !classes.is_empty()  {
       document.add_class(root, &classes)?;
     }
@@ -204,8 +205,8 @@ LoadDefinitions!({
   // This collects up the various declared ltx:tag's into an ltx:tags
   DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
     let formatters = if let Some(Stored::HashStored(formatters)) =
-      state!().lookup_value("type_tag_formatter") {
-        Some(formatters.clone())
+      lookup_value("type_tag_formatter") {
+        Some(formatters)
       } else {
         None
       };
@@ -269,12 +270,12 @@ LoadDefinitions!({
   // but be sure to use the right counter!  This is how \ref will show the number.
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
   DefMacro!("\\lx@counterfor{}", sub[(ctr_type)] {
-    let state = state!();
-    if let Some(ctr) = state.lookup_mapping("counter_for_type", &ctr_type.to_string()) {
+    with_mapping("counter_for_type", &ctr_type.to_string(), |ctr_opt|
+    if let Some(ctr) = ctr_opt {
       Tokens!(T_OTHER!(ctr.to_string()))
     } else {
       ctr_type
-    }
+    })
   });
   DefMacro!(
     "\\lx@the@@{}",

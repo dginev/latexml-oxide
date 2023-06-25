@@ -7,6 +7,7 @@ use std::rc::Rc;
 use rtx_core::common::arena;
 use rtx_core::common::error::{self, note_begin, note_end, Result};
 use rtx_core::common::DigestionMode;
+use rtx_core::common::store::Stored;
 use rtx_core::common::model;
 use rtx_core::definition::expandable::Expandable;
 use rtx_core::digested::Digested;
@@ -14,14 +15,13 @@ use rtx_core::document::Document;
 use rtx_core::list::List;
 use rtx_core::stomach;
 use rtx_core::gullet;
-use rtx_core::state::*;
+use rtx_core::state::{self,Scope};
 use rtx_core::token::{Catcode, Token};
 use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE,
-     state,state_mut,model};
+use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE,model};
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
 use rtx_package::{
@@ -41,7 +41,7 @@ pub struct DigestionOptions {
 }
 
 pub trait DigestionAPI {
-  fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()>;
+  fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()>;
   fn digest(
     &mut self,
     request: String,
@@ -60,14 +60,14 @@ pub trait DigestionAPI {
 }
 
 impl DigestionAPI for Core {
-  fn initialize_state(&mut self, preloads: Vec<String>) -> Result<()> {
+  fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
     // first, reset the error REPORT singleton
     error::initialize_report();
     // now handle conversion state
     gullet::initialize_gullet();
     stomach::initialize_stomach();
     // should we reset the model also?
-    model::initialize();
+    model::initialize_model();
     // let paths = state::search_paths;
     state::assign_value("InitialPreloads", true, Some(Scope::Global));
     for preload in preloads {
@@ -123,9 +123,9 @@ impl DigestionAPI for Core {
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
       {
-        let mut state = state_mut!();
-        state.assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
-        state.search_paths.push_front(dir.to_string());
+
+        state::assign_value("SOURCEDIRECTORY", arena::pin(dir), None);
+        state::add_search_path(dir.to_string());
       }
     }
     //   if defined $dir && !grep { $_ eq $dir } @{ $state::>lookupValue('SEARCHPATHS') };
@@ -175,7 +175,7 @@ impl DigestionAPI for Core {
     {
 
       // TODO: Can we disentangle the ownership to avoid the clone?
-      let paths_stored = state!().search_paths.clone();
+      let paths_stored = state::get_search_paths();
       let schema_paths = paths_stored
         .iter()
         .map(String::as_str)
@@ -191,16 +191,14 @@ impl DigestionAPI for Core {
         // Eager-load at runtime
         model::load_schema(schema_paths.as_slice())?; // If needed?
       }
-      let state = state!();
-      if !state.search_paths.is_empty() {
+      if state::has_search_paths() {
         {
-          if lookup_bool("INCLUDE_COMMENTS") {
-            let paths_string = state
-              .search_paths
+          if state::lookup_bool("INCLUDE_COMMENTS") {
+            let paths_string = state::with_search_paths(|paths| paths
               .iter()
               .map(String::as_str)
               .collect::<Vec<&str>>()
-              .join(",");
+              .join(","));
             let attributes = map! {s!("paths") => paths_string};
             document.insert_pi("latexml", Some(attributes))?;
           }
@@ -232,7 +230,7 @@ impl DigestionAPI for Core {
     document.absorb(&digested, None)?;
     note_end("Building");
 
-    let has_rewrites = has_value("DOCUMENT_REWRITE_RULES");
+    let has_rewrites = state::has_value("DOCUMENT_REWRITE_RULES");
     if has_rewrites {
       note_begin("Rewriting");
       document.mark_xmnode_visibility()?;
@@ -259,7 +257,7 @@ impl DigestionAPI for Core {
       note_end("Rewriting");
     }
 
-    if !state!().nomathparse {
+    if ! state::get_nomathparse_flag() {
       let mut parser = MathParser::default();
       parser.parse_math(&mut document)?;
     }
@@ -335,7 +333,7 @@ impl DigestionAPI for Core {
     if !noinitialize {
       let mut preloads = vec![main_pool];
       preloads.extend(self.preload.clone());
-      self.initialize_state(preloads)?;
+      self.initialize_singletons(preloads)?;
     }
     {
 
@@ -345,11 +343,8 @@ impl DigestionAPI for Core {
       if !dir.is_empty() {
         state::assign_value("SOURCEDIRECTORY", dir.clone(), None);
       }
-      {
-        let mut state = state_mut!();
-        state.search_paths.push_front(dir.clone());
-        state.graphics_paths.push_front(dir);
-      }
+      state::search_paths_push_front(dir.clone());
+      state::graphics_paths_push_front(dir);
       state::install_definition(
         Stored::Expandable(Rc::new(Expandable {
           cs: T_CS!("\\jobname"),

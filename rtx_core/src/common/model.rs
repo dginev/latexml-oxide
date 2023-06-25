@@ -71,7 +71,7 @@ macro_rules! model_mut {
   () => ((*$crate::common::model::MODEL).borrow_mut())
 }
 
-pub fn initialize() {
+pub fn initialize_model() {
   let mut global_model = MODEL.borrow_mut();
   *global_model = Model::new();
 }
@@ -558,12 +558,12 @@ impl Model {
     }
 
     // Else query tag properties.
-    let model = &mut self
+    let model_entry = &mut self
       .tagprop
       .entry(tag)
       .or_insert_with(TagFrame::default)
       .model;
-    model.contains(&ANY_SYM) || model.contains(&child)
+    model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
   }
 
   /// Can an element with (qualified name) `tag` contain a `child` element?
@@ -764,4 +764,8 @@ pub(crate) fn compute_indirect_model_aux(
 
 pub fn load_schema(search_paths: &[&str]) -> Result<()> {
   model_mut!().load_schema(search_paths)
+}
+
+pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
+  model_mut!().can_contain_sym(tag,child)
 }

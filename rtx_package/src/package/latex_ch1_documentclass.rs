@@ -34,7 +34,7 @@ LoadDefinitions!({
 
   AssignValue!("@unusedoptionlist", Stored::VecString(Vec::new()));
   DefPrimitive!("\\warn@unusedclassoptions", {
-    if let Some(Stored::VecString(unused)) = state!().lookup_value("@unusedoptionlist") {
+    if let Some(Stored::VecString(unused)) = lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
         Info!("unexpected", "options",
               "Unused global options: {}",unused.join(","));

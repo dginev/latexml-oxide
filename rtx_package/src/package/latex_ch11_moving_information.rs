@@ -41,8 +41,8 @@ LoadDefinitions!({
     let label_key = s!("LABEL@{}", label);
     whatsit.set_property("label", label);
 
-    let ctr_key_opt = state!().lookup_value("current_counter")
-      .map(|ctr| s!("scopes_for_counter:{}", ctr));
+    let ctr_key_opt = with_value("current_counter", |val_opt| val_opt
+      .map(|ctr| s!("scopes_for_counter:{}", ctr)));
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
       state::unshift_value(&ctr_key, vec![scope.clone()]);
@@ -697,9 +697,8 @@ fn begin_bibliography_clean(
     whatsit.set_property("title", title);
   }
   {
-    let state = state!();
-    whatsit.set_property("bibstyle", state.lookup_value("BIBSTYLE"));
-    whatsit.set_property("citestyle", state.lookup_value("CITE_STYLE"));
+    whatsit.set_property("bibstyle", lookup_value("BIBSTYLE"));
+    whatsit.set_property("citestyle", lookup_value("CITE_STYLE"));
   }
   // And prepare for the likely nonsense that appears within bibliographies
   ResetCounter!("enumiv");

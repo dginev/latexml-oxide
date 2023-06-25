@@ -17,34 +17,33 @@ LoadDefinitions!({
   // Primitive column types;
   // This is really LaTeX, but the mechanisms are used behind-the-scenes here, too.
   DefColumnType!("|", {
-    state_mut!().current_build_template().unwrap().
-      add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")]);
+    with_current_build_template(|template_opt| template_opt.unwrap().
+      add_between_column(vec![T_CS!("\\vrule"), T_CS!("\\relax")]));
   });
   DefColumnType!("l", {
-    state_mut!().current_build_template().unwrap().add_column(Cell {
-      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
+    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()}));
   });
   DefColumnType!("c", {
-    state_mut!().current_build_template().unwrap().add_column(Cell {
+    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\hfil"))),
-      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()});
+      after: Some(Tokens!(T_CS!("\\hfil"))), ..Cell::default()}));
   });
   DefColumnType!("r", {
-    let mut state = state_mut!();
-    let mut template = state.current_build_template().unwrap();
-    template.add_column(Cell {
-      before: Some(Tokens!(T_CS!("\\hfil"))),
-      ..Cell::default()});
+    with_current_build_template(|template_opt|
+      template_opt.unwrap().add_column(Cell {
+        before: Some(Tokens!(T_CS!("\\hfil"))),
+        ..Cell::default()}));
   });
 
   DefColumnType!("p{Dimension}", sub[args] {
     let width = args.remove(0).expect_dimension();
-    state_mut!().current_build_template().unwrap().add_column(Cell {
+    with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
       after: Some(Tokens!(T_END!(), T_END!())),
       align: Some(Align::Justify),
       width: Some(width),
-      ..Cell::default()});
+      ..Cell::default()}));
   });
 
   DefColumnType!("*{Number}{}", sub[args] {
@@ -59,7 +58,7 @@ LoadDefinitions!({
 
   DefColumnType!("@{}", sub[args] {
     let filler = args.remove(0).owned_tokens().unwrap();
-    state_mut!().current_build_template().unwrap().add_between_column(filler.unlist());
+    with_current_build_template(|template_opt| template_opt.unwrap().add_between_column(filler.unlist()));
   });
 
   // ----------------------------------------------------------------------

@@ -94,7 +94,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();
-    Debug!("Box {n} = {:?}", state!().lookup_value(&s!("box{n}")));
+    Debug!("Box {n} = {:?}", lookup_value(&s!("box{n}")));
   });
   DefPrimitive!("\\showlists", None);
   DefPrimitive!("\\showthe Token", None);
@@ -200,22 +200,22 @@ LoadDefinitions!({
   DefPrimitive!("\\closein Number", sub[(port)] {
     // Clone the Rc<> for mouth out of state:: since we'll be mutating.
     let file_key = s!("input_file:{}", port);
-    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = state!().lookup_value(&file_key) {
-      Some(Rc::clone(mouth))
-    } else {
-      None
-    };
+    let mut finished = false;
     //   close the mouth (if any) and clear the variable
-    if let Some(mouth) = mouth_opt {
-      mouth.borrow_mut().finish();
+    with_value(&file_key, |mouth_opt|
+      if let Some(Stored::Mouth(ref mouth)) = mouth_opt {
+        mouth.borrow_mut().finish();
+        finished = true;
+      });
+    if finished {
       AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
     }
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
     sub[(port, token)] {
-    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = state!().lookup_value(&format!("input_file:{port}")) {
-      Some(Rc::clone(mouth_stored))
+    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
+      Some(mouth_stored)
     } else { None };
     if let Some(mouth_obj) = mouth_opt {
       bgroup();
@@ -244,11 +244,12 @@ LoadDefinitions!({
   });
 
   DefConditional!("\\ifeof Number", sub[(port)] {
-    if let Some(Stored::Mouth(mouth)) = state!().lookup_value(&s!("input_file:{}", port)) {
-      mouth.borrow().at_eof()
-    } else {
-      true
-    }
+    with_value(&s!("input_file:{}", port), |val_opt|
+      if let Some(Stored::Mouth(mouth)) = val_opt {
+        mouth.borrow().at_eof()
+      } else {
+        true
+      })
   });
 
   // For output files, we'll write the data to a cached internal copy
@@ -267,15 +268,16 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\write Number {}", sub[(port, tokens)] {
-    if let Some(filename) = state!().lookup_value(&s!("output_file:{}", port)) {
-      let handle   = s!("{}_contents",filename);
+    let handle = with_value(&s!("output_file:{}", port), |val_opt|
+    if let Some(filename) = val_opt {
+       s!("{}_contents",filename)
+    } else { String::new() });
+    if !handle.is_empty() {
       let mut contents : String = LookupString!(&handle);
-      let mut gullet = gullet_mut!();
       contents.push_str(&Expand!(tokens).untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
-      let mut gullet = gullet_mut!();
       println_stderr!("{}", Expand!(tokens).untex());
     }
   });
