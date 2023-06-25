@@ -27,6 +27,7 @@ pub use rtx_core::common::locator::Locator;
 pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
+pub use rtx_core::common::model;
 pub use rtx_core::common::numeric_ops::NumericOps;
 pub use rtx_core::common::object::Object;
 pub use rtx_core::common::xml::XML_NS;

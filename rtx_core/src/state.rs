@@ -18,6 +18,7 @@ use crate::common::glue::Glue;
 use crate::common::model::{IndirectModel, Model};
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
+use crate::common::model;
 use crate::common::numeric_ops::NumericOps;
 pub use crate::common::store::Stored; // reexport for convenience
 use crate::common::BindingDispatcher;
@@ -29,7 +30,6 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Definition;
 use crate::document::resource::Resource;
 use crate::document::tag::TagOptions;
-use crate::{model,model_mut};
 use crate::mouth;
 use crate::gullet;
 use crate::token::{Catcode, Token};
@@ -424,8 +424,7 @@ impl State {
 
     // Basic defaults
     if let Some(model) = options.model {
-      let mut global_model = model_mut!();
-      *global_model = model;
+      model::set_model(model);
     };
     let verbosity = options.verbosity.unwrap_or(0);
     // let strict = options.strict.unwrap_or(false);
@@ -2023,7 +2022,7 @@ pub fn compute_indirect_model() -> IndirectModel {
   let mut imodel: IndirectModel = HashMap::default();
   // Determine any indirect paths to each descendent via an `autoOpen-able' tag.
   let mut openable: HashSet<SymbolU32> = HashSet::default();
-  for tag in model!().get_sym_tags() {
+  for tag in model::get_tags() {
     if let Some(x) = state!().tag_properties.get(&tag) {
       if let Some(true) = x.auto_open {
         openable.insert(tag);
@@ -2031,7 +2030,7 @@ pub fn compute_indirect_model() -> IndirectModel {
     }
   }
 
-  for tag in model!().get_sym_tags() {
+  for tag in model::get_tags() {
     let mut desc: HashMap<SymbolU32, HashMap<SymbolU32, usize>> = HashMap::default();
     crate::common::model::compute_indirect_model_aux(tag, None, 1, &mut openable, &mut desc);
     let desc_keys: Vec<SymbolU32> = desc.keys().copied().collect();
@@ -2062,7 +2061,7 @@ pub fn compute_indirect_model() -> IndirectModel {
     }
   }
   // PATCHUP
-  if model!().permissive {
+  if model::is_permissive() {
     // !!! Alarm!!!
     imodel
       .entry(arena::pin_static("#Document"))

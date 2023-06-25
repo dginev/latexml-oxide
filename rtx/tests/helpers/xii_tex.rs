@@ -22,6 +22,6 @@ LoadDefinitions!({
 
   Tag!("line", auto_close => true, auto_open => true);
   // Ensure no namespaces
-  model_mut!().register_document_namespace("", None);
-  model_mut!().register_document_namespace("ltx", None);
+  model::register_document_namespace("", None);
+  model::register_document_namespace("ltx", None);
 });

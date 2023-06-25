@@ -122,7 +122,7 @@ LoadDefinitions!({
   let mut node_ref = node;
   let mut current;
   loop {
-    let qn = model!().get_node_qname(node_ref);
+    let qn = model::get_node_qname(node_ref);
     if qn == arena::pin_static("ltx:XMTok") || qn == arena::pin_static("ltx:XMWrap") {
       let r = node_ref.get_attribute("role").unwrap_or_default();
       let f    = document.get_node_font(node_ref);
@@ -217,7 +217,7 @@ LoadDefinitions!({
        let mut n      = 0;
        let mut text = String::new();
        loop {
-         if model!().with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
+         if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
           || document.get_node_font(node_mut) != font
           || node_mut.has_attribute("name") {
             break;

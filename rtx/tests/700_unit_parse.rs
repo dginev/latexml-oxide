@@ -1,6 +1,6 @@
 use rtx::util::test::{lex_single_tex_formula, new_test_engine};
-use rtx_core::model_mut;
 use rtx_math_parser::MathParser;
+use rtx_core::common::model;
 
 #[test]
 fn basic_1() {
@@ -35,7 +35,7 @@ fn basic_1() {
 
   let mut parser = MathParser::default();
   // need to load the model schema by hand in the unit test, to get the "ltx" namespace working
-  assert!(model_mut!().load_schema(&[]).is_ok());
+  assert!(model::load_schema(&[]).is_ok());
   let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc);
 
   assert!(parse_tree_opt.is_ok());

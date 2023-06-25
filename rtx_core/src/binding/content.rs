@@ -10,6 +10,7 @@ use crate::util::pathname::{self, PathnameFindOptions};
 use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
+use crate::common::model;
 use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
 use crate::mouth::{Mouth, MouthOptions};
@@ -20,7 +21,6 @@ use crate::state::*;
 use crate::token::*;
 use crate::gullet;
 use crate::stomach::*;
-use crate::model_mut;
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -1042,10 +1042,10 @@ pub fn select_relaxng_schema(
   namespaces: Option<HashMap<String, String>>,
 ) {
   // What verb here? Set, Choose,...
-  model_mut!().set_relaxng_schema(schema);
+  model::set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
     for (prefix, value) in namespaces {
-      model_mut!().register_document_namespace(&prefix, Some(&value));
+      model::register_document_namespace(&prefix, Some(&value));
     }
   }
 }

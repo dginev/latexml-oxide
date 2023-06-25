@@ -167,7 +167,7 @@ macro_rules! DefMathLigature {
       let mut node : Node;
       let mut node_mut = node_opt;
       for c in chars.iter() {
-        if model!().with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
+        if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok") ||
            node_mut.get_content() != c.to_string() {
           return Ok(None);
         }
@@ -649,7 +649,7 @@ macro_rules! RelaxNGSchema {
 #[macro_export]
 macro_rules! RegisterNamespace(
   ($prefix:expr, $namespace:expr) => {
-    model_mut!().register_namespace($prefix, Some($namespace));
+    model::register_namespace($prefix, Some($namespace));
   };
   ($prefix:expr => $namespace:expr) => {
     RegisterNamespace!($prefix, $namespace)
@@ -658,7 +658,7 @@ macro_rules! RegisterNamespace(
 #[macro_export]
 macro_rules! RegisterDocumentNamespace(
   ($prefix:expr, $namespace:expr) => {
-    model_mut!().register_document_namespace($prefix, Some($namespace))
+    model::register_document_namespace($prefix, Some($namespace))
   }
 );
 #[macro_export]
@@ -1534,10 +1534,9 @@ macro_rules! DocType {
     DocType!($rootelement, $pubid, $sysid, namespaces)
   };
   ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr) => {{
-    let mut md = model_mut!();
-    md.set_doc_type($rootelement, $pubid, $sysid);
+    model::set_doc_type($rootelement, $pubid, $sysid);
     for (prefix, value) in $namespaces.iter() {
-      md.register_document_namespace(prefix, Some(value));
+      model::register_document_namespace(prefix, Some(value));
     }
   }};
 }

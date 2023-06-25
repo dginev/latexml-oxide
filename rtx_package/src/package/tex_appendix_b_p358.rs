@@ -338,7 +338,7 @@ LoadDefinitions!({
     // should it be another datastructure?
     let thing = nodes.pop().unwrap();
     let not_node = nodes.pop().unwrap();
-    let text = model_mut!().with_node_qname(thing, |thing_str| match thing_str {
+    let text = model::with_node_qname(thing, |thing_str| match thing_str {
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });

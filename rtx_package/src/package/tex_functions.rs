@@ -418,7 +418,7 @@ pub fn insert_block(
       }
     }
     let mut inline = Vec::new(); // Collect up sequences of Inline
-    while !nodes.is_empty() && model!().is_node_in_schema_class("Inline", &nodes[0]) {
+    while !nodes.is_empty() && model::is_node_in_schema_class("Inline", &nodes[0]) {
       inline.push(nodes.pop_front().unwrap());
     }
     if !inline.is_empty() {
@@ -451,11 +451,10 @@ pub fn insert_block(
       document.remove_node(&mut blocknode); // then remove the new block entirely
     } else if rows.len() == 1
       && crows.len() == 1
-      && model!()
-        .with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
+      && model::with_node_qname(rows.first().unwrap(), |qname| qname == "ltx:p")
       && document::node_can_contain_sym(
         &blocknode.get_parent().unwrap(),
-        model!().get_node_qname(&crows[0]),
+        model::get_node_qname(&crows[0]),
           )
     // TODO: && (!hasattr || blockattr.keys().any(...
     {
@@ -469,7 +468,7 @@ pub fn insert_block(
     } else if rows.len() == 1
       && document::node_can_contain_sym(
         &blocknode.get_parent().unwrap(),
-        model!().get_node_qname(&rows[0]),
+        model::get_node_qname(&rows[0]),
           )
     // if allowed.
     // TODO: && (!hasattr || !grep { !$document->canHaveAttribute($rows[0], $_) } keys %blockattr)))
@@ -610,8 +609,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   // How much math should determine the switch?
   // [will alignment attributes be lost?]
   } else if children.len() == 1
-    && model!()
-      .with_node_qname(children.first().as_ref().unwrap(), |qname| {
+    && model::with_node_qname(children.first().as_ref().unwrap(), |qname| {
         qname == "ltx:tabular"
       })
   //// Should we ALWAYS do this, or just for some minimal amount of math???
@@ -950,18 +948,16 @@ pub fn set_align_or_class(
   align: &str,
   class: &str,
 ) -> Result<()> {
-  let qname = model!().get_node_qname(node);
+  let qname = model::get_node_qname(node);
   if qname == arena::pin_static("ltx:tag") {
   }
   // HACK
   else if !align.is_empty()
-    && model!()
-      .can_have_attribute(qname, arena::pin_static("align"))
+    && model::can_have_attribute(qname, arena::pin_static("align"))
   {
     node.set_attribute("align", align)?;
   } else if !class.is_empty()
-    && model!()
-      .can_have_attribute(qname, arena::pin_static("class"))
+    && model::can_have_attribute(qname, arena::pin_static("class"))
   {
     document.add_class(node, class)?;
   }

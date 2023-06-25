@@ -86,7 +86,7 @@ macro_rules! compile_expansion {
 #[macro_export]
 macro_rules! load_model {
   ($name:literal) => {{
-    use rtx_core::common::model::Model;
+    use rtx_core::common::model;
     use rtx_core::common::relaxng::Relaxng;
     use rustc_hash::FxHashSet as HashSet;
     use std::iter::FromIterator;
@@ -96,7 +96,7 @@ macro_rules! load_model {
     struct _ModelLoader;
     {
       // compute the model
-      _ModelLoader::model();
+      _ModelLoader::build_model();
     }
 
     // TODO: It seems that properly computing the indirect hash requires all Tag!() definitions to

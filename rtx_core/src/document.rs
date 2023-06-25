@@ -24,12 +24,12 @@ use crate::common::font::{Font, FONT_TEXT_DEFAULT};
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::common::model::{can_contain_sym};
+use crate::common::model;
 use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
-use crate::{model,model_mut, TexMode};
+use crate::{TexMode};
 use crate::state::*;
 
 use crate::document::resource::Resource;
@@ -181,13 +181,13 @@ impl Document {
       ctxt
     } else {
       let mut context = XPath::new(&self.document, HashMap::default());
-      for (prefix, ns) in &model!().code_namespaces {
+      model::with_code_namespaces(|code_ns| for (prefix, ns) in code_ns {
         // TODO: Is this too slow? We may need to store an active context in the state as an
         // alternative
         arena::with(*prefix, |p_str| {
           arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
         }).unwrap();
-      }
+      });
       self.context = Some(context);
       self.context.as_mut().unwrap()
     }
@@ -279,7 +279,7 @@ impl Document {
         && !pending_declaration.is_empty()
       {
         for (key, (value, properties)) in &pending_declaration {
-          if model!().can_have_attribute(qname, arena::pin(key)) {
+          if model::can_have_attribute(qname, arena::pin(key)) {
             let key_sym = arena::pin(key);
             attrs_to_set.push((key_sym, arena::pin(value)));
             // Merge to set the font currently in effect
@@ -888,7 +888,7 @@ impl Document {
       // Found node.
       // Intervening non-auto-closeable nodes!!
       if !cant_close.is_empty() {
-        model!().with_node_qname(node, |qname| {
+        model::with_node_qname(node, |qname| {
           let message = s!(
             "Closing {} whose open descendents do not auto-close. Descendents are {}",
             qname,
@@ -1011,7 +1011,7 @@ impl Document {
       },
       Some(NodeType::ElementNode) => {
         // TODO: handle properly
-        // let tag = model!().get_node_document_qname(&node);
+        // let tag = model::get_node_document_qname(&node);
         let tag = node.get_name();
         let children = node.get_child_nodes();
         let mut open_tag = s!("<{tag}");
@@ -1035,8 +1035,8 @@ impl Document {
           if key == "id" {
             continue;
           } // HACK for xml:id
-          let key_sym = model_mut!()
-            .get_node_document_qname(&node.get_attribute_node(key).unwrap());
+          let key_sym = model::get_node_document_qname(
+            &node.get_attribute_node(key).unwrap());
           let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
           arena::with(key_sym, |key_str| {
             write!(open_tag, " {key_str}=\"{val_serialized}\"")
@@ -1058,8 +1058,7 @@ impl Document {
         } else {
           // This is the "Correct" way to determine whether to add indentation
           let node_qname = get_node_qname(node);
-          model_mut!()
-            .can_contain_sym(node_qname, *H_PCDATA_SYM)
+          model::can_contain_sym(node_qname, *H_PCDATA_SYM)
         };
 
         if !noindent {
@@ -1380,14 +1379,13 @@ impl Document {
       // "font") BUT, it isn"t being forced somehow
       if c.len() == 1
         && (get_node_qname(&c[0]) == *FONT_ELEMENT_SYM)
-        && model!()
-          .can_have_attribute(qname, *FONT_SYM)
+        && model::can_have_attribute(qname, *FONT_SYM)
         && c[0]
           .get_attributes()
           .keys()
           .filter(|x| !x.starts_with('_'))
           .all(|v| {
-            model!().can_have_attribute(qname, arena::pin(v))
+            model::can_have_attribute(qname, arena::pin(v))
               && !(NON_MERGEABLE_ATTRIBUTES.contains(v.as_str()))
           })
         && !c[0].has_attribute("_force_font")
@@ -1848,7 +1846,7 @@ impl Document {
       // Ignore attributes not allowed by the model,
       // but accept "internal" attributes.
       let qname = get_node_qname(&self.node);
-      if key.starts_with('_') || model!().can_have_attribute(qname, arena::pin(key)) {
+      if key.starts_with('_') || model::can_have_attribute(qname, arena::pin(key)) {
         self.node.set_attribute(key, value)?
       };
     } else {
@@ -1938,7 +1936,7 @@ impl Document {
       dbg!(key);
       unimplemented!();
     }
-    //   my ($ns, $name) = model_mut!().decodeQName($key);
+    //   my ($ns, $name) = model::decodeQName($key);
     //   if ($ns) {             // If namespaced attribute (must have prefix!
     // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
     // declared? if (!$prefix) {                                    // if
@@ -2506,14 +2504,14 @@ impl Document {
         }
       }
     }
-    let (decoded_ns, tag) = model_mut!().decode_qname(qname)?;
+    let (decoded_ns, tag) = model::decode_qname(qname)?;
     let mut newnode;
     // box = self.node_boxes.get(box);    // may already be the string key
     // If this will be the document root node, things are slightly more involved.
     if point.get_type() == Some(NodeType::DocumentNode) {
       // First node! (?)
       Debug!("adding schema declaration, new node will be : {}", tag);
-      model_mut!().add_schema_declaration(self);
+      model::add_schema_declaration(self);
       newnode = Node::new(&tag, None, &self.document).unwrap();
       self.record_constructed_node(&newnode);
       self.document.set_root_element(&newnode);
@@ -2528,8 +2526,8 @@ impl Document {
         // there is ALSO a prefix associated with that namespace, we have to declare it
         // FIRST due to the (apparently) buggy way that XML::LibXML works with
         // namespaces in setAttributeNS.
-        let prefix_opt = model_mut!().get_document_namespace_prefix(&ns, false, false);
-        let attprefix_opt = model_mut!().get_document_namespace_prefix(&ns, true, true);
+        let prefix_opt = model::get_document_namespace_prefix(&ns, false, false);
+        let attprefix_opt = model::get_document_namespace_prefix(&ns, true, true);
         if prefix_opt.is_none() {
           if let Some(attprefix_sym) = attprefix_opt {
             let attr_ns_node = arena::with(attprefix_sym, |attprefix| {
@@ -2607,8 +2605,7 @@ impl Document {
         match point.lookup_namespace_prefix(&ns_uri) {
           // namespace not already declared?
           None => {
-            if let Some(prefix) = model_mut!()
-              .get_document_namespace_prefix(&ns_uri, false, false)
+            if let Some(prefix) = model::get_document_namespace_prefix(&ns_uri, false, false)
             {
               if prefix != *EMPTY_SYM {
                 let mut root = self.document.get_root_element().unwrap();
@@ -2801,7 +2798,7 @@ impl Document {
     }
     let first_node = &nodes[0];
     let mut parent = first_node.get_parent().unwrap();
-    let (ns, tag) = model_mut!().decode_qname(qname)?;
+    let (ns, tag) = model::decode_qname(qname)?;
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
     self.after_open(&mut new)?;
     parent.replace_child_node(new.clone(), first_node.clone())?;
@@ -3080,7 +3077,7 @@ impl Document {
     // but isn't a _Capture_ node (which ultimately should disappear)
     let qname = get_node_qname(node);
     if !node.has_attribute_ns("id", XML_NS)
-      && model!().can_have_attribute(qname, *XML_ID_SYM)
+      && model::can_have_attribute(qname, *XML_ID_SYM)
       && (qname != *CAPTURE_SYM)
     {
       let mut ancestor = self
@@ -3266,20 +3263,20 @@ impl IntoVDQS for VecDeque<String> {
 // containment checks are package-level (and maybe can be moved in a new submodule?)
 
 pub fn can_contain(node: &Node, child: &str) -> bool {
-  let tag = model!().get_node_qname(node);
-  can_contain_sym(tag, arena::pin(child))
+  let tag = model::get_node_qname(node);
+  model::can_contain_sym(tag, arena::pin(child))
 }
 
 pub fn can_contain_qname(tag: &str, child: &str) -> bool {
-  model!().can_contain(tag, child)
+  model::can_contain(tag, child)
 }
 
 pub fn node_can_contain_sym(node: &Node, child: SymbolU32) -> bool {
-  let tag = model!().get_node_qname(node);
-  can_contain_sym(tag, child)
+  let tag = model::get_node_qname(node);
+  model::can_contain_sym(tag, child)
 }
 pub fn can_contain_qsym(tag: SymbolU32, child: SymbolU32) -> bool {
-  can_contain_sym(tag, child)
+  model::can_contain_sym(tag, child)
 }
 
 /// Can an element with (qualified name) `tag` contain a `childtag` element indirectly?
@@ -3302,7 +3299,7 @@ pub fn can_contain_indirect(
 
 pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
   let child_sym = arena::pin(child);
-  sym_can_contain_somehow(model!().get_node_qname(node), child_sym)
+  sym_can_contain_somehow(model::get_node_qname(node), child_sym)
 }
 
 pub fn can_contain_somehow(tag: &str, child: &str) -> bool {
@@ -3315,23 +3312,22 @@ pub fn sym_can_contain_somehow(
   tag: SymbolU32,
   child: SymbolU32,
 ) -> bool {
-  can_contain_sym(tag, child)
+  model::can_contain_sym(tag, child)
     || can_contain_indirect(tag, child).is_some()
 }
 
 pub fn can_node_have_attribute(node: &Node, attrib: &str) -> bool {
-  let qname = model!().get_node_qname(node);
-  model!().can_have_attribute(qname, arena::pin(attrib))
+  let qname = model::get_node_qname(node);
+  model::can_have_attribute(qname, arena::pin(attrib))
 }
 pub fn can_have_attribute(tag: &str, attrib: &str) -> bool {
-  model!()
-    .can_have_attribute(arena::pin(tag), arena::pin(attrib))
+  model::can_have_attribute(arena::pin(tag), arena::pin(attrib))
 }
 pub fn sym_can_have_attribute(
   tag: SymbolU32,
   attrib: SymbolU32,
 ) -> bool {
-  model!().can_have_attribute(tag, attrib)
+  model::can_have_attribute(tag, attrib)
 }
 
 // Dirty little secrets:
@@ -3371,9 +3367,9 @@ pub fn can_auto_close(node: &Node) -> bool {
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
 pub fn get_node_qname(node: &Node) -> SymbolU32 {
-  model!().get_node_qname(node)
+  model::get_node_qname(node)
 }
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
-  model!().with_node_qname(node, caller)
+  model::with_node_qname(node, caller)
 }

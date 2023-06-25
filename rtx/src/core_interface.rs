@@ -21,7 +21,7 @@ use rtx_core::tokens::Tokens;
 use rtx_core::util::pathname;
 use rtx_core::util::pathname::PathnameFindOptions;
 // TODO: Clean up these imports -- what belongs where?
-use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE,model};
+use rtx_core::{fatal, map, s, CharToken, Core, Debug, Explode, Token, T_CS, T_SPACE};
 use rtx_codegen::LoadModel;
 use rtx_math_parser::MathParser;
 use rtx_package::{
@@ -180,10 +180,10 @@ impl DigestionAPI for Core {
         .iter()
         .map(String::as_str)
         .collect::<Vec<&str>>();
-      let default_model_load = match model!().schema_data {
+      let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
         None => true,
         Some(ref v) => v.last() == Some(&arena::pin_static("LaTeXML")),
-      };
+      });
       if default_model_load {
         // Compile-time load of model AND indirect model
         load_model!("LaTeXML");
