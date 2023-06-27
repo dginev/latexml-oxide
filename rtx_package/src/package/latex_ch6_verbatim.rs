@@ -86,8 +86,8 @@ LoadDefinitions!({
       egroup()?;
       lines.push(arena::pin_static("\\end{verbatim}"));
       let boxes = lines.into_iter().map(|line|
-        Tbox::new(line, font.clone(), loc.clone()
-          .map(|l| l.into_owned()), Token{text: line, code:Catcode::OTHER, smuggled:None}.into(), HashMap::default()).into()
+        Tbox::new(line, font.clone(), Some(loc),
+          Token{text: line, code:Catcode::OTHER}.into(), HashMap::default()).into()
       ).collect();
       whatsit.set_body(boxes);
     },

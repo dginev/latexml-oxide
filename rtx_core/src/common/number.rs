@@ -4,14 +4,12 @@ use crate::definition::register::RegisterType;
 use crate::mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::{Locator, Object};
-use std::borrow::Cow;
+use crate::{Object};
 use std::fmt;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Number(pub i64);
 impl Object for Number {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
   fn revert(&self) -> Result<Tokens> {
     Ok(Tokens::new(ExplodeText!(&self.0.to_string())))
   }

@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::Display;
 use std::rc::Rc;
+use std::borrow::Cow;
 use once_cell::sync::Lazy;
 use string_interner::symbol::SymbolU32;
 
@@ -265,14 +266,12 @@ impl Catcode {
 ///     Token { text: arena::pin_static(" "), code: Catcode::SPACE}
 ///   });
 /// ```
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Token {
   /// an arena id the character content for this token
   pub text: SymbolU32,
   /// a TeX catcode
   pub code: Catcode,
-  /// possibly smuggled inner token (for \noexpand)
-  pub smuggled: Option<Box<Token>>,
 }
 
 impl fmt::Debug for Token {
@@ -302,7 +301,6 @@ impl PartialEq for Token {
   fn eq(&self, other: &Token) -> bool {
     self.code == other.code
       && (self.code == Catcode::SPACE || (self.text == other.text))
-      && (self.smuggled.is_none() == other.smuggled.is_none())
   }
 }
 
@@ -315,71 +313,61 @@ impl PartialEq for Token {
 #[thread_local]
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
-  code: Catcode::BEGIN,
-  smuggled: None,
+  code: Catcode::BEGIN
 });
 /// constant for a BEGIN "{" token
 #[thread_local]
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
-  code: Catcode::END,
-  smuggled: None,
+  code: Catcode::END
 });
 /// constant for a MATH "$" token
 #[thread_local]
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
-  code: Catcode::MATH,
-  smuggled: None,
+  code: Catcode::MATH
 });
 /// constant for an ALIGN "&" token
 #[thread_local]
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
-  code: Catcode::ALIGN,
-  smuggled: None,
+  code: Catcode::ALIGN
 });
 /// constant for a PARAM "#" token
 #[thread_local]
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
-  code: Catcode::PARAM,
-  smuggled: None,
+  code: Catcode::PARAM
 });
 /// constant for a SUPER "^" token
 #[thread_local]
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
-  code: Catcode::SUPER,
-  smuggled: None,
+  code: Catcode::SUPER
 });
 /// constant for a SUB "_" token
 #[thread_local]
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
-  code: Catcode::SUB,
-  smuggled: None,
+  code: Catcode::SUB
 });
 /// constant for a SPACE " " token
 #[thread_local]
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
-  code: Catcode::SPACE,
-  smuggled: None,
+  code: Catcode::SPACE
 });
 /// constant for a CR "\n" token
 #[thread_local]
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
-  code: Catcode::SPACE,
-  smuggled: None,
+  code: Catcode::SPACE
 });
 /// constant for T_CS("\relax")
 #[thread_local]
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
-  code: Catcode::CS,
-  smuggled: None,
+  code: Catcode::CS
 });
 
 #[macro_export]
@@ -407,7 +395,7 @@ macro_rules! T_SUB(() => { $crate::token::TOKEN_SUB.clone() });
 #[macro_export]
 macro_rules! T_SPACE(() => { $crate::token::TOKEN_SPACE.clone() };
 ($text:literal) => {
-  Token { text: $crate::common::arena::pin($text), code: Catcode::SPACE, smuggled: None}
+  Token { text: $crate::common::arena::pin($text), code: Catcode::SPACE}
 });
 /// macro for a CR "\n" token
 #[macro_export]
@@ -419,14 +407,14 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::common::arena::pin_static($text),
       code: Catcode::LETTER,
-      smuggled: None,
+
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
-      smuggled: None,
+
     }
   };
 }
@@ -437,14 +425,14 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::common::arena::pin_static($text),
       code: Catcode::OTHER,
-      smuggled: None,
+
     }
   };
   ($text:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
-      smuggled: None,
+
     }
   };
 }
@@ -455,7 +443,7 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
-      smuggled: None,
+
     }
   };
 }
@@ -468,7 +456,7 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
-      smuggled: None,
+
     }
   }};
 }
@@ -479,7 +467,7 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
-      smuggled: None,
+
     }
   };
 }
@@ -490,14 +478,14 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::common::arena::pin_static($text),
       code: $crate::token::Catcode::CS,
-      smuggled: None,
+
     }
   };
   ($text:expr) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
-      smuggled: None,
+
     }
   };
 }
@@ -513,7 +501,7 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
-      smuggled: None,
+
     }
   };
 }
@@ -525,32 +513,7 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
-      smuggled: None,
-    }
-  };
-}
-/// macro for a SmuggleThe token (see `gullet::invoke_and_read_x_token`)
-#[macro_export]
-macro_rules! T_SMUGGLE_THE {
-  ($t:ident) => {
-    match $t.get_catcode() {
-      Catcode::SmuggleTHE => {
-        // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
-        fatal!(
-          SmuggledCatcode,
-          Unexpected,
-          s!(
-            "We are masking a \\the-produced token twice, this must Never happen. Illegal: {}",
-            $t.stringify()
-          )
-        );
-      },
-      cc if cc.can_smuggle_the() => Token {
-        text: $crate::common::arena::pin_static("SMUGGLE_THE"),
-        code: Catcode::SmuggleTHE,
-        smuggled: Some(Box::new($t)),
-      },
-      _ => $t,
+
     }
   };
 }
@@ -565,7 +528,7 @@ macro_rules! Token {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
-      smuggled: None,
+
     }
   };
 }
@@ -628,7 +591,7 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
-      smuggled: None,
+
     }
   }
 }
@@ -641,7 +604,7 @@ impl Token {
     Token {
       text: arena::pin(text),
       code,
-      smuggled: None,
+
     }
   }
 
@@ -737,7 +700,6 @@ impl Token {
   pub fn get_catcode(&self) -> Catcode { self.code }
   /// is the current one
   pub fn is_executable(&self) -> bool { self.code.is_executable() }
-  pub fn has_smuggled(&self) -> bool { self.smuggled.is_some() }
 
   /// neutralize really should only retroactively imitate what Semiverbatim would have done.
   /// So, it needs to neutralize those in SPECIALS
@@ -782,14 +744,14 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
-      smuggled: None,
+
     }
   }
   pub fn as_cs(&self) -> Token {
     Token {
       text: self.text,
       code: Catcode::CS,
-      smuggled: None,
+
     }
   }
 
@@ -799,7 +761,7 @@ impl Token {
         let arg_idx = text
           .parse::<usize>()
           .expect("ARG catcode tokens should always contain numeric literals as text");
-        args[arg_idx - 1].clone()
+        *args[arg_idx - 1]
       })
     } else {
       self
@@ -824,35 +786,12 @@ impl Token {
           Ok(Token {
             text: arena::pin_static("\\relax"),
             code: Catcode::CS,
-            smuggled: Some(Box::new(self)),
           })
         } else {
           Ok(self)
         }
       },
       _ => Ok(self),
-    }
-  }
-
-  /// Return the original token of a not-expanded token,
-  /// or undef if it isn't marked as such.
-  pub fn get_dont_expand(&self) -> &Option<Box<Token>> { &self.smuggled }
-  pub fn get_smuggled(&self) -> &Option<Box<Token>> { &self.smuggled }
-  pub fn take_dont_expand(&mut self) -> Option<Box<Token>> { self.smuggled.take() }
-  pub fn take_smuggled(&mut self) -> Option<Box<Token>> { self.smuggled.take() }
-
-  /// Remove dont_expand flag, remove SMUGGLE_THE wrapper
-  pub fn without_dont_expand(mut self) -> Token {
-    match self.smuggled.take() {
-      Some(t) => *t,
-      None => self,
-    }
-  }
-  /// Borrow a smuggled inner token, without consuming the owner Token
-  pub fn without_dont_expand_ref(&self) -> &Token {
-    match &self.smuggled {
-      Some(t) => t,
-      None => self,
     }
   }
   ///======================================================================
@@ -866,21 +805,19 @@ impl Token {
 
   /// A string form which is primarily used for error-reporting
   pub fn stringify(&self) -> String {
-    let mut string = self.with_str(|text| text.to_string());
-    // Make the token's char content more printable, since this is for a visual messages.
-    if string.len() == 1 {
-      let c = string.chars().next().unwrap() as u16;
-      if c < 0x020 {
-        // TODO: sprintf("%04x", c)
-        string = s!("U+{}/{}", c, CONTROLNAME[c as usize]);
-      }
-    }
-    let smuggled = self
-      .smuggled
-      .as_ref()
-      .map(|t| s!("<{}>", t.stringify()))
-      .unwrap_or_default();
-    s!("{}[{}]{}", self.code.short_name(), string, smuggled)
+    self.with_str(|text| {
+      // Make the token's char content more printable, since this is for a visual messages.
+      let display_text = if text.len() == 1 {
+        let c = text.chars().next().unwrap() as u16;
+        if c < 0x020 {
+          // TODO: sprintf("%04x", c)
+          Cow::Owned(s!("U+{}/{}", c, CONTROLNAME[c as usize]))
+        } else {
+          Cow::Borrowed(text)
+        }
+      } else { Cow::Borrowed(text) };
+      s!("{}[{}]", self.code.short_name(), display_text)
+    })
   }
 
   pub fn to_register(&self) -> Option<Rc<Register>> {

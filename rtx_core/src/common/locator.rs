@@ -1,8 +1,9 @@
 use crate::common::object::Object;
+use crate::common::arena;
 use crate::util::pathname;
-use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Write as _;
+use string_interner::symbol::SymbolU32;
 
 // TODO: This will require a large refactor, but
 // switching the source from an owned String to a &str reference
@@ -14,13 +15,25 @@ use std::fmt::Write as _;
 // but the mouth sources should be easier to manage.
 // definitely something that can be tried after test milestone is achieved.
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Locator {
-  pub source: String,
-  pub from_line: usize,
-  pub to_line: usize,
-  pub from_column: usize,
-  pub to_column: usize,
+  pub source: SymbolU32,
+  pub from_line: u32,
+  pub to_line: u32,
+  pub from_column: u32,
+  pub to_column: u32,
+}
+
+impl Default for Locator {
+  fn default() -> Self {
+    Locator {
+      source: arena::pin(file!()),
+      from_line: line!(),
+      to_line: line!(),
+      from_column: column!(),
+      to_column: column!()
+    }
+  }
 }
 
 // elide Locator debugging until we get to implementing them faithfully
@@ -48,15 +61,15 @@ impl fmt::Display for Locator {
 }
 
 impl Locator {
-  pub fn new(
-    source: String,
-    from_line: usize,
-    from_column: usize,
-    to_line: usize,
-    to_column: usize,
+  pub fn new<S: AsRef<str>>(
+    source: S,
+    from_line: u32,
+    from_column: u32,
+    to_line: u32,
+    to_column: u32,
   ) -> Self {
     Locator {
-      source,
+      source: arena::pin(source.as_ref()),
       from_line,
       to_line,
       from_column,
@@ -77,37 +90,39 @@ impl Locator {
     } else {
       (to.from_line, to.from_column)
     };
-    Some(Locator::new(
-      from.source,
-      from.from_line,
-      from.from_column,
+    Some(Locator {
+      source: from.source,
+      from_line: from.from_line,
+      from_column: from.from_column,
       to_line,
-      to_column,
-    ))
+      to_column
+    })
   }
 
   pub fn is_range(&self) -> bool { self.to_line > 0 || self.to_column > 0 }
 
   pub fn get_short_source(&self, string_source: &str) -> String {
-    if self.source.is_empty() {
-      if string_source.is_empty() {
-        "String".to_string()
+    arena::with(self.source, |source| {
+      if source.is_empty() {
+        if string_source.is_empty() {
+          "String".to_string()
+        } else {
+          string_source.to_string()
+        }
+      } else if source.contains(':') {
+        let (base, ext) = pathname::url_split(source);
+        s!("{}.{}", base, ext)
       } else {
-        string_source.to_string()
+        let (_path, base, _ext) = pathname::split(source);
+        base
       }
-    } else if self.source.contains(':') {
-      let (base, ext) = pathname::url_split(&self.source);
-      s!("{}.{}", base, ext)
-    } else {
-      let (_path, base, _ext) = pathname::split(&self.source);
-      base
-    }
+    })
   }
-  pub fn get_source(&self) -> &str { &self.source }
+  pub fn get_source(&self) -> SymbolU32 { self.source }
 
   pub fn get_from_locator(&self) -> Locator {
     Locator {
-      source: self.source.clone(),
+      source: self.source,
       from_line: self.from_line,
       from_column: self.from_column,
       ..Locator::default()
@@ -116,7 +131,7 @@ impl Locator {
 
   pub fn get_to_locator(&self) -> Locator {
     Locator {
-      source: self.source.clone(),
+      source: self.source,
       from_line: self.to_line,
       from_column: self.to_column,
       ..Locator::default()
@@ -125,10 +140,9 @@ impl Locator {
 }
 impl Object for Locator {
   fn stringify(&self) -> String {
-    let mut loc = if self.source.is_empty() {
-      "Anonymous String".to_string()
-    } else {
-      self.source.to_string()
+    let mut loc = arena::to_string(self.source);
+    if loc.is_empty() {
+      loc = "Anonymous String".to_string()
     };
     let range_from = if self.is_range() { " from" } else { "" };
     if self.from_line > 0 {
@@ -147,7 +161,7 @@ impl Object for Locator {
   }
 
   /// getting the locator of a locator should return itself
-  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(self)) }
+  fn get_locator(&self) -> Locator { *self }
 }
 
 impl Locator {

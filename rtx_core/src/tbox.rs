@@ -13,6 +13,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
+use crate::gullet;
 use crate::state::{lookup_bool,lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
@@ -58,7 +59,7 @@ impl fmt::Display for Tbox {
   }
 }
 impl Object for Tbox {
-  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
+  fn get_locator(&self) -> Locator { self.locator }
   fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
   fn stringify(&self) -> String { format!("{self:?}") }
 }
@@ -75,19 +76,17 @@ impl Tbox {
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
   ) -> Self {
-    let font = match font_opt {
+    let locator = locator_opt.unwrap_or_else(gullet::get_locator);
+    let mut font = match font_opt {
       Some(f) => f,
       None => lookup_font().unwrap(),
     };
-    // let locator = $state->getStomach->getGullet->getLocator unless defined $locator;
-    let _locator = locator_opt;
     let empty_sym = *EMPTY_SYM;
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
       Tokens!(Token {
         text,
-        code: Catcode::OTHER,
-        smuggled: None
-      })
+        code: Catcode::OTHER
+    })
     } else {
       tokens_opt
     };
@@ -120,23 +119,16 @@ impl Tbox {
           }
         });
       }
-      let font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
-      Tbox {
-        text,
-        font, // $locator,
-        properties,
-        tokens,
-        ..Tbox::default()
-      }
-    } else {
-      Tbox {
-        text,
-        font, // $locator,
-        properties,
-        tokens,
-        ..Tbox::default()
-      }
+      font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
     }
+    Tbox {
+      text,
+      font,
+      locator,
+      properties,
+      tokens
+    }
+
   }
   /// checks if the text content is empty
   pub fn is_empty(&self) -> bool {

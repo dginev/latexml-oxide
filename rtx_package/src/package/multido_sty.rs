@@ -61,7 +61,7 @@ LoadDefinitions!({
             _ => panic!("This voids the regex condition (d|n|i|r).")
           };
           inits.push(T_CS!("\\def"));
-          inits.push(var.clone());
+          inits.push(var);
           inits.push(T_BEGIN!());
           inits.extend(init.unlist());
           inits.push(T_END!());

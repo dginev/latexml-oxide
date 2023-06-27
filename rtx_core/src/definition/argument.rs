@@ -56,17 +56,17 @@ impl Display for ArgWrap {
 }
 
 impl Object for ArgWrap {
-  fn get_locator(&self) -> Option<Cow<Locator>> {
+  fn get_locator(&self) -> Locator {
     use ArgWrap::*;
     match self {
       Token(_) | Tokens(_) | Number(_) | Float(_) | Dimension(_) | AlignmentTemplate(_) => {
-        Option::None
+        Locator::default()
       },
       Glue(t) => t.get_locator(),
       MuGlue(t) => t.get_locator(),
       MuDimension(t) => t.get_locator(),
       KV(kv) => kv.get_locator(),
-      RegisterDefinition(_) | None => Option::None,
+      RegisterDefinition(_) | None => Locator::default(),
     }
   }
   fn be_digested(self) -> Result<Digested> {
@@ -90,7 +90,7 @@ impl Object for ArgWrap {
   fn revert(&self) -> Result<Tokens> {
     use ArgWrap::*;
     match self {
-      Token(t) => Ok(Tokens!(t.clone())),
+      Token(t) => Ok(Tokens!(*t)),
       Tokens(t) => Ok(t.clone()),
       Number(t) => t.revert(),
       Float(t) => t.revert(),
@@ -158,7 +158,7 @@ impl ArgWrap {
   pub fn as_tokens(&self) -> Result<Option<Cow<Tokens>>> {
     use ArgWrap::*;
     let result = match self {
-      Token(t) => Some(Cow::Owned(Tokens!(t.clone()))), // ? avoid the clone ?
+      Token(t) => Some(Cow::Owned(Tokens!(*t))),
       Tokens(tks) => Some(Cow::Borrowed(tks)),
       Number(_) | Float(_) | Dimension(_) | Glue(_) | MuGlue(_) | MuDimension(_) | KV(_) => {
         Some(Cow::Owned(self.revert()?))

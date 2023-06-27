@@ -1,11 +1,9 @@
-use std::borrow::Cow;
 use std::fmt;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::common::error::*;
-use crate::common::locator::Locator;
 use crate::common::numeric_ops::{fixpoint, kround, round_to, NumericOps, UNITY, UNITY_F64};
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
@@ -20,7 +18,6 @@ static SPEC_RE: Lazy<Regex> =
 pub struct Dimension(pub i64);
 
 impl Object for Dimension {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
   fn revert(&self) -> Result<Tokens> {
     Ok(Tokens::new(ExplodeText!(&self.to_string())))
   }

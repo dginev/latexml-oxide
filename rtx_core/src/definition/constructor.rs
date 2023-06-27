@@ -19,7 +19,7 @@ use crate::parameter::Parameters;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{BoxOps, Digested, Locator};
+use crate::{BoxOps, Digested};
 use crate::stomach::digest_next_body;
 
 /// configuration for creating a new Constructor
@@ -175,7 +175,7 @@ impl fmt::Display for Constructor {
 }
 impl Object for Constructor {
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Constructor") }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+
 }
 impl Definition for Constructor {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }

@@ -44,17 +44,17 @@ LoadDefinitions!({
           "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty")
       }};
-    if token.has_smuggled() {    // marked dont_expand
-      let smuggled = token.get_dont_expand().as_ref().unwrap();
-      if smuggled.get_catcode() == Catcode::ACTIVE {
-        // treat as active character, if originally such
-        token.without_dont_expand()
-      } else { // otherwise, treat as relax for comparisons
-        T_RELAX!()
-      }
-    } else {   // normal case, treat token as-is
+    // if token.has_smuggled() {    // marked dont_expand
+    //   let smuggled = token.get_dont_expand().as_ref().unwrap();
+    //   if smuggled.get_catcode() == Catcode::ACTIVE {
+    //     // treat as active character, if originally such
+    //     token.without_dont_expand()
+    //   } else { // otherwise, treat as relax for comparisons
+    //     T_RELAX!()
+    //   }
+    // } else {   // normal case, treat token as-is
       token
-    }
+    // }
   });
 
   DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {

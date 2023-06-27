@@ -49,8 +49,8 @@ LoadDefinitions!({
       gullet::read_balanced(false)?.unwrap_or_default()
     } else {
       open = open.as_other();
-      close = open.clone();
-      gullet::read_until_token(close.clone())?
+      close = open;
+      gullet::read_until_token(close)?
     };
     end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)

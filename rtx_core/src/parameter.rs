@@ -18,7 +18,7 @@ use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested, Locator};
+use crate::{Digested};
 
 pub type ReaderFn =
   dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
@@ -110,7 +110,7 @@ impl PartialEq for Parameter {
 }
 impl Object for Parameter {
   fn stringify(&self) -> String { self.spec.to_string() }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+
 }
 
 static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
@@ -454,7 +454,7 @@ impl Object for Parameters {
     }
     result
   }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+
 }
 
 impl Parameters {
@@ -488,7 +488,6 @@ impl Parameters {
     fordefn: Option<&dyn Definition>,
   ) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
-    gullet::setup_scan();
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if parameter.predigest.is_some() {
@@ -511,7 +510,6 @@ impl Parameters {
     fordefn: &Constructor,
   ) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
-    gullet::setup_scan();
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {

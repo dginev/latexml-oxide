@@ -1,12 +1,11 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::borrow::Cow;
 use std::fmt;
 
 use super::dimension::fixedformat;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps, UNITY_F64};
 use crate::definition::register::RegisterType;
-use crate::{Locator, Object};
+use crate::{Object};
 
 static MUDIM_SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
 
@@ -26,9 +25,7 @@ impl fmt::Display for MuDimension {
     write!(f, "{}", fixedformat(self.0, self.unit()))
   }
 }
-impl Object for MuDimension {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
-}
+impl Object for MuDimension {}
 
 impl MuDimension {
   pub fn new_spec(spec: &str) -> Self {

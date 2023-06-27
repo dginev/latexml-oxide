@@ -181,7 +181,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
-    gullet::unread(Tokens!(token1,token2.clone()));
+    gullet::unread(Tokens!(token1,token2));
     Let!(cs, token2);
   });
 
@@ -234,7 +234,7 @@ LoadDefinitions!({
   });
 
   DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=> {
-    Number::new(gullet::get_locator().map(|l| l.from_line as i64).unwrap_or(0))
+    Number::new(gullet::get_locator().from_line as i64)
   });
 
   DefRegister!("\\badness", Number::new(0), readonly => true);

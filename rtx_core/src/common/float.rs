@@ -1,10 +1,8 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::borrow::Cow;
 use std::fmt;
 
 use crate::common::error::Result;
-use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
@@ -24,7 +22,6 @@ impl Default for Float {
 }
 
 impl Object for Float {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
   fn revert(&self) -> Result<Tokens> {
     Ok(Tokens::new(ExplodeText!(&self.to_string())))
   }

@@ -61,7 +61,7 @@ impl PartialEq for List {
 
 impl Object for List {
   fn stringify(&self) -> String { format!("List[{self:?}]") }
-  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
+  fn get_locator(&self) -> Locator { self.locator }
 
   fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();
@@ -114,12 +114,11 @@ impl List {
     // it's rare? Hmmmm
     let mut locator: Locator = Locator::default();
     for bx in boxes.iter().rev() {
-      if let Some(bx_locator) = bx.get_locator() {
-        if *bx_locator != locator {
-          // not the default!
-          locator = bx_locator.into_owned();
-          break;
-        }
+      let bx_locator = bx.get_locator();
+      if bx_locator != locator {
+        // not the default!
+        locator = bx_locator;
+        break;
       }
     }
     // Maybe the most representative font for a List is the font of the LAST box (that _has_ a
