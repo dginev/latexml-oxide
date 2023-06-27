@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt;
 use std::fs::File;
@@ -127,7 +126,7 @@ impl fmt::Display for Mouth {
 }
 impl Object for Mouth {
   fn stringify(&self) -> String { s!("Mouth[<string>{}x{}]", self.lineno, self.colno) }
-  fn get_locator(&self) -> Option<Cow<Locator>> {
+  fn get_locator(&self) -> Locator {
     let (to_line, to_column) = (self.lineno, self.colno);
     let max_col = if self.nchars > 0 {
       self.nchars - 1
@@ -139,13 +138,13 @@ impl Object for Mouth {
     } else {
       (to_line, to_column)
     };
-    Some(Cow::Owned(Locator::new(
-      self.source.clone(),
-      from_line,
-      from_column,
-      to_line,
-      to_column,
-    )))
+    Locator::new(
+      &self.source,
+      from_line as u32,
+      from_column as u32,
+      to_line as u32,
+      to_column as u32,
+    )
   }
 }
 

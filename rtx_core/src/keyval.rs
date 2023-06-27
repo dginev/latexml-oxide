@@ -334,9 +334,9 @@ fn define_choice(
     if normalize {
       nvalue = nvalue.to_lowercase();
     }
-    if let Some(ref varmacro) = varmacro_opt {
+    if let Some(varmacro) = varmacro_opt {
       def_macro(
-        varmacro.clone(),
+        varmacro,
         None,
         ExpansionBody::Tokens(Tokens::new(Explode!(nvalue))),
         None,
@@ -348,9 +348,9 @@ fn define_choice(
     for choice_str in choices.iter() {
       if (normalize && (choice_str.to_lowercase() == nvalue)) || *choice_str == nvalue {
         valid = true;
-        if let Some(ref idxmacro) = idxmacro_opt {
+        if let Some(idxmacro) = idxmacro_opt {
           def_macro(
-            idxmacro.clone(),
+            idxmacro,
             None,
             ExpansionBody::Tokens(Tokens::new(Explode!(index))),
             None,
@@ -365,12 +365,12 @@ fn define_choice(
     if valid {
       if let Some(ref code) = code_opt {
         def_macro(
-          orig.clone(),
+          orig,
           plain_params.clone(),
           code.clone(),
           None,
         )?;
-        tokens.push(orig.clone());
+        tokens.push(orig);
         tokens.push(T_BEGIN!());
         tokens.extend(value.unlist());
         tokens.push(T_END!());
@@ -378,12 +378,12 @@ fn define_choice(
     } else if let Some(ref mismatch) = mismatch_opt {
       // else run `mismatch
       def_macro(
-        orig.clone(),
+        orig,
         plain_params.clone(),
         mismatch.clone(),
         None,
       )?;
-      tokens.push(orig.clone());
+      tokens.push(orig);
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());
       tokens.push(T_END!());
@@ -421,20 +421,20 @@ fn define_boolean(
     let value = values.remove(0).owned_tokens().unwrap_or_default();
     let value_str = value.to_string().to_lowercase();
     if value_str == "true" {
-      macroname_true.clone()
+      macroname_true
     } else {
-      macroname_false.clone()
+      macroname_false
     };
     let mut tokens = vec![];
     // Store and invoke the original macro if needed
     if let Some(ref code) = code_opt {
       def_macro(
-        orig_cs.clone(),
+        orig_cs,
         plain_params.clone(),
         code.clone(),
         None,
       )?;
-      tokens.push(orig_cs.clone());
+      tokens.push(orig_cs);
       tokens.push(T_BEGIN!());
       tokens.extend(value.unlist());
       tokens.push(T_END!());

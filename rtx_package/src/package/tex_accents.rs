@@ -36,7 +36,7 @@ pub fn apply_accent(
   Ok(Tbox::new(
     arena::pin(text),
     font,
-    locator.map(|l| l.into_owned()),
+    Some(locator),
     reversion.unwrap_or(Tokens!()),
     HashMap::default(),
   ))

@@ -1,7 +1,6 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
-use std::borrow::Cow;
 use std::cell::{RefCell,RefMut};
 use std::collections::VecDeque;
 use std::mem;
@@ -85,7 +84,7 @@ impl Gullet {
     self.pushback_has_smuggled_the = false;
   }
   /// User feedback for where something (error?) occurred.
-  pub fn get_locator(&self) -> Option<Cow<Locator>> {
+  pub fn get_locator(&self) -> Locator {
     let mut runtime_opt = self.mouth.as_ref();
     let mut mouthstack_iter = self.mouthstack.iter();
     while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
@@ -100,19 +99,12 @@ impl Gullet {
     } else {
       // Final backup -- the default locator
       // TODO: Or should this be None?
-      Some(Cow::Owned(Locator::default()))
+      Locator::default()
     }
   }
   pub fn get_location(&self) -> String {
-    if let Some(loc) = self.get_locator() {
-      if *loc == Locator::default() {
-        String::new()
-      } else {
-        s!("at {}", loc)
-      }
-    } else {
-      String::new()
-    }
+    let loc = self.get_locator();
+    s!("at {}", loc)
   }
 
   /// This flushes a mouth so that it will be automatically closed, next time it's read
@@ -233,7 +225,7 @@ impl Gullet {
     // if $LaTeXML::DEBUG{halign};
 
     //  Append expansion to end!?!?!?!
-    local_current_token(token.clone());
+    local_current_token(token);
     let post = alignment.get_column_after();
     set_align_group_count(1000000);
     // ### NOTE: Truly fishy smuggling w/ \hidden@cr
@@ -272,10 +264,7 @@ impl Gullet {
       { let mut gullet = gullet_mut!();
         if gullet.mouth.is_none() { return Ok(None); }
         // Check in pushback first....
-        while let Some(mut pushback_token) = gullet.mouth.as_mut().unwrap().pushback.pop_front() {
-          if pushback_token.get_catcode() == Catcode::SmuggleTHE {
-            pushback_token = *pushback_token.take_smuggled().unwrap();
-          }
+        while let Some(pushback_token) = gullet.mouth.as_mut().unwrap().pushback.pop_front() {
           match pushback_token.get_catcode() {
             Catcode::COMMENT => gullet.pending_comments.push_back(pushback_token),
             Catcode::MARKER => handle_marker(pushback_token),
@@ -408,15 +397,9 @@ impl Gullet {
         }
       }
       // we got a token
-      // -- check if smuggled for \the
-      let mut token = next_token.unwrap();
-      if token.has_smuggled() {
-        if token.get_catcode() != Catcode::SmuggleTHE || get_smuggle_the() {
-          return Ok(Some(token));
-        } else {
-          return Ok(token.take_smuggled().map(|t| *t));
-        }
-      }
+      // TODO: -- check if smuggled for \the
+      let token = next_token.unwrap();
+
       // --
       // Wow!!!!! See TeX the Program \S 309
       // SHOULD count nesting of { }!!! when SCANNED (not digested)
@@ -476,7 +459,8 @@ impl Gullet {
       for item in expansion.unlist_mut() {
         if item.get_catcode().can_smuggle_the() {
           let taken = mem::replace(item, T_RELAX!());
-          *item = T_SMUGGLE_THE!(taken);
+          // *item = T_SMUGGLE_THE!(taken);
+          *item = taken;
         }
       }
       // PERFORMANCE:
@@ -765,10 +749,7 @@ impl Gullet {
   }
   /// reads and discards tokens, until it encounters a conditional, if any
   pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
-    while let Some(mut token) = read_token()? {
-      if token.get_catcode() == Catcode::SmuggleTHE {
-        token = token.without_dont_expand();
-      }
+    while let Some(token) = read_token()? {
       if token.get_catcode().is_active_or_cs() {
         if let Some(cond_type) = lookup_conditional(&token) {
           return Ok(Some((token, cond_type)));
@@ -1365,20 +1346,6 @@ impl Gullet {
     Ok(())
   }
 
-  pub fn setup_scan() {
-    if gullet!().pushback_has_smuggled_the {
-      gullet_mut!().pushback_has_smuggled_the = false;
-      // setup new scan by removing any smuggle CCs
-      if let Some(runtime) = &mut gullet_mut!().mouth {
-        for token in runtime.pushback.iter_mut() {
-          if token.get_catcode() == Catcode::SmuggleTHE {
-            *token = *token.take_dont_expand().unwrap();
-          }
-        }
-      }
-    }
-  }
-
   //======================================================================
   // some helpers...
 
@@ -1471,20 +1438,20 @@ impl Gullet {
 
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
-    Catcode::ALIGN => Some((token.clone(), "align", false)),
+    Catcode::ALIGN => Some((*token, "align", false)),
     Catcode::CS => {
       // Embedded version of Equals, knowing both are tokens
       let defn = lookup_meaning(token)
-        .unwrap_or_else(|| Stored::Token(token.clone()));
+        .unwrap_or_else(|| Stored::Token(*token));
       COLUMN_ENDS.with(|ends| {
         for end in ends {
           let e = &end.0;
           // Would be nice to cache the defns, but don't know when they're present & constant!
           if defn
             == lookup_meaning(e)
-              .unwrap_or_else(|| Stored::Token(e.clone()))
+              .unwrap_or_else(|| Stored::Token(*e))
           {
-            return Some(end.clone());
+            return Some(*end);
           }
         }
         None
@@ -1641,8 +1608,8 @@ pub fn flush_mouth() {
 pub fn initialize_gullet() {
   gullet_mut!().initialize()
 }
-pub fn get_locator() -> Option<Locator> {
-  gullet!().get_locator().map(Cow::into_owned)
+pub fn get_locator() -> Locator {
+  gullet!().get_locator()
 }
 pub fn get_location() -> String {
   gullet!().get_location()

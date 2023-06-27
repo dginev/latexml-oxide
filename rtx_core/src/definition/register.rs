@@ -3,20 +3,23 @@ use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::glue::Glue;
+use crate::common::font;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
+use crate::common::arena;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
 use crate::state::{Scope};
-use crate::stomach;
+use crate::tbox::Tbox;
 use crate::gullet;
 use crate::token::*;
 use crate::tokens::Tokens;
@@ -86,7 +89,7 @@ impl Default for RegisterValue {
 }
 impl Object for RegisterValue {
   fn stringify(&self) -> String { s!("RegisterValue[{}]", self) }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+
   fn revert(&self) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
@@ -95,7 +98,7 @@ impl Object for RegisterValue {
       RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::Glue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
       RegisterValue::MuGlue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Token(ref value) => Ok(Tokens!(value.clone().revert())),
+      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert())),
       RegisterValue::Tokens(ref value) => Ok(Tokens::new(value.clone().revert())), // clone?
     }
   }
@@ -400,29 +403,32 @@ pub struct Register {
   pub register_type: RegisterType,
   /// read-only flag (default: false)
   pub readonly: bool,
-  /// internal command sequence for this register
-  pub internalcs: Option<Token>,
   /// the current value
   pub value: Option<RegisterValue>,
   /// reader for a value
   pub getter: Option<RegisterGetterClosure>,
   /// setter for a value
   pub setter: Option<RegisterSetterClosure>,
-  ///
+  /// a default value
   pub default: Option<RegisterValue>,
+  /// the unicode corresponding to the \mathchar of `value` (for chardef)
+  pub mathglyph: Option<char>,
+  /// the source point of origin for this register definition
+  pub locator: Locator
 }
 impl Default for Register {
   fn default() -> Self {
     Register {
       cs: T_CS!("Register"),
       address: String::from("Register"),
+      locator: Locator::default(),
       parameters: None,
       register_type: RegisterType::Number,
       getter: None,
       setter: None,
       readonly: false,
-      internalcs: None,
       value: None,
+      mathglyph: None,
       default: None
     }
   }
@@ -439,8 +445,8 @@ impl fmt::Debug for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(
       f,
-      "Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, internalcs:{:?}, value:{:?}, default:{:?}]",
-      self.cs, self.address, self.parameters, self.register_type, self.readonly, self.internalcs, self.value,
+      "Register[cs:{:?}, address:{:?}, parameters:{:?}, type:{:?}, readonly:{:?}, value:{:?}, default:{:?}]",
+      self.cs, self.address, self.parameters, self.register_type, self.readonly, self.value,
       self.default,
     )
   }
@@ -451,7 +457,7 @@ impl fmt::Display for Register {
 
 impl Object for Register {
   fn stringify(&self) -> String { format!("{self:?}") }
-  fn get_locator(&self) -> Option<Cow<Locator>> { unimplemented!() }
+
 }
 
 impl Definition for Register {
@@ -463,7 +469,7 @@ impl Definition for Register {
     unimplemented!()
   }
   fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
-  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs.clone()) }
+  fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
 
@@ -504,12 +510,9 @@ impl Definition for Register {
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     // CharDef case
     if self.register_type == RegisterType::CharDef {
-      let internalcs = &self.internalcs;
-      return match internalcs {
-        // Tracing ?
-        None => Ok(Vec::new()),
-        Some(ref cs) => stomach::invoke_token(cs),
-      };
+      return Ok(vec![Digested::from(
+        Tbox::new(arena::pin_char(font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap()), None, None,
+          Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default()))]);
     }
 
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -577,15 +580,15 @@ impl Register {
   /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
   /// creates a CharDef type register
-  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, internalcs: Option<Token>) -> Self {
+  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>) -> Self {
     Register {
       cs,
       parameters: None,
       value,
-      internalcs,
+      mathglyph,
       register_type: RegisterType::CharDef,
       readonly: true,
-      //locator => $state->getStomach->getGullet->getMouth->getLocator,
+      locator: gullet::get_locator(),
       ..Register::default()
     }
   }

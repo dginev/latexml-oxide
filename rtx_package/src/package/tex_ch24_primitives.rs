@@ -89,7 +89,7 @@ LoadDefinitions!({
     let rhs = writable_tokens(&Expand!(stuff));
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
-    eprintln!("{}",get_locator().unwrap_or_default());
+    eprintln!("{}",gullet::get_locator());
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();

@@ -103,10 +103,10 @@ pub fn push_stack_frame(nobox: bool) {
   ); // ALWAYS bind this!
   assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
   assign_value("groupNonBoxing", nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value("groupInitiator", current_token.clone(), Some(Scope::Local));
+  assign_value("groupInitiator", current_token, Some(Scope::Local));
   assign_value(
     "groupInitiatorLocator",
-    gullet::get_locator().unwrap(),
+    gullet::get_locator(),
     Some(Scope::Local),
   );
   if !nobox {
@@ -398,7 +398,7 @@ pub fn digest_next_body(
   terminal_opt: Option<Token>,
 ) -> Result<Vec<Digested>> {
 
-  let start_location = { gullet::get_locator().unwrap() };
+  let start_location = { gullet::get_locator() };
 
   let init_depth = { stomach!().boxing.len() };
   let mut found_token = false;
@@ -503,8 +503,8 @@ pub fn invoke_token<'a>(
   while maybe_token.is_some() {
     let token = maybe_token.take().unwrap().into_owned();
     // info!(target:"invoke_token", "{:?}", token);
-    local_current_token(token.clone());
-    { stomach_mut!().token_stack.push(token.clone()); }
+    local_current_token(token);
+    { stomach_mut!().token_stack.push(token); }
     if { stomach!().token_stack.len() } > MAXSTACK {
       fatal!(
         Stomach,
@@ -655,7 +655,7 @@ fn invoke_token_undefined(
     );
 
     let_i(token, &T_CS!("\\iffalse"), None);
-    gullet::unread_one(token.clone()); // Retry
+    gullet::unread_one(*token); // Retry
     Ok(Vec::new())
   } else {
     let message = s!("The token {} is not defined.", token.stringify());
@@ -667,7 +667,7 @@ fn invoke_token_undefined(
     );
     install_definition(
       Constructor {
-        cs: token.clone(),
+        cs: *token,
         paramlist: None,
         replacement: Some(Rc::new(move |document, _args, _props| {
           document.make_error("undefined", &cs)
@@ -693,7 +693,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
         Ok(Some(Digested::from(Tbox::new(
           meaning.get_sym(),
           font,
-          gullet::get_locator(),
+          None,
           Tokens!(meaning),
           HashMap::default(),
                 ))))
@@ -713,7 +713,7 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       Ok(Some(Digested::from(Tbox::new(
         text,
         None,
-        None,               // locator
+        None,
         Tokens!(meaning),   // tokens
         HashMap::default(), // properties
             ))))

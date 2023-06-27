@@ -128,7 +128,7 @@ pub fn def_conditional(
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
     install_definition(
       Conditional {
-        cs: cs.clone(),
+        cs,
         paramlist,
         test,
         conditional_type: cs.with_str(|cs_name| ConditionalType::from(cs_name)),
@@ -154,13 +154,13 @@ pub fn def_conditional(
         def_macro(
           T_CS!(s!("\\{}true", name)),
           None,
-          Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iftrue")),
+          Tokens!(T_CS!("\\let"), cs, T_CS!("\\iftrue")),
           None
         )?;
         def_macro(
           T_CS!(s!("\\{}false", name)),
           None,
-          Tokens!(T_CS!("\\let"), cs.clone(), T_CS!("\\iffalse")),
+          Tokens!(T_CS!("\\let"), cs, T_CS!("\\iffalse")),
           None
         )?;
         let_i(&cs, &T_CS!("\\iffalse"), None);
@@ -292,7 +292,8 @@ pub fn def_register<T: Into<RegisterValue>>(
       setter: options.setter,
       default: Some(value),
       value: None,
-      internalcs: None,
+      locator: gullet::get_locator(),
+      mathglyph: None
     },
     Some(Scope::Global),
   );
@@ -403,17 +404,17 @@ pub fn def_math_dual(
   let cont_cs = T_CS!(cont_cs_str);
   let pres_cs = T_CS!(pres_cs_str);
   let defcs = if options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone())?
+    def_robust_cs(cs, options.locked, options.scope.clone())?
   } else {
-    cs.clone()
+    cs
   };
   let presentation_toks = mouth::tokenize_internal(&presentation);
 
   // Make the original CS expand into a DUAL invoking a presentation macro and content constructor
   let captured_role = options.role.clone();
   let captured_revert_as = options.revert_as.clone();
-  let captured_cont_cs = cont_cs.clone();
-  let captured_pres_cs = pres_cs.clone();
+  let captured_cont_cs = cont_cs;
+  let captured_pres_cs = pres_cs;
   let captured_pres = presentation.clone();
   install_definition(
     Expandable::new(
@@ -447,7 +448,7 @@ pub fn def_math_dual(
         }
         // end optional keyval arg
         dtks.push(T_BEGIN!());
-        dtks.push(captured_cont_cs.clone());
+        dtks.push(captured_cont_cs);
         dtks.push(T_BEGIN!());
         for carg in cargs.into_iter().flatten() {
           // if let Some(carg) = carg_opt {
@@ -458,7 +459,7 @@ pub fn def_math_dual(
         dtks.push(T_END!());
         dtks.push(T_END!());
         dtks.push(T_BEGIN!());
-        dtks.push(captured_pres_cs.clone());
+        dtks.push(captured_pres_cs);
         dtks.push(T_BEGIN!());
         for parg in pargs.into_iter().flatten() {
           // if let Some(parg) = parg_opt {
@@ -576,10 +577,10 @@ pub fn def_math_primitive(
 
   install_definition(
     MathPrimitive {
-      cs: cs.clone(),
+      cs,
       paramlist: None, // never any parameters, this is intentional
       replacement: Some(Rc::new(move |_args| {
-        let locator = gullet::get_locator().unwrap();
+        let locator = gullet::get_locator();
         let mut properties = moved_options.clone();
         properties.mode = Some(String::from("math"));
         let state_font = lookup_font().unwrap();
@@ -594,7 +595,7 @@ pub fn def_math_primitive(
 
         Ok(vec![Digested::from(Tbox {
           text: arena::pin(&presentation),
-          tokens: Tokens!(cs.clone()),
+          tokens: Tokens!(cs),
           font,
           properties: properties.to_hash_stored(),
           locator,
@@ -626,9 +627,9 @@ pub fn def_math_constructor(
   //   None
   // };
   let defcs = if options.robust {
-    def_robust_cs(cs.clone(), options.locked, options.scope.clone())?
+    def_robust_cs(cs, options.locked, options.scope.clone())?
   } else {
-    cs.clone()
+    cs
   };
   if options.reversion.is_none() && nargs == 0 && options.alias.is_none() {
     if options.revert_as.is_none()
@@ -636,7 +637,7 @@ pub fn def_math_constructor(
       || options.revert_as == Some(Cow::Borrowed("context"))
     {
       // TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
-      options.reversion = Some(Reversion::Tokens(Tokens!(cs.clone())));
+      options.reversion = Some(Reversion::Tokens(Tokens!(cs)));
     } else {
       // TODO: This differs from the Perl, where `presentation` comes in as Tokens
       //       we have it come in as a `String`,
@@ -805,7 +806,7 @@ fn infer_sizer(
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
   let cs_str = cs.with_str(|cstr| format!("{} ", cstr));
   let defcs = T_CS!(cs_str);
-  let return_cs = defcs.clone();
+  let return_cs = defcs;
   let expansion = Tokens!(T_CS!("\\protect"), defcs);
   let options = ExpandableOptions {
     locked,

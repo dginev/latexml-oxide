@@ -6,7 +6,6 @@ use std::fmt;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
@@ -23,7 +22,6 @@ impl fmt::Display for Comment {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "") }
 }
 impl Object for Comment {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
   fn revert(&self) -> Result<Tokens> { Ok(NO_TOKENS) }
 }
 impl BoxOps for Comment {

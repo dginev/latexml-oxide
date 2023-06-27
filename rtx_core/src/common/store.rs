@@ -733,7 +733,7 @@ impl From<Dimension> for Stored {
 }
 
 impl<'a> From<&'a Token> for Stored {
-  fn from(value: &'a Token) -> Self { Stored::Token(value.clone()) }
+  fn from(value: &'a Token) -> Self { Stored::Token(*value) }
 }
 
 impl From<Alignment> for Stored {
@@ -981,7 +981,7 @@ impl<'a> From<&'a Stored> for Option<RegisterValue> {
       Stored::Dimension(v) => Some(RegisterValue::Dimension(*v)),
       Stored::Glue(v) => Some(RegisterValue::Glue(*v)),
       Stored::MuGlue(v) => Some(RegisterValue::MuGlue(*v)),
-      Stored::Token(v) => Some(RegisterValue::Token(v.clone())),
+      Stored::Token(v) => Some(RegisterValue::Token(*v)),
       Stored::Tokens(v) => Some(RegisterValue::Tokens(v.clone())),
       _ => None,
     }
@@ -1018,11 +1018,10 @@ impl<'a> From<&'a Stored> for Token {
   fn from(value: &'a Stored) -> Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
-      Stored::Token(t) => (*t).clone(),
+      Stored::Token(t) => *t,
       Stored::String(text) => Token {
         text: *text,
-        code: Catcode::CS,
-        smuggled: None,
+        code: Catcode::CS
       },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);

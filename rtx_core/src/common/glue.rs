@@ -1,6 +1,5 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt;
 
@@ -8,7 +7,7 @@ use crate::common::dimension::attribute_format;
 use crate::common::numeric_ops::{fixpoint, kround, NumericOps};
 use crate::definition::register::RegisterType;
 use crate::state::*;
-use crate::{Locator, Object};
+use crate::{Object};
 
 use super::dimension::fixedformat;
 
@@ -194,9 +193,7 @@ impl fmt::Display for Glue {
     write!(f, "{string}")
   }
 }
-impl Object for Glue {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
-}
+impl Object for Glue {}
 
 pub fn new_setup(
   skip: f64,

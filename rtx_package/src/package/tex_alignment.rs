@@ -463,7 +463,7 @@ pub fn digest_alignment_body(
     } else if vtype.as_deref() == Some("align") {
       alignment_cell.borrow_mut().end_column()?;
       if !hidden {
-        reversion.push(next.clone().unwrap()); // and record the &
+        reversion.push(next.unwrap()); // and record the &
         creversion.push(next.unwrap()); // and record the &
       }
     } else if vtype.as_deref() == Some("insert") {
@@ -471,7 +471,7 @@ pub fn digest_alignment_body(
     } else if vtype.as_deref() == Some("cr") || vtype.as_deref() == Some("crcr") {
       alignment_cell.borrow_mut().end_row()?;
       if !hidden {
-        reversion.push(next.clone().unwrap());
+        reversion.push(next.unwrap());
         creversion.push(next.unwrap());
       } else if vtype.as_deref() == Some("cr") {
         let arg_toks = gullet::read_arg()?;
@@ -582,7 +582,7 @@ pub fn digest_alignment_column(
     let to_unread = Tokens!(
       alignment.borrow_mut().get_column_before(),
       T_MARKER!("before-column"),
-      last_token.clone().unwrap()
+      last_token.unwrap()
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     gullet::unread(to_unread);

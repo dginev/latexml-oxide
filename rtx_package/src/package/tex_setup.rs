@@ -102,7 +102,7 @@ LoadDefinitions!({
       read_tokens.extend(if let Some(inner_ps) = inner {
         inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
       } else {
-        arg.iter().map(|t| t.clone().revert()).collect()
+        arg.iter().map(|t| t.revert()).collect()
       });
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
@@ -122,7 +122,7 @@ LoadDefinitions!({
      read_tokens.extend(if let Some(inner_ps) = inner {
       inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
      } else {
-       arg.iter().map(|t| t.clone().revert()).collect()
+       arg.iter().map(|t| t.revert()).collect()
      });
      read_tokens.push(T_END!());
      Ok(Tokens::new(read_tokens))
@@ -261,7 +261,7 @@ LoadDefinitions!({
   // Yet another special case: Require a { but do not read it!!!
   DefParameterType!(RequireBrace, sub[_inner, _extra] {
     gullet::read_token()?.map(|tok| {
-      gullet::unread_one(tok.clone());
+      gullet::unread_one(tok);
       if tok.get_catcode() != Catcode::BEGIN {
         let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
         err().ok();
@@ -298,7 +298,7 @@ LoadDefinitions!({
   DefParameterType!(Expanded, sub[_inner, _untils] {
     if let Some(token) = gullet::read_x_token(Some(false), false)? {
       if token.get_catcode() == Catcode::BEGIN {
-        gullet::read_balanced(true)?.unwrap_or_default().without_dont_expand()
+        gullet::read_balanced(true)?.unwrap_or_default()//.without_dont_expand()
       } else {
         Tokens!(token)
       }
@@ -374,7 +374,7 @@ LoadDefinitions!({
       read_tokens.extend(if let Some(inner_ps) = inner {
         inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
       } else {
-        arg.iter().map(|t| t.clone().revert()).collect()
+        arg.iter().map(|t| t.revert()).collect()
       });
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))

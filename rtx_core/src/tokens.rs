@@ -68,7 +68,7 @@ impl From<Token> for Tokens {
   fn from(t: Token) -> Tokens { Tokens::new(vec![t]) }
 }
 impl From<&Token> for Tokens {
-  fn from(t: &Token) -> Tokens { Tokens::new(vec![t.clone()]) }
+  fn from(t: &Token) -> Tokens { Tokens::new(vec![*t]) }
 }
 
 // Good news: Cloning `Token` should now be cheap (due to string interning),
@@ -110,7 +110,7 @@ impl<'a> From<&'a Tokens> for Token {
     if ts.0.is_empty() {
       unimplemented!();
     } else if ts.0.len() == 1 {
-      ts.0.first().unwrap().clone()
+      *ts.0.first().unwrap()
     } else {
       panic!("Dangerous cast! Tokens->Token for {ts:?}");
       //let code = ts.0.first().unwrap().get_catcode();
@@ -174,15 +174,6 @@ impl Tokens {
   pub fn revert(self) -> Vec<Token> {
     self
       .0
-      .into_iter()
-      .map(|mut t| {
-        if t.get_catcode() == Catcode::SmuggleTHE {
-          *t.take_dont_expand().unwrap()
-        } else {
-          t
-        }
-      })
-      .collect()
   }
 
   /// to_number casts back to a parsed Number (usually via gullet::read_number)
@@ -245,7 +236,7 @@ impl Tokens {
     while let Some(key) = toks_iter.next() {
       key.with_str(|key_str| {
         if let Some(value) = toks_iter.next() {
-          kvs.add_value(key_str, Stored::Token(value.clone()), false, false);
+          kvs.add_value(key_str, Stored::Token(*value), false, false);
         } else {
           kvs.add_value(key_str, Stored::Tokens(Tokens!()), false, false);
         }
@@ -330,23 +321,12 @@ impl Tokens {
     for token in in_tokens {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
-        result.push(token.clone());
+        result.push(*token);
       } else if let Some(ref arg) = args[&token.with_str(|ts| ts.parse::<usize>().unwrap()) - 1] {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
     Tokens::new(result)
-  }
-
-  /// removes the smuggled token of all contained Token elements
-  pub fn without_dont_expand(self) -> Self {
-    Tokens(
-      self
-        .0
-        .into_iter()
-        .map(|t| t.without_dont_expand())
-        .collect(),
-    )
   }
 
   /// Consumes a Tokens to a string containing TeX that created it (or could have).
@@ -440,7 +420,7 @@ impl Tokens {
   pub fn pack_parameters(self) -> Result<Self> {
     let mut rescanned = Vec::new();
     let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
-    while let Some(mut t) = toks.pop_front() {
+    while let Some(t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         // NOTE for future cleanup: Only CC_CS & CC_ACTIVE should ever get with_dont_expand!
         let next_t = toks.pop_front();
@@ -449,8 +429,7 @@ impl Tokens {
           // only group clear match token cases
           rescanned.push(Token {
             text: next_t.unwrap().get_sym(),
-            code: Catcode::ARG,
-            smuggled: None,
+            code: Catcode::ARG
           });
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
@@ -463,12 +442,6 @@ impl Tokens {
             "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );
-        }
-      } else if let Some(mut inner) = t.take_dont_expand() {
-        if let Some(smuggled) = inner.take_dont_expand() {
-          rescanned.push(*smuggled);
-        } else {
-          rescanned.push(*inner);
         }
       } else {
         rescanned.push(t);
@@ -527,8 +500,7 @@ impl ToTokens for Token {
       stream.extend(quote! {
         Token {
           text: rtx_core::common::arena::pin(#text),
-          code: #code,
-          smuggled: None
+          code: #code
         }
       })
     });

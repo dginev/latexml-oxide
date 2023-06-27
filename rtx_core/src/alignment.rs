@@ -399,10 +399,7 @@ impl Alignment {
 //======================================================================
 // Constructing the XML for the alignment.
 
-impl Object for Alignment {
-  fn get_locator(&self) -> Option<Cow<crate::common::locator::Locator>> { None }
-}
-
+impl Object for Alignment {}
 impl BoxOps for Alignment {
   fn get_properties(&self) -> &HashMap<String, Stored> { &self.properties }
   fn with_properties<R, FnR>(&self, caller: FnR) -> R

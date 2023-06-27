@@ -234,7 +234,7 @@ impl fmt::Display for Whatsit {
 }
 
 impl Object for Whatsit {
-  fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
+  fn get_locator(&self) -> Locator { self.locator }
 
   fn stringify(&self) -> String { format!("{self:?}") }
 

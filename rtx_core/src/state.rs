@@ -905,7 +905,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
     );
     install_definition(
       Constructor {
-        cs: token.clone(),
+        cs: *token,
         replacement: Some(Rc::new(move |document, _args, _props| {
           document.make_error("undefined", &cs) })),
         ..Constructor::default()
@@ -914,7 +914,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Some(Scope::Global),
     );
   }
-  Ok(token.clone())
+  Ok(*token)
 }
 
 
@@ -1163,7 +1163,7 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
   match state.lookup_value(key) {
     None | Some(Stored::None) => None,
     Some(Stored::Tokens(v)) => Some(v.clone()),
-    Some(Stored::Token(v)) => Some(Tokens::new(vec![v.clone()])),
+    Some(Stored::Token(v)) => Some(Tokens::new(vec![*v])),
     Some(Stored::String(sym)) => {
       let astr = arena::to_string(*sym);
       drop(state);
@@ -1176,7 +1176,7 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
 /// a variant of `lookup_value` that only recognizes a `Stored::Token`
 pub fn lookup_token(key: &str) -> Option<Token> {
   match state!().lookup_value(key) {
-    Some(Stored::Token(t)) => Some(t.clone()),
+    Some(Stored::Token(t)) => Some(*t),
     _ => None,
   }
 }
@@ -1526,7 +1526,6 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// Any other token is returned as is.
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   if token.get_catcode().is_active_or_cs()
-    && !token.has_smuggled()
     && token.text != *EMPTY_SYM
   {
     match state!().meaning.get(&token.text) {
@@ -1537,7 +1536,7 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
       None => None,
     }
   } else {
-    Some(Stored::Token(token.clone()))
+    Some(Stored::Token(*token))
   }
 }
 
@@ -1573,8 +1572,21 @@ pub fn assign_meaning<T: Into<Stored>>(
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }
 
+// keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
-  lookup_meaning(token).is_some()
+  if token.get_catcode().is_active_or_cs()
+    && token.text != *EMPTY_SYM
+  {
+    match state!().meaning.get(&token.text) {
+      Some(entry) => match entry.front() {
+        None | Some(Stored::None) => false,
+        Some(_) => true,
+      },
+      None => false,
+    }
+  } else {
+    true
+  }
 }
 
 /// used for expansion & various queries
@@ -1618,7 +1630,7 @@ pub fn lookup_definition_stored(key: &Token) -> Result<Option<Stored>> {Ok(
       Some(Stored::Token(entry)) => Some(Stored::Expandable(Rc::new(Expandable {
         cs: key.with_str(|k| T_CS!(k)),
         paramlist: None,
-        expansion: entry.clone().into(),
+        expansion: (*entry).into(),
         ..Expandable::default()
       }))),
       Some(v) => {
@@ -1671,11 +1683,11 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {
         if let Stored::Token(ref t) = front {
-          let lookup_sym = if t.has_smuggled() {
-            arena::pin_static("\\relax")
-          } else {
-            arena::pin(t.get_executable_primitive_name().unwrap_or_default())
-          };
+          // let lookup_sym = if t.has_smuggled() {
+          //   arena::pin_static("\\relax")
+          // } else {
+            arena::pin(t.get_executable_primitive_name().unwrap_or_default());
+          // };
           if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
             // special case,
             // If a cs has been let to an executable token, lookup ITS defn.
@@ -2087,12 +2099,12 @@ pub fn let_i(
   token2: &Token,
   scope: Option<Scope>,
 ) {
-  let meaning = if token2.get_dont_expand().is_some() {
-    Stored::Token(token2.clone())
-  } else {
+  let meaning =// if token2.get_dont_expand().is_some() {
+  //   Stored::Token(token2.clone())
+  // } else {
     lookup_meaning(token2)
-      .unwrap_or(Stored::None)
-  };
+      .unwrap_or(Stored::None);
+  // };
   assign_meaning(token1, meaning, scope);
   after_assignment();
 }

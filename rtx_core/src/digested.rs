@@ -249,17 +249,17 @@ impl Object for Digested {
       RegisterValue(ref rv) => (*rv).stringify(),
     }
   }
-  fn get_locator(&self) -> Option<Cow<Locator>> {
+  fn get_locator(&self) -> Locator {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
-      List(ref l) => l.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      TBox(ref b) => b.borrow().get_locator(),
+      List(ref l) => l.borrow().get_locator(),
       Comment(ref c) => c.get_locator(),
-      Whatsit(ref w) => w.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
-      Alignment(ref w) => w.borrow().get_locator().map(|l| Cow::Owned(l.into_owned())),
+      Whatsit(ref w) => w.borrow().get_locator(),
+      Alignment(ref w) => w.borrow().get_locator(),
       KeyVals(ref kvs) => kvs.get_locator(), // KeyVals locator?
       RegisterValue(ref rv) => rv.get_locator(),
-      Postponed(ref _t) => None, // Tokens locator?
+      Postponed(ref _t) => Locator::default(), // Tokens locator?
     }
   }
   fn revert(&self) -> Result<Tokens> {

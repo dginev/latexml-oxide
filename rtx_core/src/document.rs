@@ -110,12 +110,8 @@ impl Default for Document {
   fn default() -> Self { Self::new() }
 }
 impl Object for Document {
-  fn get_locator(&self) -> Option<Cow<Locator>> {
-    if let Some(tbox) = self.get_node_box(&self.node) {
-      tbox.get_locator().map(|l| Cow::Owned(l.into_owned()))
-    } else {
-      None
-    }
+  fn get_locator(&self) -> Locator {
+    self.get_node_box(&self.node).map(|tbox| tbox.get_locator()).unwrap_or_default()
   }
 }
 impl Document {

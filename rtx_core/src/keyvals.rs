@@ -7,7 +7,6 @@ use std::fmt;
 use crate::common::arena::EMPTY_SYM;
 use crate::common::error::*;
 use crate::common::font::Font;
-use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::{gullet};
@@ -76,9 +75,6 @@ impl fmt::Display for KeyVals {
 }
 
 impl Object for KeyVals {
-  fn get_locator(&self) -> Option<Cow<Locator>> {
-    unimplemented!();
-  }
   fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
 
   fn be_digested(mut self) -> Result<Digested> {
@@ -530,14 +526,14 @@ impl KeyVals {
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    let startloc = gullet::get_locator().unwrap();
+    let startloc = gullet::get_locator();
 
     // set and read tokens
     let _open = gullet::read_token();
     let assign = T_OTHER!("=");
     let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
-    let until_tks = Tokens!(until.clone());
+    let until_tks = Tokens!(until);
     // my ($punct, $assign) = ($$self{punct}, $$self{assign});
 
     // create arrays for key-value pairs and explicit values
@@ -661,8 +657,7 @@ impl KeyVals {
         Stored::Token(vtk) => tks.push(vtk),
         Stored::String(vstr) => tks.push(Token {
           text: vstr,
-          code: Catcode::OTHER,
-          smuggled: None,
+          code: Catcode::OTHER
         }),
         _ => unimplemented!(),
       }

@@ -5,7 +5,6 @@ use crate::Digested;
 ///======================================================================
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
-use std::borrow::Cow;
 use std::fmt::Debug;
 
 /// Base object for all LaTeXML Objects.
@@ -34,7 +33,7 @@ pub trait Object {
       "Was it really intended to digest? We don't know how! {self:?}"
     );
   }
-  fn get_locator(&self) -> Option<Cow<Locator>>;
+  fn get_locator(&self) -> Locator { Locator::default() }
 
   /// each concrete object needs to provide its own path back to tokens
   fn revert(&self) -> Result<Tokens> {

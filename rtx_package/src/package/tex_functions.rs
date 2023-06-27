@@ -701,7 +701,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   split_tokens(tokens, vec![T_CS!("\\and")])
     .into_iter()
     .flat_map(|t| {
-      let mut with_cs = vec![cs.clone(), T_BEGIN!()];
+      let mut with_cs = vec![cs, T_BEGIN!()];
       with_cs.extend(t.unlist());
       with_cs.push(T_END!());
       with_cs
@@ -717,18 +717,18 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
   // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
   for t in tokens.unlist_ref().iter() {
-    let t = t.without_dont_expand_ref();
+    // let t = t.without_dont_expand_ref();
     match t.code {
       Catcode::CS => {
-        wv.push(t.clone());
+        wv.push(*t);
         wv.push(T_SPACE!());
       },
       Catcode::SPACE => {
         wv.push(T_SPACE!());
       },
       Catcode::PARAM => {
-        wv.push(t.clone());
-        wv.push(t.clone());
+        wv.push(*t);
+        wv.push(*t);
       },
       Catcode::ARG => {
         // B Book, 294. Reduce to param+integer
@@ -736,7 +736,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
         wv.push(t.as_other());
       },
       _ => {
-        wv.push(t.clone());
+        wv.push(*t);
       },
     }
   }

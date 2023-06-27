@@ -106,7 +106,6 @@ impl fmt::Display for Conditional {
 impl Object for Conditional {
   fn is_expandable(&self) -> bool { true }
   fn stringify(&self) -> String { self.stringify_type("Conditional") }
-  fn get_locator(&self) -> Option<Cow<Locator>> { None } // TODO
 }
 impl Definition for Conditional {
   // sub new {
@@ -188,7 +187,7 @@ impl Conditional {
     //     "Conditional limit of $LaTeXML::IF_LIMIT exceeded, infinite loop?"); }
     let if_frame = Rc::new(RefCell::new(IfFrame {
       token: get_current_token().unwrap(),
-      start: gullet::get_locator().unwrap(),
+      start: gullet::get_locator(),
       parsing: true,
       elses: false,
       ifid,
