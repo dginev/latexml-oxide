@@ -33,22 +33,20 @@ use crate::tokens::Tokens;
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
 static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
-thread_local! {
-  static SMUGGLE_THE_COMMANDS: HashSet<SymbolU32> =
-    set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
-      arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize"));
-}
+#[thread_local]
+static DEFERRED_COMMANDS: Lazy<HashSet<SymbolU32>> = Lazy::new(||
+  set!(arena::pin_static("\\the"), arena::pin_static("\\showthe"),
+    arena::pin_static("\\unexpanded"), arena::pin_static("\\detokenize")));
 
 // If it is a column ending token, Returns the token, a keyword and whether it is "hidden"
-thread_local! {
- static COLUMN_ENDS : [(Token,&'static str, bool); 6] = [    // besides T_ALIGN
+#[thread_local]
+static COLUMN_ENDS : Lazy<[(Token,&'static str, bool); 6]> = Lazy::new(|| [    // besides T_ALIGN
   (T_CS!("\\cr"),           "cr",     false),
   (T_CS!("\\crcr"),         "crcr",   false),
   (T_CS!("\\hidden@cr"),    "cr",     true),
   (T_CS!("\\hidden@crcr"),  "crcr",   true),
   (T_CS!("\\hidden@align"), "insert", true),
-  (T_CS!("\\span"),         "span",   false)];
-}
+  (T_CS!("\\span"),         "span",   false)]);
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
@@ -327,10 +325,12 @@ impl Gullet {
   // Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
   // `Toplevel' processing, (if $toplevel is true), used at the toplevel processing by Stomach,
   //  will step to the next input stream (Mouth) if one is available,
-  // If `commentsok` is true, will also pass comments.
+  //  If `commentsok` is true, will also pass comments.
   /// Return the next unexpandable token from the input source, or None if there is no more input.
   /// If the next token is expandable, it is expanded, and its expansion is reinserted into the
   /// input. If `commentsok`, a comment read or pending will be returned.
+  /// Note that, unlike `read_balanced`, this does NOT defer expansion of \the & friends.
+  /// Also, \noexpand'd tokens effectively act ilke \relax
   pub fn read_x_token(
     toplevel_opt: Option<bool>,
     commentsok: bool,
@@ -349,7 +349,6 @@ impl Gullet {
         if gullet.mouth.is_none() {
           return Ok(None);
         }
-        // NOTE: CC_SMUGGLE_THE should ONLY appear in pushback!
         while let Some(token) = gullet.mouth.as_mut().unwrap().pushback.pop_front() {
           match token.get_catcode() {
             Catcode::COMMENT => {
@@ -452,7 +451,7 @@ impl Gullet {
     if expansion.is_empty() {
       return Ok(());
     }
-    if SMUGGLE_THE_COMMANDS.with(|set| set.contains(&defn.get_cs().get_sym())) {
+    if DEFERRED_COMMANDS.contains(&defn.get_cs().get_sym()) {
       // magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
       // at the exact time the token leaves the pushback.
       // This is *required to be different* from the noexpand flag, as per the B Book
@@ -1443,19 +1442,17 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
       // Embedded version of Equals, knowing both are tokens
       let defn = lookup_meaning(token)
         .unwrap_or_else(|| Stored::Token(*token));
-      COLUMN_ENDS.with(|ends| {
-        for end in ends {
-          let e = &end.0;
-          // Would be nice to cache the defns, but don't know when they're present & constant!
-          if defn
-            == lookup_meaning(e)
-              .unwrap_or_else(|| Stored::Token(*e))
-          {
-            return Some(*end);
-          }
+      for end in *COLUMN_ENDS {
+        let e = &end.0;
+        // Would be nice to cache the defns, but don't know when they're present & constant!
+        if defn
+          == lookup_meaning(e)
+            .unwrap_or_else(|| Stored::Token(*e))
+        {
+          return Some(end);
         }
-        None
-      })
+      }
+      None
     },
     _ => None,
   }
