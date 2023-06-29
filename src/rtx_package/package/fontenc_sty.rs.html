@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/fontenc_sty.rs`."><title>fontenc_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/fontenc_sty.rs`."><title>fontenc_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -141,15 +141,9 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="kw">use </span>rtx_core::state::State;
 
-<span class="kw">fn </span>setup_cyrillic(_stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="macro">BindState!</span>(_stomach, state);
+<span class="kw">fn </span>setup_cyrillic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyra&quot;</span>, <span class="string">&quot;\u{0430}&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrb&quot;</span>, <span class="string">&quot;\u{0431}&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\cyrv&quot;</span>, <span class="string">&quot;\u{0432}&quot;</span>);
@@ -248,14 +242,13 @@
   </span><span class="prelude-val">Ok</span>(())
 }
 
-<span class="macro">LoadDefinitions!</span>(stomach, state, {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=&gt;unicode mapping.
 
-  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, sub[stomach, state] {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    <span class="kw">let </span>current_option = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>), gullet).to_string();
+  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+    <span class="kw">let </span>current_option = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>)).to_string();
     <span class="macro">UnshiftValue!</span>(<span class="string">&quot;font_encodings&quot;</span>, <span class="macro">vec!</span>[Stored::String(arena::pin(current_option))]);
   });
 
@@ -263,12 +256,11 @@
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  </span><span class="macro">ProcessOptions!</span>(stomach);
+  </span><span class="macro">ProcessOptions!</span>();
   <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font_encodings_ref) = state.lookup_vecdeque(<span class="string">&quot;font_encodings&quot;</span>) {
-    <span class="kw">let </span>font_encodings: VecDeque&lt;Stored&gt; = font_encodings_ref.clone();
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font_encodings) = lookup_vecdeque(<span class="string">&quot;font_encodings&quot;</span>) {
     <span class="kw">if </span>!font_encodings.is_empty() {
-      setup_cyrillic(stomach, state)<span class="question-mark">?</span>;
+      setup_cyrillic()<span class="question-mark">?</span>;
       <span class="kw">for </span>encoding_stored <span class="kw">in </span>font_encodings.into_iter() {
         <span class="kw">if let </span>Stored::String(enc_sym) = encoding_stored {
           <span class="kw">let </span>encoding = arena::to_string(enc_sym);
@@ -276,7 +268,7 @@
             scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
           <span class="kw">let </span>encfile = encoding.to_lowercase() + <span class="string">&quot;enc&quot;</span>;
           <span class="macro">InputDefinitions!</span>(<span class="kw-2">&amp;</span>encfile, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;def&quot;</span>)));
-          <span class="kw">if </span><span class="macro">LoadFontMap!</span>(<span class="kw-2">&amp;</span>encoding).is_some() {
+          <span class="kw">if </span>load_font_map(<span class="kw-2">&amp;</span>encoding).is_some() {
             <span class="macro">MergeFont!</span>(encoding =&gt; encoding);
           }
         } <span class="kw">else </span>{
@@ -284,7 +276,7 @@
             <span class="string">&quot;Only strings should be stored as font encoding names, at: {:?}&quot;</span>,
             encoding_stored
           );
-          <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, stomach, message);
+          <span class="macro">Error!</span>(<span class="string">&quot;fontenc&quot;</span>, <span class="string">&quot;font_encodings&quot;</span>, message);
         }
       }
     }

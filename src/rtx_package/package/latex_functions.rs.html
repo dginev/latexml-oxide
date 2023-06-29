@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_functions.rs`."><title>latex_functions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_functions.rs`."><title>latex_functions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -221,22 +221,6 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
@@ -249,12 +233,12 @@
 <span class="kw">static </span>NOTE_TEXT_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^(\\w+?)text$&quot;</span>).unwrap());
 <span class="kw">static </span>NOTE_MARK_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">&quot;^(\\w+?)mark$&quot;</span>).unwrap());
 
-<span class="kw">pub fn </span>start_appendices(kind: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;mut </span>State) { begin_appendices(kind, state) }
+<span class="kw">pub fn </span>start_appendices(kind: <span class="kw-2">&amp;</span>str) { begin_appendices(kind) }
 
 <span class="comment">// Class files should define \@appendix to call this as startAppendices(&#39;section&#39;) or chapter...
 // counter is also the element name!
 
-</span><span class="kw">pub fn </span>begin_appendices(_counter: <span class="kw-2">&amp;</span>str, _state: <span class="kw-2">&amp;mut </span>State) {
+</span><span class="kw">pub fn </span>begin_appendices(_counter: <span class="kw-2">&amp;</span>str) {
   <span class="macro">unimplemented!</span>();
   <span class="comment">// Let(&#39;\lx@save@theappendex&#39;,    &#39;\the&#39; . $counter,         &#39;global&#39;);
   // Let(&#39;\lx@save@theappendex@ID&#39;, &#39;\the&#39; . $counter . &#39;@ID&#39;, &#39;global&#39;);
@@ -273,7 +257,7 @@
   // Let(T_CS!(&#39;\@appendix&#39;),    T_CS!(&#39;\relax&#39;),      &#39;global&#39;);
 </span>}
 
-<span class="kw">pub fn </span>end_appendices(_state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>end_appendices() {
   <span class="macro">unimplemented!</span>();
   <span class="comment">// if (my $counter = LookupMapping(&#39;BACKMATTER_ELEMENT&#39;, &#39;ltx:appendix&#39;)) {
   //   $counter =~ s/^ltx://;
@@ -287,11 +271,9 @@
   counter: <span class="kw-2">&amp;</span>str,
   mark_opt: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Digested&gt;,
   tag_opt: <span class="prelude-ty">Option</span>&lt;Cow&lt;Digested&gt;&gt;,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;String, Stored&gt;&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(tag) = tag_opt {
-    <span class="kw">let </span><span class="kw-2">mut </span>props = ref_step_id(counter, stomach, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>props = ref_step_id(counter)<span class="question-mark">?</span>;
     <span class="kw">let </span>mark = <span class="kw">match </span>mark_opt {
       <span class="prelude-val">None </span>=&gt; tag.clone(),
       <span class="prelude-val">Some</span>(mark) =&gt; Cow::Borrowed(mark),
@@ -299,21 +281,20 @@
     props.insert(<span class="string">&quot;mark&quot;</span>.to_string(), mark.into());
     props.insert(
       <span class="string">&quot;tags&quot;</span>.to_string(),
-      stomach
-        .digest(
+      stomach::digest(
           <span class="macro">Tokens!</span>(
             <span class="macro">T_BEGIN!</span>(),
             <span class="macro">T_CS!</span>(<span class="string">&quot;\\def&quot;</span>),
             <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{counter}&quot;</span>)),
             <span class="macro">T_BEGIN!</span>(),
-            tag.revert(state)<span class="question-mark">?</span>,
+            tag.revert()<span class="question-mark">?</span>,
             <span class="macro">T_END!</span>(),
             <span class="macro">T_CS!</span>(<span class="string">&quot;\\def&quot;</span>),
             <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\typerefnum@{counter}&quot;</span>)),
             <span class="macro">T_BEGIN!</span>(),
             <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{counter}typerefname&quot;</span>)),
             <span class="macro">T_SPACE!</span>(),
-            tag.revert(state)<span class="question-mark">?</span>,
+            tag.revert()<span class="question-mark">?</span>,
             <span class="macro">T_END!</span>(),
             <span class="macro">T_CS!</span>(<span class="string">&quot;\\lx@make@tags&quot;</span>),
             <span class="macro">T_BEGIN!</span>(),
@@ -321,15 +302,14 @@
             <span class="macro">T_END!</span>(),
             <span class="macro">T_END!</span>()
           ),
-          state,
-        )<span class="question-mark">?
+              )<span class="question-mark">?
         </span>.into(),
     );
     <span class="prelude-val">Ok</span>(props)
   } <span class="kw">else </span>{
-    <span class="kw">let </span><span class="kw-2">mut </span>props = ref_step_counter(counter, <span class="bool-val">false</span>, stomach, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>props = ref_step_counter(counter, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>mark = Stored::Digested(<span class="kw">match </span>mark_opt {
-      <span class="prelude-val">None </span>=&gt; digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{counter}&quot;</span>))), stomach, state)<span class="question-mark">?</span>,
+      <span class="prelude-val">None </span>=&gt; digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{counter}&quot;</span>))))<span class="question-mark">?</span>,
       <span class="prelude-val">Some</span>(mark) =&gt; mark.clone(),
     });
     props.insert(<span class="string">&quot;mark&quot;</span>.to_string(), mark);
@@ -342,7 +322,6 @@
 </span><span class="kw">pub fn </span>relocate_footnote(
   document: <span class="kw-2">&amp;mut </span>Document,
   node: <span class="kw-2">&amp;mut </span>Node,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = NOTE_TEXT_END.captures(<span class="kw-2">&amp;</span>node.get_attribute(<span class="string">&quot;role&quot;</span>).unwrap_or_default()) {
     <span class="kw">let </span>notetype = caps.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str()); <span class="comment">// Eg &quot;footnote&quot;, &quot;endnote&quot;,...
@@ -350,9 +329,8 @@
       <span class="kw">for </span><span class="kw-2">mut </span>marknote <span class="kw">in </span>document.findnodes(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.//ltx:note[@role=&#39;{notetype}mark&#39;][@mark=&#39;{mark}&#39;]&quot;</span>),
         <span class="prelude-val">None</span>,
-        state,
-      ) {
-        relocate_footnote_aux(document, notetype, <span class="kw-2">&amp;mut </span>marknote, node, state)<span class="question-mark">?</span>;
+          ) {
+        relocate_footnote_aux(document, notetype, <span class="kw-2">&amp;mut </span>marknote, node)<span class="question-mark">?</span>;
       }
     }
   } <span class="kw">else if let </span><span class="prelude-val">Some</span>(caps) = NOTE_MARK_END.captures(<span class="kw-2">&amp;</span>node.get_attribute(<span class="string">&quot;role&quot;</span>).unwrap_or_default())
@@ -362,9 +340,8 @@
       <span class="kw">for </span><span class="kw-2">mut </span>textnote <span class="kw">in </span>document.findnodes(
         <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.//ltx:note[@role=&#39;{notetype}text&#39;][@mark=&#39;{mark}&#39;]&quot;</span>),
         <span class="prelude-val">None</span>,
-        state,
-      ) {
-        relocate_footnote_aux(document, notetype, node, <span class="kw-2">&amp;mut </span>textnote, state)<span class="question-mark">?</span>;
+          ) {
+        relocate_footnote_aux(document, notetype, node, <span class="kw-2">&amp;mut </span>textnote)<span class="question-mark">?</span>;
       }
     }
   }
@@ -377,25 +354,23 @@
   notetype: <span class="kw-2">&amp;</span>str,
   marknote: <span class="kw-2">&amp;mut </span>Node,
   textnote: <span class="kw-2">&amp;mut </span>Node,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// textnote.get_parent().unwrap().remove_child(textnote);
   </span>textnote.unlink();
-  document.append_clone(marknote, textnote.get_child_nodes(), state)<span class="question-mark">?</span>;
+  document.append_clone(marknote, textnote.get_child_nodes())<span class="question-mark">?</span>;
   document.set_attribute(marknote, <span class="string">&quot;role&quot;</span>, notetype)<span class="question-mark">?</span>;
   <span class="kw">if let </span><span class="prelude-val">Some</span>(labels) = textnote.get_attribute(<span class="string">&quot;labels&quot;</span>) {
-    document.generate_id(marknote, <span class="string">&quot;&quot;</span>, state)<span class="question-mark">?</span>;
+    document.generate_id(marknote, <span class="string">&quot;&quot;</span>)<span class="question-mark">?</span>;
     document.set_attribute(marknote, <span class="string">&quot;labels&quot;</span>, <span class="kw-2">&amp;</span>labels)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>only_preamble(cs: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">if </span>!state.lookup_bool(<span class="string">&quot;inPreamble&quot;</span>) {
+<span class="kw">pub fn </span>only_preamble(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">if </span>!lookup_bool(<span class="string">&quot;inPreamble&quot;</span>) {
     <span class="macro">Error!</span>(
       <span class="string">&quot;unexpected&quot;</span>,
       cs,
-      stomach,
       <span class="string">&quot;The current command &#39;{cs}&#39; can only appear in the preamble&quot;
     </span>);
   }
@@ -405,21 +380,18 @@
 <span class="kw">pub fn </span>tabular_bindings(
   template: Template,
   <span class="kw-2">mut </span>properties: HashMap&lt;String, Stored&gt;,
-  <span class="kw-2">mut </span>xml_attributes: HashMap&lt;String, String&gt;,
-  gullet: <span class="kw-2">&amp;mut </span>Gullet,
-  state: <span class="kw-2">&amp;mut </span>State,
+  <span class="kw-2">mut </span>xml_attributes: HashMap&lt;String, String&gt;
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = state.lookup_value(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot;</span>) {
-      properties.insert(String::from(<span class="string">&quot;guess_headers&quot;</span>), v.clone());
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = lookup_value(<span class="string">&quot;GUESS_TABULAR_HEADERS&quot;</span>) {
+      properties.insert(String::from(<span class="string">&quot;guess_headers&quot;</span>), v);
     }
   }
   <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;colsep&quot;</span>) {
-    <span class="kw">let </span>sep_opt = state.lookup_dimension(<span class="string">&quot;\\tabcolsep&quot;</span>);
+    <span class="kw">let </span>sep_opt = lookup_dimension(<span class="string">&quot;\\tabcolsep&quot;</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sep) = sep_opt {
       <span class="kw">if </span>sep.value_of()
-        != state
-          .lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>)
+        != lookup_dimension(<span class="string">&quot;\\lx@default@tabcolsep&quot;</span>)
           .unwrap()
           .value_of()
       {
@@ -428,14 +400,13 @@
     }
   }
   <span class="kw">if </span>!xml_attributes.contains_key(<span class="string">&quot;rowsep&quot;</span>) {
-    <span class="kw">let </span>astr = gullet
-      .do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>), state)<span class="question-mark">?
+    <span class="kw">let </span>astr = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\arraystretch&quot;</span>))<span class="question-mark">?
       </span>.to_string();
     <span class="kw">if </span>astr != <span class="string">&quot;1&quot; </span>{
       <span class="kw">let </span>astr_int = astr.parse::&lt;i64&gt;().expect(<span class="kw-2">&amp;</span>astr);
       xml_attributes.insert(
         String::from(<span class="string">&quot;rowsep&quot;</span>),
-        Dimension::from_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>, astr_int - <span class="number">1</span>), state)<span class="question-mark">?</span>.to_attribute(),
+        Dimension::from_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}em&quot;</span>, astr_int - <span class="number">1</span>))<span class="question-mark">?</span>.to_attribute(),
       );
     }
   }
@@ -443,8 +414,7 @@
   <span class="kw">if </span>!properties.contains_key(<span class="string">&quot;strut&quot;</span>) {
     properties.insert(
       String::from(<span class="string">&quot;strut&quot;</span>),
-      state
-        .lookup_register(<span class="string">&quot;\\baselineskip&quot;</span>, Vec::new())<span class="question-mark">?
+      lookup_register(<span class="string">&quot;\\baselineskip&quot;</span>, Vec::new())<span class="question-mark">?
         </span>.unwrap()
         .multiply(Float::new_f64(<span class="number">1.5</span>))
         .into(),
@@ -454,12 +424,10 @@
     template,
     String::from(<span class="string">&quot;text&quot;</span>),
     properties,
-    xml_attributes,
-    gullet,
-    state,
+    xml_attributes
   );
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>), <span class="prelude-val">None</span>, gullet);
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\tabularnewline&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="prelude-val">None</span>, gullet);
+  state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@tabularcr&quot;</span>), <span class="prelude-val">None</span>);
+  state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\tabularnewline&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\\\&quot;</span>), <span class="prelude-val">None</span>);
   <span class="comment">// NOTE: Fit this back in!!!!!!!
   // Do like AddToMacro, but NOT global!
   </span><span class="kw">for </span>name <span class="kw">in </span>[
@@ -469,10 +437,10 @@
     <span class="string">&quot;@column@after&quot;</span>,
   ] {
     <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{name}&quot;</span>));
-    <span class="kw">let </span>cs_def = state.lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.unwrap();
+    <span class="kw">let </span>cs_def = lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>expansion = cs_def.get_expansion().cloned().unwrap_or_default();
     expansion.push(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\@tabular{name}&quot;</span>)));
-    def_macro(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+    def_macro(cs, <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
 }

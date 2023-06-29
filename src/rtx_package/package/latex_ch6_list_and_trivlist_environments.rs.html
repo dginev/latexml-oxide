@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch6_list_and_trivlist_environments.rs`."><title>latex_ch6_list_and_trivlist_environments.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/latex_ch6_list_and_trivlist_environments.rs`."><title>latex_ch6_list_and_trivlist_environments.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -103,13 +103,10 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="attr">#[rustfmt::skip]
-</span><span class="macro">LoadDefinitions!</span>(state, {
+</span><span class="macro">LoadDefinitions!</span>({
   <span class="comment">//======================================================================
   // C.6.3 The list and trivlist environments.
   //======================================================================
@@ -118,16 +115,14 @@
 
   </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\if@nmbrlist&quot;</span>);
   <span class="macro">DefMacro!</span>(<span class="string">&quot;\\@listctr&quot;</span>, <span class="string">&quot;&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\usecounter{}&quot;</span>, sub[stomach, (counter), state] {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    <span class="kw">let </span>counter = <span class="macro">Expand!</span>(counter, gullet, state).to_string();
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\usecounter{}&quot;</span>, sub[(counter)] {
+    <span class="kw">let </span>counter = <span class="macro">Expand!</span>(counter).to_string();
     <span class="kw">if </span>counter.is_empty() {
-      begin_itemize(<span class="string">&quot;list&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state)<span class="question-mark">?</span>;
+      begin_itemize(<span class="string">&quot;list&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default())<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
       begin_itemize(<span class="string">&quot;list&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>counter), BeginItemizeOptions {
         nolevel:<span class="bool-val">true</span>,
-        ..BeginItemizeOptions::default() },
-        stomach, state)<span class="question-mark">?</span>;
+        ..BeginItemizeOptions::default() })<span class="question-mark">?</span>;
     }
   });
 
@@ -140,23 +135,23 @@
   <span class="comment">// Start an anonymous list (often misused)
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\lx@list&quot;</span>,
     <span class="string">&quot;&lt;ltx:itemize&gt;&quot;</span>,
-    before_digest =&gt; sub[stomach, state] { stomach.bgroup(state); });
+    before_digest =&gt; { bgroup(); });
   <span class="comment">// Close the anonymous list if we&#39;re still within one.
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\endlx@list&quot;</span>, sub[document, state] {
-    document.maybe_close_element(<span class="string">&quot;ltx:itemize&quot;</span>, state)<span class="question-mark">?</span>; },
-    before_digest =&gt; sub[stomach,state] { stomach.egroup(state)<span class="question-mark">?</span>; });
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\endlx@list&quot;</span>, sub[document] {
+    document.maybe_close_element(<span class="string">&quot;ltx:itemize&quot;</span>)<span class="question-mark">?</span>; },
+    before_digest =&gt; { egroup()<span class="question-mark">?</span>; });
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\list@item OptionalUndigested&quot;</span>,
     <span class="string">&quot;&lt;ltx:item xml:id=&#39;#id&#39; itemsep=&#39;#itemsep&#39;&gt;#tags&quot;</span>,
-    properties =&gt; sub[stomach, args, state] {
+    properties =&gt; sub[args] {
       <span class="kw">let </span>undigested = args[<span class="number">0</span>].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) }
+      ref_step_item_counter(undigested) }
   );
 
   <span class="macro">DefEnvironment!</span>(<span class="string">&quot;{trivlist}&quot;</span>,
     <span class="string">&quot;&lt;ltx:itemize&gt;#body&lt;/ltx:itemize&gt;&quot;</span>,
-    properties =&gt; sub[stomach, _args, state] {
-      begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default(), stomach, state) },
+    properties =&gt; {
+      begin_itemize(<span class="string">&quot;trivlist&quot;</span>, <span class="prelude-val">None</span>, BeginItemizeOptions::default()) },
     before_digest_end =&gt; { <span class="macro">Digest!</span>(<span class="string">&quot;\\par&quot;</span>)<span class="question-mark">?</span>; }
   );
 
@@ -164,12 +159,11 @@
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\trivlist@item@ OptionalUndigested&quot;</span>,
     <span class="string">&quot;&lt;ltx:item xml:id=&#39;#id&#39; itemsep=&#39;#itemsep&#39;&gt;&lt;ltx:tags&gt;&lt;ltx:tag&gt;#tag&lt;/ltx:tag&gt;&lt;/ltx:tags&gt;&quot;</span>,
     <span class="comment">// At least an empty tag! ?
-    </span>properties =&gt; sub[stomach, args, state] {
+    </span>properties =&gt; sub[args] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="number">0</span>] {
         <span class="kw">if let </span>DigestedData::Postponed(<span class="kw-2">ref </span>tag_tokens) = arg.data() {
-          <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-          <span class="kw">let </span>tag_expanded = <span class="macro">Expand!</span>(tag_tokens.clone(), gullet, state);
-          <span class="kw">let </span>tag = stomach.digest(tag_expanded, state)<span class="question-mark">?</span>;
+          <span class="kw">let </span>tag_expanded = <span class="macro">Expand!</span>(tag_tokens.clone());
+          <span class="kw">let </span>tag = stomach::digest(tag_expanded)<span class="question-mark">?</span>;
           <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;tag&quot; </span>=&gt; tag))
         } <span class="kw">else </span>{
           <span class="prelude-val">Ok</span>(HashMap::default())

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/whatsit.rs`."><title>whatsit.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/whatsit.rs`."><title>whatsit.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -427,8 +427,6 @@
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::borrow::Cow;
 <span class="comment">// use std::cell::RefCell;
 </span><span class="kw">use </span>libxml::tree::Node;
@@ -447,7 +445,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, FontDirective, Reversion};
 <span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="kw">use </span><span class="kw">crate</span>::list::List;
-<span class="kw">use </span><span class="kw">crate</span>::state::{State, STD_STATE};
+<span class="kw">use </span><span class="kw">crate</span>::state::{get_dual_branch,lookup_font};
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, DigestedData, TexMode};
@@ -513,7 +511,7 @@
     <span class="prelude-val">Ok</span>(
     <span class="comment">// 1. A space-like thing
     // 2. An environment-like structure with an empty body
-    // TODO: For now it is difficult to pass in a State with an initialized TeX.pool.
+    // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
     </span><span class="self">self</span>.get_property_bool(<span class="string">&quot;isEmpty&quot;</span>)
       || <span class="self">self</span>.get_property_bool(<span class="string">&quot;isSpace&quot;</span>)
       || (<span class="self">self</span>.get_definition().get_cs_name() == <span class="string">&quot;Begin&quot;
@@ -559,7 +557,7 @@
   /// The last box in `body` is assumed to represent the `trailer`, that is the result of the
   /// invocation that closed the environment or math.  It is stored separately in the properties
   /// under &quot;trailer&quot;.
-  </span><span class="kw">pub fn </span>set_body(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>body: Vec&lt;Digested&gt;, state: <span class="kw-2">&amp;mut </span>State) {
+  </span><span class="kw">pub fn </span>set_body(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>body: Vec&lt;Digested&gt;) {
     <span class="kw">let </span>trailer_opt = body.pop();
     <span class="kw">let </span>mode = <span class="kw">if </span><span class="self">self</span>.is_math() {
       TexMode::Math
@@ -567,7 +565,7 @@
       TexMode::Text
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>list = List::new(body, state);
+    <span class="kw">let </span><span class="kw-2">mut </span>list = List::new(body);
     <span class="kw">if </span><span class="self">self</span>.is_math() {
       list.mode = <span class="prelude-val">Some</span>(mode);
     }
@@ -595,7 +593,7 @@
   <span class="doccomment">/// Like Tokens-substituteParameters, but substitutes in the Whatsit&#39;s arguments OR properties!
   /// #&lt;digit&gt; is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
-  </span><span class="kw">fn </span>substitute_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>, spec: Tokens, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+  </span><span class="kw">fn </span>substitute_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>, spec: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
     <span class="comment">// TODO: This is kind of unfortunate -- I am not sure what are the reasonable &quot;entryways&quot; into
     // the Whatsit substituteParameters. For Expandable we now have guarantees that &quot;#,i&quot; has
     // been mapped into a single T_ARG(#i), but not here. so for now run on each call?
@@ -623,7 +621,7 @@
           }
         });
         <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = arg_opt {
-          result.extend(arg.revert(state)<span class="question-mark">?</span>.unlist());
+          result.extend(arg.revert()<span class="question-mark">?</span>.unlist());
         }
       }
     }
@@ -660,8 +658,7 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Whatsit {
   <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-    <span class="kw">let </span>state = STD_STATE.borrow(); <span class="comment">// TODO: is this really the way?
-    </span><span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.revert(<span class="kw-2">&amp;</span>state).unwrap())
+    <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.revert().unwrap())
   }
 }
 
@@ -670,10 +667,10 @@
 
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="macro">format!</span>(<span class="string">&quot;{self:?}&quot;</span>) }
 
-  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="comment">// WARNING: Forbidden knowledge?
     // (2) caching the reversion (which is a big performance boost)
-    </span><span class="kw">let </span>saved_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(this_branch) = state.get_dual_branch() {
+    </span><span class="kw">let </span>saved_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(this_branch) = get_dual_branch() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dual_reversion) = <span class="self">self</span>.dual_reversion {
         dual_reversion.get(this_branch).cloned()
       } <span class="kw">else </span>{
@@ -691,7 +688,7 @@
     <span class="kw">if </span>defn.get_reversion_spec().is_none() {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(digested)) = <span class="self">self</span>.properties.get(<span class="string">&quot;alignment&quot;</span>) {
         <span class="kw">if let </span>DigestedData::Alignment(alignment) = digested.data() {
-          <span class="kw">return </span>alignment.borrow().revert(state);
+          <span class="kw">return </span>alignment.borrow().revert();
         }
       }
     }
@@ -711,12 +708,12 @@
     <span class="kw">match </span>spec_opt.as_deref() {
       <span class="prelude-val">Some</span>(Reversion::Closure(spec)) =&gt; {
         is_closure = <span class="bool-val">true</span>;
-        <span class="kw">let </span>spec_tokens = spec(<span class="self">self</span>, <span class="self">self</span>.get_args(), state).unwrap();
-        tokens = <span class="self">self</span>.substitute_parameters(spec_tokens, state)<span class="question-mark">?</span>;
+        <span class="kw">let </span>spec_tokens = spec(<span class="self">self</span>, <span class="self">self</span>.get_args()).unwrap();
+        tokens = <span class="self">self</span>.substitute_parameters(spec_tokens)<span class="question-mark">?</span>;
       },
       <span class="prelude-val">Some</span>(Reversion::Tokens(spec)) =&gt; {
         <span class="kw">if </span>!spec.is_empty() {
-          tokens = <span class="self">self</span>.substitute_parameters(spec.clone(), state)<span class="question-mark">?</span>;
+          tokens = <span class="self">self</span>.substitute_parameters(spec.clone())<span class="question-mark">?</span>;
         }
       },
       <span class="prelude-val">None </span>=&gt; {
@@ -743,20 +740,20 @@
             </span>.get_args()
             .iter()
             .map(|opt| <span class="kw">match </span>opt {
-              <span class="prelude-val">Some</span>(arg) =&gt; <span class="prelude-val">Some</span>(arg.revert(state).ok()<span class="question-mark">?</span>),
+              <span class="prelude-val">Some</span>(arg) =&gt; <span class="prelude-val">Some</span>(arg.revert().ok()<span class="question-mark">?</span>),
               <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             })
             .collect();
-          tokens.extend(parameters.revert_arguments(args, state)<span class="question-mark">?</span>)
+          tokens.extend(parameters.revert_arguments(args)<span class="question-mark">?</span>)
         }
       },
     };
 
     <span class="kw">if </span>!is_closure {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = <span class="self">self</span>.get_body()<span class="question-mark">? </span>{
-        tokens.extend(body.revert(state)<span class="question-mark">?</span>.unlist());
+        tokens.extend(body.revert()<span class="question-mark">?</span>.unlist());
         <span class="kw">if let </span><span class="prelude-val">Some</span>(trailer) = <span class="self">self</span>.get_trailer() {
-          tokens.extend(trailer.revert(state)<span class="question-mark">?</span>.unlist());
+          tokens.extend(trailer.revert()<span class="question-mark">?</span>.unlist());
         }
       }
     }
@@ -765,7 +762,7 @@
     // TODO: DG: We can&#39;t yet cache reversions, because we lack mutability on .revert()
     //       should we reorganize? is it worth it?
     //
-    // if let Some(this_branch) = state.get_dual_branch() {
+    // if let Some(this_branch) = state!().get_dual_branch() {
     //   if self.dual_reversion.is_none() {
     //     self.dual_reversion = Some(HashMap::default());
     //   }
@@ -789,20 +786,20 @@
     <span class="self">self</span>.properties.get(key).map(Cow::Borrowed)
   }
   <span class="kw">fn </span>get_property_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Stored&gt; { <span class="self">self</span>.properties.get_mut(key) }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
-    <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert(state)<span class="question-mark">?</span>.to_string()))
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; {
+    <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.revert()<span class="question-mark">?</span>.to_string()))
   }
 
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="comment">// Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
 
-    // my $profiled = $STATE-&gt;lookupValue(&#39;PROFILING&#39;) &amp;&amp; $defn-&gt;getCS;
+    // my $profiled = $state-&gt;lookupValue(&#39;PROFILING&#39;) &amp;&amp; $defn-&gt;getCS;
     // LaTeXML::Definition::startProfiling($profiled, &#39;absorb&#39;) if $profiled;
     // info!(target:&quot;whatsit:be_absorbed&quot;, &quot;{:?}&quot;, self);
 
-    </span><span class="self">self</span>.definition.do_absorbtion(document, <span class="self">self</span>, state)
+    </span><span class="self">self</span>.definition.do_absorbtion(document, <span class="self">self</span>)
     <span class="comment">// LaTeXML::Definition::stopProfiling($profiled, &#39;absorb&#39;) if $profiled;
   </span>}
   <span class="kw">fn </span>get_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
@@ -812,11 +809,11 @@
     })
   }
 
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; {
     <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">&quot;font&quot;</span>) {
       <span class="prelude-val">Some</span>(Stored::Font(font)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned((<span class="kw-2">**</span>font).clone()))),
       <span class="prelude-val">Some</span>(Stored::FontDirective(fd)) =&gt; <span class="kw">match </span>fd {
-        FontDirective::Closure(<span class="kw-2">ref </span>code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>), state)<span class="question-mark">?</span>))),
+        FontDirective::Closure(<span class="kw-2">ref </span>code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>))),
         FontDirective::Asset(<span class="kw-2">ref </span>asset) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(asset))),
       },
       <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
@@ -832,11 +829,10 @@
   <span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     options: HashMap&lt;String, Stored&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
     <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
-      sizer(<span class="self">self</span>, state)
+      sizer(<span class="self">self</span>)
     } <span class="kw">else </span>{
       <span class="comment">// Nothing specified? use #body if any, else sum all box args
       </span><span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
@@ -854,9 +850,9 @@
       <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">&quot;font&quot;</span>).unwrap() {
         sf.clone()
       } <span class="kw">else </span>{
-        state.lookup_font().unwrap()
+        lookup_font().unwrap()
       };
-      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options, state)
+      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
     }
   }
 }

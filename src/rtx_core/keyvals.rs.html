@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyvals.rs`."><title>keyvals.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/keyvals.rs`."><title>keyvals.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -677,13 +677,6 @@
 <a href="#677" id="677">677</a>
 <a href="#678" id="678">678</a>
 <a href="#679" id="679">679</a>
-<a href="#680" id="680">680</a>
-<a href="#681" id="681">681</a>
-<a href="#682" id="682">682</a>
-<a href="#683" id="683">683</a>
-<a href="#684" id="684">684</a>
-<a href="#685" id="685">685</a>
-<a href="#686" id="686">686</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::slice::Iter;
 <span class="kw">use </span>libxml::tree::Node;
 <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -696,14 +689,12 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::locator::Locator;
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
-<span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
-<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
+<span class="kw">use crate</span>::{gullet};
 <span class="comment">// use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 </span><span class="kw">use </span><span class="kw">crate</span>::document::Document;
 <span class="comment">// use crate::list::List;
 </span><span class="kw">use </span><span class="kw">crate</span>::keyval::KeyVal;
-<span class="kw">use </span><span class="kw">crate</span>::state::State;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use crate</span>::{BoxOps, Digested, NO_PROPERTIES};
@@ -769,16 +760,15 @@
   }
   <span class="kw">fn </span>stringify(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String { <span class="string">&quot;KeyVals:TODO&quot;</span>.to_string() }
 
-  <span class="kw">fn </span>be_digested(<span class="kw-2">mut </span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+  <span class="kw">fn </span>be_digested(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
     <span class="kw">if </span><span class="self">self</span>.was_digested {
       <span class="macro">Info!</span>(
         <span class="string">&quot;ignore&quot;</span>,
         <span class="string">&quot;keyvals&quot;</span>,
-        stomach,
         <span class="string">&quot;Skipping digestion of \\setkeys as requested (did you digest a KeyVals twice?) &quot;
       </span>);
     } <span class="kw">else </span>{
-      stomach.digest(<span class="self">self</span>.set_keys_expansion(), state)<span class="question-mark">?</span>;
+      <span class="kw">crate</span>::stomach::digest(<span class="self">self</span>.set_keys_expansion())<span class="question-mark">?</span>;
     }
 
     <span class="comment">// new tuples we want to create
@@ -789,17 +779,17 @@
       <span class="kw">let </span>(key, value, use_default, resolution, keyval) = tuple;
       <span class="comment">// digest a single token
       </span><span class="kw">let </span>value_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = value.into();
-      <span class="kw">let </span>digested_value: Digested = <span class="kw">if let </span><span class="prelude-val">Some</span>(keydef) = keyval.get_type(state) {
+      <span class="kw">let </span>digested_value: Digested = <span class="kw">if let </span><span class="prelude-val">Some</span>(keydef) = keyval.get_type() {
         <span class="comment">// keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to
         // keyval specifications.
         </span>keydef
-          .digest(stomach, value_tokens_opt.into(), <span class="prelude-val">None</span>, state)<span class="question-mark">?
+          .digest( value_tokens_opt.into(), <span class="prelude-val">None</span>)<span class="question-mark">?
           </span>.unwrap()
       } <span class="kw">else </span>{
         <span class="kw">let </span>value_tokens = value_tokens_opt.unwrap_or_default();
-        value_tokens.be_digested(stomach, state)<span class="question-mark">?
+        value_tokens.be_digested()<span class="question-mark">?
       </span>};
       new_tuples.push((key, digested_value.into(), use_default, resolution, keyval));
     }
@@ -829,18 +819,17 @@
   <span class="kw">where </span>FnR: FnOnce(<span class="kw-2">&amp;</span>HashMap&lt;String, Stored&gt;) -&gt; R {
     caller(<span class="kw-2">&amp;</span>NO_PROPERTIES)
   }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="prelude-val">Ok</span>(Cow::Owned(<span class="self">self</span>.to_string())) }
   <span class="kw">fn </span>set_property&lt;T: Into&lt;Stored&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _key: <span class="kw-2">&amp;</span>str, _value: T) {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="prelude-val">Ok</span>(Vec::new())
   } <span class="comment">// TODO
-  </span><span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) } <span class="comment">// TODO
+  </span><span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) } <span class="comment">// TODO
   </span><span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     _options: HashMap&lt;String, Stored&gt;,
-    _state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(
     <span class="kw">crate</span>::common::dimension::Dimension,
     <span class="kw">crate</span>::common::dimension::Dimension,
@@ -869,7 +858,7 @@
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  </span><span class="kw">pub fn </span>new(options: KeyvalsConfig, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="self">Self </span>{
+  </span><span class="kw">pub fn </span>new(options: KeyvalsConfig) -&gt; <span class="self">Self </span>{
     <span class="comment">// parse all the arguments
     </span><span class="kw">let </span>prefix = options.prefix.unwrap_or_else(|| String::from(<span class="string">&quot;KV&quot;</span>));
     <span class="comment">// $keysets = [split(&#39;,&#39;, ToString(defined($keysets) ? $keysets : &#39;_anonymous_&#39;))] unless
@@ -946,19 +935,18 @@
 
   <span class="kw">fn </span>read_keyword_from(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+
     ignore: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>Token],
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;Token&gt;)&gt; {
     <span class="comment">// set of tokens we will expand
     </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
 
     <span class="comment">// we do not want any spaces
-    </span>gullet.skip_spaces(state)<span class="question-mark">?</span>;
+    </span>gullet::skip_spaces()<span class="question-mark">?</span>;
 
     <span class="comment">// read tokens one-by-one
     </span><span class="kw">let </span><span class="kw-2">mut </span>last_token = <span class="prelude-val">None</span>;
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
       <span class="comment">// skip to the next iteration if we have a paragraph
       </span><span class="kw">if </span>token == <span class="macro">T_CS!</span>(<span class="string">&quot;\\par&quot;</span>) {
         <span class="kw">continue</span>;
@@ -1050,7 +1038,7 @@
     // let rmtokens    = ();
 
     // // read in existing tokens (if they are defined)
-    // if ($definedrm &amp;&amp; $STATE-&gt;lookupMeaning($rmmacro)) {
+    // if ($definedrm &amp;&amp; $state-&gt;lookupMeaning($rmmacro)) {
     //   @rmtokens = LaTeXML::Package::Expand($rmmacro)-&gt;unlist; }
 
     // define some xkeyval internals
@@ -1121,8 +1109,7 @@
     key: <span class="kw-2">&amp;</span>str,
     value: Stored,
     use_default: bool,
-    no_rebuild: bool,
-    state: <span class="kw-2">&amp;</span>State,
+    no_rebuild: bool
   ) {
     <span class="comment">// figure out the keyset(s) for the key to be added
     </span><span class="kw">let </span>keysets = <span class="self">self</span>.resolve_keyval_for(key);
@@ -1131,7 +1118,7 @@
     <span class="comment">// and add the new tuple to the set of tuples
     </span><span class="kw">let </span>value = <span class="kw">if </span>use_default {
       headset
-        .get_default(state)
+        .get_default()
         .unwrap_or_else(|| Stored::String(<span class="kw-2">*</span>EMPTY_SYM))
     } <span class="kw">else </span>{
       value
@@ -1146,11 +1133,11 @@
     }
   }
 
-  <span class="kw">pub fn </span>set_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: Stored, use_default: bool, state: <span class="kw-2">&amp;</span>State) {
+  <span class="kw">pub fn </span>set_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: Stored, use_default: bool) {
     <span class="comment">// delete the existing values by skipping key
     </span><span class="self">self</span>.rebuild(<span class="prelude-val">Some</span>(key));
     <span class="comment">// set normally
-    </span><span class="self">self</span>.add_value(key, value, use_default, <span class="bool-val">false</span>, state);
+    </span><span class="self">self</span>.add_value(key, value, use_default, <span class="bool-val">false</span>);
   }
 
   <span class="kw">fn </span>set_tuples(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tuples: Vec&lt;KVTuple&gt;) {
@@ -1208,7 +1195,7 @@
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
-  </span><span class="kw">pub fn </span>read_from(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, until: Token, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  </span><span class="kw">pub fn </span>read_from(<span class="kw-2">&amp;mut </span><span class="self">self</span>, until: Token) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// TODO
     // # if we want to force skip_missing keys, we set it up here
     // my $silenceMissing = $options{silenceMissing} ? 1 : 0;
@@ -1222,10 +1209,10 @@
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    </span><span class="kw">let </span>startloc = gullet.get_locator().unwrap().into_owned();
+    </span><span class="kw">let </span>startloc = gullet::get_locator().unwrap();
 
     <span class="comment">// set and read tokens
-    </span><span class="kw">let </span>_open = gullet.read_token(state);
+    </span><span class="kw">let </span>_open = gullet::read_token();
     <span class="kw">let </span>assign = <span class="macro">T_OTHER!</span>(<span class="string">&quot;=&quot;</span>);
     <span class="kw">let </span>punct = <span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>);
     <span class="kw">let </span>punct_tks = <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;,&quot;</span>));
@@ -1241,7 +1228,7 @@
     </span><span class="kw">loop </span>{
       <span class="comment">// Read a single keyword, get a delimiter and a set of keyword tokens
       </span><span class="kw">let </span>(ktoks, <span class="kw-2">mut </span>delim_opt) =
-        <span class="self">self</span>.read_keyword_from(gullet, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>until, <span class="kw-2">&amp;</span>assign, <span class="kw-2">&amp;</span>punct], state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.read_keyword_from(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>until, <span class="kw-2">&amp;</span>assign, <span class="kw-2">&amp;</span>punct])<span class="question-mark">?</span>;
       <span class="comment">// if there was no delimiter at the end, we throw an error
       </span><span class="kw">if </span>delim_opt.is_none() {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
@@ -1249,7 +1236,7 @@
           until.stringify()
         );
         <span class="kw">let </span>message2 = <span class="macro">s!</span>(<span class="string">&quot;key started at {}&quot;</span>, startloc.to_string());
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, until, gullet, message, message2);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, until, message, message2);
       }
 
       <span class="comment">// turn the key tokens into a string and normalize
@@ -1265,26 +1252,25 @@
         </span><span class="kw">if </span>!is_default {
           <span class="comment">// setup the key-codes to properly read
           </span><span class="kw">let </span>keyval = <span class="self">self</span>.get_primary_keyval_of(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span><span class="self">self</span>.resolve_keyval_for(<span class="kw-2">&amp;</span>key));
-          <span class="kw">let </span>keydef_opt = keyval.get_type(state);
+          <span class="kw">let </span>keydef_opt = keyval.get_type();
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
             <span class="comment">// TODO:
-            </span>keydef.setup_catcodes(state);
+            </span>keydef.setup_catcodes();
           }
 
           <span class="comment">// read until $punct
           </span><span class="kw">let </span><span class="kw-2">mut </span>toks = Vec::new();
           <span class="kw">loop </span>{
-            delim_opt = gullet
-              .read_match(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>punct_tks, <span class="kw-2">&amp;</span>until_tks], state)<span class="question-mark">?
+            delim_opt = gullet::read_match(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>punct_tks, <span class="kw-2">&amp;</span>until_tks])<span class="question-mark">?
               </span>.map(|tks| tks.into());
             <span class="kw">if </span>delim_opt.is_some() {
               <span class="kw">break</span>; <span class="comment">// only until we hit a delim.
             </span>}
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet.read_token(state)<span class="question-mark">? </span>{
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = gullet::read_token()<span class="question-mark">? </span>{
               <span class="comment">// Copy next token to args
               </span><span class="kw">let </span><span class="kw-2">mut </span>rest = Vec::new();
               <span class="kw">if </span>tok.get_catcode() == Catcode::BEGIN {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(balanced) = gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(balanced) = gullet::read_balanced(<span class="bool-val">false</span>)<span class="question-mark">? </span>{
                   rest.append(<span class="kw-2">&amp;mut </span>balanced.unlist());
                 }
                 rest.push(<span class="macro">T_END!</span>());
@@ -1300,18 +1286,18 @@
           </span><span class="kw">if </span>!toks.is_empty() {
             value = Tokens::new(toks);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
-              value = keydef.reparse(value, gullet, state)<span class="question-mark">?</span>;
+              value = keydef.reparse(value)<span class="question-mark">?</span>;
             }
           }
           <span class="comment">// and cleanup
           </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>keydef) = keydef_opt {
-            keydef.revert_catcodes(state)<span class="question-mark">?</span>;
+            keydef.revert_catcodes()<span class="question-mark">?</span>;
           }
         }
 
         <span class="comment">// and store our value please
         // if !silence_missing || self.can_resolve_keyval_for(key) {
-        </span><span class="self">self</span>.add_value(<span class="kw-2">&amp;</span>key, Stored::Tokens(value), is_default, <span class="bool-val">false</span>, state);
+        </span><span class="self">self</span>.add_value(<span class="kw-2">&amp;</span>key, Stored::Tokens(value), is_default, <span class="bool-val">false</span>);
         <span class="comment">// }
       </span>}
 
@@ -1337,14 +1323,14 @@
   /// [Token, KeyVals, RegisterValue]       potentially? On the other hand, we can also put the
   /// extra effort of *postponing* the build of KV metadata until digestion,       this way not
   /// losing any time reserializing metadata
-  </span><span class="kw">pub fn </span>into_tokens(<span class="self">self</span>, gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">pub fn </span>into_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tks: Vec&lt;Token&gt; = Vec::new();
     <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="self">self</span>.cached_pairs.into_iter() {
       tks.push(<span class="macro">T_OTHER!</span>(k));
       <span class="kw">match </span>v {
         <span class="comment">// TODO: This is a really quick CRUTCH, what is the proper interface?
         </span>Stored::Tokens(vtks) =&gt; {
-          <span class="kw">let </span>expanded = gullet.do_expand(vtks, state)<span class="question-mark">?</span>;
+          <span class="kw">let </span>expanded = gullet::do_expand(vtks)<span class="question-mark">?</span>;
           <span class="kw">let </span><span class="kw-2">mut </span>exp_str = expanded.to_string();
           <span class="kw">if </span>exp_str == <span class="string">&quot;{}&quot; </span>{
             exp_str = String::new();

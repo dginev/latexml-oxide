@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_ch24_primitives.rs`."><title>tex_ch24_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_ch24_primitives.rs`."><title>tex_ch24_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -496,13 +496,6 @@
 <a href="#496" id="496">496</a>
 <a href="#497" id="497">497</a>
 <a href="#498" id="498">498</a>
-<a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
-<a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
-<a href="#505" id="505">505</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">use </span>rtx_core::list::List;
 <span class="kw">use </span>rtx_core::tbox::Tbox;
@@ -518,7 +511,7 @@
 // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
 //**********************************************************************
 
-</span><span class="macro">LoadDefinitions!</span>(state, {
+</span><span class="macro">LoadDefinitions!</span>({
   <span class="comment">//======================================================================
   // Remaining Mode independent primitives in Ch.24, pp.279-280
   // \relax was done as expandable (isn&#39;t that right?)
@@ -529,17 +522,17 @@
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;{&quot;</span>, sub[stomach, (), state] {
-    stomach.bgroup(state);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;{&quot;</span>, {
+    bgroup();
     <span class="kw">let </span>open = Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-        <span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()), <span class="macro">stored_map!</span>(<span class="string">&quot;isEmpty&quot; </span>=&gt; <span class="bool-val">true</span>), state);
-    <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>state.lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) { TexMode::Math} <span class="kw">else </span>{TexMode::Text});
-    <span class="kw">let </span>body = stomach.digest_next_body(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+        <span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>()), <span class="macro">stored_map!</span>(<span class="string">&quot;isEmpty&quot; </span>=&gt; <span class="bool-val">true</span>));
+    <span class="kw">let </span>mode = <span class="prelude-val">Some</span>(<span class="kw">if </span>lookup_bool(<span class="string">&quot;IN_MATH&quot;</span>) { TexMode::Math} <span class="kw">else </span>{TexMode::Text});
+    <span class="kw">let </span>body = stomach::digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>boxes = <span class="macro">vec!</span>[Digested::from(open)];
     boxes.extend(body);
     <span class="kw">let </span><span class="kw-2">mut </span>font = <span class="prelude-val">None</span>;
     <span class="kw">for </span>abox <span class="kw">in </span>boxes.iter().rev() {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(boxfont) = abox.get_font(state)<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(boxfont) = abox.get_font()<span class="question-mark">? </span>{
         font = <span class="prelude-val">Some</span>(boxfont.into_owned());
         <span class="kw">break</span>;
       }
@@ -553,59 +546,52 @@
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(
-    <span class="string">&quot;}&quot;</span>,
-    sub[stomach, (), state] {
-      <span class="kw">let </span>f = <span class="macro">LookupFont!</span>();
-      stomach.egroup(state)<span class="question-mark">?</span>;
-      Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), f, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_END!</span>()), <span class="macro">stored_map!</span>(<span class="string">&quot;isEmpty&quot;</span>=&gt;<span class="bool-val">true</span>), state)
-    }
-  );
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;}&quot;</span>, {
+    <span class="kw">let </span>f = <span class="macro">LookupFont!</span>();
+    egroup()<span class="question-mark">?</span>;
+    Tbox::new(arena::pin_static(<span class="string">&quot;&quot;</span>), f, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_END!</span>()), <span class="macro">stored_map!</span>(<span class="string">&quot;isEmpty&quot;</span>=&gt;<span class="bool-val">true</span>))
+  });
 
   <span class="comment">// These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
   // BUT you DON&#39;T want extra {, } showing up in any untex-ing.
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@hidden@bgroup&quot;</span>, <span class="string">&quot;#body&quot;</span>,
-    before_digest =&gt; sub[stomach,state] { stomach.bgroup(state); },
+    before_digest =&gt; { bgroup(); },
     capture_body =&gt; <span class="bool-val">true</span>,
-    reversion=&gt; sub[whatsit, _args,state] {
+    reversion=&gt; sub[whatsit,_args] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_body()<span class="question-mark">? </span>{
-        body.revert(state)
+        body.revert()
       } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
     }
   );
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@hidden@egroup&quot;</span>, <span class="string">&quot;&quot;</span>,
-    after_digest =&gt; sub[stomach,_args,state] { stomach.egroup(state)<span class="question-mark">?</span>; },
+    after_digest =&gt; { egroup()<span class="question-mark">?</span>; },
     reversion =&gt; <span class="string">&quot;&quot;
   </span>);
 
   <span class="macro">DefPrimitive!</span>(
-  <span class="string">&quot;\\begingroup&quot;</span>, sub[stomach, _args, state] {
-    stomach.begingroup(state);
+  <span class="string">&quot;\\begingroup&quot;</span>, {
+    begingroup();
   });
   <span class="macro">DefPrimitive!</span>(
-  <span class="string">&quot;\\endgroup&quot;</span>, sub[stomach, _args, state] {
-    stomach.endgroup(state)<span class="question-mark">?</span>;
+  <span class="string">&quot;\\endgroup&quot;</span>, {
+    endgroup()<span class="question-mark">?</span>;
   });
 
   <span class="comment">// Debugging aids; Ignored!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\show Token&quot;</span>, sub[stomach,(arg),state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\show Token&quot;</span>, sub[(arg)] {
     <span class="kw">let </span>lhs = <span class="kw">if </span>arg.get_catcode() == Catcode::CS {
       <span class="macro">s!</span>(<span class="string">&quot;{arg}=&quot;</span>)
     } <span class="kw">else </span>{ String::new() };
-    <span class="kw">let </span>stuff = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\meaning&quot;</span>), <span class="macro">vec!</span>[arg], gullet)<span class="question-mark">?</span>;
-    <span class="kw">let </span>rhs = writable_tokens(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(stuff, gullet), state);
+    <span class="kw">let </span>stuff = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\meaning&quot;</span>), <span class="macro">vec!</span>[arg]);
+    <span class="kw">let </span>rhs = writable_tokens(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(stuff));
     <span class="comment">// TODO: add+use `Note!` instead of `eprintln`
     </span><span class="macro">eprintln!</span>(<span class="string">&quot;&gt; {lhs}{rhs}&quot;</span>);
-    <span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>,gullet.get_locator().unwrap_or_default());
-    ()
+    <span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>,get_locator().unwrap_or_default());
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\showbox Number&quot;</span>, sub[stomach,(arg),state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\showbox Number&quot;</span>, sub[(arg)] {
     <span class="kw">let </span>n     = arg.value_of();
-    <span class="kw">let </span>stuff = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;box{n}&quot;</span>));
-    <span class="macro">Debug!</span>(<span class="string">&quot;Box {n} = {stuff:?}&quot;</span>);
-    ()
+    <span class="macro">Debug!</span>(<span class="string">&quot;Box {n} = {:?}&quot;</span>, lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;box{n}&quot;</span>)));
   });
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\showlists&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\showthe Token&quot;</span>, <span class="prelude-val">None</span>);
@@ -613,10 +599,10 @@
   <span class="comment">// DefPrimitive(&#39;\shipout ??
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ignorespaces SkipSpaces&quot;</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@ignorehardspaces&quot;</span>, sub[stomach, (), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lx@ignorehardspaces&quot;</span>, {
     <span class="kw">let </span><span class="kw-2">mut </span>boxes = Vec::new();
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = stomach.get_gullet_mut().read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
-      boxes = stomach.invoke_token(<span class="kw-2">&amp;</span>token, state)<span class="question-mark">?</span>;
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+      boxes = stomach::invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
       <span class="kw">if </span>boxes.is_empty() {
         <span class="kw">break</span>;
       }
@@ -646,55 +632,54 @@
   });
 
   <span class="comment">// \afterassignment saves ONE token (globally!) to execute after the next assignment
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\afterassignment Token&quot;</span>, sub[stomach, (t), state] {
-    state.assign_value(<span class="string">&quot;afterAssignment&quot;</span>, t, <span class="prelude-val">Some</span>(Scope::Global));
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\afterassignment Token&quot;</span>, sub[(t)] {
+    state::assign_value(<span class="string">&quot;afterAssignment&quot;</span>, t, <span class="prelude-val">Some</span>(Scope::Global));
   });
   <span class="comment">// \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\aftergroup Token&quot;</span>, sub[stomach, (t), state] {
-    state.push_value(<span class="string">&quot;afterGroup&quot;</span>, t)
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\aftergroup Token&quot;</span>, sub[(t)] {
+    push_value(<span class="string">&quot;afterGroup&quot;</span>, t)
   });
 
   <span class="comment">// \uppercase&lt;general text&gt;, \lowercase&lt;general text&gt;
 
   // Note that these are NOT expandable, even though the &quot;return&quot; tokens!
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\uppercase GeneralText&quot;</span>, sub[stomach,(tokens), state] {
-    stomach.get_gullet_mut().unread_vec(
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\uppercase GeneralText&quot;</span>, sub[(tokens)] {
+    gullet::unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| uppercase_token(t, state))
+        .map(uppercase_token)
         .collect());
   });
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lowercase GeneralText&quot;</span>, sub[stomach,(tokens), state] {
-    stomach.get_gullet_mut().unread_vec(
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\lowercase GeneralText&quot;</span>, sub[(tokens)] {
+    gullet::unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| lowercase_token(t, state))
+        .map(lowercase_token)
         .collect::&lt;Vec&lt;Token&gt;&gt;());
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\message{}&quot;</span>, sub [stomach, (message), state] {
-    <span class="kw">if </span>state.lookup_int(<span class="string">&quot;VERBOSITY&quot;</span>) &gt; -<span class="number">1 </span>{
-      <span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>, writable_tokens(
-        <span class="kw-2">&amp;</span>do_expand(message, stomach.get_gullet_mut(), state)<span class="question-mark">?</span>, state));
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\message{}&quot;</span>, sub [(message)] {
+    <span class="kw">if </span>lookup_int(<span class="string">&quot;VERBOSITY&quot;</span>) &gt; -<span class="number">1 </span>{
+      <span class="macro">eprintln!</span>(<span class="string">&quot;{}&quot;</span>, writable_tokens(<span class="kw-2">&amp;</span>do_expand(message)<span class="question-mark">?</span>));
     }
   });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\errhelp&quot;</span>, <span class="macro">Tokens!</span>());
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\errmessage{}&quot;</span>, sub[stomach,(args),state] {
-    <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
-    <span class="kw">let </span>message = <span class="macro">Expand!</span>(args, gullet, state);
-    <span class="kw">let </span>help = <span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\the&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\errhelp&quot;</span>)), gullet, state);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\errmessage{}&quot;</span>, sub[(args)] {
+
+    <span class="kw">let </span>message = <span class="macro">Expand!</span>(args);
+    <span class="kw">let </span>help = <span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\the&quot;</span>), <span class="macro">T_CS!</span>(<span class="string">&quot;\\errhelp&quot;</span>)));
     <span class="macro">eprintln!</span>(<span class="string">&quot;{}: {}&quot;</span>, message, help);
   });
 
   <span class="comment">// TeX I/O primitives
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\openin Number SkipMatch:= SkipSpaces TeXFileName&quot;</span>,
-  sub[stomach, (port, filename), state] {
+  sub[(port, filename)] {
     <span class="kw">let </span>port = port.to_string();
     <span class="kw">let </span>filename = filename.to_string();
     <span class="comment">// possibly should close $port if it&#39;s already been opened?
     // Rely on FindFile to enforce any access restrictions
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>filename, <span class="prelude-val">Some</span>(
-      FindFileOptions {forbid_ltxml: <span class="bool-val">true</span>, ..FindFileOptions::default()}), state) {
+      FindFileOptions {forbid_ltxml: <span class="bool-val">true</span>, ..FindFileOptions::default()})) {
       <span class="kw">let </span>content_str = <span class="macro">LookupString!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,path));
       <span class="kw">let </span>content = <span class="kw">if </span>content_str.is_empty() {
         <span class="prelude-val">None
@@ -704,37 +689,38 @@
       <span class="kw">let </span>mouth = Mouth::create(<span class="kw-2">&amp;</span>path, MouthOptions {
         content,
         .. MouthOptions::default()
-      }, state)<span class="question-mark">?</span>;
+      })<span class="question-mark">?</span>;
       <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port), mouth, <span class="prelude-val">Some</span>(Scope::Global));
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\closein Number&quot;</span>, sub[stomach, (port), state] {
-    <span class="comment">// Clone the Rc&lt;&gt; for mouth out of state, since we&#39;ll be mutating.
-    </span><span class="kw">let </span>file_key = <span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port);
-    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(<span class="kw-2">ref </span>mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span>file_key) {
-      <span class="prelude-val">Some</span>(Rc::clone(mouth))
-    } <span class="kw">else </span>{
-      <span class="prelude-val">None
-    </span>};
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\closein Number&quot;</span>, sub[(port)] {
+    <span class="kw">let </span>file_key = <span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port);
+    <span class="kw">let </span><span class="kw-2">mut </span>finished = <span class="bool-val">false</span>;
     <span class="comment">//   close the mouth (if any) and clear the variable
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = mouth_opt {
-      mouth.borrow_mut().finish(state);
-      <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    </span>with_value(<span class="kw-2">&amp;</span>file_key, |mouth_opt|
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(<span class="kw-2">ref </span>mouth)) = mouth_opt {
+        mouth.borrow_mut().finish();
+        finished = <span class="bool-val">true</span>;
+      });
+    <span class="kw">if </span>finished {
+      <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span>file_key, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
     }
   });
 
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\read Number SkipKeyword:to SkipSpaces Token&quot;</span>,
-    sub[stomach, (port, token), state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth_stored)) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>)) {
-      <span class="kw">let </span>mouth_obj = Rc::clone(mouth_stored);
-      stomach.bgroup(state);
+    sub[(port, token)] {
+    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth_stored)) = lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>)) {
+      <span class="prelude-val">Some</span>(mouth_stored)
+    } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth_obj) = mouth_opt {
+      bgroup();
       <span class="macro">AssignValue!</span>(<span class="string">&quot;PRESERVE_NEWLINES&quot;</span>, <span class="number">2</span>); <span class="comment">// Special EOL/EOF treatment for \read
       </span><span class="macro">AssignValue!</span>(<span class="string">&quot;INCLUDE_COMMENTS&quot;</span>, <span class="bool-val">false</span>);
       <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
       <span class="kw">let </span><span class="kw-2">mut </span>level = <span class="number">0</span>;
       <span class="kw">let </span><span class="kw-2">mut </span>mouth = mouth_obj.borrow_mut();
-      <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = mouth.read_token(state) {
+      <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = mouth.read_token() {
         <span class="kw">let </span>cc = t.get_catcode();
         <span class="kw">if </span>cc != Catcode::MARKER {
           tokens.push(t);
@@ -744,27 +730,28 @@
           Catcode::END =&gt; {level -= <span class="number">1</span>},
           <span class="kw">_ </span>=&gt; {}
         };
-        <span class="kw">if </span>level == <span class="number">0 </span>&amp;&amp; mouth.is_eol(state) {
+        <span class="kw">if </span>level == <span class="number">0 </span>&amp;&amp; mouth.is_eol() {
           <span class="kw">break</span>;
         }
       }
-      stomach.egroup(state)<span class="question-mark">?</span>;
+      egroup()<span class="question-mark">?</span>;
       <span class="macro">DefMacro!</span>(token, <span class="prelude-val">None</span>, Tokens::new(tokens), nopack_parameters =&gt; <span class="bool-val">true</span>);
     }
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifeof Number&quot;</span>, sub[gullet, (port), state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port)) {
-      mouth.borrow().at_eof()
-    } <span class="kw">else </span>{
-      <span class="bool-val">true
-    </span>}
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifeof Number&quot;</span>, sub[(port)] {
+    with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;input_file:{}&quot;</span>, port), |val_opt|
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = val_opt {
+        mouth.borrow().at_eof()
+      } <span class="kw">else </span>{
+        <span class="bool-val">true
+      </span>})
   });
 
   <span class="comment">// For output files, we&#39;ll write the data to a cached internal copy
   // rather than to the actual file system.
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\openout Number SkipMatch:= SkipSpaces TeXFileName&quot;</span>,
-    sub[stomach, (port, filename), state] {
+    sub[(port, filename)] {
     <span class="kw">let </span>port = port.to_string();
     <span class="kw">let </span>filename = filename.to_string();
     <span class="kw">let </span>contents_key = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,filename);
@@ -772,21 +759,22 @@
     <span class="macro">AssignValue!</span>(contents_key =&gt; <span class="string">&quot;&quot;</span>,  <span class="prelude-val">Some</span>(Scope::Global));
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\closeout Number&quot;</span>, sub[stomach, (port), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\closeout Number&quot;</span>, sub[(port)] {
     <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;output_file:{}&quot;</span>,port), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\write Number {}&quot;</span>, sub[stomach, (port, tokens), state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;output_file:{}&quot;</span>, port)) {
-      <span class="kw">let </span>handle   = <span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,filename);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\write Number {}&quot;</span>, sub[(port, tokens)] {
+    <span class="kw">let </span>handle = with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;output_file:{}&quot;</span>, port), |val_opt|
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = val_opt {
+       <span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>,filename)
+    } <span class="kw">else </span>{ String::new() });
+    <span class="kw">if </span>!handle.is_empty() {
       <span class="kw">let </span><span class="kw-2">mut </span>contents : String = <span class="macro">LookupString!</span>(<span class="kw-2">&amp;</span>handle);
-      <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
-      contents.push_str(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(tokens,gullet,state).untex());
+      contents.push_str(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(tokens).untex());
       contents.push(<span class="string">&#39;\n&#39;</span>);
       <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span>handle =&gt; contents, <span class="prelude-val">Some</span>(Scope::Global));
     } <span class="kw">else </span>{
-      <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-      <span class="macro">println_stderr!</span>(<span class="string">&quot;{}&quot;</span>, <span class="macro">Expand!</span>(tokens, gullet).untex());
+      <span class="macro">println_stderr!</span>(<span class="string">&quot;{}&quot;</span>, <span class="macro">Expand!</span>(tokens).untex());
     }
   });
 
@@ -797,7 +785,7 @@
   <span class="comment">//======================================================================
   // Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\special {}&quot;</span>, sub[stomach,(arg),state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\special {}&quot;</span>, sub[(arg)] {
     <span class="kw">let </span>special_str = arg.to_string();
     <span class="comment">// recognize one special graphics inclusion case
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(cap) = PSFILE_REGEX.captures(<span class="kw-2">&amp;</span>special_str) {
@@ -822,12 +810,12 @@
         wrapped.push(<span class="macro">T_OTHER!</span>(<span class="string">&quot;]&quot;</span>));
         kv = wrapped;
       }
-      <span class="kw">let </span><span class="kw-2">mut </span>gullet = stomach.get_gullet_mut();
-      gullet.unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(graphic), <span class="macro">T_END!</span>()]);
-      gullet.unread_vec(kv);
-      gullet.unread_one(<span class="macro">T_CS!</span>(<span class="string">&quot;\\ltx@special@graphics&quot;</span>));
+
+      gullet::unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(graphic), <span class="macro">T_END!</span>()]);
+      gullet::unread_vec(kv);
+      gullet::unread_one(<span class="macro">T_CS!</span>(<span class="string">&quot;\\ltx@special@graphics&quot;</span>));
     } <span class="kw">else </span>{
-      <span class="macro">Info!</span>(<span class="string">&quot;ignored&quot;</span>, <span class="string">&quot;special&quot;</span>, stomach, <span class="macro">s!</span>(<span class="string">&quot;Unrecognized TeX Special: {arg}&quot;</span>));
+      <span class="macro">Info!</span>(<span class="string">&quot;ignored&quot;</span>, <span class="string">&quot;special&quot;</span>, <span class="macro">s!</span>(<span class="string">&quot;Unrecognized TeX Special: {arg}&quot;</span>));
     }
   });
 
@@ -890,12 +878,12 @@
   <span class="comment">// \kern is heavily used by xy.
   // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\kern Dimension&quot;</span>, sub[document,args,state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\kern Dimension&quot;</span>, sub[document,args] {
     <span class="kw">let </span>length = <span class="kw">if let </span>DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[<span class="number">0</span>].as_ref().unwrap().data() {
         <span class="kw-2">*</span>d
       } <span class="kw">else </span>{ Dimension::default() };
-      <span class="kw">let </span>is_svg_g = document.with_node_qname(document.get_node(), state,
+      <span class="kw">let </span>is_svg_g = document::with_node_qname(document.get_node(),
         |qname| qname == <span class="string">&quot;svg:g&quot;</span>);
     <span class="kw">let </span>parent = document.get_node_mut();
     <span class="kw">if </span>is_svg_g {
@@ -909,8 +897,8 @@
         transform.push_str(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;translate({x},0)&quot;</span>));
         parent.set_attribute(<span class="string">&quot;transform&quot;</span>, <span class="kw-2">&amp;</span>transform)<span class="question-mark">?</span>;
       }
-    } <span class="kw">else if </span>in_svg(document,state) {
-      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;kern&quot;</span>, document, <span class="macro">s!</span>(<span class="string">&quot;Lost kern in SVG {length}&quot;</span>));
+    } <span class="kw">else if </span>in_svg(document) {
+      <span class="macro">Warn!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;kern&quot;</span>, <span class="macro">s!</span>(<span class="string">&quot;Lost kern in SVG {length}&quot;</span>));
     }
   });
   <span class="macro">DefMacro!</span>(
@@ -920,11 +908,11 @@
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unpenalty&quot;</span>, <span class="prelude-val">None</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unkern&quot;</span>, <span class="prelude-val">None</span>);
   <span class="comment">// Worrisome, but...
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unskip&quot;</span>, sub[stomach,(),state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\unskip&quot;</span>, {
     <span class="comment">// pop until a non-empty box is found
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(last_box) = stomach.box_list.pop() {
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(last_box) = pop_box_list() {
       <span class="kw">if </span>!last_box.is_empty()<span class="question-mark">? </span>{
-        stomach.box_list.push(last_box);
+        push_box_list(last_box);
         <span class="kw">break</span>;
       }
     }
@@ -935,9 +923,7 @@
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\insert Number&quot;</span>, <span class="prelude-val">None</span>);
   <span class="comment">// \vadjust&lt;filler&gt;{&lt;vertical mode material&gt;}
   // Note: \vadjust ignores in vertical mode...
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\vadjust {}&quot;</span>, sub[stomach,(arg),state] {
-    state.push_tokens(<span class="string">&quot;vAdjust&quot;</span>, arg);
-  });
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\vadjust {}&quot;</span>, sub[(arg)] { push_tokens(<span class="string">&quot;vAdjust&quot;</span>, arg); });
 
   <span class="comment">//======================================================================
   // Remaining Vertical Mode primitives in Ch.24, pp.281--283
@@ -961,13 +947,13 @@
   <span class="comment">// \moveleft&lt;dimen&gt;&lt;box&gt;, \moveright&lt;dimen&gt;&lt;box&gt;
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\moveleft Dimension MoveableBox&quot;</span>,
     <span class="string">&quot;&lt;ltx:text xoffset=&#39;#x&#39; _noautoclose=&#39;true&#39;&gt;#2&lt;/ltx:text&gt;&quot;</span>,
-    after_digest =&gt; sub[_stomach,whatsit,_state] {
+    after_digest =&gt; sub[whatsit] {
       <span class="kw">if let </span>DigestedData::RegisterValue(d) = whatsit.get_arg(<span class="number">1</span>).unwrap().data() {
         whatsit.set_property(<span class="string">&quot;x&quot;</span>, d.clone().multiply(Number::new(-<span class="number">1</span>)));
       }});
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\moveright Dimension MoveableBox&quot;</span>,
     <span class="string">&quot;&lt;ltx:text xoffset=&#39;#x&#39; _noautoclose=&#39;true&#39;&gt;#2&lt;/ltx:text&gt;&quot;</span>,
-    after_digest =&gt; sub[_stomach,whatsit,_state] {
+    after_digest =&gt; sub[whatsit] {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(dimension) = whatsit.get_arg(<span class="number">1</span>) {
         whatsit.set_property(<span class="string">&quot;x&quot;</span>, dimension.clone());
       }});
@@ -975,17 +961,17 @@
   <span class="comment">// DG: TODO: We need tests+examples here, a bit lost in the typing interface...
   //
   // # \unvbox&lt;8bit&gt;, \unvcopy&lt;8bit&gt;
-  // DefPrimitive!(&quot;\\unvbox Number&quot;, sub[stomach,(number),state] {
+  // DefPrimitive!(&quot;\\unvbox Number&quot;, sub[(number)] {
   //   let box_key   = s!(&quot;box{}&quot;,number.value_of());
-  //   let stuff = state.lookup_tokens(&amp;box_key);
-  //   adjust_box_color(stuff, state);
+  //   let stuff = state!().lookup_tokens(&amp;box_key);
+  //   adjust_box_color(stuff);
   //   AssignValue!(&amp;box_key, None);
   //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
   // });
-  // DefPrimitive!(&quot;\\unvcopy Number&quot;, sub[stomach,(number),state] {
+  // DefPrimitive!(&quot;\\unvcopy Number&quot;, sub[(number)] {
   //   let box_key   = s!(&quot;box{}&quot;,number.value_of());
-  //   let stuff = state.lookup_tokens(&amp;box_key);
-  //   adjust_box_color(stuff, state);
+  //   let stuff = state!().lookup_tokens(&amp;box_key);
+  //   adjust_box_color(stuff);
   //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
   // });
 
@@ -993,15 +979,15 @@
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
-  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vskip Glue&quot;</span>, sub[document, args, _props, state] {
+  </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\vskip Glue&quot;</span>, sub[document, args, _props] {
     <span class="macro">unref!</span>(args =&gt; length);
     <span class="kw">let </span>length = length.pt_value(<span class="prelude-val">None</span>);
 
     <span class="kw">if </span>length &gt; <span class="number">10.0 </span>{    <span class="comment">// Or what!?!?!?!
-      </span><span class="kw">if </span>document.is_closeable(<span class="string">&quot;ltx:para&quot;</span>, state).is_some() {
-        document.close_element(<span class="string">&quot;ltx:para&quot;</span>, state)<span class="question-mark">?</span>;
-      } <span class="kw">else if </span>document.is_openable(<span class="string">&quot;ltx:break&quot;</span>, state) {
-        document.insert_element(<span class="string">&quot;ltx:break&quot;</span>, Vec::new(), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+      </span><span class="kw">if </span>document.is_closeable(<span class="string">&quot;ltx:para&quot;</span>).is_some() {
+        document.close_element(<span class="string">&quot;ltx:para&quot;</span>)<span class="question-mark">?</span>;
+      } <span class="kw">else if </span>document.is_openable(<span class="string">&quot;ltx:break&quot;</span>) {
+        document.insert_element(<span class="string">&quot;ltx:break&quot;</span>, Vec::new(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       }
     }},
      <span class="comment">// TODO: &quot;height&quot; property

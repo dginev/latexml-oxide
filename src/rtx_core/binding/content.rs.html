@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/content.rs`."><title>content.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/binding/content.rs`."><title>content.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_core/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1205,104 +1205,29 @@
 <a href="#1205" id="1205">1205</a>
 <a href="#1206" id="1206">1206</a>
 <a href="#1207" id="1207">1207</a>
-<a href="#1208" id="1208">1208</a>
-<a href="#1209" id="1209">1209</a>
-<a href="#1210" id="1210">1210</a>
-<a href="#1211" id="1211">1211</a>
-<a href="#1212" id="1212">1212</a>
-<a href="#1213" id="1213">1213</a>
-<a href="#1214" id="1214">1214</a>
-<a href="#1215" id="1215">1215</a>
-<a href="#1216" id="1216">1216</a>
-<a href="#1217" id="1217">1217</a>
-<a href="#1218" id="1218">1218</a>
-<a href="#1219" id="1219">1219</a>
-<a href="#1220" id="1220">1220</a>
-<a href="#1221" id="1221">1221</a>
-<a href="#1222" id="1222">1222</a>
-<a href="#1223" id="1223">1223</a>
-<a href="#1224" id="1224">1224</a>
-<a href="#1225" id="1225">1225</a>
-<a href="#1226" id="1226">1226</a>
-<a href="#1227" id="1227">1227</a>
-<a href="#1228" id="1228">1228</a>
-<a href="#1229" id="1229">1229</a>
-<a href="#1230" id="1230">1230</a>
-<a href="#1231" id="1231">1231</a>
-<a href="#1232" id="1232">1232</a>
-<a href="#1233" id="1233">1233</a>
-<a href="#1234" id="1234">1234</a>
-<a href="#1235" id="1235">1235</a>
-<a href="#1236" id="1236">1236</a>
-<a href="#1237" id="1237">1237</a>
-<a href="#1238" id="1238">1238</a>
-<a href="#1239" id="1239">1239</a>
-<a href="#1240" id="1240">1240</a>
-<a href="#1241" id="1241">1241</a>
-<a href="#1242" id="1242">1242</a>
-<a href="#1243" id="1243">1243</a>
-<a href="#1244" id="1244">1244</a>
-<a href="#1245" id="1245">1245</a>
-<a href="#1246" id="1246">1246</a>
-<a href="#1247" id="1247">1247</a>
-<a href="#1248" id="1248">1248</a>
-<a href="#1249" id="1249">1249</a>
-<a href="#1250" id="1250">1250</a>
-<a href="#1251" id="1251">1251</a>
-<a href="#1252" id="1252">1252</a>
-<a href="#1253" id="1253">1253</a>
-<a href="#1254" id="1254">1254</a>
-<a href="#1255" id="1255">1255</a>
-<a href="#1256" id="1256">1256</a>
-<a href="#1257" id="1257">1257</a>
-<a href="#1258" id="1258">1258</a>
-<a href="#1259" id="1259">1259</a>
-<a href="#1260" id="1260">1260</a>
-<a href="#1261" id="1261">1261</a>
-<a href="#1262" id="1262">1262</a>
-<a href="#1263" id="1263">1263</a>
-<a href="#1264" id="1264">1264</a>
-<a href="#1265" id="1265">1265</a>
-<a href="#1266" id="1266">1266</a>
-<a href="#1267" id="1267">1267</a>
-<a href="#1268" id="1268">1268</a>
-<a href="#1269" id="1269">1269</a>
-<a href="#1270" id="1270">1270</a>
-<a href="#1271" id="1271">1271</a>
-<a href="#1272" id="1272">1272</a>
-<a href="#1273" id="1273">1273</a>
-<a href="#1274" id="1274">1274</a>
-<a href="#1275" id="1275">1275</a>
-<a href="#1276" id="1276">1276</a>
-<a href="#1277" id="1277">1277</a>
-<a href="#1278" id="1278">1278</a>
-<a href="#1279" id="1279">1279</a>
-<a href="#1280" id="1280">1280</a>
-<a href="#1281" id="1281">1281</a>
-<a href="#1282" id="1282">1282</a>
-<a href="#1283" id="1283">1283</a>
-<a href="#1284" id="1284">1284</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <span class="kw">use </span>std::borrow::Cow;
 <span class="kw">use </span>std::collections::VecDeque;
 <span class="kw">use </span>std::path::Path;
+<span class="kw">use </span>std::rc::Rc;
 
+<span class="kw">use </span><span class="kw">crate</span>::util::pathname::{<span class="self">self</span>, PathnameFindOptions};
 <span class="kw">use </span><span class="kw">crate</span>::common::arena;
 <span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::common::font::{Font, Fontmap};
-<span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+<span class="kw">use </span><span class="kw">crate</span>::common::model;
 <span class="kw">use </span><span class="kw">crate</span>::document::resource::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::document::tag::{TagOptionName, TagOptions};
-<span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::{Mouth, MouthOptions};
+<span class="kw">use </span><span class="kw">crate</span>::gullet::do_expand;
 <span class="kw">use </span><span class="kw">crate</span>::parameter::{Parameter, Parameters};
-<span class="kw">use </span><span class="kw">crate</span>::state::{Scope, State, Stored};
-<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
+<span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
+<span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::util::pathname::{<span class="self">self</span>, PathnameFindOptions};
-<span class="kw">use crate</span>::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::gullet;
+<span class="kw">use </span><span class="kw">crate</span>::stomach::<span class="kw-2">*</span>;
 <span class="comment">// use crate::util::pathname::PathnameFindOptions;
 </span><span class="kw">use </span><span class="kw">crate</span>::Digested;
 
@@ -1353,24 +1278,20 @@
 <span class="doccomment">/// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 </span><span class="kw">pub fn </span>input_definitions(
   raw_file: <span class="kw-2">&amp;</span>str,
-  <span class="kw-2">mut </span>options: InputDefinitionOptions,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
+  <span class="kw-2">mut </span>options: InputDefinitionOptions
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>name = raw_file.trim();
   <span class="comment">// Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let&#39;s make stomach a mandatory option.
   </span><span class="kw">let </span>prevname =
-    <span class="kw">if </span>options.handleoptions &amp;&amp; state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>))<span class="question-mark">?</span>.is_some() {
-      <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-      gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>), state)<span class="question-mark">?</span>.to_string()
+    <span class="kw">if </span>options.handleoptions &amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>))<span class="question-mark">?</span>.is_some() {
+      gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>))<span class="question-mark">?</span>.to_string()
     } <span class="kw">else </span>{
       String::new()
     };
-  <span class="kw">let </span>prevext = <span class="kw">if </span>options.handleoptions &amp;&amp; state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>))<span class="question-mark">?</span>.is_some()
+  <span class="kw">let </span>prevext = <span class="kw">if </span>options.handleoptions &amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>))<span class="question-mark">?</span>.is_some()
   {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    gullet.do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>), state)<span class="question-mark">?</span>.to_string()
+    gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>))<span class="question-mark">?</span>.to_string()
   } <span class="kw">else </span>{
     String::new()
   };
@@ -1378,17 +1299,18 @@
   // IF as_class is true
   // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
   </span><span class="kw">if </span>options.handleoptions &amp;&amp; options.withoptions.is_some() {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(vdq) = state.lookup_vecdeque(<span class="string">&quot;@masquerading@as@class&quot;</span>) {
-      <span class="kw">if </span>vdq.iter().any(|x| {
-        <span class="kw">if let </span>Stored::String(<span class="kw-2">ref </span>v) = x {
-          arena::with(<span class="kw-2">*</span>v, |str| str == prevname)
-        } <span class="kw">else </span>{
-          <span class="bool-val">false
-        </span>}
-      }) {
-        options.as_class = <span class="bool-val">true</span>;
-      }
-    }
+    with_vecdeque(<span class="string">&quot;@masquerading@as@class&quot;</span>, |vdq_opt| {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(vdq) = vdq_opt {
+        <span class="kw">if </span>vdq.iter().any(|x| {
+          <span class="kw">if let </span>Stored::String(<span class="kw-2">ref </span>v) = x {
+            arena::with(<span class="kw-2">*</span>v, |str| str == prevname)
+          } <span class="kw">else </span>{
+            <span class="bool-val">false
+          </span>}
+        }) {
+          options.as_class = <span class="bool-val">true</span>;
+        }
+      }});
   }
   <span class="kw">if </span>options.noltxml {
     options.raw = <span class="bool-val">true</span>; <span class="comment">// so it will be read as raw by Gullet.
@@ -1411,16 +1333,16 @@
   <span class="kw">let </span>current_options = options.options.join(<span class="string">&quot;,&quot;</span>);
   <span class="kw">if </span>!current_options.is_empty() {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(prevoptions)) =
-      state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{filename}_loaded_with_options&quot;</span>))
+      lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{filename}_loaded_with_options&quot;</span>))
     {
-      <span class="kw">if </span>arena::with(<span class="kw-2">*</span>prevoptions, |prev_str| current_options != prev_str) {
+      <span class="kw">if </span>arena::with(prevoptions, |prev_str| current_options != prev_str) {
         <span class="kw">let </span>message = <span class="macro">s!</span>(
           <span class="string">&quot;Option clash for file {} with options {:?}, previously loaded with {:?}&quot;</span>,
           filename,
           current_options,
           prevoptions
         );
-        <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;options&quot;</span>, stomach, message);
+        <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;options&quot;</span>, message);
       }
     }
   }
@@ -1435,14 +1357,12 @@
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(name)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(as_type)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
 
   <span class="comment">// TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
@@ -1455,21 +1375,17 @@
       <span class="kw-2">&amp;</span>prevname,
       <span class="kw-2">&amp;</span>prevext,
       name,
-      <span class="kw-2">&amp;</span>as_type,
-      stomach,
-      state,
-    )<span class="question-mark">?</span>;
+      <span class="kw-2">&amp;</span>as_type)<span class="question-mark">?</span>;
     def_macro(
       <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{}.{}-h@@k&quot;</span>, name, as_type)),
       <span class="prelude-val">None</span>,
       options.after,
       <span class="prelude-val">None</span>,
-      state,
-    )<span class="question-mark">?</span>;
+      )<span class="question-mark">?</span>;
   }
 
   <span class="kw">if </span>!current_options.is_empty() {
-    state.assign_value(
+    assign_value(
       <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_loaded_with_options&quot;</span>, filename),
       current_options,
       <span class="prelude-val">Some</span>(Scope::Global),
@@ -1477,13 +1393,13 @@
   }
 
   <span class="kw">let </span>is_binding = !options.noltxml
-    &amp;&amp; (load_external_binding(<span class="kw-2">&amp;</span>filename, stomach, state)<span class="question-mark">?
-      </span>|| load_binding(<span class="kw-2">&amp;</span>filename, stomach, state)<span class="question-mark">?</span>);
+    &amp;&amp; (load_external_binding(<span class="kw-2">&amp;</span>filename)<span class="question-mark">?
+      </span>|| load_binding(<span class="kw-2">&amp;</span>filename)<span class="question-mark">?</span>);
   <span class="kw">let </span><span class="kw-2">mut </span>is_found_raw = <span class="bool-val">false</span>;
   <span class="kw">if </span>is_binding {
     <span class="comment">// We found and loaded a binding successfully, mark it as such.
     </span><span class="kw">let </span>loaded_flag = <span class="macro">format!</span>(<span class="string">&quot;{filename}_loaded&quot;</span>);
-    state.assign_value(<span class="kw-2">&amp;</span>loaded_flag, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(<span class="kw-2">&amp;</span>loaded_flag, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   } <span class="kw">else </span>{
     <span class="comment">// We&#39;re inverting the control flow, because it is near-instant to check whether we have an
     // available binding dispatcher, in both contributed and core binding names
@@ -1500,22 +1416,20 @@
         ext_type: options.extension.as_ref().cloned(),
         search_paths_only: <span class="bool-val">false</span>,
       }),
-      state,
-    ) {
+      ) {
       is_found_raw = <span class="bool-val">true</span>;
-      load_tex_definitions(<span class="kw-2">&amp;</span>filename, <span class="kw-2">&amp;</span>file, stomach, state)<span class="question-mark">?</span>;
+      load_tex_definitions(<span class="kw-2">&amp;</span>filename, <span class="kw-2">&amp;</span>file)<span class="question-mark">?</span>;
     } <span class="kw">else if </span>!options.noerror {
       <span class="comment">// TODO: Proper missing reports
       </span><span class="macro">Warn!</span>(
         <span class="string">&quot;missing_file&quot;</span>,
         name,
-        stomach,
         <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t find file for {name}&quot;</span>)
       );
-      <span class="comment">// STATE.note_status(missing =&gt; $name . ($options{type} ? &#39;.&#39; . $options{type} : &#39;&#39;));
+      <span class="comment">// note_status(missing =&gt; $name . ($options{type} ? &#39;.&#39; . $options{type} : &#39;&#39;));
       // # We&#39;ll only warn about a missing file of definitions: it may be ignorable or never used.
       // # if there ARE problems, they&#39;ll likely produce their own errors!
-      // Warn(&#39;missing_file&#39;, $name, $STATE-&gt;getStomach-&gt;getGullet,
+      // Warn(&#39;missing_file&#39;, $name, $STATE&gt;getStomach-&gt;getGullet,
       //   &quot;Can&#39;t find &quot;
       //     . ($options{notex} ? &quot;binding for &quot; : &quot;&quot;)
       //     . (($options{type} &amp;&amp; $definition_name{ $options{type} }) || &#39;definitions&#39;) . &#39; &#39;
@@ -1527,15 +1441,14 @@
 
   <span class="kw">if </span>(is_binding || is_found_raw) &amp;&amp; options.handleoptions {
     <span class="comment">// after_input_handle_options ?
-    </span>stomach.digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{name}.{as_type}-h@@k&quot;</span>)), state)<span class="question-mark">?</span>;
+    </span>digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{name}.{as_type}-h@@k&quot;</span>)))<span class="question-mark">?</span>;
     <span class="kw">if </span>!prevname.is_empty() {
       def_macro(
         <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>),
         <span class="prelude-val">None</span>,
         <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(prevname)),
         <span class="prelude-val">None</span>,
-        state,
-      )<span class="question-mark">?</span>;
+          )<span class="question-mark">?</span>;
     }
     <span class="kw">if </span>!prevext.is_empty() {
       def_macro(
@@ -1543,47 +1456,44 @@
         <span class="prelude-val">None</span>,
         <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(prevext)),
         <span class="prelude-val">None</span>,
-        state,
-      )<span class="question-mark">?</span>;
+          )<span class="question-mark">?</span>;
     }
-    stomach.digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@popfilename&quot;</span>), state)<span class="question-mark">?</span>;
-    reset_options(stomach.get_gullet_mut(), state)<span class="question-mark">?</span>; <span class="comment">// And reset options afterwards, too.
+    digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@popfilename&quot;</span>))<span class="question-mark">?</span>;
+    reset_options()<span class="question-mark">?</span>; <span class="comment">// And reset options afterwards, too.
   </span>}
   note_end(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Loading {:?} definitions&quot;</span>, filename));
   <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// loads a binding from the main binding dispatcher, if available+found
-</span><span class="kw">pub fn </span>load_binding(file: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-  _load_binding(<span class="bool-val">true</span>, file, stomach, state)
+</span><span class="kw">pub fn </span>load_binding(file: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  _load_binding(<span class="bool-val">true</span>, file)
 }
 <span class="doccomment">/// loads a binding from an external binding dispatcher, if available+found
-</span><span class="kw">pub fn </span>load_external_binding(file: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-  _load_binding(<span class="bool-val">false</span>, file, stomach, state)
+</span><span class="kw">pub fn </span>load_external_binding(file: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  _load_binding(<span class="bool-val">false</span>, file)
 }
 <span class="comment">// in the spirit of Perl&#39;s Package::loadLTXML
 </span><span class="kw">fn </span>_load_binding(
   internal: bool,
   request: <span class="kw-2">&amp;</span>str,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   <span class="comment">// avoid double-loads, but be binding-specific
   </span><span class="kw">let </span>loaded_key = <span class="macro">s!</span>(<span class="string">&quot;{request}_binding_loaded&quot;</span>);
-  <span class="kw">if </span>state.lookup_bool(<span class="kw-2">&amp;</span>loaded_key) {
+  <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span>loaded_key) {
     <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>);
   }
-  <span class="comment">// TODO? || state.lookup_bool(&amp;s!(&quot;{trequest}_loaded&quot;))
-  //|| state.lookup_bool(&amp;s!(&quot;{name}_loaded&quot;)) || state.lookup_bool(&amp;s!(&quot;{ltxname}_loaded&quot;));
+  <span class="comment">// TODO? || lookup_bool(&amp;s!(&quot;{trequest}_loaded&quot;))
+  //|| lookup_bool(&amp;s!(&quot;{name}_loaded&quot;)) || lookup_bool(&amp;s!(&quot;{ltxname}_loaded&quot;));
 
   </span><span class="kw">let </span>taken_dispatcher = <span class="kw">if </span>internal {
-    state.bindings_dispatch.as_ref().map(Rc::clone)
+    get_bindings_dispatch()
   } <span class="kw">else </span>{
-    state.extra_bindings_dispatch.as_ref().map(Rc::clone)
+    get_extra_bindings_dispatch()
   };
   <span class="kw">match </span>taken_dispatcher {
     <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dispatcher) =&gt; {
-      <span class="kw">let </span>result_opt = dispatcher(request, stomach, state);
+      <span class="kw">let </span>result_opt = dispatcher(request);
       <span class="kw">match </span>result_opt {
         <span class="prelude-val">Some</span>(result) =&gt; {
           <span class="comment">// Here and only here we are certain we have binding support.
@@ -1591,9 +1501,9 @@
 
           // TODO: is this still true?
           // Note (only!) that the binding version of this was loaded; still could load raw tex!
-          </span>state.assign_value(<span class="kw-2">&amp;</span>loaded_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+          </span>assign_value(<span class="kw-2">&amp;</span>loaded_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
           <span class="comment">// if a binding load succeeded, mark the generic request as loaded.
-          </span>state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+          </span>assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
           <span class="kw">match </span>result {
             <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>),
             <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
@@ -1613,20 +1523,18 @@
   prevname: <span class="kw-2">&amp;</span>str,
   prevext: <span class="kw-2">&amp;</span>str,
   name: <span class="kw-2">&amp;</span>str,
-  as_type: <span class="kw-2">&amp;</span>str,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
+  as_type: <span class="kw-2">&amp;</span>str
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see
   // expl3.sty.ltxml
-  </span>stomach.digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@pushfilename&quot;</span>), state)<span class="question-mark">?</span>;
+  </span>digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@pushfilename&quot;</span>))<span class="question-mark">?</span>;
 
   <span class="comment">// For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   </span><span class="kw">if let </span><span class="prelude-val">Some</span>(with_options_to_pass) = options.withoptions.take() {
-    <span class="kw">if </span>!prevname.is_empty() &amp;&amp; state.has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, prevname, prevext)) {
+    <span class="kw">if </span>!prevname.is_empty() &amp;&amp; has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, prevname, prevext)) {
       <span class="comment">// Only pass those class options that are declared by the package!
-      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(declared_options) = state.lookup_vecdeque(<span class="string">&quot;@declaredoptions&quot;</span>) {
-        <span class="kw">let </span><span class="kw-2">mut </span>topass = Vec::new();
+      </span><span class="kw">let </span><span class="kw-2">mut </span>topass = Vec::new();
+      with_vecdeque(<span class="string">&quot;@declaredoptions&quot;</span>,|vdq_opt| <span class="kw">if let </span><span class="prelude-val">Some</span>(declared_options) = vdq_opt {
         <span class="kw">for </span>op <span class="kw">in </span>with_options_to_pass.into_iter() {
           <span class="kw">if </span>declared_options.iter().any(|x| {
             <span class="kw">if let </span>Stored::String(val) = x {
@@ -1638,9 +1546,9 @@
             topass.push(op)
           }
         }
-        <span class="kw">if </span>!topass.is_empty() {
-          pass_options(name, as_type, topass, state)<span class="question-mark">?</span>;
-        }
+      });
+      <span class="kw">if </span>!topass.is_empty() {
+        pass_options(name, as_type, topass)<span class="question-mark">?</span>;
       }
     }
   }
@@ -1649,44 +1557,41 @@
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(name)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(as_type)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
   <span class="comment">// reset options (Note reset &amp; pass were in opposite order in LoadClass ????)
-  </span><span class="kw">let </span>gullet = stomach.get_gullet_mut();
-  reset_options(gullet, state)<span class="question-mark">?</span>;
-  pass_options(name, as_type, options.options.clone(), state)<span class="question-mark">?</span>;
+  </span>reset_options()<span class="question-mark">?</span>;
+  pass_options(name, as_type, options.options.clone())<span class="question-mark">?</span>;
 
   <span class="comment">// Note which packages are pretending to be classes.
   </span><span class="kw">if </span>options.as_class {
-    state.push_value(<span class="string">&quot;@masquerading@as@class&quot;</span>, arena::pin(name))<span class="question-mark">?</span>;
+    push_value(<span class="string">&quot;@masquerading@as@class&quot;</span>, arena::pin(name))<span class="question-mark">?</span>;
   }
-  <span class="kw">let </span>current_opt_val = <span class="kw">match </span>state.lookup_vecdeque(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, name, as_type)) {
-    <span class="prelude-val">Some</span>(vdq) =&gt; {
-      <span class="kw">let </span><span class="kw-2">mut </span>pieces = String::new();
-      <span class="kw">for </span>x <span class="kw">in </span>vdq.iter() {
-        <span class="kw">if let </span>Stored::String(val) = x {
-          arena::with(<span class="kw-2">*</span>val, |str| pieces.push_str(str));
+  <span class="kw">let </span>current_opt_val = with_vecdeque(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, name, as_type), |vdq_opt|
+    <span class="kw">match </span>vdq_opt {
+      <span class="prelude-val">Some</span>(vdq) =&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>pieces = String::new();
+        <span class="kw">for </span>x <span class="kw">in </span>vdq.iter() {
+          <span class="kw">if let </span>Stored::String(val) = x {
+            arena::with(<span class="kw-2">*</span>val, |str| pieces.push_str(str));
+          }
+          pieces.push(<span class="string">&#39;,&#39;</span>);
         }
-        pieces.push(<span class="string">&#39;,&#39;</span>);
-      }
-      pieces.pop();
-      pieces
-    },
-    <span class="prelude-val">None </span>=&gt; String::new(),
-  };
+        pieces.pop();
+        pieces
+      },
+      <span class="prelude-val">None </span>=&gt; String::new()
+    });
   def_macro(
     <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\opt@{}.{}&quot;</span>, name, as_type)),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(current_opt_val)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
   <span class="prelude-val">Ok</span>(())
 }
@@ -1713,17 +1618,15 @@
 </span><span class="kw">pub fn </span>input_content(
   request: <span class="kw-2">&amp;</span>str,
   options: InputOptions,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span>filepath = find_file(request, <span class="prelude-val">None</span>, state);
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span>filepath = find_file(request, <span class="prelude-val">None</span>);
   <span class="kw">match </span>filepath {
     <span class="comment">// TODO: type =&gt; $options{type}, noltxml =&gt; 1
-    </span><span class="prelude-val">Some</span>(path) =&gt; load_tex_content(<span class="kw-2">&amp;</span>path, options, stomach, state),
+    </span><span class="prelude-val">Some</span>(path) =&gt; load_tex_content(<span class="kw-2">&amp;</span>path, options),
     <span class="prelude-val">None </span>=&gt; <span class="macro">fatal!</span>(Package, MissingFile, request),
     <span class="comment">/* TODO:
-     * Error(&quot;missing_file&quot;, request, state.get_stomach().get_gullet(),
-     * &quot;Can&#39;t find TeX file &quot;+request, maybeReportSearchPaths(state))) */
+     * Error(&quot;missing_file&quot;, request, state!().get_stomach().get_gullet(),
+     * &quot;Can&#39;t find TeX file &quot;+request, maybeReportSearchPaths())) */
   </span>}
 }
 
@@ -1737,9 +1640,7 @@
 </span><span class="kw">pub fn </span>input(
   request: <span class="kw-2">&amp;</span>str,
   options: InputOptions,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// unwrap if in quotes \input{&quot;file name&quot;}
   </span><span class="kw">let </span><span class="kw-2">mut </span>clean_req = Cow::Borrowed(request);
   <span class="kw">while </span>request.starts_with(<span class="string">&#39;&quot;&#39;</span>) &amp;&amp; request.ends_with(<span class="string">&#39;&quot;&#39;</span>) {
@@ -1767,14 +1668,11 @@
   // }
   // // Next special case: If we were currently reading a &quot;known&quot; style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
-  </span><span class="kw">if </span>state.lookup_bool(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>) {
+  </span><span class="kw">if </span>lookup_bool(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>) {
     input_definitions(
       <span class="kw-2">&amp;</span>clean_req,
-      InputDefinitionOptions::default(),
-      stomach,
-      state,
-    )
-  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>clean_req, <span class="prelude-val">None</span>, state) {
+      InputDefinitionOptions::default())
+  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(path) = find_file(<span class="kw-2">&amp;</span>clean_req, <span class="prelude-val">None</span>) {
     <span class="comment">// Found something plausible..
     // let ftype = if pathname_is_literaldata(path) { &quot;tex&quot; } else {
     //   pathname_type(path)
@@ -1788,7 +1686,7 @@
     //   else if (ftype != &quot;tex&quot;) &amp;&amp; (pathname_is_raw(path)) {
     //     load_tex_definitions(request, path);
     //   } else {
-    </span>load_tex_content(<span class="kw-2">&amp;</span>path, options, stomach, state)
+    </span>load_tex_content(<span class="kw-2">&amp;</span>path, options)
   <span class="comment">//   }
   </span>} <span class="kw">else </span>{
     <span class="comment">// Couldn&#39;t find anything?
@@ -1796,11 +1694,9 @@
 
     <span class="comment">// We presumably are trying to input Content; an error if we can&#39;t find it (contrast to
     // Definitions)
-    </span><span class="kw">let </span>gullet = stomach.get_gullet();
-    <span class="macro">Error!</span>(
+    </span><span class="macro">Error!</span>(
       <span class="string">&quot;missing_file&quot;</span>,
       request,
-      gullet,
       <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t find TeX file {}&quot;</span>, request)
     );
     <span class="comment">//  maybeReportSearchPaths());
@@ -1811,9 +1707,7 @@
 <span class="kw">fn </span>load_tex_definitions(
   request: <span class="kw-2">&amp;</span>str,
   pathname: <span class="kw-2">&amp;</span>str,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">if </span>!pathname::is_literaldata(pathname) {
     <span class="comment">// We can&#39;t analyze literal data&#39;s pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -1823,27 +1717,27 @@
     // since someone&#39;s presumably asking _explicitly_ for the raw TeX version.
     // It&#39;s probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    </span><span class="kw">if </span>state.lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>)) &amp;&amp; !pathname::is_reloadable(pathname) {
+    </span><span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>)) &amp;&amp; !pathname::is_reloadable(pathname) {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
-    state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{request}_loaded&quot;</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
   }
 
   <span class="comment">// Note that we are reading definitions (and recursive input is assumed also definitions)
-  </span><span class="kw">let </span>was_interpreting = state.lookup_bool(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>);
+  </span><span class="kw">let </span>was_interpreting = lookup_bool(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>);
   <span class="comment">// And that if we&#39;re interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
-  </span><span class="kw">let </span>was_including_styles = state.lookup_bool(<span class="string">&quot;INCLUDE_STYLES&quot;</span>);
-  state.assign_value(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+  </span><span class="kw">let </span>was_including_styles = lookup_bool(<span class="string">&quot;INCLUDE_STYLES&quot;</span>);
+  assign_value(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
   <span class="comment">// If we&#39;re reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
-  </span>state.assign_value(<span class="string">&quot;INCLUDE_STYLES&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+  </span>assign_value(<span class="string">&quot;INCLUDE_STYLES&quot;</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
   <span class="comment">// When set, this variable allows redefinitions of locked defns.
   // It is set in before/after methods to allow local rebinding of commands
   // but loading of sources &amp; bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
-  </span>state.unlocked = <span class="bool-val">false</span>;
-  <span class="kw">let </span>content_str = state.lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{pathname}_contents&quot;</span>));
+  </span>set_locked_state();
+  <span class="kw">let </span>content_str = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{pathname}_contents&quot;</span>));
   <span class="kw">let </span>content = <span class="kw">if </span>content_str.is_empty() {
     <span class="prelude-val">None
   </span>} <span class="kw">else </span>{
@@ -1857,53 +1751,48 @@
       content,
       ..MouthOptions::default()
     },
-    state,
   )<span class="question-mark">?</span>;
 
-  stomach.reading_from_mouth(
+  gullet::reading_from_mouth(
     pathname_mouth,
-    state,
-    <span class="kw">move </span>|i_stomach, i_state| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
       <span class="kw">while let </span><span class="prelude-val">Some</span>(token) =
-        i_stomach.get_gullet_mut()
-          .read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, i_state)<span class="question-mark">?
+        gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">?
       </span>{
         <span class="kw">if </span>token != <span class="macro">T_SPACE!</span>() {
-          i_stomach.invoke_token(<span class="kw-2">&amp;</span>token, i_state)<span class="question-mark">?</span>;
+          invoke_token(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
         }
       }
       <span class="prelude-val">Ok</span>(())
     },
   )<span class="question-mark">?</span>;
 
-  state.assign_value(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>, was_interpreting, <span class="prelude-val">None</span>);
-  state.assign_value(<span class="string">&quot;INCLUDE_STYLES&quot;</span>, was_including_styles, <span class="prelude-val">None</span>);
+  assign_value(<span class="string">&quot;INTERPRETING_DEFINITIONS&quot;</span>, was_interpreting, <span class="prelude-val">None</span>);
+  assign_value(<span class="string">&quot;INCLUDE_STYLES&quot;</span>, was_including_styles, <span class="prelude-val">None</span>);
   <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">pub fn </span>load_tex_content(
   path: <span class="kw-2">&amp;</span>str,
   _options: InputOptions,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
   </span><span class="kw">let </span>_has_binding = <span class="kw">if </span>!pathname::is_literaldata(path) {
     <span class="kw">let </span>(_dir, base, _ext) = pathname::split(path);
-    load_external_binding(<span class="kw-2">&amp;</span>base, stomach, state)<span class="question-mark">? </span>|| load_binding(<span class="kw-2">&amp;</span>base, stomach, state)<span class="question-mark">?
+    load_external_binding(<span class="kw-2">&amp;</span>base)<span class="question-mark">? </span>|| load_binding(<span class="kw-2">&amp;</span>base)<span class="question-mark">?
   </span>} <span class="kw">else </span>{
     <span class="bool-val">false
   </span>};
 
   <span class="comment">// Open a mouth for that TeX content
-  </span><span class="kw">let </span>cached = state.lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{path}_contents&quot;</span>));
+  </span><span class="kw">let </span>cached = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{path}_contents&quot;</span>));
   <span class="kw">let </span>cached_opt = <span class="kw">if </span>cached.is_empty() {
     <span class="prelude-val">None
   </span>} <span class="kw">else </span>{
     <span class="prelude-val">Some</span>(cached)
   };
-  stomach.get_gullet_mut().open_mouth(
+  gullet::open_mouth(
     Mouth::create(
       path,
       MouthOptions {
@@ -1911,8 +1800,7 @@
         content: cached_opt,
         ..MouthOptions::default()
       },
-      state,
-    )<span class="question-mark">?</span>,
+      )<span class="question-mark">?</span>,
     <span class="bool-val">true</span>,
   );
   <span class="prelude-val">Ok</span>(())
@@ -1920,33 +1808,28 @@
 
 <span class="doccomment">/// Pass the sequence of @options to the package $name (if $ext is &#39;sty&#39;),
 /// or class $name (if $ext is &#39;cls&#39;).
-</span><span class="kw">fn </span>pass_options(name: <span class="kw-2">&amp;</span>str, ext: <span class="kw-2">&amp;</span>str, options: Vec&lt;String&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  state.push_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, name, ext), options)
+</span><span class="kw">fn </span>pass_options(name: <span class="kw-2">&amp;</span>str, ext: <span class="kw-2">&amp;</span>str, options: Vec&lt;String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  push_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, name, ext), options)
 }
 
-<span class="kw">pub fn </span>process_options(stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>process_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="kw">let </span>currname_token = <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currname&quot;</span>);
   <span class="kw">let </span>currext_token = <span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>);
-  <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-  <span class="kw">let </span>name = <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span>currname_token)<span class="question-mark">?</span>.is_some() {
-    do_expand(currname_token, gullet, state)<span class="question-mark">?</span>.to_string()
+  <span class="kw">let </span>name = <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>currname_token)<span class="question-mark">?</span>.is_some() {
+    do_expand(currname_token)<span class="question-mark">?</span>.to_string()
   } <span class="kw">else </span>{
     String::new()
   };
-  <span class="kw">let </span>ext = <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span>currext_token)<span class="question-mark">?</span>.is_some() {
-    do_expand(currext_token, gullet, state)<span class="question-mark">?</span>.to_string()
+  <span class="kw">let </span>ext = <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>currext_token)<span class="question-mark">?</span>.is_some() {
+    do_expand(currext_token)<span class="question-mark">?</span>.to_string()
   } <span class="kw">else </span>{
     String::new()
   };
-  <span class="kw">let </span>empty_vdq = VecDeque::new(); <span class="comment">// convenience for unwrapping empty
-
-  </span><span class="kw">let </span>declared_options: VecDeque&lt;Stored&gt; = state
-    .lookup_vecdeque(<span class="string">&quot;@declaredoptions&quot;</span>)
-    .unwrap_or(<span class="kw-2">&amp;</span>empty_vdq)
-    .clone();
+  <span class="kw">let </span>declared_options: VecDeque&lt;Stored&gt; = lookup_vecdeque(<span class="string">&quot;@declaredoptions&quot;</span>)
+    .unwrap_or_default();
   <span class="kw">let </span>opt_key = <span class="macro">s!</span>(<span class="string">&quot;opt@{}.{}&quot;</span>, name, ext);
-  <span class="kw">let </span>current_options = state.lookup_vecdeque(<span class="kw-2">&amp;</span>opt_key).unwrap_or(<span class="kw-2">&amp;</span>empty_vdq);
-  <span class="kw">let </span>class_options = state.lookup_vecdeque(<span class="string">&quot;class_options&quot;</span>).unwrap_or(<span class="kw-2">&amp;</span>empty_vdq);
+  <span class="kw">let </span>current_options = lookup_vecdeque(<span class="kw-2">&amp;</span>opt_key).unwrap_or_default();
+  <span class="kw">let </span>class_options = lookup_vecdeque(<span class="string">&quot;class_options&quot;</span>).unwrap_or_default();
   <span class="comment">// Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
@@ -1994,7 +1877,7 @@
         arena::with(<span class="kw-2">*</span>content, |c_str| {
           <span class="kw">if </span>requested_options.contains(c_str) {
             requested_options.remove(c_str); <span class="comment">// Remove it, since it&#39;s been handled.
-            </span>execute_option_internal(c_str, stomach, state)
+            </span>execute_option_internal(c_str)
           } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
           }
@@ -2004,7 +1887,7 @@
         <span class="kw">for </span>content <span class="kw">in </span>contents.iter() {
           <span class="kw">if </span>requested_options.contains(content) {
             requested_options.remove(content); <span class="comment">// Remove it, since it&#39;s been handled.
-            </span>execute_option_internal(content, stomach, state)<span class="question-mark">?</span>;
+            </span>execute_option_internal(content)<span class="question-mark">?</span>;
           }
         }
       },
@@ -2013,32 +1896,30 @@
   }
   <span class="comment">// Now handle any remaining options (eg. default options), in the given order.
   </span><span class="kw">for </span>option <span class="kw">in </span>requested_options.iter() {
-    execute_default_option_internal(option, stomach, state)<span class="question-mark">?</span>;
+    execute_default_option_internal(option)<span class="question-mark">?</span>;
   }
   <span class="comment">// Now, undefine the handlers?
   </span><span class="kw">for </span>option <span class="kw">in </span>declared_options.iter() {
-    state.let_i(
+    let_i(
       <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, option)),
       <span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>(),
-      <span class="prelude-val">None</span>,
-      stomach.get_gullet_mut(),
-    );
+      <span class="prelude-val">None
+    </span>);
   }
   <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>execute_option_internal(option: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<span class="kw">fn </span>execute_option_internal(option: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   <span class="kw">let </span>cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\ds@{}&quot;</span>, option));
-  <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.is_some() {
+  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>cs)<span class="question-mark">?</span>.is_some() {
     def_macro(
       <span class="macro">T_CS!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>),
       <span class="prelude-val">None</span>,
       <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(option)),
       <span class="prelude-val">None</span>,
-      state,
-    )<span class="question-mark">?</span>;
+      )<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>unused = <span class="kw">match </span>state.remove_vecdeque(<span class="string">&quot;@unusedoptionlist&quot;</span>) {
+    <span class="kw">let </span>unused = <span class="kw">match </span>remove_vecdeque(<span class="string">&quot;@unusedoptionlist&quot;</span>) {
       <span class="prelude-val">Some</span>(list) =&gt; list
         .into_iter()
         .filter(|item| {
@@ -2051,8 +1932,8 @@
         .collect(),
       <span class="prelude-val">None </span>=&gt; VecDeque::new(),
     };
-    state.assign_value(<span class="string">&quot;@unusedoptionlist&quot;</span>, Stored::VecDequeStored(unused), <span class="prelude-val">None</span>);
-    stomach.digest(cs, state)<span class="question-mark">?</span>;
+    assign_value(<span class="string">&quot;@unusedoptionlist&quot;</span>, Stored::VecDequeStored(unused), <span class="prelude-val">None</span>);
+    digest(cs)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
   } <span class="kw">else </span>{
     <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
@@ -2061,32 +1942,29 @@
 
 <span class="kw">fn </span>execute_default_option_internal(
   option: <span class="kw-2">&amp;</span>str,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
   def_macro(
     <span class="macro">T_CS!</span>(<span class="string">&quot;\\CurrentOption&quot;</span>),
     <span class="prelude-val">None</span>,
     <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(option)),
     <span class="prelude-val">None</span>,
-    state,
   )<span class="question-mark">?</span>;
-  stomach.digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>), state)<span class="question-mark">?</span>;
+  digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>))<span class="question-mark">?</span>;
   <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
 }
 
-<span class="kw">fn </span>reset_options(gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  state.assign_value(
+<span class="kw">fn </span>reset_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  assign_value(
     <span class="string">&quot;@declaredoptions&quot;</span>,
     Stored::VecDequeStored(VecDeque::new()),
     <span class="prelude-val">None</span>,
   );
-  <span class="kw">let </span>opt_unused_cs = <span class="kw">if </span>do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>), gullet, state)<span class="question-mark">?</span>.to_string() == <span class="string">&quot;cls&quot; </span>{
+  <span class="kw">let </span>opt_unused_cs = <span class="kw">if </span>gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@currext&quot;</span>))<span class="question-mark">?</span>.to_string() == <span class="string">&quot;cls&quot; </span>{
     <span class="string">&quot;\\OptionNotUsed&quot;
   </span>} <span class="kw">else </span>{
     <span class="string">&quot;\\@unknownoptionerror&quot;
   </span>};
-  state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>, gullet);
+  let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\default@ds&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(opt_unused_cs), <span class="prelude-val">None</span>);
   <span class="prelude-val">Ok</span>(())
 }
 
@@ -2122,12 +2000,10 @@
 </span><span class="kw">pub fn </span>require_package(
   name: <span class="kw-2">&amp;</span>str,
   <span class="kw-2">mut </span>options: RequireOptions,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// We&#39;ll usually disallow raw TeX, unless the option explicitly given, or globally set.
   </span><span class="kw">if </span>options.notex.is_none()
-    &amp;&amp; !state.lookup_bool(<span class="string">&quot;INCLUDE_STYLES&quot;</span>)
+    &amp;&amp; !lookup_bool(<span class="string">&quot;INCLUDE_STYLES&quot;</span>)
     &amp;&amp; !<span class="macro">matches!</span>(options.noltxml, <span class="prelude-val">Some</span>(<span class="bool-val">true</span>))
   {
     options.notex = <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
@@ -2154,18 +2030,15 @@
       notex: options.notex.unwrap_or(<span class="bool-val">false</span>),
       after: options.after,
       ..InputDefinitionOptions::default()
-    },
-    stomach,
-    state,
+    }
   )
 }
 
-<span class="kw">pub fn </span>require_resource(<span class="kw-2">mut </span>resource: Resource, state: <span class="kw-2">&amp;mut </span>State) {
+<span class="kw">pub fn </span>require_resource(<span class="kw-2">mut </span>resource: Resource) {
   <span class="kw">if </span>resource.name.is_empty() &amp;&amp; resource.content.is_empty() {
     <span class="macro">Warn!</span>(
       <span class="string">&quot;expected&quot;</span>,
       <span class="string">&quot;resource&quot;</span>,
-      <span class="prelude-val">None</span>,
       <span class="string">&quot;Resource must have a resource pathname or content; skipping&quot;
     </span>);
     <span class="kw">return</span>;
@@ -2178,17 +2051,16 @@
     <span class="macro">Warn!</span>(
       <span class="string">&quot;expected&quot;</span>,
       <span class="string">&quot;mime-type&quot;</span>,
-      <span class="prelude-val">None</span>,
       <span class="string">&quot;Resource must have a mime-type; skipping&quot;
     </span>);
     <span class="kw">return</span>;
   }
 
   <span class="comment">// If we&#39;ve got a document, go ahead &amp; put the resource in.
-  // if (state.document.is_some()) {
-  //   state.document.as_mut().unwrap().add_resource(resource, resource);
+  // if (document.is_some()) {
+  //   document.as_mut().unwrap().add_resource(resource, resource);
   // } else {
-  </span>state.pending_resources.push(resource);
+  </span>push_pending_resource(resource);
   <span class="comment">// }
 </span>}
 
@@ -2196,9 +2068,7 @@
   name: <span class="kw-2">&amp;</span>str,
   _options: Vec&lt;String&gt;,
   after: Tokens,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -2208,23 +2078,21 @@
       handleoptions: <span class="bool-val">true</span>,
       noerror: <span class="bool-val">true</span>,
       ..InputDefinitionOptions::default()
-    },
-    stomach,
-    state,
+    }
   )
   <span class="comment">// if (let success = InputDefinitions($class, type =&gt; &#39;cls&#39;, notex =&gt; 1, handleoptions =&gt; 1,
   // noerror =&gt; 1,     %options)) {
   //   return $success; }
   // else {
-  //   $STATE-&gt;noteStatus(missing =&gt; $class . &#39;.cls&#39;);
+  //   $STATE&gt;noteStatus(missing =&gt; $class . &#39;.cls&#39;);
   //   let alternate = &#39;OmniBus&#39;;    # was &#39;article&#39;
-  //   Warn(&#39;missing_file&#39;, $class, $STATE-&gt;getStomach-&gt;getGullet,
+  //   Warn(&#39;missing_file&#39;, $class, $STATE&gt;getStomach-&gt;getGullet,
   //     &quot;Can&#39;t find binding for class $class (using $alternate)&quot;,
   //     maybeReportSearchPaths());
   // if (let success = InputDefinitions($alternate, type =&gt; &#39;cls&#39;, noerror =&gt; 1, handleoptions =&gt;
   // 1, %options)) {     return $success; }
   //   else {
-  //     Fatal(&#39;missing_file&#39;, $alternate . &#39;.cls.ltxml&#39;, $STATE-&gt;getStomach-&gt;getGullet,
+  //     Fatal(&#39;missing_file&#39;, $alternate . &#39;.cls.ltxml&#39;, $STATE&gt;getStomach-&gt;getGullet,
   //       &quot;Can&#39;t find binding for class $alternate (installation error)&quot;);
   //     return; } } }
 </span>}
@@ -2243,7 +2111,6 @@
 </span><span class="kw">pub fn </span>find_file(
   file: <span class="kw-2">&amp;</span>str,
   options: <span class="prelude-ty">Option</span>&lt;FindFileOptions&gt;,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
   <span class="kw">let </span>options = options.unwrap_or_default();
   <span class="kw">if </span>pathname::is_literaldata(file) {
@@ -2266,22 +2133,22 @@
     } <span class="kw">else </span>{
       <span class="macro">s!</span>(<span class="string">&quot;{}.{}&quot;</span>, file, ext)
     };
-    find_file_aux(<span class="kw-2">&amp;</span>aux_file, <span class="kw-2">&amp;</span>options, state)
+    find_file_aux(<span class="kw-2">&amp;</span>aux_file, <span class="kw-2">&amp;</span>options)
   } <span class="kw">else if </span>file.ends_with(<span class="string">&quot;.tex&quot;</span>) {
     <span class="comment">// If no type given, we MAY expect .tex, or maybe NOT!!
     // No requested type, then .tex; Of course, it may already have it!
-    </span>find_file_aux(file, <span class="kw-2">&amp;</span>options, state)
+    </span>find_file_aux(file, <span class="kw-2">&amp;</span>options)
   } <span class="kw">else </span>{
-    <span class="kw">match </span>find_file_aux(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}.tex&quot;</span>, file), <span class="kw-2">&amp;</span>options, state) {
-      <span class="prelude-val">None </span>=&gt; find_file_aux(file, <span class="kw-2">&amp;</span>options, state),
+    <span class="kw">match </span>find_file_aux(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}.tex&quot;</span>, file), <span class="kw-2">&amp;</span>options) {
+      <span class="prelude-val">None </span>=&gt; find_file_aux(file, <span class="kw-2">&amp;</span>options),
       <span class="prelude-val">Some</span>(f) =&gt; <span class="prelude-val">Some</span>(f),
     }
   }
 }
 
-<span class="kw">fn </span>find_file_aux(file: <span class="kw-2">&amp;</span>str, options: <span class="kw-2">&amp;</span>FindFileOptions, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<span class="kw">fn </span>find_file_aux(file: <span class="kw-2">&amp;</span>str, options: <span class="kw-2">&amp;</span>FindFileOptions) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
   <span class="comment">// If cached, return simple path (it&#39;s a key into the cache)
-  </span><span class="kw">let </span>cached = state.lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>, file));
+  </span><span class="kw">let </span>cached = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{}_contents&quot;</span>, file));
   <span class="kw">if </span>!cached.is_empty() {
     <span class="prelude-val">Some</span>(file.to_string())
   } <span class="kw">else if </span>pathname::is_absolute(file) {
@@ -2303,12 +2170,12 @@
     // (2) those MAY be present in kpsewhich&#39;s DB (although our searchpaths take precedence!)
     // (3) BUT we want to avoid kpsewhich if we can, since it&#39;s slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-    </span><span class="kw">let </span>paths: Vec&lt;String&gt; = state.search_paths.iter().cloned().collect();
-    <span class="kw">let </span>_urlbase = state.lookup_value(<span class="string">&quot;URLBASE&quot;</span>);
-    <span class="kw">let </span>nopaths = state.lookup_bool(<span class="string">&quot;REMOTE_REQUEST&quot;</span>);
-    <span class="kw">let </span>_ltxml_paths: Vec&lt;String&gt; = <span class="kw">if </span>nopaths { <span class="macro">vec!</span>[] } <span class="kw">else </span>{ paths.clone() };
+    </span><span class="kw">let </span>paths: Vec&lt;String&gt; = get_search_paths();
+    <span class="comment">// let _urlbase = state!().lookup_value(&quot;URLBASE&quot;);
+    // let _nopaths = lookup_bool(&quot;REMOTE_REQUEST&quot;);
+    // let _ltxml_paths: Vec&lt;String&gt; = if nopaths { vec![] } else { paths.clone() };
 
-    <span class="comment">// TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
+    // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we&#39;re looking for ltxml, look within our paths &amp; installation first (faster than kpse)
     // if !options.forbid_ltxml {
     //   if let Some(path) = pathname::find(
@@ -2356,18 +2223,15 @@
 // Declaring and Adjusting the Document Model.
 //======================================================================
 
-</span><span class="kw">pub fn </span>install_tag(tag: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>properties: TagOptions, state: <span class="kw-2">&amp;mut </span>State) {
-  <span class="kw">let </span>options = state
-    .tag_properties
-    .entry(arena::pin(tag))
-    .or_insert_with(TagOptions::default);
+</span><span class="kw">pub fn </span>install_tag(tag: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>properties: TagOptions) {
+  <span class="kw">let </span>tag_ticket = arena::pin(tag);
+  with_tag_property_mut(tag_ticket, |options| {
   <span class="kw">if </span>properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;
   }
   <span class="kw">if </span>properties.auto_close.is_some() {
     options.auto_close = properties.auto_close;
   }
-
   <span class="kw">for </span>name <span class="kw">in </span><span class="kw-2">&amp;</span>TagOptionName::all() {
     <span class="kw">if </span>name.is_prepend() {
       options.prepend(name, properties.remove(name));
@@ -2376,66 +2240,60 @@
     } <span class="kw">else </span>{
       <span class="comment">// we&#39;ll handle the regular ones out of the loop
     </span>}
-  }
+  }});
 }
 
 <span class="doccomment">/// Selects the RelaxNG schema defining the XML output language
 </span><span class="kw">pub fn </span>select_relaxng_schema(
   schema: <span class="kw-2">&amp;</span>str,
   namespaces: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) {
   <span class="comment">// What verb here? Set, Choose,...
-  </span><span class="kw">let </span>model = <span class="kw-2">&amp;mut </span>state.model;
-  model.set_relaxng_schema(schema);
+  </span>model::set_relaxng_schema(schema);
   <span class="kw">if let </span><span class="prelude-val">Some</span>(namespaces) = namespaces {
     <span class="kw">for </span>(prefix, value) <span class="kw">in </span>namespaces {
-      model.register_document_namespace(<span class="kw-2">&amp;</span>prefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value));
+      model::register_document_namespace(<span class="kw-2">&amp;</span>prefix, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value));
     }
   }
 }
 
-<span class="kw">pub fn </span>merge_font(font: Font, state: <span class="kw-2">&amp;mut </span>State) {
-  <span class="kw">let </span>new_font = state.lookup_font().unwrap().merge(font);
-  state.assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
+<span class="kw">pub fn </span>merge_font(font: Font) {
+  <span class="kw">let </span>new_font = lookup_font().unwrap().merge(font);
+  assign_font(Rc::new(new_font), <span class="prelude-val">Some</span>(Scope::Local));
 }
 
-<span class="kw">pub fn </span>digest_text(stuff: Tokens, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-  stomach.begin_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
-  <span class="kw">let </span>value = stomach.digest(stuff, state);
-  stomach.end_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
+<span class="kw">pub fn </span>digest_text(stuff: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+  begin_mode(<span class="string">&quot;text&quot;</span>)<span class="question-mark">?</span>;
+  <span class="kw">let </span>value = digest(stuff);
+  end_mode(<span class="string">&quot;text&quot;</span>)<span class="question-mark">?</span>;
   value
 }
 
 <span class="kw">pub fn </span>digest_literal&lt;T: Into&lt;Tokens&gt;&gt;(
   stuff: T,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
   <span class="kw">let </span>stuff: Tokens = stuff.into();
   <span class="comment">// Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
   // valid changes of state!)
-  </span>stomach.begin_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
+  </span>begin_mode(<span class="string">&quot;text&quot;</span>)<span class="question-mark">?</span>;
 
-  <span class="kw">let </span>font = state.lookup_font().unwrap(); <span class="comment">// TODO: raise error if font missing
-  </span>state.assign_font(
+  <span class="kw">let </span>font = lookup_font().unwrap(); <span class="comment">// TODO: raise error if font missing
+  </span>assign_font(
     Rc::new(font.merge(<span class="macro">fontmap!</span>(encoding =&gt; <span class="string">&quot;ASCII&quot;</span>))),
     <span class="prelude-val">Some</span>(Scope::Local),
   ); <span class="comment">// try to stay as ASCII as possible
 
-  </span><span class="kw">let </span>value = stomach.digest(stuff, state);
-  state.assign_font(font, <span class="prelude-val">None</span>);
-  stomach.end_mode(<span class="string">&quot;text&quot;</span>, state)<span class="question-mark">?</span>;
+  </span><span class="kw">let </span>value = digest(stuff);
+  assign_font(font, <span class="prelude-val">None</span>);
+  end_mode(<span class="string">&quot;text&quot;</span>)<span class="question-mark">?</span>;
   value
 }
 
 <span class="kw">pub fn </span>digest_if(
   token: Token,
-  stomach: <span class="kw-2">&amp;mut </span>Stomach,
-  state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-  <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
-    <span class="kw">match </span>stomach.digest(<span class="macro">Tokens!</span>(token), state) {
+  ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
+    <span class="kw">match </span>digest(<span class="macro">Tokens!</span>(token)) {
       <span class="prelude-val">Ok</span>(t) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(t)),
       <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
     }
@@ -2446,16 +2304,14 @@
 
 <span class="kw">pub fn </span>build_invocation&lt;T: Into&lt;Token&gt;&gt;(
   token: T,
-  args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;,
-  gullet: <span class="kw-2">&amp;mut </span>Gullet,
-  state: <span class="kw-2">&amp;mut </span>State,
+  args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
   <span class="kw">let </span>token: Token = token.into();
   <span class="comment">// Note: token may have been \let to another defn!
-  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
     <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
     <span class="kw">let </span><span class="kw-2">mut </span>reverted_args = <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
-      params.revert_arguments(args, state)<span class="question-mark">?
+      params.revert_arguments(args)<span class="question-mark">?
     </span>} <span class="kw">else </span>{
       Vec::new()
     };
@@ -2463,7 +2319,7 @@
     <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
   } <span class="kw">else </span>{
     <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t invoke {:?}; it is undefined&quot;</span>, token.stringify());
-    token.with_cs_name(|csname| { <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, csname, gullet, message); <span class="prelude-val">Ok</span>(()) })<span class="question-mark">?</span>;
+    token.with_cs_name(|csname| { <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, csname, message); <span class="prelude-val">Ok</span>(()) })<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
     <span class="comment">// DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], &#39;undefined&#39;, token); });
@@ -2483,21 +2339,12 @@
   }
 }
 
-<span class="kw">pub fn </span>do_expand&lt;T: Into&lt;Tokens&gt;&gt;(
-  tokens: T,
-  outer_gullet: <span class="kw-2">&amp;mut </span>Gullet,
-  outer_state: <span class="kw-2">&amp;mut </span>State,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-  outer_gullet.do_expand(tokens, outer_state)
-}
-
 <span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.
 /// Ie. given $nargs and $optional, being the two optional arguments to
 /// something like \newcommand, convert it to the form we use
 </span><span class="kw">pub fn </span>convert_latex_args(
   <span class="kw-2">mut </span>nargs: usize,
   optional: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Parameters&gt;&gt; {
   <span class="kw">let </span><span class="kw-2">mut </span>params = Vec::new();
   <span class="kw">if let </span><span class="prelude-val">Some</span>(tks) = optional {
@@ -2508,7 +2355,7 @@
         extra: <span class="macro">vec!</span>[tks],
         ..Parameter::default()
       }
-      .init(state)<span class="question-mark">?</span>,
+      .init()<span class="question-mark">?</span>,
     );
     nargs -= <span class="number">1</span>;
   }
@@ -2520,7 +2367,7 @@
         spec: Cow::Borrowed(<span class="string">&quot;{}&quot;</span>),
         ..Parameter::default()
       }
-      .init(state)<span class="question-mark">?</span>,
+      .init()<span class="question-mark">?</span>,
     );
   }
   <span class="kw">if </span>params.is_empty() {
@@ -2530,38 +2377,37 @@
   }
 }
 
-<span class="kw">pub fn </span>load_font_map&lt;<span class="lifetime">&#39;a</span>&gt;(encoding: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str, state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>State) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Fontmap&gt; {
-  <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
+<span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
+  preload_font_map(encoding).expect(<span class="string">&quot;preloading font map should succeed.&quot;</span>);
+  <span class="kw">if let </span><span class="prelude-val">Some</span>(map) = lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
     map.into()
   } <span class="kw">else </span>{
     <span class="prelude-val">None
   </span>}
 }
-<span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// This check is done as a &quot;preload&quot; step for mutability reasons.
-  </span><span class="kw">let </span>sym = arena::pin(<span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>));
-  <span class="kw">if </span>state.lookup_value_sym(<span class="kw-2">&amp;</span>sym).is_some() {
+  </span><span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>);
+  <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>key) {
     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
   }
   <span class="kw">let </span>fail_key = <span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap_failed_to_load&quot;</span>);
-  <span class="kw">let </span>failed_flag = state.lookup_bool(<span class="kw-2">&amp;</span>fail_key);
+  <span class="kw">let </span>failed_flag = lookup_bool(<span class="kw-2">&amp;</span>fail_key);
   <span class="kw">if </span>!failed_flag {
-    state.assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
+    assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
     </span>input_definitions(
       <span class="kw-2">&amp;</span>encoding.to_lowercase(),
       InputDefinitionOptions {
         extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">&quot;fontmap&quot;</span>)),
         noerror: <span class="bool-val">true</span>,
         ..InputDefinitionOptions::default()
-      },
-      stomach,
-      state,
+      }
     )<span class="question-mark">?</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(_map) = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
+    <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{encoding}_fontmap&quot;</span>)) {
       <span class="comment">// Got map?
-      </span>state.assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+      </span>assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
     } <span class="kw">else </span>{
-      state.assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+      assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
     }
   }
   <span class="prelude-val">Ok</span>(())

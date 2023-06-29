@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_scripts.rs`."><title>tex_scripts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_scripts.rs`."><title>tex_scripts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -448,13 +448,6 @@
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
-<a href="#457" id="457">457</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 <span class="kw">static </span>SCRIPT_NAME_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\@@(FLOATING|POST)(SUBSCRIPT|SUPERSCRIPT)$&quot;</span>).unwrap());
@@ -487,7 +480,7 @@
 
 // Remember a &quot;safe&quot; way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
-</span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
+</span><span class="kw">pub fn </span>is_script(object: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Catcode)&gt; {
   <span class="kw">let </span>box_opt = <span class="kw">match </span>object.data() {
     DigestedData::List(obj) =&gt; obj.borrow().boxes.last().map(|v| Cow::Owned(v.clone())),
     <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(object)),
@@ -522,10 +515,10 @@
 // in the new codebase, so as to avoid both 1) cloning and
 // 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
-</span><span class="kw">fn </span>script_handler(stomach: <span class="kw-2">&amp;mut </span>Stomach, cc: Catcode, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-  <span class="comment">//   let mut gullet = stomach.get_gullet_mut();
-  //   gullet.skip_spaces(state);
-  </span><span class="kw">let </span>font = state.lookup_font().unwrap();
+</span><span class="kw">fn </span>script_handler(cc: Catcode) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+  <span class="comment">//
+  //   gullet::skip_spaces();
+  </span><span class="kw">let </span>font = lookup_font().unwrap();
   <span class="kw">if </span>font.get_mathstyle().is_some() {
     <span class="kw">let </span><span class="kw-2">mut </span>putback = VecDeque::new();
     <span class="kw">let </span><span class="kw-2">mut </span>nscripts = <span class="number">0</span>;
@@ -542,7 +535,7 @@
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go
     // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(prev) = stomach.box_list.pop() {
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(prev) = { pop_box_list() } {
       <span class="kw">if </span>prev.get_property_bool(<span class="string">&quot;isSpace&quot;</span>) {
         prevspace = <span class="bool-val">true</span>; <span class="comment">// a space avoids double-scripts
         </span>putback.push_front(prev); <span class="comment">// put back? assuming it will add rpadding to previous???
@@ -550,7 +543,7 @@
       } <span class="kw">else if </span>prev.is_empty()<span class="question-mark">? </span>{
         <span class="comment">// If empty, the script floats, can&#39;t conflict, but don&#39;t put back
         </span><span class="kw">break</span>;
-      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(prevop) = is_script(<span class="kw-2">&amp;</span>prev, state) {
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(prevop) = is_script(<span class="kw-2">&amp;</span>prev) {
         <span class="kw">if </span>prevop.<span class="number">1 </span>== cc {
           <span class="comment">// Whoops, duplicated; better use FLOATING
           </span>putback.push_front(prev);
@@ -562,9 +555,8 @@
           <span class="kw">if </span>!prevspace {
             <span class="macro">Error!</span>(
               <span class="string">&quot;unexpected&quot;</span>,
-              <span class="macro">s!</span>(<span class="string">&quot;double-{}&quot;</span>, lcode),
-              stomach,
-              <span class="macro">s!</span>(<span class="string">&quot;Double {}&quot;</span>, lcode)
+              <span class="macro">s!</span>(<span class="string">&quot;double-{lcode}&quot;</span>),
+              <span class="macro">s!</span>(<span class="string">&quot;Double {lcode}&quot;</span>)
             );
           }
           cs = <span class="kw">if </span>cc == Catcode::SUPER {
@@ -603,15 +595,13 @@
         <span class="kw">break</span>;
       }
     }
-    stomach.box_list.extend(putback);
-    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>, state);
+    extend_box_list(putback);
+    <span class="macro">MergeFont!</span>(scripted =&gt; <span class="bool-val">true</span>);
     <span class="comment">// Now, get following boxes (may have to process several tokens!)
     </span><span class="kw">let </span><span class="kw-2">mut </span>stuff = Vec::new();
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = stomach
-      .get_gullet_mut()
-      .read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, state)<span class="question-mark">?
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(tok) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">?
     </span>{
-      stuff = stomach.invoke_token(<span class="kw-2">&amp;</span>tok, state)<span class="question-mark">?</span>;
+      stuff = stomach::invoke_token(<span class="kw-2">&amp;</span>tok)<span class="question-mark">?</span>;
       <span class="kw">if </span>!stuff.is_empty() {
         <span class="kw">break</span>;
       }
@@ -620,7 +610,6 @@
       <span class="macro">Error!</span>(
         <span class="string">&quot;expected&quot;</span>,
         <span class="string">&quot;{&quot;</span>,
-        stomach,
         <span class="string">&quot;Missing sub/superscript argument&quot;
       </span>); <span class="comment">//$gullet-&gt;showUnexpected);
       </span>stuff.push(Digested::default());
@@ -628,21 +617,21 @@
     <span class="kw">let </span>script = stuff.remove(<span class="number">0</span>); <span class="comment">// ONLY the first box is the script!
 
     </span><span class="kw">if </span>!script.is_empty()<span class="question-mark">? </span>{
-      <span class="kw">let </span><span class="kw-2">mut </span>properties = <span class="macro">stored_map!</span>(
+      <span class="kw">let </span><span class="kw-2">mut </span>properties = {<span class="macro">stored_map!</span>(
         <span class="string">&quot;isMath&quot; </span>=&gt; <span class="bool-val">true</span>,
         <span class="string">&quot;base&quot;        </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = base { Stored::Digested(b) }
           <span class="kw">else </span>{ Stored::None },                      <span class="comment">// for sizing/positioning
-        </span><span class="string">&quot;scriptlevel&quot; </span>=&gt; stomach.get_script_level(state),
-        <span class="string">&quot;level&quot;       </span>=&gt; stomach.get_boxing_level()
-      );
+        </span><span class="string">&quot;scriptlevel&quot; </span>=&gt; get_script_level(),
+        <span class="string">&quot;level&quot;       </span>=&gt; get_boxing_level()
+      )};
       <span class="kw">if let </span><span class="prelude-val">Some</span>(pvs) = prevscript {
         properties.insert(<span class="string">&quot;prevscript&quot;</span>.to_string(), pvs.into());
       }
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = script.get_font(state)<span class="question-mark">? </span>{
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(font) = script.get_font()<span class="question-mark">? </span>{
         properties.insert(<span class="string">&quot;font&quot;</span>.to_string(), font.into());
       }
       <span class="kw">let </span><span class="kw-2">mut </span>with_script = <span class="macro">vec!</span>[Digested::from(Whatsit {
-        definition: state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(cs))<span class="question-mark">?</span>.unwrap(),
+        definition: lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(cs))<span class="question-mark">?</span>.unwrap(),
         args: <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(script)],
         properties,
         <span class="comment">// TODO:
@@ -652,15 +641,14 @@
       with_script.extend(stuff);
       stuff = with_script;
     }
-    state.assign_font(font, <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// revert
+    assign_font(font, <span class="prelude-val">Some</span>(Scope::Local)); <span class="comment">// revert
     </span><span class="prelude-val">Ok</span>(stuff)
   } <span class="kw">else </span>{
     <span class="kw">let </span>c = <span class="kw">if </span>cc == Catcode::SUPER { <span class="string">&#39;^&#39; </span>} <span class="kw">else </span>{ <span class="string">&#39;_&#39; </span>};
     <span class="macro">Error!</span>(
       <span class="string">&quot;Unexpected&quot;</span>,
       c,
-      stomach,
-      <span class="macro">format!</span>(<span class="string">&quot;Script {} can only appear in math mode&quot;</span>, c)
+      <span class="macro">format!</span>(<span class="string">&quot;Script {c} can only appear in math mode&quot;</span>)
     );
     <span class="kw">let </span>placeholder = <span class="kw">if </span>cc == Catcode::SUPER {
       <span class="macro">T_SUPER!</span>()
@@ -673,8 +661,7 @@
       <span class="prelude-val">None</span>,
       <span class="macro">Tokens!</span>(placeholder),
       HashMap::default(),
-      state,
-    ))])
+      ))])
   }
 }
 
@@ -685,8 +672,8 @@
 // OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
 // So, when reverting, we&#39;re going to a bit of extra trouble to make sure we have ONE set
 // of braces, but no extras!!  [Worry about lists of lists...]
-</span><span class="kw">pub fn </span>revert_script(script: <span class="kw-2">&amp;</span>Digested, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-  <span class="kw">let </span>tokens = script.revert(state)<span class="question-mark">?</span>;
+</span><span class="kw">pub fn </span>revert_script(script: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+  <span class="kw">let </span>tokens = script.revert()<span class="question-mark">?</span>;
   <span class="kw">let </span><span class="kw-2">mut </span>ts = tokens.unlist();
   <span class="comment">// let mut level = 0;
   </span><span class="kw">if </span>ts.len() &gt; <span class="number">1
@@ -712,13 +699,12 @@
   prev_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;,
   op: <span class="kw-2">&amp;</span>str,
   pos: <span class="kw-2">&amp;</span>str,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
   <span class="macro">eprintln!</span>(<span class="string">&quot;SCRIPT SIZER IS ON!&quot;</span>);
   <span class="comment">// NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it&#39;s different from the &#39;expected&#39; style!!!]
-  </span><span class="kw">let </span>script_size = script.clone().get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+  </span><span class="kw">let </span>script_size = script.clone().get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
   <span class="kw">let </span>(<span class="kw-2">mut </span>ws, <span class="kw-2">mut </span>hs, <span class="kw-2">mut </span>ds) = (
     script_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
     script_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
@@ -728,14 +714,14 @@
   hs <span class="kw-2">*</span>= <span class="number">0.8</span>;
   ds <span class="kw-2">*</span>= <span class="number">0.8</span>; <span class="comment">// HACK!@!!
   </span><span class="kw">let </span>(wb, hb, db) = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>base)) = base_opt {
-    <span class="kw">let </span>base_size = base.clone().get_size(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>base_size = base.clone().get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
     (
       base_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
       base_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
       base_size.<span class="number">2</span>.value_of() <span class="kw">as </span>f64,
     )
   } <span class="kw">else </span>{
-    <span class="kw">let </span>nominal_size = state.lookup_font().unwrap().get_nominal_size();
+    <span class="kw">let </span>nominal_size = lookup_font().unwrap().get_nominal_size();
     (
       nominal_size.<span class="number">0</span>.value_of() <span class="kw">as </span>f64,
       nominal_size.<span class="number">1</span>.value_of() <span class="kw">as </span>f64,
@@ -772,7 +758,7 @@
   } <span class="kw">else </span>{
     <span class="comment">// as if max of width &amp; prev script&#39;s width
     </span><span class="kw">let </span>wp = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>prev)) = prev_opt {
-      prev.get_width(<span class="prelude-val">None</span>, state)<span class="question-mark">?</span>.unwrap_or_default().value_of() <span class="kw">as </span>f64
+      prev.get_width(<span class="prelude-val">None</span>)<span class="question-mark">?</span>.unwrap_or_default().value_of() <span class="kw">as </span>f64
     } <span class="kw">else </span>{
       <span class="number">0.0
     </span>};
@@ -790,30 +776,28 @@
   ))
 }
 
-<span class="macro">LoadDefinitions!</span>(state, {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">// TODO: Should I add a special macro case that takes an arbitrary token as argument?
   // DefPrimitiveT ?
   </span>def_primitive(
     <span class="macro">T_SUPER!</span>(),
     <span class="prelude-val">None</span>,
     <span class="prelude-val">Some</span>(Rc::new(
-      |stomach: <span class="kw-2">&amp;mut </span>Stomach, _args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State| {
-        script_handler(stomach, Catcode::SUPER, state)
+      |_args: Vec&lt;ArgWrap&gt;| {
+        script_handler(Catcode::SUPER)
       },
     )),
     PrimitiveOptions::default(),
-    state,
   )<span class="question-mark">?</span>;
   def_primitive(
     <span class="macro">T_SUB!</span>(),
     <span class="prelude-val">None</span>,
     <span class="prelude-val">Some</span>(Rc::new(
-      |stomach: <span class="kw-2">&amp;mut </span>Stomach, _args: Vec&lt;ArgWrap&gt;, state: <span class="kw-2">&amp;mut </span>State| {
-        script_handler(stomach, Catcode::SUB, state)
+      |_args: Vec&lt;ArgWrap&gt;| {
+        script_handler( Catcode::SUB)
       },
     )),
     PrimitiveOptions::default(),
-    state,
   )<span class="question-mark">?</span>;
 
   <span class="comment">// NOTE: The When reverting these, the
@@ -822,12 +806,12 @@
     &lt;ltx:XMArg rule=&quot;Superscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[_whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args] {
       <span class="macro">unref!</span>(args=&gt;arg);
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUPER!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) },
-    sizer =&gt; sub[w,state] {
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUPER!</span>(), revert_script(arg)<span class="question-mark">?</span>)) },
+    sizer =&gt; sub[w] {
       script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), w.get_property(<span class="string">&quot;base&quot;</span>).as_deref(),
-        w.get_property(<span class="string">&quot;prevscript&quot;</span>).as_deref(), <span class="string">&quot;SUPERSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>, state) }
+        w.get_property(<span class="string">&quot;prevscript&quot;</span>).as_deref(), <span class="string">&quot;SUPERSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>) }
   );
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@POSTSUBSCRIPT InScriptStyle&quot;</span>,<span class="string">r###&quot;
@@ -836,12 +820,12 @@
   &lt;/ltx:XMApp&gt;
   &quot;###
     </span>,
-    reversion =&gt; sub[_whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args] {
       <span class="macro">unref!</span>(args=&gt;arg);
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUB!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) },
-    sizer =&gt; sub[w,state] {
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_SUB!</span>(), revert_script(arg)<span class="question-mark">?</span>)) },
+    sizer =&gt; sub[w] {
       script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), w.get_property(<span class="string">&quot;base&quot;</span>).as_deref(),
-        w.get_property(<span class="string">&quot;prevscript&quot;</span>).as_deref(), <span class="string">&quot;SUBSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>, state) }
+        w.get_property(<span class="string">&quot;prevscript&quot;</span>).as_deref(), <span class="string">&quot;SUBSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>) }
   );
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@FLOATINGSUPERSCRIPT InScriptStyle&quot;</span>,<span class="string">r###&quot;
@@ -849,56 +833,58 @@
     &lt;ltx:XMArg rule=&quot;Superscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[_whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args] {
       <span class="macro">unref!</span>(args=&gt;arg);
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUPER!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
-    sizer =&gt; sub[w,state] {
-      script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;SUPERSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>, state) }
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUPER!</span>(), revert_script(arg)<span class="question-mark">?</span>)) }
+    sizer =&gt; sub[w] {
+      script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;SUPERSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>) }
   );
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\@@FLOATINGSUBSCRIPT InScriptStyle&quot;</span>,<span class="string">r###&quot;
   &lt;ltx:XMApp role=&quot;FLOATSUBSCRIPT&quot; scriptpos=&quot;?#scriptpos(#scriptpos)(#scriptlevel)&quot;&gt;
     &lt;ltx:XMArg rule=&quot;Subscript&quot;&gt;#1&lt;/ltx:XMArg&gt;
   &lt;/ltx:XMApp&gt;
   &quot;###</span>,
-    reversion =&gt; sub[_whatsit,args,state] {
+    reversion =&gt; sub[_whatsit,args] {
       <span class="macro">unref!</span>(args=&gt;arg);
-      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUB!</span>(), revert_script(arg,state)<span class="question-mark">?</span>)) }
-      sizer =&gt; sub[w,state] {
-        script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;SUBSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>, state) }
+      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_SUB!</span>(), revert_script(arg)<span class="question-mark">?</span>)) }
+      sizer =&gt; sub[w] {
+        script_sizer(w.get_arg(<span class="number">1</span>).unwrap(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&quot;SUBSCRIPT&quot;</span>, <span class="string">&quot;post&quot;</span>) }
   );
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;&#39;&quot;</span>, sub[gullet,_args,state] {
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;&#39;&quot;</span>, {
     <span class="kw">let </span><span class="kw-2">mut </span>sup = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>)];
     <span class="comment">// Collect up all &#39;, convering to \prime
-    </span><span class="kw">while </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>), state)<span class="question-mark">? </span>{
-      gullet.read_token(state)<span class="question-mark">?</span>;
+
+    </span><span class="kw">while </span>gullet::if_next(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;&#39;&quot;</span>))<span class="question-mark">? </span>{
+      gullet::read_token()<span class="question-mark">?</span>;
       sup.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>));
     }
     <span class="comment">// Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    </span><span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span>TOKEN_SUPER, state)<span class="question-mark">? </span>{
-      gullet.read_token(state)<span class="question-mark">?</span>;
-      sup.extend(gullet.read_arg(state)<span class="question-mark">?</span>.unlist());
+    </span><span class="kw">if </span>gullet::if_next(<span class="kw-2">&amp;</span>TOKEN_SUPER)<span class="question-mark">? </span>{
+      gullet::read_token()<span class="question-mark">?</span>;
+      sup.extend(gullet::read_arg()<span class="question-mark">?</span>.unlist());
     }
     <span class="macro">Tokens!</span>(<span class="macro">T_SUPER!</span>(), <span class="macro">T_BEGIN!</span>(), sup, <span class="macro">T_END!</span>())
   },
   mathactive =&gt; <span class="bool-val">true</span>); <span class="comment">// Only in math!
 
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\active@math@prime&quot;</span>, sub[gullet,(),state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\active@math@prime&quot;</span>, {
     <span class="kw">let </span><span class="kw-2">mut </span>sup = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>)];
     <span class="comment">// Collect up all &#39;, convering to \prime
     </span><span class="kw">let </span>prime_token = <span class="macro">T_OTHER!</span>(<span class="string">&quot;\&#39;&quot;</span>);
-    <span class="kw">while </span>gullet.if_next(<span class="kw-2">&amp;</span>prime_token, state)<span class="question-mark">? </span>{
-      gullet.read_token(state)<span class="question-mark">?</span>;
+
+    <span class="kw">while </span>gullet::if_next(<span class="kw-2">&amp;</span>prime_token)<span class="question-mark">? </span>{
+      gullet::read_token()<span class="question-mark">?</span>;
       sup.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\prime&quot;</span>));
     }
     <span class="comment">// Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    </span><span class="kw">if </span>gullet.if_next(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>(), state)<span class="question-mark">? </span>{
-      gullet.read_token(state)<span class="question-mark">?</span>;
-      <span class="kw">let </span>arg = gullet.read_arg(state)<span class="question-mark">?</span>;
+    </span><span class="kw">if </span>gullet::if_next(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>())<span class="question-mark">? </span>{
+      gullet::read_token()<span class="question-mark">?</span>;
+      <span class="kw">let </span>arg = gullet::read_arg()<span class="question-mark">?</span>;
       <span class="kw">let </span>arg_tks = arg.unlist();
       sup.extend(arg_tks);
     }

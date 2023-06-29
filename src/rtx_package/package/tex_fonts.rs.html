@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_fonts.rs`."><title>tex_fonts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_fonts.rs`."><title>tex_fonts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -501,13 +501,12 @@
 <a href="#501" id="501">501</a>
 <a href="#502" id="502">502</a>
 <a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>FONT_TOKEN_RE: Lazy&lt;Regex&gt; =
   Lazy::new(|| Regex::new(<span class="string">r&quot;^\\(?:text|script|scriptscript)font$&quot;</span>).unwrap());
 
-<span class="macro">LoadDefinitions!</span>(outer_state, {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">// &lt;font&gt; = &lt;fontdef token&gt; | \font | &lt;family member&gt;
   // &lt;family member&gt; = &lt;font range&gt;&lt;4bit&gt;
   // &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
@@ -518,33 +517,33 @@
   // (although it SHOULD be one defined to be a font switch??)
   // NOTE: These should NOT be global(?)
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\textfont Number&quot;</span>, <span class="macro">T_CS!</span>(<span class="string">&quot;\\tenrm&quot;</span>),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;textfont_{fam}&quot;</span>)).unwrap_or_default()
+    lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;textfont_{fam}&quot;</span>)).unwrap_or_default()
   },
-  setter =&gt; sub[font,scope,args,state] {
+  setter =&gt; sub[font,scope,args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;textfont_{fam}&quot;</span>), font, scope);
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;textfont_{fam}&quot;</span>), font, scope);
   });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\scriptfont Number&quot; </span>=&gt; <span class="macro">T_CS!</span>(<span class="string">&quot;\\sevenrm&quot;</span>),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptfont_{fam}&quot;</span>)).unwrap_or_default()
+    lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptfont_{fam}&quot;</span>)).unwrap_or_default()
   },
-  setter =&gt; sub[font,scope,args,state] {
+  setter =&gt; sub[font,scope,args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptfont_{fam}&quot;</span>), font, scope);
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptfont_{fam}&quot;</span>), font, scope);
   });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\scriptscriptfont Number&quot; </span>=&gt; <span class="macro">T_CS!</span>(<span class="string">&quot;\\fiverm&quot;</span>),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptscriptfont_{fam}&quot;</span>)).unwrap_or_default()
+    lookup_number(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptscriptfont_{fam}&quot;</span>)).unwrap_or_default()
   },
-  setter =&gt; sub[font,scope,args,state] {
+  setter =&gt; sub[font,scope,args] {
     <span class="kw">let </span>fam = args.remove(<span class="number">0</span>).expect_number().value_of();
-    state.assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptscriptfont_{fam}&quot;</span>), font, scope);
+    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;scriptscriptfont_{fam}&quot;</span>), font, scope);
   });
 
   <span class="comment">// # &lt;internal dimen&gt; = &lt;dimen parameter&gt; | &lt;special dimen&gt; | \lastkern
@@ -554,32 +553,32 @@
 
   <span class="comment">// # &lt;box dimension&gt; = \ht | \wd | \dp
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\ht Number&quot;</span>, Dimension::new(<span class="number">0</span>),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
-    <span class="kw">let </span>stuff = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of()));
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = stuff {
-      thebox.get_height(state)
+    with_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of()), |val_opt|
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = val_opt {
+      thebox.get_height()
     } <span class="kw">else </span>{
       <span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::default()))
-    }},
-  setter =&gt; sub[value,_scope,args,state] {
+    })},
+  setter =&gt; sub[value,_scope,args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
     <span class="kw">let </span>boxkey = <span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of());
-    <span class="kw">let </span>stuff = state.lookup_value_mut(<span class="kw-2">&amp;</span>boxkey);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = stuff {
+    with_value_mut(<span class="kw-2">&amp;</span>boxkey, |val_opt|
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
-    }});
+    })});
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\wd Number&quot;</span>, Dimension::default(),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
     <span class="kw">let </span>boxid = <span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of());
-    <span class="kw">let </span><span class="kw-2">mut </span>stuff = state.checkout_value(<span class="kw-2">&amp;</span>boxid);
+    <span class="kw">let </span><span class="kw-2">mut </span>stuff = checkout_value(<span class="kw-2">&amp;</span>boxid);
     <span class="kw">let </span>result = {<span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref mut </span>thebox)) = stuff {
-      <span class="kw">match </span>thebox.get_width(<span class="prelude-val">None</span>, state) {
+      <span class="kw">match </span>thebox.get_width(<span class="prelude-val">None</span>) {
         <span class="prelude-val">Ok</span>(v) =&gt; v,
         <span class="prelude-val">Err</span>(e) =&gt; {
-          <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;method&quot;</span>, <span class="string">&quot;get_width&quot;</span>, <span class="prelude-val">None</span>, <span class="macro">format!</span>(<span class="string">&quot;{e}&quot;</span>)); <span class="prelude-val">Ok</span>(()) };
+          <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;method&quot;</span>, <span class="string">&quot;get_width&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;{e}&quot;</span>)); <span class="prelude-val">Ok</span>(()) };
           err().ok();
           <span class="prelude-val">None
         </span>}
@@ -588,52 +587,52 @@
       <span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::default()))
     }};
     <span class="kw">if let </span><span class="prelude-val">Some</span>(thebox) = stuff {
-      state.checkin_value(<span class="kw-2">&amp;</span>boxid, thebox);
+      checkin_value(<span class="kw-2">&amp;</span>boxid, thebox);
     }
     result
   },
-  setter =&gt; sub[value,_scope,args,state] {
+  setter =&gt; sub[value,_scope,args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
     <span class="kw">let </span>boxkey = <span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of());
-    <span class="kw">let </span>stuff = state.lookup_value_mut(<span class="kw-2">&amp;</span>boxkey);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = stuff {
+    with_value_mut(<span class="kw-2">&amp;</span>boxkey, |val_opt|
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
-    }});
+    })});
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\dp Number&quot;</span>, Dimension::new(<span class="number">0</span>),
-  getter =&gt; sub[args, state] {
+  getter =&gt; sub[args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
-    <span class="kw">let </span>stuff = state.lookup_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of()));
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = stuff {
-      thebox.get_depth(state)
-    } <span class="kw">else </span>{
-      <span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::default()))
-    }},
-setter =&gt; sub[value,_scope,args,state] {
+    with_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of()),|val_opt|
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = val_opt {
+        thebox.get_depth()
+      } <span class="kw">else </span>{
+        <span class="prelude-val">Some</span>(RegisterValue::Dimension(Dimension::default()))
+      })},
+setter =&gt; sub[value,_scope,args] {
     <span class="kw">let </span>n = args.remove(<span class="number">0</span>).expect_number();
     <span class="kw">let </span>boxkey = <span class="macro">format!</span>(<span class="string">&quot;box{}&quot;</span>, n.value_of());
-    <span class="kw">let </span>stuff = state.lookup_value_mut(<span class="kw-2">&amp;</span>boxkey);
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = stuff {
+    with_value_mut(<span class="kw-2">&amp;</span>boxkey, |val_opt|
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);
-    }});
+    })});
 
   <span class="comment">// # 2nd arg is &lt;font&gt; = &lt;fontdef token&gt; | \font | &lt;family member&gt;
   // #  &lt;family member&gt; = &lt;font range&gt;&lt;4bit number&gt;
   // #  &lt;font range&gt; = \textfont | \scriptfont | \scriptscriptfont
-  </span><span class="macro">DefParameterType!</span>(FontToken, sub[gullet, _inner, _extra, state] {
-    <span class="kw">let </span>token = gullet.read_token(state)<span class="question-mark">?</span>.unwrap();
+  </span><span class="macro">DefParameterType!</span>(FontToken, sub[_inner, _extra] {
+    <span class="kw">let </span>token = gullet::read_token()<span class="question-mark">?</span>.unwrap();
     <span class="kw">if </span>token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet.read_number(state)<span class="question-mark">?</span>;
+      gullet::read_number()<span class="question-mark">?</span>;
     }
     token
   }); <span class="comment">// ?
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\fontdimen Number FontToken&quot;</span>, Dimension::new(<span class="number">0</span>),
-    getter =&gt; sub[args, state] {
+    getter =&gt; sub[args] {
       <span class="kw">let </span>p = args.remove(<span class="number">0</span>).expect_number().value_of();
       <span class="kw">match </span>p {
-        <span class="number">2 </span>=&gt; Dimension::from_str(<span class="string">&quot;0.5em&quot;</span>,state).ok()<span class="question-mark">?</span>,    <span class="comment">// interword space
-        </span><span class="number">5 </span>=&gt; Dimension::from_str(<span class="string">&quot;1ex&quot;</span>,state).ok()<span class="question-mark">?</span>,      <span class="comment">// x-height
-        </span><span class="number">6 </span>=&gt; Dimension::from_str(<span class="string">&quot;1em&quot;</span>,state).ok()<span class="question-mark">?</span>,      <span class="comment">// quad width
+        <span class="number">2 </span>=&gt; Dimension::from_str(<span class="string">&quot;0.5em&quot;</span>).ok()<span class="question-mark">?</span>,    <span class="comment">// interword space
+        </span><span class="number">5 </span>=&gt; Dimension::from_str(<span class="string">&quot;1ex&quot;</span>).ok()<span class="question-mark">?</span>,      <span class="comment">// x-height
+        </span><span class="number">6 </span>=&gt; Dimension::from_str(<span class="string">&quot;1em&quot;</span>).ok()<span class="question-mark">?</span>,      <span class="comment">// quad width
         </span><span class="kw">_ </span>=&gt; Dimension::new(<span class="number">0</span>)
       }
     }
@@ -671,13 +670,12 @@ setter =&gt; sub[value,_scope,args,state] {
 
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\fontencoding{}&quot;</span>, <span class="string">&quot;\\@@@fontencoding{#1}&quot;</span>);
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@@@fontencoding{}&quot;</span>, sub[stomach, (encoding), state] {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
-    <span class="kw">let </span>encoding = <span class="macro">Expand!</span>(encoding, gullet).to_string();
-    <span class="kw">if </span><span class="macro">LoadFontMap!</span>(<span class="kw-2">&amp;</span>encoding).is_some() {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\@@@fontencoding{}&quot;</span>, sub[(encoding)] {
+    <span class="kw">let </span>encoding = <span class="macro">Expand!</span>(encoding).to_string();
+    <span class="kw">if </span>load_font_map(<span class="kw-2">&amp;</span>encoding).is_some() {
       <span class="macro">MergeFont!</span>(encoding =&gt; encoding);
     } <span class="kw">else </span>{
-      <span class="macro">Info!</span>(<span class="string">&quot;missing_font_encoding&quot;</span>, encoding, stomach,
+      <span class="macro">Info!</span>(<span class="string">&quot;missing_font_encoding&quot;</span>, encoding,
         <span class="string">&quot;Couldn&#39;t find font encoding, falling back to OT1&quot;</span>);
       <span class="comment">// Default to OT1 encoding if no map found
       </span><span class="macro">MergeFont!</span>(encoding =&gt; <span class="string">&quot;OT1&quot;</span>);
@@ -695,7 +693,7 @@ setter =&gt; sub[value,_scope,args,state] {
   <span class="comment">// Used for SemiVerbatim text
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;ASCII&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
       <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
       <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
       <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="string">&#39; &#39;</span>, <span class="string">&#39;!&#39;</span>, <span class="string">&#39;&quot;&#39;</span>, <span class="string">&#39;#&#39;</span>, <span class="string">&#39;$&#39;</span>, <span class="string">&#39;%&#39;</span>, <span class="string">&#39;&amp;&#39;</span>, <span class="string">&#39;\&#39;&#39;</span>, <span class="string">&#39;(&#39;</span>, <span class="string">&#39;)&#39;</span>, <span class="string">&#39;*&#39;</span>, <span class="string">&#39;+&#39;</span>, <span class="string">&#39;,&#39;</span>, <span class="string">&#39;-&#39;</span>, <span class="string">&#39;.&#39;</span>, <span class="string">&#39;/&#39;</span>,
@@ -723,7 +721,7 @@ setter =&gt; sub[value,_scope,args,state] {
   // only when no other spacing point is available.]
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;OT1&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
       <span class="string">&#39;\u{0393}&#39;</span>, <span class="string">&#39;\u{0394}&#39;</span>, <span class="string">&#39;\u{0398}&#39;</span>, <span class="string">&#39;\u{039B}&#39;</span>, <span class="string">&#39;\u{039E}&#39;</span>, <span class="string">&#39;\u{03A0}&#39;</span>, <span class="string">&#39;\u{03A3}&#39;</span>,
       <span class="string">&#39;\u{03A5}&#39;</span>, <span class="string">&#39;\u{03A6}&#39;</span>, <span class="string">&#39;\u{03A8}&#39;</span>, <span class="string">&#39;\u{03A9}&#39;</span>, <span class="string">&#39;\u{FB00}&#39;</span>, <span class="string">&#39;\u{FB01}&#39;</span>, <span class="string">&#39;\u{FB02}&#39;</span>,
       <span class="string">&#39;\u{FB03}&#39;</span>, <span class="string">&#39;\u{FB04}&#39;</span>, <span class="string">&#39;\u{0131}&#39;</span>, <span class="string">&#39;\u{0237}&#39;</span>, <span class="string">&#39;\u{0060}&#39;</span>, <span class="string">&#39;\u{00B4}&#39;</span>, <span class="string">&#39;\u{02C7}&#39;</span>,
@@ -740,7 +738,7 @@ setter =&gt; sub[value,_scope,args,state] {
 
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;OT1&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
       <span class="string">&#39;\u{0393}&#39;</span>, <span class="string">&#39;\u{0394}&#39;</span>, <span class="string">&#39;\u{0398}&#39;</span>, <span class="string">&#39;\u{039B}&#39;</span>, <span class="string">&#39;\u{039E}&#39;</span>, <span class="string">&#39;\u{03A0}&#39;</span>, <span class="string">&#39;\u{03A3}&#39;</span>,
       <span class="string">&#39;\u{03A5}&#39;</span>, <span class="string">&#39;\u{03A6}&#39;</span>, <span class="string">&#39;\u{03A8}&#39;</span>, <span class="string">&#39;\u{03A9}&#39;</span>, <span class="string">&#39;\u{2191}&#39;</span>, <span class="string">&#39;\u{2193}&#39;</span>, <span class="string">&#39;\&#39;&#39;</span>, <span class="string">&#39;\u{00A1}&#39;</span>,
       <span class="string">&#39;\u{00BF}&#39;</span>, <span class="string">&#39;\u{0131}&#39;</span>, <span class="string">&#39;\u{0237}&#39;</span>, <span class="string">&#39;\u{0060}&#39;</span>, <span class="string">&#39;\u{00B4}&#39;</span>, <span class="string">&#39;\u{02C7}&#39;</span>, <span class="string">&#39;\u{02D8}&#39;</span>,
@@ -757,7 +755,7 @@ setter =&gt; sub[value,_scope,args,state] {
   <span class="attr">#[rustfmt::skip]
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;OML&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
       <span class="comment">// \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma \Upsilon
       </span><span class="string">&#39;\u{0393}&#39;</span>, <span class="string">&#39;\u{0394}&#39;</span>, <span class="string">&#39;\u{0398}&#39;</span>, <span class="string">&#39;\u{039B}&#39;</span>, <span class="string">&#39;\u{039E}&#39;</span>, <span class="string">&#39;\u{03A0}&#39;</span>, <span class="string">&#39;\u{03A3}&#39;</span>,
       <span class="string">&#39;\u{03A5}&#39;</span>,
@@ -806,7 +804,7 @@ setter =&gt; sub[value,_scope,args,state] {
   </span><span class="attr">#[rustfmt::skip]
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;OMS&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
     <span class="comment">// minus     dot         times       ast          divide      diamond    plus-minus minus-plus
     </span><span class="string">&#39;-&#39;</span>,        <span class="string">&#39;\u{22C5}&#39;</span>, <span class="string">&#39;\u{00D7}&#39;</span>, <span class="string">&#39;\u{2217}&#39;</span>, <span class="string">&#39;\u{00F7}&#39;</span>, <span class="string">&#39;\u{22C4}&#39;</span>, <span class="string">&#39;\u{00B1}&#39;</span>, <span class="string">&#39;\u{2213}&#39;</span>,
     <span class="comment">// oplus      ominus      otimes      oslash       odot        bigcirc circ        bullet
@@ -845,7 +843,7 @@ setter =&gt; sub[value,_scope,args,state] {
   <span class="attr">#[rustfmt::skip]
   </span><span class="macro">DeclareFontMap!</span>(
     <span class="string">&quot;OMX&quot;</span>,
-    <span class="macro">mixvec!</span>[
+    <span class="macro">mixrc!</span>[
       <span class="comment">// (          )           [           ]             lfloor      rfloor      lceil rceil
       </span><span class="string">&#39;(&#39;</span>, <span class="string">&#39;)&#39;</span>, <span class="string">&#39;[&#39;</span>, <span class="string">&#39;]&#39;</span>, <span class="string">&#39;\u{230A}&#39;</span>, <span class="string">&#39;\u{230B}&#39;</span>, <span class="string">&#39;\u{2308}&#39;</span>,
       <span class="string">&#39;\u{2309}&#39;</span>, <span class="comment">/* lbrace      rbrace      langle      rangle        |           ||          /
@@ -876,9 +874,9 @@ setter =&gt; sub[value,_scope,args,state] {
     </span>]
   );
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\char Number&quot;</span>, sub[stomach, (number), p_state] {
-    <span class="kw">let </span>number_tks = number.revert(p_state).unwrap_or_default().unlist();
-    <span class="kw">let </span>decoded = <span class="kw">match </span>font::decode(number.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, p_state) {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\char Number&quot;</span>, sub[(number)] {
+    <span class="kw">let </span>number_tks = number.revert().unwrap_or_default().unlist();
+    <span class="kw">let </span>decoded = <span class="kw">match </span>font::decode(number.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>) {
       <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>EMPTY_SYM,
       <span class="prelude-val">Some</span>(c) =&gt; arena::pin_char(c)
     };
@@ -887,34 +885,33 @@ setter =&gt; sub[value,_scope,args,state] {
      <span class="prelude-val">None</span>,
      <span class="prelude-val">None</span>,
      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), number_tks, <span class="macro">T_RELAX!</span>()),
-     HashMap::default(),
-     p_state)
+     HashMap::default())
   });
 
   <span class="comment">// Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\chardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\chardef Token SkipMatch:=&quot;</span>, sub[(newcs)] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
-    <span class="kw">let </span>value = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
+    { assign_meaning(<span class="kw-2">&amp;</span>newcs, meaning, <span class="prelude-val">None</span>); }
+    <span class="kw">let </span>value = gullet::read_number()<span class="question-mark">?</span>;
     <span class="comment">// TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     </span><span class="kw">let </span>internalcs_str = newcs.with_cs_name(|csname| <span class="macro">s!</span>(<span class="string">&quot;\\@chardef@{}&quot;</span>, csname));
     <span class="kw">let </span>internalcs = <span class="macro">T_CS!</span>(internalcs_str);
-    <span class="macro">DefPrimitive!</span>(internalcs.clone(), <span class="prelude-val">None</span>, sub[stomach,args,i_state] {
-      <span class="kw">let </span>decoded = font::decode(value.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, stomach, i_state)
+    <span class="macro">DefPrimitive!</span>(internalcs.clone(), <span class="prelude-val">None</span>, sub[args] {
+      <span class="kw">let </span>decoded = font::decode(value.value_of() <span class="kw">as </span>u8, <span class="prelude-val">None</span>, <span class="bool-val">false</span>)
         .map(arena::pin_char).unwrap_or_else(|| <span class="kw-2">*</span>EMPTY_SYM);
-      <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+
       Tbox::new(decoded,
         <span class="prelude-val">None</span>,
         <span class="prelude-val">None</span>,
-        <span class="comment">// Note: curious case, since this is 2-levels in, we can&#39;t infer the &quot;i_state&quot;
+        <span class="comment">// Note: curious case, since this is 2-levels in, we can&#39;t infer the &quot;i_state::
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
-        </span><span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), <span class="macro">vec!</span>[value], gullet, i_state)<span class="question-mark">?</span>,
-        HashMap::default(),
-        i_state)
+        </span><span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\char&quot;</span>), <span class="macro">vec!</span>[value]),
+        HashMap::default())
     });
-    state.install_definition(
+    state::install_definition(
       Register::new_chardef(newcs, <span class="prelude-val">Some</span>(value.into()), <span class="prelude-val">Some</span>(internalcs)), <span class="prelude-val">None</span>);
     <span class="macro">AfterAssignment!</span>();
     <span class="prelude-val">Ok</span>(Vec::new())
@@ -922,12 +919,12 @@ setter =&gt; sub[value,_scope,args,state] {
 
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathchar Number&quot;</span>, <span class="string">&quot;?#glyph(&lt;ltx:XMTok role=&#39;#role&#39;&gt;#glyph&lt;/ltx:XMTok&gt;)&quot;</span>,
     sizer       =&gt; <span class="string">&quot;#1&quot;</span>,
-    after_digest =&gt; sub[stomach,whatsit,state] {
+    after_digest =&gt; sub[whatsit] {
       <span class="kw">let </span>n = whatsit.get_arg(<span class="number">1</span>).unwrap().value_of();
-      <span class="kw">let </span>(role_opt, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16, stomach, state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>(role_opt, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16)<span class="question-mark">?</span>;
       <span class="kw">if let </span><span class="prelude-val">Some</span>(glyph) = glyph_opt {
         whatsit.set_property(<span class="string">&quot;glyph&quot;</span>, glyph);
-        whatsit.set_property(<span class="string">&quot;font&quot;</span>, state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph.to_string()));
+        whatsit.set_property(<span class="string">&quot;font&quot;</span>, lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph.to_string()));
       }
       <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = role_opt {
         whatsit.set_property(<span class="string">&quot;role&quot;</span>, role);
@@ -939,13 +936,13 @@ setter =&gt; sub[value,_scope,args,state] {
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\delimiter Number&quot;</span>,
   <span class="string">&quot;?#glyph(?#isMath(&lt;ltx:XMTok role=&#39;#role&#39;&gt;#glyph&lt;/ltx:XMTok&gt;)(#glyph))&quot;</span>,
   sizer       =&gt; <span class="string">&quot;#glyph&quot;</span>,
-  after_digest =&gt; sub[stomach,whatsit,state] {
+  after_digest =&gt; sub[whatsit] {
     <span class="kw">let </span><span class="kw-2">mut </span>n = whatsit.get_arg(<span class="number">1</span>).unwrap().value_of();
     n &gt;&gt;= <span class="number">12</span>;    <span class="comment">// Ignore 3 rightmost digits and treat as \mathchar
-    </span><span class="kw">let </span>(role_opt, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16, stomach, state)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>(role_opt, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(glyph) = glyph_opt {
       whatsit.set_property(<span class="string">&quot;glyph&quot;</span>,glyph);
-      whatsit.set_property(<span class="string">&quot;font&quot;</span>, state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph.to_string()));
+      whatsit.set_property(<span class="string">&quot;font&quot;</span>, lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph.to_string()));
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(role) = role_opt {
       whatsit.set_property(<span class="string">&quot;role&quot;</span>, role);
@@ -954,12 +951,13 @@ setter =&gt; sub[value,_scope,args,state] {
   });
 
   <span class="comment">// Almost like a register, but different...
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\mathchardef Token SkipMatch:=&quot;</span>, sub[stomach, (newcs), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\mathchardef Token SkipMatch:=&quot;</span>, sub[(newcs)] {
     <span class="comment">// Let w/o AfterAssignment
-    </span>state.assign_meaning(<span class="kw-2">&amp;</span>newcs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
-    <span class="kw">let </span>value  = stomach.get_gullet_mut().read_number(state).unwrap();
+    </span><span class="kw">let </span>meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
+    { assign_meaning(<span class="kw-2">&amp;</span>newcs, meaning, <span class="prelude-val">None</span>); }
+    <span class="kw">let </span>value  = gullet::read_number().unwrap();
     <span class="comment">// eprintln!(&quot; ** {} + {}&quot;, value,csname);
-    </span><span class="kw">let </span>(role, glyph) = decode_math_char(value.value_of() <span class="kw">as </span>u16, stomach, state)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>(role, glyph) = decode_math_char(value.value_of() <span class="kw">as </span>u16)<span class="question-mark">?</span>;
     <span class="comment">// eprintln!(&quot;    role: {:?} + glyph: {:?}&quot;, role, glyph);
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     </span><span class="kw">let </span>internalcs_opt = glyph.map(|<span class="kw">_</span>|
@@ -974,8 +972,8 @@ setter =&gt; sub[value,_scope,args,state] {
       <span class="macro">DefConstructor!</span>(internalcs, <span class="prelude-val">None</span>, <span class="string">&quot;&lt;ltx:XMTok role=&#39;#role&#39;&gt;#glyph&lt;/ltx:XMTok&gt;&quot;</span>,
         sizer =&gt; <span class="string">&quot;#1&quot;</span>,
         properties =&gt; glyph_props,
-        font =&gt; sub[whatsit,state] { <span class="prelude-val">Ok</span>(state.lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph_str)) },
-        reversion =&gt;  sub[_whatsit,_args,st] {
+        font =&gt; { <span class="prelude-val">Ok</span>(lookup_font().unwrap().specialize(<span class="kw-2">&amp;</span>glyph_str)) },
+        reversion =&gt; sub[_w,_a] {
           <span class="prelude-val">Ok</span>(Tokens::new(
             <span class="kw">if </span>(glyph_c <span class="kw">as </span>usize) &lt; <span class="number">128 </span>{
               <span class="macro">vec!</span>[<span class="macro">CharToken!</span>(glyph_c,Catcode::OTHER)]
@@ -986,7 +984,7 @@ setter =&gt; sub[value,_scope,args,state] {
         }
       );
     }
-    state.install_definition(Register::new_chardef(newcs,<span class="prelude-val">Some</span>(value.into()), internalcs_2), <span class="prelude-val">None</span>);
+    state::install_definition(Register::new_chardef(newcs,<span class="prelude-val">Some</span>(value.into()), internalcs_2), <span class="prelude-val">None</span>);
     <span class="macro">AfterAssignment!</span>();
     <span class="prelude-val">Ok</span>(Vec::new())
   });
@@ -994,15 +992,15 @@ setter =&gt; sub[value,_scope,args,state] {
   <span class="macro">DefConstructor!</span>(<span class="string">&quot;\\mathaccent Number Digested&quot;</span>,
   <span class="string">&quot;&lt;ltx:XMApp&gt;&lt;ltx:XMTok role=&#39;OVERACCENT&#39;&gt;#glyph&lt;/ltx:XMTok&gt;&lt;ltx:XMArg&gt;#2&lt;/ltx:XMArg&gt;&lt;/ltx:XMApp&gt;&quot;</span>,
   sizer =&gt; <span class="string">&quot;#1&quot;</span>,    <span class="comment">// Close enough?
-  </span>after_digest =&gt; sub[stomach, whatsit, state] {
+  </span>after_digest =&gt; sub[whatsit] {
     <span class="kw">let </span>n = whatsit.get_arg(<span class="number">1</span>).unwrap().value_of();
-    <span class="kw">let </span>(role, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16, stomach, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>(_role, glyph_opt) = decode_math_char(n <span class="kw">as </span>u16)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(glyph) = glyph_opt {
       whatsit.set_property(<span class="string">&quot;glyph&quot;</span>, glyph);
 
       <span class="kw">let </span><span class="kw-2">mut </span>glyph_buf: [u8; <span class="number">4</span>] = [<span class="number">0</span>; <span class="number">4</span>];
       <span class="kw">let </span>glyph_str: <span class="kw-2">&amp;</span>str = glyph.encode_utf8(<span class="kw-2">&amp;mut </span>glyph_buf);
-      whatsit.set_property(<span class="string">&quot;font&quot;</span>, state.lookup_font().unwrap().specialize(glyph_str));
+      whatsit.set_property(<span class="string">&quot;font&quot;</span>, lookup_font().unwrap().specialize(glyph_str));
     }
   });
 });

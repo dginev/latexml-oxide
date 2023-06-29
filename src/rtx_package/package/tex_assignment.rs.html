@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_assignment.rs`."><title>tex_assignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_assignment.rs`."><title>tex_assignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -343,7 +343,6 @@
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
 <span class="comment">//======================================================================
@@ -351,7 +350,7 @@
 //======================================================================
 // &lt;assignment&gt; = &lt;non-macro assignment&gt; | &lt;macro assignment&gt;
 
-</span><span class="macro">LoadDefinitions!</span>(outer_state, {
+</span><span class="macro">LoadDefinitions!</span>({
   <span class="comment">//======================================================================
   // Macros
   // See Chapter 24, p.275-276
@@ -360,23 +359,23 @@
   // &lt;def&gt; = \def | \gdef | \edef | \xdef
   // &lt;definition text&gt; = &lt;register text&gt;&lt;left brace&gt;&lt;balanced text&gt;&lt;right brace&gt;
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\def SkipSpaces Token UntilBrace DefPlain&quot;</span>,
-    sub[stomach, (cs,params,body), state] {
-      do_def(<span class="bool-val">false</span>, stomach, cs,params,body, state)<span class="question-mark">?</span>;
+    sub[(cs,params,body)] {
+      do_def(<span class="bool-val">false</span>,cs,params,body)<span class="question-mark">?</span>;
     },
     locked =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\gdef SkipSpaces Token UntilBrace DefPlain&quot;</span>,
-    sub[stomach, (cs,params,body), state] {
-      do_def(<span class="bool-val">true</span>, stomach, cs,params,body, state)<span class="question-mark">?</span>;
+    sub[(cs,params,body)] {
+      do_def(<span class="bool-val">true</span>,cs,params,body)<span class="question-mark">?</span>;
     },
     locked =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\edef SkipSpaces Token UntilBrace DefExpanded&quot;</span>,
-    sub[stomach, (cs,params,body), state] {
-      do_def(<span class="bool-val">false</span>, stomach, cs,params,body, state)<span class="question-mark">?</span>;
+    sub[(cs,params,body)] {
+      do_def(<span class="bool-val">false</span>,cs,params,body)<span class="question-mark">?</span>;
     },
     locked =&gt; <span class="bool-val">true</span>);
   <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\xdef SkipSpaces Token UntilBrace DefExpanded&quot;</span>,
-    sub[stomach, (cs,params,body), state] {
-      do_def(<span class="bool-val">true</span>, stomach, cs,params,body, state)<span class="question-mark">?</span>;
+    sub[(cs,params,body)] {
+      do_def(<span class="bool-val">true</span>,cs,params,body)<span class="question-mark">?</span>;
     },
     locked =&gt; <span class="bool-val">true</span>);
 
@@ -411,23 +410,22 @@
 
   // Need to handle &quot;at&quot; too!!!
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\font Token SkipMatch:= SkipSpaces TeXFileName&quot;</span>,
-  sub[stomach, (cs, name_arg), state] {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+  sub[(cs, name_arg)] {
     <span class="kw">let </span>name = name_arg.to_string();
     <span class="kw">let </span>props_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>props) = font::decode_fontname(<span class="kw-2">&amp;</span>name,
-      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;at&quot;</span>], state)<span class="question-mark">?
-        </span>.map(|<span class="kw">_</span>| gullet.read_dimension(state).unwrap().pt_value(<span class="prelude-val">None</span>)),
-      gullet.read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;scaled&quot;</span>], state)<span class="question-mark">?
-        </span>.map(|<span class="kw">_</span>| gullet.read_number(state).unwrap().value_of() <span class="kw">as </span>f64 / <span class="number">1000.0</span>)) {
+      gullet::read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;at&quot;</span>])<span class="question-mark">?
+        </span>.map(|<span class="kw">_</span>| gullet::read_dimension().unwrap().pt_value(<span class="prelude-val">None</span>)),
+      gullet::read_keyword(<span class="kw-2">&amp;</span>[<span class="string">&quot;scaled&quot;</span>])<span class="question-mark">?
+        </span>.map(|<span class="kw">_</span>| gullet::read_number().unwrap().value_of() <span class="kw">as </span>f64 / <span class="number">1000.0</span>)) {
       props.name = <span class="prelude-val">Some</span>(Cow::Owned(name));
       <span class="prelude-val">Some</span>(props)
     } <span class="kw">else </span>{ <span class="comment">// Failed?
       </span><span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;Unrecognized font name {:?} Font switch macro {:?}
       will have no effect&quot;</span>, name, cs.stringify());
-      <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, name, gullet, message);
+      <span class="macro">Info!</span>(<span class="string">&quot;unexpected&quot;</span>, name, message);
       <span class="prelude-val">None
     </span>};
-    gullet.skip_spaces(state)<span class="question-mark">?</span>;
+    gullet::skip_spaces()<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>props) = props_opt {
       <span class="macro">AssignValue!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;fontinfo_{}&quot;</span>, cs.to_string()), props.clone());
     }
@@ -455,80 +453,80 @@
   //    | \multiply &lt;numeric variable&gt;&lt;optional by&gt;&lt;number&gt;
   //    | \divide &lt;numeric variable&gt;&lt;optional by&gt;&lt;number&gt;
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\advance Variable SkipKeyword:by&quot;</span>, sub[stomach, (var), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\advance Variable SkipKeyword:by&quot;</span>, sub[(var)] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
       <span class="kw">let </span>(defn_token, inner) = <span class="kw-2">*</span>dbox;
       <span class="kw">let </span>defn_token_str = defn_token.to_string();
       <span class="kw">if </span>!defn_token_str.is_empty() &amp;&amp; defn_token_str != <span class="string">&quot;missing&quot; </span>{
-        <span class="kw">let </span>defn_opt = state.lookup_register_definition(<span class="kw-2">&amp;</span>defn_token);
-        state.local_current_token(defn_token);
+        <span class="kw">let </span>defn_opt = state::lookup_register_definition(<span class="kw-2">&amp;</span>defn_token);
+        local_current_token(defn_token);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = defn_opt {
-          <span class="kw">let </span>summand = stomach.get_gullet_mut().read_value(defn.register_type().unwrap(), state)<span class="question-mark">?</span>;
+          <span class="kw">let </span>summand = gullet::read_value(defn.register_type().unwrap())<span class="question-mark">?</span>;
           <span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
-          <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
-          defn.set_value(defn_value.add(summand), <span class="prelude-val">None</span>, defn_args, state);
+          <span class="kw">let </span>defn_value = defn.value_of(inner).unwrap_or_default();
+          defn.set_value(defn_value.add(summand), <span class="prelude-val">None</span>, defn_args);
         } <span class="kw">else </span>{
           <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\advance expected a defined variable for {:?}, found no definition&quot;</span>,
           defn_token_str);
-          <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, message);
+          <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, message);
         }
-        state.expire_current_token();
+        expire_current_token();
       }
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\multiply Variable SkipKeyword:by Number&quot;</span>, sub[stomach, (var,scale), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\multiply Variable SkipKeyword:by Number&quot;</span>, sub[(var,scale)] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
       <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
+      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state::lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
         <span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
-        <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
-        defn.set_value(defn_value.multiply(scale), <span class="prelude-val">None</span>, defn_args, state);
+        <span class="kw">let </span>defn_value = defn.value_of(inner).unwrap_or_default();
+        defn.set_value(defn_value.multiply(scale), <span class="prelude-val">None</span>, defn_args);
       } <span class="kw">else </span>{
         <span class="kw">let </span>message =
           <span class="macro">s!</span>(<span class="string">&quot;\\multiply expected a defined variable for {:?}, found no definition&quot;</span>, varname);
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, message);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, message);
       }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\multiply expected a Variable argument, but got nothing.&quot;</span>);
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;variable&quot;</span>, stomach, message);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;variable&quot;</span>, message);
     }
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\divide Variable SkipKeyword:by Number&quot;</span>, sub[stomach, (var,scale), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\divide Variable SkipKeyword:by Number&quot;</span>, sub[(var,scale)] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
       <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       </span><span class="kw">let </span>defn_args : Vec&lt;ArgWrap&gt; = inner.clone();
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
-        <span class="kw">let </span>defn_value = defn.value_of(inner, state).unwrap_or_default();
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state::lookup_register_definition(<span class="kw-2">&amp;</span>varname) {
+        <span class="kw">let </span>defn_value = defn.value_of(inner).unwrap_or_default();
         <span class="kw">let </span><span class="kw-2">mut </span>denominator = scale.value_f64();
         <span class="kw">if </span>denominator == <span class="number">0.0 </span>{
-          <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, scale, stomach, <span class="string">&quot;Illegal \\divide by 0; assuming 1&quot;</span>);
+          <span class="macro">Error!</span>(<span class="string">&quot;misdefined&quot;</span>, scale, <span class="string">&quot;Illegal \\divide by 0; assuming 1&quot;</span>);
           denominator = <span class="number">1.0</span>;
         }
-        defn.set_value(defn_value.divide(Float::new_f64(denominator)), <span class="prelude-val">None</span>, defn_args, state);
+        defn.set_value(defn_value.divide(Float::new_f64(denominator)), <span class="prelude-val">None</span>, defn_args);
       } <span class="kw">else </span>{
         <span class="kw">let </span>message =
           <span class="macro">s!</span>(<span class="string">&quot;\\divide expected a defined variable for {:?}, found no definition&quot;</span>, varname);
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, stomach, message);
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;definition&quot;</span>, message);
       }
     } <span class="kw">else </span>{
       <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;\\divide expected a Variable argument, but got nothing.&quot;</span>);
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;variable&quot;</span>, stomach, message);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>,<span class="string">&quot;variable&quot;</span>, message);
     }
   });
 
   <span class="comment">// &lt;let assignment&gt; = \futurelet &lt;control sequence&gt;&lt;token&gt;&lt;token&gt;
   //  | \let&lt;control sequence&gt;&lt;equals&gt;&lt;one optional space&gt;&lt;token&gt;
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\let Token SkipMatch:= Skip1Space Token&quot;</span>, sub[stomach, (token1, token2), state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\let Token SkipMatch:= Skip1Space Token&quot;</span>, sub[(token1, token2)] {
     <span class="macro">Let!</span>(token1, token2);
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\futurelet Token Token Token&quot;</span>, sub[stomach, (cs, token1, token2), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\futurelet Token Token Token&quot;</span>, sub[(cs, token1, token2)] {
     <span class="comment">// NOT expandable, but puts tokens back
-    </span>stomach.get_gullet_mut().unread(<span class="macro">Tokens!</span>(token1,token2.clone()));
+    </span>gullet::unread(<span class="macro">Tokens!</span>(token1,token2.clone()));
     <span class="macro">Let!</span>(cs, token2);
   });
 
@@ -541,24 +539,24 @@
 
   // DG: it&#39;s just RegisterValue actually.
 
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\countdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    shorthand_def(cs, <span class="string">&quot;\\count&quot;</span>, Number::new(<span class="number">0</span>).into(), stomach,state)
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\countdef Token SkipMatch:=&quot;</span>, sub[(cs)] {
+    shorthand_def(cs, <span class="string">&quot;\\count&quot;</span>, Number::new(<span class="number">0</span>).into())
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\dimendef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    shorthand_def(cs, <span class="string">&quot;\\dimen&quot;</span>, Dimension::new(<span class="number">0</span>).into(), stomach,state)
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\dimendef Token SkipMatch:=&quot;</span>, sub[(cs)] {
+    shorthand_def(cs, <span class="string">&quot;\\dimen&quot;</span>, Dimension::new(<span class="number">0</span>).into())
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\skipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    shorthand_def(cs, <span class="string">&quot;\\skip&quot;</span>, Glue::new(<span class="number">0</span>).into(), stomach,state)
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\skipdef Token SkipMatch:=&quot;</span>, sub[(cs)] {
+    shorthand_def(cs, <span class="string">&quot;\\skip&quot;</span>, Glue::new(<span class="number">0</span>).into())
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\muskipdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    shorthand_def(cs, <span class="string">&quot;\\muskip&quot;</span>, MuGlue::new(<span class="number">0</span>).into(), stomach,state)
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\muskipdef Token SkipMatch:=&quot;</span>, sub[(cs)] {
+    shorthand_def(cs, <span class="string">&quot;\\muskip&quot;</span>, MuGlue::new(<span class="number">0</span>).into())
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\toksdef Token SkipMatch:=&quot;</span>, sub[stomach, (cs), state] {
-    shorthand_def(cs, <span class="string">&quot;\\toks&quot;</span>, <span class="macro">Tokens!</span>().into(), stomach,state)
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\toksdef Token SkipMatch:=&quot;</span>, sub[(cs)] {
+    shorthand_def(cs, <span class="string">&quot;\\toks&quot;</span>, <span class="macro">Tokens!</span>().into())
   });
 
   <span class="comment">// NOTE: Get all these handled as registers
@@ -570,106 +568,105 @@
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\lastpenalty&quot;</span>, Number::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// \parshape !?!??
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\parshape SkipMatch:= Number&quot;</span>, sub[stomach, (n), state] {
-    <span class="kw">let </span>gullet = stomach.get_gullet_mut();
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\parshape SkipMatch:= Number&quot;</span>, sub[(n)] {
+
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n.value_of() {
-      gullet.read_dimension(state)<span class="question-mark">?</span>;
-      gullet.read_dimension(state)<span class="question-mark">?</span>;
+      gullet::read_dimension()<span class="question-mark">?</span>;
+      gullet::read_dimension()<span class="question-mark">?</span>;
     }
     <span class="comment">// we _could_ conceivably store this somewhere for some attempt at stylistic purpose...
     </span><span class="prelude-val">Ok</span>(Vec::new())
   });
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\inputlineno&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>, getter=&gt;sub[_args,state] {
-    <span class="kw">let </span>stomach = state.stomach.clone();
-    <span class="kw">let </span>stomach_mut = stomach.borrow_mut();
-    <span class="kw">let </span>locator = stomach_mut.get_gullet().get_locator();
-    Number::new(locator.map(|l| l.from_line <span class="kw">as </span>i64).unwrap_or(<span class="number">0</span>))
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\inputlineno&quot;</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>, getter=&gt; {
+    Number::new(gullet::get_locator().map(|l| l.from_line <span class="kw">as </span>i64).unwrap_or(<span class="number">0</span>))
   });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\badness&quot;</span>, Number::new(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// &lt;codename&gt; = \catcode | \mathcode | \lccode | \uccode | \sfcode | \delcode
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\catcode Number&quot;</span>, Number::new(<span class="number">0</span>),
-    getter =&gt; sub[args, state] {
+    getter =&gt; sub[args] {
       <span class="macro">unpack_opt!</span>(args =&gt; num);
       <span class="kw">let </span>refchar = (num.expect_number().value_of() <span class="kw">as </span>u8) <span class="kw">as </span>char;
-      <span class="kw">let </span>code = state.lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
+      <span class="kw">let </span>code = lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
-    setter =&gt; sub[value, scope, args, state] {
+    setter =&gt; sub[value, scope, args] {
       <span class="macro">unpack_opt!</span>(args =&gt; num);
       <span class="kw">let </span>c_char = (num.expect_number().value_of() <span class="kw">as </span>u8) <span class="kw">as </span>char;
       <span class="kw">let </span>c_code : Catcode = From::from(value.value_of() <span class="kw">as </span>u8);
-      state.assign_catcode(c_char, c_code, scope);
+      assign_catcode(c_char, c_code, scope);
     }
   );
 
   <span class="comment">// Only used for active math characters, so far
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\mathcode Number&quot;</span>, Number::new(<span class="number">0</span>),
-    getter =&gt; sub[args, state] {
+    getter =&gt; sub[args] {
       <span class="kw">let </span>ch_code   = args.remove(<span class="number">0</span>).expect_number().value_of() <span class="kw">as </span>u8;
       <span class="kw">let </span>ch : char = ch_code <span class="kw">as </span>char;
-      <span class="kw">let </span>code = <span class="kw">match </span>state.lookup_mathcode(<span class="kw-2">&amp;</span>ch.to_string()) {
+      <span class="kw">let </span>code = <span class="kw">match </span>lookup_mathcode(<span class="kw-2">&amp;</span>ch.to_string()) {
         <span class="prelude-val">None </span>=&gt; ch_code,
         <span class="prelude-val">Some</span>(code) =&gt; code <span class="kw">as </span>u8
       };
       <span class="macro">Number!</span>(code)
     },    <span class="comment">// defaults to the char&#39;s code itself(?)
-    </span>setter =&gt; sub[value, scope, args, state] {
+    </span>setter =&gt; sub[value, scope, args] {
       <span class="kw">let </span>ch = args.remove(<span class="number">0</span>).expect_number().value_of() <span class="kw">as </span>u8;
       <span class="kw">let </span>ch : char = ch <span class="kw">as </span>char;
-      state.assign_mathcode(ch, value.value_of() <span class="kw">as </span>u16, scope);
+      assign_mathcode(ch, value.value_of() <span class="kw">as </span>u16, scope);
     }
   );
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\sfcode Number&quot;</span>, Number::new(<span class="number">0</span>),
-    getter=&gt; sub[args, state] {
-    <span class="kw">let </span>code = state.lookup_sfcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
+    getter=&gt; sub[args] {
+    <span class="kw">let </span>code = lookup_sfcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
       Number::new(code.unwrap_or_default() <span class="kw">as </span>i64)
     },
-    setter =&gt; sub[value, scope, args, state] {
-      state.assign_sfcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
+    setter =&gt; sub[value, scope, args] {
+      assign_sfcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
         value.value_of() <span class="kw">as </span>u16, scope); });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\lccode Number&quot;</span>, Number::new(<span class="number">0</span>),
-  getter=&gt; sub[args, state] {
-    <span class="kw">let </span>code = state.lookup_lccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
+  getter=&gt; sub[args] {
+    <span class="kw">let </span>code = lookup_lccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
     Number::new(code.unwrap_or_default() <span class="kw">as </span>i64)
   },
-  setter =&gt; sub[value, scope, args, state] {
-    state.assign_lccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
+  setter =&gt; sub[value, scope, args] {
+    assign_lccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
       value.value_of() <span class="kw">as </span>u16, scope);
   });
 
   <span class="macro">DefRegister!</span>(<span class="string">&quot;\\uccode Number&quot;</span>, Number::new(<span class="number">0</span>),
-  getter=&gt; sub[args, state] {
-    <span class="kw">let </span>code = state.lookup_uccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
+  getter=&gt; sub[args] {
+    <span class="kw">let </span>code = lookup_uccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
     Number::new(code.unwrap_or_default() <span class="kw">as </span>i64)
   },
-  setter =&gt; sub[value, scope, args, state] {
-    state.assign_uccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
+  setter =&gt; sub[value, scope, args] {
+    assign_uccode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
       value.value_of() <span class="kw">as </span>u16, scope);
   });
 
   <span class="comment">// Not used anywhere (yet)
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\delcode Number&quot;</span>, Number::new(<span class="number">0</span>),
-  getter=&gt; sub[args, state] {
-    <span class="kw">let </span>code = state.lookup_delcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
+  getter=&gt; sub[args] {
+    <span class="kw">let </span>code = lookup_delcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char);
     Number::new(code.unwrap_or_default() <span class="kw">as </span>i64)
   },
-  setter =&gt; sub[value, scope, args, state] {
-    state.assign_delcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
+  setter =&gt; sub[value, scope, args] {
+    assign_delcode(args[<span class="number">0</span>].value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char,
       value.value_of() <span class="kw">as </span>u16, scope);
   });
 
   <span class="comment">// Remember, we&#39;re assigning a NUMBER (codepoint) to a CHARACTER!
-  </span><span class="kw">for </span>letter <span class="kw">in </span><span class="string">b&#39;A&#39;</span>..=<span class="string">b&#39;Z&#39; </span>{
-    <span class="comment">//FYI: 0x20 == 32
-    </span>outer_state.assign_lccode(letter, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
-    outer_state.assign_uccode(letter, letter, <span class="prelude-val">Some</span>(Scope::Global));
-    outer_state.assign_lccode(letter + <span class="number">32</span>, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
-    outer_state.assign_uccode(letter + <span class="number">32</span>, letter, <span class="prelude-val">Some</span>(Scope::Global));
+  </span>{
+    <span class="kw">for </span>letter <span class="kw">in </span><span class="string">b&#39;A&#39;</span>..=<span class="string">b&#39;Z&#39; </span>{
+      <span class="comment">//FYI: 0x20 == 32
+      </span>assign_lccode(letter, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
+      assign_uccode(letter, letter, <span class="prelude-val">Some</span>(Scope::Global));
+      assign_lccode(letter + <span class="number">32</span>, letter + <span class="number">32</span>, <span class="prelude-val">Some</span>(Scope::Global));
+      assign_uccode(letter + <span class="number">32</span>, letter, <span class="prelude-val">Some</span>(Scope::Global));
+    }
   }
 
   <span class="comment">// Stub definitions ???
@@ -681,12 +678,13 @@
 });
 
 <span class="doccomment">/// Note that these define a &quot;shorthand&quot; for eg. \count123, but are NOT macros!
-</span><span class="kw">pub fn </span>shorthand_def(cs: Token, address_type: <span class="kw-2">&amp;</span>str, init: RegisterValue, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  state.assign_meaning(<span class="kw-2">&amp;</span>cs, state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(),<span class="prelude-val">None</span>);
-  <span class="kw">let </span>num = stomach.get_gullet_mut().read_number(state)<span class="question-mark">?</span>;
+</span><span class="kw">pub fn </span>shorthand_def(cs: Token, address_type: <span class="kw-2">&amp;</span>str, init: RegisterValue) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
+  { assign_meaning(<span class="kw-2">&amp;</span>cs, relax_meaning,<span class="prelude-val">None</span>); }
+  <span class="kw">let </span>num = gullet::read_number()<span class="question-mark">?</span>;
   <span class="kw">let </span>address = <span class="macro">s!</span>(<span class="string">&quot;{address_type}{}&quot;</span>, num.value_of());
   <span class="kw">let </span>options = <span class="prelude-val">Some</span>(RegisterOptions{address: <span class="prelude-val">Some</span>(address), ..RegisterOptions::default()});
-  def_register(cs, <span class="prelude-val">None</span>, init, options, state)<span class="question-mark">?</span>;
-  state.after_assignment(stomach.get_gullet_mut());
+  def_register(cs, <span class="prelude-val">None</span>, init, options)<span class="question-mark">?</span>;
+  after_assignment();
   <span class="prelude-val">Ok</span>(())
 }</code></pre></div></section></main></body></html>

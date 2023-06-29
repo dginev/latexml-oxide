@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/hyperref_sty.rs`."><title>hyperref_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/hyperref_sty.rs`."><title>hyperref_sty.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -841,10 +841,8 @@
 <a href="#841" id="841">841</a>
 <a href="#842" id="842">842</a>
 <a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
-<span class="macro">LoadDefinitions!</span>(state, {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">// Some of the requirements not yet applicable/supported in latexml
   //TODO: RequirePackage!(&quot;ltxcmds&quot;);
   //RequirePackage(&quot;iftex&quot;);
@@ -1021,7 +1019,7 @@
   //   pdfauthortitle   =&gt; &#39;&#39;,                                # photoshop:AuthorsPosition
   //   pdfcaptionwriter =&gt; &#39;&#39;,                                # photoshop:CaptionWriter !?!?!?
   //   pdfcopyright     =&gt; [&#39;dcterms:rights&#39;, &#39;content&#39;],     # &amp; xmpRights:Marked
-  //   pdflicenseurl    =&gt; [&#39;cc:licence&#39;,     &#39;resource&#39;],    # xmpRights:WebStatement
+  //   pdflicenseurl    =&gt; [&#39;cc:licence&#39;,     &#39;resource&#39;],    # xmpRights:Webstate::ent
   //   pdfmetalang      =&gt; &#39;&#39;,                                # dcterms:language ??
   // );
   // date=&gt;dcterms:date xmp:CreateDate xmp:ModifyDate xmp:MetadataDate ?
@@ -1079,18 +1077,18 @@
   <span class="comment">// \url{url} from url.sty... well sorta
   // It&#39;s slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@Url Token&quot;</span>, sub[gullet,(cmd),state] {
-    <span class="kw">let </span>open = gullet.read_token(state)<span class="question-mark">?</span>.unwrap();
-    state.begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
-    state.let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>, gullet); <span class="comment">// Needs special protection?
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\@Url Token&quot;</span>, sub[(cmd)] {
+    <span class="kw">let </span>open = gullet::read_token()<span class="question-mark">?</span>.unwrap();
+   begin_semiverbatim(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="string">&#39;%&#39;</span>]));
+    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;~&quot;</span>), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">&quot;~&quot;</span>), <span class="prelude-val">None</span>); <span class="comment">// Needs special protection?
     </span><span class="kw">let </span>(open,close,url) = <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
       ( <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>),
-        gullet.read_balanced(<span class="bool-val">true</span>, state)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
+        gullet::read_balanced(<span class="bool-val">true</span>)<span class="question-mark">?</span>.unwrap_or_default()) <span class="comment">// Expand as we go!
     </span>} <span class="kw">else </span>{
       ( <span class="macro">T_OTHER!</span>(<span class="string">&quot;{&quot;</span>), <span class="macro">T_OTHER!</span>(<span class="string">&quot;}&quot;</span>),
         <span class="macro">Tokens!</span>(open.as_other()) )
     };
-    state.end_semiverbatim()<span class="question-mark">?</span>;
+    end_semiverbatim()<span class="question-mark">?</span>;
     <span class="kw">let </span>toks : Vec&lt;Token&gt; = url.unlist().into_iter()
       .filter(|t| t.get_catcode() != Catcode::SPACE)
       <span class="comment">// Identical with url&#39;s \@Url except, let CS&#39;s through!
@@ -1104,7 +1102,7 @@
         <span class="macro">Tokens!</span>(open),
         <span class="macro">Tokens!</span>(close),
         Tokens::new(toks),
-        Tokens::new(url_wrapped)], gullet)<span class="question-mark">?</span>.unlist();
+        Tokens::new(url_wrapped)]).unlist();
     invocation_tokens.push(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endgroup&quot;</span>));
     Tokens::new(invocation_tokens)
   });
@@ -1113,7 +1111,7 @@
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\nolinkurl Semiverbatim&quot;</span>, <span class="string">&quot;#1&quot;</span>);
 
   <span class="comment">// \hyperbaseurl{url}
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\hyperbaseurl Semiverbatim&quot;</span>, sub[stomach,(url),state] {
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\hyperbaseurl Semiverbatim&quot;</span>, sub[(url)] {
   <span class="macro">AssignValue!</span>(<span class="string">&quot;BASE_URL&quot; </span>=&gt; url.to_string()); });
 
   <span class="comment">// \hyperimage{imageurl}{text}
@@ -1146,7 +1144,7 @@
 
   // sub localized_anchor {
   //   my ($document, $whatsit) = @_;
-  //   my $model      = $STATE-&gt;getModel;
+  //   my $model      = $state-&gt;getModel;
   //   my $node       = $document-&gt;getNode;
   //   my @candidates = ($node);
   //   my $candidate;
@@ -1278,27 +1276,25 @@
   </span><span class="macro">DefConstructor!</span>(<span class="string">&quot;\\autoref OptionalMatch:* Semiverbatim&quot;</span>,
   <span class="string">&quot;&lt;ltx:ref ?#1(class=&#39;ltx_refmacro_autoref ltx_nolink&#39;)(class=&#39;ltx_refmacro_autoref&#39;)
     show=&#39;autoref&#39; labelref=&#39;#label&#39; _force_font=&#39;true&#39;/&gt;&quot;</span>,
-  properties =&gt; sub[_stomach, args, _state] {
+  properties =&gt; sub[args] {
     <span class="kw">let </span>refarg = <span class="kw-2">&amp;</span>args[<span class="number">1</span>];
     <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">&quot;label&quot; </span>=&gt; clean_label(<span class="kw-2">&amp;</span>refarg.as_ref().unwrap().to_string(), <span class="prelude-val">None</span>).to_string()))
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@autorefnum@@{}&quot;</span>, sub[gullet,(ttype),state] {
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\lx@autorefnum@@{}&quot;</span>, sub[(ttype)] {
     <span class="kw">let </span>type_s  = ttype.unwrap().to_string();
-    <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{type_s}autorefname&quot;</span>)))<span class="question-mark">?</span>.is_some() {
+    <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\{type_s}autorefname&quot;</span>)))<span class="question-mark">?</span>.is_some() {
       <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">&quot;\\{type_s}autorefname&quot;</span>)), <span class="macro">T_CS!</span>(<span class="string">&quot;\\nobreakspace&quot;</span>)]
     } <span class="kw">else </span>{
       Vec::new()
     };
 
-    <span class="kw">let </span>counter = <span class="macro">LookupMapping!</span>(<span class="string">&quot;counter_for_type&quot;</span>,<span class="kw-2">&amp;</span>type_s);
-    <span class="kw">let </span>counter_str = <span class="kw">match </span>counter {
-      <span class="prelude-val">Some</span>(c) =&gt; c.to_string(),
-      <span class="prelude-val">None </span>=&gt; type_s
-    };
+    <span class="kw">let </span>counter_str = with_mapping(<span class="string">&quot;counter_for_type&quot;</span>,<span class="kw-2">&amp;</span>type_s, |mapping_opt|
+      mapping_opt.map(ToString::to_string)).unwrap_or(type_s);
+
     <span class="kw">let </span>pcounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\p@{counter_str}&quot;</span>,));
     <span class="kw">let </span>thecounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\the{counter_str}&quot;</span>));
-    <span class="kw">if </span>state.lookup_definition(<span class="kw-2">&amp;</span>pcounter)<span class="question-mark">?</span>.is_some() {
+    <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>pcounter)<span class="question-mark">?</span>.is_some() {
       tokens.push(pcounter);
     }
     tokens.push(thecounter);
@@ -1422,7 +1418,7 @@
   // \hypercalcbp{dimen}
   // DefMacro(&#39;\hypercalcbp{Dimension}&#39;, sub {
   //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen-&gt;valueOf / $STATE-&gt;convertUnit(&#39;bp&#39;)); });
+  //     Explode($dimen-&gt;valueOf / $state-&gt;convertUnit(&#39;bp&#39;)); });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour

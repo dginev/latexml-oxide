@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/parameter.rs`."><title>parameter.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -593,14 +593,6 @@
 <a href="#593" id="593">593</a>
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a>
-<a href="#597" id="597">597</a>
-<a href="#598" id="598">598</a>
-<a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
-<a href="#601" id="601">601</a>
-<a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>proc_macro2::TokenStream;
 <span class="kw">use </span>quote::{quote, ToTokens};
@@ -615,18 +607,17 @@
 <span class="kw">use </span><span class="kw">crate</span>::definition::argument::ArgWrap;
 <span class="kw">use </span><span class="kw">crate</span>::definition::constructor::Constructor;
 <span class="kw">use </span><span class="kw">crate</span>::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-<span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
-<span class="kw">use </span><span class="kw">crate</span>::state::State;
-<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
+<span class="kw">use crate</span>::{gullet};
+<span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::token::{Catcode, Token};
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
 <span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
 <span class="kw">use crate</span>::{Digested, Locator};
 
 <span class="kw">pub type </span>ReaderFn =
-  <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Gullet, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
-<span class="kw">pub type </span>ReaderPredigestFn = <span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Stomach, ArgWrap, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;;
+  <span class="kw">dyn </span>Fn(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens]) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt;;
+<span class="kw">pub type </span>ReaderPredigestFn = <span class="kw">dyn </span>Fn(ArgWrap) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;;
 <span class="kw">pub type </span>ReaderPredigestClosure = Rc&lt;ReaderPredigestFn&gt;;
 <span class="kw">pub type </span>ReaderClosure = Rc&lt;ReaderFn&gt;;
 
@@ -634,12 +625,12 @@
 // the reversion functions initially had &quot;&amp;mut Gullet&quot; as a parameter.
 // This turned out to be infeasible if we are to maintain the latexml code flow
 // as we have calls into reversions from arbitrary binding closures, at ALL phases.
-// Compromise: use the gated Stomach in state whenever you need gullet in reversion, as in
-// let mut stomach = state.stomach.borrow_mut();
-// let mut gullet = stomach.get_gullet_mut();
+// Compromise: use the gated Stomach in state::whenever you need gullet in reversion, as in
+// let mut stomach = state::stomach.borrow_mut();
+//
 //
 </span><span class="kw">pub type </span>ReversionClosure =
-  Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens], <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
+  Rc&lt;<span class="kw">dyn </span>Fn(Vec&lt;Token&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Parameters&gt;, <span class="kw-2">&amp;</span>[Tokens]) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;&gt;;
 
 <span class="kw">static </span>LAST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;\w$&quot;</span>).unwrap());
 <span class="kw">static </span>FIRST_WCHAR_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\w&quot;</span>).unwrap());
@@ -671,11 +662,10 @@
       spec: Cow::Borrowed(<span class="string">&quot;&quot;</span>),
       extra: Vec::new(),
       inner: <span class="prelude-val">None</span>,
-      reader: Rc::new(|_gullet, _args, _extra, _state| {
+      reader: Rc::new(|_args, _extra| {
         <span class="macro">Warn!</span>(
           <span class="string">&quot;Parameter&quot;</span>,
           <span class="string">&quot;mock_reader&quot;</span>,
-          <span class="prelude-val">None</span>,
           <span class="string">&quot;Please define a real reader, this is a mock fallback!&quot;
         </span>);
         <span class="prelude-val">Ok</span>(ArgWrap::None)
@@ -722,81 +712,87 @@
 <span class="kw">static </span>SKIP_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^Skip(.+)$&quot;</span>).unwrap());
 
 <span class="kw">impl </span>Parameter {
-  <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+  <span class="kw">pub fn </span>new(name: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;, spec: Cow&lt;<span class="lifetime">&#39;static</span>, str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     Parameter {
       name,
       spec,
       ..Parameter::default()
     }
-    .init(state)
+    .init()
   }
-  <span class="kw">pub fn </span>init(<span class="kw-2">mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+  <span class="kw">pub fn </span>init(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="comment">// Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read&lt;Type&gt; accessible from LaTeXML::Package::Pool
     // is defined.
-    </span><span class="kw">let </span>looked_up_mapping = state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name);
-    <span class="kw">let </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt;;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
-      descriptor = <span class="prelude-val">Some</span>(Rc::clone(d_lookup));
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-      <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-      descriptor = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype) {
-        <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
-        <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name), state) {
-          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
-            reader,
-            optional: <span class="bool-val">true</span>,
-            ..Parameter::default()
-          })),
-          <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype), state) {
+    </span><span class="kw">let </span><span class="kw-2">mut </span>descriptor: <span class="prelude-ty">Option</span>&lt;Rc&lt;Parameter&gt;&gt; = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name, |looked_up_mapping|
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) = looked_up_mapping {
+        <span class="prelude-val">Some</span>(Rc::clone(d_lookup))
+      } <span class="kw">else </span>{
+        <span class="prelude-val">None
+      </span>});
+    <span class="kw">if </span>descriptor.is_none() {
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(captures) = OPTIONAL_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
+        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+        descriptor = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype, |basetype_param_opt|
+        <span class="kw">match </span>basetype_param_opt {
+          <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(d_lookup.clone())),
+          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)) {
+            <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
+              reader,
+              optional: <span class="bool-val">true</span>,
+              ..Parameter::default()
+            }))),
+            <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype)) {
+              <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Rc::new(Parameter {
+                reader,
+                optional: <span class="bool-val">true</span>,
+                novalue: <span class="bool-val">true</span>,
+                ..Parameter::default()
+              }))),
+              <span class="prelude-val">None </span>=&gt; <span class="macro">fatal!</span>(
+                Parameter,
+                Init,
+                <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t initialize parameter {:?}, unknown?&quot;</span>, <span class="self">self</span>.name)
+              ),
+            },
+          },
+        })<span class="question-mark">?</span>;
+        <span class="self">self</span>.optional = <span class="bool-val">true</span>;
+      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SKIP_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
+        <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
+        descriptor = with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype, |basetype_param_opt|
+        <span class="kw">match </span>basetype_param_opt {
+          <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
+          <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
             <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
               reader,
               optional: <span class="bool-val">true</span>,
               novalue: <span class="bool-val">true</span>,
               ..Parameter::default()
             })),
-            <span class="prelude-val">None </span>=&gt; <span class="macro">fatal!</span>(
-              Parameter,
-              Init,
-              <span class="macro">s!</span>(<span class="string">&quot;Can&#39;t initialize parameter {:?}, unknown?&quot;</span>, <span class="self">self</span>.name)
-            ),
+            <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype)).map(|reader| {
+              Rc::new(Parameter {
+                reader,
+                optional: <span class="bool-val">true</span>,
+                novalue: <span class="bool-val">true</span>,
+                ..Parameter::default()
+              })
+            }),
           },
-        },
-      };
-      <span class="self">self</span>.optional = <span class="bool-val">true</span>;
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(captures) = SKIP_REGEX.captures(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
-      <span class="kw">let </span>basetype = captures.get(<span class="number">1</span>).map_or(<span class="string">&quot;&quot;</span>, |m| m.as_str());
-      descriptor = <span class="kw">match </span>state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, basetype) {
-        <span class="prelude-val">Some</span>(Stored::Parameter(d_lookup)) =&gt; <span class="prelude-val">Some</span>(d_lookup.clone()),
-        <span class="kw">_ </span>=&gt; <span class="kw">match </span>Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="self">self</span>.name, state) {
-          <span class="prelude-val">Some</span>(reader) =&gt; <span class="prelude-val">Some</span>(Rc::new(Parameter {
-            reader,
-            optional: <span class="bool-val">true</span>,
-            novalue: <span class="bool-val">true</span>,
-            ..Parameter::default()
-          })),
-          <span class="prelude-val">None </span>=&gt; Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, basetype), state).map(|reader| {
+        });
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_desc) = descriptor {
+          <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
+          <span class="self">self</span>.optional = <span class="bool-val">true</span>;
+        }
+      } <span class="kw">else </span>{
+        descriptor =
+          Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name)).map(|reader| {
             Rc::new(Parameter {
               reader,
-              optional: <span class="bool-val">true</span>,
-              novalue: <span class="bool-val">true</span>,
               ..Parameter::default()
             })
-          }),
-        },
-      };
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>_desc) = descriptor {
-        <span class="self">self</span>.novalue = <span class="bool-val">true</span>;
-        <span class="self">self</span>.optional = <span class="bool-val">true</span>;
+          });
       }
-    } <span class="kw">else </span>{
-      descriptor =
-        Parameter::check_reader_function(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;Read{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name), state).map(|reader| {
-          Rc::new(Parameter {
-            reader,
-            ..Parameter::default()
-          })
-        });
     }
     <span class="kw">match </span>descriptor {
       <span class="prelude-val">Some</span>(descriptor) =&gt; {
@@ -831,57 +827,57 @@
     <span class="comment">// Last but not least, initialize any &quot;inner&quot; parameters
     </span><span class="self">self</span>.inner = <span class="self">self</span>.inner.map(|inner_ps| {
       inner_ps
-        .init(state)
+        .init()
         .expect(<span class="string">&quot;inner param init shouldn&#39;t fail?&quot;</span>)
     });
     <span class="prelude-val">Ok</span>(<span class="self">self</span>)
   }
 
   <span class="doccomment">/// Obtain the reader of a given parameter name, if available
-  </span><span class="kw">pub fn </span>check_reader_function(name: <span class="kw-2">&amp;</span>str, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Option</span>&lt;ReaderClosure&gt; {
+  </span><span class="kw">pub fn </span>check_reader_function(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;ReaderClosure&gt; {
     <span class="comment">// TODO: This function doesn&#39;t have a direct Rust equivalent, since the metaprogramming isn&#39;t
     // possible But what is the exact purpose of seeking through the pool namespace? Wouldn&#39;t
-    // any parameter be already assigned in the state?
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(param)) = state.lookup_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, name) {
-      <span class="prelude-val">Some</span>(param.reader.clone())
-    } <span class="kw">else </span>{
-      <span class="prelude-val">None
-    </span>}
+    // any parameter be already assigned in the state::
+    </span>with_mapping(<span class="string">&quot;PARAMETER_TYPES&quot;</span>, name, |param_opt|
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(param)) = param_opt {
+        <span class="prelude-val">Some</span>(param.reader.clone())
+      } <span class="kw">else </span>{
+        <span class="prelude-val">None
+      </span>})
   }
 
-  <span class="kw">pub fn </span>setup_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) {
+  <span class="kw">pub fn </span>setup_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>) {
     <span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
-      state.begin_semiverbatim(<span class="self">self</span>.semiverbatim.as_deref());
+      begin_semiverbatim(<span class="self">self</span>.semiverbatim.as_deref());
     }
   }
 
-  <span class="kw">pub fn </span>revert_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>revert_catcodes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
-      state.end_semiverbatim()<span class="question-mark">?</span>;
+      end_semiverbatim()<span class="question-mark">?</span>;
     }
     <span class="prelude-val">Ok</span>(())
   }
 
   <span class="kw">pub fn </span>read(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
+
     fordefn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Definition&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;ArgWrap&gt; {
     <span class="comment">// For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
     // Hmmm, seem to still need it...
-    </span><span class="self">self</span>.setup_catcodes(state);
+    </span><span class="self">self</span>.setup_catcodes();
 
     <span class="kw">let </span>closure = <span class="kw-2">&amp;</span><span class="self">self</span>.reader;
-    <span class="kw">let </span>value_from_reader: ArgWrap = closure(gullet, <span class="self">self</span>.inner.as_ref(), <span class="kw-2">&amp;</span><span class="self">self</span>.extra, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>value_from_reader: ArgWrap = closure(<span class="self">self</span>.inner.as_ref(), <span class="kw-2">&amp;</span><span class="self">self</span>.extra)<span class="question-mark">?</span>;
     <span class="kw">let </span>value_arg = <span class="kw">if </span>value_from_reader.is_tokens() {
       <span class="kw">let </span>wants_option = <span class="self">self</span>.optional || value_from_reader.is_none();
       <span class="kw">match </span>value_from_reader.owned_tokens() {
         <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>value) =&gt; {
           <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>semi_chars) = <span class="self">self</span>.semiverbatim {
-            value = value.neutralize(semi_chars, state);
+            value = value.neutralize(semi_chars);
           }
           <span class="kw">if </span><span class="self">self</span>.pack_parameters {
             value = value.pack_parameters()<span class="question-mark">?</span>;
@@ -907,7 +903,7 @@
     } <span class="kw">else </span>{
       value_from_reader
     };
-    <span class="self">self</span>.revert_catcodes(state)<span class="question-mark">?</span>;
+    <span class="self">self</span>.revert_catcodes()<span class="question-mark">?</span>;
 
     <span class="kw">let </span>checked_value = <span class="kw">if </span>!<span class="self">self</span>.optional
       &amp;&amp; !<span class="self">self</span>.novalue
@@ -921,7 +917,6 @@
         <span class="macro">Error!</span>(
           <span class="string">&quot;expected&quot;</span>,
           <span class="self">self</span>,
-          gullet,
           <span class="macro">s!</span>(<span class="string">&quot;Missing argument {} for {}&quot;</span>, <span class="self">self</span>.stringify(), fordefn_str)
         );
         ArgWrap::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;missing&quot;</span>)))
@@ -936,24 +931,20 @@
 
   <span class="kw">pub fn </span>digest(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    stomach: <span class="kw-2">&amp;mut </span>Stomach,
     <span class="kw-2">mut </span>value_arg: ArgWrap,
     _fordefn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Constructor&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
     <span class="comment">// If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     </span><span class="kw">if </span><span class="self">self</span>.semiverbatim.is_some() {
-      <span class="self">self</span>.setup_catcodes(state);
+      <span class="self">self</span>.setup_catcodes();
       <span class="kw">if </span>value_arg.is_tokens() {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value_arg.owned_tokens() {
-          <span class="kw">let </span>neutralized = stomach.get_gullet_mut().reading_from_mouth(
-            Mouth::default(),
-            state,
-            <span class="kw">move </span>|gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State| {
-              gullet.unread(value);
+          <span class="kw">let </span>neutralized = gullet::reading_from_mouth(Mouth::default(),
+                    <span class="kw">move </span>|| {
+              gullet::unread(value);
               <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
               <span class="kw">loop </span>{
-                <span class="kw">match </span>gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state) {
+                <span class="kw">match </span>gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>) {
                   <span class="prelude-val">Ok</span>(token_opt) =&gt; <span class="kw">match </span>token_opt {
                     <span class="prelude-val">Some</span>(token) =&gt; tokens.push(token),
                     <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
@@ -962,7 +953,7 @@
                 }
               }
               <span class="kw">let </span>evec = Vec::new();
-              <span class="prelude-val">Ok</span>(Tokens::new(tokens).neutralize(<span class="kw-2">&amp;</span>evec, state).unlist())
+              <span class="prelude-val">Ok</span>(Tokens::new(tokens).neutralize(<span class="kw-2">&amp;</span>evec).unlist())
             },
           )<span class="question-mark">?</span>;
           value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
@@ -974,10 +965,10 @@
 
     <span class="kw">for </span>pre <span class="kw">in </span><span class="self">self</span>.before_digest.iter() {
       <span class="comment">// Done for effect only.
-      </span>pre(stomach, state)<span class="question-mark">?</span>; <span class="comment">// maybe pass extras?
+      </span>pre()<span class="question-mark">?</span>; <span class="comment">// maybe pass extras?
     </span>}
     <span class="kw">let </span>digested_value = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) = <span class="kw-2">&amp;</span><span class="self">self</span>.predigest {
-      closure(stomach, value_arg, state)<span class="question-mark">?
+      closure(value_arg)<span class="question-mark">?
     </span>} <span class="kw">else </span>{
       <span class="comment">// Note: we have an open question for the type interface.
       //  What happens when a wrapped &quot;None&quot; value,
@@ -991,29 +982,28 @@
       </span><span class="kw">if </span><span class="self">self</span>.optional &amp;&amp; value_arg.is_none() {
         <span class="prelude-val">None
       </span>} <span class="kw">else </span>{
-        <span class="prelude-val">Some</span>(value_arg.be_digested(stomach, state)<span class="question-mark">?</span>)
+        <span class="prelude-val">Some</span>(value_arg.be_digested()<span class="question-mark">?</span>)
       }
     };
     <span class="kw">for </span>post <span class="kw">in </span><span class="self">self</span>.after_digest.iter() {
       <span class="comment">// Done for effect only.
       </span><span class="kw">let </span><span class="kw-2">mut </span>w = Whatsit::default();
-      post(stomach, <span class="kw-2">&amp;mut </span>w, state)<span class="question-mark">?</span>; <span class="comment">// maybe pass extras?
+      post(<span class="kw-2">&amp;mut </span>w)<span class="question-mark">?</span>; <span class="comment">// maybe pass extras?
     </span>}
 
-    <span class="self">self</span>.revert_catcodes(state)<span class="question-mark">?</span>;
+    <span class="self">self</span>.revert_catcodes()<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(digested_value)
   }
 
-  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, value_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
+  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, value_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>reverter) = <span class="self">self</span>.reversion {
       <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = value_opt {
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>((reverter)(
           value.unlist(),
           <span class="self">self</span>.inner.as_ref(),
           <span class="kw-2">&amp;</span><span class="self">self</span>.extra,
-          state,
-        )<span class="question-mark">?</span>))
+              )<span class="question-mark">?</span>))
       } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
       }
@@ -1028,7 +1018,7 @@
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
   </span><span class="comment">// Yuck!
-  </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: Tokens, _gullet: <span class="kw-2">&amp;mut </span>Gullet, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  </span><span class="kw">pub fn </span>reparse(<span class="kw-2">&amp;</span><span class="self">self</span>, _value: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="macro">unimplemented!</span>()
   }
 }
@@ -1067,11 +1057,11 @@
   <span class="kw">pub fn </span>get_num_args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize { <span class="self">self</span>.<span class="number">0</span>.iter().filter(|<span class="kw-2">&amp;</span>p| !p.novalue).count() }
   <span class="kw">pub fn </span>get_parameters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;<span class="kw-2">&amp;</span>Parameter&gt; { <span class="self">self</span>.<span class="number">0</span>.iter().collect() }
   <span class="kw">pub fn </span>take_parameters(<span class="self">self</span>) -&gt; Vec&lt;Parameter&gt; { <span class="self">self</span>.<span class="number">0 </span>}
-  <span class="kw">pub fn </span>revert_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;, state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+  <span class="kw">pub fn </span>revert_arguments(<span class="kw-2">&amp;</span><span class="self">self</span>, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
     <span class="kw">for </span>(parameter, arg) <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter().zip(args.into_iter()) {
       <span class="kw">if </span>!parameter.novalue {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(reverted_tks) = parameter.revert(arg, state)<span class="question-mark">? </span>{
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(reverted_tks) = parameter.revert(arg)<span class="question-mark">? </span>{
           tokens.extend(reverted_tks.unlist());
         }
       }
@@ -1079,10 +1069,10 @@
     <span class="prelude-val">Ok</span>(tokens)
   }
   <span class="comment">// Try to initialize each associated Parameter
-  </span><span class="kw">pub fn </span>init(<span class="kw-2">mut </span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+  </span><span class="kw">pub fn </span>init(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>initialized = Vec::new();
     <span class="kw">for </span>param <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.drain(..) {
-      initialized.push(param.init(state)<span class="question-mark">?</span>);
+      initialized.push(param.init()<span class="question-mark">?</span>);
     }
     <span class="self">self</span>.<span class="number">0 </span>= initialized;
     <span class="prelude-val">Ok</span>(<span class="self">self</span>)
@@ -1090,14 +1080,12 @@
 
   <span class="kw">pub fn </span>read_arguments(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
     fordefn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>Definition&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
-    gullet.setup_scan();
+    gullet::setup_scan();
     <span class="kw">for </span>parameter <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
-      <span class="kw">let </span>values = parameter.read(gullet, fordefn, state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>values = parameter.read(fordefn)<span class="question-mark">?</span>;
       <span class="kw">if </span>parameter.predigest.is_some() {
         <span class="comment">// TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
         // closure... so this shouldn&#39;t be an error, not even an info -- but leaving it here
@@ -1115,16 +1103,14 @@
 
   <span class="kw">pub fn </span>read_arguments_and_digest(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    stomach: <span class="kw-2">&amp;mut </span>Stomach,
     fordefn: <span class="kw-2">&amp;</span>Constructor,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = Vec::new();
-    stomach.get_gullet_mut().setup_scan();
+    gullet::setup_scan();
     <span class="kw">for </span>parameter <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0 </span>{
-      <span class="kw">let </span>value = parameter.read(stomach.get_gullet_mut(), <span class="prelude-val">Some</span>(fordefn), state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>value = parameter.read(<span class="prelude-val">Some</span>(fordefn))<span class="question-mark">?</span>;
       <span class="kw">if </span>!parameter.novalue {
-        <span class="kw">let </span>digested_value = parameter.digest(stomach, value, <span class="prelude-val">Some</span>(fordefn), state)<span class="question-mark">?</span>;
+        <span class="kw">let </span>digested_value = parameter.digest( value, <span class="prelude-val">Some</span>(fordefn))<span class="question-mark">?</span>;
         args.push(digested_value);
       }
     }
@@ -1133,20 +1119,18 @@
 
   <span class="kw">pub fn </span>reparse_argument(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
-    value: ArgWrap,
-    ostate: <span class="kw-2">&amp;mut </span>State,
+    value: ArgWrap
   ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ArgWrap&gt;&gt; {
     <span class="kw">if </span>value.is_none() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
     }
-    <span class="kw">let </span>value_tokens = value.revert(ostate)<span class="question-mark">?</span>;
+    <span class="kw">let </span>value_tokens = value.revert()<span class="question-mark">?</span>;
     <span class="comment">// start with empty mouth
-    </span><span class="kw">let </span>reader_mouth = Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>, ostate)<span class="question-mark">?</span>;
-    gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: <span class="kw-2">&amp;mut </span>Gullet, state| {
-      gulletx.unread(value_tokens); <span class="comment">// but put back tokens to be read
-      </span><span class="kw">let </span>values = <span class="self">self</span>.read_arguments(gulletx, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
-      gulletx.skip_spaces(state)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>reader_mouth = Mouth::new(<span class="string">&quot;&quot;</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+    gullet::reading_from_mouth(reader_mouth, || {
+      gullet::unread(value_tokens); <span class="comment">// but put back tokens to be read
+      </span><span class="kw">let </span>values = <span class="self">self</span>.read_arguments(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+      gullet::skip_spaces()<span class="question-mark">?</span>;
       <span class="prelude-val">Ok</span>(values)
     })
   }

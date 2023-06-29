@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/tex_expandable_primitives.rs`."><title>tex_expandable_primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -414,20 +414,20 @@
 <span class="comment">//=======================
 // -- Main Definitions --
 //=======================
-</span><span class="macro">LoadDefinitions!</span>(outer_state, {
+</span><span class="macro">LoadDefinitions!</span>({
   <span class="comment">// The following special cases are built-in to Definition
   </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\else&quot;</span>);
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\or&quot;</span>);
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\fi&quot;</span>);
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcase Number&quot;</span>);
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifnum Number Token Number&quot;</span>, sub[gullet, (u,rel,v), state] {
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifnum Number Token Number&quot;</span>, sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdim Dimension Token Dimension&quot;</span>, sub[gullet, (u,rel,v), state] {
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdim Dimension Token Dimension&quot;</span>, sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifodd Number&quot;</span>, sub[gullet, (u), state] {
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifodd Number&quot;</span>, sub[(u)] {
     u.value_of() % <span class="number">2 </span>== <span class="number">1
   </span>});
 
@@ -437,19 +437,18 @@
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifinner&quot;</span>, { <span class="bool-val">false </span>});
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifmmode&quot;</span>, { <span class="macro">LookupBool!</span>(<span class="string">&quot;IN_MATH&quot;</span>) });
 
-  <span class="macro">DefParameterType!</span>(ExpandedIfToken, sub[gullet, _inner, _extra, state] {
-    <span class="kw">let </span>token_opt = gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>, state)<span class="question-mark">?</span>.map(|t| {
+  <span class="macro">DefParameterType!</span>(ExpandedIfToken, sub[_inner, _extra] {
+    <span class="kw">let </span>token_opt = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>), <span class="bool-val">false</span>)<span class="question-mark">?</span>.map(|t| {
       <span class="comment">// Also resolve \let variants:
-      </span><span class="kw">let </span>meaning_opt = state.lookup_meaning(<span class="kw-2">&amp;</span>t);
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(<span class="kw-2">ref </span>meaning)) = meaning_opt.as_deref() {
-        meaning.clone()
+      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(meaning)) = lookup_meaning(<span class="kw-2">&amp;</span>t) {
+        meaning
       } <span class="kw">else </span>{
         t
       }});
     <span class="kw">let </span>token = <span class="kw">match </span>token_opt {
       <span class="prelude-val">Some</span>(t) =&gt; t,
       <span class="prelude-val">None </span>=&gt; {
-        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>, gullet,
+        <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;ExpandedIfToken&quot;</span>,
           <span class="string">&quot;conditional expected a token argument, came back empty. Falling back to \\@empty&quot;</span>);
         <span class="macro">T_CS!</span>(<span class="string">&quot;\\@empty&quot;</span>)
       }};
@@ -466,21 +465,21 @@
     }
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (left,right), state] {
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\if ExpandedIfToken ExpandedIfToken&quot;</span>, sub[(left,right)] {
     left.get_charcode() == right.get_charcode()
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcat ExpandedIfToken ExpandedIfToken&quot;</span>, sub[gullet, (left,right), state] {
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcat ExpandedIfToken ExpandedIfToken&quot;</span>, sub[(left,right)] {
     left.get_catcode() == right.get_catcode()
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifx Token Token&quot;</span>, sub[gullet, (left,right), state] {
-    state.x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right)
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifx Token Token&quot;</span>, sub[(left,right)] {
+    x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right)
   });
 
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvoid Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">?</span>.is_empty() });
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifhbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">? </span>== <span class="string">&quot;hbox&quot; </span>});
-  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvbox Number&quot;</span>, sub[_g, (arg), state] { classify_box(arg, state)<span class="question-mark">? </span>== <span class="string">&quot;vbox&quot; </span>});
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvoid Number&quot;</span>, sub[(arg)] { classify_box(arg)<span class="question-mark">?</span>.is_empty() });
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifhbox Number&quot;</span>, sub[(arg)] { classify_box(arg)<span class="question-mark">? </span>== <span class="string">&quot;hbox&quot; </span>});
+  <span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifvbox Number&quot;</span>, sub[(arg)] { classify_box(arg)<span class="question-mark">? </span>== <span class="string">&quot;vbox&quot; </span>});
 
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\iftrue&quot;</span>, { <span class="bool-val">true </span>});
   <span class="macro">DefConditional!</span>(<span class="string">&quot;\\iffalse&quot;</span>, { <span class="bool-val">false </span>});
@@ -490,19 +489,19 @@
   // (which seems most TeX like).
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\relax&quot;</span>, <span class="prelude-val">None</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\number Number&quot;</span>, sub[gullet, (num), state] { <span class="macro">Explode!</span>(num.value_of()) });
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\number Number&quot;</span>, sub[(num)] { <span class="macro">Explode!</span>(num.value_of()) });
 
   <span class="comment">// define it here (only approxmiately), since it&#39;s already useful.
   </span><span class="macro">Let!</span>(<span class="string">&quot;\\protect&quot;</span>, <span class="string">&quot;\\relax&quot;</span>);
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\romannumeral Number&quot;</span>, sub[gullet, (num), state] { <span class="macro">roman!</span>(num.value_of()) });
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\romannumeral Number&quot;</span>, sub[(num)] { <span class="macro">roman!</span>(num.value_of()) });
 
   <span class="comment">// 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\string Token&quot;</span>, sub[gullet, (token), state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\string Token&quot;</span>, sub[(token)] {
     <span class="kw">let </span><span class="kw-2">mut </span>s = token.to_string();
     <span class="kw">if </span>s.starts_with(<span class="string">&#39;\\&#39;</span>) {
-      s = escapechar(state) + <span class="kw-2">&amp;</span>s[<span class="number">1</span>..];
+      s = escapechar() + <span class="kw-2">&amp;</span>s[<span class="number">1</span>..];
     }
     <span class="macro">Explode!</span>(s)
   });
@@ -517,12 +516,12 @@
 
   <span class="comment">// Not sure about this yet...
   // NOTE: Lots of back-and-forth mangle with definition vs cs; don&#39;t do that!
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\meaning Token&quot;</span>, sub[gullet, (token), state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\meaning Token&quot;</span>, sub[(token)] {
     <span class="kw">let </span><span class="kw-2">mut </span>meaning = String::from(<span class="string">&quot;undefined&quot;</span>);
     <span class="kw">if let </span><span class="prelude-val">Some</span>(definition) = <span class="kw">if </span>token == <span class="macro">T_ALIGN!</span>() {
       <span class="prelude-val">Some</span>(Stored::Token(token))
     } <span class="kw">else </span>{
-      state.lookup_meaning(<span class="kw-2">&amp;</span>token).map(|d| d.into_owned())
+      lookup_meaning(<span class="kw-2">&amp;</span>token)
     } {
       <span class="comment">// First, if this definition is a primitive|conditional|constructor,
       // check to see if it has an alias, which would allow us to work with a token
@@ -627,7 +626,7 @@
             <span class="prelude-val">None </span>=&gt; String::new(),
             <span class="comment">// TODO: How to print closures? This follows Perl&#39;s raw pointer format
             </span><span class="prelude-val">Some</span>(ExpansionBody::Closure(exp)) =&gt; <span class="macro">format!</span>(<span class="string">&quot;CODE({:p})&quot;</span>, Rc::as_ptr(exp)),
-            <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; writable_tokens(tks, state)
+            <span class="prelude-val">Some</span>(ExpansionBody::Tokens(tks)) =&gt; writable_tokens(tks)
           };
           meaning = <span class="macro">format!</span>(<span class="string">&quot;{prefixes}macro:{spec}-&gt;{expansion}{p_trailer}&quot;</span>);
         },
@@ -641,24 +640,24 @@
 
   <span class="comment">//======================================================================
 
-  </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>(gullet, _inner, _extra, state, {
-    <span class="kw">let </span><span class="kw-2">mut </span>cs = escapechar(state);
+  </span><span class="macro">DefParameterType!</span>(CSName, reader =&gt; <span class="macro">reader!</span>( _inner, _extra, {
+    <span class="kw">let </span><span class="kw-2">mut </span>cs = escapechar();
     <span class="kw">let </span>endcsname_token = <span class="macro">T_CS!</span>(<span class="string">&quot;\\endcsname&quot;</span>);
     <span class="comment">// keep newlines from having \n inside!
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet.read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>, state)<span class="question-mark">? </span>{
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = gullet::read_x_token(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>), <span class="bool-val">true</span>)<span class="question-mark">? </span>{
       <span class="kw">if </span>token == endcsname_token {
         <span class="kw">break</span>;
       }
       <span class="kw">match </span>token.get_catcode() {
         Catcode::CS =&gt; {
-          <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+          <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
             <span class="kw">let </span>message =
               <span class="macro">s!</span>(<span class="string">&quot;The control sequence {:?} should not appear between \\csname and \\endcsname&quot;</span>,
                 token);
-            <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, token, gullet, message);
+            <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, token, message);
           } <span class="kw">else </span>{
             <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">&quot;The token {:?} is not defined&quot;</span>, token);
-            <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, token, gullet, message);
+            <span class="macro">Error!</span>(<span class="string">&quot;undefined&quot;</span>, token, message);
           }
         },
         Catcode::SPACE =&gt; {  <span class="comment">// Keep newlines from having \n!
@@ -672,32 +671,33 @@
     <span class="macro">T_CS!</span>(cs)
   }));
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\csname CSName&quot;</span>, sub[gullet, (token), state] {
-    <span class="kw">if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
-      state.assign_meaning(<span class="kw-2">&amp;</span>token,
-        state.lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap().into_owned(), <span class="prelude-val">None</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\csname CSName&quot;</span>, sub[(token)] {
+    <span class="kw">if </span>lookup_meaning(<span class="kw-2">&amp;</span>token).is_none() {
+      <span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
+      assign_meaning(<span class="kw-2">&amp;</span>token,
+        relax_meaning, <span class="prelude-val">None</span>);
     }
     token
   });
 
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\endcsname&quot;</span>, sub[stomach, (), state] {
-    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot; </span>,<span class="string">&quot;\\endcsname&quot;</span>, stomach, <span class="string">&quot;Extra \\endcsname&quot;</span>);
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\endcsname&quot;</span>, {
+    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot; </span>,<span class="string">&quot;\\endcsname&quot;</span>, <span class="string">&quot;Extra \\endcsname&quot;</span>);
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[gullet, (tok, xtok), state] {
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\expandafter Token Token&quot;</span>, sub[(tok, xtok)] {
     <span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="macro">vec!</span>[tok];
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
-      state.local_current_token(xtok);
-      <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+      state::local_current_token(xtok);
+      <span class="kw">let </span>invoked = defn.invoke( <span class="bool-val">true</span>)<span class="question-mark">?</span>;
       <span class="kw">if </span>!invoked.is_empty() {
         tokens.append(<span class="kw-2">&amp;mut </span>invoked.unlist()); <span class="comment">// Expand $xtok ONCE ONLY!
       </span>}
-      state.expire_current_token();
-    } <span class="kw">else if </span>state.lookup_meaning(<span class="kw-2">&amp;</span>xtok).is_none() {
+      state::expire_current_token();
+    } <span class="kw">else if </span>lookup_meaning(<span class="kw-2">&amp;</span>xtok).is_none() {
       <span class="comment">// Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
-      </span>state.generate_error_stub(gullet, <span class="kw-2">&amp;</span>xtok)<span class="question-mark">?</span>;
+      </span>state::generate_error_stub(<span class="kw-2">&amp;</span>xtok)<span class="question-mark">?</span>;
       tokens.push(xtok);
     } <span class="kw">else </span>{
       tokens.push(xtok);
@@ -706,9 +706,9 @@
   });
 
   <span class="comment">// Replace the next token with it&#39;s not-expanded variant
-  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\noexpand&quot;</span>), <span class="prelude-val">None</span>, sub[gullet, _args, state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state)<span class="question-mark">? </span>{
-      <span class="macro">vec!</span>[token.with_dont_expand(state)<span class="question-mark">?</span>]
+  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\noexpand&quot;</span>), <span class="prelude-val">None</span>, {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet::read_token()<span class="question-mark">? </span>{
+      <span class="macro">vec!</span>[token.with_dont_expand()<span class="question-mark">?</span>]
     } <span class="kw">else </span>{
       <span class="comment">// Missing token likely the result of &quot;{\noexpand}&quot; for which TeX would be unperturbed
       </span>Vec::new()
@@ -723,12 +723,12 @@
 
   <span class="comment">// using input() from DefMacro is actually an incredible ordeal.
   // I tried several variations of arranging the types, but Rust is quite strict
-  // about avoiding multiple borrows that relate to &quot;state&quot;
+  // about avoiding multiple borrows that relate to &quot;state::
   // when mutability is involved.
   // For now I have changed to DefPrimitive, so that there is a clear access to the
   // stomach, but we may require some special-case treatment in other pieces of code...
   </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\input&quot;</span>, <span class="string">&quot;\\ltx@input&quot;</span>);
-  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ltx@input TeXFileName&quot;</span>, sub[stomach, (name), state] {
+  <span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\ltx@input TeXFileName&quot;</span>, sub[(name)] {
     <span class="kw">let </span><span class="kw-2">mut </span>tks = name.unlist();
     <span class="comment">// If given a LaTeX-style argument, strip braces
     </span><span class="kw">if </span>tks.len() &gt; <span class="number">1 </span>&amp;&amp; tks.first().unwrap().get_catcode() == Catcode::BEGIN
@@ -736,22 +736,22 @@
       tks.remove(<span class="number">0</span>);
       tks.pop();
       <span class="comment">// and load LaTeX.pool if not already
-      </span><span class="kw">if </span>!state.lookup_bool(<span class="string">&quot;LaTeX.pool_loaded&quot;</span>) {
+      </span><span class="kw">if </span>!lookup_bool(<span class="string">&quot;LaTeX.pool_loaded&quot;</span>) {
         <span class="macro">LoadPool!</span>(<span class="string">&quot;LaTeX&quot;</span>);
       }
     }
     <span class="kw">let </span>reloadable_opts = InputOptions { reloadable: <span class="bool-val">true</span>, ..InputOptions::default() };
-    input(<span class="kw-2">&amp;</span>Tokens::new(tks).to_string(), reloadable_opts, stomach, state)<span class="question-mark">?</span>;
+    input(<span class="kw-2">&amp;</span>Tokens::new(tks).to_string(), reloadable_opts)<span class="question-mark">?</span>;
   });
 
   <span class="comment">// Note that TeX doesn&#39;t actually close the mouth;
   // it just flushes it so that it will close the next time it&#39;s read!
-  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endinput&quot;</span>), <span class="prelude-val">None</span>, sub[gullet, _args, state] {
-    gullet.flush_mouth(state);
+  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">&quot;\\endinput&quot;</span>), <span class="prelude-val">None</span>, {
+    gullet::flush_mouth();
   });
 
   <span class="comment">// \the&lt;internal quantity&gt;
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\the Register&quot;</span>, sub[gullet, args, state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\the Register&quot;</span>, sub[args] {
     <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = args.remove(<span class="number">0</span>) {
       <span class="kw">let </span>(rtoken, inner) = <span class="kw-2">*</span>dbox;
       <span class="comment">// let register_type = defn.borrow().register_type;
@@ -759,9 +759,9 @@
       //       my $cs = ToString($defn-&gt;getCS);
       //       Error(&#39;unexpected&#39;, &quot;\\the$cs&quot;, $gullet,
       //     &quot;You can&#39;t use $cs after \\the&quot;); return (); }
-      </span><span class="kw">let </span>defn = rtoken.to_register(state)
+      </span><span class="kw">let </span>defn = rtoken.to_register()
         .expect(<span class="string">&quot;if a Register parameter provides a token, it must have a Register definition.&quot;</span>);
-      <span class="kw">let </span>value = defn.value_of(inner, state)
+      <span class="kw">let </span>value = defn.value_of(inner)
         .unwrap_or_else(|| RegisterValue::Tokens(<span class="macro">Tokens!</span>()));
       <span class="comment">// In all cases, these should be OTHER, except for space. (!?)
       </span><span class="kw">let </span><span class="kw-2">mut </span>tokens : Vec&lt;Token&gt; = <span class="kw">match </span>value {
@@ -771,15 +771,15 @@
       };
       tokens
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;register&gt;&quot;</span>, gullet, <span class="string">&quot;a register was expected to be here&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;register&gt;&quot;</span>, <span class="string">&quot;a register was expected to be here&quot;</span>);
       Vec::new()
     }
   });
 });
 
 <span class="comment">// Hmm... I wonder, should getString itself be dealing with escapechar?
-</span><span class="kw">fn </span>escapechar(state: <span class="kw-2">&amp;mut </span>State) -&gt; String {
-  <span class="kw">let </span>code: i64 = <span class="kw">match </span>state.lookup_register(<span class="string">&quot;\\escapechar&quot;</span>, Vec::new()).unwrap() {
+</span><span class="kw">fn </span>escapechar() -&gt; String {
+  <span class="kw">let </span>code: i64 = <span class="kw">match </span>state::lookup_register(<span class="string">&quot;\\escapechar&quot;</span>, Vec::new()).unwrap() {
     <span class="prelude-val">Some</span>(RegisterValue::Number(v)) =&gt; v.value_of(),
     <span class="kw">_ </span>=&gt; -<span class="number">1</span>,
   };
@@ -792,7 +792,7 @@
 }
 
 <span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
-  <span class="comment">// NOTE: One would expect this to be best written as an advanced match statement
+  <span class="comment">// NOTE: One would expect this to be best written as an advanced match state::ent
   // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed(&quot;&lt;&quot;) and
   // Cow::Owned(&quot;&lt;&quot;) variants will NOT be equal via a destructuring match.
   // However, since we&#39;ve defined our own PartialEq trait over Token, an equality comparison
@@ -809,7 +809,7 @@
       rel,
       rel.get_catcode()
     );
-    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, <span class="prelude-val">None</span>, message); <span class="prelude-val">Ok</span>(())};
+    <span class="kw">let </span>err = || {<span class="macro">Error!</span>(<span class="string">&quot;expected&quot;</span>, <span class="string">&quot;&lt;relationaltoken&gt;&quot;</span>, message); <span class="prelude-val">Ok</span>(())};
     err().ok();
     <span class="bool-val">false
   </span>}

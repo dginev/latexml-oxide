@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/etex.rs`."><title>etex.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_package/src/package/etex.rs`."><title>etex.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rtx_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../rtx_package/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -273,13 +273,9 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::package::<span class="kw-2">*</span>;
 
-<span class="macro">LoadDefinitions!</span>(outer_state, {
+<span class="macro">LoadDefinitions!</span>({
   <span class="comment">// See http://tex.loria.fr/moteurs/etex_ref.html
   // Or better yet, see the full manual
   // http://texdoc.net/texmf-dist/doc/etex/base/etex_man.pdf
@@ -289,14 +285,14 @@
   // 3.1 Additional control over expansion
   // \protected associates with the next defn
   // (note that it isn&#39;t actually used anywhere).
-  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\protected&quot;</span>, sub[_stomach, _args, state] {
-    state.set_prefix(<span class="string">&quot;protected&quot;</span>);
+  </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\protected&quot;</span>, {
+    set_prefix(<span class="string">&quot;protected&quot;</span>);
   },
   is_prefix =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// \detokenize
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\detokenize GeneralText&quot;</span>, sub[gullet, (text), state] {
-    <span class="macro">Explode!</span>(writable_tokens(<span class="kw-2">&amp;</span>text, state))
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\detokenize GeneralText&quot;</span>, sub[(text)] {
+    <span class="macro">Explode!</span>(writable_tokens(<span class="kw-2">&amp;</span>text))
   });
 
   <span class="comment">// When building an expanded token list, the tokens resulting from the expansion
@@ -309,16 +305,16 @@
   // 3.2. Provision for re-scanning already read text
 
   // \readline; like \read, but only spaces &amp; other
-  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\readline Number SkipKeyword:to SkipSpaces Token&quot;</span>, sub[gullet, (port, token), state] {
+  </span><span class="macro">DefMacro!</span>(<span class="string">&quot;\\readline Number SkipKeyword:to SkipSpaces Token&quot;</span>, sub[(port, token)] {
     <span class="kw">let </span>file_key = <span class="macro">format!</span>(<span class="string">&quot;input_file:{port}&quot;</span>);
-    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = <span class="macro">LookupValue!</span>(<span class="kw-2">&amp;</span>file_key) {
-      <span class="prelude-val">Some</span>(Rc::clone(mouth)) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
+    <span class="kw">let </span>mouth_opt = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = lookup_value(<span class="kw-2">&amp;</span>file_key) {
+      <span class="prelude-val">Some</span>(mouth) } <span class="kw">else </span>{ <span class="prelude-val">None </span>};
     <span class="kw">if let </span><span class="prelude-val">Some</span>(mouth) = mouth_opt {
-      <span class="kw">let </span><span class="kw-2">mut </span>raw_line = mouth.borrow_mut().read_raw_line(<span class="bool-val">false</span>, state).unwrap_or_default();
+      <span class="kw">let </span><span class="kw-2">mut </span>raw_line = mouth.borrow_mut().read_raw_line(<span class="bool-val">false</span>).unwrap_or_default();
       <span class="comment">// DG: Can&#39;t we do this \endlinechar check in readRawLine ?!
       // DG:  and can&#39;t we make it *faster* ?
-      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eol) = state.lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>))<span class="question-mark">? </span>{
-        <span class="kw">let </span>eolv   = eol.value_of(Vec::new(), state).unwrap_or_default().value_of();
+      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eol) = lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">&quot;\\endlinechar&quot;</span>))<span class="question-mark">? </span>{
+        <span class="kw">let </span>eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
         <span class="kw">if </span>(eolv &gt; <span class="number">0</span>) &amp;&amp; (eolv &lt;= <span class="number">255</span>) {
           raw_line.push(eolv <span class="kw">as </span>u8 <span class="kw">as </span>char);
         }
@@ -330,9 +326,9 @@
     }
   });
 
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\scantokens GeneralText&quot;</span>, sub[gullet, (tokens), state] {
-    gullet.open_mouth(
-      Mouth::new(<span class="kw-2">&amp;</span>writable_tokens(<span class="kw-2">&amp;</span>tokens, state), <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\scantokens GeneralText&quot;</span>, sub[(tokens)] {
+    gullet::open_mouth(
+      Mouth::new(<span class="kw-2">&amp;</span>writable_tokens(<span class="kw-2">&amp;</span>tokens), <span class="prelude-val">None</span>)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
     <span class="macro">Tokens!</span>()
   });
 
@@ -344,19 +340,19 @@
 
   <span class="comment">// \currentgrouplevel
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\currentgrouplevel&quot;</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>,
-    getter =&gt; sub[_args, state] { state.get_frame_depth() });
+    getter =&gt; { get_frame_depth() });
 
   <span class="comment">// \currentgrouptype returns group types from 0..16 ; but what IS a &quot;group type&quot;?
   </span><span class="macro">DefRegister!</span>(<span class="string">&quot;\\currentgrouptype&quot;</span>, <span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>);
 
   <span class="comment">// \ifcsname stuff \endcsname
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcsname CSName&quot;</span>, sub[gullet, (t), state] {
-    state.lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
+  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifcsname CSName&quot;</span>, sub[(t)] {
+    lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
   });
 
   <span class="comment">// \ifdefined &lt;token&gt;
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdefined Token&quot;</span>, sub[gullet, (t), state] {
-    state.lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
+  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\ifdefined Token&quot;</span>, sub[(t)] {
+    lookup_meaning(<span class="kw-2">&amp;</span>t).is_some()
   });
 
   <span class="comment">// # ???
@@ -367,11 +363,11 @@
   // # but since we don&#39;t manage Pages...
 
   </span><span class="macro">DefPrimitive!</span>(<span class="string">&quot;\\marks Number GeneralText&quot;</span>, <span class="prelude-val">None</span>);
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\topmarks Number&quot;</span>, sub[gullet, (num), state] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\firstmarks Number&quot;</span>, sub[gullet, (num), state] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\botmarks Number&quot;</span>, sub[gullet, (num), state] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitfirstmarks Number&quot;</span>, sub[gullet, (num), state] {});
-  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitbotmarks Number&quot;</span>, sub[gullet, (num), state] {});
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\topmarks Number&quot;</span>, sub[(num)] {});
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\firstmarks Number&quot;</span>, sub[(num)] {});
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\botmarks Number&quot;</span>, sub[(num)] {});
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitfirstmarks Number&quot;</span>, sub[(num)] {});
+  <span class="macro">DefMacro!</span>(<span class="string">&quot;\\splitbotmarks Number&quot;</span>, sub[(num)] {});
 
   <span class="comment">// #======================================================================
   // # 3.5 Bi-directional typesetting: the TeX--XeT primitives
@@ -437,18 +433,18 @@
   //     return; });
 
   // \unless someif
-  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\unless Token&quot;</span>, sub[gullet, (if_token), state] {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Conditional(defn)) = state.lookup_definition_stored(<span class="kw-2">&amp;</span>if_token)<span class="question-mark">? </span>{
+  </span><span class="macro">DefConditional!</span>(<span class="string">&quot;\\unless Token&quot;</span>, sub[(if_token)] {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Conditional(defn)) = lookup_definition_stored(<span class="kw-2">&amp;</span>if_token)<span class="question-mark">? </span>{
       <span class="kw">if </span>defn.conditional_type == ConditionalType::If {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>test) = defn.test {
           <span class="comment">// Invert the if&#39;s test!
-          </span><span class="kw">let </span>args = defn.read_arguments(gullet, state)<span class="question-mark">?</span>;
-          <span class="kw">return </span><span class="prelude-val">Ok</span>(!(test(gullet, args, state)<span class="question-mark">?</span>));
+          </span><span class="kw">let </span>args = defn.read_arguments()<span class="question-mark">?</span>;
+          <span class="kw">return </span><span class="prelude-val">Ok</span>(!(test( args)<span class="question-mark">?</span>));
         }
       }
     }
     <span class="kw">let </span>msg = <span class="macro">s!</span>(<span class="string">&quot;\\unless should not be followed by {}&quot;</span>,if_token.stringify());
-    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, if_token, gullet, msg);
+    <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, if_token, msg);
     <span class="bool-val">false
   </span>});
 
@@ -459,34 +455,30 @@
   // # They also act like a Register!
   // # $type is one of Number, Dimension, Glue or MuGlue
   </span><span class="kw">fn </span>etex_readexpr(
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
     rtype: RegisterType,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
-    <span class="kw">let </span>value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet.read_token(state)<span class="question-mark">? </span>{
+    <span class="kw">let </span>value = etex_readexpr_i( rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = gullet::read_token()<span class="question-mark">? </span>{
       <span class="comment">// Skip \relax
       </span><span class="kw">if </span>token != <span class="kw-2">*</span>TOKEN_RELAX {
-        gullet.unread_one(token);
+        gullet::unread_one(token);
       }
     }
     <span class="prelude-val">Ok</span>(value)
   }
 
   <span class="kw">fn </span>etex_readexpr_i(
-    gullet: <span class="kw-2">&amp;mut </span>Gullet,
     rtype: RegisterType,
     prec: usize,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;RegisterValue&gt; {
     <span class="comment">// Read a first value
-    </span><span class="kw">let </span>token = <span class="kw">match </span>gullet.read_x_non_space(state)<span class="question-mark">? </span>{
+    </span><span class="kw">let </span>token = <span class="kw">match </span>gullet::read_x_non_space()<span class="question-mark">? </span>{
       <span class="prelude-val">Some</span>(t) =&gt; t,
       <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(RegisterValue::default()),
     };
     <span class="kw">let </span><span class="kw-2">mut </span>value = <span class="kw">if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">&quot;(&quot;</span>) {
-      <span class="kw">let </span>i_value = etex_readexpr_i(gullet, rtype, <span class="number">0</span>, state)<span class="question-mark">?</span>;
-      <span class="kw">let </span>close = gullet.read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, state)<span class="question-mark">?</span>;
+      <span class="kw">let </span>i_value = etex_readexpr_i( rtype, <span class="number">0</span>)<span class="question-mark">?</span>;
+      <span class="kw">let </span>close = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
       <span class="comment">// close parenthesis should have terminated recursive call
       </span><span class="kw">if </span>close.is_none() || !(close == <span class="prelude-val">Some</span>(<span class="macro">T_OTHER!</span>(<span class="string">&quot;)&quot;</span>))) {
         <span class="macro">unimplemented!</span>();
@@ -496,57 +488,57 @@
       i_value
     } <span class="kw">else </span>{
       <span class="comment">// Read core TeX value/register
-      </span>gullet.unread_one(token);
-      gullet.read_value(rtype, state)<span class="question-mark">?
+      </span>gullet::unread_one(token);
+      gullet::read_value(rtype)<span class="question-mark">?
     </span>};
 
     <span class="comment">// Now check for a following operator(s) &amp; operand(s) (respecting precedence)
-    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(next) = gullet.read_x_non_space(state)<span class="question-mark">? </span>{
+    </span><span class="kw">while let </span><span class="prelude-val">Some</span>(next) = gullet::read_x_non_space()<span class="question-mark">? </span>{
       <span class="kw">if </span>next == <span class="kw-2">*</span>TOKEN_RELAX {
-        gullet.unread_one(next); <span class="comment">// leave the \relax for top-level to strip off.
+        gullet::unread_one(next); <span class="comment">// leave the \relax for top-level to strip off.
         </span><span class="kw">break</span>;
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;+&quot;</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
-        value = value.add(etex_readexpr_i(gullet, rtype, <span class="number">1</span>, state)<span class="question-mark">?</span>);
+        value = value.add(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;-&quot;</span>) &amp;&amp; prec &lt; <span class="number">1 </span>{
-        value = value.subtract(etex_readexpr_i(gullet, rtype, <span class="number">1</span>, state)<span class="question-mark">?</span>);
+        value = value.subtract(etex_readexpr_i( rtype, <span class="number">1</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;*&quot;</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// multiplier should be pure number
-        </span>value = value.multiply(etex_readexpr_i(gullet, RegisterType::Number, <span class="number">2</span>, state)<span class="question-mark">?</span>);
+        </span>value = value.multiply(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
       } <span class="kw">else if </span>next == <span class="macro">T_OTHER!</span>(<span class="string">&quot;/&quot;</span>) &amp;&amp; prec &lt; <span class="number">2 </span>{
         <span class="comment">// denominator should be pure number
-        </span>value = value.divideround(etex_readexpr_i(gullet, RegisterType::Number, <span class="number">2</span>, state)<span class="question-mark">?</span>);
+        </span>value = value.divideround(etex_readexpr_i( RegisterType::Number, <span class="number">2</span>)<span class="question-mark">?</span>);
       } <span class="kw">else </span>{
         <span class="comment">// anything else, we&#39;re done.
-        </span>gullet.unread_one(next);
+        </span>gullet::unread_one(next);
         <span class="kw">break</span>;
       }
     }
     <span class="prelude-val">Ok</span>(value)
   }
 
-  <span class="macro">DefParameterType!</span>(NumExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Number, state)<span class="question-mark">?
+  <span class="macro">DefParameterType!</span>(NumExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Number)<span class="question-mark">?
   </span>});
-  <span class="macro">DefParameterType!</span>(DimExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Dimension, state)<span class="question-mark">?
+  <span class="macro">DefParameterType!</span>(DimExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Dimension)<span class="question-mark">?
   </span>});
-  <span class="macro">DefParameterType!</span>(GlueExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::Glue, state)<span class="question-mark">?
+  <span class="macro">DefParameterType!</span>(GlueExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::Glue)<span class="question-mark">?
   </span>});
-  <span class="macro">DefParameterType!</span>(MuExpr, sub[gullet, _inner, _extra, state] {
-    etex_readexpr(gullet, RegisterType::MuGlue, state)<span class="question-mark">?
+  <span class="macro">DefParameterType!</span>(MuExpr, sub[_inner, _extra] {
+    etex_readexpr( RegisterType::MuGlue)<span class="question-mark">?
   </span>});
 
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\numexpr NumExpr&quot;</span>, Number::new(<span class="number">0</span>), getter =&gt; sub[args, _state] {
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\numexpr NumExpr&quot;</span>, Number::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_number()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\dimexpr DimExpr&quot;</span>, Dimension::new(<span class="number">0</span>), getter =&gt; sub[args, _state] {
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\dimexpr DimExpr&quot;</span>, Dimension::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_dimension()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\glueexpr GlueExpr&quot;</span>, Glue::new(<span class="number">0</span>), getter =&gt; sub[args, _state] {
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\glueexpr GlueExpr&quot;</span>, Glue::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_glue()
   });
-  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\muexpr MuExpr&quot;</span>, MuGlue::new(<span class="number">0</span>), getter =&gt; sub[args, _state] {
+  <span class="macro">DefRegister!</span>(<span class="string">&quot;\\muexpr MuExpr&quot;</span>, MuGlue::new(<span class="number">0</span>), getter =&gt; sub[args] {
     args.remove(<span class="number">0</span>).expect_mu_glue()
   });
 

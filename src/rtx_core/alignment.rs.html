@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment.rs`."><title>alignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2fcac8296ac587d8.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (371994e0d 2023-06-13)" data-search-js="search-6ad6b976982acb3d.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-11255107d0a65077.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-762bcae8c0777c4b.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `rtx_core/src/alignment.rs`."><title>alignment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-8092eaa720ad3b6f.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rtx_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (5bd28f5ea 2023-06-28)" data-channel="nightly" data-search-js="search-c507e026dd61038c.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../rtx_core/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1649,18 +1649,6 @@
 <a href="#1649" id="1649">1649</a>
 <a href="#1650" id="1650">1650</a>
 <a href="#1651" id="1651">1651</a>
-<a href="#1652" id="1652">1652</a>
-<a href="#1653" id="1653">1653</a>
-<a href="#1654" id="1654">1654</a>
-<a href="#1655" id="1655">1655</a>
-<a href="#1656" id="1656">1656</a>
-<a href="#1657" id="1657">1657</a>
-<a href="#1658" id="1658">1658</a>
-<a href="#1659" id="1659">1659</a>
-<a href="#1660" id="1660">1660</a>
-<a href="#1661" id="1661">1661</a>
-<a href="#1662" id="1662">1662</a>
-<a href="#1663" id="1663">1663</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Representation of aligned structures
 //! An &quot;Alignment&quot; is an array/tabular construct as:
 //!   &lt;tabular&gt;&lt;tr&gt;&lt;td&gt;...
@@ -1698,14 +1686,13 @@
 <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
 <span class="kw">use </span><span class="kw">crate</span>::common::store::Stored;
 <span class="kw">use </span><span class="kw">crate</span>::digested::Digested;
-<span class="kw">use </span><span class="kw">crate</span>::document::Document;
-<span class="kw">use </span><span class="kw">crate</span>::gullet::Gullet;
+<span class="kw">use </span><span class="kw">crate</span>::document::{get_node_qname,with_node_qname,Document};
 <span class="kw">use </span><span class="kw">crate</span>::mouth::Mouth;
-<span class="kw">use </span><span class="kw">crate</span>::state::State;
-<span class="kw">use </span><span class="kw">crate</span>::stomach::Stomach;
 <span class="kw">use </span><span class="kw">crate</span>::token::Catcode;
 <span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<span class="kw">use </span><span class="kw">crate</span>::BoxOps;
+<span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::stomach::<span class="kw-2">*</span>;
+<span class="kw">use crate</span>::{BoxOps,gullet,stomach};
 
 <span class="kw">use </span>libxml::tree::{Node, NodeType};
 <span class="kw">use </span>once_cell::sync::Lazy;
@@ -1718,13 +1705,13 @@
 
 <span class="comment">//DebuggableFeature(&#39;alignment&#39;, &quot;Debug guessing headers of alignments/tables&quot;);
 </span><span class="kw">pub type </span>OpenContainerFn =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
-<span class="kw">pub type </span>CloseContainerFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
-<span class="kw">pub type </span>OpenRowFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
-<span class="kw">pub type </span>CloseRowFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
+  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
+<span class="kw">pub type </span>CloseContainerFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
+<span class="kw">pub type </span>OpenRowFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;&gt;;
+<span class="kw">pub type </span>CloseRowFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
 <span class="kw">pub type </span>OpenColumnFn =
-  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
-<span class="kw">pub type </span>CloseColumnFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
+  Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document, HashMap&lt;String, String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
+<span class="kw">pub type </span>CloseColumnFn = Rc&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt;&gt;;
 
 <span class="kw">static </span>SINGLE_PUNCT: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r&quot;^\s*[\.,;]\s*$&quot;</span>).unwrap());
 
@@ -1873,7 +1860,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(colspec) = current_row.get_column_mut(<span class="self">self</span>.current_column) {
       <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(colspec))
     } <span class="kw">else </span>{
-      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;&amp;&quot;</span>, <span class="prelude-val">None</span>, <span class="string">&quot;Extra alignment tab &#39;&amp;&#39;&quot;</span>);
+      <span class="macro">Error!</span>(<span class="string">&quot;unexpected&quot;</span>, <span class="string">&quot;&amp;&quot;</span>, <span class="string">&quot;Extra alignment tab &#39;&amp;&#39;&quot;</span>);
       <span class="comment">// DG: Mutability issue, should we do an alternative recovery?
       //     or change the call interface?
       //
@@ -1983,7 +1970,7 @@
     }
   }
 
-  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+  <span class="kw">pub fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
     <span class="prelude-val">Ok</span>(<span class="self">self</span>.reversion.clone().unwrap_or_default())
   }
 
@@ -1997,28 +1984,27 @@
   <span class="kw">pub fn </span>start_row(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     pseudorow: bool,
-    stomach: <span class="kw-2">&amp;mut </span>Stomach,
-    state: <span class="kw-2">&amp;mut </span>State,
+
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="self">self</span>.new_row();
-    stomach.bgroup(state); <span class="comment">// Grouping around ROW!
+    bgroup(); <span class="comment">// Grouping around ROW!
     </span><span class="kw">if </span>pseudorow {
       <span class="self">self</span>.current_row_mut().unwrap().set_pseudo()
     } <span class="kw">else </span>{
-      <span class="kw">let </span>row_before = stomach.digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@row@before&quot;</span>), state)<span class="question-mark">?</span>;
-      stomach.box_list.push(row_before);
+      <span class="kw">let </span>row_before = stomach::digest(<span class="macro">T_CS!</span>(<span class="string">&quot;\\@row@before&quot;</span>))<span class="question-mark">?</span>;
+      push_box_list(row_before);
     }
     <span class="self">self</span>.in_row = <span class="bool-val">true</span>;
-    state.assign_value(<span class="string">&quot;alignmentStartColumn&quot;</span>, <span class="number">0</span>, <span class="prelude-val">None</span>); <span class="comment">// ???
+    assign_value(<span class="string">&quot;alignmentStartColumn&quot;</span>, <span class="number">0</span>, <span class="prelude-val">None</span>); <span class="comment">// ???
     </span><span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>end_row(<span class="kw-2">&amp;mut </span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>end_row(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.in_row {
       <span class="kw">if </span><span class="self">self</span>.in_column {
-        <span class="self">self</span>.end_column(stomach, state)<span class="question-mark">?</span>;
+        <span class="self">self</span>.end_column()<span class="question-mark">?</span>;
       }
-      stomach.egroup(state)<span class="question-mark">?</span>; <span class="comment">// Grouping around ROW!
+      egroup()<span class="question-mark">?</span>; <span class="comment">// Grouping around ROW!
       </span><span class="self">self</span>.in_row = <span class="bool-val">false</span>;
     }
     <span class="prelude-val">Ok</span>(()) <span class="comment">//  Digest(T_CS(&#39;\@row@after&#39;));
@@ -2027,26 +2013,25 @@
   <span class="kw">pub fn </span>start_column(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     pseudorow: bool,
-    stomach: <span class="kw-2">&amp;mut </span>Stomach,
-    state: <span class="kw-2">&amp;mut </span>State,
+
   ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span>!<span class="self">self</span>.in_row {
-      <span class="self">self</span>.start_row(pseudorow, stomach, state)<span class="question-mark">?</span>;
+      <span class="self">self</span>.start_row(pseudorow)<span class="question-mark">?</span>;
     } <span class="kw">else if </span>pseudorow {
       <span class="self">self</span>.current_row_mut().unwrap().set_pseudo();
     }
-    stomach.bgroup(state); <span class="comment">// Grouping around CELL!
+    bgroup(); <span class="comment">// Grouping around CELL!
                            // Note: a VERY round-about way of tracking the column spanning!
-    </span>state.assign_value(<span class="string">&quot;alignmentStartColumn&quot;</span>, <span class="self">self</span>.current_column_number(), <span class="prelude-val">None</span>);
+    </span>assign_value(<span class="string">&quot;alignmentStartColumn&quot;</span>, <span class="self">self</span>.current_column_number(), <span class="prelude-val">None</span>);
     <span class="kw">let </span>_colspec = <span class="self">self</span>.next_column();
-    state.set_align_group_count(<span class="number">1000000</span>);
+    set_align_group_count(<span class="number">1000000</span>);
     <span class="self">self</span>.in_column = <span class="bool-val">true</span>;
     <span class="prelude-val">Ok</span>(())
   }
 
-  <span class="kw">pub fn </span>end_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>, stomach: <span class="kw-2">&amp;mut </span>Stomach, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">pub fn </span>end_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="kw">if </span><span class="self">self</span>.in_column {
-      stomach.egroup(state)<span class="question-mark">?</span>; <span class="comment">// Grouping around CELL!
+      egroup()<span class="question-mark">?</span>; <span class="comment">// Grouping around CELL!
       </span><span class="self">self</span>.in_column = <span class="bool-val">false</span>;
     }
     <span class="prelude-val">Ok</span>(())
@@ -2083,21 +2068,19 @@
   <span class="kw">fn </span>compute_size(
     <span class="kw-2">&amp;</span><span class="self">self</span>,
     _options: HashMap&lt;String, Stored&gt;,
-    _state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::font::Font&gt;&gt;&gt; {
+  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="kw">crate</span>::common::font::Font&gt;&gt;&gt; {
     <span class="macro">unimplemented!</span>();
   }
-  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>, _state: <span class="kw-2">&amp;</span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="macro">unimplemented!</span>() }
+  <span class="kw">fn </span>get_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Cow&lt;str&gt;&gt; { <span class="macro">unimplemented!</span>() }
 
   <span class="kw">fn </span>compute_size_and_cache(
     <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     _options: HashMap&lt;String, Stored&gt;,
-    state: <span class="kw-2">&amp;mut </span>State,
   ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
-    normalize_alignment(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+    normalize_alignment(<span class="self">self</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((
       <span class="self">self</span>.cached_width.unwrap(),
       <span class="self">self</span>.cached_height.unwrap(),
@@ -2105,12 +2088,12 @@
     ))
   }
 
-  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document, _state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>be_absorbed(<span class="kw-2">&amp;</span><span class="self">self</span>, _document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="macro">unimplemented!</span>(); <span class="comment">// call the mutable version only, we need to rearrange the alignment first!
   </span>}
-  <span class="kw">fn </span>be_absorbed_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
+  <span class="kw">fn </span>be_absorbed_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;&gt; {
     <span class="kw">let </span>ismath = <span class="self">self</span>.is_math;
-    normalize_alignment(<span class="self">self</span>, state)<span class="question-mark">?</span>;
+    normalize_alignment(<span class="self">self</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>rows = <span class="kw-2">&amp;mut </span><span class="self">self</span>.rows;
     <span class="kw">if </span>rows.is_empty() {
       <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
@@ -2119,8 +2102,8 @@
     <span class="comment">// # Guard via the absorb limit to avoid infinite loops
     // TODO
     // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $STATE-&gt;lookupValue(&quot;absorb_count&quot;) || 0;
-    //   $STATE-&gt;assignValue(absorb_count =&gt; ++$absorb_counter, &quot;global&quot;);
+    //   my $absorb_counter = $state-&gt;lookupValue(&quot;absorb_count&quot;) || 0;
+    //   $state-&gt;assignValue(absorb_count =&gt; ++$absorb_counter, &quot;global&quot;);
     //   if ($absorb_counter &gt; $LaTeXML::ABSORB_LIMIT) {
     //     Fatal(&quot;timeout&quot;, &quot;absorb_limit&quot;, $self,
     //       &quot;Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?&quot;); } }
@@ -2140,7 +2123,7 @@
     // open_attrs.insert(String::from(&quot;row_heights&quot;), self.row_heights.into());
     // open_attrs.insert(String::from(&quot;column_widths&quot;), self.column_widths.into());
     </span><span class="kw">let </span>open_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_container;
-    open_container_fn(document, attrs, state)<span class="question-mark">?</span>;
+    open_container_fn(document, attrs)<span class="question-mark">?</span>;
 
     <span class="kw">for </span>row <span class="kw">in </span>rows {
       <span class="kw">let </span>vpad_opt = row.get_padding().copied();
@@ -2151,9 +2134,9 @@
       //     cached_width =&gt; $$row{cached_width}, cached_height =&gt; $$row{cached_height},
       // cached_depth =&gt; $$row{cached_depth},   );
       </span><span class="kw">let </span>open_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.open_row;
-      open_row_fn(document, open_row_attrs, state)<span class="question-mark">?</span>;
+      open_row_fn(document, open_row_attrs)<span class="question-mark">?</span>;
       <span class="kw">for </span>before <span class="kw">in </span>row.before.iter() {
-        document.absorb(before, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+        document.absorb(before, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       }
       <span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
         <span class="kw">if </span>cell.skipped {
@@ -2213,7 +2196,7 @@
         //       x      =&gt; $$cell{x}, y =&gt; $$cell{y},
         //       cached_width =&gt; $$cell{cached_width}, cached_height =&gt; $$cell{cached_height},
         // cached_depth =&gt; $$cell{cached_depth})
-        </span>cell.cell = open_column_fn(document, cell_attrs, state)<span class="question-mark">?</span>;
+        </span>cell.cell = open_column_fn(document, cell_attrs)<span class="question-mark">?</span>;
         <span class="kw">if </span>!empty {
           <span class="kw">let </span>box_ref = cell.boxes.as_ref().unwrap();
           <span class="comment">// local $LaTeXML::BOX
@@ -2224,49 +2207,48 @@
               <span class="string">&quot;ltx:XMArg&quot;</span>,
               <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">&quot;rule&quot; </span>=&gt; <span class="string">&quot;Anything&quot;</span>)),
               <span class="prelude-val">None</span>,
-              state,
-            )<span class="question-mark">?</span>;
+                      )<span class="question-mark">?</span>;
           }
-          document.absorb(box_ref, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+          document.absorb(box_ref, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
           <span class="kw">if </span>ismath {
             <span class="comment">// Hacky!
-            </span>document.close_element(<span class="string">&quot;ltx:XMArg&quot;</span>, state)<span class="question-mark">?</span>;
+            </span>document.close_element(<span class="string">&quot;ltx:XMArg&quot;</span>)<span class="question-mark">?</span>;
           }
           <span class="comment">// expire local $LaTeXML::BOX
           </span>document.expire_box_to_absorb();
         }
         <span class="kw">let </span>close_column_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_column;
-        close_column_fn(document, state)<span class="question-mark">?</span>;
+        close_column_fn(document)<span class="question-mark">?</span>;
       }
       <span class="kw">for </span>after <span class="kw">in </span>row.after.iter() {
-        document.absorb(after, <span class="prelude-val">None</span>, state)<span class="question-mark">?</span>;
+        document.absorb(after, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
       }
       <span class="kw">let </span>close_row_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_row;
-      close_row_fn(document, state)<span class="question-mark">?</span>;
+      close_row_fn(document)<span class="question-mark">?</span>;
     }
     <span class="kw">let </span>close_container_fn = <span class="kw-2">&amp;</span><span class="self">self</span>.close_container;
-    <span class="kw">let </span>node_opt = close_container_fn(document, state)<span class="question-mark">?</span>;
+    <span class="kw">let </span>node_opt = close_container_fn(document)<span class="question-mark">?</span>;
 
     <span class="comment">// If we&#39;re not nested inside another tabular
     // [This should be an afterConstruct somewhere?]
     // If requested to guess headers &amp; we&#39;re not nested inside another tabular
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = node_opt {
       <span class="kw">if </span>document
-        .findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state)
+        .findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node))
         .is_empty()
       {
         <span class="kw">let </span>hashead = !document
-          .findnodes(<span class="string">&quot;descendant::ltx:td[@thead]&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node), state)
+          .findnodes(<span class="string">&quot;descendant::ltx:td[@thead]&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>node))
           .is_empty();
         <span class="comment">// If requested &amp;&amp; no cells are already marked as being thead, apply heuristic
         </span><span class="kw">if </span><span class="self">self</span>.properties.contains_key(<span class="string">&quot;guess_headers&quot;</span>) &amp;&amp; !hashead {
-          guess_alignment_headers(document, <span class="kw-2">&amp;mut </span>node, <span class="self">self</span>, state)<span class="question-mark">?</span>;
+          guess_alignment_headers(document, <span class="kw-2">&amp;mut </span>node, <span class="self">self</span>)<span class="question-mark">?</span>;
         }
         <span class="comment">// Otherwise, if not a math array, group thead &amp; tbody rows
         // TODO: Re-design asking the outer Whatsit about &quot;!body-&gt;isMath&quot;
         </span><span class="kw">else if </span>hashead &amp;&amp; !ismath {
           <span class="comment">// in case already marked w/thead|tbody
-          </span>alignment_regroup_rows(document, <span class="kw-2">&amp;</span>node, state)<span class="question-mark">?</span>;
+          </span>alignment_regroup_rows(document, <span class="kw-2">&amp;</span>node)<span class="question-mark">?</span>;
         }
       }
       <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[node])
@@ -2305,27 +2287,27 @@
 //    or &quot;constructor&quot; (or just sub that creates a column)
 
 </span><span class="doccomment">/// a reader for the Template parameter type
-</span><span class="kw">pub fn </span>read_alignment_template(gullet: <span class="kw-2">&amp;mut </span>Gullet, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;Template&gt; {
-  gullet.skip_spaces(state)<span class="question-mark">?</span>;
-  state.local_build_template(Template::default());
+</span><span class="kw">pub fn </span>read_alignment_template() -&gt; <span class="prelude-ty">Result</span>&lt;Template&gt; {
+  gullet::skip_spaces()<span class="question-mark">?</span>;
+  local_build_template(Template::default());
   <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>()];
   <span class="kw">let </span><span class="kw-2">mut </span>nopens = <span class="number">0</span>;
-  <span class="kw">while let </span><span class="prelude-val">Some</span>(open) = gullet.read_token(state)<span class="question-mark">? </span>{
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(open) = gullet::read_token()<span class="question-mark">? </span>{
     <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN {
       nopens += <span class="number">1</span>;
     } <span class="kw">else </span>{
-      gullet.unread_one(open);
+      gullet::unread_one(open);
       <span class="kw">break</span>;
     }
   }
-  <span class="kw">while let </span><span class="prelude-val">Some</span>(op) = gullet.read_token(state)<span class="question-mark">? </span>{
+  <span class="kw">while let </span><span class="prelude-val">Some</span>(op) = gullet::read_token()<span class="question-mark">? </span>{
     <span class="kw">let </span>cc = op.get_catcode();
     <span class="kw">if </span>cc == Catcode::SPACE {
     } <span class="kw">else if </span>cc == Catcode::END {
       <span class="kw">let </span><span class="kw-2">mut </span>last_op = op;
       nopens -= <span class="number">1</span>;
       <span class="kw">while </span>nopens &gt; <span class="number">0 </span>{
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(next_op) = gullet.read_token(state)<span class="question-mark">? </span>{
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(next_op) = gullet::read_token()<span class="question-mark">? </span>{
           last_op = next_op;
           <span class="kw">if </span>last_op.get_catcode() != Catcode::END {
             <span class="kw">break</span>;
@@ -2338,19 +2320,18 @@
       <span class="kw">if </span>nopens &lt;= <span class="number">0 </span>{
         <span class="kw">break</span>;
       }
-      gullet.unread_one(last_op);
-    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = state.lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{op}&quot;</span>)), <span class="bool-val">true</span>)<span class="question-mark">? </span>{
-      <span class="kw">let </span>invoked = defn.invoke(gullet, <span class="bool-val">true</span>, state)<span class="question-mark">?</span>;
-      gullet.unread(invoked);
+      gullet::unread_one(last_op);
+    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">&quot;\\NC@rewrite@{op}&quot;</span>)), <span class="bool-val">true</span>)<span class="question-mark">? </span>{
+      <span class="kw">let </span>invoked = defn.invoke(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
+      gullet::unread(invoked);
     } <span class="kw">else if </span>cc == Catcode::BEGIN {
-      <span class="kw">if let </span><span class="prelude-val">Some</span>(balanced_tks) = gullet.read_balanced(<span class="bool-val">false</span>, state)<span class="question-mark">? </span>{
-        gullet.unread(balanced_tks);
+      <span class="kw">if let </span><span class="prelude-val">Some</span>(balanced_tks) = gullet::read_balanced(<span class="bool-val">false</span>)<span class="question-mark">? </span>{
+        gullet::unread(balanced_tks);
       }
     } <span class="kw">else </span>{
       <span class="macro">Warn!</span>(
         <span class="string">&quot;unexpected&quot;</span>,
         op,
-        gullet,
         <span class="macro">s!</span>(<span class="string">&quot;Unrecognized tabular template {op:?}&quot;</span>)
       );
     }
@@ -2359,21 +2340,17 @@
     }
   }
   tokens.push(<span class="macro">T_END!</span>());
-  state
-    .current_build_template()
-    .unwrap()
-    .set_reversion(Tokens::new(tokens));
-  <span class="prelude-val">Ok</span>(state.take_build_template().unwrap())
+  with_current_build_template(|template_opt| template_opt.unwrap()
+    .set_reversion(Tokens::new(tokens)));
+  <span class="prelude-val">Ok</span>(take_build_template().unwrap())
 }
 
 <span class="kw">pub fn </span>parse_alignment_template(
-  spec: <span class="kw-2">&amp;</span>str,
-  gullet: <span class="kw-2">&amp;mut </span>Gullet,
-  ostate: <span class="kw-2">&amp;mut </span>State,
+  spec: <span class="kw-2">&amp;</span>str
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Template&gt; {
-  <span class="kw">let </span>reader_mouth = Mouth::new(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{{{spec}}}&quot;</span>), <span class="prelude-val">None</span>, ostate)<span class="question-mark">?</span>;
-  gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: <span class="kw-2">&amp;mut </span>Gullet, state| {
-    read_alignment_template(gulletx, state)
+  <span class="kw">let </span>reader_mouth = Mouth::new(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">&quot;{{{spec}}}&quot;</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+  gullet::reading_from_mouth(reader_mouth, || {
+    read_alignment_template()
   })
 }
 
@@ -2401,17 +2378,16 @@
   document: <span class="kw-2">&amp;mut </span>Document,
   table: <span class="kw-2">&amp;mut </span>Node,
   alignment: <span class="kw-2">&amp;mut </span>Alignment,
-  state: <span class="kw-2">&amp;mut </span>State,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
   <span class="comment">// Assume that headers don&#39;t make sense for nested tables.
   // OR Maybe we should only do this within table environments???
   </span><span class="kw">if </span>!document
-    .findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(table), state)
+    .findnodes(<span class="string">&quot;ancestor::ltx:tabular&quot;</span>, <span class="prelude-val">Some</span>(table))
     .is_empty()
   {
     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
   }
-  <span class="kw">let </span>tag = document.get_node_qname(table, state);
+  <span class="kw">let </span>tag = get_node_qname(table);
   <span class="comment">// TODO
   //   Debug((&#39;=&#39; x 50) . &quot;\nGuessing alignment headers for &quot;
   //       . (($x = $document-&gt;findnode(&#39;ancestor-or-self::*[@xml:id]&#39;, $table)) ?
@@ -2421,7 +2397,7 @@
   <span class="kw">let </span>reversed = <span class="bool-val">false</span>;
   <span class="comment">// Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting &amp; characterizing each cell.
-  </span>classify_alignment_rows(document, alignment, state);
+  </span>classify_alignment_rows(alignment);
 
   {
     <span class="kw">let </span><span class="kw-2">mut </span>rows = collect_alignment_rows(alignment);
@@ -2471,7 +2447,7 @@
   <span class="comment">// Regroup the rows into thead &amp; tbody elements.
   // But not if it&#39;s a math array, or if reversed (since browsers get confused?)
   </span><span class="kw">if </span>!ismath &amp;&amp; !reversed {
-    alignment_regroup_rows(document, table, state)<span class="question-mark">?</span>;
+    alignment_regroup_rows(document, table)<span class="question-mark">?</span>;
   }
   <span class="kw">if </span>n_h &gt; <span class="number">0 </span>{
     <span class="comment">// Found some headers?
@@ -2488,13 +2464,13 @@
 // Any leading rows, all of whose cells have attribute thead should be in thead.
 // UNLESS any of them have a rowspan that extends PAST the end of the thead!!!!
 // trailing rows marked as thead go into tfoot.
-</span><span class="kw">fn </span>alignment_regroup_rows(document: <span class="kw-2">&amp;mut </span>Document, table: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-  <span class="kw">let </span><span class="kw-2">mut </span>rows = document.findnodes(<span class="string">&quot;ltx:tr&quot;</span>, <span class="prelude-val">Some</span>(table), state);
+</span><span class="kw">fn </span>alignment_regroup_rows(document: <span class="kw-2">&amp;mut </span>Document, table: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+  <span class="kw">let </span><span class="kw-2">mut </span>rows = document.findnodes(<span class="string">&quot;ltx:tr&quot;</span>, <span class="prelude-val">Some</span>(table));
   <span class="kw">let </span><span class="kw-2">mut </span>heads = Vec::new();
   <span class="kw">let </span><span class="kw-2">mut </span>maxreach = <span class="number">0</span>;
   <span class="comment">// Scan initial rows as potential thead
   </span><span class="kw">while </span>!rows.is_empty() {
-    <span class="kw">let </span>cells = document.findnodes(<span class="string">&quot;ltx:td&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]), state);
+    <span class="kw">let </span>cells = document.findnodes(<span class="string">&quot;ltx:td&quot;</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>rows[<span class="number">0</span>]));
     <span class="comment">// Non header cells, done.
     </span><span class="kw">if </span>cells
       .iter()
@@ -2522,7 +2498,7 @@
   <span class="comment">// scan trailing rows as potential tfoot
   </span><span class="kw">let </span><span class="kw-2">mut </span>foots = VecDeque::new();
   <span class="kw">while </span>!rows.is_empty() {
-    <span class="kw">let </span>cells = document.findnodes(<span class="string">&quot;ltx:td&quot;</span>, <span class="prelude-val">Some</span>(rows.last().unwrap()), state);
+    <span class="kw">let </span>cells = document.findnodes(<span class="string">&quot;ltx:td&quot;</span>, <span class="prelude-val">Some</span>(rows.last().unwrap()));
     <span class="comment">// Non header cells, done.
     </span><span class="kw">if </span>cells
       .iter()
@@ -2533,20 +2509,20 @@
     foots.push_front(rows.pop().unwrap())
   }
   <span class="kw">if </span>!heads.is_empty() {
-    document.wrap_nodes(<span class="string">&quot;ltx:thead&quot;</span>, heads, state)<span class="question-mark">?</span>;
+    document.wrap_nodes(<span class="string">&quot;ltx:thead&quot;</span>, heads)<span class="question-mark">?</span>;
   }
   <span class="kw">if </span>!rows.is_empty() {
-    document.wrap_nodes(<span class="string">&quot;ltx:tbody&quot;</span>, rows, state)<span class="question-mark">?</span>;
+    document.wrap_nodes(<span class="string">&quot;ltx:tbody&quot;</span>, rows)<span class="question-mark">?</span>;
   }
   <span class="kw">if </span>!foots.is_empty() {
-    document.wrap_nodes(<span class="string">&quot;ltx:tfoot&quot;</span>, foots.into_iter().collect(), state)<span class="question-mark">?</span>;
+    document.wrap_nodes(<span class="string">&quot;ltx:tfoot&quot;</span>, foots.into_iter().collect())<span class="question-mark">?</span>;
   }
   <span class="prelude-val">Ok</span>(())
 }
 
 <span class="comment">//======================================================================
 </span><span class="doccomment">/// Setup a View of the alignment, with characterized cells, for analysis -- modifying it in place.
-</span><span class="kw">fn </span>classify_alignment_rows(document: <span class="kw-2">&amp;mut </span>Document, alignment: <span class="kw-2">&amp;mut </span>Alignment, state: <span class="kw-2">&amp;mut </span>State) {
+</span><span class="kw">fn </span>classify_alignment_rows(alignment: <span class="kw-2">&amp;mut </span>Alignment) {
   <span class="kw">let </span><span class="kw-2">mut </span>ncols = <span class="number">0</span>;
   <span class="kw">for </span>arow <span class="kw">in </span><span class="kw-2">&amp;mut </span>alignment.rows {
     <span class="kw">let </span>n = arow.get_columns().len();
@@ -2565,7 +2541,7 @@
         </span><span class="kw">if </span>col.align == <span class="prelude-val">Some</span>(Align::Justify) {
           ColumnSpec::MathAltText
         } <span class="kw">else if </span>col.cell.is_some() {
-          classify_alignment_cell(document, col.cell.as_ref().unwrap(), state)
+          classify_alignment_cell(col.cell.as_ref().unwrap())
         } <span class="kw">else </span>{
           ColumnSpec::Unknown
         },
@@ -2775,7 +2751,7 @@
 
 <span class="doccomment">/// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or &#39;_&#39; (empty) (or some combination)
 ///  or &#39;mx&#39; for alternating text &amp; math.
-</span><span class="kw">fn </span>classify_alignment_cell(document: <span class="kw-2">&amp;mut </span>Document, xcell: <span class="kw-2">&amp;</span>Node, state: <span class="kw-2">&amp;mut </span>State) -&gt; ColumnSpec {
+</span><span class="kw">fn </span>classify_alignment_cell(xcell: <span class="kw-2">&amp;</span>Node) -&gt; ColumnSpec {
   <span class="kw">let </span>content = xcell.get_content();
   <span class="kw">let </span><span class="kw-2">mut </span>inferred_classes: Vec&lt;ColumnSpec&gt; = Vec::new();
   <span class="kw">if </span>!content.is_empty() &amp;&amp; content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
@@ -2794,7 +2770,7 @@
           }
         },
         <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-          document.with_node_qname(<span class="kw-2">&amp;</span>ch, state, |chtag| <span class="kw">match </span>chtag {
+          with_node_qname(<span class="kw-2">&amp;</span>ch, |chtag| <span class="kw">match </span>chtag {
             <span class="string">&quot;ltx:text&quot; </span>=&gt; {
               <span class="kw">if </span>inferred_classes.first() != <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ColumnSpec::Text) {
                 <span class="comment">// Font would be useful, but haven&#39;t &quot;resolved&quot; it, yet!
