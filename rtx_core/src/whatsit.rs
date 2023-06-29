@@ -82,7 +82,7 @@ impl Whatsit {
     Ok(
     // 1. A space-like thing
     // 2. An environment-like structure with an empty body
-    // TODO: For now it is difficult to pass in a state::with an initialized TeX.pool.
+    // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
       || (self.get_definition().get_cs_name() == "Begin"
@@ -298,7 +298,7 @@ impl Object for Whatsit {
         if let Some(parameters) = defn.get_parameters() {
           // TODO: This is a sticking point. Both in terms of type mismatch between
           // revert_arguments and get_args, but much worse with the expectation of
-          // passing in a gullet and state::for the parameter reversion
+          // passing in a gullet and state for the parameter reversion
           // for now approximate this with some slight of hand ...
           // tokens.extend(parameters.revert_arguments(self.get_args())?);
           //
@@ -366,7 +366,7 @@ impl BoxOps for Whatsit {
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
 
-    // my $profiled = $state::>lookupValue('PROFILING') && $defn->getCS;
+    // my $profiled = $state->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 

@@ -110,5 +110,5 @@ LoadDefinitions!({
   });
 
   // \dump ???
-  DefPrimitive!("\\end", sub[()] { gullet::flush(); });
+  DefPrimitive!("\\end", { gullet::flush(); });
 });

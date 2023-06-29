@@ -105,7 +105,7 @@ macro_rules! LookupColor {
 //   my ($name, $color, $scope) = @_;
 //   return unless ref $color;
 //   my ($model, @spec) = @$color;
-//   $scope = 'global' if $state::>lookupDefinition(T_CS('\ifglobalcolors')) &&
+//   $scope = 'global' if $state->lookupDefinition(T_CS('\ifglobalcolors')) &&
 // IfCondition(T_CS('\ifglobalcolors'));   AssignValue('color_' . $name => $color, $scope);
 //   # We could store these pieces separately,or in a list for above,
 //   # so that extract could use them more reasonably?
@@ -277,10 +277,10 @@ macro_rules! TypedConditional {
 
 // sub IfCondition {
 //   my ($if, @args) = @_;
-//   my $gullet = $state::>getStomach->getGullet;
+//   my $gullet = $state->getStomach->getGullet;
 //   $if = coerceCS($if);
 //   my ($defn, $test);
-//   if (($defn = $state::>lookupDefinition($if))
+//   if (($defn = $state->lookupDefinition($if))
 //     && (($$defn{conditional_type} || '') eq 'if') && ($test = $defn->getTest)) {
 //     return &$test($gullet, @args); }
 //   elsif (XEquals($if, T_CS('\iftrue'))) {
@@ -297,11 +297,11 @@ macro_rules! TypedConditional {
 //   my ($if, $value, $scope) = @_;
 //   my ($defn, $test);
 //   # We'll accept any conditional \ifxxx, providing it takes no arguments
-//   if (($defn = $state::>lookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
+//   if (($defn = $state->lookupDefinition($if)) && (($$defn{conditional_type} || '') eq 'if')
 //     && !$defn->getParameters) {
 //     Let($if, ($value ? T_CS('\iftrue') : T_CS('\iffalse')), $scope) }
 //   else {
-//     Error('expected', 'conditional', $state::>getStomach,
+//     Error('expected', 'conditional', $state->getStomach,
 //       "Expected a conditional defined by \\newif, got '" . ToString($if) . "'"); }
 //   return; }
 
@@ -457,16 +457,16 @@ macro_rules! LookupRegisterOrDefault {
 //   my ($cs) = @_;
 //   my $defn;
 //   $cs = T_CS($cs) unless ref $cs;
-//   if (my $defn = $state::>lookupDefinition($cs)) {
+//   if (my $defn = $state->lookupDefinition($cs)) {
 //     if ($defn->isRegister) {    # Easy (and proper) case.
 //       return $defn->valueOf; }
 //     else {
-//       $state::>getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start
+//       $state->getStomach->getGullet->readingFromMouth(LaTeXML::Core::Mouth->new(), sub { # start
 // with empty mouth           my ($gullet) = @_;
 //           $gullet->unread($cs);    # but put back tokens to be read
 //           return $gullet->readDimension; }); } }
 //   else {
-//     Warn('expected', 'register', $state::>getStomach,
+//     Warn('expected', 'register', $state->getStomach,
 //       "The control sequence " . ToString($cs) . " is not a register"); }
 //   return Dimension(0); }
 
@@ -609,7 +609,7 @@ macro_rules! parse_prototype(
 
 // sub DocType {
 //   my ($rootelement, $pubid, $sysid, %namespaces) = @_;
-//   let model = state::>getModel;
+//   let model = state->getModel;
 //   $model->setDocType($rootelement, $pubid, $sysid);
 //   foreach let prefix (keys %namespaces) {
 //     $model->registerDocumentNamespace($prefix => $namespaces{$prefix}); }
@@ -1245,8 +1245,6 @@ macro_rules! DefRegister {
   }};
 }
 
-/// Internal auxiliary, only purpose is to bind state:: then call the api::def_macro
-/// function, where the interior macro installation logic resides.
 #[macro_export]
 macro_rules! defi_register {
   ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
@@ -1614,7 +1612,7 @@ macro_rules! AddToMacro {
     } else {
       let mut expansion = match defn.unwrap().get_expansion() {
         // the .clone() call is again avoidable with a careful refactor via e.g. using
-        // `.remove_definition` from state::(as we're redefining the macro again), and then
+        // `.remove_definition` from state (as we're redefining the macro again), and then
         // use a `.remove_expansion` call on defn?
         Some(ExpansionBody::Tokens(tokens)) => tokens.clone().unlist(),
         Some(ExpansionBody::Closure(_)) => {

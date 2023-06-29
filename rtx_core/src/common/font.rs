@@ -34,7 +34,7 @@ static DEFBACKGROUND: &str = "white";
 static DEFOPACITY: &str = "1";
 static DEFENCODING: &str = "OT1";
 static DEFLANGUAGE: &str = "en";
-// TODO: master consults state::"NOMINAL_FONT_SIZE" before defaulting to 10
+// TODO: master consults state "NOMINAL_FONT_SIZE" before defaulting to 10
 static DEFSIZE: f64 = 10.0;
 
 pub const TEXT_FONTS: [&str; 6] = ["cmr", "cmm", "cmsy", "cmex", "amsa", "amsb"];
@@ -207,7 +207,7 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
     let shp = cap.get(3).map_or("", |m| m.as_str());
     let size_str = cap.get(4).map_or("", |m| m.as_str());
     // TODO: Maybe a straight merge isn't the way to go here -- and we should do a property
-    // whitelist as in Perl? but the merge is convenient, especially if we can state::"only the
+    // whitelist as in Perl? but the merge is convenient, especially if we can state "only the
     // values different from the default Font" which may already work courtesy of "None"? Need
     // to think it through...
     if let Some(ffam) = lookup_font_family(fam) {
@@ -457,7 +457,7 @@ impl Font {
     // my $style   = $self->getMathstyle || 'text';
     // if (!$bearing || (($bearing < 0) && ($style ne 'display') && ($style ne 'text'))) {
     //   return 0; }
-    // return $state::>lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
+    // return $state->lookupDefinition($$mathbearingreg[abs($bearing)])->valueOf->spValue; }
     0.0
   }
 

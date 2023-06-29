@@ -227,9 +227,6 @@ pub struct Localized {
 /// bindings associate data with keys (eg definitions with macro names)
 /// and respect TeX grouping; that is, an assignment is only in effect
 /// until the current group (opened by \bgroup) is closed (by \egroup).
-// TODO: Maybe the right Rust metaphor here is to chunk state into a tuple of independent data:
-// struct State, Gullet, Stomach, Model, StateTables, SessionSstate;
-// maybe not...
 pub struct State {
   // Tables
   /// bookkeeps arbitrary Stored values
@@ -1783,27 +1780,8 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 //   #======================================================================
 
 // sub pushDaemonFrame {
-//   my ($self) = @_;
-//   my $frame = {};
-//   unshift(@{ $$self{undo} }, $frame);
-//   # Push copys of data for any data that is mutable;
-//   # Only the value & stash tables need to be to be checked.
-//   # NOTE ??? No...
-//   foreach my $table (qw(value stash)) {
-//     if (my $hash = $$self{$table}) {
-//       foreach my $key (keys %$hash) {
-//         my $value = $$hash{$key}[0];
-//         my $type  = ref $value;
-// if (($type eq 'HASH') || ($type eq 'ARRAY')) {    # Only concerned with mutable perl
-// data?                                                           # Local assignment
-//           $$frame{$table}{$key} = 1;                      # Note new value in this frame.
-//           unshift(@{ $$hash{$key} }, daemon_copy($value)); } } } }    # And push new binding.
-//       # Record the contents of LaTeXML::Package::Pool as preloaded
-//   my $pool_preloaded_hash = { map { $_ => 1 } keys %LaTeXML::Package::Pool:: };
-//   $self->assignValue('_PRELOADED_POOL_', $pool_preloaded_hash, 'global');
-//   # Now mark the top frame as LOCKED!!!
-//   $$frame{_FRAME_LOCK_} = 1;
-//   return; }
+// ...  TODO
+// }
 
 // sub daemon_copy {
 //   my ($ob) = @_;

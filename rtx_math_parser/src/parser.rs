@@ -127,7 +127,7 @@ impl MathParser {
       // note_progress("Symbols assumed as simple identifiers (with # of
       // occurences):\n   " . join(', ', map { "'" .
       // colorizeString("$_", 'warning') . "' ($$self{unknowns}{$_})" } sort @unk) .
-      // "\n");       if (!$state::>lookupValue('MATHPARSER_SPECULATE')) {
+      // "\n");       if (!$state->lookupValue('MATHPARSER_SPECULATE')) {
       // note_progress("Set MATHPARSER_SPECULATE to speculate on possible
       // notations.\n"); } } if (my @funcs = keys %{
       // $$self{maybe_functions} }) { note_progress("Possibly used as

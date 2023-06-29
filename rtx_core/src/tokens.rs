@@ -201,7 +201,7 @@ impl Tokens {
   pub fn to_dimension(&self) -> Dimension {
     // TODO: How do we enhance here to be able to use the current font information from state::
     // Using the state::ful variations makes it impossible to work with the From/Into standard Rust
-    // traits. Should we do state::ulFrom/state::ulInto ?
+    // traits. Should we do stateful From/Into ?
     Dimension::new_f64(Dimension::spec_to_f64(&self.to_string()).unwrap_or_default())
   }
 
@@ -391,7 +391,7 @@ impl Tokens {
       // If this token is a letter (or otherwise starts with a letter or digit): space or linebreak
       } else {
         let last_prevs = prevs.chars().last().unwrap_or('_');
-        // TOOD: this used to call "lookup_catcode" in state:: is this char-check as good?
+        // TOOD: this used to call "lookup_catcode" in state, is this char-check as good?
         let prev_is_letter = last_prevs.is_alphabetic();
 
         if (cc == Catcode::LETTER || (cc == Catcode::OTHER && first_char.is_alphanumeric()))

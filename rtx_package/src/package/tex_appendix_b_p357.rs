@@ -48,7 +48,7 @@ LoadDefinitions!({
       stored_map!("name"  => "medspace", "isSpace" => true,
       "width" => state::lookup_register("\\medmuskip", Vec::new())?))
   });
-  DefPrimitive!("\\;", sub[()] {
+  DefPrimitive!("\\;", {
     Tbox::new(arena::pin_static("\u{2004}"), None, None, Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
       "width" => state::lookup_register("\\thickmuskip", Vec::new())?))

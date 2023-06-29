@@ -24,7 +24,7 @@ LoadDefinitions!({
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitive!("{", sub[()] {
+  DefPrimitive!("{", {
     bgroup();
     let open = Tbox::new(arena::pin_static(""), None, None,
         Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
@@ -197,7 +197,6 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\closein Number", sub[(port)] {
-    // Clone the Rc<> for mouth out of state:: since we'll be mutating.
     let file_key = s!("input_file:{}", port);
     let mut finished = false;
     //   close the mouth (if any) and clear the variable
@@ -207,7 +206,7 @@ LoadDefinitions!({
         finished = true;
       });
     if finished {
-      AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
+      AssignValue!(&file_key, false, Some(Scope::Global));
     }
   });
 

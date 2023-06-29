@@ -154,7 +154,7 @@ impl Converter {
 
     // 2 Beginning Core conversion - digest the source:
     // my ($digested, $dom, $serialized) = (undef, undef, undef);
-    // Should be this, but is overridden by withstate::
+    // Should be this, but is overridden by withState.
     // local $SIG{'ALRM'} = sub { LaTeXML::Common::Error::Fatal('conversion','timeout',
     // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
     // alarm($$opts{timeout});
@@ -241,7 +241,7 @@ impl Converter {
     //     1;
     //   };
     //   // 3.1 Bookkeeping if a post-processing Fatal error occurred
-    //   //// $$latexml{state::->noteStatus('fatal') if $latexml && $@; // Fatal Error?
+    //   //// $$latexml{state}->noteStatus('fatal') if $latexml && $@; // Fatal Error?
     //   local $@ = 'Fatal:conversion:unknown Post-processing failed! (Unknown Reason)'
     //     if ((!$post_eval_return) && (!$@));
     //   if ($@) {    //Fatal occured!

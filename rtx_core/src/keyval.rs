@@ -255,7 +255,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   Ok(())
 }
 
-/// Helper function to define state::neccesary for an ordinary key.
+/// Helper function to define state, neccesary for an ordinary key.
 fn define_ordinary(
   qname: &str,
   code_expansion: Option<ExpansionBody>,
@@ -265,7 +265,7 @@ fn define_ordinary(
   def_macro(qname_cs, plain_params, code_expansion, None)
 }
 
-/// Helper function to define state::neccesary for a command key.
+/// Helper function to define state, neccesary for a command key.
 fn define_command(
   qname: &str,
   code: Option<ExpansionBody>,
@@ -308,7 +308,7 @@ fn define_command(
   )
 }
 
-/// Helper function to define state::neccesary for an choice key.
+/// Helper function to define state, neccesary for an choice key.
 fn define_choice(
   qname: &str,
   code_opt: Option<ExpansionBody>,
@@ -398,7 +398,7 @@ fn define_choice(
   )
 }
 
-/// Helper function to define state::neccesary for a boolean key.
+/// Helper function to define state, neccesary for a boolean key.
 fn define_boolean(
   qname: &str,
   code_opt: Option<ExpansionBody>,

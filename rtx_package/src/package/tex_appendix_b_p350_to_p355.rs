@@ -173,7 +173,7 @@ LoadDefinitions!({
   DefPrimitive!("\\break", None);
   DefPrimitive!("\\nobreak", None);
   DefPrimitive!("\\allowbreak", None);
-  DefPrimitive!("\\nobreakspace", sub[()] {
+  DefPrimitive!("\\nobreakspace", {
     Tbox::new(arena::pin_static("\u{00A0}"), None, None,
       Tokens!(T_ACTIVE!('~')), stored_map!("isSpace" => true,
       "width" => Dimension::from_str("0.333em")?))

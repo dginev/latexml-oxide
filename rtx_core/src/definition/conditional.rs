@@ -111,7 +111,7 @@ impl Object for Conditional {
 impl Definition for Conditional {
   // sub new {
   //   my ($class, $cs, $parameters, $test, %traits) = @_;
-  //   my $source = $state::>getStomach->getGullet->getMouth;
+  //   my $source = $state->getStomach->getGullet->getMouth;
   //   return bless { cs => $cs, parameters => $parameters, test => $test,
   //     locator      => "from " . $source->getLocator(-1),
   //     isExpandable => 1,
@@ -367,7 +367,7 @@ impl Conditional {
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
-        //       if $state::>lookupValue('TRACINGCOMMANDS');
+        //       if $state->lookupValue('TRACINGCOMMANDS');
         state::expire_ifframe();
         Ok(Tokens!())
       }
@@ -406,7 +406,7 @@ impl Conditional {
 
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         // . " [for " . Stringify($$LaTeXML::IFFRAME{token}) . " #" . $$LaTeXML::IFFRAME{ifid} .
-        // "]\n"       if $state::>lookupValue('TRACINGCOMMANDS');
+        // "]\n"       if $state->lookupValue('TRACINGCOMMANDS');
         expire_ifframe();
         Ok(Tokens!())
       }

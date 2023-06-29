@@ -83,7 +83,7 @@ LoadDefinitions!({
 
   // sub onlyPreamble {
   //   my ($cs) = @_;
-  //   Error('unexpected', $cs, $state::>getStomach,
+  //   Error('unexpected', $cs, $state->getStomach,
   //     "The current command '" . ToString($cs) . "' can only appear in the preamble")
   //     unless LookupValue("inPreamble");
   //   return; }

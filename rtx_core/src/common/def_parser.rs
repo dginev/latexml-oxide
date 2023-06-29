@@ -20,7 +20,7 @@ static OPTIONAL_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\[([^\]]*)\]
 static PARAMSPECT_CHECK_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap());
 
-/// If calling at compile-time, pass `None` for state:: to avoid initialization.
+/// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_prototype(
   proto: &str,
   init_flag: bool
@@ -60,7 +60,7 @@ pub fn parse_prototype(
   Ok((cs, paramlist))
 }
 
-/// If calling at compile-time, pass `None` for state:: to avoid initialization.
+/// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_parameters(
   outer_prototype: &str,
   cs: &Token,

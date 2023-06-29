@@ -451,8 +451,8 @@ impl BoxOps for Alignment {
     // # Guard via the absorb limit to avoid infinite loops
     // TODO
     // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $state::>lookupValue("absorb_count") || 0;
-    //   $state::>assignValue(absorb_count => ++$absorb_counter, "global");
+    //   my $absorb_counter = $state->lookupValue("absorb_count") || 0;
+    //   $state->assignValue(absorb_count => ++$absorb_counter, "global");
     //   if ($absorb_counter > $LaTeXML::ABSORB_LIMIT) {
     //     Fatal("timeout", "absorb_limit", $self,
     //       "Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?"); } }

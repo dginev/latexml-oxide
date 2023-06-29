@@ -161,7 +161,7 @@ macro_rules! Error {
     use log::error;
     error!(target: &format!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message, -1, $($details),*));
-    let maxerrors = 100; //TODO: ($state::? $state::>lookupValue('MAX_ERRORS') : 100);
+    let maxerrors = 100; //TODO: ($state::? $state->lookupValue('MAX_ERRORS') : 100);
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
     }
@@ -433,14 +433,14 @@ pub fn note_progress_detailed(stuff: &str) {
 }
 
 pub fn note_begin(stage: &str) {
-  // $state::>assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
+  // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   use log::info;
   info!(target: "note", "\n({}...", stage);
 }
 
 pub fn note_end(_stage: &str) {
-  // if (my $start = $state::&& $state::>lookupMapping('NOTE_TIMERS', $stage)) {
-  //   $state::>assignMapping('NOTE_TIMERS', $stage, undef);
+  // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
+  //   $state->assignMapping('NOTE_TIMERS', $stage, undef);
 
   // my $elapsed = Time::HiRes::tv_interval($start, [Time::HiRes::gettimeofday]);
   // info!(target: "note", " %.2f sec)", elapsed);

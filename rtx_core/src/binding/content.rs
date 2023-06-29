@@ -222,7 +222,7 @@ pub fn input_definitions(
       // note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
       // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
       // # if there ARE problems, they'll likely produce their own errors!
-      // Warn('missing_file', $name, $>getStomach->getGullet,
+      // Warn('missing_file', $name, $STATE>getStomach->getGullet,
       //   "Can't find "
       //     . ($options{notex} ? "binding for " : "")
       //     . (($options{type} && $definition_name{ $options{type} }) || 'definitions') . ' '
@@ -279,11 +279,11 @@ fn _load_binding(
   // TODO? || lookup_bool(&s!("{trequest}_loaded"))
   //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
-  let taken_dispatcher = {if internal {
+  let taken_dispatcher = if internal {
     get_bindings_dispatch()
   } else {
     get_extra_bindings_dispatch()
-  }};
+  };
   match taken_dispatcher {
     Some(ref dispatcher) => {
       let result_opt = dispatcher(request);
@@ -877,15 +877,15 @@ pub fn load_class(
   // noerror => 1,     %options)) {
   //   return $success; }
   // else {
-  //   $>noteStatus(missing => $class . '.cls');
+  //   $STATE>noteStatus(missing => $class . '.cls');
   //   let alternate = 'OmniBus';    # was 'article'
-  //   Warn('missing_file', $class, $>getStomach->getGullet,
+  //   Warn('missing_file', $class, $STATE>getStomach->getGullet,
   //     "Can't find binding for class $class (using $alternate)",
   //     maybeReportSearchPaths());
   // if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions =>
   // 1, %options)) {     return $success; }
   //   else {
-  //     Fatal('missing_file', $alternate . '.cls.ltxml', $>getStomach->getGullet,
+  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE>getStomach->getGullet,
   //       "Can't find binding for class $alternate (installation error)");
   //     return; } } }
 }
@@ -1067,7 +1067,7 @@ pub fn digest_literal<T: Into<Tokens>>(
   ) -> Result<Digested> {
   let stuff: Tokens = stuff.into();
   // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
-  // valid changes of )
+  // valid changes of state!)
   begin_mode("text")?;
 
   let font = lookup_font().unwrap(); // TODO: raise error if font missing
@@ -1115,7 +1115,7 @@ pub fn build_invocation<T: Into<Token>>(
     token.with_cs_name(|csname| { Error!("undefined", csname, message); Ok(()) })?;
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
-    // sub { LaTeXML::Core::makeError($_[0], 'undefined', token); });
+    // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
     let mut wrapped_args: Vec<Token> = args
       .into_iter()
       .flat_map(|arg_opt| {

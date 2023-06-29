@@ -917,7 +917,7 @@ impl Token {
 }
 
 // A simple (constant!) auto-cast for &str to Token. Beware this will not respect the current
-// catcodes in state::(and @ is OTHER).
+// catcodes in state (and @ is OTHER).
 impl From<&str> for Token {
   fn from(text: &str) -> Token {
     match text.chars().next() {

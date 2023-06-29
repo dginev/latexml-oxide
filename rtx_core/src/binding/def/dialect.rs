@@ -304,7 +304,7 @@ pub fn def_register<T: Into<RegisterValue>>(
 /// Primitive control sequences generate Boxes or Lists, generally
 /// containing basic Unicode content, rather than structured XML.
 /// Primitive control sequences are also executed for side effect during digestion,
-/// effecting changes to the `.
+/// effecting changes to the `State`.
 pub fn def_primitive(
   cs: Token,
   paramlist: Option<Parameters>,

@@ -65,7 +65,7 @@ impl Object for Tbox {
 impl Tbox {
   /// creates a new Tbox.
   /// If `font_opt` or `locator_opt` are None, they are obtained from the
-  /// currently active state::  Note that `text` can
+  /// currently active state? Note that `text` can
   /// be empty, which contributes nothing to the generated document,
   /// but does record the TeX code (in the tokens).
   pub fn new(
@@ -79,7 +79,7 @@ impl Tbox {
       Some(f) => f,
       None => lookup_font().unwrap(),
     };
-    // let locator = $state::>getStomach->getGullet->getLocator unless defined $locator;
+    // let locator = $state->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
     let empty_sym = *EMPTY_SYM;
     let tokens = if text != empty_sym && tokens_opt.is_empty() {

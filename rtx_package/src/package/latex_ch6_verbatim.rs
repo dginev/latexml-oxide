@@ -95,7 +95,7 @@ LoadDefinitions!({
       document.maybe_close_element("ltx:p")?; }
   );
 
-  DefPrimitive!("\\@vobeyspaces", sub[()] {
+  DefPrimitive!("\\@vobeyspaces", {
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(' '), T_CS!("\\nobreakspace"));
   });
@@ -154,7 +154,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\lx@use@visiblespace", sub[()] {
+  DefPrimitive!("\\lx@use@visiblespace", {
     // Do NOT (necessarily) skip spaces after \verb!!!
     assign_catcode(' ', Catcode::ACTIVE, None);
     // Visible space

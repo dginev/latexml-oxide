@@ -217,9 +217,6 @@ LoadDefinitions!({
       sorted_keys.sort();
       for role in sorted_keys.iter() {
         let formatter = &formatters[*role];
-        // Note: Another curious mutability issue here if we leave ",state:: out of the Invocation!()
-        // call. We'd need to assign each invocation piece in a separate variable, to avoid Rust getting
-        // confused about mutability conflicts in borrowing. The explicit invocation seems clear enough.
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
           vec![
             Tokens!(T_OTHER!(role)),

@@ -43,17 +43,17 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 // Basic principles:
 // 1. If the type is `Copy`, store directly
-// 2. If the type is intended as state::exclusive, store in a Box
+// 2. If the type is intended as state-exclusive, store in a Box
 //      (or directly if any already Boxed datatype such as Vec, VecDeque, HashMap)
 // 3. If the struct is intended for reuse in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
 // 4. In the very unfortunate cases where we have to mutate items while they are stored,
 //    we may consider a RefCell<> wrapper for interior mutability.
 //      BUT it is often possible to take the value out to mutate, and re-insert.
-//      state:::checkout_value(key) + mutate + state:::checkin_value(key,val)
+//      state::checkout_value(key) + mutate + state::checkin_value(key,val)
 //      The only cases where this isn't straightforward is for deep recursive callchains,
-//      as in the ones where we rely on Stomach or a Mouth being in state::
-/// The original global state::(in Perl) allowed arbitrary values. To stay consistent, we create an
+//      as in the ones where we rely on Stomach or a Mouth being in state.
+/// The original global state (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
 #[derive(Default, Clone)]
 pub enum Stored {
@@ -83,7 +83,7 @@ pub enum Stored {
   VecTokens(Vec<crate::Tokens>),
   /// boxed collection (latexml)
   VecDigested(Vec<crate::Digested>),
-  /// the heart of state::- a stored Stash table
+  /// the heart of state - a stored Stash table
   Stash(StashTable),
   /// boxed map
   HashString(HashMap<String, String>),
@@ -132,7 +132,7 @@ pub enum Stored {
   //  MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   /// latexml object (Rc-wrapped)
   Constructor(Rc<Constructor>),
-  /// latexml object (Rc-wrapped)
+  /// latexml object (Rc-wrapped from within)
   Digested(crate::Digested),
   /// latexml object (Rc-wrapped)
   Parameter(Rc<Parameter>),
@@ -224,7 +224,7 @@ impl fmt::Display for Stored {
 /// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
 /// if it is safe to eagerly borrow() from the RefCell guards over fields with interior
 /// mutability.
-/// Worse: some conditions depend on the state::ul meaning of Token's,
+/// Worse: some conditions depend on the stateful meaning of Token's,
 ///        so the perfect equality check would need state::as an argument.
 impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {

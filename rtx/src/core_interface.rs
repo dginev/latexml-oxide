@@ -112,13 +112,13 @@ impl DigestionAPI for Core {
       }
     };
     // else {
-    //   $self->withstate::sub {
+    //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
     let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
     // $self->initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless
-    // $options{noinitialize}; $state::>assignValue(SOURCEFILE      => $request) if
+    // $options{noinitialize}; $state->assignValue(SOURCEFILE      => $request) if
     // (!pathname::is_literaldata($request));
     if let Some(dir) = dir_opt {
       let dir = dir.to_str().unwrap_or(".");
@@ -128,10 +128,10 @@ impl DigestionAPI for Core {
         state::add_search_path(dir.to_string());
       }
     }
-    //   if defined $dir && !grep { $_ eq $dir } @{ $state::>lookupValue('SEARCHPATHS') };
-    // $state::>unshiftValue(GRAPHICSPATHS => $dir)
+    //   if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('SEARCHPATHS') };
+    // $state->unshiftValue(GRAPHICSPATHS => $dir)
 
-    // if defined $dir && !grep { $_ eq $dir } @{ $state::>lookupValue('GRAPHICSPATHS') };
+    // if defined $dir && !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
 
     let name_copy = name;
     state::install_definition(
@@ -152,7 +152,7 @@ impl DigestionAPI for Core {
 
     // // Now for the Hacky part for BibTeX!!!
     // if ($mode eq 'BibTeX') {
-    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state::>getStomach->getGullet);
+    //   my $bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX); }
 
     let list = self.digest_internal()?;
@@ -238,8 +238,8 @@ impl DigestionAPI for Core {
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
       if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES") {
         if let Some(root) = document.get_document().get_root_element() {
-          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
-          // (TODO: obviously, this could be avoided if they never needed mutable
+          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable state.
+          // (TODO: obviously, this could be avoided if they never needed mutable state.
           // When do they?)
           let mut rewrites = Vec::new();
           for rule in rules {
@@ -283,7 +283,7 @@ impl DigestionAPI for Core {
 
   // options are currently being evolved to accomodate the Daemon:
   //    mode  : the processing mode, ie the pool to preload: TeX or BibTeX
-  //    noinitialize : if defined, it does not initialize state::
+  //    noinitialize : if defined, it does not initialize State.
   //    preamble = names a tex file (or standard_preamble.tex)
   //    postamble = names a tex file (or standard_postamble.tex)
 
@@ -374,7 +374,7 @@ impl DigestionAPI for Core {
 
     // Now for the Hacky part for BibTeX!!!
     // if mode == DigestionMode::BibTeX {
-    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state::>getStomach->getGullet);
+    //   let bib = LaTeXML::Pre::BibTeX->newFromGullet($name, $state->getStomach->getGullet);
     //   LaTeXML::Package::InputContent("literal:" . $bib->toTeX);
     // }
 

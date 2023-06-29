@@ -359,7 +359,7 @@ impl KeyVals {
     // let rmtokens    = ();
 
     // // read in existing tokens (if they are defined)
-    // if ($definedrm && $state::>lookupMeaning($rmmacro)) {
+    // if ($definedrm && $state->lookupMeaning($rmmacro)) {
     //   @rmtokens = LaTeXML::Package::Expand($rmmacro)->unlist; }
 
     // define some xkeyval internals

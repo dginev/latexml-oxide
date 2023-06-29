@@ -1508,7 +1508,7 @@ impl Document {
     Ok(node)
   }
 
-  // New state::y (but inefficient): apply ligatures until one succeeds,
+  // New strategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
   fn apply_math_ligatures(&mut self, node: &mut Node) -> Result<()> {
     let checked_out_ligatures = checkout_value("MATH_LIGATURES");
@@ -1936,19 +1936,7 @@ impl Document {
       dbg!(key);
       unimplemented!();
     }
-    //   my ($ns, $name) = model::decodeQName($key);
-    //   if ($ns) {             // If namespaced attribute (must have prefix!
-    // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
-    // declared? if (!$prefix) {                                    // if
-    // namespace not already declared $prefix =
-    // model!()DocumentNamespacePrefix($ns, 1);    // get the prefix to use
-    // self.getDocument->documentElement->setNamespace($ns, $prefix, 0); }
-    // // and declare it if ($prefix eq '//default') {    // Probably
-    // shouldn't happen...?       node.setAttribute($name => $value); }
-    //     else {
-    //       node.setAttributeNS($ns, "$prefix:$name" => $value); } }
-    //   else {
-    //     node.setAttribute($name => $value); } } }    // redundant case...
+    // ... TODO: continue (see Perl)
     Ok(())
   }
 

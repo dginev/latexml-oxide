@@ -272,7 +272,7 @@ LoadDefinitions!({
     token
   });
 
-  DefPrimitive!("\\endcsname", sub[()] {
+  DefPrimitive!("\\endcsname", {
     Error!("unexpected" ,"\\endcsname", "Extra \\endcsname");
   });
 

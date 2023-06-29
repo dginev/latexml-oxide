@@ -732,7 +732,7 @@ pub fn begin_itemize(
       // TODO:
       // SetCounter!(usecounter,
       //   lookup_int(&s!("enumitem_series_{}_last",series)),
-      //   state::;
+      //   state);
     }
   } else {
     reset_counter(&T_OTHER!(&usecounter))?;

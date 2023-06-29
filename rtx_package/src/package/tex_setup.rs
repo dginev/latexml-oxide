@@ -770,7 +770,7 @@ LoadDefinitions!({
   //     unimplemented!();
   //     //   let ismath = lookup_bool("IN_MATH");
   //     //   stomach::digest_next_body(Some(until))?
-  //   //   my @list   = $state::>getStomach->digestNextBody($until);
+  //   //   my @list   = $state->getStomach->digestNextBody($until);
   //   //   @list = grep { ref $_ ne 'LaTeXML::Core::Comment' } @list;
   //   //   List(@list, mode => ($ismath ? 'math' : 'text'));
   //     ()

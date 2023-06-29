@@ -157,7 +157,7 @@ macro_rules! parameter_rust_type {
   (CSName) => {Token};
   (Variable) => {ArgWrap};
   // For now return the raw Tokens for KeyVals, until we figure out how to
-  // do TryInto with access to the current "state:: object.
+  // do TryInto with access to the current "state" object.
   (OptionalKeyVals) => {Option<KeyVals>};
   (KeyVals) => {KeyVals};
   ($other:ident) => {$other};

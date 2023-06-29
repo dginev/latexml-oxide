@@ -46,7 +46,7 @@ pub mod mouth;
 pub mod parameter;
 /// Rules for rewriting the constructed XML document, after core processing has completed
 pub mod rewrite;
-/// A global, singleton, mutable state::- hosts almost all TeX-facing runtime information for the
+/// A global, singleton, mutable state - hosts almost all TeX-facing runtime information for the
 /// conversion
 #[macro_use]
 pub mod state;
@@ -128,7 +128,7 @@ impl Core {
       Some(p) => p,
     };
 
-    // pass on the state::options, defaults are handled in state:::new
+    // pass on the state::options, defaults are handled in state::new
     let state_options = StateOptions {
       model: options.model,
       verbosity: options.verbosity,

@@ -382,10 +382,7 @@ pub enum RegisterType {
   Any,
 }
 
-// why mutable state::in the Getter closure? Because the `.get_width` and friends methods have a
-// caching optimization, which requires writing new properties while they are stored in the State
-// table if we decide that isn't needed, we can go back to immutable.
-/// looks up a stored value from the state::frame (at a constant key, or key based on the arguments)
+/// looks up a stored value from the state frame (at a constant key, or key based on the arguments)
 pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Option<RegisterValue>>;
 /// sets a register value in the state::frame
 pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>)>;
@@ -515,7 +512,7 @@ impl Definition for Register {
       };
     }
 
-    // my $profiled = $state::>lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     let args = self.read_arguments()?;
     gullet::read_keyword(&["="])?;
@@ -588,7 +585,7 @@ impl Register {
       internalcs,
       register_type: RegisterType::CharDef,
       readonly: true,
-      //locator => $state::>getStomach->getGullet->getMouth->getLocator,
+      //locator => $state->getStomach->getGullet->getMouth->getLocator,
       ..Register::default()
     }
   }

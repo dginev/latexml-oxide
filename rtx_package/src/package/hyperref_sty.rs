@@ -301,7 +301,7 @@ LoadDefinitions!({
 
   // sub localized_anchor {
   //   my ($document, $whatsit) = @_;
-  //   my $model      = $state::>getModel;
+  //   my $model      = $state->getModel;
   //   my $node       = $document->getNode;
   //   my @candidates = ($node);
   //   my $candidate;
@@ -575,7 +575,7 @@ LoadDefinitions!({
   // \hypercalcbp{dimen}
   // DefMacro('\hypercalcbp{Dimension}', sub {
   //     my ($gullet, $dimen) = @_;
-  //     Explode($dimen->valueOf / $state::>convertUnit('bp')); });
+  //     Explode($dimen->valueOf / $state->convertUnit('bp')); });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // 5 Acrobat-specific behaviour

@@ -77,27 +77,27 @@ LoadDefinitions!({
       // and we want to at least compress & avoid unnecessary errors & warnings.
       let _nframes = get_frame_depth();
       //     my $ifstack;
-      //     if ($state::>isValueBound('current_environment', 0)
-      //       && ($state::>valueInFrame('current_environment', 0) eq 'document')
-      //       && (!($ifstack = $state::>lookupValue('if_stack')) || !$$ifstack[0])) { }    # OK!
+      //     if ($state->isValueBound('current_environment', 0)
+      //       && ($state->valueInFrame('current_environment', 0) eq 'document')
+      //       && (!($ifstack = $state->lookupValue('if_stack')) || !$$ifstack[0])) { }    # OK!
       //     else {
       //       my @lines = ();
-      //       while ((!$state::>isValueBound('current_environment', 0)
-      //           || ($state::>valueInFrame('current_environment', 0) ne 'document'))
-      //         && ($state::>getFrameDepth > 0)) {
-      //         # my $nonbox = $state::>valueInFrame('groupNonBoxing',0) || 0;
-      //         my $tok = $state::>valueInFrame('groupInitiator',        0) || '<unknown>';
-      //         my $loc = $state::>valueInFrame('groupInitiatorLocator', 0);
+      //       while ((!$state->isValueBound('current_environment', 0)
+      //           || ($state->valueInFrame('current_environment', 0) ne 'document'))
+      //         && ($state->getFrameDepth > 0)) {
+      //         # my $nonbox = $state->valueInFrame('groupNonBoxing',0) || 0;
+      //         my $tok = $state->valueInFrame('groupInitiator',        0) || '<unknown>';
+      //         my $loc = $state->valueInFrame('groupInitiatorLocator', 0);
       //         $loc = defined $loc ? ToString($loc) : '<unknown>';
-      //         my $env = $state::>isValueBound('current_environment', 0)
-      //           && $state::>valueInFrame('current_environment', 0);
+      //         my $env = $state->isValueBound('current_environment', 0)
+      //           && $state->valueInFrame('current_environment', 0);
       //         if ($env) {
       //           push(@lines, "Environment $env opened by " . ToString($tok) . ' ' . $loc); }
       //         else {    # but unclosed { is so common and latex itself doesn't Error!
   //           push(@lines, "Group opened by " . ToString($tok) . ' ' . $loc); }
-  //         $state::>popFrame; }
-  //       while (($ifstack = $state::>lookupValue('if_stack')) && $$ifstack[0]) {
-  //         my $frame = $state::>shiftValue('if_stack');
+  //         $state->popFrame; }
+  //       while (($ifstack = $state->lookupValue('if_stack')) && $$ifstack[0]) {
+  //         my $frame = $state->shiftValue('if_stack');
   //         push(@lines, "Conditional " . ToString($$frame{token})
   //             . "started " . ToString($$frame{start})); }
   //       Warn('unexpected', '\end{document}', $stomach,

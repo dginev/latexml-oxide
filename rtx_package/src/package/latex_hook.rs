@@ -46,7 +46,7 @@ LoadDefinitions!({
     });
   }
   // TODO: Port and use `DefAutoload` instead of this single-purpose macro
-  DefPrimitive!("\\@load@latex@pool", sub[()] {
+  DefPrimitive!("\\@load@latex@pool", {
     input_definitions(
       "LaTeX",
       InputDefinitionOptions {
