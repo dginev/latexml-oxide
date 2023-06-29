@@ -2,7 +2,7 @@ use crate::package::*;
 
 //======================================================================
 // TeX Book, Appendix B. p. 363
-LoadDefinitions!(state, {
+LoadDefinitions!({
 
   DefPrimitive!("\\raggedbottom", None);
   DefPrimitive!("\\normalbottom", None);

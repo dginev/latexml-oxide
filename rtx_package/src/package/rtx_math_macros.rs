@@ -2,7 +2,7 @@ use crate::package::*;
 use std::collections::hash_map::Entry;
 use crate::common::xml::XML_NS;
 
-LoadDefinitions!(_state, {
+LoadDefinitions!({
   // ======================================================================
   //  Support for constructing mathematical expressions
 
@@ -171,12 +171,12 @@ LoadDefinitions!(_state, {
 
   DefConstructor!("\\lx@dual OptionalKeyVals:XMath {}{}",
   "<ltx:XMDual role='#role' name='#name' meaning='#meaning' omcd='#omcd' width='#width' height='#height' xoffset='#xoffset' yoffset='#yoffset' lpadding='#lpadding' rpadding='#rpadding'>#2<ltx:XMWrap>#3</ltx:XMWrap></ltx:XMDual>",
-  before_digest => sub[_stomach,state] {
-    state.push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
+  before_digest => {
+    push_value("PENDING_DUAL_XMARGS", Stored::HashStored(HashMap::default()))
   },
-  after_digest => sub[_stomach,whatsit,state] {
-    let kv     = whatsit.get_arg(1);
-    if let Some(Stored::HashStored(xmargs)) = state.pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
+  after_digest => sub[whatsit] {
+    // let kv     = whatsit.get_arg(1);
+    if let Some(Stored::HashStored(xmargs)) = pop_value("PENDING_DUAL_XMARGS")? { // Really SHOULD be a hash
       whatsit.set_properties(xmargs);  // Hopefully no name class with XM<digits>
     }
     // TODO:
@@ -190,27 +190,27 @@ LoadDefinitions!(_state, {
       None => String::from("content")
     };    // ?????
     if whatsit.get_property("reversion").is_none() {
-      let reversion_closure = Reversion::Closure(Rc::new(move |wself, args, state| {
+      let reversion_closure = Reversion::Closure(Rc::new(move |wself, args| {
         // TODO: The data manamgement here is far from final.
         // Can we avoid clones? Can we consolidate the reversion variants?
-        let kvs = &args[0];
+        // let kvs = &args[0];
         let c = &args[1];
         let p = &args[2];
         let reverted = match r.as_str() {
          "content" => match &cr {
           Some(Stored::Reversion(Reversion::Tokens(cr_tks))) => cr_tks.clone(),
-          Some(Stored::Reversion(Reversion::Closure(cr_closure))) => cr_closure(wself,args,state)?,
+          Some(Stored::Reversion(Reversion::Closure(cr_closure))) => cr_closure(wself,args)?,
           Some(Stored::Tokens(cr_tks)) => cr_tks.clone(),
           _ => match c {
-            Some(inner) => inner.revert(state)?,
+            Some(inner) => inner.revert()?,
             None => Tokens!()
           }},
          "presentation" => match &pr {
           Some(Stored::Reversion(Reversion::Tokens(pr_tks))) => pr_tks.clone(),
-          Some(Stored::Reversion(Reversion::Closure(pr_closure))) => pr_closure(wself,args,state)?,
+          Some(Stored::Reversion(Reversion::Closure(pr_closure))) => pr_closure(wself,args)?,
           Some(Stored::Tokens(pr_tks)) => pr_tks.clone(),
           _ => match p {
-            Some(inner) => inner.revert(state)?,
+            Some(inner) => inner.revert()?,
             None => Tokens!()
           }},
          "dual" => {
@@ -221,7 +221,7 @@ LoadDefinitions!(_state, {
             //                   T_BEGIN, ($cr || Revert($c)), T_END,
             //                   T_BEGIN, ($pr || Revert($p)), T_END)
          },
-          other => {
+          _other => {
             unimplemented!()
             //                 : (($LaTeXML::DUAL_BRANCH || '') eq 'presentation'    # Context dependent reversion
             //                   ? $pr || Revert($p)
@@ -252,28 +252,27 @@ LoadDefinitions!(_state, {
   // and establish an id and idref later.
   DefConstructor!("\\lx@xmarg{}{}", "<ltx:XMArg _xmkey='#1'>#2</ltx:XMArg>",
     reversion   => "#2",
-    after_digest => sub[_stomach,whatsit,state] {
+    after_digest => sub[whatsit] {
       let xmid = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let arg = whatsit.get_arg(2);
       let reversion_key = s!("xref:{}@reversion", xmid);
-      if let Some(Stored::HashStored(ref mut pending)) =
-        state.lookup_value_mut("PENDING_DUAL_XMARGS") {
+      with_value_mut("PENDING_DUAL_XMARGS", |pending_opt|
+        if let Some(Stored::HashStored(ref mut pending)) = pending_opt  {
           pending.insert(xmid, arg.into());
-      }
+        });
       // TODO: Must we store the (currently &mut) Whatsit?
       // let whatsit_stored = Stored::Digested(whatsit.into());
-      state.assign_value(&reversion_key, Stored::Tokens(whatsit.revert(state)?),
+      state::assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),
         Some(Scope::Global));
-      // state.assign_value(&s!("xref:{}@size", xmid),
-      //   whatsit.get_size(None,state), Some(Scope::Global));
-
+      // state::assign_value(&s!("xref:{}@size", xmid),
+      //   whatsit.get_size(None), Some(Scope::Global));
   });
 
   DefConstructor!("\\lx@xmref{}", "<ltx:XMRef _xmkey='#1'/>",
     // TODO: Must we store and lookup the Whatsit?
-    reversion => sub[_stomach,args,state] {
+    reversion => sub[_whatsit,args] {
       let xmid = args[0].as_ref().unwrap().to_string();
-      Ok( state.lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )},
+      Ok( state::lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )}
     // sizer => sub { LookupValue('xref:' . ToString($_[0]->getArg(1)))->getSize; }
   );
 
@@ -281,31 +280,31 @@ LoadDefinitions!(_state, {
   // We want to set the idref of the XMRef's to point to the id of the XMArg (or other XM element),
   // but usually the XMRef is created first, and we want to let the referred to element
   // get it's id computed by whatever means it prefers.
-  // so we have to work both ways (use state to record associations, to avoid expensive xpath)
+  // so we have to work both ways (use state::to record associations, to avoid expensive xpath)
   // Set id's on any non-XMRef nodes that have an _xmkey
   // This gets a more natural ordering
-  Tag!("ltx:*", after_open_late => sub[document,node,state] {
+  Tag!("ltx:*", after_open_late => sub[document,node] {
     if node.has_attribute("_xmkey") {
-      let qname = document.get_node_qname(node, state);
+      let qname = document::get_node_qname(node);
       if (qname != arena::pin_static("ltx:XMRef")) &&
         arena::with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
-        document.generate_id(node, "", state)?;
+        document.generate_id(node, "")?;
       }
     }
   });
 
-  Tag!("ltx:XMDual", after_close_late => sub[document,node,state] {
+  Tag!("ltx:XMDual", after_close_late => sub[document,node] {
     let mut ids  = HashMap::default();
     let mut refs = Vec::new();
     // Collect all children with _xmkey attribute
-    for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node), state) {
-      if document.with_node_qname(&n, state, |qname| qname == "ltx:XMRef")
+    for mut n in document.findnodes("descendant::*[@_xmkey]", Some(node)) {
+      if document::with_node_qname(&n, |qname| qname == "ltx:XMRef")
          && !n.has_attribute("idref") {
         refs.push(n);    // we'll fill these in next
       } else { // generate & record ids for all referenced noces
         let key = n.get_attribute("_xmkey").unwrap();
         if let Entry::Vacant(e) = ids.entry(key) {
-          document.generate_id(&mut n, "", state)?; // Generate id if none already.
+          document.generate_id(&mut n, "")?; // Generate id if none already.
           e.insert(n.get_attribute_ns("id",XML_NS).unwrap_or_default());
         }
       }

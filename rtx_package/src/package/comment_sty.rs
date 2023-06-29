@@ -1,19 +1,18 @@
 use crate::package::*;
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
   // until \endname or \end{name}, respectively
-  let define_excluded: PrimitiveClosure = primitiveproc!(_stomach, args, state, {
+  let define_excluded: PrimitiveClosure = primitiveproc!( args, {
     let name = args.remove(0).owned_tokens().unwrap();
     let begin_mark = s!("\\begin{{{name}}}");
     let end_mark = s!("\\end{{{name}}}");
     DefConstructor!(T_CS!(begin_mark), None, None,
-    after_digest => sub[stomach, _whatsit, after_digest_state] {
+    after_digest => {
       let mut nlines = 0;
-      let gullet = &mut stomach.gullet;
-      gullet.read_raw_line(after_digest_state);    // IGNORE 1st line (after the \begin{$name} !!!
-      while let Some(line) = gullet.read_raw_line(after_digest_state) {
+      gullet::read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+      while let Some(line) = gullet::read_raw_line() {
         if line == end_mark {
           break;
         }
@@ -26,7 +25,7 @@ LoadDefinitions!(outer_state, {
 
   // I don't understand Rust closures enough to figure out how to clone one, so instantiating it
   // twice instead, via a macro
-  let define_included: PrimitiveClosure = primitiveproc!(_stomach, args, inner_state, {
+  let define_included: PrimitiveClosure = primitiveproc!(args, {
     args.reverse(); // we'll be using .pop() from the front
     let name = args
       .pop()
@@ -46,10 +45,9 @@ LoadDefinitions!(outer_state, {
     after_tokens.push(T_CS!("\\ignorespaces"));
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-    DefMacro!(T_CS!(s!("\\begin{{{name}}}")),
-    None,
-    sub[gullet, _args, macro_state] {
-      gullet.read_raw_line(macro_state); // IGNORE 1st line (after the \begin{$name} !!!
+    DefMacro!(T_CS!(s!("\\begin{{{name}}}")), None,
+    {
+      gullet::read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
       before_tokens.clone()
     });
     DefMacro!(
@@ -59,12 +57,7 @@ LoadDefinitions!(outer_state, {
     );
   });
 
-  let mut mock_stomach = Stomach::default();
-  define_excluded(
-    &mut mock_stomach,
-    vec![ArgWrap::Tokens(Tokenize!("comment", None))],
-    outer_state,
-  )?;
+  define_excluded(vec![ArgWrap::Tokens(Tokenize!("comment"))])?;
 
   DefPrimitive!("\\includecomment{}", Some(Rc::clone(&define_included)));
   DefPrimitive!("\\excludecomment{}", Some(define_excluded));

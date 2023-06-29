@@ -24,14 +24,14 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:acknowledgements",
 ];
 #[rustfmt::skip]
-LoadDefinitions!(state, {
+LoadDefinitions!({
   AssignValue!(
     "frontmatter",
     Stored::HashTagData(HashMap::default()),
     Some(Scope::Global)
   );
 
-  DefConditional!("\\if@in@preamble", sub[_s,_args,state] { state.lookup_bool("inPreamble") });
+  DefConditional!("\\if@in@preamble", { lookup_bool("inPreamble") });
 
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
@@ -41,7 +41,7 @@ LoadDefinitions!(state, {
   //   ifnew   (only add if no previous entry)//
 
   DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
-    sub[stomach, (_keys_tks,tag,attrs_opt,tokens), state] {
+    sub[(_keys_tks,tag,attrs_opt,tokens)] {
     // Digest this as if we're already in the document body!
     let inpreamble = LookupBool!("inPreamble");
     AssignValue!("inPreamble", false);
@@ -52,7 +52,7 @@ LoadDefinitions!(state, {
 
     // TODO: Port over keys handling from TeX.pool
     let attrs_digested = if let Some(attr_kvs) = attrs_opt {
-      if let DigestedData::KeyVals(digested) = attr_kvs.be_digested(stomach, state)?.data() {
+      if let DigestedData::KeyVals(digested) = attr_kvs.be_digested()?.data() {
         Some(digested.get_hash())
       } else {
         None
@@ -64,14 +64,17 @@ LoadDefinitions!(state, {
     let mut wrapped_tokens = vec![T_BEGIN!()];
     wrapped_tokens.extend(tokens.unlist());
     wrapped_tokens.push(T_END!());
-    let digested_tokens = stomach.digest(Tokens::new(wrapped_tokens), state)?;
+    let digested_tokens = stomach::digest(Tokens::new(wrapped_tokens))?;
     let entry = (tag.to_string(), attrs_digested, digested_tokens);
-    let frontmatter = match state.lookup_value_mut("frontmatter") {
-      Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-      _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
-    };
-    let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
-    f_entry.push(entry);
+    with_value_mut("frontmatter", |val_opt| {
+      let frontmatter = match val_opt {
+        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
+        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
+      };
+      let f_entry = frontmatter.entry(tag.to_string()).or_insert_with(Vec::new);
+      f_entry.push(entry);
+      Ok(())
+    })?;
 
     AssignValue!("inPreamble", inpreamble);
   });
@@ -81,7 +84,7 @@ LoadDefinitions!(state, {
   // otherwise, just append to the last item in $tag.
 
   // \@add@to@frontmatter{tag}[label]{content}
-  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[stomach,(tag,label,tokens), state] {
+  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(tag,label,tokens)] {
   //     $tag = ToString($tag);
   //     $label = ToString($label) if $label;
   //     my $frontmatter = LookupValue('frontmatter');
@@ -108,15 +111,15 @@ LoadDefinitions!(state, {
   // This is called by afterOpen (by default on <ltx:document>) to
   // output any frontmatter that was accumulated.
 
-  Tag!("ltx:document", after_open_late => sub[document, _node, state] {
+  Tag!("ltx:document", after_open_late => sub[document, _node] {
     // this happens only once per conversion, so not a big deal to keep it in the closure
     let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS.iter().map(ToString::to_string).collect();
 
-    let mut frontmatter = match state.remove_value("frontmatter") {
+    let mut frontmatter = match state::remove_value("frontmatter") {
       Some(Stored::HashTagData(frnt)) => frnt,
       _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
     };
-    state.assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
+    state::assign_value("frontmatter", Stored::HashTagData(HashMap::default()), Some(Scope::Global));
 
     // order is important here, first go through frontmatter_elements, then any leftover keys.
     let custom_keys: Vec<String> = frontmatter
@@ -130,14 +133,14 @@ LoadDefinitions!(state, {
     for key in &all_keys {
       if let Some(list) = frontmatter.remove(key) {
         // Dubious, but assures that frontmatter appears in text mode...
-        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), state.lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default(), state).into());
+        document.set_box_to_absorb(Tbox::new(arena::pin_static(""), lookup_font(), None, Tokens!(T_SPACE!()), HashMap::default()).into());
         for (tag, attr, stuff) in list {
-          document.open_element(&tag, attr, None, state)?;
+          document.open_element(&tag, attr, None)?;
           // TODO:  (scalar(@stuff) && $document->canHaveAttribute($tag, 'font')
           //        ? (font => $stuff[0]->getFont, _force_font => 'true') : ()));
-          document.absorb(&stuff, None, state)?;
+          document.absorb(&stuff, None)?;
 
-          document.close_element(&tag, state)?;
+          document.close_element(&tag)?;
         }
         document.expire_box_to_absorb();
       }
@@ -146,14 +149,14 @@ LoadDefinitions!(state, {
 
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
-  DefConstructor!("\\lx@frontmatterhere", sub[doc,_args,state] { insert_frontmatter(doc,state)? },
-    after_digest => sub[stomach,_args,state] { state.assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
+  DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
+    after_digest => { state::assign_value("frontmatter_deferred", true, Some(Scope::Global)); });
 
   // TeX.pool.ltxml, line 5421
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
-  Tag!("ltx:document", after_open_late => sub[document, root, state] {
-    let classes = LookupMappingKeys!("DOCUMENT_CLASSES").join(" ");
+  Tag!("ltx:document", after_open_late => sub[document, root] {
+    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| keys.join(" "));
     if !classes.is_empty()  {
       document.add_class(root, &classes)?;
     }
@@ -169,13 +172,13 @@ LoadDefinitions!(state, {
   // POSSIBLY #1 is a name or reference number and  #2 is the theoremm TITLE
   //  If so, how do know when the theorem ends?
   // TODO:
-  // DefMacro!("\\proclaim", parse_def_parameters("\\proclaim", Tokenize!("#1. #2\\par"),state),
+  // DefMacro!("\\proclaim", parse_def_parameters("\\proclaim", Tokenize!("#1. #2\\par")),
   //   r"\@proclaim{{\bf #1}}{{\sl #2}}");
   // DefConstructor!("\\@proclaim{}{}",
   //   "<ltx:theorem><ltx:title font='#titlefont' _force_font='true' >#title</ltx:title>\
   //     #2",
-  //   after_construct => sub[doc,_args,state] { doc.maybe_close_element("ltx:theorem", state)?; },
-  //   properties     => sub[stomach,title,state] {
+  //   after_construct => sub[doc,_args] { doc.maybe_close_element("ltx:theorem")?; },
+  //   properties     => sub[title] {
   //     stored_map!("title" => title, "titlefont" => title.get_font()) });
 
   //======================================================================
@@ -200,10 +203,10 @@ LoadDefinitions!(state, {
   // The design reflects LaTeX needs, more than TeX, but support starts here!
 
   // This collects up the various declared ltx:tag's into an ltx:tags
-  DefMacro!("\\lx@make@tags {}", sub[gullet, (ttype), state] {
+  DefMacro!("\\lx@make@tags {}", sub[(ttype)] {
     let formatters = if let Some(Stored::HashStored(formatters)) =
-      state.lookup_value("type_tag_formatter") {
-        Some(formatters.clone())
+      lookup_value("type_tag_formatter") {
+        Some(formatters)
       } else {
         None
       };
@@ -214,14 +217,11 @@ LoadDefinitions!(state, {
       sorted_keys.sort();
       for role in sorted_keys.iter() {
         let formatter = &formatters[*role];
-        // Note: Another curious mutability issue here if we leave ",state" out of the Invocation!()
-        // call. We'd need to assign each invocation piece in a separate variable, to avoid Rust getting
-        // confused about mutability conflicts in borrowing. The explicit invocation seems clear enough.
         tags.push(Invocation!(T_CS!("\\lx@tag@intags"),
           vec![
             Tokens!(T_OTHER!(role)),
-            build_invocation(formatter, vec![Some(ttype.clone())], gullet, state)?
-          ], gullet, state)?
+            build_invocation(formatter, vec![Some(ttype.clone())])?
+          ])
         );
       }
     }
@@ -235,7 +235,7 @@ LoadDefinitions!(state, {
   });
 
   // Remove the last closed node, if it's empty.
-  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit, _state, {
+  let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit,{
     if let Some(mut node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
       if node.get_child_nodes().is_empty() {
@@ -266,12 +266,13 @@ LoadDefinitions!(state, {
   // "refnum" is the lowest level reference number for an object is typically \the<counter>
   // but be sure to use the right counter!  This is how \ref will show the number.
   // You'll typically customize this by defining \the<counter> (and \p@<counter) as in LaTeX.
-  DefMacro!("\\lx@counterfor{}", sub[gullet, (ctr_type), state] {
-    if let Some(ctr) = LookupMapping!("counter_for_type", &ctr_type.to_string()) {
+  DefMacro!("\\lx@counterfor{}", sub[(ctr_type)] {
+    with_mapping("counter_for_type", &ctr_type.to_string(), |ctr_opt|
+    if let Some(ctr) = ctr_opt {
       Tokens!(T_OTHER!(ctr.to_string()))
     } else {
       ctr_type
-    }
+    })
   });
   DefMacro!(
     "\\lx@the@@{}",
@@ -391,7 +392,7 @@ LoadDefinitions!(state, {
 });
 
 
-pub fn insert_frontmatter(_document: &mut Document, _state: &mut State) -> Result<()> {
+pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
   // TODO: update and port over
   unimplemented!();
   Ok(())

@@ -5,6 +5,7 @@
 //!  fully implement KeyVal pairs.
 
 use std::rc::Rc;
+use std::borrow::Cow;
 
 use crate::binding::def::dialect::{def_conditional, def_macro};
 use crate::common::arena;
@@ -16,14 +17,14 @@ use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::conditional::ConditionalOptions;
 use crate::definition::{ExpansionBody, ExpansionClosure};
-use crate::gullet::Gullet;
 use crate::parameter::Parameter;
+use crate::state::State;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 // use crate::document::Document;
 // use crate::list::List;
 use crate::mouth::tokenize;
-use crate::state::State;
+use crate::{state};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -61,15 +62,15 @@ impl KeyVal {
   // Property access
   //======================================================================
 
-  pub fn get_prop<'a>(&self, key: &str, state: &'a State) -> Option<&'a Stored> {
-    state.lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
+  pub fn get_prop(&self, key: &str) -> Option<Stored> {
+    state::lookup_value(&s!("KEYVAL@{}@{}", key, self.get_header()))
   }
-  pub fn get_default(&self, state: &State) -> Option<Stored> {
-    self.get_prop("default", state).map(|v| (*v).clone())
+  pub fn get_default(&self) -> Option<Stored> {
+    self.get_prop("default")
   }
-  pub fn get_type<'a>(&'a self, state: &'a State) -> Option<Rc<Parameter>> {
-    match self.get_prop("type", state) {
-      Some(Stored::Parameter(p)) => Some(Rc::clone(p)),
+  pub fn get_type(&self) -> Option<Rc<Parameter>> {
+    match self.get_prop("type") {
+      Some(Stored::Parameter(p)) => Some(p),
       _ => None,
     }
   }
@@ -85,8 +86,8 @@ pub fn keyval_get<'a>(qname: &str, prop: &str, state: &'a State) -> Option<&'a S
   state.lookup_value_sym(&arena::pin(s!("KEYVAL@{prop}@{qname}")))
 }
 
-pub fn keyval_set(qname: &str, prop: &str, value: Stored, state: &mut State) {
-  state.assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
+pub fn keyval_set(qname: &str, prop: &str, value: Stored) {
+  state::assign_value_sym(arena::pin(s!("KEYVAL@{prop}@{qname}")), value, None);
 }
 
 //======================================================================
@@ -145,7 +146,7 @@ pub struct KeyvalConfig<'a> {
 ///
 ///The kind parameter only takes effect when `code` is given, otherwise only
 ///meta-data is stored.
-pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> Result<()> {
+pub fn define(options: KeyvalConfig) -> Result<()> {
   let prefix = options.prefix;
   let keyset = options.keyset;
   let key = options.key;
@@ -154,21 +155,20 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
   let qname = keyval_qname(prefix, keyset, key);
 
   // define that the key exists and is not disabled
-  keyval_set(&qname, "exists", 1.into(), state);
-  keyval_set(&qname, "disabled", 0.into(), state);
+  keyval_set(&qname, "exists", 1.into());
+  keyval_set(&qname, "disabled", 0.into());
   // set the type
   let vtype = if vtype.is_empty() { "{}" } else { vtype };
   let paramlist_opt = parse_parameters(
     vtype,
     &T_OTHER!(s!("KeyVal {key} in set {keyset} with prefix {prefix}")),
-    Some(state),
+    true
   )?;
   match paramlist_opt {
     None => {
       Warn!(
         "unexpected",
         "keyval",
-        None,
         s!(
           "No parameters in keyval {key} (in set {keyset} with prefix {prefix}) taking only first"
         )
@@ -179,7 +179,6 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
         Warn!(
           "unexpected",
           "keyval",
-          None,
           "Too many parameters in keyval {key} (in set {keyset} with prefix {prefix})\
           taking only first"
         );
@@ -188,18 +187,16 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
         &qname,
         vtype,
         paramlist.take_parameters().remove(0).into(),
-        state,
       );
     },
   };
   // set the default
   if let Some(default) = default_opt {
-    let tdefault = tokenize(default, Some(state));
+    let tdefault = tokenize(default);
     keyval_set(
       &qname,
       "default",
       Stored::Tokens(Tokens!(tdefault.clone())),
-      state,
     );
     def_macro(
       T_CS!(s!("\\{qname}@default")),
@@ -211,21 +208,20 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
         T_END!()
       )),
       None,
-      state,
     )?;
   }
 
   // figure out the kind of key-val parameter we are defining
   let kind = options.kind.unwrap_or("ordinary");
   match kind {
-    "ordinary" => define_ordinary(&qname, options.code, state)?,
+    "ordinary" => define_ordinary(&qname, options.code)?,
     "command" => {
       let macroname = if let Some(mpfx) = options.macroprefix {
         s!("{mpfx}{key}")
       } else {
         s!("cmd{qname}")
       };
-      define_command(&qname, options.code, &macroname, state)?;
+      define_command(&qname, options.code, &macroname)?;
     },
     "choice" => define_choice(
       &qname,
@@ -234,27 +230,22 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
       options.choices,
       options.normalize.unwrap_or(false),
       options.bin,
-      state,
     )?,
     "boolean" => {
-      let macroname = if let Some(mpfx) = options.macroprefix {
-        s!("{mpfx}{key}")
-      } else {
-        qname.clone()
-      };
       define_boolean(
         &qname,
         options.code,
         options.mismatch,
-        &macroname,
-        gullet,
-        state,
+        &if let Some(mpfx) = options.macroprefix {
+          Cow::Owned(s!("{mpfx}{key}"))
+        } else {
+          Cow::Borrowed(&qname)
+        }
       )?
     },
     _ => Warn!(
       "unknown",
       "undef",
-      None,
       s!(
         "Unknown KeyVals kind {kind} should be one of\
      'ordinary', 'command', 'choice', 'boolean'. "
@@ -264,31 +255,29 @@ pub fn define(options: KeyvalConfig, gullet: &mut Gullet, state: &mut State) -> 
   Ok(())
 }
 
-/// Helper function to define state neccesary for an ordinary key.
+/// Helper function to define state, neccesary for an ordinary key.
 fn define_ordinary(
   qname: &str,
   code_expansion: Option<ExpansionBody>,
-  state: &mut State,
 ) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs, Some(state))?;
-  def_macro(qname_cs, plain_params, code_expansion, None, state)
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
+  def_macro(qname_cs, plain_params, code_expansion, None)
 }
 
-/// Helper function to define state neccesary for a command key.
+/// Helper function to define state, neccesary for a command key.
 fn define_command(
   qname: &str,
   code: Option<ExpansionBody>,
   macroname: &str,
-  state: &mut State,
 ) -> Result<()> {
   let qname_cs = T_CS!(s!("\\{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs, Some(state))?;
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
   let plainp = plain_params.clone();
   let orig = s!("\\ltxml@orig@{qname}");
   let macroname_cs = s!("\\{macroname}");
-  let closure: ExpansionClosure = Rc::new(move |_gullet, value: Vec<ArgWrap>, istate| {
-    def_macro(T_CS!(&orig), plainp.clone(), code.clone(), None, istate)?;
+  let closure: ExpansionClosure = Rc::new(move |value: Vec<ArgWrap>| {
+    def_macro(T_CS!(&orig), plainp.clone(), code.clone(), None)?;
     let value_tks: Vec<Token> = value
       .into_iter()
       .flat_map(|v| {
@@ -315,12 +304,11 @@ fn define_command(
     qname_cs,
     plain_params,
     ExpansionBody::Closure(closure),
-    None,
-    state,
+    None
   )
 }
 
-/// Helper function to define state neccesary for an choice key.
+/// Helper function to define state, neccesary for an choice key.
 fn define_choice(
   qname: &str,
   code_opt: Option<ExpansionBody>,
@@ -328,7 +316,6 @@ fn define_choice(
   choices: Vec<&'static str>,
   normalize: bool,
   bin: Option<Tokens>,
-  state: &mut State,
 ) -> Result<()> {
   let (varmacro_opt, idxmacro_opt) = if let Some(bin_tks) = bin {
     let mut bin_iter = bin_tks.unlist().into_iter();
@@ -338,9 +325,9 @@ fn define_choice(
   };
   let qname_cs = T_CS!(s!("\\{qname}"));
   let orig = T_CS!(s!("\\ltxml@orig@{qname}"));
-  let plain_params = parse_parameters("{}", &qname_cs, Some(state))?;
+  let plain_params = parse_parameters("{}", &qname_cs, true)?;
   let plain_params_main = plain_params.clone();
-  let closure: ExpansionClosure = Rc::new(move |_gullet, mut values, istate| {
+  let closure: ExpansionClosure = Rc::new(move |mut values| {
     // Store the normalized value (if applicable)
     let value = values.remove(0).owned_tokens().unwrap_or_default();
     let mut nvalue = value.to_string();
@@ -353,7 +340,6 @@ fn define_choice(
         None,
         ExpansionBody::Tokens(Tokens::new(Explode!(nvalue))),
         None,
-        istate,
       )?;
     }
     // iterate over the possible choices and store them
@@ -368,7 +354,6 @@ fn define_choice(
             None,
             ExpansionBody::Tokens(Tokens::new(Explode!(index))),
             None,
-            istate,
           )?;
         }
         index += 1;
@@ -384,7 +369,6 @@ fn define_choice(
           plain_params.clone(),
           code.clone(),
           None,
-          istate,
         )?;
         tokens.push(orig.clone());
         tokens.push(T_BEGIN!());
@@ -398,7 +382,6 @@ fn define_choice(
         plain_params.clone(),
         mismatch.clone(),
         None,
-        istate,
       )?;
       tokens.push(orig.clone());
       tokens.push(T_BEGIN!());
@@ -412,33 +395,28 @@ fn define_choice(
     plain_params_main,
     ExpansionBody::Closure(closure),
     None,
-    state,
   )
 }
 
-/// Helper function to define state neccesary for a boolean key.
+/// Helper function to define state, neccesary for a boolean key.
 fn define_boolean(
   qname: &str,
   code_opt: Option<ExpansionBody>,
   mismatch: Option<ExpansionBody>,
   macroname: &str,
-  gullet: &mut Gullet,
-  state: &mut State,
 ) -> Result<()> {
   def_conditional(
     T_CS!(s!("\\if{macroname}")),
     None,
     None,
     ConditionalOptions::default(),
-    gullet,
-    state,
   )?; // We might need to $scope here
   let orig = s!("\\ltxml@@rig@{qname}");
   let orig_cs = T_CS!(orig);
-  let plain_params = parse_parameters("{}", &orig_cs, Some(state))?;
+  let plain_params = parse_parameters("{}", &orig_cs, true)?;
   let macroname_true = T_CS!(s!("\\{macroname}true"));
   let macroname_false = T_CS!(s!("\\{macroname}false"));
-  let closure: ExpansionClosure = Rc::new(move |_gullet, mut values: Vec<ArgWrap>, istate| {
+  let closure: ExpansionClosure = Rc::new(move |mut values: Vec<ArgWrap>| {
     // set the value to true (if needed)
     let value = values.remove(0).owned_tokens().unwrap_or_default();
     let value_str = value.to_string().to_lowercase();
@@ -455,7 +433,6 @@ fn define_boolean(
         plain_params.clone(),
         code.clone(),
         None,
-        istate,
       )?;
       tokens.push(orig_cs.clone());
       tokens.push(T_BEGIN!());
@@ -472,6 +449,5 @@ fn define_boolean(
     vec!["true", "false"],
     true,
     None,
-    state,
   )
 }

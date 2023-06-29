@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
     //======================================================================
   // TeX Book, Appendix B, p. 350
 
@@ -125,39 +125,39 @@ LoadDefinitions!(state, {
   "###
   );
 
-  DefPrimitive!("\\enskip", sub[stomach,(),state] {
+  DefPrimitive!("\\enskip", {
     Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enskip")),
-    stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em",state)?,
-      "isSpace"=>true), state) });
+    stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
+      "isSpace"=>true)) });
 
-  DefPrimitive!("\\enspace", sub[stomach,(),state] {
+  DefPrimitive!("\\enspace", {
       Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enspace")),
-      stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em",state)?,
-        "isSpace"=>true), state) });
+      stored_map!("name" => "enskip", "width" => Dimension::from_str("0.5em")?,
+        "isSpace"=>true)) });
 
-  DefPrimitive!("\\quad", sub[stomach,(),state] {
+  DefPrimitive!("\\quad", {
       Tbox::new(arena::pin_static("\u{2003}"), None, None, Tokens!(T_CS!("\\quad")),
-      stored_map!("name" => "quad", "width" => Dimension::from_str("1em",state)?,
-        "isSpace"=>true), state) });
+      stored_map!("name" => "quad", "width" => Dimension::from_str("1em")?,
+        "isSpace"=>true)) });
 
   // Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
-  DefPrimitive!("\\qquad", sub[stomach,(),state] {
+  DefPrimitive!("\\qquad", {
       Tbox::new(arena::pin_static("\u{2003}\u{2003}"), None, None, Tokens!(T_CS!("\\qquad")),
-      stored_map!("name" => "qquad", "width" => Dimension::from_str("2em",state)?,
-        "isSpace"=>true, "asHint" => true), state) });
+      stored_map!("name" => "qquad", "width" => Dimension::from_str("2em")?,
+        "isSpace"=>true, "asHint" => true)) });
 
-  DefPrimitive!("\\thinspace", sub[stomach,(),state] {
+  DefPrimitive!("\\thinspace", {
       Tbox::new(arena::pin_static("\u{2009}"), None, None, Tokens!(T_CS!("\\thinspace")),
-      stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em",state)?,
-        "isSpace"=>true), state) });
+      stored_map!("name" => "thinspace", "width" => Dimension::from_str("0.16667em")?,
+        "isSpace"=>true)) });
 
-  DefPrimitive!("\\negthinspace", sub[stomach,(),state] {
+  DefPrimitive!("\\negthinspace", {
       Tbox::new(arena::pin_static(""), None, None, Tokens!(T_CS!("\\negthinspace")),
-      stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em",state)?,
-        "isSpace"=>true), state) });
+      stored_map!("name" => "negthinspace", "width" => Dimension::from_str("-0.16667em")?,
+        "isSpace"=>true)) });
 
   // DefConstructor('\hglue Glue', "?#isMath(<ltx:XMHint name='hglue' width='#width'/>)(\x{2003})",
-  //   properties => sub { (stored_map!("isSpace"=>true), state, width => $_[1]) });
+  //   properties => sub { (stored_map!("isSpace"=>true), width => $_[1]) });
   DefPrimitive!("\\vglue Glue", None);
   DefPrimitive!("\\topglue", None);
   DefPrimitive!("\\nointerlineskip", None);
@@ -173,10 +173,10 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\break", None);
   DefPrimitive!("\\nobreak", None);
   DefPrimitive!("\\allowbreak", None);
-  DefPrimitive!("\\nobreakspace", sub[stomach, (), state] {
+  DefPrimitive!("\\nobreakspace", {
     Tbox::new(arena::pin_static("\u{00A0}"), None, None,
       Tokens!(T_ACTIVE!('~')), stored_map!("isSpace" => true,
-      "width" => Dimension::from_str("0.333em",state)?), state)
+      "width" => Dimension::from_str("0.333em")?))
   });
   DefMacro!("~", "\\nobreakspace{}");
 
@@ -187,8 +187,8 @@ LoadDefinitions!(state, {
   Let!("\\newpage", "\\eject");
 
   DefConstructor!("\\LTX@newpage", "^<ltx:pagination role='newpage'/>",
-  before_digest=>sub[stomach,state] {
-    state.after_assignment(stomach.get_gullet_mut());
+  before_digest=>{
+    after_assignment();
     Ok(Vec::new())
   });
   DefMacro!("\\supereject", "\\par\\LTX@newpage");

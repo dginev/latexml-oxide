@@ -101,7 +101,7 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
     quote!(
     Some(Rc::new(
     |document: &mut Document, args: &Vec<Option<Digested>>,
-      props: &HashMap<String, Stored>, state: &mut State| {
+      props: &HashMap<String, Stored>| {
       #[allow(unused_assignments)]
       let mut savenode : Option<Node> = None;
 
@@ -213,9 +213,9 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       if has_floats {
         let float_type = floats.len();
         if float_type == 1 {
-          operations.push(quote!(savenode = document.float_to_element(#current_tag, false, state)?;));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, false)?;));
         } else if float_type == 2 {
-          operations.push(quote!(savenode = document.float_to_element(#current_tag, true, state)?;));
+          operations.push(quote!(savenode = document.float_to_element(#current_tag, true)?;));
         }
         has_floats = false;
         floats = String::new();
@@ -229,18 +229,18 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
           Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
           Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
           Some(Stored::FontDirective(FontDirective::Closure(code))) =>
-            Some(Cow::Owned(code(None, state)?)),
+            Some(Cow::Owned(code(None)?)),
           _ => None
         };
         if let Some(this_font) = this_font_opt {
-          document.open_element(#current_tag, Some(av_props), Some(&this_font), state)?;
+          document.open_element(#current_tag, Some(av_props), Some(&this_font))?;
         } else {
-          document.open_element(#current_tag, Some(av_props), None, state)?;
+          document.open_element(#current_tag, Some(av_props), None)?;
         }
       ));
       // Empty element?
       if replacement.starts_with('/') {
-        operations.push(quote!(document.close_element(#current_tag, state)?;));
+        operations.push(quote!(document.close_element(#current_tag)?;));
         replacement = replacement[1..].to_owned();
       }
       if replacement.starts_with('>') {
@@ -258,7 +258,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         current_tag = refs.get(1).map_or("", |m| m.as_str()).to_string();
         // println!("-- close tag {:?}", current_tag);
         // handle close tag
-        operations.push(quote!(document.close_element(#current_tag, state)?;));
+        operations.push(quote!(document.close_element(#current_tag)?;));
         String::new()
       });
     if is_match {
@@ -285,7 +285,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         if let Some(ref stored_digested) = #to_absorb {
           let digested_opt : Option<Digested> = stored_digested.into();
           if let Some(ref digested) = digested_opt {
-            document.absorb(digested, None, state)?;
+            document.absorb(digested, None)?;
           }
         }
       ));
@@ -308,7 +308,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         if let Some(text_match) = refs.get(1) {
           let escaped_match = &slashify(&unquote(text_match.as_str()));
           operations.push(quote!(
-            document.absorb_string(#escaped_match, props, state)?;
+            document.absorb_string(#escaped_match, props)?;
           ));
         }
         has_random_text = true;

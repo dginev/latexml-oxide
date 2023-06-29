@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Note that we CAN process the verbatim.sty file and that works,
   // although the xml it generates is pretty pointless
@@ -44,8 +44,8 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\lx@verbatim@", "<ltx:verbatim font='#font'>",
     before_digest => { Let!(T_CS!("\\par"), T_CR!()); },
-    before_construct => sub[document, _whatsit, inner_state] {
-      document.maybe_close_element("ltx:p", inner_state)?; }
+    before_construct => sub[document, _whatsit] {
+      document.maybe_close_element("ltx:p")?; }
   );
 
   // We HAVE to get this guy in, to close the <ltx:verbatim>"
@@ -90,22 +90,22 @@ LoadDefinitions!(state, {
   // Well, we have to dance a bit...
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
-  DefMacro!("\\verbatim@", sub[gullet, _arg, state] {
-    let env = state.lookup_string("current_environment");
+  DefMacro!("\\verbatim@", {
+    let env = state::lookup_string("current_environment");
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate
     // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
-    while let Some(line) = gullet.read_raw_line(state) {
+    while let Some(line) = gullet::read_raw_line() {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
         lines.push(pre);
         if !post.is_empty() {
           let message = s!("Characters dropped after '\\end{{{}}}'", env);
-          Info!("unexpected","stuff", gullet, message);
+          Info!("unexpected","stuff", message);
         }
         break;
       } else {
@@ -119,31 +119,30 @@ LoadDefinitions!(state, {
     for line in &lines {
       tokens.push(T_CS!("\\verbatim@startline"));
       tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
-        vec![Tokens::new(ExplodeText!(line))], gullet)?.unlist());
+        vec![Tokens::new(ExplodeText!(line))]).unlist());
       tokens.push(T_CS!("\\verbatim@processline"));
     }
-    tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)], gullet)?.unlist());
+    tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)]).unlist());
     Ok(Tokens::new(tokens))
   });
 
   // //======================================================================
   // // Read verbatim material from file.
-  DefMacro!("\\verbatiminput {}", sub[gullet, (file), state] {
-    if let Some(path) = find_file(&file.to_string(), None, state) {
-      gullet.reading_from_mouth(Mouth::create(&path, MouthOptions::default(), state)?,
-        state,
-        |igullet, istate| -> Result<Tokens> {
+  DefMacro!("\\verbatiminput {}", sub[(file)] {
+    if let Some(path) = find_file(&file.to_string(), None) {
+      gullet::reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
+            || -> Result<Tokens> {
           let mut lines = Vec::new();
-          if let Some(mouth) = igullet.get_mouth_mut() {
-            while let Some(line) = mouth.read_raw_line(false, istate) {
+          gullet::with_mouth_mut(|mouth_opt| if let Some(mouth) = mouth_opt {
+            while let Some(line) = mouth.read_raw_line(false) {
               lines.push(line);
             }
-          }
+          });
           let mut tokens = Vec::new();
           for line in lines.into_iter() {
             tokens.push(T_CS!("\\verbatim@startline"));
             tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
-              vec![Tokens::new(ExplodeText!(line))], igullet, istate)?.unlist());
+              vec![Tokens::new(ExplodeText!(line))]).unlist());
             tokens.push(T_CS!("\\verbatim@processline"));
           }
           Ok(Tokens!(
@@ -155,16 +154,16 @@ LoadDefinitions!(state, {
       )
     } else {
       let message = s!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
-      Error!("binding", "missing_file", gullet, message);
+      Error!("binding", "missing_file", message);
       Ok(Tokens!())
     }
   });
 
   // //======================================================================
   // // Getting verbatim text into arguments
-  // DefPrimitive!("\\newverbtext DefToken", sub[stomach, args, state] {
+  // DefPrimitive!("\\newverbtext DefToken", sub[args] {
   //     unpack!(args => cs);
-  //     let mouth = stomach.get_gullet_mut().get_mouth_mut();
+  //     let mouth = gullet_mut!().get_mouth_mut();
   //     my ($init, $body);
   //     StartSemiverbatim();
   //     AssignCatcode('\\', CC_OTHER);

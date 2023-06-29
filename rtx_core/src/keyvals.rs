@@ -10,14 +10,12 @@ use crate::common::font::Font;
 use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::gullet::Gullet;
-use crate::stomach::Stomach;
+use crate::{gullet};
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
 // use crate::list::List;
 use crate::keyval::KeyVal;
-use crate::state::State;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, NO_PROPERTIES};
@@ -83,16 +81,15 @@ impl Object for KeyVals {
   }
   fn stringify(&self) -> String { "KeyVals:TODO".to_string() }
 
-  fn be_digested(mut self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
+  fn be_digested(mut self) -> Result<Digested> {
     if self.was_digested {
       Info!(
         "ignore",
         "keyvals",
-        stomach,
         "Skipping digestion of \\setkeys as requested (did you digest a KeyVals twice?) "
       );
     } else {
-      stomach.digest(self.set_keys_expansion(), state)?;
+      crate::stomach::digest(self.set_keys_expansion())?;
     }
 
     // new tuples we want to create
@@ -103,17 +100,17 @@ impl Object for KeyVals {
       let (key, value, use_default, resolution, keyval) = tuple;
       // digest a single token
       let value_tokens_opt: Option<Tokens> = value.into();
-      let digested_value: Digested = if let Some(keydef) = keyval.get_type(state) {
+      let digested_value: Digested = if let Some(keydef) = keyval.get_type() {
         // keydefs are actual Parameter objects, which should be able to digest their own values!
         // Hmmm, so we need to add Parameter to Store
         // This comes together with the DefKeyVal infrastructure, which assigns keydef parameters to
         // keyval specifications.
         keydef
-          .digest(stomach, value_tokens_opt.into(), None, state)?
+          .digest( value_tokens_opt.into(), None)?
           .unwrap()
       } else {
         let value_tokens = value_tokens_opt.unwrap_or_default();
-        value_tokens.be_digested(stomach, state)?
+        value_tokens.be_digested()?
       };
       new_tuples.push((key, digested_value.into(), use_default, resolution, keyval));
     }
@@ -143,18 +140,17 @@ impl BoxOps for KeyVals {
   where FnR: FnOnce(&HashMap<String, Stored>) -> R {
     caller(&NO_PROPERTIES)
   }
-  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
     unimplemented!();
   }
-  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
     Ok(Vec::new())
   } // TODO
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
+  fn get_font(&self) -> Result<Option<Cow<Font>>> { Ok(None) } // TODO
   fn compute_size(
     &self,
     _options: HashMap<String, Stored>,
-    _state: &mut State,
   ) -> Result<(
     crate::common::dimension::Dimension,
     crate::common::dimension::Dimension,
@@ -183,7 +179,7 @@ impl KeyVals {
   /// Thus it has to be digestible, however we may not want to digest it more
   /// than once.
   ///**********************************************************************
-  pub fn new(options: KeyvalsConfig, _state: &State) -> Self {
+  pub fn new(options: KeyvalsConfig) -> Self {
     // parse all the arguments
     let prefix = options.prefix.unwrap_or_else(|| String::from("KV"));
     // $keysets = [split(',', ToString(defined($keysets) ? $keysets : '_anonymous_'))] unless
@@ -260,19 +256,18 @@ impl KeyVals {
 
   fn read_keyword_from(
     &self,
-    gullet: &mut Gullet,
+
     ignore: &[&Token],
-    state: &mut State,
   ) -> Result<(Vec<Token>, Option<Token>)> {
     // set of tokens we will expand
     let mut tokens = Vec::new();
 
     // we do not want any spaces
-    gullet.skip_spaces(state)?;
+    gullet::skip_spaces()?;
 
     // read tokens one-by-one
     let mut last_token = None;
-    while let Some(token) = gullet.read_x_token(None, false, state)? {
+    while let Some(token) = gullet::read_x_token(None, false)? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
@@ -364,7 +359,7 @@ impl KeyVals {
     // let rmtokens    = ();
 
     // // read in existing tokens (if they are defined)
-    // if ($definedrm && $STATE->lookupMeaning($rmmacro)) {
+    // if ($definedrm && $state->lookupMeaning($rmmacro)) {
     //   @rmtokens = LaTeXML::Package::Expand($rmmacro)->unlist; }
 
     // define some xkeyval internals
@@ -435,8 +430,7 @@ impl KeyVals {
     key: &str,
     value: Stored,
     use_default: bool,
-    no_rebuild: bool,
-    state: &State,
+    no_rebuild: bool
   ) {
     // figure out the keyset(s) for the key to be added
     let keysets = self.resolve_keyval_for(key);
@@ -445,7 +439,7 @@ impl KeyVals {
     // and add the new tuple to the set of tuples
     let value = if use_default {
       headset
-        .get_default(state)
+        .get_default()
         .unwrap_or_else(|| Stored::String(*EMPTY_SYM))
     } else {
       value
@@ -460,11 +454,11 @@ impl KeyVals {
     }
   }
 
-  pub fn set_value(&mut self, key: &str, value: Stored, use_default: bool, state: &State) {
+  pub fn set_value(&mut self, key: &str, value: Stored, use_default: bool) {
     // delete the existing values by skipping key
     self.rebuild(Some(key));
     // set normally
-    self.add_value(key, value, use_default, false, state);
+    self.add_value(key, value, use_default, false);
   }
 
   fn set_tuples(&mut self, tuples: Vec<KVTuple>) {
@@ -522,7 +516,7 @@ impl KeyVals {
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
-  pub fn read_from(&mut self, gullet: &mut Gullet, until: Token, state: &mut State) -> Result<()> {
+  pub fn read_from(&mut self, until: Token) -> Result<()> {
     // TODO
     // # if we want to force skip_missing keys, we set it up here
     // my $silenceMissing = $options{silenceMissing} ? 1 : 0;
@@ -536,10 +530,10 @@ impl KeyVals {
     //   $$self{hookMissing} = undef; }
 
     // read the opening token and figure out where we are
-    let startloc = gullet.get_locator().unwrap().into_owned();
+    let startloc = gullet::get_locator().unwrap();
 
     // set and read tokens
-    let _open = gullet.read_token(state);
+    let _open = gullet::read_token();
     let assign = T_OTHER!("=");
     let punct = T_OTHER!(",");
     let punct_tks = Tokens!(T_OTHER!(","));
@@ -555,7 +549,7 @@ impl KeyVals {
     loop {
       // Read a single keyword, get a delimiter and a set of keyword tokens
       let (ktoks, mut delim_opt) =
-        self.read_keyword_from(gullet, &[&until, &assign, &punct], state)?;
+        self.read_keyword_from(&[&until, &assign, &punct])?;
       // if there was no delimiter at the end, we throw an error
       if delim_opt.is_none() {
         let message = s!(
@@ -563,7 +557,7 @@ impl KeyVals {
           until.stringify()
         );
         let message2 = s!("key started at {}", startloc.to_string());
-        Error!("expected", until, gullet, message, message2);
+        Error!("expected", until, message, message2);
       }
 
       // turn the key tokens into a string and normalize
@@ -579,26 +573,25 @@ impl KeyVals {
         if !is_default {
           // setup the key-codes to properly read
           let keyval = self.get_primary_keyval_of(&key, &self.resolve_keyval_for(&key));
-          let keydef_opt = keyval.get_type(state);
+          let keydef_opt = keyval.get_type();
           if let Some(ref keydef) = keydef_opt {
             // TODO:
-            keydef.setup_catcodes(state);
+            keydef.setup_catcodes();
           }
 
           // read until $punct
           let mut toks = Vec::new();
           loop {
-            delim_opt = gullet
-              .read_match(&[&punct_tks, &until_tks], state)?
+            delim_opt = gullet::read_match(&[&punct_tks, &until_tks])?
               .map(|tks| tks.into());
             if delim_opt.is_some() {
               break; // only until we hit a delim.
             }
-            if let Some(tok) = gullet.read_token(state)? {
+            if let Some(tok) = gullet::read_token()? {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
-                if let Some(balanced) = gullet.read_balanced(false, state)? {
+                if let Some(balanced) = gullet::read_balanced(false)? {
                   rest.append(&mut balanced.unlist());
                 }
                 rest.push(T_END!());
@@ -614,18 +607,18 @@ impl KeyVals {
           if !toks.is_empty() {
             value = Tokens::new(toks);
             if let Some(ref keydef) = keydef_opt {
-              value = keydef.reparse(value, gullet, state)?;
+              value = keydef.reparse(value)?;
             }
           }
           // and cleanup
           if let Some(ref keydef) = keydef_opt {
-            keydef.revert_catcodes(state)?;
+            keydef.revert_catcodes()?;
           }
         }
 
         // and store our value please
         // if !silence_missing || self.can_resolve_keyval_for(key) {
-        self.add_value(&key, Stored::Tokens(value), is_default, false, state);
+        self.add_value(&key, Stored::Tokens(value), is_default, false);
         // }
       }
 
@@ -651,14 +644,14 @@ impl KeyVals {
   /// [Token, KeyVals, RegisterValue]       potentially? On the other hand, we can also put the
   /// extra effort of *postponing* the build of KV metadata until digestion,       this way not
   /// losing any time reserializing metadata
-  pub fn into_tokens(self, gullet: &mut Gullet, state: &mut State) -> Result<Tokens> {
+  pub fn into_tokens(self) -> Result<Tokens> {
     let mut tks: Vec<Token> = Vec::new();
     for (k, v) in self.cached_pairs.into_iter() {
       tks.push(T_OTHER!(k));
       match v {
         // TODO: This is a really quick CRUTCH, what is the proper interface?
         Stored::Tokens(vtks) => {
-          let expanded = gullet.do_expand(vtks, state)?;
+          let expanded = gullet::do_expand(vtks)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
             exp_str = String::new();

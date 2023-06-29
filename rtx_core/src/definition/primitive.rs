@@ -3,15 +3,13 @@ use std::borrow::Cow;
 
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::state::{Scope, State};
+use crate::state::{Scope};
 
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion,
 };
 use crate::document::Document;
-use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -80,25 +78,25 @@ impl Definition for Primitive {
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn is_prefix(&self) -> bool { self.is_prefix }
 
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
     Ok(Tokens!())
   }
-  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     Debug!("primitive invoke for {:?}", self.cs);
-    // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
-    // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
+    // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // my $tracing = $state->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
-    let mut invoked_boxes: Vec<Digested> = self.execute_before_digest(stomach, state)?;
-    let args = self.read_arguments(stomach.get_gullet_mut(), state)?;
+    let mut invoked_boxes: Vec<Digested> = self.execute_before_digest()?;
+    let args = self.read_arguments()?;
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     if let Some(ref closure) = self.replacement {
-      invoked_boxes.extend(closure(stomach, args, state)?);
+      invoked_boxes.extend(closure(args)?);
     }
     if !self.after_digest.is_empty() {
       // optimize to avoid needless generation of whatsits
       let mut w = Whatsit::default();
-      let after_boxes = self.execute_after_digest(stomach, &mut w, state)?;
+      let after_boxes = self.execute_after_digest(&mut w)?;
       invoked_boxes.extend(after_boxes);
     }
 
@@ -110,7 +108,6 @@ impl Definition for Primitive {
     &self,
     _document: &mut Document,
     _whatsit: &Whatsit,
-    _state: &mut State,
   ) -> Result<Vec<Node>> {
     fatal!(
       Definition,

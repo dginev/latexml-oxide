@@ -16,7 +16,7 @@ use crate::definition::expandable::Expandable;
 use crate::definition::{Definition, FontDirective, Reversion};
 use crate::document::Document;
 use crate::list::List;
-use crate::state::{State, STD_STATE};
+use crate::state::{get_dual_branch,lookup_font};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, DigestedData, TexMode};
@@ -82,7 +82,7 @@ impl Whatsit {
     Ok(
     // 1. A space-like thing
     // 2. An environment-like structure with an empty body
-    // TODO: For now it is difficult to pass in a State with an initialized TeX.pool.
+    // TODO: For now it is difficult to pass in a state with an initialized TeX.pool.
     self.get_property_bool("isEmpty")
       || self.get_property_bool("isSpace")
       || (self.get_definition().get_cs_name() == "Begin"
@@ -128,7 +128,7 @@ impl Whatsit {
   /// The last box in `body` is assumed to represent the `trailer`, that is the result of the
   /// invocation that closed the environment or math.  It is stored separately in the properties
   /// under "trailer".
-  pub fn set_body(&mut self, mut body: Vec<Digested>, state: &mut State) {
+  pub fn set_body(&mut self, mut body: Vec<Digested>) {
     let trailer_opt = body.pop();
     let mode = if self.is_math() {
       TexMode::Math
@@ -136,7 +136,7 @@ impl Whatsit {
       TexMode::Text
     };
 
-    let mut list = List::new(body, state);
+    let mut list = List::new(body);
     if self.is_math() {
       list.mode = Some(mode);
     }
@@ -164,7 +164,7 @@ impl Whatsit {
   /// Like Tokens-substituteParameters, but substitutes in the Whatsit's arguments OR properties!
   /// #<digit> is the standard TeX positional argument
   /// # followed by a T_OTHER(propname) specifies the property propname!!
-  fn substitute_parameters(&self, spec: Tokens, state: &State) -> Result<Vec<Token>> {
+  fn substitute_parameters(&self, spec: Tokens) -> Result<Vec<Token>> {
     // TODO: This is kind of unfortunate -- I am not sure what are the reasonable "entryways" into
     // the Whatsit substituteParameters. For Expandable we now have guarantees that "#,i" has
     // been mapped into a single T_ARG(#i), but not here. so for now run on each call?
@@ -192,7 +192,7 @@ impl Whatsit {
           }
         });
         if let Some(arg) = arg_opt {
-          result.extend(arg.revert(state)?.unlist());
+          result.extend(arg.revert()?.unlist());
         }
       }
     }
@@ -229,8 +229,7 @@ impl fmt::Debug for Whatsit {
 
 impl fmt::Display for Whatsit {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    let state = STD_STATE.borrow(); // TODO: is this really the way?
-    write!(f, "{}", self.revert(&state).unwrap())
+    write!(f, "{}", self.revert().unwrap())
   }
 }
 
@@ -239,10 +238,10 @@ impl Object for Whatsit {
 
   fn stringify(&self) -> String { format!("{self:?}") }
 
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     // WARNING: Forbidden knowledge?
     // (2) caching the reversion (which is a big performance boost)
-    let saved_opt = if let Some(this_branch) = state.get_dual_branch() {
+    let saved_opt = if let Some(this_branch) = get_dual_branch() {
       if let Some(ref dual_reversion) = self.dual_reversion {
         dual_reversion.get(this_branch).cloned()
       } else {
@@ -260,7 +259,7 @@ impl Object for Whatsit {
     if defn.get_reversion_spec().is_none() {
       if let Some(Stored::Digested(digested)) = self.properties.get("alignment") {
         if let DigestedData::Alignment(alignment) = digested.data() {
-          return alignment.borrow().revert(state);
+          return alignment.borrow().revert();
         }
       }
     }
@@ -280,12 +279,12 @@ impl Object for Whatsit {
     match spec_opt.as_deref() {
       Some(Reversion::Closure(spec)) => {
         is_closure = true;
-        let spec_tokens = spec(self, self.get_args(), state).unwrap();
-        tokens = self.substitute_parameters(spec_tokens, state)?;
+        let spec_tokens = spec(self, self.get_args()).unwrap();
+        tokens = self.substitute_parameters(spec_tokens)?;
       },
       Some(Reversion::Tokens(spec)) => {
         if !spec.is_empty() {
-          tokens = self.substitute_parameters(spec.clone(), state)?;
+          tokens = self.substitute_parameters(spec.clone())?;
         }
       },
       None => {
@@ -312,20 +311,20 @@ impl Object for Whatsit {
             .get_args()
             .iter()
             .map(|opt| match opt {
-              Some(arg) => Some(arg.revert(state).ok()?),
+              Some(arg) => Some(arg.revert().ok()?),
               None => None,
             })
             .collect();
-          tokens.extend(parameters.revert_arguments(args, state)?)
+          tokens.extend(parameters.revert_arguments(args)?)
         }
       },
     };
 
     if !is_closure {
       if let Some(body) = self.get_body()? {
-        tokens.extend(body.revert(state)?.unlist());
+        tokens.extend(body.revert()?.unlist());
         if let Some(trailer) = self.get_trailer() {
-          tokens.extend(trailer.revert(state)?.unlist());
+          tokens.extend(trailer.revert()?.unlist());
         }
       }
     }
@@ -334,7 +333,7 @@ impl Object for Whatsit {
     // TODO: DG: We can't yet cache reversions, because we lack mutability on .revert()
     //       should we reorganize? is it worth it?
     //
-    // if let Some(this_branch) = state.get_dual_branch() {
+    // if let Some(this_branch) = state!().get_dual_branch() {
     //   if self.dual_reversion.is_none() {
     //     self.dual_reversion = Some(HashMap::default());
     //   }
@@ -358,20 +357,20 @@ impl BoxOps for Whatsit {
     self.properties.get(key).map(Cow::Borrowed)
   }
   fn get_property_mut(&mut self, key: &str) -> Option<&mut Stored> { self.properties.get_mut(key) }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> {
-    Ok(Cow::Owned(self.revert(state)?.to_string()))
+  fn get_string(&self) -> Result<Cow<str>> {
+    Ok(Cow::Owned(self.revert()?.to_string()))
   }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
     // Significant time is consumed here, and associated with a specific CS,
     // so we should be profiling as well!
     // Hopefully the csname is the same that was charged in the digestioned phase!
 
-    // my $profiled = $STATE->lookupValue('PROFILING') && $defn->getCS;
+    // my $profiled = $state->lookupValue('PROFILING') && $defn->getCS;
     // LaTeXML::Definition::startProfiling($profiled, 'absorb') if $profiled;
     // info!(target:"whatsit:be_absorbed", "{:?}", self);
 
-    self.definition.do_absorbtion(document, self, state)
+    self.definition.do_absorbtion(document, self)
     // LaTeXML::Definition::stopProfiling($profiled, 'absorb') if $profiled;
   }
   fn get_body(&self) -> Result<Option<Digested>> {
@@ -381,11 +380,11 @@ impl BoxOps for Whatsit {
     })
   }
 
-  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<Font>>> {
     match self.properties.get("font") {
       Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
       Some(Stored::FontDirective(fd)) => match fd {
-        FontDirective::Closure(ref code) => Ok(Some(Cow::Owned(code(Some(self), state)?))),
+        FontDirective::Closure(ref code) => Ok(Some(Cow::Owned(code(Some(self))?))),
         FontDirective::Asset(ref asset) => Ok(Some(Cow::Borrowed(asset))),
       },
       _ => Ok(None),
@@ -401,11 +400,10 @@ impl BoxOps for Whatsit {
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
     if let Some(sizer) = defn.get_sizer() {
-      sizer(self, state)
+      sizer(self)
     } else {
       // Nothing specified? use #body if any, else sum all box args
       let mut boxes = Vec::new();
@@ -423,9 +421,9 @@ impl BoxOps for Whatsit {
       let font = if let Stored::Font(ref sf) = *self.get_property("font").unwrap() {
         sf.clone()
       } else {
-        state.lookup_font().unwrap()
+        lookup_font().unwrap()
       };
-      font.compute_boxes_size(&boxes, options, state)
+      font.compute_boxes_size(&boxes, options)
     }
   }
 }

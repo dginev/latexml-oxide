@@ -1,5 +1,5 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefConditional!("\\iflatexml", { true });
 });

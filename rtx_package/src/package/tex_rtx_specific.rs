@@ -4,7 +4,7 @@ use crate::package::*;
 // LaTeXML Specific.
 // Support for Declarations & Presentation/Semantic Duality
 //**********************************************************************
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Normally definitions disappear; the macros are expanded or have their expected effect.
   // But in a few cases (eg tabular column definitions, or LaTeX \Declarexxxx)

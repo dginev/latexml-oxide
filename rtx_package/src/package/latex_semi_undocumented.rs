@@ -3,9 +3,9 @@ use crate::package::*;
 // Semi-Undocumented stuff
 //**********************************************************************
 
-LoadDefinitions!(outer_stomach, state, {
-  DefMacro!("\\@ifnextchar DefToken {}{}", sub[gullet, (token, t_if, t_else), state] {
-    let next = gullet.read_non_space(state)?;
+LoadDefinitions!({
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
+    let next = gullet::read_non_space()?;
     // NOTE: Not actually substituting, but collapsing ## pairs!!!!
     // use \egroup for $next, if we've fallen off end?
     let next_test = match next {
@@ -27,10 +27,11 @@ LoadDefinitions!(outer_stomach, state, {
   Let!("\\@ifnext", "\\@ifnextchar"); // ????
 
   // Hacky version matches multiple chars! but does NOT expand
-  DefMacro!(r"\@ifnext@n {}{}{}", sub[gullet,(tokens,if_toks,else_toks),state] {
+  DefMacro!("\\@ifnext@n {}{}{}", sub[(tokens,if_toks,else_toks)] {
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
-    while let Some(t) = gullet.read_token(state)? {
+
+    while let Some(t) = gullet::read_token()? {
       if t == toks[0] {
         toks.pop_front();
         read.push(t);
@@ -48,8 +49,8 @@ LoadDefinitions!(outer_stomach, state, {
     Ok(Tokens::new(result))
   });
 
-  DefMacro!("\\@ifstar {}{}", sub[gullet,(if_toks,else_toks),state] {
-  let next_opt = gullet.read_non_space(state)?;
+  DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
+  let next_opt = gullet::read_non_space()?;
   if next_opt == Some(T_OTHER!("*")) {
     Ok(if_toks)
   } else {
@@ -63,8 +64,8 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
-  DefMacro!("\\@testopt{}{}", sub[gullet,(cmd, option),state] {
-    if gullet.if_next(&T_OTHER!("["), state)? {
+  DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
+    if gullet::if_next(&T_OTHER!("["))? {
       Ok(cmd)
     } else {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
@@ -98,8 +99,8 @@ LoadDefinitions!(outer_stomach, state, {
   "###
   );
 
-  DefMacro!("\\@ifdefinable DefToken {}", sub[gullet, (token, iftoken), state] {
-    if is_definable(&token, state) {
+  DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
+    if is_definable(&token) {
       iftoken.unlist()
     } else {
       let token_str = token.to_string();
@@ -107,15 +108,15 @@ LoadDefinitions!(outer_stomach, state, {
       if token_str.starts_with('\\') { // drop leading slash
         s.remove(0);
       }
-      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s), state);
+      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
       vec![T_CS!("\\@notdefinable")]
     }
   });
 
   Let!("\\@@ifdefinable", "\\@ifdefinable");
 
-  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[gullet, (token, iftoken), state] {
-    state.let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None, gullet);
+  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(token, iftoken)] {
+    state::let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None);
     iftoken.unlist()
   });
 
@@ -179,7 +180,7 @@ LoadDefinitions!(outer_stomach, state, {
     "\\lx@paragraphsign\\lx@ignorehardspaces"
   );
 
-  DefPrimitive!("\\@@end", sub[stomach,_args,state] { stomach.get_gullet_mut().flush(state) });
+  DefPrimitive!("\\@@end", { gullet::flush() });
 
   // DG: TODO Maybe split these out?
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

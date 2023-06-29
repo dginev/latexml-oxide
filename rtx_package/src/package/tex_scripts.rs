@@ -30,7 +30,7 @@ static SCRIPT_NAME_RE: Lazy<Regex> =
 
 // Remember a "safe" way to test a script Whatsit.
 // Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
-pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)> {
+pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
   let box_opt = match object.data() {
     DigestedData::List(obj) => obj.borrow().boxes.last().map(|v| Cow::Owned(v.clone())),
     _ => Some(Cow::Borrowed(object)),
@@ -65,10 +65,10 @@ pub fn is_script(object: &Digested, _state: &State) -> Option<(String, Catcode)>
 // in the new codebase, so as to avoid both 1) cloning and
 // 2) mutably referencing the same Digested object from multiple unrelated pieces of code.
 //
-fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Result<Vec<Digested>> {
-  //   let mut gullet = stomach.get_gullet_mut();
-  //   gullet.skip_spaces(state);
-  let font = state.lookup_font().unwrap();
+fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
+  //
+  //   gullet::skip_spaces();
+  let font = lookup_font().unwrap();
   if font.get_mathstyle().is_some() {
     let mut putback = VecDeque::new();
     let mut nscripts = 0;
@@ -85,7 +85,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     // Note that this analysis has to be done now (or sometime like it) before grouping lists go
     // away; and whether there are conflicting preceding scripts, which is an error
     // Parsing is too late!
-    while let Some(prev) = stomach.box_list.pop() {
+    while let Some(prev) = { pop_box_list() } {
       if prev.get_property_bool("isSpace") {
         prevspace = true; // a space avoids double-scripts
         putback.push_front(prev); // put back? assuming it will add rpadding to previous???
@@ -93,7 +93,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       } else if prev.is_empty()? {
         // If empty, the script floats, can't conflict, but don't put back
         break;
-      } else if let Some(prevop) = is_script(&prev, state) {
+      } else if let Some(prevop) = is_script(&prev) {
         if prevop.1 == cc {
           // Whoops, duplicated; better use FLOATING
           putback.push_front(prev);
@@ -105,9 +105,8 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
           if !prevspace {
             Error!(
               "unexpected",
-              s!("double-{}", lcode),
-              stomach,
-              s!("Double {}", lcode)
+              s!("double-{lcode}"),
+              s!("Double {lcode}")
             );
           }
           cs = if cc == Catcode::SUPER {
@@ -146,15 +145,13 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
         break;
       }
     }
-    stomach.box_list.extend(putback);
-    MergeFont!(scripted => true, state);
+    extend_box_list(putback);
+    MergeFont!(scripted => true);
     // Now, get following boxes (may have to process several tokens!)
     let mut stuff = Vec::new();
-    while let Some(tok) = stomach
-      .get_gullet_mut()
-      .read_x_token(Some(false), false, state)?
+    while let Some(tok) = gullet::read_x_token(Some(false), false)?
     {
-      stuff = stomach.invoke_token(&tok, state)?;
+      stuff = stomach::invoke_token(&tok)?;
       if !stuff.is_empty() {
         break;
       }
@@ -163,7 +160,6 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       Error!(
         "expected",
         "{",
-        stomach,
         "Missing sub/superscript argument"
       ); //$gullet->showUnexpected);
       stuff.push(Digested::default());
@@ -171,21 +167,21 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
     let script = stuff.remove(0); // ONLY the first box is the script!
 
     if !script.is_empty()? {
-      let mut properties = stored_map!(
+      let mut properties = {stored_map!(
         "isMath" => true,
         "base"        => if let Some(b) = base { Stored::Digested(b) }
           else { Stored::None },                      // for sizing/positioning
-        "scriptlevel" => stomach.get_script_level(state),
-        "level"       => stomach.get_boxing_level()
-      );
+        "scriptlevel" => get_script_level(),
+        "level"       => get_boxing_level()
+      )};
       if let Some(pvs) = prevscript {
         properties.insert("prevscript".to_string(), pvs.into());
       }
-      if let Some(font) = script.get_font(state)? {
+      if let Some(font) = script.get_font()? {
         properties.insert("font".to_string(), font.into());
       }
       let mut with_script = vec![Digested::from(Whatsit {
-        definition: state.lookup_definition(&T_CS!(cs))?.unwrap(),
+        definition: lookup_definition(&T_CS!(cs))?.unwrap(),
         args: vec![Some(script)],
         properties,
         // TODO:
@@ -195,15 +191,14 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       with_script.extend(stuff);
       stuff = with_script;
     }
-    state.assign_font(font, Some(Scope::Local)); // revert
+    assign_font(font, Some(Scope::Local)); // revert
     Ok(stuff)
   } else {
     let c = if cc == Catcode::SUPER { '^' } else { '_' };
     Error!(
       "Unexpected",
       c,
-      stomach,
-      format!("Script {} can only appear in math mode", c)
+      format!("Script {c} can only appear in math mode")
     );
     let placeholder = if cc == Catcode::SUPER {
       T_SUPER!()
@@ -216,8 +211,7 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
       None,
       Tokens!(placeholder),
       HashMap::default(),
-      state,
-    ))])
+      ))])
   }
 }
 
@@ -228,8 +222,8 @@ fn script_handler(stomach: &mut Stomach, cc: Catcode, state: &mut State) -> Resu
 // OTOH, direct use of \@@POSTSUPERSCRIPT, etal, MAY need to have extra braces around them.
 // So, when reverting, we're going to a bit of extra trouble to make sure we have ONE set
 // of braces, but no extras!!  [Worry about lists of lists...]
-pub fn revert_script(script: &Digested, state: &State) -> Result<Vec<Token>> {
-  let tokens = script.revert(state)?;
+pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
+  let tokens = script.revert()?;
   let mut ts = tokens.unlist();
   // let mut level = 0;
   if ts.len() > 1
@@ -255,13 +249,12 @@ fn script_sizer(
   prev_opt: Option<&Stored>,
   op: &str,
   pos: &str,
-  state: &mut State,
 ) -> Result<(Dimension, Dimension, Dimension)> {
   eprintln!("SCRIPT SIZER IS ON!");
   // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it's different from the 'expected' style!!!]
-  let script_size = script.clone().get_size(None, state)?;
+  let script_size = script.clone().get_size(None)?;
   let (mut ws, mut hs, mut ds) = (
     script_size.0.value_of() as f64,
     script_size.1.value_of() as f64,
@@ -271,14 +264,14 @@ fn script_sizer(
   hs *= 0.8;
   ds *= 0.8; // HACK!@!!
   let (wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
-    let base_size = base.clone().get_size(None, state)?;
+    let base_size = base.clone().get_size(None)?;
     (
       base_size.0.value_of() as f64,
       base_size.1.value_of() as f64,
       base_size.2.value_of() as f64,
     )
   } else {
-    let nominal_size = state.lookup_font().unwrap().get_nominal_size();
+    let nominal_size = lookup_font().unwrap().get_nominal_size();
     (
       nominal_size.0.value_of() as f64,
       nominal_size.1.value_of() as f64,
@@ -315,7 +308,7 @@ fn script_sizer(
   } else {
     // as if max of width & prev script's width
     let wp = if let Some(Stored::Digested(ref prev)) = prev_opt {
-      prev.get_width(None, state)?.unwrap_or_default().value_of() as f64
+      prev.get_width(None)?.unwrap_or_default().value_of() as f64
     } else {
       0.0
     };
@@ -333,30 +326,28 @@ fn script_sizer(
   ))
 }
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // TODO: Should I add a special macro case that takes an arbitrary token as argument?
   // DefPrimitiveT ?
   def_primitive(
     T_SUPER!(),
     None,
     Some(Rc::new(
-      |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
-        script_handler(stomach, Catcode::SUPER, state)
+      |_args: Vec<ArgWrap>| {
+        script_handler(Catcode::SUPER)
       },
     )),
     PrimitiveOptions::default(),
-    state,
   )?;
   def_primitive(
     T_SUB!(),
     None,
     Some(Rc::new(
-      |stomach: &mut Stomach, _args: Vec<ArgWrap>, state: &mut State| {
-        script_handler(stomach, Catcode::SUB, state)
+      |_args: Vec<ArgWrap>| {
+        script_handler( Catcode::SUB)
       },
     )),
     PrimitiveOptions::default(),
-    state,
   )?;
 
   // NOTE: The When reverting these, the
@@ -365,12 +356,12 @@ LoadDefinitions!(state, {
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[_whatsit,args,state] {
+    reversion => sub[_whatsit,args] {
       unref!(args=>arg);
-      Ok(Tokens!(T_SUPER!(), revert_script(arg,state)?)) },
-    sizer => sub[w,state] {
+      Ok(Tokens!(T_SUPER!(), revert_script(arg)?)) },
+    sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post", state) }
+        w.get_property("prevscript").as_deref(), "SUPERSCRIPT", "post") }
   );
 
   DefConstructor!("\\@@POSTSUBSCRIPT InScriptStyle",r###"
@@ -379,12 +370,12 @@ LoadDefinitions!(state, {
   </ltx:XMApp>
   "###
     ,
-    reversion => sub[_whatsit,args,state] {
+    reversion => sub[_whatsit,args] {
       unref!(args=>arg);
-      Ok(Tokens!(T_SUB!(), revert_script(arg,state)?)) },
-    sizer => sub[w,state] {
+      Ok(Tokens!(T_SUB!(), revert_script(arg)?)) },
+    sizer => sub[w] {
       script_sizer(w.get_arg(1).unwrap(), w.get_property("base").as_deref(),
-        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post", state) }
+        w.get_property("prevscript").as_deref(), "SUBSCRIPT", "post") }
   );
 
   DefConstructor!("\\@@FLOATINGSUPERSCRIPT InScriptStyle",r###"
@@ -392,56 +383,58 @@ LoadDefinitions!(state, {
     <ltx:XMArg rule="Superscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[_whatsit,args,state] {
+    reversion => sub[_whatsit,args] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg,state)?)) }
-    sizer => sub[w,state] {
-      script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post", state) }
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUPER!(), revert_script(arg)?)) }
+    sizer => sub[w] {
+      script_sizer(w.get_arg(1).unwrap(), None, None, "SUPERSCRIPT", "post") }
   );
   DefConstructor!("\\@@FLOATINGSUBSCRIPT InScriptStyle",r###"
   <ltx:XMApp role="FLOATSUBSCRIPT" scriptpos="?#scriptpos(#scriptpos)(#scriptlevel)">
     <ltx:XMArg rule="Subscript">#1</ltx:XMArg>
   </ltx:XMApp>
   "###,
-    reversion => sub[_whatsit,args,state] {
+    reversion => sub[_whatsit,args] {
       unref!(args=>arg);
-      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg,state)?)) }
-      sizer => sub[w,state] {
-        script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post", state) }
+      Ok(Tokens!(T_BEGIN!(), T_END!(), T_SUB!(), revert_script(arg)?)) }
+      sizer => sub[w] {
+        script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
 
-  DefMacro!("'", sub[gullet,_args,state] {
+  DefMacro!("'", {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
-    while gullet.if_next(&T_OTHER!("'"), state)? {
-      gullet.read_token(state)?;
+
+    while gullet::if_next(&T_OTHER!("'"))? {
+      gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&TOKEN_SUPER, state)? {
-      gullet.read_token(state)?;
-      sup.extend(gullet.read_arg(state)?.unlist());
+    if gullet::if_next(&TOKEN_SUPER)? {
+      gullet::read_token()?;
+      sup.extend(gullet::read_arg()?.unlist());
     }
     Tokens!(T_SUPER!(), T_BEGIN!(), sup, T_END!())
   },
   mathactive => true); // Only in math!
 
-  DefMacro!("\\active@math@prime", sub[gullet,(),state] {
+  DefMacro!("\\active@math@prime", {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
-    while gullet.if_next(&prime_token, state)? {
-      gullet.read_token(state)?;
+
+    while gullet::if_next(&prime_token)? {
+      gullet::read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet.if_next(&T_SUPER!(), state)? {
-      gullet.read_token(state)?;
-      let arg = gullet.read_arg(state)?;
+    if gullet::if_next(&T_SUPER!())? {
+      gullet::read_token()?;
+      let arg = gullet::read_arg()?;
       let arg_tks = arg.unlist();
       sup.extend(arg_tks);
     }

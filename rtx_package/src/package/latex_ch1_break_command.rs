@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.1.4 Declarations
   //======================================================================
@@ -22,7 +22,7 @@ LoadDefinitions!(state, {
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
-    properties => sub[_whatsit,_args,_state] { Ok(stored_map!("isBreak" => true)) }
+    properties => { Ok(stored_map!("isBreak" => true)) }
   );
 
   Let!("\\@normalcr", "\\\\");

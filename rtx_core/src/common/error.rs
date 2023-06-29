@@ -19,6 +19,7 @@ pub struct LogState {
   pub warning: usize,
   pub error: usize,
   pub fatal: bool,
+  pub status_code: usize,
 }
 pub enum LogStatus {
   Debug,
@@ -32,23 +33,31 @@ pub enum LogStatus {
 
 #[thread_local]
 pub static REPORT : Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
+#[macro_export]
+macro_rules! report {
+  () => ((*$crate::common::error::REPORT).borrow())
+}
+#[macro_export]
+macro_rules! report_mut {
+  () => ((*$crate::common::error::REPORT).borrow_mut())
+}
 
 pub fn note_status(status: LogStatus, what:Option<&str>) {
-  let mut state = REPORT.borrow_mut();
+  let mut report = REPORT.borrow_mut();
   use LogStatus::*;
   match status {
-    Debug => {state.debug += 1},
-    Info => {state.info += 1},
-    Warning => {state.warning += 1},
-    Error => {state.error += 1},
-    Fatal => {state.fatal = true},
+    Debug => {report.debug += 1},
+    Info => {report.info += 1},
+    Warning => {report.warning += 1},
+    Error => {report.error += 1},
+    Fatal => {report.fatal = true},
     Undefined => {
-      let entry = state.undefined.entry(
+      let entry = report.undefined.entry(
         what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
       *entry +=1;
     },
     Missing => {
-      let entry = state.missing.entry(
+      let entry = report.missing.entry(
         what.map(arena::pin).unwrap_or(*EMPTY_SYM)).or_insert(0);
       *entry +=1;
     },
@@ -56,38 +65,38 @@ pub fn note_status(status: LogStatus, what:Option<&str>) {
 }
 
 pub fn get_status(status: LogStatus) -> usize {
-  let state = REPORT.borrow();
+  let report = REPORT.borrow();
   use LogStatus::*;
   match status {
-    Debug => state.debug,
-    Info => state.info,
-    Warning => state.warning,
-    Error => state.error,
-    Fatal => if state.fatal {1} else {0},
+    Debug => report.debug,
+    Info => report.info,
+    Warning => report.warning,
+    Error => report.error,
+    Fatal => if report.fatal {1} else {0},
     _ => unimplemented!()
   }
 }
 
-pub fn init_report() {
+pub fn initialize_report() {
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
 }
 
 #[macro_export]
 macro_rules! Debug {
-  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+  ($category:expr, $object:expr, $message:expr) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1))
+      $crate::generate_message!($message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+ ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1, $($details),*))
+      $crate::generate_message!($message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
     $crate::common::error::note_status(
@@ -100,19 +109,19 @@ macro_rules! Debug {
 
 #[macro_export]
 macro_rules! Info {
-  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+  ($category:expr, $object:expr, $message:expr) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1))
+      $crate::generate_message!($message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+ ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
   $crate::common::error::note_status(
     $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
-    $crate::generate_message!($where, $message, -1, $($details),*))
+    $crate::generate_message!($message, -1, $($details),*))
   }};
   ($($simple:expr),*) => {{
     $crate::common::error::note_status(
@@ -125,36 +134,36 @@ macro_rules! Info {
 
 #[macro_export]
 macro_rules! Warn {
-  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
+  ($category:expr, $object:expr, $message:expr) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1))
+      $crate::generate_message!($message, -1))
   }};
- ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+ ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     use log::warn;
     warn!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1, $($details),*))
+      $crate::generate_message!($message, -1, $($details),*))
   }}
 }
 
 #[macro_export]
 macro_rules! Error {
-  ($category:expr, $object:expr, $where:ident, $message:expr) => {{
-    $crate::Error!($category,$object,$where,$message,"")
+  ($category:expr, $object:expr, $message:expr) => {{
+    $crate::Error!($category,$object,$message,"")
   }};
- ($category:expr, $object:expr, $where:ident, $message:expr, $($details:expr),*) => {{
+ ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
     use log::error;
     error!(target: &format!("{}:{}", $category, $object), "{}",
-      $crate::generate_message!($where, $message, -1, $($details),*));
-    let maxerrors = 100; //TODO: ($state ? $state->lookupValue('MAX_ERRORS') : 100);
+      $crate::generate_message!($message, -1, $($details),*));
+    let maxerrors = 100; //TODO: ($state::? $state->lookupValue('MAX_ERRORS') : 100);
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
-      Fatal!(TooManyErrors, MaxLimit(maxerrors), $where, format!("Too many errors (> {maxerrors})!"));
+      Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
     }
   }}
 }
@@ -162,7 +171,7 @@ macro_rules! Error {
 // TODO: flesh out the messages
 #[macro_export]
 macro_rules! Fatal {
-  ($target:expr, $category:expr, $where:expr, $message:expr) => {{
+  ($target:expr, $category:expr, $message:expr) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Fatal, None);
     fatal!($target, $category, $message);
@@ -181,59 +190,36 @@ macro_rules! fatal {
       message: $message.to_string(),
     });
   }};
-  ($target:tt, $category:expr, $where: ident, $message:expr) => {{
-    use $crate::common::error::Error as RtxError;
-    use $crate::common::error::ErrorCategory::*;
-    use $crate::common::error::ErrorTarget::*;
-    return Err(RtxError {
-      target: $target,
-      category: $category,
-      message: $message.to_string(),
-    });
-  }};
 }
 
 #[macro_export]
 macro_rules! generate_message {
-  (None, $message:expr, $level:literal) => {
-    format!("{}\n\tIn {}:{}:{}\n", $message, file!(), line!(), column!())
-  };
-  (None, $message:expr, $level:literal, $detail:expr) => {
+  ($message:expr, $level:literal) => {
     format!(
       "{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $detail,
+      $crate::gullet::get_location(),
       file!(),
       line!(),
       column!()
     )
   };
-  ($where:ident, $message:expr, $level:literal) => {
-    format!(
-      "{}\n\t{}\n\tIn {}:{}:{}\n",
-      $message,
-      $where.get_location(),
-      file!(),
-      line!(),
-      column!()
-    )
-  };
-  ($where:ident, $message:expr, $level:literal, $detail:expr) => {
+  ($message:expr, $level:literal, $detail:expr) => {
     format!(
       "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $where.get_location(),
+      $crate::gullet::get_location(),
       $detail,
       file!(),
       line!(),
       column!()
     )
   };
-  ($where:ident, $message:expr, $level:literal, $detail:expr, $detail2:expr) => {
+  ($message:expr, $level:literal, $detail:expr, $detail2:expr) => {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $where.get_location(),
+      $crate::gullet::get_location(),
       $detail,
       $detail2,
       file!(),
@@ -301,10 +287,11 @@ pub enum ErrorTarget {
   TooManyErrors,
 }
 
-impl fmt::Display for Error {
+
+impl fmt::Display for ErrorCategory {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    use self::ErrorCategory::*;
-    match self.category {
+    use ErrorCategory::*;
+    match self {
       Init => write!(f, "Init"),
       Io(ref err) => err.fmt(f),
       NotFound => write!(f, "No matching cities with a population were found."),
@@ -324,6 +311,11 @@ impl fmt::Display for Error {
       Generic(ref err) => err.fmt(f),
       Filename(ref name) => write!(f, "file:{name}"),
     }
+  }
+}
+impl fmt::Display for Error {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f,"Error:{}:{:?} {}", self.category, self.target, self.message)
   }
 }
 

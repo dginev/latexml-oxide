@@ -60,7 +60,7 @@ pub static DELIMITER_MAP : Lazy<HashMap<&'static str, DelimeterMeta>> = Lazy::ne
 ));
 
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefMacro!("\\{", r"\ifmmode\lx@math@lbrace\else\lx@text@lbrace\fi", protected => true);
   DefMacro!("\\}", r"\ifmmode\lx@math@rbrace\else\lx@text@rbrace\fi", protected => true);
   DefMath!("\\lx@math@lbrace", None, "{", role => "OPEN",  stretchy => false, alias => "\\{");
@@ -114,12 +114,12 @@ LoadDefinitions!(state, {
   DefMacro!("\\left XToken", r"\@left #1\@hidden@bgroup");
   // Like \@hidden@egroup, but softer about missing \left
   DefConstructor!("\\right@hidden@egroup", "",
-    after_digest => sub[stomach,_args,state] {
-      if state.is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || state.lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
-        Error!("unexpected", "\\right", stomach, "Unbalanced \\right, no balancing \\left."); }
+    after_digest => {
+      if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
+        || lookup_bool("groupNonBoxing") { // or group was opened with \begingroup
+        Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
-        stomach.egroup(state)?;
+        egroup()?;
       }
     },
     reversion => None);
@@ -129,7 +129,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@left Token",
     "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
-    after_digest => sub[stomach,whatsit,state] {
+    after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       if delim == "." {
         whatsit.set_property("hint", true); }
@@ -140,13 +140,13 @@ LoadDefinitions!(state, {
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
-          whatsit.get_arg(1).unwrap().get_font(state)?.unwrap().into_owned()
+          whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "OPEN" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach,
+        Warn!("unexpected", delim,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())
@@ -155,7 +155,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@right Token",
     "?#char(<ltx:XMTok role='#role' name='#name' stretchy='#stretchy'>#char</ltx:XMTok>)\
       (?#hint(<ltx:XMHint/>)(#1))",
-    after_digest => sub[stomach,whatsit,state] {
+    after_digest => sub[whatsit] {
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       if delim == "." {
         whatsit.set_property("hint", true); }
@@ -166,13 +166,13 @@ LoadDefinitions!(state, {
         whatsit.set_property("stretchy", true);
         // TODO: Should we have more Rc<> wrappers over Font?
         whatsit.set_font(Rc::new(
-          whatsit.get_arg(1).unwrap().get_font(state)?.unwrap().into_owned()
+          whatsit.get_arg(1).unwrap().get_font()?.unwrap().into_owned()
         ));
       }
       else if whatsit.get_arg(1).unwrap().get_property_string("role") == "CLOSE" {
         whatsit.get_arg_mut(1).unwrap().set_property("stretchy", true);
       } else {
-        Warn!("unexpected", delim, stomach,
+        Warn!("unexpected", delim,
           "Missing delimiter; '.' inserted");
       }
       Ok(Vec::new())

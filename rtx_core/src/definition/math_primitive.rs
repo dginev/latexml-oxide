@@ -6,16 +6,14 @@ use crate::common::error::*;
 // use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope, State};
+use crate::state::{Scope};
 
 use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PrimitiveClosure, Reversion,
 };
 use crate::document::Document;
-use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -254,25 +252,25 @@ impl Object for MathPrimitive {
 impl Definition for MathPrimitive {
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.options.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.options.after_digest) }
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
     Ok(Tokens!())
   }
-  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
-    // Info!("MathPrimitive", "invoke", stomach, state, "invoke for {:?}", self.cs);
-    // my $profiled = $STATE->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
-    // my $tracing = $STATE->lookupValue('TRACINGCOMMANDS');
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
+    // Info!("MathPrimitive", "invoke", stomach, "invoke for {:?}", self.cs);
+    // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // my $tracing = $state->lookupValue('TRACINGCOMMANDS');
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
-    let mut result: Vec<Digested> = self.execute_before_digest(stomach, state)?;
-    let args = self.read_arguments(stomach.get_gullet_mut(), state)?;
+    let mut result: Vec<Digested> = self.execute_before_digest()?;
+    let args = self.read_arguments()?;
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     let replacement_result = match self.replacement {
       None => Vec::new(),
-      Some(ref closure) => closure(stomach, args, state)?,
+      Some(ref closure) => closure( args)?,
     };
     result.extend(replacement_result);
     let mut w = Whatsit::default();
-    let after_result = self.execute_after_digest(stomach, &mut w, state)?;
+    let after_result = self.execute_after_digest( &mut w)?;
     result.extend(after_result);
 
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
@@ -283,7 +281,6 @@ impl Definition for MathPrimitive {
     &self,
     _document: &mut Document,
     _whatsit: &Whatsit,
-    _state: &mut State,
   ) -> Result<Vec<Node>> {
     fatal!(
       Definition,

@@ -13,7 +13,7 @@ static PSFILE_REGEX : Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\
 // Parsing of basic types (pp.268--271) is (mostly) handled in Gullet.pm
 //**********************************************************************
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // Remaining Mode independent primitives in Ch.24, pp.279-280
   // \relax was done as expandable (isn't that right?)
@@ -24,17 +24,17 @@ LoadDefinitions!(state, {
 
   // These are actually TeX primitives, but we treat them as a Whatsit so they
   // remain in the constructed tree.
-  DefPrimitive!("{", sub[stomach, (), state] {
-    stomach.bgroup(state);
+  DefPrimitive!("{", {
+    bgroup();
     let open = Tbox::new(arena::pin_static(""), None, None,
-        Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true), state);
-    let mode = Some(if state.lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
-    let body = stomach.digest_next_body(None, state)?;
+        Tokens!(T_BEGIN!()), stored_map!("isEmpty" => true));
+    let mode = Some(if lookup_bool("IN_MATH") { TexMode::Math} else {TexMode::Text});
+    let body = stomach::digest_next_body(None)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
     let mut font = None;
     for abox in boxes.iter().rev() {
-      if let Some(boxfont) = abox.get_font(state)? {
+      if let Some(boxfont) = abox.get_font()? {
         font = Some(boxfont.into_owned());
         break;
       }
@@ -48,59 +48,52 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefPrimitive!(
-    "}",
-    sub[stomach, (), state] {
-      let f = LookupFont!();
-      stomach.egroup(state)?;
-      Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true), state)
-    }
-  );
+  DefPrimitive!("}", {
+    let f = LookupFont!();
+    egroup()?;
+    Tbox::new(arena::pin_static(""), f, None, Tokens!(T_END!()), stored_map!("isEmpty"=>true))
+  });
 
   // These are for those screwy cases where you need to create a group like box,
   // more than just bgroup, egroup,
   // BUT you DON'T want extra {, } showing up in any untex-ing.
   DefConstructor!("\\@hidden@bgroup", "#body",
-    before_digest => sub[stomach,state] { stomach.bgroup(state); },
+    before_digest => { bgroup(); },
     capture_body => true,
-    reversion=> sub[whatsit, _args,state] {
+    reversion=> sub[whatsit,_args] {
       if let Some(body) = whatsit.get_body()? {
-        body.revert(state)
+        body.revert()
       } else { Ok(Tokens!()) }
     }
   );
   DefConstructor!("\\@hidden@egroup", "",
-    after_digest => sub[stomach,_args,state] { stomach.egroup(state)?; },
+    after_digest => { egroup()?; },
     reversion => ""
   );
 
   DefPrimitive!(
-  "\\begingroup", sub[stomach, _args, state] {
-    stomach.begingroup(state);
+  "\\begingroup", {
+    begingroup();
   });
   DefPrimitive!(
-  "\\endgroup", sub[stomach, _args, state] {
-    stomach.endgroup(state)?;
+  "\\endgroup", {
+    endgroup()?;
   });
 
   // Debugging aids; Ignored!
-  DefPrimitive!("\\show Token", sub[stomach,(arg),state] {
-    let mut gullet = stomach.get_gullet_mut();
+  DefPrimitive!("\\show Token", sub[(arg)] {
     let lhs = if arg.get_catcode() == Catcode::CS {
       s!("{arg}=")
     } else { String::new() };
-    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg], gullet)?;
-    let rhs = writable_tokens(&Expand!(stuff, gullet), state);
+    let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
+    let rhs = writable_tokens(&Expand!(stuff));
     // TODO: add+use `Note!` instead of `eprintln`
     eprintln!("> {lhs}{rhs}");
-    eprintln!("{}",gullet.get_locator().unwrap_or_default());
-    ()
+    eprintln!("{}",get_locator().unwrap_or_default());
   });
-  DefPrimitive!("\\showbox Number", sub[stomach,(arg),state] {
+  DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();
-    let stuff = state.lookup_value(&s!("box{n}"));
-    Debug!("Box {n} = {stuff:?}");
-    ()
+    Debug!("Box {n} = {:?}", lookup_value(&s!("box{n}")));
   });
   DefPrimitive!("\\showlists", None);
   DefPrimitive!("\\showthe Token", None);
@@ -108,10 +101,10 @@ LoadDefinitions!(state, {
   // DefPrimitive('\shipout ??
   DefPrimitive!("\\ignorespaces SkipSpaces", None);
 
-  DefPrimitive!("\\lx@ignorehardspaces", sub[stomach, (), state] {
+  DefPrimitive!("\\lx@ignorehardspaces", {
     let mut boxes = Vec::new();
-    while let Some(token) = stomach.get_gullet_mut().read_x_token(None, false, state)? {
-      boxes = stomach.invoke_token(&token, state)?;
+    while let Some(token) = gullet::read_x_token(None, false)? {
+      boxes = stomach::invoke_token(&token)?;
       if boxes.is_empty() {
         break;
       }
@@ -141,55 +134,54 @@ LoadDefinitions!(state, {
   });
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
-  DefPrimitive!("\\afterassignment Token", sub[stomach, (t), state] {
-    state.assign_value("afterAssignment", t, Some(Scope::Global));
+  DefPrimitive!("\\afterassignment Token", sub[(t)] {
+    state::assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }
-  DefPrimitive!("\\aftergroup Token", sub[stomach, (t), state] {
-    state.push_value("afterGroup", t)
+  DefPrimitive!("\\aftergroup Token", sub[(t)] {
+    push_value("afterGroup", t)
   });
 
   // \uppercase<general text>, \lowercase<general text>
 
   // Note that these are NOT expandable, even though the "return" tokens!
-  DefPrimitive!("\\uppercase GeneralText", sub[stomach,(tokens), state] {
-    stomach.get_gullet_mut().unread_vec(
+  DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
+    gullet::unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| uppercase_token(t, state))
+        .map(uppercase_token)
         .collect());
   });
-  DefPrimitive!("\\lowercase GeneralText", sub[stomach,(tokens), state] {
-    stomach.get_gullet_mut().unread_vec(
+  DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
+    gullet::unread_vec(
       tokens.unlist().into_iter()
-        .map(|t| lowercase_token(t, state))
+        .map(lowercase_token)
         .collect::<Vec<Token>>());
   });
 
-  DefPrimitive!("\\message{}", sub [stomach, (message), state] {
-    if state.lookup_int("VERBOSITY") > -1 {
-      eprintln!("{}", writable_tokens(
-        &do_expand(message, stomach.get_gullet_mut(), state)?, state));
+  DefPrimitive!("\\message{}", sub [(message)] {
+    if lookup_int("VERBOSITY") > -1 {
+      eprintln!("{}", writable_tokens(&do_expand(message)?));
     }
   });
 
   DefRegister!("\\errhelp", Tokens!());
-  DefPrimitive!("\\errmessage{}", sub[stomach,(args),state] {
-    let mut gullet = stomach.get_gullet_mut();
-    let message = Expand!(args, gullet, state);
-    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")), gullet, state);
+  DefPrimitive!("\\errmessage{}", sub[(args)] {
+
+    let message = Expand!(args);
+    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
     eprintln!("{}: {}", message, help);
   });
 
   // TeX I/O primitives
   DefPrimitive!("\\openin Number SkipMatch:= SkipSpaces TeXFileName",
-  sub[stomach, (port, filename), state] {
+  sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
     // possibly should close $port if it's already been opened?
     // Rely on FindFile to enforce any access restrictions
     if let Some(path) = find_file(&filename, Some(
-      FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()}), state) {
+      FindFileOptions {forbid_ltxml: true, ..FindFileOptions::default()})) {
       let content_str = LookupString!(&s!("{}_contents",path));
       let content = if content_str.is_empty() {
         None
@@ -199,37 +191,38 @@ LoadDefinitions!(state, {
       let mouth = Mouth::create(&path, MouthOptions {
         content,
         .. MouthOptions::default()
-      }, state)?;
+      })?;
       AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
     }
   });
 
-  DefPrimitive!("\\closein Number", sub[stomach, (port), state] {
-    // Clone the Rc<> for mouth out of state, since we'll be mutating.
+  DefPrimitive!("\\closein Number", sub[(port)] {
     let file_key = s!("input_file:{}", port);
-    let mouth_opt = if let Some(Stored::Mouth(ref mouth)) = LookupValue!(&file_key) {
-      Some(Rc::clone(mouth))
-    } else {
-      None
-    };
+    let mut finished = false;
     //   close the mouth (if any) and clear the variable
-    if let Some(mouth) = mouth_opt {
-      mouth.borrow_mut().finish(state);
-      AssignValue!(&s!("input_file:{}", port), false, Some(Scope::Global));
+    with_value(&file_key, |mouth_opt|
+      if let Some(Stored::Mouth(ref mouth)) = mouth_opt {
+        mouth.borrow_mut().finish();
+        finished = true;
+      });
+    if finished {
+      AssignValue!(&file_key, false, Some(Scope::Global));
     }
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token",
-    sub[stomach, (port, token), state] {
-    if let Some(Stored::Mouth(mouth_stored)) = state.lookup_value(&format!("input_file:{port}")) {
-      let mouth_obj = Rc::clone(mouth_stored);
-      stomach.bgroup(state);
+    sub[(port, token)] {
+    let mouth_opt = if let Some(Stored::Mouth(mouth_stored)) = lookup_value(&format!("input_file:{port}")) {
+      Some(mouth_stored)
+    } else { None };
+    if let Some(mouth_obj) = mouth_opt {
+      bgroup();
       AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
       AssignValue!("INCLUDE_COMMENTS", false);
       let mut tokens = Vec::new();
       let mut level = 0;
       let mut mouth = mouth_obj.borrow_mut();
-      while let Some(t) = mouth.read_token(state) {
+      while let Some(t) = mouth.read_token() {
         let cc = t.get_catcode();
         if cc != Catcode::MARKER {
           tokens.push(t);
@@ -239,27 +232,28 @@ LoadDefinitions!(state, {
           Catcode::END => {level -= 1},
           _ => {}
         };
-        if level == 0 && mouth.is_eol(state) {
+        if level == 0 && mouth.is_eol() {
           break;
         }
       }
-      stomach.egroup(state)?;
+      egroup()?;
       DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
     }
   });
 
-  DefConditional!("\\ifeof Number", sub[gullet, (port), state] {
-    if let Some(Stored::Mouth(mouth)) = LookupValue!(&s!("input_file:{}", port)) {
-      mouth.borrow().at_eof()
-    } else {
-      true
-    }
+  DefConditional!("\\ifeof Number", sub[(port)] {
+    with_value(&s!("input_file:{}", port), |val_opt|
+      if let Some(Stored::Mouth(mouth)) = val_opt {
+        mouth.borrow().at_eof()
+      } else {
+        true
+      })
   });
 
   // For output files, we'll write the data to a cached internal copy
   // rather than to the actual file system.
   DefPrimitive!("\\openout Number SkipMatch:= SkipSpaces TeXFileName",
-    sub[stomach, (port, filename), state] {
+    sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
     let contents_key = &s!("{}_contents",filename);
@@ -267,21 +261,22 @@ LoadDefinitions!(state, {
     AssignValue!(contents_key => "",  Some(Scope::Global));
   });
 
-  DefPrimitive!("\\closeout Number", sub[stomach, (port), state] {
+  DefPrimitive!("\\closeout Number", sub[(port)] {
     AssignValue!(&s!("output_file:{}",port), false, Some(Scope::Global));
   });
 
-  DefPrimitive!("\\write Number {}", sub[stomach, (port, tokens), state] {
-    if let Some(filename) = LookupValue!(&s!("output_file:{}", port)) {
-      let handle   = s!("{}_contents",filename);
+  DefPrimitive!("\\write Number {}", sub[(port, tokens)] {
+    let handle = with_value(&s!("output_file:{}", port), |val_opt|
+    if let Some(filename) = val_opt {
+       s!("{}_contents",filename)
+    } else { String::new() });
+    if !handle.is_empty() {
       let mut contents : String = LookupString!(&handle);
-      let mut gullet = stomach.get_gullet_mut();
-      contents.push_str(&Expand!(tokens,gullet,state).untex());
+      contents.push_str(&Expand!(tokens).untex());
       contents.push('\n');
       AssignValue!(&handle => contents, Some(Scope::Global));
     } else {
-      let gullet = stomach.get_gullet_mut();
-      println_stderr!("{}", Expand!(tokens, gullet).untex());
+      println_stderr!("{}", Expand!(tokens).untex());
     }
   });
 
@@ -292,7 +287,7 @@ LoadDefinitions!(state, {
   //======================================================================
   // Remaining semi- Vertical Mode primitives in Ch.24, pp.280--281
 
-  DefPrimitive!("\\special {}", sub[stomach,(arg),state] {
+  DefPrimitive!("\\special {}", sub[(arg)] {
     let special_str = arg.to_string();
     // recognize one special graphics inclusion case
     if let Some(cap) = PSFILE_REGEX.captures(&special_str) {
@@ -317,12 +312,12 @@ LoadDefinitions!(state, {
         wrapped.push(T_OTHER!("]"));
         kv = wrapped;
       }
-      let mut gullet = stomach.get_gullet_mut();
-      gullet.unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
-      gullet.unread_vec(kv);
-      gullet.unread_one(T_CS!("\\ltx@special@graphics"));
+
+      gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
+      gullet::unread_vec(kv);
+      gullet::unread_one(T_CS!("\\ltx@special@graphics"));
     } else {
-      Info!("ignored", "special", stomach, s!("Unrecognized TeX Special: {arg}"));
+      Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }
   });
 
@@ -385,12 +380,12 @@ LoadDefinitions!(state, {
   // \kern is heavily used by xy.
   // Completely HACK version for the moment
   // Note that \kern should add vertical spacing in vertical modes!
-  DefConstructor!("\\kern Dimension", sub[document,args,state] {
+  DefConstructor!("\\kern Dimension", sub[document,args] {
     let length = if let DigestedData::RegisterValue(RegisterValue::Dimension(d)) =
       args[0].as_ref().unwrap().data() {
         *d
       } else { Dimension::default() };
-      let is_svg_g = document.with_node_qname(document.get_node(), state,
+      let is_svg_g = document::with_node_qname(document.get_node(),
         |qname| qname == "svg:g");
     let parent = document.get_node_mut();
     if is_svg_g {
@@ -404,8 +399,8 @@ LoadDefinitions!(state, {
         transform.push_str(&s!("translate({x},0)"));
         parent.set_attribute("transform", &transform)?;
       }
-    } else if in_svg(document,state) {
-      Warn!("unexpected", "kern", document, s!("Lost kern in SVG {length}"));
+    } else if in_svg(document) {
+      Warn!("unexpected", "kern", s!("Lost kern in SVG {length}"));
     }
   });
   DefMacro!(
@@ -415,11 +410,11 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\unpenalty", None);
   DefPrimitive!("\\unkern", None);
   // Worrisome, but...
-  DefPrimitive!("\\unskip", sub[stomach,(),state] {
+  DefPrimitive!("\\unskip", {
     // pop until a non-empty box is found
-    while let Some(last_box) = stomach.box_list.pop() {
+    while let Some(last_box) = pop_box_list() {
       if !last_box.is_empty()? {
-        stomach.box_list.push(last_box);
+        push_box_list(last_box);
         break;
       }
     }
@@ -430,9 +425,7 @@ LoadDefinitions!(state, {
   DefPrimitive!("\\insert Number", None);
   // \vadjust<filler>{<vertical mode material>}
   // Note: \vadjust ignores in vertical mode...
-  DefPrimitive!("\\vadjust {}", sub[stomach,(arg),state] {
-    state.push_tokens("vAdjust", arg);
-  });
+  DefPrimitive!("\\vadjust {}", sub[(arg)] { push_tokens("vAdjust", arg); });
 
   //======================================================================
   // Remaining Vertical Mode primitives in Ch.24, pp.281--283
@@ -456,13 +449,13 @@ LoadDefinitions!(state, {
   // \moveleft<dimen><box>, \moveright<dimen><box>
   DefConstructor!("\\moveleft Dimension MoveableBox",
     "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-    after_digest => sub[_stomach,whatsit,_state] {
+    after_digest => sub[whatsit] {
       if let DigestedData::RegisterValue(d) = whatsit.get_arg(1).unwrap().data() {
         whatsit.set_property("x", d.clone().multiply(Number::new(-1)));
       }});
   DefConstructor!("\\moveright Dimension MoveableBox",
     "<ltx:text xoffset='#x' _noautoclose='true'>#2</ltx:text>",
-    after_digest => sub[_stomach,whatsit,_state] {
+    after_digest => sub[whatsit] {
       if let Some(dimension) = whatsit.get_arg(1) {
         whatsit.set_property("x", dimension.clone());
       }});
@@ -470,17 +463,17 @@ LoadDefinitions!(state, {
   // DG: TODO: We need tests+examples here, a bit lost in the typing interface...
   //
   // # \unvbox<8bit>, \unvcopy<8bit>
-  // DefPrimitive!("\\unvbox Number", sub[stomach,(number),state] {
+  // DefPrimitive!("\\unvbox Number", sub[(number)] {
   //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state.lookup_tokens(&box_key);
-  //   adjust_box_color(stuff, state);
+  //   let stuff = state!().lookup_tokens(&box_key);
+  //   adjust_box_color(stuff);
   //   AssignValue!(&box_key, None);
   //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
   // });
-  // DefPrimitive!("\\unvcopy Number", sub[stomach,(number),state] {
+  // DefPrimitive!("\\unvcopy Number", sub[(number)] {
   //   let box_key   = s!("box{}",number.value_of());
-  //   let stuff = state.lookup_tokens(&box_key);
-  //   adjust_box_color(stuff, state);
+  //   let stuff = state!().lookup_tokens(&box_key);
+  //   adjust_box_color(stuff);
   //   stuff.map(|tks| Digested::from(tks)).unwrap_or_else(|| Digested::from(List::default()))
   // });
 
@@ -488,15 +481,15 @@ LoadDefinitions!(state, {
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
-  DefConstructor!("\\vskip Glue", sub[document, args, _props, state] {
+  DefConstructor!("\\vskip Glue", sub[document, args, _props] {
     unref!(args => length);
     let length = length.pt_value(None);
 
     if length > 10.0 {    // Or what!?!?!?!
-      if document.is_closeable("ltx:para", state).is_some() {
-        document.close_element("ltx:para", state)?;
-      } else if document.is_openable("ltx:break", state) {
-        document.insert_element("ltx:break", Vec::new(), None, state)?;
+      if document.is_closeable("ltx:para").is_some() {
+        document.close_element("ltx:para")?;
+      } else if document.is_openable("ltx:break") {
+        document.insert_element("ltx:break", Vec::new(), None)?;
       }
     }},
      // TODO: "height" property

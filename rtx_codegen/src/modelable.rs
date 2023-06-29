@@ -49,8 +49,8 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   // NOTE: Do something automatic about this too!?!
   // We'll need to generate namespace prefixes for all namespaces found in the doc!
   operations.push(quote!(
-    model.register_document_namespace("", Some("http://dlmf.nist.gov/LaTeXML"));
-    model.schema = Some(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
+    model::register_document_namespace("", Some("http://dlmf.nist.gov/LaTeXML"));
+    model::set_schema(Relaxng{ name: #name.to_owned(), ..Relaxng::default()});
   ));
 
   // note_begin(&(s!("Compiling .model file: {}", path)));
@@ -66,8 +66,8 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
       let child_vec: Vec<String> = children.split(',').map(ToString::to_string).collect();
 
       operations.push(quote!(
-        model.add_tag_attribute(#tag, vec![#(#attr_vec),*]);
-        model.add_tag_content(#tag, vec![#(#child_vec),*]);
+        model::add_tag_attribute(#tag, vec![#(#attr_vec),*]);
+        model::add_tag_content(#tag, vec![#(#child_vec),*]);
       ));
     } else if let Some(caps) = CLASS_MODEL_LINE.captures(&line) {
       let classname = caps.get(1).map_or("", |m| m.as_str()).to_string();
@@ -78,7 +78,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
         .collect::<Vec<String>>();
 
       operations.push(quote!(
-        model.set_schema_class(#classname,
+        model::set_schema_class(#classname,
           HashSet::from_iter(vec![#(#elements_vec),*].into_iter()
           .map(rtx_core::common::arena::pin_static)));
       ));
@@ -86,7 +86,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
       let prefix = caps.get(1).map_or("", |m| m.as_str());
       let namespace = caps.get(2).map_or("", |m| m.as_str());
       operations.push(quote!(
-        model.register_document_namespace(#prefix, Some(#namespace));
+        model::register_document_namespace(#prefix, Some(#namespace));
       ));
     } else {
       fatal!(
@@ -101,7 +101,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 
   Ok(TokenStream::from(quote!(
     impl _ModelLoader {
-      fn model(model : &mut Model) {
+      fn build_model() {
         #(#operations)*
       }
     }

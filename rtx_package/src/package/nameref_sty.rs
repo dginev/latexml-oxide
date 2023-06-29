@@ -1,5 +1,5 @@
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // TODO:
   // RequirePackage!("refcount");
   // RequirePackage!("gettitlestring");
@@ -12,7 +12,7 @@ LoadDefinitions!(state, {
   DefConstructor!("\\nameref OptionalMatch:* Semiverbatim",
     "<ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
       show='title' labelref='#label' _force_font='true'/>",
-    properties => sub[_stomach,args,_state] {
+    properties => sub[args] {
       let label_arg = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
       Ok(stored_map!(
         "label" => clean_label(&label_arg, None)))

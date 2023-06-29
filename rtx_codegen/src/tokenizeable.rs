@@ -69,7 +69,7 @@ pub fn compile_tokenize(input: DeriveInput) -> TokenStream {
   let tokenized = if literal.is_empty() {
     Tokens::default()
   } else {
-    mouth::tokenize(&literal, None)
+    mouth::tokenize(&literal)
   };
   quote!(
     macro_rules! these_tokens {

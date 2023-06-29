@@ -1,5 +1,5 @@
 use rtx_package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefMacro!("\\hw", "hello world!");
 });

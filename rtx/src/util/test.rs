@@ -9,8 +9,7 @@ use std::sync::Once;
 use crate::core_interface::DigestionAPI;
 use rtx_core::common::BindingDispatcher;
 use rtx_core::document::Document;
-use rtx_core::state::State;
-use rtx_core::{s, Core, CoreOptions};
+use rtx_core::{s, Core, CoreOptions, state};
 use rtx_math_parser::node_to_grammar_lexemes;
 use rtx_package::{package,load_model};
 use rtx_codegen::LoadModel;
@@ -132,19 +131,18 @@ fn process_texfile(
     ..CoreOptions::default()
   });
   // Add the package bindings
-  latexml.get_state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
+  state::set_bindings_dispatch(Rc::new(package::dispatch));
   // If we want to test the rtx_contrib bindings, we need to pass in the additional binding
   // dispatcher, which makes the contrib bindings visible
   // this would have been equivalent to a latexml --path argument, except we require access to
   // compiled functions, hence the rust-native pass
-  if extra_bindings_dispatcher.is_some() {
-    latexml.get_state_mut().extra_bindings_dispatch = extra_bindings_dispatcher;
+  if let Some(dispatcher) = extra_bindings_dispatcher {
+    state::set_extra_bindings_dispatch(dispatcher);
   }
-  let res = match latexml.convert_file(tex_path.to_owned()) {
+  match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
-    Ok(doc) => process_ltx_doc(doc, name, latexml.get_state_mut()),
-  };
-  res
+    Ok(doc) => process_ltx_doc(doc, name),
+  }
 }
 
 /// Loads and serialized the resulting XML for a test file target,
@@ -156,8 +154,8 @@ fn process_xmlfile<'a>(xml_path: &'a str, name: &'a str) -> Vec<String> {
     Ok(dom) => process_dom(dom, name),
   }
 }
-fn process_ltx_doc(doc: Document, _name: &str, state: &mut State) -> Vec<String> {
-  let doc_str = doc.serialize_to_string(state);
+fn process_ltx_doc(doc: Document, _name: &str) -> Vec<String> {
+  let doc_str = doc.serialize_to_string();
   // eprintln!("{doc_str}");
   doc_str.split('\n').map(ToString::to_string).collect()
 }
@@ -176,7 +174,7 @@ fn process_dom(dom: XmlDoc, _name: &str) -> Vec<String> {
 
 /// Provide a default test `Core` engine for simple operations
 pub fn new_test_engine() -> Core {
-  let mut core_engine = Core::new(CoreOptions {
+  let core_engine = Core::new(CoreOptions {
     preload: Some(
       ["article.cls", "amsmath.sty"]
         .map(|x| x.to_string())
@@ -188,9 +186,8 @@ pub fn new_test_engine() -> Core {
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  let state = core_engine.get_state_mut();
-  load_model!(state,"LaTeXML");
-  state.bindings_dispatch = Some(Rc::new(package::dispatch));
+  load_model!("LaTeXML");
+  state::set_bindings_dispatch(Rc::new(package::dispatch));
   core_engine
 }
 
@@ -202,8 +199,7 @@ pub fn lex_single_tex_formula(tex: &str, latexml: &mut Core) -> (Vec<String>, Ve
   let mut doc = xml_result.unwrap();
 
   // grab the first formula
-  let state = latexml.get_state_mut();
-  match doc.findnode("//*[local-name()='XMath']", None, state) {
+  match doc.findnode("//*[local-name()='XMath']", None) {
     Some(math) => {
       let mut idx = 0;
       let (lexemes, nodes) = node_to_grammar_lexemes(&math, &mut idx);

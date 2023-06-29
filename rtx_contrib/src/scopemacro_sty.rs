@@ -1,6 +1,6 @@
 use rtx_package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefMacro!("\\where", "Section 1",           scope => "section:1");
   DefMacro!("\\where", "Subsection 2.1",      scope => "subsection:2.1");
   DefMacro!("\\where", "Labelled subsection", scope => "label:labelled");

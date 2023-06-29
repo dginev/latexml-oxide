@@ -17,7 +17,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     Error!(
       "rtx",
       "logger",
-      None,
       "Failed to load logger. Please check rtx_core::util::logger installed correctly."
     ); Ok(()) };
     err().ok();
@@ -31,8 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       let err = || {Error!(
         "rtx",
         "",
-        None,
-        "Please provide a source document! Exiting..."
+          "Please provide a source document! Exiting..."
       ); Ok(()) };
       err().ok();
       process::exit(1);
@@ -54,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut converter = Converter::from_config(opts.clone());
   if let Err(e) = converter.prepare_session(&opts) {
     let message = s!("Could not prepare converter session! : {}", e);
-    let err = || {Error!("rtx", "session", None, message); Ok(())};
+    let err = || {Error!("rtx", "session", message); Ok(())};
     err().ok();
     process::exit(1);
   }

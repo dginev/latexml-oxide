@@ -1,11 +1,11 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefEnvironment!("{alltt}", "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
   font => {family => "typewriter", series => "medium", shape => "upright"},
-  before_digest => sub[stomach, inner_state] {
+  before_digest => {
     for c in &['$', '&', '#', '^', '_', '%', '~'] {
-     AssignCatcode!(*c, Catcode::OTHER);
+      AssignCatcode!(*c, Catcode::OTHER);
     }
     AssignCatcode!(' ', Catcode::ACTIVE);
     Let!(&T_ACTIVE!(' '), T_CS!("\\space"));

@@ -1,7 +1,5 @@
 use crate::package::*;
-use rtx_core::state::State;
-
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!({
   //**********************************************************************
   // Predefine, then load standard file.
 

@@ -1,7 +1,7 @@
 use crate::package::*;
 static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r",\s*").unwrap());
 
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!({
   // ======================================================================
   // C.5.2 Packages
   // ======================================================================
@@ -23,8 +23,8 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
-    before_digest => sub[stomach, state] { only_preamble("\\usepackage", stomach, state) },
-    after_digest => sub[stomach, whatsit, state] {
+    before_digest => { only_preamble("\\usepackage") },
+    after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
       let package_list = match packages {
@@ -40,7 +40,7 @@ LoadDefinitions!(outer_stomach, state, {
         require_package(&package, RequireOptions {
           options: options_list.clone(),
           ..RequireOptions::default()
-        }, stomach, state)?
+        })?
       }
       Ok(Vec::new())
     }
@@ -48,22 +48,21 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
   "<?latexml package='#2' ?#1(options='#1')?>",
-  before_digest =>  sub[stomach, state] { only_preamble("\\RequirePackage", stomach, state) },
-  after_digest => sub[stomach, whatsit, state] {
-    let options  = whatsit.get_arg(1);
+  before_digest =>  { only_preamble("\\RequirePackage") },
+  after_digest => sub[whatsit] {
+    // let options  = whatsit.get_arg(1);
     let packages = whatsit.get_arg(2).unwrap();
   //   $options = [($options ? split(/\s*,\s*/, (ToString($options))) : ())];
     for pkg in packages.to_string().split(',') {
       let pkg_trimmed = pkg.trim();
       if pkg_trimmed.is_empty() || pkg.starts_with('%') { continue; }
-      require_package(pkg, RequireOptions::default(), stomach, state)?;
+      require_package(pkg, RequireOptions::default())?;
     }
   });
 
   DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
     "<?latexml class='#2' ?#1(options='#1')?>",
-    before_digest => { unimplemented!(); Ok(Vec::new()) }
-    // beforeDigest => sub { onlyPreamble('\LoadClass'); },
+    before_digest => { only_preamble("\\LoadClass") }
     // afterDigest  => sub { my ($stomach, $whatsit) = @_;
     //   my $options = $whatsit->getArg(1);
     //   my $class   = ToString($whatsit->getArg(2));
@@ -77,25 +76,24 @@ LoadDefinitions!(outer_stomach, state, {
   // Internals used in Packages
   DefMacro!("\\NeedsTeXFormat{}[]", None);
 
-  DefPrimitive!("\\ProvidesClass{}[]", sub[stomach, (class, version_opt), state] {
+  DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    ()
   });
 
   // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
-  DefMacro!("\\ProvidesPackage{}[]", sub[stomach, (package, version_opt), state] {
+  DefMacro!("\\ProvidesPackage{}[]", sub[(package, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    () });
+  });
 
-  DefMacro!("\\ProvidesFile{}[]", sub[stomach, (file, version_opt), state] {
+  DefMacro!("\\ProvidesFile{}[]", sub[(file, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{file}"));
     let version = version_opt.unwrap_or_default();
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
-    () });
+  });
 
   // anything useful?
   //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
@@ -105,7 +103,7 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease", None);
   DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease", None);
 
-  DefPrimitive!("\\DeclareOption{}{}", sub[stomach,(option, code),state] {
+  DefPrimitive!("\\DeclareOption{}{}", sub[(option, code)] {
     let option_str = option.to_string();
     if option_str == "*" {
       DeclareOption!(None, code);
@@ -115,26 +113,23 @@ LoadDefinitions!(outer_stomach, state, {
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\PassOptionsToPackage{}{}", sub[stomach,(name, options),state] {
-    unimplemented!();
-    // $name = ToString($name);
-    // $name =~ s/\s+//g;
-    // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(name, options)] {
+  //   // $name = ToString($name);
+  //   // $name =~ s/\s+//g;
+  //   // PassOptions($name, 'sty', split(/\s*,\s*/, ToString(Expand($options))));
+  //   Ok(Vec::new())
+  // });
 
-  DefPrimitive!("\\PassOptionsToClass{}{}", sub[stomach,(name, options),state] {
-    unimplemented!();
-    // $name = ToString($name);
-    // $name =~ s/\s+//g;
-    // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\PassOptionsToClass{}{}", sub[(name, options)] {
+  //   // $name = ToString($name);
+  //   // $name =~ s/\s+//g;
+  //   // PassOptions($name, 'cls', split(/\s*,\s*/, ToString(Expand($options))));
+  //   Ok(Vec::new())
+  // });
 
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
-  before_digest => { unimplemented!(); Ok(Vec::new()) }
-  // beforeDigest => sub { onlyPreamble('\RequirePackage'); },
+  before_digest => { only_preamble("\\RequirePackage") }
   // afterDigest  => sub { my ($stomach, $whatsit) = @_;
   //   my $package = ToString($whatsit->getArg(1));
   //   $package =~ s/\s+//g;
@@ -143,59 +138,57 @@ LoadDefinitions!(outer_stomach, state, {
   );
 
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
-    before_digest => { unimplemented!(); Ok(Vec::new()) }
-    // beforeDigest => sub { onlyPreamble('\LoadClassWithOptions'); },
+    before_digest => { only_preamble("\\LoadClassWithOptions") }
     // afterDigest  => sub { my ($stomach, $whatsit) = @_;
     //   my $class = ToString($whatsit->getArg(1));
     //   $class =~ s/\s+//g;
     //   LoadClass($class, withoptions => 1);
     //   return; });
   );
-  DefPrimitive!("\\@onefilewithoptions {} [][] {}",
-  sub[stomach, (name,option1,option2,ext), state] {
-    unimplemented!();
-    // InputDefinitions(ToString(Expand($name)),
-    //    type => ToString(Expand($ext)), options => $option1);
-    Ok(Vec::new())
-  });
+  // DefPrimitive!("\\@onefilewithoptions {} [][] {}",
+  // sub[(name,option1,option2,ext)] {
+  //   // InputDefinitions(ToString(Expand($name)),
+  //   //    type => ToString(Expand($ext)), options => $option1);
+  //   Ok(Vec::new())
+  // });
 
   DefMacro!("\\CurrentOption", None);
 
-  DefPrimitive!("\\ExecuteOptions{}", sub[gullet, (options), state] {
+  DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
     // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
-    Info!("TODO","\\ExecuteOptions",gullet,"implement fully, it's an empty stub.");
+    Info!("TODO","\\ExecuteOptions","implement fully, it's an empty stub.");
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[stomach, (star), state] {
+  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(star)] {
     // TODO:
     // if star.is_some() {
     //   "inorder"
     // }
     // ProcessOptions!(($star ? (inorder => 1) : ()));
-    Info!("TODO","\\ProcessOptions",stomach,"implement fully, missing 'inorder'");
-    process_options(stomach, state)?;
+    Info!("TODO","\\ProcessOptions","implement fully, missing 'inorder'");
+    process_options()?;
     Ok(Vec::new())
   });
   DefMacro!("\\@options", "\\ProcessOptions*");
 
   Let!("\\@enddocumenthook", "\\@empty");
-  DefMacro!("\\AtEndOfPackage{}", sub [gullet, (code), state] {
-    let name = Expand!(T_CS!("\\@currname"), gullet).to_string();
-    let ttype = Expand!(T_CS!("\\@currext"), gullet).to_string();
+  DefMacro!("\\AtEndOfPackage{}", sub [(code)] {
+    let name = Expand!(T_CS!("\\@currname")).to_string();
+    let ttype = Expand!(T_CS!("\\@currext")).to_string();
     let hookcs = T_CS!(s!("\\{name}.{ttype}-h@@k"));
-    AddToMacro!(hookcs, code, gullet, state);
+    AddToMacro!(hookcs, code);
   });
 
   DefMacro!("\\@ifpackageloaded", r"\@ifl@aded\@pkgextension");
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   DefMacro!("\\@ifclassloaded", r"\@ifl@aded\@clsextension");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
-  DefMacro!("\\@ifl@aded{}{}", sub[gullet, (ext, name), state] {
-  let path = s!("{}.{}", Expand!(name, gullet), Expand!(ext, gullet));
+  DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
+  let path = s!("{}.{}", Expand!(name), Expand!(ext));
   // If EITHER the raw TeX or ltxml version of this file was loaded.
-  if state.lookup_bool(&s!("{path}_loaded")) || state.lookup_bool(&s!("{path}_binding_loaded")) {
+  if lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_binding_loaded")) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")
@@ -208,8 +201,8 @@ LoadDefinitions!(outer_stomach, state, {
     r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
   );
 
-  DefPrimitive!("\\g@addto@macro DefToken {}", sub[stomach,(target, content),state] {
-    AddToMacro!(target, content, stomach, state);
+  DefPrimitive!("\\g@addto@macro DefToken {}", sub[(target, content)] {
+    AddToMacro!(target, content);
   });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 });

@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // TODO:
   // #======================================================================
   // # \choose & friends, also need VERY special argument handling
@@ -95,11 +95,11 @@ LoadDefinitions!(state, {
   //     # (there could be a \displaystyle INSIDE the numerator, but that's not the one we want)
   //     # Of course the group that started the numerator may be the start of the Math, itself!
   //     # AND, the numerator, which was already digested, needs it's mathstyle ADJUSTED
-  //     my $font = ($STATE->isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
-  //       ? $STATE->lookupValue('font')                # then just use whatever font we've got
-  //       : ($STATE->isValueBound('font', 0)           # else if font was set in numerator
-  //           && $STATE->valueInFrame('font', 1))
-  //         || $STATE->lookupValue('font')             # then just use whatever font we've got
+  //     my $font = ($state->isValueBound('MODE', 0)    # Last stack frame was a mode switch!?!?!
+  //       ? $state->lookupValue('font')                # then just use whatever font we've got
+  //       : ($state->isValueBound('font', 0)           # else if font was set in numerator
+  //           && $state->valueInFrame('font', 1))
+  //         || $state->lookupValue('font')             # then just use whatever font we've got
   //     );
   //     my $style     = $font->getMathstyle;
   //     my $role      = ToString($kv->getValue('role'));

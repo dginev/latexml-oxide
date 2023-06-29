@@ -6,20 +6,20 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
 //=======================
 // -- Main Definitions --
 //=======================
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   // The following special cases are built-in to Definition
   DefConditional!("\\else");
   DefConditional!("\\or");
   DefConditional!("\\fi");
   DefConditional!("\\ifcase Number");
 
-  DefConditional!("\\ifnum Number Token Number", sub[gullet, (u,rel,v), state] {
+  DefConditional!("\\ifnum Number Token Number", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  DefConditional!("\\ifdim Dimension Token Dimension", sub[gullet, (u,rel,v), state] {
+  DefConditional!("\\ifdim Dimension Token Dimension", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
-  DefConditional!("\\ifodd Number", sub[gullet, (u), state] {
+  DefConditional!("\\ifodd Number", sub[(u)] {
     u.value_of() % 2 == 1
   });
 
@@ -29,19 +29,18 @@ LoadDefinitions!(outer_state, {
   DefConditional!("\\ifinner", { false });
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
-  DefParameterType!(ExpandedIfToken, sub[gullet, _inner, _extra, state] {
-    let token_opt = gullet.read_x_token(Some(false), false, state)?.map(|t| {
+  DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
+    let token_opt = gullet::read_x_token(Some(false), false)?.map(|t| {
       // Also resolve \let variants:
-      let meaning_opt = state.lookup_meaning(&t);
-      if let Some(Stored::Token(ref meaning)) = meaning_opt.as_deref() {
-        meaning.clone()
+      if let Some(Stored::Token(meaning)) = lookup_meaning(&t) {
+        meaning
       } else {
         t
       }});
     let token = match token_opt {
       Some(t) => t,
       None => {
-        Error!("expected", "ExpandedIfToken", gullet,
+        Error!("expected", "ExpandedIfToken",
           "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty")
       }};
@@ -58,21 +57,21 @@ LoadDefinitions!(outer_state, {
     }
   });
 
-  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[gullet, (left,right), state] {
+  DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_charcode() == right.get_charcode()
   });
 
-  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[gullet, (left,right), state] {
+  DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_catcode() == right.get_catcode()
   });
 
-  DefConditional!("\\ifx Token Token", sub[gullet, (left,right), state] {
-    state.x_equals(&left, &right)
+  DefConditional!("\\ifx Token Token", sub[(left,right)] {
+    x_equals(&left, &right)
   });
 
-  DefConditional!("\\ifvoid Number", sub[_g, (arg), state] { classify_box(arg, state)?.is_empty() });
-  DefConditional!("\\ifhbox Number", sub[_g, (arg), state] { classify_box(arg, state)? == "hbox" });
-  DefConditional!("\\ifvbox Number", sub[_g, (arg), state] { classify_box(arg, state)? == "vbox" });
+  DefConditional!("\\ifvoid Number", sub[(arg)] { classify_box(arg)?.is_empty() });
+  DefConditional!("\\ifhbox Number", sub[(arg)] { classify_box(arg)? == "hbox" });
+  DefConditional!("\\ifvbox Number", sub[(arg)] { classify_box(arg)? == "vbox" });
 
   DefConditional!("\\iftrue", { true });
   DefConditional!("\\iffalse", { false });
@@ -82,19 +81,19 @@ LoadDefinitions!(outer_state, {
   // (which seems most TeX like).
   DefPrimitive!("\\relax", None);
 
-  DefMacro!("\\number Number", sub[gullet, (num), state] { Explode!(num.value_of()) });
+  DefMacro!("\\number Number", sub[(num)] { Explode!(num.value_of()) });
 
   // define it here (only approxmiately), since it's already useful.
   Let!("\\protect", "\\relax");
 
-  DefMacro!("\\romannumeral Number", sub[gullet, (num), state] { roman!(num.value_of()) });
+  DefMacro!("\\romannumeral Number", sub[(num)] { roman!(num.value_of()) });
 
   // 1) Knuth, The TeXBook, page 40, paragraph 1, Chapter 7: How TEX Reads What You Type.
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
-  DefMacro!("\\string Token", sub[gullet, (token), state] {
+  DefMacro!("\\string Token", sub[(token)] {
     let mut s = token.to_string();
     if s.starts_with('\\') {
-      s = escapechar(state) + &s[1..];
+      s = escapechar() + &s[1..];
     }
     Explode!(s)
   });
@@ -109,12 +108,12 @@ LoadDefinitions!(outer_state, {
 
   // Not sure about this yet...
   // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
-  DefMacro!("\\meaning Token", sub[gullet, (token), state] {
+  DefMacro!("\\meaning Token", sub[(token)] {
     let mut meaning = String::from("undefined");
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
-      state.lookup_meaning(&token).map(|d| d.into_owned())
+      lookup_meaning(&token)
     } {
       // First, if this definition is a primitive|conditional|constructor,
       // check to see if it has an alias, which would allow us to work with a token
@@ -219,7 +218,7 @@ LoadDefinitions!(outer_state, {
             None => String::new(),
             // TODO: How to print closures? This follows Perl's raw pointer format
             Some(ExpansionBody::Closure(exp)) => format!("CODE({:p})", Rc::as_ptr(exp)),
-            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks, state)
+            Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks)
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");
         },
@@ -233,24 +232,24 @@ LoadDefinitions!(outer_state, {
 
   //======================================================================
 
-  DefParameterType!(CSName, reader => reader!(gullet, _inner, _extra, state, {
-    let mut cs = escapechar(state);
+  DefParameterType!(CSName, reader => reader!( _inner, _extra, {
+    let mut cs = escapechar();
     let endcsname_token = T_CS!("\\endcsname");
     // keep newlines from having \n inside!
-    while let Some(token) = gullet.read_x_token(Some(true), true, state)? {
+    while let Some(token) = gullet::read_x_token(Some(true), true)? {
       if token == endcsname_token {
         break;
       }
       match token.get_catcode() {
         Catcode::CS => {
-          if let Some(defn) = state.lookup_definition(&token)? {
+          if lookup_definition(&token)?.is_some() {
             let message =
               s!("The control sequence {:?} should not appear between \\csname and \\endcsname",
                 token);
-            Error!("unexpected", token, gullet, message);
+            Error!("unexpected", token, message);
           } else {
             let message = s!("The token {:?} is not defined", token);
-            Error!("undefined", token, gullet, message);
+            Error!("undefined", token, message);
           }
         },
         Catcode::SPACE => {  // Keep newlines from having \n!
@@ -264,32 +263,33 @@ LoadDefinitions!(outer_state, {
     T_CS!(cs)
   }));
 
-  DefMacro!("\\csname CSName", sub[gullet, (token), state] {
-    if state.lookup_meaning(&token).is_none() {
-      state.assign_meaning(&token,
-        state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
+  DefMacro!("\\csname CSName", sub[(token)] {
+    if lookup_meaning(&token).is_none() {
+      let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+      assign_meaning(&token,
+        relax_meaning, None);
     }
     token
   });
 
-  DefPrimitive!("\\endcsname", sub[stomach, (), state] {
-    Error!("unexpected" ,"\\endcsname", stomach, "Extra \\endcsname");
+  DefPrimitive!("\\endcsname", {
+    Error!("unexpected" ,"\\endcsname", "Extra \\endcsname");
   });
 
-  DefMacro!("\\expandafter Token Token", sub[gullet, (tok, xtok), state] {
+  DefMacro!("\\expandafter Token Token", sub[(tok, xtok)] {
     let mut tokens : Vec<Token> = vec![tok];
-    if let Some(defn) = state.lookup_expandable(&xtok, false)? {
-      state.local_current_token(xtok);
-      let invoked = defn.invoke(gullet, true, state)?;
+    if let Some(defn) = lookup_expandable(&xtok, false)? {
+      state::local_current_token(xtok);
+      let invoked = defn.invoke( true)?;
       if !invoked.is_empty() {
         tokens.append(&mut invoked.unlist()); // Expand $xtok ONCE ONLY!
       }
-      state.expire_current_token();
-    } else if state.lookup_meaning(&xtok).is_none() {
+      state::expire_current_token();
+    } else if lookup_meaning(&xtok).is_none() {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
-      state.generate_error_stub(gullet, &xtok)?;
+      state::generate_error_stub(&xtok)?;
       tokens.push(xtok);
     } else {
       tokens.push(xtok);
@@ -298,9 +298,9 @@ LoadDefinitions!(outer_state, {
   });
 
   // Replace the next token with it's not-expanded variant
-  DefMacro!(T_CS!("\\noexpand"), None, sub[gullet, _args, state] {
-    if let Some(token) = gullet.read_token(state)? {
-      vec![token.with_dont_expand(state)?]
+  DefMacro!(T_CS!("\\noexpand"), None, {
+    if let Some(token) = gullet::read_token()? {
+      vec![token.with_dont_expand()?]
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed
       Vec::new()
@@ -315,12 +315,12 @@ LoadDefinitions!(outer_state, {
 
   // using input() from DefMacro is actually an incredible ordeal.
   // I tried several variations of arranging the types, but Rust is quite strict
-  // about avoiding multiple borrows that relate to "state"
+  // about avoiding multiple borrows that relate to "state::
   // when mutability is involved.
   // For now I have changed to DefPrimitive, so that there is a clear access to the
   // stomach, but we may require some special-case treatment in other pieces of code...
   DefMacro!("\\input", "\\ltx@input");
-  DefPrimitive!("\\ltx@input TeXFileName", sub[stomach, (name), state] {
+  DefPrimitive!("\\ltx@input TeXFileName", sub[(name)] {
     let mut tks = name.unlist();
     // If given a LaTeX-style argument, strip braces
     if tks.len() > 1 && tks.first().unwrap().get_catcode() == Catcode::BEGIN
@@ -328,22 +328,22 @@ LoadDefinitions!(outer_state, {
       tks.remove(0);
       tks.pop();
       // and load LaTeX.pool if not already
-      if !state.lookup_bool("LaTeX.pool_loaded") {
+      if !lookup_bool("LaTeX.pool_loaded") {
         LoadPool!("LaTeX");
       }
     }
     let reloadable_opts = InputOptions { reloadable: true, ..InputOptions::default() };
-    input(&Tokens::new(tks).to_string(), reloadable_opts, stomach, state)?;
+    input(&Tokens::new(tks).to_string(), reloadable_opts)?;
   });
 
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
-  DefMacro!(T_CS!("\\endinput"), None, sub[gullet, _args, state] {
-    gullet.flush_mouth(state);
+  DefMacro!(T_CS!("\\endinput"), None, {
+    gullet::flush_mouth();
   });
 
   // \the<internal quantity>
-  DefMacro!("\\the Register", sub[gullet, args, state] {
+  DefMacro!("\\the Register", sub[args] {
     if let ArgWrap::RegisterDefinition(dbox) = args.remove(0) {
       let (rtoken, inner) = *dbox;
       // let register_type = defn.borrow().register_type;
@@ -351,9 +351,9 @@ LoadDefinitions!(outer_state, {
       //       my $cs = ToString($defn->getCS);
       //       Error('unexpected', "\\the$cs", $gullet,
       //     "You can't use $cs after \\the"); return (); }
-      let defn = rtoken.to_register(state)
+      let defn = rtoken.to_register()
         .expect("if a Register parameter provides a token, it must have a Register definition.");
-      let value = defn.value_of(inner, state)
+      let value = defn.value_of(inner)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
       let mut tokens : Vec<Token> = match value {
@@ -363,15 +363,15 @@ LoadDefinitions!(outer_state, {
       };
       tokens
     } else {
-      Error!("expected", "<register>", gullet, "a register was expected to be here");
+      Error!("expected", "<register>", "a register was expected to be here");
       Vec::new()
     }
   });
 });
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
-fn escapechar(state: &mut State) -> String {
-  let code: i64 = match state.lookup_register("\\escapechar", Vec::new()).unwrap() {
+fn escapechar() -> String {
+  let code: i64 = match state::lookup_register("\\escapechar", Vec::new()).unwrap() {
     Some(RegisterValue::Number(v)) => v.value_of(),
     _ => -1,
   };
@@ -384,7 +384,7 @@ fn escapechar(state: &mut State) -> String {
 }
 
 fn compare(u: i64, rel: Token, v: i64) -> bool {
-  // NOTE: One would expect this to be best written as an advanced match statement
+  // NOTE: One would expect this to be best written as an advanced match state::ent
   // however, due to the shallow comparison of Cow<str> the Cow::Borrowed("<") and
   // Cow::Owned("<") variants will NOT be equal via a destructuring match.
   // However, since we've defined our own PartialEq trait over Token, an equality comparison
@@ -401,7 +401,7 @@ fn compare(u: i64, rel: Token, v: i64) -> bool {
       rel,
       rel.get_catcode()
     );
-    let err = || {Error!("expected", "<relationaltoken>", None, message); Ok(())};
+    let err = || {Error!("expected", "<relationaltoken>", message); Ok(())};
     err().ok();
     false
   }

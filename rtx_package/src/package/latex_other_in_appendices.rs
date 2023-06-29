@@ -4,7 +4,7 @@
 // Some stuff that got missed in the appendices ?
 
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
   RawTeX!(
     r###"
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
@@ -61,32 +61,32 @@ LoadDefinitions!(state, {
   DefMacro!("\\@gobble{}", None);
   DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
-  DefMacro!("\\@firstofone{}",       sub[gullet, (first), state] { Ok(first) });
+  DefMacro!("\\@firstofone{}",       sub[(first)] { Ok(first) });
   Let!("\\@iden", "\\@firstofone");
-  DefMacro!("\\@firstoftwo{}{}",     sub[gullet, (first,_second), state] { Ok(first) });
-  DefMacro!("\\@secondoftwo{}{}",    sub[gullet, (_first, second), state] { Ok(second) });
-  DefMacro!("\\@thirdofthree{}{}{}", sub[gullet, (_first,_second, third), state] { Ok(third) });
-  DefMacro!("\\@expandtwoargs{}{}{}", sub[gullet, (first,second,third), state] {
+  DefMacro!("\\@firstoftwo{}{}",     sub[(first,_second)] { Ok(first) });
+  DefMacro!("\\@secondoftwo{}{}",    sub[(_first, second)] { Ok(second) });
+  DefMacro!("\\@thirdofthree{}{}{}", sub[(_first,_second, third)] { Ok(third) });
+  DefMacro!("\\@expandtwoargs{}{}{}", sub[(first,second,third)] {
     let mut tks = first.unlist();
     tks.push(T_BEGIN!());
-    tks.append(&mut Expand!(second, gullet).unlist());
+    tks.append(&mut Expand!(second).unlist());
     tks.push(T_END!());
     tks.push(T_BEGIN!());
-    tks.append(&mut Expand!(third, gullet).unlist());
+    tks.append(&mut Expand!(third).unlist());
     tks.push(T_END!());
     tks });
 
-  DefMacro!("\\@makeother {}", sub[gullet,(arg),state] {
+  DefMacro!("\\@makeother {}", sub[(arg)] {
     let arg_str = arg.to_string();
     let mut arg_chars = arg_str.chars();
     let arg_c = match arg_chars.next() {
       Some('\\') => arg_chars.next().unwrap(),
       Some(other) => other,
       None => {
-        Warn!("expected","character",gullet ,"\\@makeother called on empty argument?");
+        Warn!("expected","character","\\@makeother called on empty argument?");
         return Ok(Tokens!());
       }};
-    state.assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
+    assign_catcode(arg_c, Catcode::OTHER, Some(Scope::Local));
   });
 
   RawTeX!(
@@ -142,16 +142,16 @@ LoadDefinitions!(state, {
   );
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
 
-  DefPrimitive!("\\@onlypreamble{}", sub[stomach,(arg),state] {
-    only_preamble("\\@onlypreamble", stomach, state)?; }); // Don't bother enforcing this.
-  DefPrimitive!("\\GenericError{}{}{}{}", sub[stomach,(arg1,arg2,arg3,arg4),state] {
-    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error", stomach, state)?;
+  DefPrimitive!("\\@onlypreamble{}", sub[(arg)] {
+    only_preamble("\\@onlypreamble")?; }); // Don't bother enforcing this.
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(arg1,arg2,arg3,arg4)] {
+    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
   });
-  DefPrimitive!("\\GenericWarning{}{}", sub[stomach,(arg1,arg2),state] {
-    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn", stomach, state)?;
+  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
   });
-  DefPrimitive!("\\GenericInfo{}{}", sub[stomach,(arg1,arg2),state] {
-    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info", stomach, state)?;
+  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
   });
 
   Let!("\\MessageBreak", "\\relax");

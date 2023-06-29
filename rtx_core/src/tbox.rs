@@ -13,7 +13,7 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
-use crate::state::State;
+use crate::state::{lookup_bool,lookup_font, with_value};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested};
@@ -59,13 +59,13 @@ impl fmt::Display for Tbox {
 }
 impl Object for Tbox {
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
-  fn revert(&self, _state: &State) -> Result<Tokens> { Ok(self.tokens.clone()) }
+  fn revert(&self) -> Result<Tokens> { Ok(self.tokens.clone()) }
   fn stringify(&self) -> String { format!("{self:?}") }
 }
 impl Tbox {
   /// creates a new Tbox.
   /// If `font_opt` or `locator_opt` are None, they are obtained from the
-  /// currently active State.  Note that `text` can
+  /// currently active state? Note that `text` can
   /// be empty, which contributes nothing to the generated document,
   /// but does record the TeX code (in the tokens).
   pub fn new(
@@ -74,13 +74,12 @@ impl Tbox {
     locator_opt: Option<Locator>,
     tokens_opt: Tokens,
     mut properties: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Self {
     let font = match font_opt {
       Some(f) => f,
-      None => state.lookup_font().unwrap(),
+      None => lookup_font().unwrap(),
     };
-    // let locator = $STATE->getStomach->getGullet->getLocator unless defined $locator;
+    // let locator = $state->getStomach->getGullet->getLocator unless defined $locator;
     let _locator = locator_opt;
     let empty_sym = *EMPTY_SYM;
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
@@ -108,18 +107,18 @@ impl Tbox {
         .entry("depth".to_string())
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
-    if state.lookup_bool("IN_MATH") {
+    if lookup_bool("IN_MATH") {
       properties.insert(s!("mode"), "math".into());
       if text != empty_sym {
-        if let Some(Stored::HashString(attr)) = state.lookup_value(&arena::with(text, |text_str| {
-          s!("math_token_attributes_{}", text_str)
-        })) {
+        with_value(&arena::with(text, |text_str| {
+          s!("math_token_attributes_{}", text_str) }), |value_opt|
+        if let Some(Stored::HashString(attr)) = value_opt {
           for (key, value) in attr.iter() {
             properties
               .entry(key.to_string())
               .or_insert_with(|| Stored::String(arena::pin(value)));
           }
-        }
+        });
       }
       let font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
       Tbox {
@@ -179,13 +178,13 @@ impl BoxOps for Tbox {
     caller(&self.properties)
   }
   fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { &mut self.properties }
-  fn get_string(&self, _state: &State) -> Result<Cow<'_, str>> {
+  fn get_string(&self) -> Result<Cow<'_, str>> {
     // TODO: Should we switch these to symbols? are they used often?
     Ok(Cow::Owned(arena::with(self.text, |text| text.to_string())))
   }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
-    let text = self.get_string(state)?;
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
+    let text = self.get_string()?;
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(Stored::String(s)) => *s,
@@ -197,11 +196,10 @@ impl BoxOps for Tbox {
         Ok(vec![document.insert_math_token(
           &text,
           Stored::cast_to_string_hash(&self.properties),
-          Some(font),
-          state,
+          Some(font)
         )?])
       } else {
-        match document.open_text(&text, font, state)? {
+        match document.open_text(&text, font)? {
           None => Ok(Vec::new()),
           Some(node) => Ok(vec![node]),
         }
@@ -211,18 +209,17 @@ impl BoxOps for Tbox {
     }
   }
 
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<Font>>> {
     Ok(Some(Cow::Borrowed(&self.font)))
   }
 
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     if let Some(body_stored) = self.get_property("body") {
       if let Stored::Digested(ref body) = *body_stored {
-        body.compute_size(options, state)
+        body.compute_size(options)
       } else {
         panic!("the stored 'body' property should always be a Stored::Digested enum case.");
       }
@@ -230,7 +227,7 @@ impl BoxOps for Tbox {
       Ok(
         self
           .font
-          .compute_string_size(&self.get_string(state)?, options, state),
+          .compute_string_size(&self.get_string()?, options),
       )
     }
   }

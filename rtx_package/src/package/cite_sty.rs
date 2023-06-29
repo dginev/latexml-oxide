@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!({
   // Ignore the resorting of citations
   // "Compression" of citation lists doesn't make much sense in XML.
 
@@ -18,9 +18,8 @@ LoadDefinitions!(outer_stomach, state, {
   DefMacro!("\\citeform{}", "#1");
 
   // Copy of natbib's \citet
-  DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim",
-    sub[gullet, (_star,_pre,_post,_tkeys), _state] {
-    unimplemented!();
+  // DefMacro!("\\citen OptionalMatch:* [][] Semiverbatim",
+  //   sub[(_star,_pre,_post,_tkeys)] {
       // my ($style, $open, $close, $ns)
       //   = map { LookupValue($_) } qw(CITE_STYLE CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
       // if (!$post) { ($pre, $post) = (undef, $pre); }
@@ -57,8 +56,7 @@ LoadDefinitions!(outer_stomach, state, {
       //         Tokens($open, ($pre ? ($pre, T_SPACE) : ()))),
       //       Invocation(T_CS('\@@citephrase'),
       //         Tokens(($post ? ($ns, T_SPACE, $post) : ()), $close)))); }
-      ()
-  });
+// });
 
   Let!("\\citenum", "\\citen");
   Let!("\\citeonline", "\\citen");

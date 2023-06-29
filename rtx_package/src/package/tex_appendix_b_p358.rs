@@ -20,7 +20,7 @@ static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
 
 //======================================================================
 // TeX Book, Appendix B. p. 358
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //----------------------------------------------------------------------
   //  Actually from LaTeX; Table 3.3, Greek, p.41
   //----------------------------------------------------------------------
@@ -332,29 +332,29 @@ LoadDefinitions!(state, {
   DefRewrite!(select =>
     "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
   select_count => 2,
-  replace =>  sub[document, nodes, state] {
+  replace =>  sub[document, nodes] {
     // TODO: This argument low-level boilerplate is annoying
     // what is a good design pattern to "destructure" a Vec?
     // should it be another datastructure?
     let thing = nodes.pop().unwrap();
     let not_node = nodes.pop().unwrap();
-    let text = state.model.with_node_qname(thing, |thing_str| match thing_str {
+    let text = model::with_node_qname(thing, |thing_str| match thing_str {
       "ltx:XMTok" => { thing.get_content() },
       _ => String::new()
     });
     if text.len() != 1 { // Not simple char token.
       // Wrap with a cancel op
       document.open_element("ltx:XMApp",
-        Some(map!("_box" => not_node.to_hashable().to_string())), None, state)?;
+        Some(map!("_box" => not_node.to_hashable().to_string())), None)?;
       let mut strike = document.insert_math_token("",
         string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
-        "meaning" => "not", "_box" => not_node.to_hashable()), None, state)?;
+        "meaning" => "not", "_box" => not_node.to_hashable()), None)?;
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         not_node.remove_attribute("xml:id")?;
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
         document.get_node_mut().add_child(thing)?;
-        document.close_element("ltx:XMApp", state)?;
+        document.close_element("ltx:XMApp")?;
       }
     } else {
       // For simple tokens, we'll modify the relevant content & attributes
@@ -381,7 +381,7 @@ LoadDefinitions!(state, {
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");
-        for mut n in document.findnodes(&idref_xpath, None, state) {
+        for mut n in document.findnodes(&idref_xpath, None) {
           document.remove_node(&mut n);
         }
       }   // ? Hopefully this is safe.
@@ -396,12 +396,12 @@ LoadDefinitions!(state, {
 
   // \joinrel is \mathrel{\mkern-3\mu}
   // Ah, but the Effect is to join 2 "relations" into one!
-  DefPrimitive!("\\joinrel", sub[stomach,(),state] {
-    stomach.get_gullet_mut().skip_spaces(state)?;
-    if let Some(left) = stomach.box_list.pop() {
+  DefPrimitive!("\\joinrel", {
+    gullet::skip_spaces()?;
+    if let Some(_left) = pop_box_list() {
       let mut stuff = Vec::new();
-      while let Some(tok) = stomach.get_gullet_mut().read_x_token(Some(false),false,state)? {
-        stuff = stomach.invoke_token(&tok,state)?;
+      while let Some(tok) = gullet::read_x_token(Some(false),false)? {
+        stuff = stomach::invoke_token(&tok)?;
         if !stuff.is_empty() {
           break;
         }
@@ -409,10 +409,10 @@ LoadDefinitions!(state, {
       if stuff.is_empty() {
         return Ok(Vec::new()); // no-op ????
       }
-      let right = stuff.remove(0);
+      let _right = stuff.remove(0);
       unimplemented!(); // TODO:
       // stuff.push(
-      //   Whatsit::new(state.lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
+      //   Whatsit::new(lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
       //     // locator => $gullet->getLocator,
       //     font => right.get_font(), is_math => true));
       Ok(stuff)
@@ -422,13 +422,13 @@ LoadDefinitions!(state, {
     }
   });
 
-  DefConstructor!("\\@@joinrel{}{}", sub[document,args,state] {
+  DefConstructor!("\\@@joinrel{}{}", sub[document,args] {
     let left = args[0].as_ref().unwrap();
     let right = &args[1].as_ref().unwrap();
-    document.absorb(left,None,state)?;
-    document.absorb(right,None,state)?;
+    document.absorb(left,None)?;
+    document.absorb(right,None)?;
     // Now if last 2 items are XMTok, replace by a single token with joined content (& attr?)
-    let node  = document.get_node();
+    let _node  = document.get_node();
     unimplemented!(); // TODO:
     // let nodes = document.get_child_elements(node);
     // if nodes.len() >= 2 {

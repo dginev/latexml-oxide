@@ -7,7 +7,7 @@ use crate::package::*;
 // the type of letter, greek, symbol, etc.
 // Apparently, with the normal TeX setup, these fonts don't really merge,
 // rather they override all of family, series and shape.
-LoadDefinitions!(state, {
+LoadDefinitions!({
   DefConstructor!("\\mathrm{}", "#1", bounded => true, require_math => true,
     locked => true,
     font => {family => "serif", series => "medium", shape => "upright"});

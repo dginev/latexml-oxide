@@ -1,10 +1,10 @@
 //! t1 font encoding
 use crate::package::*;
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   DeclareFontMap!(
     "T1",
-    mixvec![
+    mixrc![
       '\u{0060}', '\u{00B4}', '\u{005E}', '\u{007E}', '\u{00A8}', '\u{02DD}', '\u{02DA}',
       '\u{02C7}', '\u{02D8}', '\u{00AF}', '\u{02D9}', '\u{00B8}', '\u{02DB}', '\u{201A}',
       '\u{2039}', '\u{203A}', '\u{201C}', '\u{201D}', '\u{201E}', '\u{00AB}', '\u{00BB}',

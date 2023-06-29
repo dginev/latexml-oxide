@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::borrow::Cow;
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -10,12 +10,10 @@ use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::{self, ANY_SYM};
 use crate::common::error::*;
-use crate::common::object::Object;
 use crate::common::relaxng::Relaxng;
 use crate::common::xml::XML_NS;
 use crate::document::Document;
 use crate::util::pathname;
-use crate::Locator;
 use libxml::tree::Node;
 
 use super::arena::{
@@ -61,9 +59,21 @@ pub struct Model {
   pub tagprop: HashMap<SymbolU32, TagFrame>,
 }
 
-impl Object for Model {
-  fn get_locator(&self) -> Option<Cow<Locator>> { None }
+#[thread_local]
+pub static MODEL : Lazy<RefCell<Model>> = Lazy::new(|| RefCell::new(Model::new()));
+
+macro_rules! model {
+  () => ((*MODEL).borrow())
 }
+macro_rules! model_mut {
+  () => ((*MODEL).borrow_mut())
+}
+
+pub fn initialize_model() {
+  let mut global_model = MODEL.borrow_mut();
+  *global_model = Model::new();
+}
+
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
@@ -72,106 +82,6 @@ impl Model {
     model.register_document_namespace("xml", Some(XML_NS));
     model
   }
-
-  pub fn set_doc_type(&mut self, roottag: &str, publicid: &str, systemid: &str) {
-    self.schema_data = Some(vec![
-      *DTD_SYM,
-      arena::pin(roottag),
-      arena::pin(publicid),
-      arena::pin(systemid),
-    ]);
-  }
-
-  pub fn set_relaxng_schema(&mut self, schema: &str) {
-    self.schema_data = Some(vec![*RELAXNG_SYM, arena::pin(schema)]);
-  }
-  pub fn add_schema_declaration(&self, document: &mut Document) {
-    if let Some(ref schema) = self.schema {
-      schema.add_schema_declaration(document);
-    }
-  }
-
-  pub fn load_schema(&mut self, search_paths: &[&str]) -> Result<&Option<Relaxng>> {
-    // Only load once
-    if self.schema.is_some() {
-      return Ok(&self.schema);
-    }
-    let mut name = String::new();
-    if self.schema_data.is_none() {
-      // TODO: Return this code path to normal once we properly load schemas
-      Warn!("expected", "<model>", None, "TODO");
-      // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
-      // // article ??? or what ? undef gives problems!
-
-      self.register_document_namespace("ltx", Some(LTX_NAMESPACE));
-      self.set_relaxng_schema("LaTeXML");
-      self.register_namespace("ltx", Some(LTX_NAMESPACE));
-      self.register_namespace("svg", Some("http://www.w3.org/2000/svg"));
-      self.register_namespace("xlink", Some("http://www.w3.org/1999/xlink")); // Needed for SVG
-      self.register_namespace("m", Some("http://www.w3.org/1998/Math/MathML"));
-      self.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml"));
-      self.permissive = true;
-    } // Actually, they could have declared all sorts of Tags....
-    let mut schema_type = *EMPTY_SYM;
-    match self.schema_data {
-      None => {},
-      Some(ref data) => {
-        schema_type = data[0];
-        if schema_type == *DTD_SYM {
-          // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
-          // ($roottag, $publicid, $systemid) = @data;
-          name = arena::with(*data.last().unwrap(), |data_str| {
-            data_str.replace(".dtd", "")
-          });
-          self.schema = Some(Relaxng {
-            name: "DTD".to_string(), // HACK, phase out DTD support!
-            ..Relaxng::default()
-          });
-          // $systemid);
-        } else if schema_type == *RELAXNG_SYM {
-          name = arena::to_string(data[1]);
-          self.schema = Some(Relaxng {
-            name: name.clone(),
-            ..Relaxng::default()
-          });
-        } else {
-          let message = arena::with(schema_type, |schema_type_str| {
-            s!("Can't load a schema of type {schema_type_str:?}")
-          });
-          Error!("unknown", "schematype", self, message)
-        }
-      },
-    };
-
-    if !self.no_compiled {
-      let paths: Option<Vec<String>> = if search_paths.is_empty() {
-        None
-      } else {
-        Some(search_paths.iter().map(ToString::to_string).collect())
-      };
-      let pathname_opt = pathname::find(
-        &name,
-        pathname::PathnameFindOptions {
-          paths,
-          extensions: Some(vec![s!("model")]),
-          installation_subdir: Some(arena::with(schema_type, |str| s!("resources/{str}"))),
-        },
-      );
-
-      match pathname_opt {
-        Some(compiled_path) => self.load_compiled_schema(&compiled_path),
-        None => self.schema.as_mut().unwrap().load_schema(),
-      };
-    }
-
-    if self.debug_mode {
-      self.describe_model()
-    }
-
-    Ok(&self.schema)
-  }
-  pub fn describe_model(&self) {}
-
   ///**********************************************************************
   /// Namespaces
   ///**********************************************************************
@@ -243,384 +153,9 @@ impl Model {
     };
   }
 
-  pub fn get_document_namespace_prefix(
-    &mut self,
-    namespace: &str,
-    forattribute: bool,
-    probe: bool,
-  ) -> Option<SymbolU32> {
-    // Get the prefix associated with the namespace url, noting that for elements, it might by
-    // "#default", but for attributes would never be.
-    // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
-    let mut docprefix = if !forattribute {
-      self
-        .document_namespace_prefixes
-        .get(&arena::pin(s!("DEFAULT#{namespace}")))
-        .copied()
-    } else {
-      None
-    };
-    let ns_sym = arena::pin(namespace);
-    if docprefix.is_none() {
-      docprefix = self.document_namespace_prefixes.get(&ns_sym).copied();
-    }
-
-    if docprefix.is_none() && !probe {
-      self.namespace_errors += 1;
-      let ns_err = s!("namespace{}", &self.namespace_errors.to_string());
-      docprefix = Some(arena::pin(&ns_err));
-      self.register_document_namespace(&ns_err, Some(namespace));
-      let message2 = if let Some(dp) = docprefix {
-        arena::with(dp, |dp_str| s!("Using '{dp_str}' instead"))
-      } else {
-        String::from("No prefix to fall back on.")
-      };
-      Warn!(
-        "malformed",
-        namespace,
-        self,
-        "No prefix has been registered for namespace (in document)",
-        message2
-      );
-    }
-    let default_sym = *H_DEFAULT_SYM;
-    docprefix.filter(|p| p != &default_sym)
+  pub fn set_relaxng_schema(&mut self, schema: &str) {
+    self.schema_data = Some(vec![*RELAXNG_SYM, arena::pin(schema)]);
   }
-
-  pub fn get_document_namespace(&mut self, docprefix: &str, probe: bool) -> Option<String> {
-    let h_default_sym = *H_DEFAULT_SYM;
-    let docprefix_sym = if docprefix.is_empty() {
-      h_default_sym
-    } else {
-      arena::pin(docprefix)
-    };
-    let ns_str = match self.document_namespaces.get(&docprefix_sym) {
-      None => String::new(),
-      Some(sym) => arena::with(*sym, |s| {
-        if s.starts_with("DEFAULT#") {
-          s.replacen("DEFAULT#", "", 1)
-        } else {
-          s.to_string()
-        }
-      }),
-    };
-
-    if docprefix_sym != h_default_sym && ns_str.is_empty() && !probe {
-      self.namespace_errors += 1;
-      let ns_error = s!(
-        "http://example.com/namespace{}",
-        &self.namespace_errors.to_string()
-      );
-      self.register_document_namespace(docprefix, Some(&ns_error));
-      let msg1 = arena::with(docprefix_sym, |dp_str| {
-        s!("No namespace has been registered for prefix '{dp_str}' (in document)")
-      });
-      let msg2 = s!("Using '{ns_str}' instead");
-      let err = || {Error!("malformed", docprefix, self, msg1, msg2); Ok(()) };
-      err().ok();
-    }
-    if ns_str.is_empty() {
-      None
-    } else {
-      Some(ns_str)
-    }
-  }
-
-  /// In the following:
-  /// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
-  /// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
-  /// if missing. Get the (code) prefix associated with $namespace,
-  /// creating a dummy prefix and signalling an error if none has been registered.
-  pub fn get_namespace_prefix(
-    &mut self,
-    namespace: &str,
-    _forattribute: bool,
-    probe: bool,
-  ) -> Option<SymbolU32> {
-    let mut codeprefix: Option<SymbolU32> = None;
-    let ns_sym = arena::pin(namespace);
-    if !namespace.is_empty() {
-      codeprefix = self.code_namespace_prefixes.get(&ns_sym).copied();
-
-      if codeprefix.is_some() && !probe {
-        {
-          let docprefix = self.document_namespace_prefixes.get(&ns_sym);
-          // if there's a doc prefix and it's NOT already used in code namespace mapping
-          if docprefix.is_some() && !self.code_namespaces.contains_key(docprefix.unwrap()) {
-            codeprefix = docprefix.copied();
-          }
-        }
-      } else {
-        // Else synthesize one
-        self.namespace_errors += 1;
-        let auto_prefix = arena::pin(s!("namespace{}", &self.namespace_errors.to_string()));
-        codeprefix = Some(auto_prefix);
-      }
-      self.register_namespace_sym(codeprefix.unwrap(), Some(arena::pin(namespace)));
-      // Warn!('malformed', $namespace, undef,
-      //   "No prefix has been registered for namespace '$namespace' (in code)",
-      //   "Using '$codeprefix' instead"); }
-    }
-
-    codeprefix
-  }
-
-  pub fn get_namespace(&mut self, codeprefix: &str, probe: bool) -> Result<Option<SymbolU32>> {
-    let mut ns: Option<SymbolU32> = self.code_namespaces.get(&arena::pin(codeprefix)).copied();
-    if ns.is_none() && !probe {
-      self.namespace_errors += 1;
-      let example_namespace = s!(
-        "http://example.com/namespace{}",
-        &self.namespace_errors.to_string()
-      );
-      ns = Some(arena::pin(&example_namespace));
-      self.register_namespace(codeprefix, Some(&example_namespace));
-      Error!(
-        "malformed",
-        codeprefix,
-        self,
-        s!("No namespace has been registered for prefix '{codeprefix}' (in code)"),
-        s!("Using '{example_namespace}' instead")
-      );
-    }
-    Ok(ns)
-  }
-
-  /// Get the node's qualified name in standard form
-  /// Ie. using the registered (code) prefix for that namespace.
-  /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
-  pub fn get_node_qname<'a>(&'a self, node: &'a Node) -> SymbolU32 {
-    use libxml::tree::NodeType::*;
-    let node_type = node.get_type();
-    if node_type.is_none() {
-      return arena::pin_static("#BrokenNode");
-    }
-    match node_type.unwrap() {
-      TextNode => arena::pin_static("#PCDATA"),
-      DocumentNode => arena::pin_static("#Document"),
-      CommentNode => arena::pin_static("#Comment"),
-      PiNode => arena::pin_static("#ProcessingInstruction"),
-      DTDNode => arena::pin_static("#DTD"),
-      NamespaceDecl => {
-        // match node.declared_uri() {
-        //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
-        //     Some(prefix) => s!("xmlns:")+prefix,
-        //     None => s!("xmlns")
-        //   },
-        //   None => s!("xmlns")
-        // }
-        arena::pin_static("xmlns")
-      },
-      ElementNode | AttributeNode => {
-        // match node.namespace_uri() {
-        //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
-        //     Some(prefix) => prefx+":"+node.get_name(),
-        //     None => node.get_name()
-        //   },
-        //   None => node.get_name()
-        // }
-        // TODO: Mock for now, add namespace_uri capability to rust-libxml next
-        let name_str = node.get_name();
-        match name_str.as_str() {
-          "song" | "verse" | "line" => arena::pin(name_str),
-          regular => arena::pin(s!("ltx:{}", regular)),
-        }
-      },
-      // Need others?
-      t => {
-        panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
-      },
-    }
-  }
-
-  pub fn with_node_qname<R, FnR>(&self, node: &Node, caller: FnR) -> R
-  where FnR: FnOnce(&str) -> R {
-    arena::with(self.get_node_qname(node), |qname_str| caller(qname_str))
-  }
-
-  /// Same as get_node_qname, but using the Document namespace prefixes
-  pub fn get_node_document_qname(&mut self, node: &Node) -> SymbolU32 {
-    use libxml::tree::NodeType::*;
-    let node_type = node.get_type();
-    if node_type.is_none() {
-      return arena::pin_static("#BrokenNode");
-    }
-
-    match node_type.unwrap() {
-      TextNode => arena::pin_static("#PCDATA"),
-      DocumentNode => arena::pin_static("#Document"),
-      CommentNode => arena::pin_static("#Comment"),
-      PiNode => arena::pin_static("#ProcessingInstruction"),
-      DTDNode => arena::pin_static("#DTD"),
-
-      // TODO
-      // elsif ($type == XML_NAMESPACE_DECL) {
-      //   my $ns = $node->declaredURI;
-      //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
-      //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
-      NamespaceDecl => arena::pin_static("xmlns"),
-
-      ElementNode | AttributeNode => {
-        let empty_sym = *EMPTY_SYM;
-        let mut prefix = empty_sym;
-        if let Some(ns) = node.get_namespace() {
-          let href = ns.get_href();
-          if !href.is_empty() {
-            prefix = self
-              .get_document_namespace_prefix(&href, false, true)
-              .unwrap_or(empty_sym);
-          }
-        }
-        if prefix == empty_sym {
-          arena::pin(node.get_name())
-        } else {
-          arena::pin(arena::with(prefix, |prefix_str| {
-            s!("{}:{}", prefix_str, node.get_name())
-          }))
-        }
-      },
-      // Need others?
-      t => {
-        panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
-      },
-    }
-  }
-
-  /// Given a Qualified name, possibly prefixed with a namespace prefix,
-  /// as defined by the code namespace mapping,
-  /// return the NamespaceURI and localname.
-  pub fn decode_qname(&mut self, codetag: &str) -> Result<(Option<String>, String)> {
-    match PREFIXED_LOCALNAME_RE.captures(codetag) {
-      Some(captures) => {
-        let prefix = captures.get(1).map_or("", |m| m.as_str());
-        let localname = captures.get(2).map_or("", |m| m.as_str());
-
-        if prefix == "xml" {
-          Ok((None, codetag.to_string()))
-        } else {
-          Ok((
-            self.get_namespace(prefix, false)?.map(arena::to_string),
-            localname.to_string(),
-          ))
-        }
-      },
-      None => Ok((None, codetag.to_string())),
-    }
-  }
-
-  //**********************************************************************
-  // Document Structure Queries
-  //**********************************************************************
-  // NOTE: These are public, but perhaps should be passed
-  // to submodel, in case it can evolve to more precision?
-  // However, it would need more context to do that.
-
-  pub fn can_contain_sym(&mut self, tag: SymbolU32, child: SymbolU32) -> bool {
-    // Handle obvious cases explicitly.
-    if tag == *H_PCDATA_SYM
-      || tag == *H_COMMENT_SYM
-      || tag == *EMPTY_SYM
-    {
-      return false;
-    } else if tag == *WILD_CARD_SYM {
-      return true;
-    };
-    if arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
-      || arena::with(child, |child_str| CAPTURE_TAG_RE.is_match(child_str))
-    {
-      // with or without namespace prefix
-      return true;
-    }
-
-    if child == *WILD_CARD_SYM
-      || child == *H_COMMENT_SYM
-      || child == *H_PI_SYM
-      || child == *H_DTD_SYM
-    {
-      return true;
-    }
-
-    if self.permissive
-      && tag == *H_DOC_SYM
-      && child != *H_PCDATA_SYM
-    {
-      return true; // No DTD? Punt!
-    }
-
-    // Else query tag properties.
-    let model = &mut self
-      .tagprop
-      .entry(tag)
-      .or_insert_with(TagFrame::default)
-      .model;
-    model.contains(&ANY_SYM) || model.contains(&child)
-  }
-
-  /// Can an element with (qualified name) `tag` contain a `child` element?
-  pub fn can_contain(&self, tag: &str, child: &str) -> bool {
-    // Handle obvious cases explicitly.
-    match tag {
-      "#PCDATA" | "#Comment" | "" => return false,
-      "_WildCard_" => return true,
-      _ => {},
-    };
-    if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
-      // with or without namespace prefix
-      return true;
-    }
-
-    match child {
-      "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
-      _ => {},
-    };
-    if self.permissive && tag == "#Document" && child != "#PCDATA" {
-      return true; // No DTD? Punt!
-    }
-
-    // Else query tag properties.
-    let model = &self
-      .tagprop
-      .get(&arena::pin(tag))
-      .unwrap_or(&*DEFAULT_TAG_FRAME)
-      .model;
-    model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
-  }
-
-  pub fn can_have_attribute(&self, tag: SymbolU32, attrib: SymbolU32) -> bool {
-    // Handle obvious cases explicitly.
-    if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
-      "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => Some(false),
-      "_WildCard_" => Some(true),
-      other if CAPTURE_TAG_RE.is_match(other) => Some(true),
-      _ => None,
-    }) {
-      return early_choice;
-    };
-    if self.permissive {
-      return true;
-    }
-
-    // Else query tag properties.
-    let attributes = &self
-      .tagprop
-      .get(&tag)
-      .unwrap_or(&*DEFAULT_TAG_FRAME)
-      .attributes;
-    attributes.contains(&attrib)
-  }
-
-  pub fn is_node_in_schema_class(&self, class_name: &str, tag: &Node) -> bool {
-    let tag = self.get_node_qname(tag);
-    self.is_in_schema_class(&arena::pin(class_name), &tag)
-  }
-  pub fn is_in_schema_class(&self, class_name: &SymbolU32, tag: &SymbolU32) -> bool {
-    if let Some(class) = self.schema_class.get(class_name) {
-      class.contains(tag)
-    } else {
-      false
-    }
-  }
-
   /// TODO: This is another component that would fit perfectly as a compiler plugin.
   /// For now, simply reimplementing the runtime loading of
   /// LaTeXML.model as-is from Model.pm
@@ -654,21 +189,6 @@ impl Model {
 
     note_end(&s!("Loading compiled schema {path}\n"));
   }
-
-  //**********************************************************************
-  // Accessors
-  //**********************************************************************
-
-  pub fn get_tags(&self) -> Vec<&SymbolU32> { self.tagprop.keys().collect() }
-  pub fn get_sym_tags(&self) -> Vec<SymbolU32> { self.tagprop.keys().copied().collect() }
-
-  pub fn get_tag_contents(&self, tag: &SymbolU32) -> Vec<SymbolU32> {
-    match self.tagprop.get(tag) {
-      Some(h) => h.model.iter().copied().collect(),
-      None => Vec::new(),
-    }
-  }
-
   pub fn add_tag_content(&mut self, tag: &str, elements: Vec<&str>) {
     let frame = self
       .tagprop
@@ -705,4 +225,577 @@ impl Model {
   pub fn set_schema_class(&mut self, classname: &str, content: HashSet<SymbolU32>) {
     self.schema_class.insert(arena::pin(classname), content);
   }
+  pub fn describe_model(&self) {}
+}
+
+pub fn set_doc_type(roottag: &str, publicid: &str, systemid: &str) {
+  model_mut!().schema_data = Some(vec![
+    *DTD_SYM,
+    arena::pin(roottag),
+    arena::pin(publicid),
+    arena::pin(systemid),
+  ]);
+}
+
+pub fn set_relaxng_schema(schema: &str) {
+  model_mut!().set_relaxng_schema(schema)
+}
+pub fn add_schema_declaration(document: &mut Document) {
+  if let Some(ref schema) = model!().schema {
+    schema.add_schema_declaration(document);
+  }
+}
+
+pub fn load_schema(search_paths: &[&str]) -> Result<()> {
+  // Only load once
+  let mut model = model_mut!();
+  if model.schema.is_some() {
+    return Ok(());
+  }
+  let mut name = String::new();
+  if model.schema_data.is_none() {
+    // TODO: Return this code path to normal once we properly load schemas
+    Warn!("expected", "<model>", "TODO");
+    // Warn('expected', '<model>', undef, "No Schema Model has been declared; assuming LaTeXML");
+    // // article ??? or what ? undef gives problems!
+
+    model.register_document_namespace("ltx", Some(LTX_NAMESPACE));
+    model.set_relaxng_schema("LaTeXML");
+    model.register_namespace("ltx", Some(LTX_NAMESPACE));
+    model.register_namespace("svg", Some("http://www.w3.org/2000/svg"));
+    model.register_namespace("xlink", Some("http://www.w3.org/1999/xlink")); // Needed for SVG
+    model.register_namespace("m", Some("http://www.w3.org/1998/Math/MathML"));
+    model.register_namespace("xhtml", Some("http://www.w3.org/1999/xhtml"));
+    model.permissive = true;
+  } // Actually, they could have declared all sorts of Tags....
+  let mut schema_type = *EMPTY_SYM;
+  match model.schema_data {
+    None => {},
+    Some(ref data) => {
+      schema_type = data[0];
+      if schema_type == *DTD_SYM {
+        // NOTE: This is a hack, as DTD should be deprecated, just making xii test work for now
+        // ($roottag, $publicid, $systemid) = @data;
+        name = arena::with(*data.last().unwrap(), |data_str| {
+          data_str.replace(".dtd", "")
+        });
+        model.schema = Some(Relaxng {
+          name: "DTD".to_string(), // HACK, phase out DTD support!
+          ..Relaxng::default()
+        });
+        // $systemid);
+      } else if schema_type == *RELAXNG_SYM {
+        name = arena::to_string(data[1]);
+        model.schema = Some(Relaxng {
+          name: name.clone(),
+          ..Relaxng::default()
+        });
+      } else {
+        let message = arena::with(schema_type, |schema_type_str| {
+          s!("Can't load a schema of type {schema_type_str:?}")
+        });
+        Error!("unknown", "schematype", message)
+      }
+    },
+  };
+
+  if !model.no_compiled {
+    let paths: Option<Vec<String>> = if search_paths.is_empty() {
+      None
+    } else {
+      Some(search_paths.iter().map(ToString::to_string).collect())
+    };
+    let pathname_opt = pathname::find(
+      &name,
+      pathname::PathnameFindOptions {
+        paths,
+        extensions: Some(vec![s!("model")]),
+        installation_subdir: Some(arena::with(schema_type, |str| s!("resources/{str}"))),
+      },
+    );
+
+    match pathname_opt {
+      Some(compiled_path) => model.load_compiled_schema(&compiled_path),
+      None => model.schema.as_mut().unwrap().load_schema(),
+    };
+  }
+
+  if model.debug_mode {
+    model.describe_model()
+  }
+
+  Ok(())
+}
+
+pub fn get_document_namespace_prefix(
+  namespace: &str,
+  forattribute: bool,
+  probe: bool,
+) -> Option<SymbolU32> {
+  // Get the prefix associated with the namespace url, noting that for elements, it might by
+  // "#default", but for attributes would never be.
+  // log!("Searching for {:?} in {:?}", namespace, self.document_namespace_prefixes);
+  let mut docprefix = if !forattribute {
+    model!()
+      .document_namespace_prefixes
+      .get(&arena::pin(s!("DEFAULT#{namespace}")))
+      .copied()
+  } else {
+    None
+  };
+  let ns_sym = arena::pin(namespace);
+  if docprefix.is_none() {
+    docprefix = model!().document_namespace_prefixes.get(&ns_sym).copied();
+  }
+
+  if docprefix.is_none() && !probe {
+    { model_mut!().namespace_errors += 1; }
+    let ns_err = s!("namespace{}", &model!().namespace_errors.to_string());
+    docprefix = Some(arena::pin(&ns_err));
+    { model_mut!().register_document_namespace(&ns_err, Some(namespace)); }
+    let message2 = if let Some(dp) = docprefix {
+      arena::with(dp, |dp_str| s!("Using '{dp_str}' instead"))
+    } else {
+      String::from("No prefix to fall back on.")
+    };
+    Warn!(
+      "malformed",
+      namespace,
+      "No prefix has been registered for namespace (in document)",
+      message2
+    );
+  }
+  let default_sym = *H_DEFAULT_SYM;
+  docprefix.filter(|p| p != &default_sym)
+}
+
+pub fn get_document_namespace(docprefix: &str, probe: bool) -> Option<String> {
+  let h_default_sym = *H_DEFAULT_SYM;
+  let docprefix_sym = if docprefix.is_empty() {
+    h_default_sym
+  } else {
+    arena::pin(docprefix)
+  };
+  let ns_str = match model!().document_namespaces.get(&docprefix_sym) {
+    None => String::new(),
+    Some(sym) => arena::with(*sym, |s| {
+      if s.starts_with("DEFAULT#") {
+        s.replacen("DEFAULT#", "", 1)
+      } else {
+        s.to_string()
+      }
+    }),
+  };
+
+  if docprefix_sym != h_default_sym && ns_str.is_empty() && !probe {
+    { model_mut!().namespace_errors += 1; }
+    let ns_error = s!(
+      "http://example.com/namespace{}",
+      &model!().namespace_errors.to_string()
+    );
+    { model_mut!().register_document_namespace(docprefix, Some(&ns_error)); }
+    let msg1 = arena::with(docprefix_sym, |dp_str| {
+      s!("No namespace has been registered for prefix '{dp_str}' (in document)")
+    });
+    let msg2 = s!("Using '{ns_str}' instead");
+    let err = || {Error!("malformed", docprefix, msg1, msg2); Ok(()) };
+    err().ok();
+  }
+  if ns_str.is_empty() {
+    None
+  } else {
+    Some(ns_str)
+  }
+}
+
+/// In the following:
+/// $forattribute is 1 if the namespace is for an attribute (in which case, there must be a
+/// non-empty prefix) $probe, if non 0, just test for namespace, without creating an entry
+/// if missing. Get the (code) prefix associated with $namespace,
+/// creating a dummy prefix and signalling an error if none has been registered.
+pub fn get_namespace_prefix(
+  namespace: &str,
+  _forattribute: bool,
+  probe: bool,
+) -> Option<SymbolU32> {
+  let mut codeprefix: Option<SymbolU32> = None;
+  let ns_sym = arena::pin(namespace);
+  let mut model = model_mut!();
+  if !namespace.is_empty() {
+    codeprefix = model.code_namespace_prefixes.get(&ns_sym).copied();
+
+    if codeprefix.is_some() && !probe {
+      {
+        let docprefix = model.document_namespace_prefixes.get(&ns_sym);
+        // if there's a doc prefix and it's NOT already used in code namespace mapping
+        if docprefix.is_some() && !model.code_namespaces.contains_key(docprefix.unwrap()) {
+          codeprefix = docprefix.copied();
+        }
+      }
+    } else {
+      // Else synthesize one
+      model.namespace_errors += 1;
+      let auto_prefix = arena::pin(s!("namespace{}", &model.namespace_errors.to_string()));
+      codeprefix = Some(auto_prefix);
+    }
+    model.register_namespace_sym(codeprefix.unwrap(), Some(arena::pin(namespace)));
+    // Warn!('malformed', $namespace, undef,
+    //   "No prefix has been registered for namespace '$namespace' (in code)",
+    //   "Using '$codeprefix' instead"); }
+  }
+
+  codeprefix
+}
+
+pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymbolU32>> {
+  let mut model = model_mut!();
+  let mut ns: Option<SymbolU32> = model.code_namespaces.get(&arena::pin(codeprefix)).copied();
+  if ns.is_none() && !probe {
+    model.namespace_errors += 1;
+    let example_namespace = s!(
+      "http://example.com/namespace{}",
+      &model.namespace_errors.to_string()
+    );
+    ns = Some(arena::pin(&example_namespace));
+    model.register_namespace(codeprefix, Some(&example_namespace));
+    Error!(
+      "malformed",
+      codeprefix,
+      s!("No namespace has been registered for prefix '{codeprefix}' (in code)"),
+      s!("Using '{example_namespace}' instead")
+    );
+  }
+  Ok(ns)
+}
+
+/// Get the node's qualified name in standard form
+/// Ie. using the registered (code) prefix for that namespace.
+/// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
+pub fn get_node_qname(node: &Node) -> SymbolU32 {
+  use libxml::tree::NodeType::*;
+  let node_type = node.get_type();
+  if node_type.is_none() {
+    return arena::pin_static("#BrokenNode");
+  }
+  match node_type.unwrap() {
+    TextNode => arena::pin_static("#PCDATA"),
+    DocumentNode => arena::pin_static("#Document"),
+    CommentNode => arena::pin_static("#Comment"),
+    PiNode => arena::pin_static("#ProcessingInstruction"),
+    DTDNode => arena::pin_static("#DTD"),
+    NamespaceDecl => {
+      // match node.declared_uri() {
+      //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
+      //     Some(prefix) => s!("xmlns:")+prefix,
+      //     None => s!("xmlns")
+      //   },
+      //   None => s!("xmlns")
+      // }
+      arena::pin_static("xmlns")
+    },
+    ElementNode | AttributeNode => {
+      // match node.namespace_uri() {
+      //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
+      //     Some(prefix) => prefx+":"+node.get_name(),
+      //     None => node.get_name()
+      //   },
+      //   None => node.get_name()
+      // }
+      // TODO: Mock for now, add namespace_uri capability to rust-libxml next
+      let name_str = node.get_name();
+      match name_str.as_str() {
+        "song" | "verse" | "line" => arena::pin(name_str),
+        regular => arena::pin(s!("ltx:{}", regular)),
+      }
+    },
+    // Need others?
+    t => {
+      panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+    },
+  }
+}
+
+pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
+where FnR: FnOnce(&str) -> R {
+  let qsym = get_node_qname(node);
+  arena::with(qsym, |qname_str| caller(qname_str))
+}
+
+/// Same as get_node_qname, but using the Document namespace prefixes
+pub fn get_node_document_qname(node: &Node) -> SymbolU32 {
+  use libxml::tree::NodeType::*;
+  let node_type = node.get_type();
+  if node_type.is_none() {
+    return arena::pin_static("#BrokenNode");
+  }
+
+  match node_type.unwrap() {
+    TextNode => arena::pin_static("#PCDATA"),
+    DocumentNode => arena::pin_static("#Document"),
+    CommentNode => arena::pin_static("#Comment"),
+    PiNode => arena::pin_static("#ProcessingInstruction"),
+    DTDNode => arena::pin_static("#DTD"),
+
+    // TODO
+    // elsif ($type == XML_NAMESPACE_DECL) {
+    //   my $ns = $node->declaredURI;
+    //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
+    //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
+    NamespaceDecl => arena::pin_static("xmlns"),
+
+    ElementNode | AttributeNode => {
+      let empty_sym = *EMPTY_SYM;
+      let mut prefix = empty_sym;
+      if let Some(ns) = node.get_namespace() {
+        let href = ns.get_href();
+        if !href.is_empty() {
+          prefix = get_document_namespace_prefix(&href, false, true)
+            .unwrap_or(empty_sym);
+        }
+      }
+      if prefix == empty_sym {
+        arena::pin(node.get_name())
+      } else {
+        arena::pin(arena::with(prefix, |prefix_str| {
+          s!("{}:{}", prefix_str, node.get_name())
+        }))
+      }
+    },
+    // Need others?
+    t => {
+      panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+    },
+  }
+}
+
+/// Given a Qualified name, possibly prefixed with a namespace prefix,
+/// as defined by the code namespace mapping,
+/// return the NamespaceURI and localname.
+pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
+  match PREFIXED_LOCALNAME_RE.captures(codetag) {
+    Some(captures) => {
+      let prefix = captures.get(1).map_or("", |m| m.as_str());
+      let localname = captures.get(2).map_or("", |m| m.as_str());
+
+      if prefix == "xml" {
+        Ok((None, codetag.to_string()))
+      } else {
+        Ok((
+          get_namespace(prefix, false)?.map(arena::to_string),
+          localname.to_string(),
+        ))
+      }
+    },
+    None => Ok((None, codetag.to_string())),
+  }
+}
+
+//**********************************************************************
+// Document Structure Queries
+//**********************************************************************
+// NOTE: These are public, but perhaps should be passed
+// to submodel, in case it can evolve to more precision?
+// However, it would need more context to do that.
+
+pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
+  // Handle obvious cases explicitly.
+  if tag == *H_PCDATA_SYM
+    || tag == *H_COMMENT_SYM
+    || tag == *EMPTY_SYM
+  {
+    return false;
+  } else if tag == *WILD_CARD_SYM {
+    return true;
+  };
+  if arena::with(tag, |tag_str| CAPTURE_TAG_RE.is_match(tag_str))
+    || arena::with(child, |child_str| CAPTURE_TAG_RE.is_match(child_str))
+  {
+    // with or without namespace prefix
+    return true;
+  }
+
+  if child == *WILD_CARD_SYM
+    || child == *H_COMMENT_SYM
+    || child == *H_PI_SYM
+    || child == *H_DTD_SYM
+  {
+    return true;
+  }
+
+  let mut model = model_mut!();
+  if model.permissive
+    && tag == *H_DOC_SYM
+    && child != *H_PCDATA_SYM
+  {
+    return true; // No DTD? Punt!
+  }
+
+  // Else query tag properties.
+  let model_entry = &mut model
+    .tagprop
+    .entry(tag)
+    .or_insert_with(TagFrame::default)
+    .model;
+  model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
+}
+
+/// Can an element with (qualified name) `tag` contain a `child` element?
+pub fn can_contain(tag: &str, child: &str) -> bool {
+  // Handle obvious cases explicitly.
+  match tag {
+    "#PCDATA" | "#Comment" | "" => return false,
+    "_WildCard_" => return true,
+    _ => {},
+  };
+  if CAPTURE_TAG_RE.is_match(tag) || CAPTURE_TAG_RE.is_match(child) {
+    // with or without namespace prefix
+    return true;
+  }
+
+  match child {
+    "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
+    _ => {},
+  };
+  let model = model!();
+  if model.permissive && tag == "#Document" && child != "#PCDATA" {
+    return true; // No DTD? Punt!
+  }
+
+  // Else query tag properties.
+  let model = &model
+    .tagprop
+    .get(&arena::pin(tag))
+    .unwrap_or(&*DEFAULT_TAG_FRAME)
+    .model;
+  model.contains(&ANY_SYM) || model.contains(&arena::pin(child))
+}
+
+pub fn can_have_attribute(tag: SymbolU32, attrib: SymbolU32) -> bool {
+  // Handle obvious cases explicitly.
+  if let Some(early_choice) = arena::with(tag, |tag_str| match tag_str {
+    "#PCDATA" | "#Comment" | "#Document" | "#ProcessingInstruction" | "#DTD" => Some(false),
+    "_WildCard_" => Some(true),
+    other if CAPTURE_TAG_RE.is_match(other) => Some(true),
+    _ => None,
+  }) {
+    return early_choice;
+  };
+  let model = model!();
+  if model.permissive {
+    return true;
+  }
+
+  // Else query tag properties.
+  let attributes = &model
+    .tagprop
+    .get(&tag)
+    .unwrap_or(&*DEFAULT_TAG_FRAME)
+    .attributes;
+  attributes.contains(&attrib)
+}
+
+pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
+  let tag = get_node_qname(tag);
+  is_in_schema_class(&arena::pin(class_name), &tag)
+}
+pub fn is_in_schema_class(class_name: &SymbolU32, tag: &SymbolU32) -> bool {
+  if let Some(class) = model!().schema_class.get(class_name) {
+    class.contains(tag)
+  } else {
+    false
+  }
+}
+
+//**********************************************************************
+// Accessors
+//**********************************************************************
+
+pub fn get_tags() -> Vec<SymbolU32> { model!().tagprop.keys().copied().collect() }
+
+pub fn get_tag_contents(tag: &SymbolU32) -> Vec<SymbolU32> {
+  match model!().tagprop.get(tag) {
+    Some(h) => h.model.iter().copied().collect(),
+    None => Vec::new(),
+  }
+}
+pub fn set_model(new_model: Model) {
+  let mut model = model_mut!();
+  *model = new_model;
+}
+pub fn is_permissive() -> bool {
+  model!().permissive
+}
+
+pub fn with_schema_data<FnR,R>(caller: FnR) -> R
+where FnR: FnOnce(&Option<Vec<SymbolU32>>) -> R {
+  caller(&model!().schema_data)
+}
+pub fn set_schema(schema: Relaxng) {
+  let mut model = model_mut!();
+  model.schema = Some(schema);
+}
+pub fn set_schema_class(classname: &str, content: HashSet<SymbolU32>) {
+  model_mut!().set_schema_class(classname, content)
+}
+pub fn add_tag_content(tag: &str, elements: Vec<&str>) {
+  model_mut!().add_tag_content(tag, elements)
+}
+pub fn add_tag_attribute(tag: &str, attributes: Vec<&str>) {
+  model_mut!().add_tag_attribute(tag, attributes)
+}
+
+pub(crate) fn compute_indirect_model_aux(
+  tag: SymbolU32,
+  start_opt: Option<SymbolU32>,
+  desirability: usize,
+  openable: &mut HashSet<SymbolU32>,
+  desc: &mut HashMap<SymbolU32, HashMap<SymbolU32, usize>>,
+) {
+  let start = match start_opt {
+    Some(s) => s,
+    None => *EMPTY_SYM,
+  };
+
+  // A bit tricky here, we need to release the model_mut!() borrow immediately, which is why we
+  // move ownership of the tag strings into the tag_contents vector.
+  // That leads to a bunch of .clone()s later one, but stays close to the original algorithm
+  let tag_contents: Vec<SymbolU32> = get_tag_contents(&tag);
+
+  for kid in tag_contents {
+    if desc
+      .entry(kid)
+      .or_insert_with(HashMap::default)
+      .contains_key(&start)
+    {
+      continue;
+    } // Already solved
+
+    if start != *EMPTY_SYM {
+      desc
+        .entry(kid)
+        .or_insert_with(HashMap::default)
+        .insert(start, desirability);
+    }
+
+    if kid != *H_PCDATA_SYM && openable.contains(&kid) {
+      let inner = if start != *EMPTY_SYM {
+        start
+      } else {
+        kid
+      };
+
+      compute_indirect_model_aux(kid, Some(inner), desirability, openable, desc);
+    }
+  }
+}
+pub fn register_document_namespace(docprefix: &str, namespace_opt: Option<&str>) {
+  model_mut!().register_document_namespace(docprefix, namespace_opt)
+}
+pub fn register_namespace(codeprefix: &str, namespace_opt: Option<&str>) {
+  model_mut!().register_namespace(codeprefix,namespace_opt)
+}
+
+pub fn with_code_namespaces<FnR,R>(caller: FnR) -> R
+where FnR: FnOnce(&HashMap<SymbolU32, SymbolU32>) -> R {
+  caller(&model!().code_namespaces)
 }

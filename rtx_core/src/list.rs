@@ -10,7 +10,6 @@ use crate::common::locator::Locator;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::document::Document;
-use crate::state::State;
 
 use crate::tokens::Tokens;
 use crate::{BoxOps, Digested, TexMode};
@@ -64,10 +63,10 @@ impl Object for List {
   fn stringify(&self) -> String { format!("List[{self:?}]") }
   fn get_locator(&self) -> Option<Cow<Locator>> { Some(Cow::Borrowed(&self.locator)) }
 
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     let mut reverted = Vec::new();
     for tbox in self.boxes.iter() {
-      reverted.extend(tbox.revert(state)?.unlist());
+      reverted.extend(tbox.revert()?.unlist());
     }
     Ok(Tokens::new(reverted))
   }
@@ -87,29 +86,28 @@ impl BoxOps for List {
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self.properties.insert(key.to_string(), value.into());
   }
-  fn get_string(&self, _state: &State) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
+  fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
-  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
     unimplemented!()
   }
 
-  fn get_font(&self, _: &mut State) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<Font>>> {
     Ok(self.font.as_ref().map(Cow::Borrowed))
   }
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     Ok(match &self.font {
-      Some(f) => f.compute_boxes_size(&self.boxes, options, state)?,
-      _ => Font::text_default().compute_boxes_size(&self.boxes, options, state)?,
+      Some(f) => f.compute_boxes_size(&self.boxes, options)?,
+      _ => Font::text_default().compute_boxes_size(&self.boxes, options)?,
     })
   }
 }
 
 impl List {
-  pub fn new(boxes: Vec<Digested>, state: &mut State) -> Self {
+  pub fn new(boxes: Vec<Digested>) -> Self {
     // while (defined($bx = shift(@bxs)) && (!defined $locator)) {
     //   $locator = $bx->getLocator unless defined $locator; }
     // TODO: Should the locators be an Option<> type? Or can we test for the default here, since
@@ -129,7 +127,7 @@ impl List {
     let mut font: Option<Font> = None;
     for bx in boxes.iter().rev() {
       if let Some(bx_font) = bx
-        .get_font(state)
+        .get_font()
         .expect("getting a font should go well during List construction")
       {
         font = Some(bx_font.into_owned());

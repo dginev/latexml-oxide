@@ -1,5 +1,5 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   InputDefinitions!("textcase", extension => Some("sty".into()), noltxml => true);
 });

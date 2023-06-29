@@ -4,21 +4,23 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::path::Path;
+use std::rc::Rc;
 
+use crate::util::pathname::{self, PathnameFindOptions};
 use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font::{Font, Fontmap};
-use crate::common::object::Object;
+use crate::common::model;
 use crate::document::resource::*;
 use crate::document::tag::{TagOptionName, TagOptions};
-use crate::gullet::Gullet;
 use crate::mouth::{Mouth, MouthOptions};
+use crate::gullet::do_expand;
 use crate::parameter::{Parameter, Parameters};
-use crate::state::{Scope, State, Stored};
-use crate::stomach::Stomach;
+use crate::tokens::Tokens;
+use crate::state::*;
 use crate::token::*;
-use crate::util::pathname::{self, PathnameFindOptions};
-use crate::*;
+use crate::gullet;
+use crate::stomach::*;
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
 
@@ -69,24 +71,20 @@ impl Default for InputDefinitionOptions {
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(
   raw_file: &str,
-  mut options: InputDefinitionOptions,
-  stomach: &mut Stomach,
-  state: &mut State,
+  mut options: InputDefinitionOptions
 ) -> Result<()> {
   let name = raw_file.trim();
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   let prevname =
-    if options.handleoptions && state.lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      let gullet = stomach.get_gullet_mut();
-      gullet.do_expand(T_CS!("\\@currname"), state)?.to_string()
+    if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+      gullet::do_expand(T_CS!("\\@currname"))?.to_string()
     } else {
       String::new()
     };
-  let prevext = if options.handleoptions && state.lookup_definition(&T_CS!("\\@currext"))?.is_some()
+  let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some()
   {
-    let gullet = stomach.get_gullet_mut();
-    gullet.do_expand(T_CS!("\\@currext"), state)?.to_string()
+    gullet::do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
     String::new()
   };
@@ -94,17 +92,18 @@ pub fn input_definitions(
   // IF as_class is true
   // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
   if options.handleoptions && options.withoptions.is_some() {
-    if let Some(vdq) = state.lookup_vecdeque("@masquerading@as@class") {
-      if vdq.iter().any(|x| {
-        if let Stored::String(ref v) = x {
-          arena::with(*v, |str| str == prevname)
-        } else {
-          false
+    with_vecdeque("@masquerading@as@class", |vdq_opt| {
+      if let Some(vdq) = vdq_opt {
+        if vdq.iter().any(|x| {
+          if let Stored::String(ref v) = x {
+            arena::with(*v, |str| str == prevname)
+          } else {
+            false
+          }
+        }) {
+          options.as_class = true;
         }
-      }) {
-        options.as_class = true;
-      }
-    }
+      }});
   }
   if options.noltxml {
     options.raw = true; // so it will be read as raw by Gullet.
@@ -127,16 +126,16 @@ pub fn input_definitions(
   let current_options = options.options.join(",");
   if !current_options.is_empty() {
     if let Some(Stored::String(prevoptions)) =
-      state.lookup_value(&s!("{filename}_loaded_with_options"))
+      lookup_value(&s!("{filename}_loaded_with_options"))
     {
-      if arena::with(*prevoptions, |prev_str| current_options != prev_str) {
+      if arena::with(prevoptions, |prev_str| current_options != prev_str) {
         let message = s!(
           "Option clash for file {} with options {:?}, previously loaded with {:?}",
           filename,
           current_options,
           prevoptions
         );
-        Info!("unexpected", "options", stomach, message);
+        Info!("unexpected", "options", message);
       }
     }
   }
@@ -151,14 +150,12 @@ pub fn input_definitions(
     None,
     Tokens!(Explode!(name)),
     None,
-    state,
   )?;
   def_macro(
     T_CS!("\\@currext"),
     None,
     Tokens!(Explode!(as_type)),
     None,
-    state,
   )?;
 
   // TODO: Is this inaccurate with latexml? It only sets the macros if the file is found, we set
@@ -171,21 +168,17 @@ pub fn input_definitions(
       &prevname,
       &prevext,
       name,
-      &as_type,
-      stomach,
-      state,
-    )?;
+      &as_type)?;
     def_macro(
       T_CS!(s!("\\{}.{}-h@@k", name, as_type)),
       None,
       options.after,
       None,
-      state,
-    )?;
+      )?;
   }
 
   if !current_options.is_empty() {
-    state.assign_value(
+    assign_value(
       &s!("{}_loaded_with_options", filename),
       current_options,
       Some(Scope::Global),
@@ -193,13 +186,13 @@ pub fn input_definitions(
   }
 
   let is_binding = !options.noltxml
-    && (load_external_binding(&filename, stomach, state)?
-      || load_binding(&filename, stomach, state)?);
+    && (load_external_binding(&filename)?
+      || load_binding(&filename)?);
   let mut is_found_raw = false;
   if is_binding {
     // We found and loaded a binding successfully, mark it as such.
     let loaded_flag = format!("{filename}_loaded");
-    state.assign_value(&loaded_flag, true, Some(Scope::Global));
+    assign_value(&loaded_flag, true, Some(Scope::Global));
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
     // available binding dispatcher, in both contributed and core binding names
@@ -216,22 +209,20 @@ pub fn input_definitions(
         ext_type: options.extension.as_ref().cloned(),
         search_paths_only: false,
       }),
-      state,
-    ) {
+      ) {
       is_found_raw = true;
-      load_tex_definitions(&filename, &file, stomach, state)?;
+      load_tex_definitions(&filename, &file)?;
     } else if !options.noerror {
       // TODO: Proper missing reports
       Warn!(
         "missing_file",
         name,
-        stomach,
         s!("Can't find file for {name}")
       );
-      // STATE.note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
+      // note_status(missing => $name . ($options{type} ? '.' . $options{type} : ''));
       // # We'll only warn about a missing file of definitions: it may be ignorable or never used.
       // # if there ARE problems, they'll likely produce their own errors!
-      // Warn('missing_file', $name, $STATE->getStomach->getGullet,
+      // Warn('missing_file', $name, $STATE>getStomach->getGullet,
       //   "Can't find "
       //     . ($options{notex} ? "binding for " : "")
       //     . (($options{type} && $definition_name{ $options{type} }) || 'definitions') . ' '
@@ -243,15 +234,14 @@ pub fn input_definitions(
 
   if (is_binding || is_found_raw) && options.handleoptions {
     // after_input_handle_options ?
-    stomach.digest(T_CS!(s!("\\{name}.{as_type}-h@@k")), state)?;
+    digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))?;
     if !prevname.is_empty() {
       def_macro(
         T_CS!("\\@currname"),
         None,
         Tokens!(Explode!(prevname)),
         None,
-        state,
-      )?;
+          )?;
     }
     if !prevext.is_empty() {
       def_macro(
@@ -259,47 +249,44 @@ pub fn input_definitions(
         None,
         Tokens!(Explode!(prevext)),
         None,
-        state,
-      )?;
+          )?;
     }
-    stomach.digest(T_CS!("\\@popfilename"), state)?;
-    reset_options(stomach.get_gullet_mut(), state)?; // And reset options afterwards, too.
+    digest(T_CS!("\\@popfilename"))?;
+    reset_options()?; // And reset options afterwards, too.
   }
   note_end(&s!("Loading {:?} definitions", filename));
   Ok(())
 }
 
 /// loads a binding from the main binding dispatcher, if available+found
-pub fn load_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  _load_binding(true, file, stomach, state)
+pub fn load_binding(file: &str) -> Result<bool> {
+  _load_binding(true, file)
 }
 /// loads a binding from an external binding dispatcher, if available+found
-pub fn load_external_binding(file: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
-  _load_binding(false, file, stomach, state)
+pub fn load_external_binding(file: &str) -> Result<bool> {
+  _load_binding(false, file)
 }
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(
   internal: bool,
   request: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<bool> {
+  ) -> Result<bool> {
   // avoid double-loads, but be binding-specific
   let loaded_key = s!("{request}_binding_loaded");
-  if state.lookup_bool(&loaded_key) {
+  if lookup_bool(&loaded_key) {
     return Ok(true);
   }
-  // TODO? || state.lookup_bool(&s!("{trequest}_loaded"))
-  //|| state.lookup_bool(&s!("{name}_loaded")) || state.lookup_bool(&s!("{ltxname}_loaded"));
+  // TODO? || lookup_bool(&s!("{trequest}_loaded"))
+  //|| lookup_bool(&s!("{name}_loaded")) || lookup_bool(&s!("{ltxname}_loaded"));
 
   let taken_dispatcher = if internal {
-    state.bindings_dispatch.as_ref().map(Rc::clone)
+    get_bindings_dispatch()
   } else {
-    state.extra_bindings_dispatch.as_ref().map(Rc::clone)
+    get_extra_bindings_dispatch()
   };
   match taken_dispatcher {
     Some(ref dispatcher) => {
-      let result_opt = dispatcher(request, stomach, state);
+      let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
@@ -307,9 +294,9 @@ fn _load_binding(
 
           // TODO: is this still true?
           // Note (only!) that the binding version of this was loaded; still could load raw tex!
-          state.assign_value(&loaded_key, true, Some(Scope::Global));
+          assign_value(&loaded_key, true, Some(Scope::Global));
           // if a binding load succeeded, mark the generic request as loaded.
-          state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+          assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
           match result {
             Ok(()) => Ok(true),
             Err(e) => Err(e),
@@ -329,20 +316,18 @@ fn before_input_handle_options(
   prevname: &str,
   prevext: &str,
   name: &str,
-  as_type: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
+  as_type: &str
 ) -> Result<()> {
   // Note: this is trying to emulate the LaTeX 2 (latex.ltx) use of \@pushfilename. For expl3, see
   // expl3.sty.ltxml
-  stomach.digest(T_CS!("\\@pushfilename"), state)?;
+  digest(T_CS!("\\@pushfilename"))?;
 
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
   if let Some(with_options_to_pass) = options.withoptions.take() {
-    if !prevname.is_empty() && state.has_value(&s!("opt@{}.{}", prevname, prevext)) {
+    if !prevname.is_empty() && has_value(&s!("opt@{}.{}", prevname, prevext)) {
       // Only pass those class options that are declared by the package!
-      if let Some(declared_options) = state.lookup_vecdeque("@declaredoptions") {
-        let mut topass = Vec::new();
+      let mut topass = Vec::new();
+      with_vecdeque("@declaredoptions",|vdq_opt| if let Some(declared_options) = vdq_opt {
         for op in with_options_to_pass.into_iter() {
           if declared_options.iter().any(|x| {
             if let Stored::String(val) = x {
@@ -354,9 +339,9 @@ fn before_input_handle_options(
             topass.push(op)
           }
         }
-        if !topass.is_empty() {
-          pass_options(name, as_type, topass, state)?;
-        }
+      });
+      if !topass.is_empty() {
+        pass_options(name, as_type, topass)?;
       }
     }
   }
@@ -365,44 +350,41 @@ fn before_input_handle_options(
     None,
     Tokens!(Explode!(name)),
     None,
-    state,
   )?;
   def_macro(
     T_CS!("\\@currext"),
     None,
     Tokens!(Explode!(as_type)),
     None,
-    state,
   )?;
   // reset options (Note reset & pass were in opposite order in LoadClass ????)
-  let gullet = stomach.get_gullet_mut();
-  reset_options(gullet, state)?;
-  pass_options(name, as_type, options.options.clone(), state)?;
+  reset_options()?;
+  pass_options(name, as_type, options.options.clone())?;
 
   // Note which packages are pretending to be classes.
   if options.as_class {
-    state.push_value("@masquerading@as@class", arena::pin(name))?;
+    push_value("@masquerading@as@class", arena::pin(name))?;
   }
-  let current_opt_val = match state.lookup_vecdeque(&s!("opt@{}.{}", name, as_type)) {
-    Some(vdq) => {
-      let mut pieces = String::new();
-      for x in vdq.iter() {
-        if let Stored::String(val) = x {
-          arena::with(*val, |str| pieces.push_str(str));
+  let current_opt_val = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq_opt|
+    match vdq_opt {
+      Some(vdq) => {
+        let mut pieces = String::new();
+        for x in vdq.iter() {
+          if let Stored::String(val) = x {
+            arena::with(*val, |str| pieces.push_str(str));
+          }
+          pieces.push(',');
         }
-        pieces.push(',');
-      }
-      pieces.pop();
-      pieces
-    },
-    None => String::new(),
-  };
+        pieces.pop();
+        pieces
+      },
+      None => String::new()
+    });
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
     Tokens!(Explode!(current_opt_val)),
     None,
-    state,
   )?;
   Ok(())
 }
@@ -429,17 +411,15 @@ pub struct InputOptions {
 pub fn input_content(
   request: &str,
   options: InputOptions,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
-  let filepath = find_file(request, None, state);
+  ) -> Result<()> {
+  let filepath = find_file(request, None);
   match filepath {
     // TODO: type => $options{type}, noltxml => 1
-    Some(path) => load_tex_content(&path, options, stomach, state),
+    Some(path) => load_tex_content(&path, options),
     None => fatal!(Package, MissingFile, request),
     /* TODO:
-     * Error("missing_file", request, state.get_stomach().get_gullet(),
-     * "Can't find TeX file "+request, maybeReportSearchPaths(state))) */
+     * Error("missing_file", request, state!().get_stomach().get_gullet(),
+     * "Can't find TeX file "+request, maybeReportSearchPaths())) */
   }
 }
 
@@ -453,9 +433,7 @@ pub fn input_content(
 pub fn input(
   request: &str,
   options: InputOptions,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
+  ) -> Result<()> {
   // unwrap if in quotes \input{"file name"}
   let mut clean_req = Cow::Borrowed(request);
   while request.starts_with('"') && request.ends_with('"') {
@@ -483,14 +461,11 @@ pub fn input(
   // }
   // // Next special case: If we were currently reading a "known" style or binding file,
   // // then this file, even if .tex, must also be definitions rather than content.!!(?)
-  if state.lookup_bool("INTERPRETING_DEFINITIONS") {
+  if lookup_bool("INTERPRETING_DEFINITIONS") {
     input_definitions(
       &clean_req,
-      InputDefinitionOptions::default(),
-      stomach,
-      state,
-    )
-  } else if let Some(path) = find_file(&clean_req, None, state) {
+      InputDefinitionOptions::default())
+  } else if let Some(path) = find_file(&clean_req, None) {
     // Found something plausible..
     // let ftype = if pathname_is_literaldata(path) { "tex" } else {
     //   pathname_type(path)
@@ -504,7 +479,7 @@ pub fn input(
     //   else if (ftype != "tex") && (pathname_is_raw(path)) {
     //     load_tex_definitions(request, path);
     //   } else {
-    load_tex_content(&path, options, stomach, state)
+    load_tex_content(&path, options)
   //   }
   } else {
     // Couldn't find anything?
@@ -512,11 +487,9 @@ pub fn input(
 
     // We presumably are trying to input Content; an error if we can't find it (contrast to
     // Definitions)
-    let gullet = stomach.get_gullet();
     Error!(
       "missing_file",
       request,
-      gullet,
       s!("Can't find TeX file {}", request)
     );
     //  maybeReportSearchPaths());
@@ -527,9 +500,7 @@ pub fn input(
 fn load_tex_definitions(
   request: &str,
   pathname: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
+  ) -> Result<()> {
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
     // let (dir, name, extension) = pathname::split(pathname);
@@ -539,27 +510,27 @@ fn load_tex_definitions(
     // since someone's presumably asking _explicitly_ for the raw TeX version.
     // It's probably even the ltxml version is asking for it!!
     // Of course, now it will be marked and wont get reloaded!
-    if state.lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
+    if lookup_bool(&s!("{request}_loaded")) && !pathname::is_reloadable(pathname) {
       return Ok(());
     }
-    state.assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{request}_loaded"), true, Some(Scope::Global));
   }
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
-  let was_interpreting = state.lookup_bool("INTERPRETING_DEFINITIONS");
+  let was_interpreting = lookup_bool("INTERPRETING_DEFINITIONS");
   // And that if we're interpreting this TeX file of definitions,
   // we probably should interpret any TeX files IT loads.
-  let was_including_styles = state.lookup_bool("INCLUDE_STYLES");
-  state.assign_value("INTERPRETING_DEFINITIONS", true, None);
+  let was_including_styles = lookup_bool("INCLUDE_STYLES");
+  assign_value("INTERPRETING_DEFINITIONS", true, None);
   // If we're reading in these definitions, probaly will accept included ones?
   // (but not forbid ltxml ?)
-  state.assign_value("INCLUDE_STYLES", true, None);
+  assign_value("INCLUDE_STYLES", true, None);
   // When set, this variable allows redefinitions of locked defns.
   // It is set in before/after methods to allow local rebinding of commands
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
-  state.unlocked = false;
-  let content_str = state.lookup_string(&s!("{pathname}_contents"));
+  set_locked_state();
+  let content_str = lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() {
     None
   } else {
@@ -573,53 +544,48 @@ fn load_tex_definitions(
       content,
       ..MouthOptions::default()
     },
-    state,
   )?;
 
-  stomach.reading_from_mouth(
+  gullet::reading_from_mouth(
     pathname_mouth,
-    state,
-    move |i_stomach, i_state| -> Result<()> {
+    move || -> Result<()> {
       while let Some(token) =
-        i_stomach.get_gullet_mut()
-          .read_x_token(Some(false), false, i_state)?
+        gullet::read_x_token(Some(false), false)?
       {
         if token != T_SPACE!() {
-          i_stomach.invoke_token(&token, i_state)?;
+          invoke_token(&token)?;
         }
       }
       Ok(())
     },
   )?;
 
-  state.assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
-  state.assign_value("INCLUDE_STYLES", was_including_styles, None);
+  assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
+  assign_value("INCLUDE_STYLES", was_including_styles, None);
   Ok(())
 }
 
 pub fn load_tex_content(
   path: &str,
   _options: InputOptions,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
+  ) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
   let _has_binding = if !pathname::is_literaldata(path) {
     let (_dir, base, _ext) = pathname::split(path);
-    load_external_binding(&base, stomach, state)? || load_binding(&base, stomach, state)?
+    load_external_binding(&base)? || load_binding(&base)?
   } else {
     false
   };
 
   // Open a mouth for that TeX content
-  let cached = state.lookup_string(&s!("{path}_contents"));
+  let cached = lookup_string(&s!("{path}_contents"));
   let cached_opt = if cached.is_empty() {
     None
   } else {
     Some(cached)
   };
-  stomach.get_gullet_mut().open_mouth(
+  gullet::open_mouth(
     Mouth::create(
       path,
       MouthOptions {
@@ -627,8 +593,7 @@ pub fn load_tex_content(
         content: cached_opt,
         ..MouthOptions::default()
       },
-      state,
-    )?,
+      )?,
     true,
   );
   Ok(())
@@ -636,33 +601,28 @@ pub fn load_tex_content(
 
 /// Pass the sequence of @options to the package $name (if $ext is 'sty'),
 /// or class $name (if $ext is 'cls').
-fn pass_options(name: &str, ext: &str, options: Vec<String>, state: &mut State) -> Result<()> {
-  state.push_value(&s!("opt@{}.{}", name, ext), options)
+fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
+  push_value(&s!("opt@{}.{}", name, ext), options)
 }
 
-pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn process_options() -> Result<()> {
   let currname_token = T_CS!("\\@currname");
   let currext_token = T_CS!("\\@currext");
-  let gullet = stomach.get_gullet_mut();
-  let name = if state.lookup_definition(&currname_token)?.is_some() {
-    do_expand(currname_token, gullet, state)?.to_string()
+  let name = if lookup_definition(&currname_token)?.is_some() {
+    do_expand(currname_token)?.to_string()
   } else {
     String::new()
   };
-  let ext = if state.lookup_definition(&currext_token)?.is_some() {
-    do_expand(currext_token, gullet, state)?.to_string()
+  let ext = if lookup_definition(&currext_token)?.is_some() {
+    do_expand(currext_token)?.to_string()
   } else {
     String::new()
   };
-  let empty_vdq = VecDeque::new(); // convenience for unwrapping empty
-
-  let declared_options: VecDeque<Stored> = state
-    .lookup_vecdeque("@declaredoptions")
-    .unwrap_or(&empty_vdq)
-    .clone();
+  let declared_options: VecDeque<Stored> = lookup_vecdeque("@declaredoptions")
+    .unwrap_or_default();
   let opt_key = s!("opt@{}.{}", name, ext);
-  let current_options = state.lookup_vecdeque(&opt_key).unwrap_or(&empty_vdq);
-  let class_options = state.lookup_vecdeque("class_options").unwrap_or(&empty_vdq);
+  let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
+  let class_options = lookup_vecdeque("class_options").unwrap_or_default();
   // Execute options in declared order (unless \ProcessOptions*)
 
   // TODO: processing options, not yet supported
@@ -710,7 +670,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
         arena::with(*content, |c_str| {
           if requested_options.contains(c_str) {
             requested_options.remove(c_str); // Remove it, since it's been handled.
-            execute_option_internal(c_str, stomach, state)
+            execute_option_internal(c_str)
           } else {
             Ok(true)
           }
@@ -720,7 +680,7 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
         for content in contents.iter() {
           if requested_options.contains(content) {
             requested_options.remove(content); // Remove it, since it's been handled.
-            execute_option_internal(content, stomach, state)?;
+            execute_option_internal(content)?;
           }
         }
       },
@@ -729,32 +689,30 @@ pub fn process_options(stomach: &mut Stomach, state: &mut State) -> Result<()> {
   }
   // Now handle any remaining options (eg. default options), in the given order.
   for option in requested_options.iter() {
-    execute_default_option_internal(option, stomach, state)?;
+    execute_default_option_internal(option)?;
   }
   // Now, undefine the handlers?
   for option in declared_options.iter() {
-    state.let_i(
+    let_i(
       &T_CS!(s!("\\ds@{}", option)),
       &T_RELAX!(),
-      None,
-      stomach.get_gullet_mut(),
+      None
     );
   }
   Ok(())
 }
 
-fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut State) -> Result<bool> {
+fn execute_option_internal(option: &str) -> Result<bool> {
   let cs = T_CS!(s!("\\ds@{}", option));
-  if state.lookup_definition(&cs)?.is_some() {
+  if lookup_definition(&cs)?.is_some() {
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
       Tokens!(T_OTHER!(option)),
       None,
-      state,
-    )?;
+      )?;
 
-    let unused = match state.remove_vecdeque("@unusedoptionlist") {
+    let unused = match remove_vecdeque("@unusedoptionlist") {
       Some(list) => list
         .into_iter()
         .filter(|item| {
@@ -767,8 +725,8 @@ fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut Stat
         .collect(),
       None => VecDeque::new(),
     };
-    state.assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
-    stomach.digest(cs, state)?;
+    assign_value("@unusedoptionlist", Stored::VecDequeStored(unused), None);
+    digest(cs)?;
     Ok(true)
   } else {
     Ok(false)
@@ -777,32 +735,29 @@ fn execute_option_internal(option: &str, stomach: &mut Stomach, state: &mut Stat
 
 fn execute_default_option_internal(
   option: &str,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<bool> {
+  ) -> Result<bool> {
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
     Tokens!(T_OTHER!(option)),
     None,
-    state,
   )?;
-  stomach.digest(T_CS!("\\default@ds"), state)?;
+  digest(T_CS!("\\default@ds"))?;
   Ok(true)
 }
 
-fn reset_options(gullet: &mut Gullet, state: &mut State) -> Result<()> {
-  state.assign_value(
+fn reset_options() -> Result<()> {
+  assign_value(
     "@declaredoptions",
     Stored::VecDequeStored(VecDeque::new()),
     None,
   );
-  let opt_unused_cs = if do_expand(T_CS!("\\@currext"), gullet, state)?.to_string() == "cls" {
+  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.to_string() == "cls" {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"
   };
-  state.let_i(&T_CS!("\\default@ds"), &T_CS!(opt_unused_cs), None, gullet);
+  let_i(&T_CS!("\\default@ds"), &T_CS!(opt_unused_cs), None);
   Ok(())
 }
 
@@ -838,12 +793,10 @@ impl Default for RequireOptions {
 pub fn require_package(
   name: &str,
   mut options: RequireOptions,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
+  ) -> Result<()> {
   // We'll usually disallow raw TeX, unless the option explicitly given, or globally set.
   if options.notex.is_none()
-    && !state.lookup_bool("INCLUDE_STYLES")
+    && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
   {
     options.notex = Some(true);
@@ -870,18 +823,15 @@ pub fn require_package(
       notex: options.notex.unwrap_or(false),
       after: options.after,
       ..InputDefinitionOptions::default()
-    },
-    stomach,
-    state,
+    }
   )
 }
 
-pub fn require_resource(mut resource: Resource, state: &mut State) {
+pub fn require_resource(mut resource: Resource) {
   if resource.name.is_empty() && resource.content.is_empty() {
     Warn!(
       "expected",
       "resource",
-      None,
       "Resource must have a resource pathname or content; skipping"
     );
     return;
@@ -894,17 +844,16 @@ pub fn require_resource(mut resource: Resource, state: &mut State) {
     Warn!(
       "expected",
       "mime-type",
-      None,
       "Resource must have a mime-type; skipping"
     );
     return;
   }
 
   // If we've got a document, go ahead & put the resource in.
-  // if (state.document.is_some()) {
-  //   state.document.as_mut().unwrap().add_resource(resource, resource);
+  // if (document.is_some()) {
+  //   document.as_mut().unwrap().add_resource(resource, resource);
   // } else {
-  state.pending_resources.push(resource);
+  push_pending_resource(resource);
   // }
 }
 
@@ -912,9 +861,7 @@ pub fn load_class(
   name: &str,
   _options: Vec<String>,
   after: Tokens,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<()> {
+  ) -> Result<()> {
   input_definitions(
     name,
     InputDefinitionOptions {
@@ -924,23 +871,21 @@ pub fn load_class(
       handleoptions: true,
       noerror: true,
       ..InputDefinitionOptions::default()
-    },
-    stomach,
-    state,
+    }
   )
   // if (let success = InputDefinitions($class, type => 'cls', notex => 1, handleoptions => 1,
   // noerror => 1,     %options)) {
   //   return $success; }
   // else {
-  //   $STATE->noteStatus(missing => $class . '.cls');
+  //   $STATE>noteStatus(missing => $class . '.cls');
   //   let alternate = 'OmniBus';    # was 'article'
-  //   Warn('missing_file', $class, $STATE->getStomach->getGullet,
+  //   Warn('missing_file', $class, $STATE>getStomach->getGullet,
   //     "Can't find binding for class $class (using $alternate)",
   //     maybeReportSearchPaths());
   // if (let success = InputDefinitions($alternate, type => 'cls', noerror => 1, handleoptions =>
   // 1, %options)) {     return $success; }
   //   else {
-  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE->getStomach->getGullet,
+  //     Fatal('missing_file', $alternate . '.cls.ltxml', $STATE>getStomach->getGullet,
   //       "Can't find binding for class $alternate (installation error)");
   //     return; } } }
 }
@@ -959,7 +904,6 @@ pub struct FindFileOptions {
 pub fn find_file(
   file: &str,
   options: Option<FindFileOptions>,
-  state: &mut State,
 ) -> Option<String> {
   let options = options.unwrap_or_default();
   if pathname::is_literaldata(file) {
@@ -982,22 +926,22 @@ pub fn find_file(
     } else {
       s!("{}.{}", file, ext)
     };
-    find_file_aux(&aux_file, &options, state)
+    find_file_aux(&aux_file, &options)
   } else if file.ends_with(".tex") {
     // If no type given, we MAY expect .tex, or maybe NOT!!
     // No requested type, then .tex; Of course, it may already have it!
-    find_file_aux(file, &options, state)
+    find_file_aux(file, &options)
   } else {
-    match find_file_aux(&s!("{}.tex", file), &options, state) {
-      None => find_file_aux(file, &options, state),
+    match find_file_aux(&s!("{}.tex", file), &options) {
+      None => find_file_aux(file, &options),
       Some(f) => Some(f),
     }
   }
 }
 
-fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Option<String> {
+fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
-  let cached = state.lookup_string(&s!("{}_contents", file));
+  let cached = lookup_string(&s!("{}_contents", file));
   if !cached.is_empty() {
     Some(file.to_string())
   } else if pathname::is_absolute(file) {
@@ -1019,10 +963,10 @@ fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Op
     // (2) those MAY be present in kpsewhich's DB (although our searchpaths take precedence!)
     // (3) BUT we want to avoid kpsewhich if we can, since it's slower
     // (4) depending on switches we may EXCLUDE .ltxml OR raw tex OR allow both.
-    let paths: Vec<String> = state.search_paths.iter().cloned().collect();
-    let _urlbase = state.lookup_value("URLBASE");
-    let nopaths = state.lookup_bool("REMOTE_REQUEST");
-    let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
+    let paths: Vec<String> = get_search_paths();
+    // let _urlbase = state!().lookup_value("URLBASE");
+    // let _nopaths = lookup_bool("REMOTE_REQUEST");
+    // let _ltxml_paths: Vec<String> = if nopaths { vec![] } else { paths.clone() };
 
     // TODO: DG: What do we do instead here? A YAML equivalent with an interpreter? Nothing?
     // If we're looking for ltxml, look within our paths & installation first (faster than kpse)
@@ -1072,18 +1016,15 @@ fn find_file_aux(file: &str, options: &FindFileOptions, state: &mut State) -> Op
 // Declaring and Adjusting the Document Model.
 //======================================================================
 
-pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
-  let options = state
-    .tag_properties
-    .entry(arena::pin(tag))
-    .or_insert_with(TagOptions::default);
+pub fn install_tag(tag: &str, mut properties: TagOptions) {
+  let tag_ticket = arena::pin(tag);
+  with_tag_property_mut(tag_ticket, |options| {
   if properties.auto_open.is_some() {
     options.auto_open = properties.auto_open;
   }
   if properties.auto_close.is_some() {
     options.auto_close = properties.auto_close;
   }
-
   for name in &TagOptionName::all() {
     if name.is_prepend() {
       options.prepend(name, properties.remove(name));
@@ -1092,66 +1033,60 @@ pub fn install_tag(tag: &str, mut properties: TagOptions, state: &mut State) {
     } else {
       // we'll handle the regular ones out of the loop
     }
-  }
+  }});
 }
 
 /// Selects the RelaxNG schema defining the XML output language
 pub fn select_relaxng_schema(
   schema: &str,
   namespaces: Option<HashMap<String, String>>,
-  state: &mut State,
 ) {
   // What verb here? Set, Choose,...
-  let model = &mut state.model;
-  model.set_relaxng_schema(schema);
+  model::set_relaxng_schema(schema);
   if let Some(namespaces) = namespaces {
     for (prefix, value) in namespaces {
-      model.register_document_namespace(&prefix, Some(&value));
+      model::register_document_namespace(&prefix, Some(&value));
     }
   }
 }
 
-pub fn merge_font(font: Font, state: &mut State) {
-  let new_font = state.lookup_font().unwrap().merge(font);
-  state.assign_font(Rc::new(new_font), Some(Scope::Local));
+pub fn merge_font(font: Font) {
+  let new_font = lookup_font().unwrap().merge(font);
+  assign_font(Rc::new(new_font), Some(Scope::Local));
 }
 
-pub fn digest_text(stuff: Tokens, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-  stomach.begin_mode("text", state)?;
-  let value = stomach.digest(stuff, state);
-  stomach.end_mode("text", state)?;
+pub fn digest_text(stuff: Tokens) -> Result<Digested> {
+  begin_mode("text")?;
+  let value = digest(stuff);
+  end_mode("text")?;
   value
 }
 
 pub fn digest_literal<T: Into<Tokens>>(
   stuff: T,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<Digested> {
+  ) -> Result<Digested> {
   let stuff: Tokens = stuff.into();
   // Perhaps should do StartSemiverbatim, but is it safe to push a frame? (we might cover over
   // valid changes of state!)
-  stomach.begin_mode("text", state)?;
+  begin_mode("text")?;
 
-  let font = state.lookup_font().unwrap(); // TODO: raise error if font missing
-  state.assign_font(
+  let font = lookup_font().unwrap(); // TODO: raise error if font missing
+  assign_font(
     Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
   ); // try to stay as ASCII as possible
 
-  let value = stomach.digest(stuff, state);
-  state.assign_font(font, None);
-  stomach.end_mode("text", state)?;
+  let value = digest(stuff);
+  assign_font(font, None);
+  end_mode("text")?;
   value
 }
 
 pub fn digest_if(
   token: Token,
-  stomach: &mut Stomach,
-  state: &mut State,
-) -> Result<Option<Digested>> {
-  if state.lookup_definition(&token)?.is_some() {
-    match stomach.digest(Tokens!(token), state) {
+  ) -> Result<Option<Digested>> {
+  if lookup_definition(&token)?.is_some() {
+    match digest(Tokens!(token)) {
       Ok(t) => Ok(Some(t)),
       Err(e) => Err(e),
     }
@@ -1162,16 +1097,14 @@ pub fn digest_if(
 
 pub fn build_invocation<T: Into<Token>>(
   token: T,
-  args: Vec<Option<Tokens>>,
-  gullet: &mut Gullet,
-  state: &mut State,
+  args: Vec<Option<Tokens>>
 ) -> Result<Tokens> {
   let token: Token = token.into();
   // Note: token may have been \let to another defn!
-  if let Some(defn) = state.lookup_definition(&token)? {
+  if let Some(defn) = lookup_definition(&token)? {
     let mut invoked_tokens = vec![token];
     let mut reverted_args = if let Some(params) = defn.get_parameters() {
-      params.revert_arguments(args, state)?
+      params.revert_arguments(args)?
     } else {
       Vec::new()
     };
@@ -1179,7 +1112,7 @@ pub fn build_invocation<T: Into<Token>>(
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    token.with_cs_name(|csname| { Error!("undefined", csname, gullet, message); Ok(()) })?;
+    token.with_cs_name(|csname| { Error!("undefined", csname, message); Ok(()) })?;
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
@@ -1199,21 +1132,12 @@ pub fn build_invocation<T: Into<Token>>(
   }
 }
 
-pub fn do_expand<T: Into<Tokens>>(
-  tokens: T,
-  outer_gullet: &mut Gullet,
-  outer_state: &mut State,
-) -> Result<Tokens> {
-  outer_gullet.do_expand(tokens, outer_state)
-}
-
 /// Convert a LaTeX-style argument spec to our Package form.
 /// Ie. given $nargs and $optional, being the two optional arguments to
 /// something like \newcommand, convert it to the form we use
 pub fn convert_latex_args(
   mut nargs: usize,
   optional: Option<Tokens>,
-  state: &mut State,
 ) -> Result<Option<Parameters>> {
   let mut params = Vec::new();
   if let Some(tks) = optional {
@@ -1224,7 +1148,7 @@ pub fn convert_latex_args(
         extra: vec![tks],
         ..Parameter::default()
       }
-      .init(state)?,
+      .init()?,
     );
     nargs -= 1;
   }
@@ -1236,7 +1160,7 @@ pub fn convert_latex_args(
         spec: Cow::Borrowed("{}"),
         ..Parameter::default()
       }
-      .init(state)?,
+      .init()?,
     );
   }
   if params.is_empty() {
@@ -1246,38 +1170,37 @@ pub fn convert_latex_args(
   }
 }
 
-pub fn load_font_map<'a>(encoding: &'a str, state: &'a State) -> Option<&'a Fontmap> {
-  if let Some(map) = state.lookup_value(&s!("{encoding}_fontmap")) {
+pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
+  preload_font_map(encoding).expect("preloading font map should succeed.");
+  if let Some(map) = lookup_value(&s!("{encoding}_fontmap")) {
     map.into()
   } else {
     None
   }
 }
-pub fn preload_font_map(encoding: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+pub fn preload_font_map(encoding: &str) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
-  let sym = arena::pin(s!("{encoding}_fontmap"));
-  if state.lookup_value_sym(&sym).is_some() {
+  let key = s!("{encoding}_fontmap");
+  if has_value(&key) {
     return Ok(());
   }
   let fail_key = s!("{encoding}_fontmap_failed_to_load");
-  let failed_flag = state.lookup_bool(&fail_key);
+  let failed_flag = lookup_bool(&fail_key);
   if !failed_flag {
-    state.assign_value(&fail_key, true, None); // Stop recursion?
+    assign_value(&fail_key, true, None); // Stop recursion?
     input_definitions(
       &encoding.to_lowercase(),
       InputDefinitionOptions {
         extension: Some(Cow::Borrowed("fontmap")),
         noerror: true,
         ..InputDefinitionOptions::default()
-      },
-      stomach,
-      state,
+      }
     )?;
-    if let Some(_map) = state.lookup_value(&s!("{encoding}_fontmap")) {
+    if has_value(&s!("{encoding}_fontmap")) {
       // Got map?
-      state.assign_value(&fail_key, false, None);
+      assign_value(&fail_key, false, None);
     } else {
-      state.assign_value(&fail_key, true, Some(Scope::Global));
+      assign_value(&fail_key, true, Some(Scope::Global));
     }
   }
   Ok(())

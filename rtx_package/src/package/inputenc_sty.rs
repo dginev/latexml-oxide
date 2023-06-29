@@ -1,7 +1,7 @@
 use crate::package::*;
 
 //**********************************************************************
-fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+fn set_input_encoding(encoding: &str) -> Result<()> {
   // Initially disable all odd & upper half-plane chars
   // TODO:
   // for code in ((0 .. 8), 0xB, (0xE .. 0x1E), (128 .. 255)) {
@@ -9,7 +9,7 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
   //   AssignCatcode!(ch, Catcode::ACTIVE);
   //   Let!(&T_ACTIVE!(ch), T_CS!("\\@inpenc@undefined"));
   // }
-  state.input_encoding = None; // Disable the state-level decoding, if any.
+  state::set_input_encoding(None); // Disable the state::level decoding, if any.
 
   // Then load TeX's input encoding definitions.
   input_definitions(
@@ -17,34 +17,31 @@ fn set_input_encoding(encoding: &str, stomach: &mut Stomach, state: &mut State) 
     InputDefinitionOptions {
       extension: Some("def".into()),
       ..InputDefinitionOptions::default()
-    },
-    stomach,
-    state,
+    }
   )?;
   // NOTE: INPUT_ENCODING is never actually used anywhere!
   // So, presumably either Perl is magically converting to utf8
   // or more likely, treating the bytes as (misinterpreted?) utf8?
   // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
-  state.assign_value("INPUT_ENCODING", encoding.to_string(), None);
+  assign_value("INPUT_ENCODING", encoding.to_string(), None);
   let encoding_tokenized = TokenizeInternal!(encoding);
   def_macro(
     T_CS!("\\inputencodingname"),
     None,
     encoding_tokenized,
     None,
-    state,
   )
 }
 
-LoadDefinitions!(outer_stomach, state, {
+LoadDefinitions!({
   //**********************************************************************
-  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[stomach, (code,expansion), state] {
+  DefPrimitive!("\\DeclareInputMath {Number} {}", sub[(code,expansion)] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
   });
 
-  DefPrimitive!("\\DeclareInputText {Number} {}", sub[stomach, (code, expansion), state] {
+  DefPrimitive!("\\DeclareInputText {Number} {}", sub[(code, expansion)] {
     let ch = code.value_of() as u8 as char;
     AssignCatcode!(ch, Catcode::ACTIVE);
     DefMacro!(T_ACTIVE!(ch), None, expansion);
@@ -52,23 +49,23 @@ LoadDefinitions!(outer_stomach, state, {
 
   DefMacro!("\\IeC{}", "#1");
 
-  DefMacro!("\\@inpenc@undefined", sub[gullet, (), state] {
-    let message = s!("Keyboard character used is undefined in inputencoding {}",
-      state.input_encoding.as_ref().unwrap());
-    Error!("unexpected", "<char>", gullet,  message);
+  DefMacro!("\\@inpenc@undefined", {
+    let enc_sym = get_input_encoding().unwrap();
+    let message = arena::with(enc_sym, |enc|
+     s!("Keyboard character used is undefined in inputencoding {}",
+      enc));
+    Error!("unexpected", "<char>", message);
   });
 
-  DefPrimitive!("\\inputencoding{}", sub[stomach, (encoding), state] {
-    let gullet = stomach.get_gullet_mut();
-    set_input_encoding(&Expand!(encoding, gullet).to_string(), stomach, state)?;
+  DefPrimitive!("\\inputencoding{}", sub[(encoding)] {
+    set_input_encoding(&Expand!(encoding).to_string())?;
   });
 
-  DeclareOption!(None, sub[stomach, state] {
-    let gullet = stomach.get_gullet_mut();
-    set_input_encoding(&Expand!(T_CS!("\\CurrentOption"), gullet).to_string(), stomach, state)?;
+  DeclareOption!(None, {
+    set_input_encoding(&Expand!(T_CS!("\\CurrentOption")).to_string())?;
   });
 
-  ProcessOptions!(outer_stomach);
+  ProcessOptions!();
 
   //**********************************************************************
 });

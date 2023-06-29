@@ -1,6 +1,6 @@
 use rtx::util::test::{lex_single_tex_formula, new_test_engine};
-use rtx_core::state::{State, StateOptions};
 use rtx_math_parser::MathParser;
+use rtx_core::common::model;
 
 #[test]
 fn basic_1() {
@@ -34,20 +34,19 @@ fn basic_1() {
   assert_eq!(node_str_before, expected_xmath_before);
 
   let mut parser = MathParser::default();
-  let mut state = State::new(StateOptions::default());
   // need to load the model schema by hand in the unit test, to get the "ltx" namespace working
-  assert!(state.model.load_schema(&[]).is_ok());
-  let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc, &mut state);
+  assert!(model::load_schema(&[]).is_ok());
+  let parse_tree_opt = parser.parse_lexemes(lexemes, &nodes, &mut doc);
 
   assert!(parse_tree_opt.is_ok());
   let parsed_tree_opt = parse_tree_opt.unwrap();
   assert!(parsed_tree_opt.is_some());
   let parsed_tree = parsed_tree_opt.unwrap();
   let parsed_xml_result =
-    parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc, &mut state);
+    parsed_tree.into_xmath(&mut xmath_opt.unwrap(), &mut nodes, &mut doc);
   assert!(parsed_xml_result.is_ok());
   let parsed_xml = parsed_xml_result.unwrap();
-  for mut fnode in doc.findnodes("//*[@_font]", Some(&parsed_xml), &mut state) {
+  for mut fnode in doc.findnodes("//*[@_font]", Some(&parsed_xml)) {
     fnode.remove_attribute("_font").ok(); // ignore _font
   }
   let expected_xmath_after = concat!(

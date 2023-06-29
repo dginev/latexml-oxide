@@ -1,6 +1,6 @@
 use crate::package::*;
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // TeX Book, Appendix B. p. 359
 
@@ -10,9 +10,9 @@ LoadDefinitions!(state, {
     "?#isMath(<ltx:XMTok name='ldots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
     reversion  => "\\ldots",
-    properties => sub[_stomach, _args, state] {
-      if state.lookup_bool("IN_MATH") {
-        let new_font = state.lookup_font().unwrap().merge(
+    properties => {
+      if lookup_bool("IN_MATH") {
+        let new_font = lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
           .specialize("\u{2026}"));
         Ok(stored_map!("font" => new_font)) // Since not DefMath!

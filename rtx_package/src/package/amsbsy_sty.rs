@@ -2,7 +2,7 @@
 // See amsldoc
 //**********************************************************************
 use crate::package::*;
-LoadDefinitions!(state, {
+LoadDefinitions!({
 
   RequirePackage!("amsgen");
 

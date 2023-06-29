@@ -12,18 +12,17 @@ use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use crate::gullet::Gullet;
 use crate::mouth::Mouth;
-use crate::state::State;
-use crate::stomach::Stomach;
+use crate::{gullet};
+use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{Digested, Locator};
 
 pub type ReaderFn =
-  dyn Fn(&mut Gullet, Option<&Parameters>, &[Tokens], &mut State) -> Result<ArgWrap>;
-pub type ReaderPredigestFn = dyn Fn(&mut Stomach, ArgWrap, &mut State) -> Result<Option<Digested>>;
+  dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
+pub type ReaderPredigestFn = dyn Fn(ArgWrap) -> Result<Option<Digested>>;
 pub type ReaderPredigestClosure = Rc<ReaderPredigestFn>;
 pub type ReaderClosure = Rc<ReaderFn>;
 
@@ -31,12 +30,12 @@ pub type ReaderClosure = Rc<ReaderFn>;
 // the reversion functions initially had "&mut Gullet" as a parameter.
 // This turned out to be infeasible if we are to maintain the latexml code flow
 // as we have calls into reversions from arbitrary binding closures, at ALL phases.
-// Compromise: use the gated Stomach in state whenever you need gullet in reversion, as in
-// let mut stomach = state.stomach.borrow_mut();
-// let mut gullet = stomach.get_gullet_mut();
+// Compromise: use the gated Stomach in state::whenever you need gullet in reversion, as in
+// let mut stomach = state::stomach.borrow_mut();
+//
 //
 pub type ReversionClosure =
-  Rc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens], &State) -> Result<Tokens>>;
+  Rc<dyn Fn(Vec<Token>, Option<&Parameters>, &[Tokens]) -> Result<Tokens>>;
 
 static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
 static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
@@ -68,11 +67,10 @@ impl Default for Parameter {
       spec: Cow::Borrowed(""),
       extra: Vec::new(),
       inner: None,
-      reader: Rc::new(|_gullet, _args, _extra, _state| {
+      reader: Rc::new(|_args, _extra| {
         Warn!(
           "Parameter",
           "mock_reader",
-          None,
           "Please define a real reader, this is a mock fallback!"
         );
         Ok(ArgWrap::None)
@@ -119,81 +117,87 @@ static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 impl Parameter {
-  pub fn new(name: Cow<'static, str>, spec: Cow<'static, str>, state: &mut State) -> Result<Self> {
+  pub fn new(name: Cow<'static, str>, spec: Cow<'static, str>) -> Result<Self> {
     Parameter {
       name,
       spec,
       ..Parameter::default()
     }
-    .init(state)
+    .init()
   }
-  pub fn init(mut self, state: &mut State) -> Result<Self> {
+  pub fn init(mut self) -> Result<Self> {
     // Create a parameter reading object for a specific type.
     // If either a declared entry or a function Read<Type> accessible from LaTeXML::Package::Pool
     // is defined.
-    let looked_up_mapping = state.lookup_mapping("PARAMETER_TYPES", &self.name);
-    let descriptor: Option<Rc<Parameter>>;
-    if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
-      descriptor = Some(Rc::clone(d_lookup));
-    } else if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
-      let basetype = captures.get(1).map_or("", |m| m.as_str());
-      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(&s!("Read{}", &self.name), state) {
-          Some(reader) => Some(Rc::new(Parameter {
-            reader,
-            optional: true,
-            ..Parameter::default()
-          })),
-          None => match Parameter::check_reader_function(&s!("Read{}", basetype), state) {
+    let mut descriptor: Option<Rc<Parameter>> = with_mapping("PARAMETER_TYPES", &self.name, |looked_up_mapping|
+      if let Some(Stored::Parameter(d_lookup)) = looked_up_mapping {
+        Some(Rc::clone(d_lookup))
+      } else {
+        None
+      });
+    if descriptor.is_none() {
+      if let Some(captures) = OPTIONAL_REGEX.captures(&self.name) {
+        let basetype = captures.get(1).map_or("", |m| m.as_str());
+        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
+        match basetype_param_opt {
+          Some(Stored::Parameter(d_lookup)) => Ok(Some(d_lookup.clone())),
+          _ => match Parameter::check_reader_function(&s!("Read{}", &self.name)) {
+            Some(reader) => Ok(Some(Rc::new(Parameter {
+              reader,
+              optional: true,
+              ..Parameter::default()
+            }))),
+            None => match Parameter::check_reader_function(&s!("Read{}", basetype)) {
+              Some(reader) => Ok(Some(Rc::new(Parameter {
+                reader,
+                optional: true,
+                novalue: true,
+                ..Parameter::default()
+              }))),
+              None => fatal!(
+                Parameter,
+                Init,
+                s!("Can't initialize parameter {:?}, unknown?", self.name)
+              ),
+            },
+          },
+        })?;
+        self.optional = true;
+      } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
+        let basetype = captures.get(1).map_or("", |m| m.as_str());
+        descriptor = with_mapping("PARAMETER_TYPES", basetype, |basetype_param_opt|
+        match basetype_param_opt {
+          Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
+          _ => match Parameter::check_reader_function(&self.name) {
             Some(reader) => Some(Rc::new(Parameter {
               reader,
               optional: true,
               novalue: true,
               ..Parameter::default()
             })),
-            None => fatal!(
-              Parameter,
-              Init,
-              s!("Can't initialize parameter {:?}, unknown?", self.name)
-            ),
+            None => Parameter::check_reader_function(&s!("Read{}", basetype)).map(|reader| {
+              Rc::new(Parameter {
+                reader,
+                optional: true,
+                novalue: true,
+                ..Parameter::default()
+              })
+            }),
           },
-        },
-      };
-      self.optional = true;
-    } else if let Some(captures) = SKIP_REGEX.captures(&self.name) {
-      let basetype = captures.get(1).map_or("", |m| m.as_str());
-      descriptor = match state.lookup_mapping("PARAMETER_TYPES", basetype) {
-        Some(Stored::Parameter(d_lookup)) => Some(d_lookup.clone()),
-        _ => match Parameter::check_reader_function(&self.name, state) {
-          Some(reader) => Some(Rc::new(Parameter {
-            reader,
-            optional: true,
-            novalue: true,
-            ..Parameter::default()
-          })),
-          None => Parameter::check_reader_function(&s!("Read{}", basetype), state).map(|reader| {
+        });
+        if let Some(ref _desc) = descriptor {
+          self.novalue = true;
+          self.optional = true;
+        }
+      } else {
+        descriptor =
+          Parameter::check_reader_function(&s!("Read{}", &self.name)).map(|reader| {
             Rc::new(Parameter {
               reader,
-              optional: true,
-              novalue: true,
               ..Parameter::default()
             })
-          }),
-        },
-      };
-      if let Some(ref _desc) = descriptor {
-        self.novalue = true;
-        self.optional = true;
+          });
       }
-    } else {
-      descriptor =
-        Parameter::check_reader_function(&s!("Read{}", &self.name), state).map(|reader| {
-          Rc::new(Parameter {
-            reader,
-            ..Parameter::default()
-          })
-        });
     }
     match descriptor {
       Some(descriptor) => {
@@ -228,57 +232,57 @@ impl Parameter {
     // Last but not least, initialize any "inner" parameters
     self.inner = self.inner.map(|inner_ps| {
       inner_ps
-        .init(state)
+        .init()
         .expect("inner param init shouldn't fail?")
     });
     Ok(self)
   }
 
   /// Obtain the reader of a given parameter name, if available
-  pub fn check_reader_function(name: &str, state: &State) -> Option<ReaderClosure> {
+  pub fn check_reader_function(name: &str) -> Option<ReaderClosure> {
     // TODO: This function doesn't have a direct Rust equivalent, since the metaprogramming isn't
     // possible But what is the exact purpose of seeking through the pool namespace? Wouldn't
-    // any parameter be already assigned in the state?
-    if let Some(Stored::Parameter(param)) = state.lookup_mapping("PARAMETER_TYPES", name) {
-      Some(param.reader.clone())
-    } else {
-      None
+    // any parameter be already assigned in the state::
+    with_mapping("PARAMETER_TYPES", name, |param_opt|
+      if let Some(Stored::Parameter(param)) = param_opt {
+        Some(param.reader.clone())
+      } else {
+        None
+      })
+  }
+
+  pub fn setup_catcodes(&self) {
+    if self.semiverbatim.is_some() {
+      begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
-  pub fn setup_catcodes(&self, state: &mut State) {
+  pub fn revert_catcodes(&self) -> Result<()> {
     if self.semiverbatim.is_some() {
-      state.begin_semiverbatim(self.semiverbatim.as_deref());
-    }
-  }
-
-  pub fn revert_catcodes(&self, state: &mut State) -> Result<()> {
-    if self.semiverbatim.is_some() {
-      state.end_semiverbatim()?;
+      end_semiverbatim()?;
     }
     Ok(())
   }
 
   pub fn read(
     &self,
-    gullet: &mut Gullet,
+
     fordefn: Option<&dyn Definition>,
-    state: &mut State,
   ) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
     // Hmmm, seem to still need it...
-    self.setup_catcodes(state);
+    self.setup_catcodes();
 
     let closure = &self.reader;
-    let value_from_reader: ArgWrap = closure(gullet, self.inner.as_ref(), &self.extra, state)?;
+    let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
     let value_arg = if value_from_reader.is_tokens() {
       let wants_option = self.optional || value_from_reader.is_none();
       match value_from_reader.owned_tokens() {
         Some(mut value) => {
           if let Some(ref semi_chars) = self.semiverbatim {
-            value = value.neutralize(semi_chars, state);
+            value = value.neutralize(semi_chars);
           }
           if self.pack_parameters {
             value = value.pack_parameters()?;
@@ -304,7 +308,7 @@ impl Parameter {
     } else {
       value_from_reader
     };
-    self.revert_catcodes(state)?;
+    self.revert_catcodes()?;
 
     let checked_value = if !self.optional
       && !self.novalue
@@ -318,7 +322,6 @@ impl Parameter {
         Error!(
           "expected",
           self,
-          gullet,
           s!("Missing argument {} for {}", self.stringify(), fordefn_str)
         );
         ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
@@ -333,24 +336,20 @@ impl Parameter {
 
   pub fn digest(
     &self,
-    stomach: &mut Stomach,
     mut value_arg: ArgWrap,
     _fordefn: Option<&Constructor>,
-    state: &mut State,
   ) -> Result<Option<Digested>> {
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
-      self.setup_catcodes(state);
+      self.setup_catcodes();
       if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
-          let neutralized = stomach.get_gullet_mut().reading_from_mouth(
-            Mouth::default(),
-            state,
-            move |gullet: &mut Gullet, state: &mut State| {
-              gullet.unread(value);
+          let neutralized = gullet::reading_from_mouth(Mouth::default(),
+                    move || {
+              gullet::unread(value);
               let mut tokens = Vec::new();
               loop {
-                match gullet.read_x_token(Some(true), true, state) {
+                match gullet::read_x_token(Some(true), true) {
                   Ok(token_opt) => match token_opt {
                     Some(token) => tokens.push(token),
                     None => break,
@@ -359,7 +358,7 @@ impl Parameter {
                 }
               }
               let evec = Vec::new();
-              Ok(Tokens::new(tokens).neutralize(&evec, state).unlist())
+              Ok(Tokens::new(tokens).neutralize(&evec).unlist())
             },
           )?;
           value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
@@ -371,10 +370,10 @@ impl Parameter {
 
     for pre in self.before_digest.iter() {
       // Done for effect only.
-      pre(stomach, state)?; // maybe pass extras?
+      pre()?; // maybe pass extras?
     }
     let digested_value = if let Some(ref closure) = &self.predigest {
-      closure(stomach, value_arg, state)?
+      closure(value_arg)?
     } else {
       // Note: we have an open question for the type interface.
       //  What happens when a wrapped "None" value,
@@ -388,29 +387,28 @@ impl Parameter {
       if self.optional && value_arg.is_none() {
         None
       } else {
-        Some(value_arg.be_digested(stomach, state)?)
+        Some(value_arg.be_digested()?)
       }
     };
     for post in self.after_digest.iter() {
       // Done for effect only.
       let mut w = Whatsit::default();
-      post(stomach, &mut w, state)?; // maybe pass extras?
+      post(&mut w)?; // maybe pass extras?
     }
 
-    self.revert_catcodes(state)?;
+    self.revert_catcodes()?;
 
     Ok(digested_value)
   }
 
-  pub fn revert(&self, value_opt: Option<Tokens>, state: &State) -> Result<Option<Tokens>> {
+  pub fn revert(&self, value_opt: Option<Tokens>) -> Result<Option<Tokens>> {
     if let Some(ref reverter) = self.reversion {
       if let Some(value) = value_opt {
         Ok(Some((reverter)(
           value.unlist(),
           self.inner.as_ref(),
           &self.extra,
-          state,
-        )?))
+              )?))
       } else {
         Ok(None)
       }
@@ -425,7 +423,7 @@ impl Parameter {
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
   // Yuck!
-  pub fn reparse(&self, _value: Tokens, _gullet: &mut Gullet, _state: &State) -> Result<Tokens> {
+  pub fn reparse(&self, _value: Tokens) -> Result<Tokens> {
     unimplemented!()
   }
 }
@@ -464,11 +462,11 @@ impl Parameters {
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
-  pub fn revert_arguments(&self, args: Vec<Option<Tokens>>, state: &State) -> Result<Vec<Token>> {
+  pub fn revert_arguments(&self, args: Vec<Option<Tokens>>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.0.iter().zip(args.into_iter()) {
       if !parameter.novalue {
-        if let Some(reverted_tks) = parameter.revert(arg, state)? {
+        if let Some(reverted_tks) = parameter.revert(arg)? {
           tokens.extend(reverted_tks.unlist());
         }
       }
@@ -476,10 +474,10 @@ impl Parameters {
     Ok(tokens)
   }
   // Try to initialize each associated Parameter
-  pub fn init(mut self, state: &mut State) -> Result<Self> {
+  pub fn init(mut self) -> Result<Self> {
     let mut initialized = Vec::new();
     for param in self.0.drain(..) {
-      initialized.push(param.init(state)?);
+      initialized.push(param.init()?);
     }
     self.0 = initialized;
     Ok(self)
@@ -487,14 +485,12 @@ impl Parameters {
 
   pub fn read_arguments(
     &self,
-    gullet: &mut Gullet,
     fordefn: Option<&dyn Definition>,
-    state: &mut State,
   ) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::new();
-    gullet.setup_scan();
+    gullet::setup_scan();
     for parameter in &self.0 {
-      let values = parameter.read(gullet, fordefn, state)?;
+      let values = parameter.read(fordefn)?;
       if parameter.predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
         // closure... so this shouldn't be an error, not even an info -- but leaving it here
@@ -512,16 +508,14 @@ impl Parameters {
 
   pub fn read_arguments_and_digest(
     &self,
-    stomach: &mut Stomach,
     fordefn: &Constructor,
-    state: &mut State,
   ) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::new();
-    stomach.get_gullet_mut().setup_scan();
+    gullet::setup_scan();
     for parameter in &self.0 {
-      let value = parameter.read(stomach.get_gullet_mut(), Some(fordefn), state)?;
+      let value = parameter.read(Some(fordefn))?;
       if !parameter.novalue {
-        let digested_value = parameter.digest(stomach, value, Some(fordefn), state)?;
+        let digested_value = parameter.digest( value, Some(fordefn))?;
         args.push(digested_value);
       }
     }
@@ -530,20 +524,18 @@ impl Parameters {
 
   pub fn reparse_argument(
     &self,
-    gullet: &mut Gullet,
-    value: ArgWrap,
-    ostate: &mut State,
+    value: ArgWrap
   ) -> Result<Vec<ArgWrap>> {
     if value.is_none() {
       return Ok(Vec::new());
     }
-    let value_tokens = value.revert(ostate)?;
+    let value_tokens = value.revert()?;
     // start with empty mouth
-    let reader_mouth = Mouth::new("", None, ostate)?;
-    gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
-      gulletx.unread(value_tokens); // but put back tokens to be read
-      let values = self.read_arguments(gulletx, None, state)?;
-      gulletx.skip_spaces(state)?;
+    let reader_mouth = Mouth::new("", None)?;
+    gullet::reading_from_mouth(reader_mouth, || {
+      gullet::unread(value_tokens); // but put back tokens to be read
+      let values = self.read_arguments(None)?;
+      gullet::skip_spaces()?;
       Ok(values)
     })
   }

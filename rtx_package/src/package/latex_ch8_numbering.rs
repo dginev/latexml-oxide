@@ -11,50 +11,45 @@ const FNSYMBOLS: &[&str] = &[
   "\u{2021}\u{2021}",
 ];
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   //======================================================================
   // C.8.4 Numbering
   //======================================================================
   // For LaTeX documents, We want id's on para, as well as sectional units.
   // However, para get created implicitly on Document construction, rather than
   // explicitly during digestion (via a whatsit), we can't use the usual LaTeX counter mechanism.
-  Tag!("ltx:para", after_open => sub[document, node, state] {
-    document.generate_id(node, "p", state)?;
+  Tag!("ltx:para", after_open => sub[document, node] {
+    document.generate_id(node, "p")?;
   });
 
-  DefPrimitive!("\\newcounter{}[]", sub[stomach, (cs, default_opt), state] {
-    let gullet = stomach.get_gullet_mut();
+  DefPrimitive!("\\newcounter{}[]", sub[(cs, default_opt)] {
     let default = if let Some(tks) = default_opt {
       if !tks.is_empty() {
-        Expand!(tks, gullet)
+        Expand!(tks)
       } else {
         Tokens!()
       }
     } else {
       Tokens!()
     };
-    let cs_expanded = &Expand!(cs, gullet).to_string();
+    let cs_expanded = &Expand!(cs).to_string();
     NewCounter!(cs_expanded, &default.to_string());
   });
-  DefPrimitive!("\\setcounter{}{Number}", sub[stomach, (cs, default), state] {
-    let gullet = stomach.get_gullet_mut();
-    let cs_expanded = &Expand!(cs, gullet).to_string();
-    SetCounter!(cs_expanded, default, stomach, state);
+  DefPrimitive!("\\setcounter{}{Number}", sub[(cs, default)] {
+    let cs_expanded = &Expand!(cs).to_string();
+    SetCounter!(cs_expanded, default);
   });
-  DefPrimitive!("\\addtocounter{}{Number}", sub[stomach, (cs,default), state] {
-    let gullet = stomach.get_gullet_mut();
-    let cs_expanded = &Expand!(cs, gullet).to_string();
-    AddToCounter!(cs_expanded, default, gullet);
+  DefPrimitive!("\\addtocounter{}{Number}", sub[(cs,default)] {
+    let cs_expanded = &Expand!(cs).to_string();
+    AddToCounter!(cs_expanded, default);
   });
-  DefPrimitive!("\\stepcounter{}",    sub[stomach, (cs), state] {
-    let gullet = stomach.get_gullet_mut();
-    let cs_expanded = &Expand!(cs, gullet).to_string();
-    StepCounter!(cs_expanded, false, gullet)?;
+  DefPrimitive!("\\stepcounter{}",    sub[(cs)] {
+    let cs_expanded = &Expand!(cs).to_string();
+    StepCounter!(cs_expanded, false)?;
   });
-  DefPrimitive!("\\refstepcounter{}", sub[stomach, (cs), state] {
-    let gullet = stomach.get_gullet_mut();
-    let cs_expanded = &Expand!(cs, gullet).to_string();
-    RefStepCounter!(cs_expanded, false, stomach)?;
+  DefPrimitive!("\\refstepcounter{}", sub[(cs)] {
+    let cs_expanded = &Expand!(cs).to_string();
+    RefStepCounter!(cs_expanded, false)?;
   });
 
   // DefPrimitive('\@addtoreset{}{}', sub {
@@ -77,53 +72,53 @@ LoadDefinitions!(outer_state, {
   //       DefMacroI(T_CS("\\\@$ctr\@ID"), undef, "0", scope => 'global'); }
   //     return; });
 
-  DefMacro!("\\value{}", sub[gullet, (value), state] {
-    T_CS!(s!("\\c@{}", Expand!(value, gullet, state)))
+  DefMacro!("\\value{}", sub[(value)] {
+    T_CS!(s!("\\c@{}", Expand!(value)))
   });
 
-  DefMacro!("\\@arabic{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@arabic{Number}", sub[(number)] {
     ExplodeText!(number.value_of().to_string())
   });
-  DefMacro!("\\arabic{}", sub[gullet, (value), state] {
-    let ctr_expansion = Expand!(value, gullet, state).to_string();
-    let ctr_value = CounterValue!(&ctr_expansion, state).value_of();
+  DefMacro!("\\arabic{}", sub[(value)] {
+    let ctr_expansion = Expand!(value).to_string();
+    let ctr_value = CounterValue!(&ctr_expansion).value_of();
     ExplodeText!(ctr_value)
   });
 
-  DefMacro!("\\@roman{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@roman{Number}", sub[(number)] {
     ExplodeText!(radix::radix_roman(number.value_of()))
   });
-  DefMacro!("\\roman{}", sub[gullet, (token), state] {
-    let ctr = Expand!(token, gullet).to_string();
+  DefMacro!("\\roman{}", sub[(token)] {
+    let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Roman{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@Roman{Number}", sub[(number)] {
     ExplodeText!(radix::radix_up_roman(number.value_of()))
   });
-  DefMacro!("\\Roman{}", sub[gullet, (token), state] {
-    let ctr = Expand!(token, gullet).to_string();
+  DefMacro!("\\Roman{}", sub[(token)] {
+    let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@alph{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@alph{Number}", sub[(number)] {
     ExplodeText!(radix::radix_alpha(number.value_of()))
   });
-  DefMacro!("\\alph{}", sub[gullet, (token), state] {
-    let ctr = Expand!(token, gullet).to_string();
+  DefMacro!("\\alph{}", sub[(token)] {
+    let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Alph{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@Alph{Number}", sub[(number)] {
     ExplodeText!(radix::radix_up_alpha(number.value_of()))
   });
-  DefMacro!("\\Alph{}", sub[gullet, (token), state] {
-    let ctr = Expand!(token, gullet).to_string();
+  DefMacro!("\\Alph{}", sub[(token)] {
+    let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of()))
   });
 
-  DefMacro!("\\@fnsymbol{Number}", sub[gullet, (number), state] {
+  DefMacro!("\\@fnsymbol{Number}", sub[(number)] {
     ExplodeText!(radix::radix_format_str(number.value_of(), FNSYMBOLS))
   });
-  DefMacro!("\\fnsymbol{}", sub[gullet, (token), state] {
-    let ctr = Expand!(token, gullet).to_string();
+  DefMacro!("\\fnsymbol{}", sub[(token)] {
+    let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))
   });
 });

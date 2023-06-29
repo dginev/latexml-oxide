@@ -3,7 +3,7 @@ use crate::package::*;
 static FONT_TOKEN_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\(?:text|script|scriptscript)font$").unwrap());
 
-LoadDefinitions!(outer_state, {
+LoadDefinitions!({
   // <font> = <fontdef token> | \font | <family member>
   // <family member> = <font range><4bit>
   // <font range> = \textfont | \scriptfont | \scriptscriptfont
@@ -14,33 +14,33 @@ LoadDefinitions!(outer_state, {
   // (although it SHOULD be one defined to be a font switch??)
   // NOTE: These should NOT be global(?)
   DefRegister!("\\textfont Number", T_CS!("\\tenrm"),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("textfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,scope,args,state] {
+  setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("textfont_{fam}"), font, scope);
+    state::assign_value(&s!("textfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("scriptfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,scope,args,state] {
+  setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("scriptfont_{fam}"), font, scope);
+    state::assign_value(&s!("scriptfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
+    lookup_number(&s!("scriptscriptfont_{fam}")).unwrap_or_default()
   },
-  setter => sub[font,scope,args,state] {
+  setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state.assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
+    state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
   });
 
   // # <internal dimen> = <dimen parameter> | <special dimen> | \lastkern
@@ -50,32 +50,32 @@ LoadDefinitions!(outer_state, {
 
   // # <box dimension> = \ht | \wd | \dp
   DefRegister!("\\ht Number", Dimension::new(0),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let n = args.remove(0).expect_number();
-    let stuff = state.lookup_value(&format!("box{}", n.value_of()));
-    if let Some(Stored::Digested(thebox)) = stuff {
-      thebox.get_height(state)
+    with_value(&format!("box{}", n.value_of()), |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
+      thebox.get_height()
     } else {
       Some(RegisterValue::Dimension(Dimension::default()))
-    }},
-  setter => sub[value,_scope,args,state] {
+    })},
+  setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state.lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
-    }});
+    })});
 
   DefRegister!("\\wd Number", Dimension::default(),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let n = args.remove(0).expect_number();
     let boxid = format!("box{}", n.value_of());
-    let mut stuff = state.checkout_value(&boxid);
+    let mut stuff = checkout_value(&boxid);
     let result = {if let Some(Stored::Digested(ref mut thebox)) = stuff {
-      match thebox.get_width(None, state) {
+      match thebox.get_width(None) {
         Ok(v) => v,
         Err(e) => {
-          let err = || {Error!("method", "get_width", None, format!("{e}")); Ok(()) };
+          let err = || {Error!("method", "get_width", format!("{e}")); Ok(()) };
           err().ok();
           None
         }
@@ -84,52 +84,52 @@ LoadDefinitions!(outer_state, {
       Some(RegisterValue::Dimension(Dimension::default()))
     }};
     if let Some(thebox) = stuff {
-      state.checkin_value(&boxid, thebox);
+      checkin_value(&boxid, thebox);
     }
     result
   },
-  setter => sub[value,_scope,args,state] {
+  setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state.lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
-    }});
+    })});
 
   DefRegister!("\\dp Number", Dimension::new(0),
-  getter => sub[args, state] {
+  getter => sub[args] {
     let n = args.remove(0).expect_number();
-    let stuff = state.lookup_value(&format!("box{}", n.value_of()));
-    if let Some(Stored::Digested(thebox)) = stuff {
-      thebox.get_depth(state)
-    } else {
-      Some(RegisterValue::Dimension(Dimension::default()))
-    }},
-setter => sub[value,_scope,args,state] {
+    with_value(&format!("box{}", n.value_of()),|val_opt|
+      if let Some(Stored::Digested(thebox)) = val_opt {
+        thebox.get_depth()
+      } else {
+        Some(RegisterValue::Dimension(Dimension::default()))
+      })},
+setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
-    let stuff = state.lookup_value_mut(&boxkey);
-    if let Some(Stored::Digested(thebox)) = stuff {
+    with_value_mut(&boxkey, |val_opt|
+    if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);
-    }});
+    })});
 
   // # 2nd arg is <font> = <fontdef token> | \font | <family member>
   // #  <family member> = <font range><4bit number>
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
-  DefParameterType!(FontToken, sub[gullet, _inner, _extra, state] {
-    let token = gullet.read_token(state)?.unwrap();
+  DefParameterType!(FontToken, sub[_inner, _extra] {
+    let token = gullet::read_token()?.unwrap();
     if token.with_str(|ts| FONT_TOKEN_RE.is_match(ts)) {
-      gullet.read_number(state)?;
+      gullet::read_number()?;
     }
     token
   }); // ?
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
-    getter => sub[args, state] {
+    getter => sub[args] {
       let p = args.remove(0).expect_number().value_of();
       match p {
-        2 => Dimension::from_str("0.5em",state).ok()?,    // interword space
-        5 => Dimension::from_str("1ex",state).ok()?,      // x-height
-        6 => Dimension::from_str("1em",state).ok()?,      // quad width
+        2 => Dimension::from_str("0.5em").ok()?,    // interword space
+        5 => Dimension::from_str("1ex").ok()?,      // x-height
+        6 => Dimension::from_str("1em").ok()?,      // quad width
         _ => Dimension::new(0)
       }
     }
@@ -167,13 +167,12 @@ setter => sub[value,_scope,args,state] {
 
   DefMacro!("\\fontencoding{}", "\\@@@fontencoding{#1}");
 
-  DefPrimitive!("\\@@@fontencoding{}", sub[stomach, (encoding), state] {
-    let gullet = stomach.get_gullet_mut();
-    let encoding = Expand!(encoding, gullet).to_string();
-    if LoadFontMap!(&encoding).is_some() {
+  DefPrimitive!("\\@@@fontencoding{}", sub[(encoding)] {
+    let encoding = Expand!(encoding).to_string();
+    if load_font_map(&encoding).is_some() {
       MergeFont!(encoding => encoding);
     } else {
-      Info!("missing_font_encoding", encoding, stomach,
+      Info!("missing_font_encoding", encoding,
         "Couldn't find font encoding, falling back to OT1");
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
@@ -191,7 +190,7 @@ setter => sub[value,_scope,args,state] {
   // Used for SemiVerbatim text
   DeclareFontMap!(
     "ASCII",
-    mixvec![
+    mixrc![
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
       None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
       None, None, ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
@@ -219,7 +218,7 @@ setter => sub[value,_scope,args,state] {
   // only when no other spacing point is available.]
   DeclareFontMap!(
     "OT1",
-    mixvec![
+    mixrc![
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{FB00}', '\u{FB01}', '\u{FB02}',
       '\u{FB03}', '\u{FB04}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}',
@@ -236,7 +235,7 @@ setter => sub[value,_scope,args,state] {
 
   DeclareFontMap!(
     "OT1",
-    mixvec![
+    mixrc![
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}', '\u{03A6}', '\u{03A8}', '\u{03A9}', '\u{2191}', '\u{2193}', '\'', '\u{00A1}',
       '\u{00BF}', '\u{0131}', '\u{0237}', '\u{0060}', '\u{00B4}', '\u{02C7}', '\u{02D8}',
@@ -253,7 +252,7 @@ setter => sub[value,_scope,args,state] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OML",
-    mixvec![
+    mixrc![
       // \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma \Upsilon
       '\u{0393}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{03A0}', '\u{03A3}',
       '\u{03A5}',
@@ -302,7 +301,7 @@ setter => sub[value,_scope,args,state] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OMS",
-    mixvec![
+    mixrc![
     // minus     dot         times       ast          divide      diamond    plus-minus minus-plus
     '-',        '\u{22C5}', '\u{00D7}', '\u{2217}', '\u{00F7}', '\u{22C4}', '\u{00B1}', '\u{2213}',
     // oplus      ominus      otimes      oslash       odot        bigcirc circ        bullet
@@ -341,7 +340,7 @@ setter => sub[value,_scope,args,state] {
   #[rustfmt::skip]
   DeclareFontMap!(
     "OMX",
-    mixvec![
+    mixrc![
       // (          )           [           ]             lfloor      rfloor      lceil rceil
       '(', ')', '[', ']', '\u{230A}', '\u{230B}', '\u{2308}',
       '\u{2309}', /* lbrace      rbrace      langle      rangle        |           ||          /
@@ -372,9 +371,9 @@ setter => sub[value,_scope,args,state] {
     ]
   );
 
-  DefPrimitive!("\\char Number", sub[stomach, (number), p_state] {
-    let number_tks = number.revert(p_state).unwrap_or_default().unlist();
-    let decoded = match font::decode(number.value_of() as u8, None, false, stomach, p_state) {
+  DefPrimitive!("\\char Number", sub[(number)] {
+    let number_tks = number.revert().unwrap_or_default().unlist();
+    let decoded = match font::decode(number.value_of() as u8, None, false) {
       None => *EMPTY_SYM,
       Some(c) => arena::pin_char(c)
     };
@@ -383,34 +382,33 @@ setter => sub[value,_scope,args,state] {
      None,
      None,
      Tokens!(T_CS!("\\char"), number_tks, T_RELAX!()),
-     HashMap::default(),
-     p_state)
+     HashMap::default())
   });
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipMatch:=", sub[stomach, (newcs), state] {
+  DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
-    let value = stomach.get_gullet_mut().read_number(state)?;
+    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    { assign_meaning(&newcs, meaning, None); }
+    let value = gullet::read_number()?;
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
-    DefPrimitive!(internalcs.clone(), None, sub[stomach,args,i_state] {
-      let decoded = font::decode(value.value_of() as u8, None, false, stomach, i_state)
+    DefPrimitive!(internalcs.clone(), None, sub[args] {
+      let decoded = font::decode(value.value_of() as u8, None, false)
         .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
-      let gullet = stomach.get_gullet_mut();
+
       Tbox::new(decoded,
         None,
         None,
-        // Note: curious case, since this is 2-levels in, we can't infer the "i_state"
+        // Note: curious case, since this is 2-levels in, we can't infer the "i_state::
         // in the Invocation!() call, so we provide it explicitly instead.
         // if this becomes a common problem, we would have to improve the infrastructure
-        Invocation!(T_CS!("\\char"), vec![value], gullet, i_state)?,
-        HashMap::default(),
-        i_state)
+        Invocation!(T_CS!("\\char"), vec![value]),
+        HashMap::default())
     });
-    state.install_definition(
+    state::install_definition(
       Register::new_chardef(newcs, Some(value.into()), Some(internalcs)), None);
     AfterAssignment!();
     Ok(Vec::new())
@@ -418,12 +416,12 @@ setter => sub[value,_scope,args,state] {
 
   DefConstructor!("\\mathchar Number", "?#glyph(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)",
     sizer       => "#1",
-    after_digest => sub[stomach,whatsit,state] {
+    after_digest => sub[whatsit] {
       let n = whatsit.get_arg(1).unwrap().value_of();
-      let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
+      let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
       if let Some(glyph) = glyph_opt {
         whatsit.set_property("glyph", glyph);
-        whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
+        whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
       }
       if let Some(role) = role_opt {
         whatsit.set_property("role", role);
@@ -435,13 +433,13 @@ setter => sub[value,_scope,args,state] {
   DefConstructor!("\\delimiter Number",
   "?#glyph(?#isMath(<ltx:XMTok role='#role'>#glyph</ltx:XMTok>)(#glyph))",
   sizer       => "#glyph",
-  after_digest => sub[stomach,whatsit,state] {
+  after_digest => sub[whatsit] {
     let mut n = whatsit.get_arg(1).unwrap().value_of();
     n >>= 12;    // Ignore 3 rightmost digits and treat as \mathchar
-    let (role_opt, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
+    let (role_opt, glyph_opt) = decode_math_char(n as u16)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph",glyph);
-      whatsit.set_property("font", state.lookup_font().unwrap().specialize(&glyph.to_string()));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(&glyph.to_string()));
     }
     if let Some(role) = role_opt {
       whatsit.set_property("role", role);
@@ -450,12 +448,13 @@ setter => sub[value,_scope,args,state] {
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[stomach, (newcs), state] {
+  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    state.assign_meaning(&newcs, state.lookup_meaning(&TOKEN_RELAX).unwrap().into_owned(), None);
-    let value  = stomach.get_gullet_mut().read_number(state).unwrap();
+    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    { assign_meaning(&newcs, meaning, None); }
+    let value  = gullet::read_number().unwrap();
     // eprintln!(" ** {} + {}", value,csname);
-    let (role, glyph) = decode_math_char(value.value_of() as u16, stomach, state)?;
+    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_opt = glyph.map(|_|
@@ -470,8 +469,8 @@ setter => sub[value,_scope,args,state] {
       DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
         sizer => "#1",
         properties => glyph_props,
-        font => sub[whatsit,state] { Ok(state.lookup_font().unwrap().specialize(&glyph_str)) },
-        reversion =>  sub[_whatsit,_args,st] {
+        font => { Ok(lookup_font().unwrap().specialize(&glyph_str)) },
+        reversion => sub[_w,_a] {
           Ok(Tokens::new(
             if (glyph_c as usize) < 128 {
               vec![CharToken!(glyph_c,Catcode::OTHER)]
@@ -482,7 +481,7 @@ setter => sub[value,_scope,args,state] {
         }
       );
     }
-    state.install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
+    state::install_definition(Register::new_chardef(newcs,Some(value.into()), internalcs_2), None);
     AfterAssignment!();
     Ok(Vec::new())
   });
@@ -490,15 +489,15 @@ setter => sub[value,_scope,args,state] {
   DefConstructor!("\\mathaccent Number Digested",
   "<ltx:XMApp><ltx:XMTok role='OVERACCENT'>#glyph</ltx:XMTok><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>",
   sizer => "#1",    // Close enough?
-  after_digest => sub[stomach, whatsit, state] {
+  after_digest => sub[whatsit] {
     let n = whatsit.get_arg(1).unwrap().value_of();
-    let (role, glyph_opt) = decode_math_char(n as u16, stomach, state)?;
+    let (_role, glyph_opt) = decode_math_char(n as u16)?;
     if let Some(glyph) = glyph_opt {
       whatsit.set_property("glyph", glyph);
 
       let mut glyph_buf: [u8; 4] = [0; 4];
       let glyph_str: &str = glyph.encode_utf8(&mut glyph_buf);
-      whatsit.set_property("font", state.lookup_font().unwrap().specialize(glyph_str));
+      whatsit.set_property("font", lookup_font().unwrap().specialize(glyph_str));
     }
   });
 });

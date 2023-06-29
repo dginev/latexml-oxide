@@ -8,20 +8,19 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::state::{Scope, State};
+use crate::state::*;
 
 use crate::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
   PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
-use crate::gullet::Gullet;
 use crate::parameter::Parameters;
-use crate::stomach::Stomach;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
 use crate::{BoxOps, Digested, Locator};
+use crate::stomach::digest_next_body;
 
 /// configuration for creating a new Constructor
 #[derive(Clone)]
@@ -84,7 +83,7 @@ impl Default for ConstructorOptions {
       // environment-specific
       require_math: false,
       forbid_math: false,
-      properties: Rc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
+      properties: Rc::new(| _whatsit| Ok(HashMap::default())),
       capture_body: false,
       font: None,
       after_digest_begin: vec![],
@@ -156,7 +155,7 @@ impl Default for Constructor {
       after_digest: vec![],
       before_construct: vec![],
       after_construct: vec![],
-      properties: Rc::new(|_stomach, _whatsit, _state| Ok(HashMap::default())),
+      properties: Rc::new(|_whatsit| Ok(HashMap::default())),
       capture_body: false,
       after_digest_body: vec![],
       reversion: None,
@@ -184,30 +183,30 @@ impl Definition for Constructor {
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }
   fn capture_body(&self) -> bool { self.capture_body }
   fn get_sizer(&self) -> Option<SizingClosure> { self.sizer.clone() }
-  fn invoke(&self, _gullet: &mut Gullet, _once_only: bool, _state: &mut State) -> Result<Tokens> {
+  fn invoke(&self, _once_only: bool) -> Result<Tokens> {
     Ok(Tokens!())
   }
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
-  fn invoke_primitive(&self, stomach: &mut Stomach, state: &mut State) -> Result<Vec<Digested>> {
+  fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     Debug!("invoke for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
-    // let profiled = state.lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
-    // let tracing = state.lookup_value("TRACINGCOMMANDS");
+    // let profiled = state!().lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
+    // let tracing = state!().lookup_value("TRACINGCOMMANDS");
     // LaTeXML::Definition::startProfiling($profiled, "digest") if $profiled;
 
-    let mut result = self.execute_before_digest(stomach, state)?;
+    let mut result = self.execute_before_digest()?;
 
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
-    let state_font = state.lookup_font();
-    let ismath = state.lookup_bool("IN_MATH");
+    let state_font = lookup_font();
+    let ismath = lookup_bool("IN_MATH");
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest(stomach, self, state)?,
+      Some(params) => params.read_arguments_and_digest( self)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -215,7 +214,7 @@ impl Definition for Constructor {
 
     // Compute any extra Whatsit properties (many end up as element attributes)
 
-    let mut properties = (self.properties)(stomach, &args, state)?;
+    let mut properties = (self.properties)( &args)?;
     // for (key, value) in properties.iter() {
     //   if (ref $value eq 'CODE') {
     //     $properties{$key} = &$value($stomach, @args); } }
@@ -242,19 +241,19 @@ impl Definition for Constructor {
     };
 
     // Call any 'After' code.
-    let mut post = self.execute_after_digest(stomach, &mut whatsit, state)?;
+    let mut post = self.execute_after_digest( &mut whatsit)?;
 
     if self.capture_body {
-      let captured = stomach.digest_next_body(None, state)?;
+      let captured = digest_next_body(None)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);
 
-      whatsit.set_body(post, state);
+      whatsit.set_body(post);
       post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
     }
-    let post_post = self.execute_after_digest_body(stomach, &mut whatsit, state)?;
+    let post_post = self.execute_after_digest_body( &mut whatsit)?;
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
     // Package the result boxes
@@ -283,10 +282,9 @@ impl Definition for Constructor {
     &self,
     document: &mut Document,
     whatsit: &Whatsit,
-    state: &mut State,
   ) -> Result<Vec<Node>> {
     for pre_closure in &self.before_construct {
-      pre_closure(document, whatsit, state)?;
+      pre_closure(document, whatsit)?;
     }
 
     match self.replacement {
@@ -299,13 +297,12 @@ impl Definition for Constructor {
           document,
           whatsit.get_args(),
           whatsit.get_properties(),
-          state,
-        )?
+              )?
       },
     };
 
     for post_closure in &self.after_construct {
-      post_closure(document, whatsit, state)?;
+      post_closure(document, whatsit)?;
     }
     Ok(Vec::new())
   }

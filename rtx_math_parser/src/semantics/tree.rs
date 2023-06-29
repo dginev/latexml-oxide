@@ -2,8 +2,6 @@ use libxml::tree::Node;
 use rtx_core::common::font::Font;
 use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
-use rtx_core::common::object::Object;
-use rtx_core::state::State;
 use rtx_core::Info;
 use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
@@ -98,7 +96,7 @@ impl XProps {
 /// finally serialized via the XMath schema of LaTeXML.
 ///
 /// The main structural variants are associated with
-/// a "parsing state", via an attached `Meta` object.
+/// a "parsing state::, via an attached `Meta` object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XM {
   Lexeme(String, Meta),
@@ -617,7 +615,6 @@ impl XM {
     owner: &mut Node,
     nodes: &mut [Node],
     document: &mut Document,
-    state: &mut State,
   ) -> Result<Node, Box<dyn Error + Send + Sync>> {
     match self {
       XM::Lexeme(content, _meta) => {
@@ -634,48 +631,48 @@ impl XM {
         // but there is some contextual inference at times, e.g. in "insertMathToken", and not at
         // others. this does the simpler aspect only:
         let (content_opt, font, attrs) = props.into_attributes();
-        let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font, state)?;
+        let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font)?;
         if let Some(content) = content_opt {
           if !content.is_empty() {
             xmtok.set_content(&content)?;
           }
         }
-        document.close_element_at(&mut xmtok, state)?;
+        document.close_element_at(&mut xmtok)?;
         Ok(xmtok)
       },
       XM::Apply(op, args, props, _meta) => {
         // let mut apply_node = Node::new("XMApp", None, document.get_document()).unwrap();
         // props.into_xmath(&mut apply_node,document)?;
         let (_, font, attrs) = props.into_attributes();
-        let mut apply_node = document.open_element_at(owner, "ltx:XMApp", attrs, font, state)?;
-        let mut op_node = op.0.into_xmath(&mut apply_node, nodes, document, state)?;
+        let mut apply_node = document.open_element_at(owner, "ltx:XMApp", attrs, font)?;
+        let mut op_node = op.0.into_xmath(&mut apply_node, nodes, document)?;
 
         add_child_guard_xmarg(&mut apply_node, &mut op_node)?;
         for arg in args.0.into_iter().flatten() {
-          let mut arg_node = arg.into_xmath(&mut apply_node, nodes, document, state)?;
+          let mut arg_node = arg.into_xmath(&mut apply_node, nodes, document)?;
           add_child_guard_xmarg(&mut apply_node, &mut arg_node)?;
         }
-        document.close_element_at(&mut apply_node, state)?;
+        document.close_element_at(&mut apply_node)?;
         Ok(apply_node)
       },
       XM::Dual(content, pres, props, _meta) => {
         let (_, font, attrs) = props.into_attributes();
-        let mut dual_node = document.open_element_at(owner, "ltx:XMDual", attrs, font, state)?;
-        let mut content_node = content.into_xmath(&mut dual_node, nodes, document, state)?;
+        let mut dual_node = document.open_element_at(owner, "ltx:XMDual", attrs, font)?;
+        let mut content_node = content.into_xmath(&mut dual_node, nodes, document)?;
         add_child_guard_xmarg(&mut dual_node, &mut content_node)?;
-        let mut pres_node = pres.into_xmath(&mut dual_node, nodes, document, state)?;
+        let mut pres_node = pres.into_xmath(&mut dual_node, nodes, document)?;
         add_child_guard_xmarg(&mut dual_node, &mut pres_node)?;
-        document.close_element_at(&mut dual_node, state)?;
+        document.close_element_at(&mut dual_node)?;
         Ok(dual_node)
       },
       XM::Wrap(content, props, _meta) => {
         let (_, font, attrs) = props.into_attributes();
-        let mut wrap_node = document.open_element_at(owner, "ltx:XMWrap", attrs, font, state)?;
+        let mut wrap_node = document.open_element_at(owner, "ltx:XMWrap", attrs, font)?;
         for c in content.into_iter() {
-          let mut content_node = c.into_xmath(&mut wrap_node, nodes, document, state)?;
+          let mut content_node = c.into_xmath(&mut wrap_node, nodes, document)?;
           add_child_guard_xmarg(&mut wrap_node, &mut content_node)?;
         }
-        document.close_element_at(&mut wrap_node, state)?;
+        document.close_element_at(&mut wrap_node)?;
         Ok(wrap_node)
       },
       XM::Ref(refprops) => {
@@ -691,20 +688,19 @@ impl XM {
       XM::Arg(inner_list) => {
         let mut arg_node = Node::new("XMArg", None, document.get_document()).unwrap();
         for inner_item in inner_list {
-          let mut inner_node = inner_item.into_xmath(&mut arg_node, nodes, document, state)?;
+          let mut inner_node = inner_item.into_xmath(&mut arg_node, nodes, document)?;
           add_child_guard_xmarg(&mut arg_node, &mut inner_node)?;
         }
         Ok(arg_node)
       },
       XM::Choices(mut choices) => {
         {
-          let stomach = &state.stomach.borrow();
-          Info!("math_parser","choices", stomach,
+          Info!("math_parser","choices",
             "to_xmath handler discarded {} parse choices.",
             choices.len() - 1
           );
         }
-        choices.remove(0).into_xmath(owner, nodes, document, state)
+        choices.remove(0).into_xmath(owner, nodes, document)
       },
     }
   }
@@ -742,9 +738,7 @@ impl XM {
     match self {
       XM::Lexeme(lex, _) => {
         let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
-        Ok(Some(
-          realize_xmnode(lex_node, ctxt.document, ctxt.state).into_owned(),
-        ))
+        Ok(Some(realize_xmnode(lex_node, ctxt.document).into_owned()))
       },
       XM::Ref(ref refprops) => {
         if let Some(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {

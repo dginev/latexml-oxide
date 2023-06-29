@@ -4,9 +4,9 @@ use rtx_core::common::{Config, DataSize, OutputFormat};
 use rtx_core::digested::Digested;
 use rtx_core::document::Document;
 use rtx_core::list::List;
-use rtx_core::state::State;
-use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info};
-use rtx_package::package;
+use rtx_core::state::{set_bindings_dispatch, set_extra_bindings_dispatch};
+use rtx_core::{s, Core, CoreOptions, Error, Fatal, fatal, Info, report, report_mut};
+use rtx_package::{package};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -45,18 +45,17 @@ impl Converter {
   }
   pub fn initialize_session(&mut self) -> Result<()> {
     // Add default package bindings
-    self.state_mut().bindings_dispatch = Some(Rc::new(package::dispatch));
+    set_bindings_dispatch(Rc::new(package::dispatch));
     // Add additional binding definitions if any
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
-      self.state_mut().extra_bindings_dispatch = Some(closure.clone())
+      set_extra_bindings_dispatch(closure.clone());
     }
     // Prepare LaTeXML object
-    self.core.initialize_state(vec![s!("TeX.pool")])?;
+    self.core.initialize_singletons(vec![s!("TeX.pool")])?;
     self.ready = true;
     Ok(())
   }
 
-  pub fn state_mut(&mut self) -> &mut State { self.core.get_state_mut() }
   pub fn bind_log(&mut self) {
     // TODO
   }
@@ -151,13 +150,7 @@ impl Converter {
     //   }
 
     // 1.5 Prepare a daemon frame
-    // self.core.pushDaemonFrame();
-    //  withState(sub {
-    //     my ($state) = @_;    // Sandbox state
-    //     $state->pushDaemonFrame;
-    //     $state->assignValue('_authlist', $$opts{authlist}, 'global');
-    //     $state->assignValue('REMOTE_REQUEST', (!$$opts{local}), 'global');
-    // });
+    // ...
 
     // 2 Beginning Core conversion - digest the source:
     // my ($digested, $dom, $serialized) = (undef, undef, undef);
@@ -176,9 +169,9 @@ impl Converter {
     let digested = match digest_result {
       Err(e) => {
         // TODO digestion failed, report
-        self.core.get_state_mut().status_code = 3;
+        report_mut!().status_code = 3;
         e.log_fatal();
-        Digested::from(List::new(Vec::new(), self.core.get_state_mut()))
+        Digested::from(List::new(Vec::new()))
       },
       Ok(d) => d,
     };
@@ -186,7 +179,7 @@ impl Converter {
     let dom_result: Result<Document>;
     let serialized = match self.opts.format {
       OutputFormat::TeX => {
-        let untex_result = { digested.untex(self.core.get_state_mut()) };
+        let untex_result = { digested.untex() };
         match untex_result {
           Ok(tex) => tex,
           Err(e) => {
@@ -209,11 +202,10 @@ impl Converter {
       _ => {
         dom_result = self.core.convert_document(digested);
         match dom_result {
-          Ok(dom) => dom.serialize_to_string(self.state_mut()),
+          Ok(dom) => dom.serialize_to_string(),
           Err(e) => {
             let message = s!("{:?}", e);
-            let error_where = &self.core;
-            let err = || {Error!("document", "convert", error_where, message); Ok(()) };
+            let err = || {Error!("document", "convert", message); Ok(()) };
             err().ok();
             String::new()
           },
@@ -221,44 +213,11 @@ impl Converter {
       },
     };
 
-    let status_code = self.core.get_state().status_code;
-    self.runtime.status_code = status_code;
+    self.runtime.status_code = report!().status_code;
     // alarm(0)
 
     // 2.2 Bookkeeping in case fatal errors occurred
-    // $$latexml{state}->noteStatus('fatal') if $latexml && $@;    // Fatal Error?
-    // local $@ = 'Fatal:conversion:unknown TeX to XML conversion failed! (Unknown Reason)' if
-    // ((!$convert_eval_return) && (!$@)); my $eval_report = $@;
-    // $$runtime{status}      = $latexml->getStatusMessage;
-    // $$runtime{status_code} = $latexml->getStatusCode;
-    // $$runtime{status_data}->{$_} = $$latexml{state}->{status}->{$_} foreach (qw(warning error
-    // fatal)); // End daemon run, by popping frame:
-    // $latexml->withState(sub {
-    //     my ($state) = @_;                                       // Remove current state frame
-    // $$opts{searchpaths} = $state->lookupValue('SEARCHPATHS'); // save the searchpaths for
-    // post-processing     $state->popDaemonFrame;
-    //     $$state{status} = {};
-    // });
-    // if ($eval_report || ($$runtime{status_code} == 3)) {
-    //   // Terminate immediately on Fatal errors
-    //   $$runtime{status_code} = 3;
-    //   log!($eval_report . "\n" if $eval_report);
-    //   log!("\nConversion complete: " . $$runtime{status} . ".\n");
-    //   log!("Status:conversion:" . ($$runtime{status_code} || '0') . "\n");
-    //   // If we just processed an archive, clean up sandbox directory.
-    //   if ($$opts{whatsin} =~ /^archive/) {
-    //     rmtree($$opts{sourcedirectory});
-    //     $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
-
-    // Close and restore STDERR to original condition.
-    // let log = self.flush_log();
-    // $serialized = $dom->to_string if ($dom && (!defined $serialized));
-    // $self->sanitize($log);
-
-    // return { result => $serialized, log => $log, status => $$runtime{status}, status_code =>
-    // $$runtime{status_code} }; } else {
-    // Standard report, if we're not in a Fatal case
-    // log!("\nConversion complete: " . $$runtime{status} . ".\n"; );
+    // ...
 
     // 2.3 Clean up and exit if we only wanted the serialization of the core conversion
     // if ($serialized) {
@@ -323,7 +282,7 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
-    Info!("status", "conversion", None, self.runtime.status_code);
+    Info!("status", "conversion", self.runtime.status_code);
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

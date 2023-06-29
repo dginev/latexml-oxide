@@ -28,14 +28,13 @@ use crate::definition::register::{Register, RegisterValue};
 use crate::definition::Reversion;
 use crate::definition::{Definition, FontDirective};
 use crate::document::tag::TagData;
-use crate::gullet::Gullet;
 use crate::ligature::Ligature;
 use crate::list::List;
 use crate::mouth;
 use crate::mouth::Mouth;
 use crate::parameter::Parameter;
 use crate::rewrite::Rewrite;
-use crate::state::{StashTable, State};
+use crate::state::{StashTable};
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
@@ -44,17 +43,17 @@ const STORED_FALSE: Stored = Stored::Bool(false);
 
 // Basic principles:
 // 1. If the type is `Copy`, store directly
-// 2. If the type is intended as State-exclusive, store in a Box
+// 2. If the type is intended as state-exclusive, store in a Box
 //      (or directly if any already Boxed datatype such as Vec, VecDeque, HashMap)
 // 3. If the struct is intended for reuse in digestion components, store it in an Rc,
 //    e.g. Rc<Font>
 // 4. In the very unfortunate cases where we have to mutate items while they are stored,
 //    we may consider a RefCell<> wrapper for interior mutability.
 //      BUT it is often possible to take the value out to mutate, and re-insert.
-//      State::checkout_value(key) + mutate + State::checkin_value(key,val)
+//      state::checkout_value(key) + mutate + state::checkin_value(key,val)
 //      The only cases where this isn't straightforward is for deep recursive callchains,
-//      as in the ones where we rely on Stomach or a Mouth being in State.
-/// The original global State (in Perl) allowed arbitrary values. To stay consistent, we create an
+//      as in the ones where we rely on Stomach or a Mouth being in state.
+/// The original global state (in Perl) allowed arbitrary values. To stay consistent, we create an
 /// extremely permissive struct that affords all essential kinds of values that appear essential.
 #[derive(Default, Clone)]
 pub enum Stored {
@@ -77,7 +76,7 @@ pub enum Stored {
   /// boxed Vec<char>
   VecChar(Vec<char>),
   /// boxed Vec<Option<char>>
-  VecOptionChar(Vec<Option<char>>),
+  Fontmap(Rc<[Option<char>]>),
   /// boxed collection
   VecString(Vec<String>),
   /// boxed collection (latexml)
@@ -133,7 +132,7 @@ pub enum Stored {
   //  MathPrimitiveOptions(MathPrimitiveOptions), // Maybe later
   /// latexml object (Rc-wrapped)
   Constructor(Rc<Constructor>),
-  /// latexml object (Rc-wrapped)
+  /// latexml object (Rc-wrapped from within)
   Digested(crate::Digested),
   /// latexml object (Rc-wrapped)
   Parameter(Rc<Parameter>),
@@ -156,7 +155,7 @@ impl fmt::Debug for Stored {
       Int(ref num) => write!(f, "Stored::Int[{num:?}]"),
       Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
       VecChar(ref vs) => write!(f, "Stored::VecChar[{vs:?}]"),
-      VecOptionChar(ref vs) => write!(f, "Stored::VecOptionChar[{vs:?}]"),
+      Fontmap(ref vs) => write!(f, "Stored::Fontmap[{vs:?}]"),
       Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
       VecString(ref vs) => write!(f, "Stored::VecString[{vs:?}]"),
       Bool(ref b) => write!(f, "Stored::Bool[{b:?}]"),
@@ -225,8 +224,8 @@ impl fmt::Display for Stored {
 /// We can not simply derive PartialEq since it is not obvious (to rust, or to me)
 /// if it is safe to eagerly borrow() from the RefCell guards over fields with interior
 /// mutability.
-/// Worse: some conditions depend on the Stateful meaning of Token's,
-///        so the perfect equality check would need State as an argument.
+/// Worse: some conditions depend on the stateful meaning of Token's,
+///        so the perfect equality check would need state::as an argument.
 impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
@@ -260,8 +259,8 @@ impl PartialEq for Stored {
           false
         }
       },
-      VecOptionChar(ref vs) => {
-        if let VecOptionChar(vs2) = other {
+      Fontmap(ref vs) => {
+        if let Fontmap(vs2) = other {
           *vs == *vs2
         } else {
           false
@@ -530,14 +529,14 @@ impl Stored {
   }
   /// Dynamic dispatch for Definition's `read_arguments`,
   /// to circumvent the limitations of using trait objects with `Rc<Definition>`
-  pub fn read_arguments(&self, gullet: &mut Gullet, state: &mut State) -> Result<Vec<ArgWrap>> {
+  pub fn read_arguments(&self) -> Result<Vec<ArgWrap>> {
     match self {
-      Stored::Conditional(ref entry) => entry.read_arguments(gullet, state),
-      Stored::Constructor(ref entry) => entry.read_arguments(gullet, state),
-      Stored::Expandable(ref entry) => entry.read_arguments(gullet, state),
-      Stored::MathPrimitive(ref entry) => entry.read_arguments(gullet, state),
-      Stored::Primitive(ref entry) => entry.read_arguments(gullet, state),
-      Stored::Register(ref entry) => entry.read_arguments(gullet, state),
+      Stored::Conditional(ref entry) => entry.read_arguments(),
+      Stored::Constructor(ref entry) => entry.read_arguments(),
+      Stored::Expandable(ref entry) => entry.read_arguments(),
+      Stored::MathPrimitive(ref entry) => entry.read_arguments(),
+      Stored::Primitive(ref entry) => entry.read_arguments(),
+      Stored::Register(ref entry) => entry.read_arguments(),
       e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
     }
   }
@@ -744,8 +743,8 @@ impl From<Alignment> for Stored {
 impl From<Vec<char>> for Stored {
   fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
 }
-impl From<Vec<Option<char>>> for Stored {
-  fn from(value: Vec<Option<char>>) -> Self { Stored::VecOptionChar(value) }
+impl From<Rc<[Option<char>]>> for Stored {
+  fn from(value: Rc<[Option<char>]>) -> Self { Stored::Fontmap(value) }
 }
 
 impl From<Vec<String>> for Stored {
@@ -961,12 +960,17 @@ impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<&'a Vec<Option<char>>> {
-  fn from(value: &'a Stored) -> Option<&'a Vec<Option<char>>> {
+impl From<&Stored> for Option<Rc<[Option<char>]>> {
+  fn from(value: &Stored) -> Option<Rc<[Option<char>]>> {
     match value {
-      Stored::VecOptionChar(ref cc) => Some(cc),
+      Stored::Fontmap(ref cc) => Some(Rc::clone(cc)),
       _ => None,
     }
+  }
+}
+impl From<Stored> for Option<Rc<[Option<char>]>> {
+  fn from(value: Stored) -> Option<Rc<[Option<char>]>> {
+    (&value).into()
   }
 }
 
@@ -1022,7 +1026,7 @@ impl<'a> From<&'a Stored> for Token {
       },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);
-        Warn!("Stored", "cast", None, message);
+        Warn!("Stored", "cast", message);
         T_CS!(t.to_string())
       }, /* TODO, is this the right place to default to CS? Do we need a
           * custom method instead? */

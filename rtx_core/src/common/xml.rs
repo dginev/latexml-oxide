@@ -10,7 +10,7 @@ pub struct XPath {
   context: Context,
 }
 
-// pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens, &mut State) -> bool>;
+// pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens) -> bool>;
 impl XPath {
   pub fn new(doc: &Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();
@@ -26,7 +26,7 @@ impl XPath {
           codeprefix,
           namespace
         );
-        Error!("expected", "XPath", None, message);
+        Error!("expected", "XPath", message);
       },
     };
     Ok(())
@@ -37,7 +37,7 @@ impl XPath {
       Ok(nodes) => nodes,
       Err(e) => {
         let message = s!("{:?}", e);
-        let err = || {Error!("xpath", "findnodes", None, message); Ok(()) };
+        let err = || {Error!("xpath", "findnodes", message); Ok(()) };
         err().ok();
         panic!("this is an external libxml2 error; unwinding...");
       },
@@ -49,7 +49,7 @@ impl XPath {
       Ok(vals) => vals,
       Err(e) => {
         let message = s!("{:?}", e);
-        let err = || {Error!("xpath", "findvalues", None, message); Ok(())};
+        let err = || {Error!("xpath", "findvalues", message); Ok(())};
         err().ok();
         Vec::new()
       },

@@ -1,5 +1,5 @@
 use crate::package::*;
-LoadDefinitions!(_state, {
+LoadDefinitions!({
   //======================================================================
 
   // We OUGHT to be able to do this using \llap,\rlap,\hss...
@@ -93,8 +93,8 @@ LoadDefinitions!(_state, {
   //       $document->getNode->appendChild($node);
   // } });
 
-  DefMacro!("\\dump", sub[gullet,_args,_state] {
-    Warn!("unexpected", "dump", gullet, "Do not know how to \\dump yet, sorry");
+  DefMacro!("\\dump", {
+    Warn!("unexpected", "dump", "Do not know how to \\dump yet, sorry");
   });
 
 });

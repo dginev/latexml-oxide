@@ -1,7 +1,7 @@
 use crate::package::*;
 
 #[rustfmt::skip]
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.6.3 The list and trivlist environments.
   //======================================================================
@@ -10,16 +10,14 @@ LoadDefinitions!(state, {
 
   DefConditional!("\\if@nmbrlist");
   DefMacro!("\\@listctr", "");
-  DefPrimitive!("\\usecounter{}", sub[stomach, (counter), state] {
-    let gullet = stomach.get_gullet_mut();
-    let counter = Expand!(counter, gullet, state).to_string();
+  DefPrimitive!("\\usecounter{}", sub[(counter)] {
+    let counter = Expand!(counter).to_string();
     if counter.is_empty() {
-      begin_itemize("list", None, BeginItemizeOptions::default(), stomach, state)?;
+      begin_itemize("list", None, BeginItemizeOptions::default())?;
     } else {
       begin_itemize("list", Some(&counter), BeginItemizeOptions {
         nolevel:true,
-        ..BeginItemizeOptions::default() },
-        stomach, state)?;
+        ..BeginItemizeOptions::default() })?;
     }
   });
 
@@ -32,23 +30,23 @@ LoadDefinitions!(state, {
   // Start an anonymous list (often misused)
   DefConstructor!("\\lx@list",
     "<ltx:itemize>",
-    before_digest => sub[stomach, state] { stomach.bgroup(state); });
+    before_digest => { bgroup(); });
   // Close the anonymous list if we're still within one.
-  DefConstructor!("\\endlx@list", sub[document, state] {
-    document.maybe_close_element("ltx:itemize", state)?; },
-    before_digest => sub[stomach,state] { stomach.egroup(state)?; });
+  DefConstructor!("\\endlx@list", sub[document] {
+    document.maybe_close_element("ltx:itemize")?; },
+    before_digest => { egroup()?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
-    properties => sub[stomach, args, state] {
+    properties => sub[args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested, stomach, state) }
+      ref_step_item_counter(undigested) }
   );
 
   DefEnvironment!("{trivlist}",
     "<ltx:itemize>#body</ltx:itemize>",
-    properties => sub[stomach, _args, state] {
-      begin_itemize("trivlist", None, BeginItemizeOptions::default(), stomach, state) },
+    properties => {
+      begin_itemize("trivlist", None, BeginItemizeOptions::default()) },
     before_digest_end => { Digest!("\\par")?; }
   );
 
@@ -56,12 +54,11 @@ LoadDefinitions!(state, {
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",
     // At least an empty tag! ?
-    properties => sub[stomach, args, state] {
+    properties => sub[args] {
       if let Some(ref arg) = args[0] {
         if let DigestedData::Postponed(ref tag_tokens) = arg.data() {
-          let gullet = stomach.get_gullet_mut();
-          let tag_expanded = Expand!(tag_tokens.clone(), gullet, state);
-          let tag = stomach.digest(tag_expanded, state)?;
+          let tag_expanded = Expand!(tag_tokens.clone());
+          let tag = stomach::digest(tag_expanded)?;
           Ok(stored_map!("tag" => tag))
         } else {
           Ok(HashMap::default())

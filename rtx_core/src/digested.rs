@@ -21,7 +21,6 @@ use crate::definition::register::RegisterValue;
 use crate::document::Document;
 use crate::keyvals::KeyVals;
 use crate::list::List;
-use crate::state::State;
 use crate::tbox::Tbox;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -202,10 +201,10 @@ impl<'a> From<&'a Digested> for Option<crate::Digested> {
 }
 
 // impl<'a> From<&'a Digested> for Tokens {
-//   fn from(value: &'a Digested) -> Tokens { value.revert(state).unwrap() }
+//   fn from(value: &'a Digested) -> Tokens { value.revert().unwrap() }
 // }
 // impl From<Digested> for Tokens {
-//   fn from(value: Digested) -> Tokens { value.revert(state).unwrap() }
+//   fn from(value: Digested) -> Tokens { value.revert().unwrap() }
 // }
 impl From<Digested> for Result<Digested> {
   fn from(value: Digested) -> Result<Digested> { Ok(value) }
@@ -263,17 +262,17 @@ impl Object for Digested {
       Postponed(ref _t) => None, // Tokens locator?
     }
   }
-  fn revert(&self, state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow().revert(state),
-      List(ref l) => l.borrow().revert(state),
-      Whatsit(ref w) => w.borrow().revert(state),
-      Alignment(ref w) => w.borrow().revert(state),
+      TBox(ref b) => b.borrow().revert(),
+      List(ref l) => l.borrow().revert(),
+      Whatsit(ref w) => w.borrow().revert(),
+      Alignment(ref w) => w.borrow().revert(),
       Postponed(ref t) => Ok(t.clone()),
-      KeyVals(ref kvs) => kvs.revert(state),
-      Comment(ref c) => c.revert(state),
-      RegisterValue(ref rv) => rv.revert(state),
+      KeyVals(ref kvs) => kvs.revert(),
+      Comment(ref c) => c.revert(),
+      RegisterValue(ref rv) => rv.revert(),
     }
   }
 }
@@ -300,15 +299,15 @@ impl BoxOps for Digested {
     }
   }
 
-  fn be_absorbed(&self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
     use DigestedData::*;
     match &*self.0 {
-      TBox(b) => b.borrow().be_absorbed(document, state),
-      List(l) => l.borrow().be_absorbed(document, state),
-      Comment(c) => c.be_absorbed(document, state),
-      Whatsit(w) => w.borrow().be_absorbed(document, state),
-      Alignment(w) => w.borrow_mut().be_absorbed_mut(document, state),
-      KeyVals(kvs) => kvs.be_absorbed(document, state),
+      TBox(b) => b.borrow().be_absorbed(document),
+      List(l) => l.borrow().be_absorbed(document),
+      Comment(c) => c.be_absorbed(document),
+      Whatsit(w) => w.borrow().be_absorbed(document),
+      Alignment(w) => w.borrow_mut().be_absorbed_mut(document),
+      KeyVals(kvs) => kvs.be_absorbed(document),
       Postponed(_) => unimplemented!(),
       RegisterValue(ref _rv) => unimplemented!(),
     }
@@ -364,20 +363,20 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-  fn get_string(&self, state: &State) -> Result<Cow<str>> {
+  fn get_string(&self) -> Result<Cow<str>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => b
         .borrow()
-        .get_string(state)
+        .get_string()
         .map(|v| Cow::Owned(v.into_owned())),
       List(ref l) => l
         .borrow()
-        .get_string(state)
+        .get_string()
         .map(|v| Cow::Owned(v.into_owned())),
       Whatsit(ref w) => w
         .borrow()
-        .get_string(state)
+        .get_string()
         .map(|v| Cow::Owned(v.into_owned())),
       _ => unimplemented!(),
     }
@@ -425,22 +424,22 @@ impl BoxOps for Digested {
       _ => unimplemented!(),
     }
   }
-  fn get_font(&self, state: &mut State) -> Result<Option<Cow<Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<Font>>> {
     use DigestedData::*;
     match *self.0 {
       TBox(ref b) => Ok(
         b.borrow()
-          .get_font(state)?
+          .get_font()?
           .map(|v| Cow::Owned(v.into_owned())),
       ),
       List(ref l) => Ok(
         l.borrow()
-          .get_font(state)?
+          .get_font()?
           .map(|v| Cow::Owned(v.into_owned())),
       ),
       Whatsit(ref w) => Ok(
         w.borrow()
-          .get_font(state)?
+          .get_font()?
           .map(|t| Cow::Owned(t.into_owned())),
       ),
       Postponed(ref _tks) => Ok(None),
@@ -454,15 +453,14 @@ impl BoxOps for Digested {
   fn compute_size(
     &self,
     options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
     match *self.0 {
-      TBox(ref b) => b.borrow_mut().compute_size_and_cache(options, state),
-      List(ref l) => l.borrow_mut().compute_size_and_cache(options, state),
-      KeyVals(ref kvs) => kvs.compute_size(options, state),
-      Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options, state),
-      Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options, state),
+      TBox(ref b) => b.borrow_mut().compute_size_and_cache(options),
+      List(ref l) => l.borrow_mut().compute_size_and_cache(options),
+      KeyVals(ref kvs) => kvs.compute_size(options),
+      Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
+      Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
       Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
     }
   }
@@ -543,7 +541,7 @@ impl Digested {
 
   /// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
   /// content
-  pub fn untex(&self, state: &mut State) -> Result<String> { Ok(self.revert(state)?.untex()) }
+  pub fn untex(&self) -> Result<String> { Ok(self.revert()?.untex()) }
 
   pub fn alignment_cell(&self) -> Option<&RefCell<Alignment>> {
     if let DigestedData::Alignment(ref alignment) = *self.0 {

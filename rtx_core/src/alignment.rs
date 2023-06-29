@@ -35,14 +35,13 @@ use crate::common::error::*;
 use crate::common::object::Object;
 use crate::common::store::Stored;
 use crate::digested::Digested;
-use crate::document::Document;
-use crate::gullet::Gullet;
+use crate::document::{get_node_qname,with_node_qname,Document};
 use crate::mouth::Mouth;
-use crate::state::State;
-use crate::stomach::Stomach;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::BoxOps;
+use crate::state::*;
+use crate::stomach::*;
+use crate::{BoxOps,gullet,stomach};
 
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
@@ -55,13 +54,13 @@ use std::rc::Rc;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
-  Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<Option<Node>>>;
-pub type CloseContainerFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
-pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<()>>;
-pub type CloseRowFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
+  Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
+pub type CloseContainerFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
+pub type OpenRowFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<()>>;
+pub type CloseRowFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 pub type OpenColumnFn =
-  Rc<dyn Fn(&mut Document, HashMap<String, String>, &mut State) -> Result<Option<Node>>>;
-pub type CloseColumnFn = Rc<dyn Fn(&mut Document, &mut State) -> Result<Option<Node>>>;
+  Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
+pub type CloseColumnFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 
 static SINGLE_PUNCT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[\.,;]\s*$").unwrap());
 
@@ -210,7 +209,7 @@ impl Alignment {
     if let Some(colspec) = current_row.get_column_mut(self.current_column) {
       Ok(Some(colspec))
     } else {
-      Error!("unexpected", "&", None, "Extra alignment tab '&'");
+      Error!("unexpected", "&", "Extra alignment tab '&'");
       // DG: Mutability issue, should we do an alternative recovery?
       //     or change the call interface?
       //
@@ -320,7 +319,7 @@ impl Alignment {
     }
   }
 
-  pub fn revert(&self, _state: &State) -> Result<Tokens> {
+  pub fn revert(&self) -> Result<Tokens> {
     Ok(self.reversion.clone().unwrap_or_default())
   }
 
@@ -334,28 +333,27 @@ impl Alignment {
   pub fn start_row(
     &mut self,
     pseudorow: bool,
-    stomach: &mut Stomach,
-    state: &mut State,
+
   ) -> Result<()> {
     self.new_row();
-    stomach.bgroup(state); // Grouping around ROW!
+    bgroup(); // Grouping around ROW!
     if pseudorow {
       self.current_row_mut().unwrap().set_pseudo()
     } else {
-      let row_before = stomach.digest(T_CS!("\\@row@before"), state)?;
-      stomach.box_list.push(row_before);
+      let row_before = stomach::digest(T_CS!("\\@row@before"))?;
+      push_box_list(row_before);
     }
     self.in_row = true;
-    state.assign_value("alignmentStartColumn", 0, None); // ???
+    assign_value("alignmentStartColumn", 0, None); // ???
     Ok(())
   }
 
-  pub fn end_row(&mut self, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  pub fn end_row(&mut self) -> Result<()> {
     if self.in_row {
       if self.in_column {
-        self.end_column(stomach, state)?;
+        self.end_column()?;
       }
-      stomach.egroup(state)?; // Grouping around ROW!
+      egroup()?; // Grouping around ROW!
       self.in_row = false;
     }
     Ok(()) //  Digest(T_CS('\@row@after'));
@@ -364,26 +362,25 @@ impl Alignment {
   pub fn start_column(
     &mut self,
     pseudorow: bool,
-    stomach: &mut Stomach,
-    state: &mut State,
+
   ) -> Result<()> {
     if !self.in_row {
-      self.start_row(pseudorow, stomach, state)?;
+      self.start_row(pseudorow)?;
     } else if pseudorow {
       self.current_row_mut().unwrap().set_pseudo();
     }
-    stomach.bgroup(state); // Grouping around CELL!
+    bgroup(); // Grouping around CELL!
                            // Note: a VERY round-about way of tracking the column spanning!
-    state.assign_value("alignmentStartColumn", self.current_column_number(), None);
+    assign_value("alignmentStartColumn", self.current_column_number(), None);
     let _colspec = self.next_column();
-    state.set_align_group_count(1000000);
+    set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
   }
 
-  pub fn end_column(&mut self, stomach: &mut Stomach, state: &mut State) -> Result<()> {
+  pub fn end_column(&mut self) -> Result<()> {
     if self.in_column {
-      stomach.egroup(state)?; // Grouping around CELL!
+      egroup()?; // Grouping around CELL!
       self.in_column = false;
     }
     Ok(())
@@ -420,21 +417,19 @@ impl BoxOps for Alignment {
   fn compute_size(
     &self,
     _options: HashMap<String, Stored>,
-    _state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     unimplemented!();
   }
-  fn get_font(&self, _state: &mut State) -> Result<Option<Cow<crate::common::font::Font>>> {
+  fn get_font(&self) -> Result<Option<Cow<crate::common::font::Font>>> {
     unimplemented!();
   }
-  fn get_string(&self, _state: &State) -> Result<Cow<str>> { unimplemented!() }
+  fn get_string(&self) -> Result<Cow<str>> { unimplemented!() }
 
   fn compute_size_and_cache(
     &mut self,
     _options: HashMap<String, Stored>,
-    state: &mut State,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    normalize_alignment(self, state)?;
+    normalize_alignment(self)?;
     Ok((
       self.cached_width.unwrap(),
       self.cached_height.unwrap(),
@@ -442,12 +437,12 @@ impl BoxOps for Alignment {
     ))
   }
 
-  fn be_absorbed(&self, _document: &mut Document, _state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
     unimplemented!(); // call the mutable version only, we need to rearrange the alignment first!
   }
-  fn be_absorbed_mut(&mut self, document: &mut Document, state: &mut State) -> Result<Vec<Node>> {
+  fn be_absorbed_mut(&mut self, document: &mut Document) -> Result<Vec<Node>> {
     let ismath = self.is_math;
-    normalize_alignment(self, state)?;
+    normalize_alignment(self)?;
     let rows = &mut self.rows;
     if rows.is_empty() {
       return Ok(Vec::new());
@@ -456,8 +451,8 @@ impl BoxOps for Alignment {
     // # Guard via the absorb limit to avoid infinite loops
     // TODO
     // if ($LaTeXML::ABSORB_LIMIT) {
-    //   my $absorb_counter = $STATE->lookupValue("absorb_count") || 0;
-    //   $STATE->assignValue(absorb_count => ++$absorb_counter, "global");
+    //   my $absorb_counter = $state->lookupValue("absorb_count") || 0;
+    //   $state->assignValue(absorb_count => ++$absorb_counter, "global");
     //   if ($absorb_counter > $LaTeXML::ABSORB_LIMIT) {
     //     Fatal("timeout", "absorb_limit", $self,
     //       "Whatsit absorb limit of $LaTeXML::ABSORB_LIMIT exceeded, infinite loop?"); } }
@@ -477,7 +472,7 @@ impl BoxOps for Alignment {
     // open_attrs.insert(String::from("row_heights"), self.row_heights.into());
     // open_attrs.insert(String::from("column_widths"), self.column_widths.into());
     let open_container_fn = &self.open_container;
-    open_container_fn(document, attrs, state)?;
+    open_container_fn(document, attrs)?;
 
     for row in rows {
       let vpad_opt = row.get_padding().copied();
@@ -488,9 +483,9 @@ impl BoxOps for Alignment {
       //     cached_width => $$row{cached_width}, cached_height => $$row{cached_height},
       // cached_depth => $$row{cached_depth},   );
       let open_row_fn = &self.open_row;
-      open_row_fn(document, open_row_attrs, state)?;
+      open_row_fn(document, open_row_attrs)?;
       for before in row.before.iter() {
-        document.absorb(before, None, state)?;
+        document.absorb(before, None)?;
       }
       for cell in row.get_columns_mut() {
         if cell.skipped {
@@ -550,7 +545,7 @@ impl BoxOps for Alignment {
         //       x      => $$cell{x}, y => $$cell{y},
         //       cached_width => $$cell{cached_width}, cached_height => $$cell{cached_height},
         // cached_depth => $$cell{cached_depth})
-        cell.cell = open_column_fn(document, cell_attrs, state)?;
+        cell.cell = open_column_fn(document, cell_attrs)?;
         if !empty {
           let box_ref = cell.boxes.as_ref().unwrap();
           // local $LaTeXML::BOX
@@ -561,49 +556,48 @@ impl BoxOps for Alignment {
               "ltx:XMArg",
               Some(string_map!("rule" => "Anything")),
               None,
-              state,
-            )?;
+                      )?;
           }
-          document.absorb(box_ref, None, state)?;
+          document.absorb(box_ref, None)?;
           if ismath {
             // Hacky!
-            document.close_element("ltx:XMArg", state)?;
+            document.close_element("ltx:XMArg")?;
           }
           // expire local $LaTeXML::BOX
           document.expire_box_to_absorb();
         }
         let close_column_fn = &self.close_column;
-        close_column_fn(document, state)?;
+        close_column_fn(document)?;
       }
       for after in row.after.iter() {
-        document.absorb(after, None, state)?;
+        document.absorb(after, None)?;
       }
       let close_row_fn = &self.close_row;
-      close_row_fn(document, state)?;
+      close_row_fn(document)?;
     }
     let close_container_fn = &self.close_container;
-    let node_opt = close_container_fn(document, state)?;
+    let node_opt = close_container_fn(document)?;
 
     // If we're not nested inside another tabular
     // [This should be an afterConstruct somewhere?]
     // If requested to guess headers & we're not nested inside another tabular
     if let Some(mut node) = node_opt {
       if document
-        .findnodes("ancestor::ltx:tabular", Some(&node), state)
+        .findnodes("ancestor::ltx:tabular", Some(&node))
         .is_empty()
       {
         let hashead = !document
-          .findnodes("descendant::ltx:td[@thead]", Some(&node), state)
+          .findnodes("descendant::ltx:td[@thead]", Some(&node))
           .is_empty();
         // If requested && no cells are already marked as being thead, apply heuristic
         if self.properties.contains_key("guess_headers") && !hashead {
-          guess_alignment_headers(document, &mut node, self, state)?;
+          guess_alignment_headers(document, &mut node, self)?;
         }
         // Otherwise, if not a math array, group thead & tbody rows
         // TODO: Re-design asking the outer Whatsit about "!body->isMath"
         else if hashead && !ismath {
           // in case already marked w/thead|tbody
-          alignment_regroup_rows(document, &node, state)?;
+          alignment_regroup_rows(document, &node)?;
         }
       }
       Ok(vec![node])
@@ -642,27 +636,27 @@ impl PartialEq for Alignment {
 //    or "constructor" (or just sub that creates a column)
 
 /// a reader for the Template parameter type
-pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result<Template> {
-  gullet.skip_spaces(state)?;
-  state.local_build_template(Template::default());
+pub fn read_alignment_template() -> Result<Template> {
+  gullet::skip_spaces()?;
+  local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
   let mut nopens = 0;
-  while let Some(open) = gullet.read_token(state)? {
+  while let Some(open) = gullet::read_token()? {
     if open.get_catcode() == Catcode::BEGIN {
       nopens += 1;
     } else {
-      gullet.unread_one(open);
+      gullet::unread_one(open);
       break;
     }
   }
-  while let Some(op) = gullet.read_token(state)? {
+  while let Some(op) = gullet::read_token()? {
     let cc = op.get_catcode();
     if cc == Catcode::SPACE {
     } else if cc == Catcode::END {
       let mut last_op = op;
       nopens -= 1;
       while nopens > 0 {
-        if let Some(next_op) = gullet.read_token(state)? {
+        if let Some(next_op) = gullet::read_token()? {
           last_op = next_op;
           if last_op.get_catcode() != Catcode::END {
             break;
@@ -675,19 +669,18 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
       if nopens <= 0 {
         break;
       }
-      gullet.unread_one(last_op);
-    } else if let Some(defn) = state.lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
-      let invoked = defn.invoke(gullet, true, state)?;
-      gullet.unread(invoked);
+      gullet::unread_one(last_op);
+    } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), true)? {
+      let invoked = defn.invoke(true)?;
+      gullet::unread(invoked);
     } else if cc == Catcode::BEGIN {
-      if let Some(balanced_tks) = gullet.read_balanced(false, state)? {
-        gullet.unread(balanced_tks);
+      if let Some(balanced_tks) = gullet::read_balanced(false)? {
+        gullet::unread(balanced_tks);
       }
     } else {
       Warn!(
         "unexpected",
         op,
-        gullet,
         s!("Unrecognized tabular template {op:?}")
       );
     }
@@ -696,21 +689,17 @@ pub fn read_alignment_template(gullet: &mut Gullet, state: &mut State) -> Result
     }
   }
   tokens.push(T_END!());
-  state
-    .current_build_template()
-    .unwrap()
-    .set_reversion(Tokens::new(tokens));
-  Ok(state.take_build_template().unwrap())
+  with_current_build_template(|template_opt| template_opt.unwrap()
+    .set_reversion(Tokens::new(tokens)));
+  Ok(take_build_template().unwrap())
 }
 
 pub fn parse_alignment_template(
-  spec: &str,
-  gullet: &mut Gullet,
-  ostate: &mut State,
+  spec: &str
 ) -> Result<Template> {
-  let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None, ostate)?;
-  gullet.reading_from_mouth(reader_mouth, ostate, |gulletx: &mut Gullet, state| {
-    read_alignment_template(gulletx, state)
+  let reader_mouth = Mouth::new(&s!("{{{spec}}}"), None)?;
+  gullet::reading_from_mouth(reader_mouth, || {
+    read_alignment_template()
   })
 }
 
@@ -738,17 +727,16 @@ fn guess_alignment_headers(
   document: &mut Document,
   table: &mut Node,
   alignment: &mut Alignment,
-  state: &mut State,
 ) -> Result<()> {
   // Assume that headers don't make sense for nested tables.
   // OR Maybe we should only do this within table environments???
   if !document
-    .findnodes("ancestor::ltx:tabular", Some(table), state)
+    .findnodes("ancestor::ltx:tabular", Some(table))
     .is_empty()
   {
     return Ok(());
   }
-  let tag = document.get_node_qname(table, state);
+  let tag = get_node_qname(table);
   // TODO
   //   Debug(('=' x 50) . "\nGuessing alignment headers for "
   //       . (($x = $document->findnode('ancestor-or-self::*[@xml:id]', $table)) ?
@@ -758,7 +746,7 @@ fn guess_alignment_headers(
   let reversed = false;
   // Attempt to recognize header lines.
   // Build a view of the table by extracting the rows, collecting & characterizing each cell.
-  classify_alignment_rows(document, alignment, state);
+  classify_alignment_rows(alignment);
 
   {
     let mut rows = collect_alignment_rows(alignment);
@@ -808,7 +796,7 @@ fn guess_alignment_headers(
   // Regroup the rows into thead & tbody elements.
   // But not if it's a math array, or if reversed (since browsers get confused?)
   if !ismath && !reversed {
-    alignment_regroup_rows(document, table, state)?;
+    alignment_regroup_rows(document, table)?;
   }
   if n_h > 0 {
     // Found some headers?
@@ -825,13 +813,13 @@ fn guess_alignment_headers(
 // Any leading rows, all of whose cells have attribute thead should be in thead.
 // UNLESS any of them have a rowspan that extends PAST the end of the thead!!!!
 // trailing rows marked as thead go into tfoot.
-fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut State) -> Result<()> {
-  let mut rows = document.findnodes("ltx:tr", Some(table), state);
+fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
+  let mut rows = document.findnodes("ltx:tr", Some(table));
   let mut heads = Vec::new();
   let mut maxreach = 0;
   // Scan initial rows as potential thead
   while !rows.is_empty() {
-    let cells = document.findnodes("ltx:td", Some(&rows[0]), state);
+    let cells = document.findnodes("ltx:td", Some(&rows[0]));
     // Non header cells, done.
     if cells
       .iter()
@@ -859,7 +847,7 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut Sta
   // scan trailing rows as potential tfoot
   let mut foots = VecDeque::new();
   while !rows.is_empty() {
-    let cells = document.findnodes("ltx:td", Some(rows.last().unwrap()), state);
+    let cells = document.findnodes("ltx:td", Some(rows.last().unwrap()));
     // Non header cells, done.
     if cells
       .iter()
@@ -870,20 +858,20 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node, state: &mut Sta
     foots.push_front(rows.pop().unwrap())
   }
   if !heads.is_empty() {
-    document.wrap_nodes("ltx:thead", heads, state)?;
+    document.wrap_nodes("ltx:thead", heads)?;
   }
   if !rows.is_empty() {
-    document.wrap_nodes("ltx:tbody", rows, state)?;
+    document.wrap_nodes("ltx:tbody", rows)?;
   }
   if !foots.is_empty() {
-    document.wrap_nodes("ltx:tfoot", foots.into_iter().collect(), state)?;
+    document.wrap_nodes("ltx:tfoot", foots.into_iter().collect())?;
   }
   Ok(())
 }
 
 //======================================================================
 /// Setup a View of the alignment, with characterized cells, for analysis -- modifying it in place.
-fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, state: &mut State) {
+fn classify_alignment_rows(alignment: &mut Alignment) {
   let mut ncols = 0;
   for arow in &mut alignment.rows {
     let n = arow.get_columns().len();
@@ -902,7 +890,7 @@ fn classify_alignment_rows(document: &mut Document, alignment: &mut Alignment, s
         if col.align == Some(Align::Justify) {
           ColumnSpec::MathAltText
         } else if col.cell.is_some() {
-          classify_alignment_cell(document, col.cell.as_ref().unwrap(), state)
+          classify_alignment_cell(col.cell.as_ref().unwrap())
         } else {
           ColumnSpec::Unknown
         },
@@ -1112,7 +1100,7 @@ fn collect_alignment_columns(alignment: &mut Alignment) -> Vec<Vec<&mut Cell>> {
 
 /// Return one of: i(nteger), t(ext), m(ath), ? (unknown) or '_' (empty) (or some combination)
 ///  or 'mx' for alternating text & math.
-fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut State) -> ColumnSpec {
+fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
   let content = xcell.get_content();
   let mut inferred_classes: Vec<ColumnSpec> = Vec::new();
   if !content.is_empty() && content.chars().all(|c| c.is_whitespace() || c.is_numeric()) {
@@ -1131,7 +1119,7 @@ fn classify_alignment_cell(document: &mut Document, xcell: &Node, state: &mut St
           }
         },
         Some(NodeType::ElementNode) => {
-          document.with_node_qname(&ch, state, |chtag| match chtag {
+          with_node_qname(&ch, |chtag| match chtag {
             "ltx:text" => {
               if inferred_classes.first() != Some(&ColumnSpec::Text) {
                 // Font would be useful, but haven't "resolved" it, yet!

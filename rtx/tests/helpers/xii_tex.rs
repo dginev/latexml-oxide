@@ -3,7 +3,7 @@ use rtx_package::package::*;
 //**********************************************************************
 // LaTeXML Declaration for David Carlisle's xii.tex
 //**********************************************************************
-LoadDefinitions!(state, {
+LoadDefinitions!({
   // Don't need to respect source newlines
   AssignValue!("PRESERVE_NEWLINES", 0);
 
@@ -18,10 +18,10 @@ LoadDefinitions!(state, {
   DefConstructor!("\\bigskip", "<verse>");
 
   // David ends each line with \par; redefine \par to close an auto-opened <line>
-  DefConstructor!("\\par", sub[doc,_args,_props,state] { doc.maybe_close_element("line", state)?; });
+  DefConstructor!("\\par", sub[doc,_args,_props] { doc.maybe_close_element("line")?; });
 
   Tag!("line", auto_close => true, auto_open => true);
   // Ensure no namespaces
-  state.model.register_document_namespace("", None);
-  state.model.register_document_namespace("ltx", None);
+  model::register_document_namespace("", None);
+  model::register_document_namespace("ltx", None);
 });

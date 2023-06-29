@@ -1,8 +1,6 @@
 use crate::package::*;
-use rtx_core::state::State;
 
-fn setup_cyrillic(_stomach: &mut Stomach, state: &mut State) -> Result<()> {
-  BindState!(_stomach, state);
+fn setup_cyrillic() -> Result<()> {
   DefMacro!("\\cyra", "\u{0430}");
   DefMacro!("\\cyrb", "\u{0431}");
   DefMacro!("\\cyrv", "\u{0432}");
@@ -101,14 +99,13 @@ fn setup_cyrillic(_stomach: &mut Stomach, state: &mut State) -> Result<()> {
   Ok(())
 }
 
-LoadDefinitions!(stomach, state, {
+LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
 
-  DeclareOption!(None, sub[stomach, state] {
-    let gullet = stomach.get_gullet_mut();
-    let current_option = Expand!(T_CS!("\\CurrentOption"), gullet).to_string();
+  DeclareOption!(None, {
+    let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
     UnshiftValue!("font_encodings", vec![Stored::String(arena::pin(current_option))]);
   });
 
@@ -116,12 +113,11 @@ LoadDefinitions!(stomach, state, {
   // apparently ASCII input characters to a completely different font.
   // EG. OT2 maps to cyrillic.
 
-  ProcessOptions!(stomach);
+  ProcessOptions!();
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if let Some(font_encodings_ref) = state.lookup_vecdeque("font_encodings") {
-    let font_encodings: VecDeque<Stored> = font_encodings_ref.clone();
+  if let Some(font_encodings) = lookup_vecdeque("font_encodings") {
     if !font_encodings.is_empty() {
-      setup_cyrillic(stomach, state)?;
+      setup_cyrillic()?;
       for encoding_stored in font_encodings.into_iter() {
         if let Stored::String(enc_sym) = encoding_stored {
           let encoding = arena::to_string(enc_sym);
@@ -129,7 +125,7 @@ LoadDefinitions!(stomach, state, {
             scope => Some(Scope::Global));
           let encfile = encoding.to_lowercase() + "enc";
           InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
-          if LoadFontMap!(&encoding).is_some() {
+          if load_font_map(&encoding).is_some() {
             MergeFont!(encoding => encoding);
           }
         } else {
@@ -137,7 +133,7 @@ LoadDefinitions!(stomach, state, {
             "Only strings should be stored as font encoding names, at: {:?}",
             encoding_stored
           );
-          Error!("fontenc", "font_encodings", stomach, message);
+          Error!("fontenc", "font_encodings", message);
         }
       }
     }

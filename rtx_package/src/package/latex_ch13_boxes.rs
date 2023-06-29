@@ -18,50 +18,50 @@ use crate::package::*;
 //   $d = $d->subtract($y)->larger($z);
 //   return ($w, $h, $d); }
 
-LoadDefinitions!(state, {
+LoadDefinitions!({
   //======================================================================
   // C.13.1 Length
   //======================================================================
   // \fill
   DefMacro!("\\stretch{}", "0pt plus #1fill\\relax");
 
-  DefPrimitive!("\\@check@length DefToken", sub[stomach, (cs), state] {
-    match state.lookup_definition(&cs)? {
+  DefPrimitive!("\\@check@length DefToken", sub[(cs)] {
+    match lookup_definition(&cs)? {
       None => {
         let message = s!("'{}' is not a length; defining it now", cs.stringify());
-        Warn!("undefined", cs, stomach, message);
+        Warn!("undefined", cs, message);
         DefRegister!(cs, None, Dimension::new(0));
       },
       Some(defn) => if !defn.is_register() {
         let message = s!("'{}' length was expected, got {:?} instead of register.",
           cs.to_string(), defn.register_type());
-        Error!("misdefined", cs, stomach, message);
+        Error!("misdefined", cs, message);
       }
     };
   });
 
-  DefPrimitive!("\\newlength DefToken", sub[stomach, (cs), inner_state] {
+  DefPrimitive!("\\newlength DefToken", sub[(cs)] {
     DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
     Ok(vec![])
   });
 
-  DefPrimitive!("\\setlength {Variable}{Dimension}", sub[stomach,(variable,length),state] {
+  DefPrimitive!("\\setlength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register(state)
+      let defn = rtoken.to_register()
         .expect("if a Variable parameter provides a token, it must have a Register definition.");
-      defn.set_value(length.into(), None, params, state);
+      defn.set_value(length.into(), None, params);
     }
     Ok(Vec::new())
   });
-  DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[stomach,(variable,length),state] {
+  DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[(variable,length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
-      let defn = rtoken.to_register(state)
+      let defn = rtoken.to_register()
         .expect("if a Variable parameter provides a token, it must have a Register definition.");
       // TODO: can we avoid cloning the params?
-      let oldlength = defn.value_of(params.clone(), state).unwrap_or_default();
-      defn.set_value(oldlength.add(length), None, params, state);
+      let oldlength = defn.value_of(params.clone()).unwrap_or_default();
+      defn.set_value(oldlength.add(length), None, params);
     }
     Ok(Vec::new())
   });
@@ -81,14 +81,14 @@ LoadDefinitions!(state, {
   // C.13.2 Space
   //======================================================================
 
-  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[stomach, (star,length), state] {
-    let s = dimension_to_spaces(&length, state);
+  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[(star,length)] {
+    let s = dimension_to_spaces(&length);
     if !s.is_empty() {
-      let length_tokens = length.revert(state)?;
-      let mut gullet = stomach.get_gullet_mut();
-      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens], gullet)?;
+      let length_tokens = length.revert()?;
+
+      let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
       Tbox::new(arena::pin(&s), None, None, tokens,
-        stored_map!("width" => length, "isSpace" => true), state);
+        stored_map!("width" => length, "isSpace" => true));
     }
   });
 
@@ -110,8 +110,8 @@ LoadDefinitions!(state, {
     mode => "text",
     bounded => true,
     sizer => "#1",
-    before_digest => sub[stomach, state] {
-      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    before_digest => {
+      reenter_text_mode(false); }
   );
 
   // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
@@ -119,9 +119,9 @@ LoadDefinitions!(state, {
   DefConstructor!("\\@makebox[Dimension][]{}",
     "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
-    before_digest => sub[stomach,state] {
-      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
-    // properties   => sub[stomach,args,state] {
+    before_digest => {
+      reenter_text_mode(false); }
+    // properties   => sub[args] {
     //   let arg1 = &args[0];
     //   let arg2 = &args[1];
     //   (($_[2] ? (align => $makebox_alignment{ ToString($_[2]) }) : ()),
@@ -225,7 +225,7 @@ LoadDefinitions!(state, {
   //     AssignValue('box' . $value, $contents); return; });
 
   // DefMacro!(T_CS!("\\begin{lrbox}"), '{Token}', "\@begin@lrbox #1");
-  // DefPrimitive!("\\end{lrbox}", primtiveproc!(stomach, args, state, {stomach.egroup(state)?; }));
+  // DefPrimitive!("\\end{lrbox}", primtiveproc!( args, {stomach.egroup()?; }));
   // DefPrimitive!("\\@begin@lrbox Token", sub {
   //     my ($stomach, $token) = @_;
   //     $stomach->bgroup;
@@ -239,8 +239,8 @@ LoadDefinitions!(state, {
   //     LookupValue('box' . $value) || Box(); });
 
   // A soft sorta \par that only closes an ltx:p, but not ltx:para
-  DefConstructor!("\\lx@parboxnewline[]", sub[document, _args, _props, state] {
-    document.maybe_close_element("ltx:p", state)?;
+  DefConstructor!("\\lx@parboxnewline[]", sub[document, _args, _props] {
+    document.maybe_close_element("ltx:p")?;
   });
 
   // //NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
@@ -289,8 +289,8 @@ LoadDefinitions!(state, {
   DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode         => "text", bounded => true,
-    before_digest => sub[stomach, state] {
-      reenter_text_mode(false, stomach.get_gullet_mut(), state); }
+    before_digest => {
+      reenter_text_mode(false); }
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );

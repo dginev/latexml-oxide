@@ -13,7 +13,6 @@ use rtx_core::common::font::{self, Font};
 use rtx_core::common::xml::element_nodes;
 use rtx_core::document::Document;
 use rtx_core::raw_map;
-use rtx_core::state::State;
 
 use self::tree::lookup_lex_node;
 pub use self::tree::{Args, Operator, XProps, XM};
@@ -34,8 +33,6 @@ pub struct ActionContext<'a> {
   pub nodes: &'a [XMLNode],
   /// The owner document of the parsed nodes
   pub document: &'a mut Document,
-  /// The `Core` state, for a variety of lookups - especially ones needing a `Model`
-  pub state: &'a mut State,
 }
 pub type ActionClosure = Rc<
   dyn Fn(
@@ -102,8 +99,7 @@ impl Actions {
             pragmas,
             ActionContext {
               nodes: ctxt.nodes,
-              document: ctxt.document,
-              state: ctxt.state,
+              document: ctxt.document
             },
           )?;
           translated_children.push(translated);
@@ -118,8 +114,7 @@ impl Actions {
             pragmas,
             ActionContext {
               nodes: ctxt.nodes,
-              document: ctxt.document,
-              state: ctxt.state,
+              document: ctxt.document
             },
           )?);
         }

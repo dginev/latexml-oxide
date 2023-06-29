@@ -9,7 +9,6 @@ use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::definition::register::RegisterType;
 use crate::mouth;
-use crate::state::State;
 use crate::tokens::Tokens;
 
 static TRAILING_ZEROS: Lazy<Regex> = Lazy::new(|| Regex::new(r"0+$").unwrap());
@@ -26,7 +25,7 @@ impl Default for Float {
 
 impl Object for Float {
   fn get_locator(&self) -> Option<Cow<Locator>> { None }
-  fn revert(&self, _state: &State) -> Result<Tokens> {
+  fn revert(&self) -> Result<Tokens> {
     Ok(Tokens::new(ExplodeText!(&self.to_string())))
   }
   fn stringify(&self) -> String { s!("Float[{}]", self.0) }

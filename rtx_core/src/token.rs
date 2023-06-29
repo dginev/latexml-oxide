@@ -15,8 +15,8 @@ use crate::common::number::Number;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
-use crate::state::State;
-use crate::stomach::Stomach;
+use crate::{state};
+use crate::state::is_dont_expandable;
 use crate::tokens::Tokens;
 use crate::{fatal, Digested, Fatal};
 
@@ -78,7 +78,7 @@ impl From<u8> for Catcode {
       19 => SmuggleTHE,
       _ => {
         // let message = s!("Unrecognized catcode: {:?}", num);
-        // Warn!("unknown", "catcode", None, None, message);
+        // Warn!("unknown", "catcode", None, message);
         IGNORE
       },
     }
@@ -607,7 +607,8 @@ macro_rules! ExplodeChars(($text:expr) => (
 /// Similar to Explode, but convert letters to catcode LETTER and others to OTHER
 /// Hopefully, this is essentially correct WITHOUT resorting to catcode lookup?
 #[macro_export]
-macro_rules! ExplodeText(($text:expr) => ({
+macro_rules! ExplodeText(
+  ($text:expr) => ({
   use $crate::token::{Catcode,Token};
   $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }
@@ -744,7 +745,7 @@ impl Token {
   /// I'm pretty sure we do NOT want to neutralize comments (turn them into CC_OTHER)
   /// here, since if comments do get into the Tokens, that will introduce weird crap into the
   /// stream.
-  pub fn neutralize(self, extraspecials: &[char], state: &State) -> Token {
+  pub fn neutralize(self, extraspecials: &[char]) -> Token {
     let first_c: Option<char> = self.with_str(|text| text.chars().next());
     let ch = match first_c {
       Some(ch) => ch,
@@ -759,14 +760,19 @@ impl Token {
           return T_OTHER!(s);
         }
       }
-      if let Some(Stored::VecChar(ref specials_list)) = state.lookup_value("SPECIALS") {
-        for special in specials_list.iter() {
-          if *special == ch {
-            let mut tmp = [0u8; 3];
-            let s = ch.encode_utf8(&mut tmp);
-            return T_OTHER!(s);
+      let maybe_return = state::with_value("SPECIALS", |specials_opt| {
+        if let Some(Stored::VecChar(ref specials_list)) = specials_opt {
+          for special in specials_list.iter() {
+            if *special == ch {
+              let mut tmp = [0u8; 3];
+              let s = ch.encode_utf8(&mut tmp);
+              return Some(T_OTHER!(s));
+            }
           }
         }
+        None});
+      if let Some(token) = maybe_return {
+        return token;
       }
     }
     self
@@ -802,7 +808,7 @@ impl Token {
 
   pub fn pack_parameters(self) -> Self { self }
 
-  pub fn with_dont_expand(self, state: &State) -> Result<Self> {
+  pub fn with_dont_expand(self) -> Result<Self> {
     match self.code {
       Catcode::SmuggleTHE => {
         // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
@@ -811,10 +817,10 @@ impl Token {
            Illegal: {}",
           &self.stringify()
         );
-        Fatal!(Parameter, Unexpected, None, msg);
+        Fatal!(Parameter, Unexpected, msg);
       },
       Catcode::CS | Catcode::ACTIVE => {
-        if state.is_dont_expandable(&self) {
+        if is_dont_expandable(&self) {
           Ok(Token {
             text: arena::pin_static("\\relax"),
             code: Catcode::CS,
@@ -877,8 +883,8 @@ impl Token {
     s!("{}[{}]{}", self.code.short_name(), string, smuggled)
   }
 
-  pub fn to_register(&self, state: &State) -> Option<Rc<Register>> {
-    state.lookup_register_definition(self)
+  pub fn to_register(&self) -> Option<Rc<Register>> {
+    state::lookup_register_definition(self)
   }
 
   pub fn to_number(&self) -> Number {
@@ -905,13 +911,13 @@ impl Token {
     Float::new_f64(self.with_str(|s| s.parse::<f64>()).unwrap_or(0.0))
   }
 
-  pub fn be_digested(self, stomach: &mut Stomach, state: &mut State) -> Result<Digested> {
-    stomach.digest(Tokens::new(vec![self]), state)
+  pub fn be_digested(self) -> Result<Digested> {
+    crate::stomach::digest(Tokens::new(vec![self]))
   }
 }
 
 // A simple (constant!) auto-cast for &str to Token. Beware this will not respect the current
-// catcodes in State (and @ is OTHER).
+// catcodes in state (and @ is OTHER).
 impl From<&str> for Token {
   fn from(text: &str) -> Token {
     match text.chars().next() {

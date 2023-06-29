@@ -3,7 +3,7 @@
 //**********************************************************************
 use crate::package::*;
 
-LoadDefinitions!(outer_stomach, outer_state, {
+LoadDefinitions!({
   //======================================================================
   // C.4.1 Sectioning Commands.
   //======================================================================
@@ -42,7 +42,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
   Tag!("ltx:paragraph", auto_close=>true);
   Tag!("ltx:subparagraph", auto_close=>true);
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[gullet, (token1, token2, star), state] {
+  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[(token1, token2, star)] {
     if star.is_some() {
       Ok(token2) // can't move out without clone, how to circumvent?
     } else {
@@ -56,25 +56,25 @@ LoadDefinitions!(outer_stomach, outer_state, {
   SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
-    sub[ gullet, (type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag), state ] {
+    sub[(type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if state.lookup_bool("IN_MATH") {
-        let mode = state.lookup_string("MODE");
+      if lookup_bool("IN_MATH") {
+        let mode = state::lookup_string("MODE");
         if mode.contains("math") { // double-check we're really in math
-          state.stomach.clone().borrow_mut().end_mode(&mode, state)?;
+          end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
-          state.assign_value("IN_MATH", false, Some(Scope::Global));
+          state::assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
       // Main logic
       let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
-      let ctr = match state.lookup_value(&s!("counter_for_{stype}")) {
+      let ctr = with_value(&s!("counter_for_{stype}"), |value_opt| match value_opt {
         Some(v) => v.to_string(),
         None => stype
-      };
+      });
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![
@@ -82,8 +82,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
         T_BEGIN!()];
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
-      } else if level_int > CounterValue!("secnumdepth", state).value_of() ||
-        state.lookup_bool("no_number_sections") {
+      } else if level_int > CounterValue!("secnumdepth").value_of() ||
+        lookup_bool("no_number_sections") {
         // No number, but in TOC
         tokens = vec![
           T_CS!("\\par"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
@@ -103,7 +103,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   DefConstructor!(
     "\\@@numbered@section{} Undigested OptionalUndigested Undigested",
-    sub[document, args, props, state] {
+    sub[document, args, props] {
       // args:=(stype,inlist,toctitle,title)
       let stype = args[0].as_ref().unwrap().to_string();
       let inlist = args[1].as_ref().unwrap().to_string();
@@ -113,8 +113,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
       document.open_element(&s!("ltx:{stype}"),
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
-        state,
-      )?;
+          )?;
       // TODO: Another instance where the immutability of props causes endless cloning
       //       which is slow and wasteful.
       // The big problem is that for props to be mutable, the entire parent whatsit needs to
@@ -138,23 +137,23 @@ LoadDefinitions!(outer_stomach, outer_state, {
       // but cloning a Digested object is now cheap enough,
       // as each enum variant is guarded by an Rc reference counter. Rc<Tbox>, Rc<List>, etc.
       if let Some(Stored::Digested(tags)) = props.get("tags") {
-        document.absorb(tags, None, state)?;
+        document.absorb(tags, None)?;
       }
       let title = prop_digested!(props, "title");
-      document.insert_element("ltx:title", title, None, state)?;
+      document.insert_element("ltx:title", title, None)?;
 
       let toctitle = prop_digested!(props, "toctitle");
       if !toctitle.is_empty() {
-        document.insert_element("ltx:toctitle", toctitle, None, state)?;
+        document.insert_element("ltx:toctitle", toctitle, None)?;
       }
     },
-    properties => sub[stomach, args, state] {
+    properties => sub[args] {
       let stype = args[0].as_ref().unwrap();
-      let inlist = args[1].as_ref().unwrap();
+      // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
 
-      let mut props = ref_step_counter(&stype.to_string(), false, stomach, state)?;
+      let mut props = ref_step_counter(&stype.to_string(), false)?;
       let toctitle = match toctitle_arg {
         Some(v) => if !v.to_string().is_empty() {
           args[2].as_ref().unwrap()
@@ -163,23 +162,14 @@ LoadDefinitions!(outer_stomach, outer_state, {
         },
         None => title
       };
-      let stype_tokens = stype.revert(state)?;
-      let title_tokens = title.revert(state)?;
-      let invoked_title;
-      {
-        let gullet = stomach.get_gullet_mut();
-        invoked_title =
-          Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens], gullet)?;
-      }
-      let xtitle    = stomach.digest(invoked_title, state)?;
-
-      let invoked_toctitle;
-      {
-        let gullet = stomach.get_gullet_mut();
-        invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype.revert(state)?, toctitle.revert(state)?], gullet, state)?;
-      }
-      let xtoctitle = stomach.digest(invoked_toctitle, state)?;
+      let stype_tokens = stype.revert()?;
+      let title_tokens = title.revert()?;
+      let invoked_title =
+        Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_tokens, title_tokens]);
+      let xtitle    = stomach::digest(invoked_title)?;
+      let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
+          vec![stype.revert()?, toctitle.revert()?]);
+      let xtoctitle = stomach::digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
         props.insert(s!("toctitle"), xtoctitle.into());
@@ -192,7 +182,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // No tags, at all? Consider...
   DefConstructor!("\\@@unnumbered@section{} Undigested OptionalUndigested Undigested",
-  sub[document, args, props, state] {
+  sub[document, args, props] {
       let stype = args[0].as_ref().unwrap();
       let inlist = args[1].as_ref().unwrap();
       // let toctitle_arg = args[2].as_ref();
@@ -203,20 +193,19 @@ LoadDefinitions!(outer_stomach, outer_state, {
         Some(string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
-        )), None, state
-      )?;
+        )), None)?;
       let title = prop_digested!(props, "title");
-      document.insert_element("ltx:title", title, None, state)?;
+      document.insert_element("ltx:title", title, None)?;
 
       let toctitle = prop_digested!(props, "toctitle");
       if !toctitle.is_empty() {
-        document.insert_element("ltx:toctitle", toctitle, None, state)?;
+        document.insert_element("ltx:toctitle", toctitle, None)?;
       }
     },
-    properties => sub[stomach, args, state] {
+    properties => sub[args] {
       use DigestedData::*;
       let stype = args[0].as_ref().unwrap();
-      let inlist = args[1].as_ref().unwrap();
+      // let inlist = args[1].as_ref().unwrap();
       let toctitle_arg = args[2].as_ref();
       let title = args[3].as_ref().unwrap();
       let mut props = RefStepID!(&stype.to_string())?;
@@ -224,9 +213,8 @@ LoadDefinitions!(outer_stomach, outer_state, {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        stomach.digest(
-          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")),
-          state)?
+        stomach::digest(
+          Tokens!(T_CS!("\\@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?
       } else {
         title.clone()
       };
@@ -235,10 +223,9 @@ LoadDefinitions!(outer_stomach, outer_state, {
       if let Some(toctitle) = toctitle_arg {
         if let Postponed(toctokens) = toctitle.data() {
           if !toctokens.is_empty() {
-            let toctitle_digested = stomach.digest(
+            let toctitle_digested = stomach::digest(
               Tokens!(T_CS!("\\@hidden@bgroup"),
-                toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")),
-              state)?;
+                toctokens.clone().unlist(), T_CS!("\\@hidden@egroup")))?;
             props.insert("toctitle".to_string(), toctitle_digested.into());
           }
         }
@@ -285,7 +272,7 @@ LoadDefinitions!(outer_stomach, outer_state, {
 
   // DefConstructor!(
   //   "\\@@section{}{}{}{}{}{}",
-  //   replacement!(document, args, props, inner_state, {
+  //   replacement!(document, args, props, inner{
   //     unpack!(args => stype, id, refnum_arg, frefnum_arg, toctitle, title);
   //     let refnum = refnum_arg.to_string();
   //     let mut frefnum = frefnum_arg.to_string();
@@ -300,11 +287,11 @@ LoadDefinitions!(outer_stomach, outer_state, {
   //       &s!("ltx:{}", stype.to_string()),
   //       Some(string_map!("xml:id" => clean_id, "refnum" => refnum, "frefnum" => frefnum)),
   //       None,
-  //       inner_state,
+  //       inner_state::
   //     )?;
-  //     document.insert_element("ltx:title", vec![title], None, inner_state)?;
+  //     document.insert_element("ltx:title", vec![title], None, inner_state::?;
   //     if has_toctitle {
-  //       document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state)?;
+  //       document.insert_element("ltx:toctitle", vec![toctitle], None, inner_state::?;
   //     }
   //   }),
   //   state
