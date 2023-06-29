@@ -5,7 +5,6 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::str;
-use std::sync::Mutex;
 
 use core::ops::RangeBounds;
 // TODO:
@@ -55,9 +54,9 @@ impl FoodType {
   }
 }
 
-thread_local! {
-  static LASTID: Mutex<u32> = Mutex::new(0);
-}
+#[thread_local]
+static mut LASTID: u32 = 0;
+
 static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 static LOWERHEX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9a-f]$").unwrap());
 static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
@@ -760,11 +759,10 @@ impl Mouth {
   }
 
   fn gid() -> String {
-    LASTID.with(|lid| {
-      let mut lastid = lid.lock().unwrap();
-      *lastid += 1;
-      lastid.to_string()
-    })
+    unsafe {
+      LASTID += 1;
+      LASTID.to_string()
+    }
   }
 
   // Be Careful!
