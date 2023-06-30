@@ -20,11 +20,11 @@ pub struct MathLigatureOptions {
 }
 
 impl MathLigatureOptions {
-  pub fn sorted_each(&self) -> Vec<(&str, &Option<String>)> {
-    vec![
-      ("meaning", &self.meaning),
-      ("name", &self.name),
-      ("role", &self.role),
+  pub fn sorted_each(&self) -> [(&str, Option<&String>); 3] {
+    [
+      ("meaning", self.meaning.as_ref()),
+      ("name", self.name.as_ref()),
+      ("role", self.role.as_ref()),
     ]
   }
 }

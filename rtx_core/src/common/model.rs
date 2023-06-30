@@ -727,8 +727,8 @@ pub fn is_permissive() -> bool {
 }
 
 pub fn with_schema_data<FnR,R>(caller: FnR) -> R
-where FnR: FnOnce(&Option<Vec<SymbolU32>>) -> R {
-  caller(&model!().schema_data)
+where FnR: FnOnce(Option<&Vec<SymbolU32>>) -> R {
+  caller(model!().schema_data.as_ref())
 }
 pub fn set_schema(schema: Relaxng) {
   let mut model = model_mut!();

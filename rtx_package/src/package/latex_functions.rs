@@ -46,7 +46,7 @@ pub fn end_appendices() {
 
 pub fn make_note_tags(
   counter: &str,
-  mark_opt: &Option<Digested>,
+  mark_opt: Option<&Digested>,
   tag_opt: Option<Cow<Digested>>,
   ) -> Result<HashMap<String, Stored>> {
   if let Some(tag) = tag_opt {

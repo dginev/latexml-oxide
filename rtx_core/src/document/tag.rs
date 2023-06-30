@@ -57,27 +57,27 @@ pub struct TagOptions {
 }
 
 impl TagOptions {
-  pub fn get(&self, name: &TagOptionName) -> &Option<Vec<TagConstructionClosure>> {
+  pub fn get(&self, name: &TagOptionName) -> Option<&Vec<TagConstructionClosure>> {
     use self::TagOptionName::*;
     match *name {
-      AfterOpen => &self.after_open,
-      AfterOpenEarly => &self.after_open_early,
-      AfterOpenLate => &self.after_open_late,
-      AfterClose => &self.after_close,
-      AfterCloseEarly => &self.after_close_early,
-      AfterCloseLate => &self.after_close_late,
+      AfterOpen => self.after_open.as_ref(),
+      AfterOpenEarly => self.after_open_early.as_ref(),
+      AfterOpenLate => self.after_open_late.as_ref(),
+      AfterClose => self.after_close.as_ref(),
+      AfterCloseEarly => self.after_close_early.as_ref(),
+      AfterCloseLate => self.after_close_late.as_ref(),
     }
   }
 
-  pub fn get_mut(&mut self, name: &TagOptionName) -> &mut Option<Vec<TagConstructionClosure>> {
+  pub fn get_mut(&mut self, name: &TagOptionName) -> Option<&mut Vec<TagConstructionClosure>> {
     use self::TagOptionName::*;
     match *name {
-      AfterOpen => &mut self.after_open,
-      AfterOpenEarly => &mut self.after_open_early,
-      AfterOpenLate => &mut self.after_open_late,
-      AfterClose => &mut self.after_close,
-      AfterCloseEarly => &mut self.after_close_early,
-      AfterCloseLate => &mut self.after_close_late,
+      AfterOpen => self.after_open.as_mut(),
+      AfterOpenEarly => self.after_open_early.as_mut(),
+      AfterOpenLate => self.after_open_late.as_mut(),
+      AfterClose => self.after_close.as_mut(),
+      AfterCloseEarly => self.after_close_early.as_mut(),
+      AfterCloseLate => self.after_close_late.as_mut(),
     }
   }
 

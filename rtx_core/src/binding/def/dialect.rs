@@ -791,11 +791,11 @@ pub fn def_math_constructor(
 }
 
 fn infer_sizer(
-  sizer: &Option<SizingClosure>,
-  reversion: &Option<Reversion>,
+  sizer: Option<&SizingClosure>,
+  reversion: Option<&Reversion>,
 ) -> Option<SizingClosure> {
   match sizer {
-    Some(ref closure) => Some(Rc::clone(closure)),
+    Some(closure) => Some(Rc::clone(closure)),
     None => match reversion {
       Some(Reversion::Tokens(tks)) => (*tks).to_string().as_str().into_option(),
       _ => None,
@@ -914,7 +914,7 @@ pub fn def_constructor(
     after_construct: options.after_construct,
     nargs: options.nargs,
     alias: options.alias,
-    sizer: infer_sizer(&options.sizer, &options.reversion),
+    sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion: options.reversion,
     capture_body: options.capture_body,
     properties: options.properties,
@@ -1042,7 +1042,7 @@ pub fn def_environment(
     // (defined $options{reversion} ? (reversion => $options{reversion}) : ()),
     // (defined $sizer ? (sizer => $sizer) : ()),
     // ), $options{scope});
-    sizer: infer_sizer(&options.sizer, &options.reversion),
+    sizer: infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()),
     reversion: options.reversion,
     alias: options.alias,
   });
@@ -1385,7 +1385,7 @@ fn transfer_common_constructor_options(
   let cs_str = cs.with_str(ToString::to_string);
   let mut properties = options.to_hash_stored();
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.to_owned()));
-  if let Some(sizer) = infer_sizer(&options.sizer, &options.reversion) {
+  if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);
   }
   if let Some(reversion) = options.reversion {

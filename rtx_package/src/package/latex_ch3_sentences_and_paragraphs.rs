@@ -98,8 +98,8 @@ LoadDefinitions!({
     reenter_text_mode(true);
     neutralize_font(); },
   properties   => sub [args] {
-    let arg1 = &args[0];
-    let arg2 = &args[1];
+    let arg1 = args[0].as_ref();
+    let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
@@ -113,8 +113,8 @@ LoadDefinitions!({
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text",
   properties => sub[args] {
-    let arg1 = &args[0];
-    let arg2 = &args[1];
+    let arg1 = args[0].as_ref();
+    let arg2 = args[1].as_ref();
     let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
@@ -128,9 +128,9 @@ LoadDefinitions!({
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
   mode       => "text",
   properties => sub [args] {
-    let arg1 = &args[0];
-    let arg2 = &args[1];
-    let arg3 = &args[2];
+    let arg1 = args[0].as_ref();
+    let arg2 = args[1].as_ref();
+    let arg3 = args[2].as_ref();
     let note_type = arg2.as_ref().map(ToString::to_string).unwrap_or_default();
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
