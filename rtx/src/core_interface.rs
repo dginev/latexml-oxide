@@ -182,7 +182,7 @@ impl DigestionAPI for Core {
         .collect::<Vec<&str>>();
       let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
         None => true,
-        Some(ref v) => v.last() == Some(&arena::pin_static("LaTeXML")),
+        Some(v) => v.last() == Some(&arena::pin_static("LaTeXML")),
       });
       if default_model_load {
         // Compile-time load of model AND indirect model

@@ -939,19 +939,19 @@ impl Document {
     // we have Rc<> around the closures, so cloning them is cheap - just another
     // pointer with a bumped up reference counter
     if let Some(when0) = when_early {
-      actions.extend(tag_hash.get(&when0).clone().unwrap_or_default());
+      actions.extend(tag_hash.get(&when0).cloned().unwrap_or_default());
       // ns_hash TODO
-      actions.extend(all_hash.get(&when0).clone().unwrap_or_default());
+      actions.extend(all_hash.get(&when0).cloned().unwrap_or_default());
     }
 
-    actions.extend(tag_hash.get(&when).clone().unwrap_or_default());
+    actions.extend(tag_hash.get(&when).cloned().unwrap_or_default());
     // ns_hash TODO
-    actions.extend(all_hash.get(&when).clone().unwrap_or_default());
+    actions.extend(all_hash.get(&when).cloned().unwrap_or_default());
 
     if let Some(when1) = when_late {
-      actions.extend(tag_hash.get(&when1).clone().unwrap_or_default());
+      actions.extend(tag_hash.get(&when1).cloned().unwrap_or_default());
       // ns_hash TODO
-      actions.extend(all_hash.get(&when1).clone().unwrap_or_default());
+      actions.extend(all_hash.get(&when1).cloned().unwrap_or_default());
     }
     // return (
     //   (($v = $$taghash{$when0}) ? @$v : ()),

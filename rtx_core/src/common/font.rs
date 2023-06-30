@@ -743,16 +743,16 @@ impl Font {
     };
     let mut diffs = vec![];
     let mut font_properties = Font::default();
-    if is_diff(&family, &other_family) {
+    if is_diff(family.as_ref(), other_family.as_ref()) {
       diffs.push(family.clone().unwrap());
       font_properties.family = family;
     }
-    if is_diff(&self.series, &other.series) {
+    if is_diff(self.series.as_ref(), other.series.as_ref()) {
       let series = self.series.clone().unwrap();
       diffs.push(series);
       font_properties.series = self.series.clone();
     }
-    if is_diff(&self.shape, &other.shape) {
+    if is_diff(self.shape.as_ref(), other.shape.as_ref()) {
       let shape = self.shape.clone().unwrap();
       diffs.push(shape);
       font_properties.shape = self.shape.clone();
@@ -764,7 +764,7 @@ impl Font {
       result.insert(s!("font"), (font_value, font_properties));
     }
 
-    if is_diff_f64(&self.size, &other.size) {
+    if is_diff_f64(self.size.as_ref().copied(), other.size.as_ref().copied()) {
       result.insert(
         "fontsize".to_string(),
         (
@@ -812,7 +812,7 @@ impl Font {
       opacity: other.opacity.clone(), // should multiply or replace?
       ..Font::default()
     };
-    if is_diff(&othercolor.cloned(), &Some(Cow::Borrowed(DEFCOLOR))) {
+    if is_diff(othercolor, Some(&Cow::Borrowed(DEFCOLOR))) {
       changes.color = other.color.clone();
     }
 
@@ -1064,11 +1064,11 @@ impl Font {
   }
 }
 
-fn is_diff(x: &Option<Cow<str>>, y: &Option<Cow<str>>) -> bool {
+fn is_diff(x: Option<&Cow<str>>, y: Option<&Cow<str>>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
 }
 
-fn is_diff_f64(x: &Option<f64>, y: &Option<f64>) -> bool {
+fn is_diff_f64(x: Option<f64>, y: Option<f64>) -> bool {
   x.is_some() && (y.is_none() || (x != y))
 }
 
