@@ -412,7 +412,7 @@ impl State {
 
     let mut value_table = HashMap::default();
     let mut specials_vdq = VecDeque::new();
-    specials_vdq.push_front(Stored::VecChar(vec!['^', '_', '~', '&', '$', '#', '\'']));
+    specials_vdq.push_front(Stored::Chars(Box::new(['^', '_', '~', '&', '$', '#', '\''])));
     value_table.insert(arena::pin_static("SPECIALS"), specials_vdq);
 
     let mut catcodes_typed: Table = HashMap::default();
@@ -680,14 +680,6 @@ impl State {
         None | Some(Stored::None) => None,
         Some(other) => Some(other),
       },
-    }
-  }
-  /// like `lookup_value` but only recognizes `Stored::VecString`
-  // TODO: consider switching to Rc<[String]>
-  pub fn lookup_vec_string<'lvec>(&'lvec self, key: &'lvec str) -> Option<&Vec<String>> {
-    match self.lookup_value(key) {
-      Some(Stored::VecString(v)) => Some(v),
-      _ => None,
     }
   }
   /// like `lookup_value` but only recognizes `Stored::VecDequeStored`
@@ -1768,8 +1760,8 @@ pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
     }
   }
   {
-    if let Some(Stored::VecChar(specials_store)) = state!().lookup_value("SPECIALS") {
-      for special_char in specials_store {
+    if let Some(Stored::Chars(specials_store)) = state!().lookup_value("SPECIALS") {
+      for special_char in &**specials_store {
         all_specials.push(*special_char);
       }
     }

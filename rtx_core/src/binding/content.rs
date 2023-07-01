@@ -641,7 +641,7 @@ pub fn process_options() -> Result<()> {
       Stored::String(content) => {
         requested_options.insert(arena::to_string(*content));
       },
-      Stored::VecString(contents) => {
+      Stored::Strings(contents) => {
         for content in contents.iter() {
           requested_options.insert(content.to_string());
         }
@@ -654,7 +654,7 @@ pub fn process_options() -> Result<()> {
       Stored::String(content) => {
         requested_options.insert(arena::to_string(*content));
       },
-      Stored::VecString(contents) => {
+      Stored::Strings(contents) => {
         for content in contents.iter() {
           requested_options.insert(content.to_string());
         }
@@ -676,7 +676,7 @@ pub fn process_options() -> Result<()> {
           }
         })?;
       },
-      Stored::VecString(contents) => {
+      Stored::Strings(contents) => {
         for content in contents.iter() {
           if requested_options.contains(content) {
             requested_options.remove(content); // Remove it, since it's been handled.

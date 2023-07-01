@@ -723,7 +723,7 @@ impl Token {
         }
       }
       let maybe_return = state::with_value("SPECIALS", |specials_opt| {
-        if let Some(Stored::VecChar(ref specials_list)) = specials_opt {
+        if let Some(Stored::Chars(ref specials_list)) = specials_opt {
           for special in specials_list.iter() {
             if *special == ch {
               let mut tmp = [0u8; 3];

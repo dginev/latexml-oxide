@@ -475,10 +475,10 @@ fn deactivate_counter_scope(ctr: &str) {
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
   let nested = lookup_value(&s!("nested_counters_{ctr}"));
-  if let Some(Stored::VecString(stored_counters)) = nested
+  if let Some(Stored::Strings(stored_counters)) = nested
   {
-    for inner_ctr in stored_counters {
-      deactivate_counter_scope(&inner_ctr);
+    for inner_ctr in &*stored_counters {
+      deactivate_counter_scope(inner_ctr);
     }
   }
 }
