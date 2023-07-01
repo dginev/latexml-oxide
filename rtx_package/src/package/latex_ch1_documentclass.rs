@@ -32,13 +32,13 @@ LoadDefinitions!({
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))
   });
 
-  AssignValue!("@unusedoptionlist", Stored::VecString(Vec::new()));
+  AssignValue!("@unusedoptionlist", Stored::Strings(Rc::new([])));
   DefPrimitive!("\\warn@unusedclassoptions", {
-    if let Some(Stored::VecString(unused)) = lookup_value("@unusedoptionlist") {
+    if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist") {
       if !unused.is_empty() {
         Info!("unexpected", "options",
               "Unused global options: {}",unused.join(","));
-        state::assign_value("@unusedoptionlist", Stored::VecString(Vec::new()), None);
+        state::assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
       }
     }
   });

@@ -73,14 +73,11 @@ pub enum Stored {
   /// atomic data (Clone)
   Node(Node),
   // Collections (boxed)
-  /// boxed Vec<char>
-  VecChar(Vec<char>),
-  /// boxed Vec<Option<char>>
+  Chars(Box<[char]>),
+  /// boxed [Option<char>]
   Fontmap(Rc<[Option<char>]>),
   /// boxed collection
-  VecString(Vec<String>),
-  /// boxed collection (latexml)
-  VecTokens(Vec<crate::Tokens>),
+  Strings(Rc<[String]>),
   /// boxed collection (latexml)
   VecDigested(Vec<crate::Digested>),
   /// the heart of state - a stored Stash table
@@ -154,10 +151,10 @@ impl fmt::Debug for Stored {
       String(ref s) => arena::with(*s, |str| write!(f, "{str}")),
       Int(ref num) => write!(f, "Stored::Int[{num:?}]"),
       Node(ref n) => write!(f, "Stored::Node[{n:?}]"),
-      VecChar(ref vs) => write!(f, "Stored::VecChar[{vs:?}]"),
+      Chars(ref vs) => write!(f, "Stored::Chars[{vs:?}]"),
       Fontmap(ref vs) => write!(f, "Stored::Fontmap[{vs:?}]"),
       Stash(ref vs) => write!(f, "Stored::Stash[{vs:?}]"),
-      VecString(ref vs) => write!(f, "Stored::VecString[{vs:?}]"),
+      Strings(ref vs) => write!(f, "Stored::Strings[{vs:?}]"),
       Bool(ref b) => write!(f, "Stored::Bool[{b:?}]"),
       Token(ref t) => write!(f, "Stored::Token[{t:?}]"),
       Tokens(ref t) => write!(f, "Stored::Tokens[{t:?}]"),
@@ -185,7 +182,6 @@ impl fmt::Debug for Stored {
       Dimension(ref dimension) => write!(f, "Stored::Dimension[{dimension:?}]"),
       MuDimension(ref dimension) => write!(f, "Stored::MuDimension[{dimension:?}]"),
       VecDigested(ref digested_vec) => write!(f, "VecDigested{digested_vec:?}"),
-      VecTokens(ref vec) => write!(f, "VecTokens{vec:?}"),
       VecDequeStored(ref vec) => write!(f, "VecDequeStored{vec:?}"),
       HashStored(ref hos) => write!(f, "HashStored{hos:?}"),
       HashTagData(ref htd) => write!(f, "HashTagData[{htd:?}]"),
@@ -252,9 +248,9 @@ impl PartialEq for Stored {
           false
         }
       },
-      VecChar(ref vs) => {
-        if let VecChar(vs2) = other {
-          *vs == *vs2
+      Chars(ref vs) => {
+        if let Chars(vs2) = other {
+          **vs == **vs2
         } else {
           false
         }
@@ -266,8 +262,8 @@ impl PartialEq for Stored {
           false
         }
       },
-      VecString(ref vs) => {
-        if let VecString(vs2) = other {
+      Strings(ref vs) => {
+        if let Strings(vs2) = other {
           *vs == *vs2
         } else {
           false
@@ -451,13 +447,6 @@ impl PartialEq for Stored {
       },
       VecDigested(ref vd) => {
         if let VecDigested(vd2) = other {
-          *vd == *vd2
-        } else {
-          false
-        }
-      },
-      VecTokens(ref vd) => {
-        if let VecTokens(vd2) = other {
           *vd == *vd2
         } else {
           false
@@ -740,24 +729,29 @@ impl From<Alignment> for Stored {
   fn from(a: Alignment) -> Self { Stored::Digested(crate::Digested::from(a)) }
 }
 
-impl From<Vec<char>> for Stored {
-  fn from(value: Vec<char>) -> Self { Stored::VecChar(value) }
+impl From<Box<[char]>> for Stored {
+  fn from(value: Box<[char]>) -> Self { Stored::Chars(value) }
 }
 impl From<Rc<[Option<char>]>> for Stored {
   fn from(value: Rc<[Option<char>]>) -> Self { Stored::Fontmap(value) }
 }
 
-impl From<Vec<String>> for Stored {
-  fn from(value: Vec<String>) -> Self { Stored::VecString(value) }
+impl From<Rc<[String]>> for Stored {
+  fn from(value: Rc<[String]>) -> Self { Stored::Strings(value) }
 }
+
+impl From<Vec<String>> for Stored {
+  fn from(value: Vec<String>) -> Self { Stored::Strings(Rc::from(value.into_boxed_slice())) }
+}
+
 
 impl<'a> From<Vec<&'a str>> for Stored {
   fn from(value: Vec<&'a str>) -> Self {
-    Stored::VecString(
+    Stored::Strings(
       value
         .iter()
         .map(ToString::to_string)
-        .collect::<Vec<String>>(),
+        .collect(),
     )
   }
 }
@@ -768,10 +762,6 @@ impl From<Vec<Token>> for Stored {
 
 impl From<Vec<crate::Digested>> for Stored {
   fn from(value: Vec<crate::Digested>) -> Self { Stored::VecDigested(value) }
-}
-
-impl From<Vec<crate::Tokens>> for Stored {
-  fn from(value: Vec<crate::Tokens>) -> Self { Stored::VecTokens(value) }
 }
 
 impl From<HashMap<String, String>> for Stored {
@@ -951,10 +941,10 @@ impl<'a> From<&'a Stored> for Option<Catcode> {
   }
 }
 
-impl<'a> From<&'a Stored> for Option<&'a Vec<char>> {
-  fn from(value: &'a Stored) -> Option<&'a Vec<char>> {
+impl<'a> From<&'a Stored> for Option<&'a [char]> {
+  fn from(value: &'a Stored) -> Option<&'a[char]> {
     match value {
-      Stored::VecChar(ref cc) => Some(cc),
+      Stored::Chars(ref cc) => Some(cc),
       _ => None,
     }
   }
