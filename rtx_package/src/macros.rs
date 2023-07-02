@@ -59,6 +59,21 @@ macro_rules! compile_prototype_for_typed_conditional {
 
 #[macro_export]
 #[allow(unused_variables)]
+/// Macro for compiling string binding prototypes into ColumnType closures
+/// Approach borrowed from diesel-codegen
+macro_rules! compile_prototype_for_typed_columntype {
+  ($prototype:literal, sub [ ( $($var:ident),* )] $body:block
+    $($input:tt)*) => {{
+    #[derive(CompilePrototypeFor)]
+    #[prototype=$prototype]
+    #[inner="TypedColumntype"]
+    struct _DummyP;
+    this_prototype!(sub [ ( $($var),* ) ] $body $($input)*);
+  }};
+}
+
+#[macro_export]
+#[allow(unused_variables)]
 /// Macro for compiling string literal prototypes into a Token and Parameters structs
 macro_rules! compile_prototype {
   ($prototype:literal) => {{

@@ -37,13 +37,14 @@ LoadDefinitions!({
       } else {
         t
       }});
-    let token = match token_opt {
+    // let token =
+    match token_opt {
       Some(t) => t,
       None => {
         Error!("expected", "ExpandedIfToken",
           "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty")
-      }};
+      }}
     // if token.has_smuggled() {    // marked dont_expand
     //   let smuggled = token.get_dont_expand().as_ref().unwrap();
     //   if smuggled.get_catcode() == Catcode::ACTIVE {
@@ -53,7 +54,7 @@ LoadDefinitions!({
     //     T_RELAX!()
     //   }
     // } else {   // normal case, treat token as-is
-      token
+      // token
     // }
   });
 
@@ -185,7 +186,7 @@ LoadDefinitions!({
                 arg_index +=1 ;
                 p_spec = Cow::Owned(s!("#{arg_index}{p_spec}"));
               },
-              other => { // regular parameter, increment
+              _other => { // regular parameter, increment
               // skip the latexml-only requirement params, but only here,
               // since Match also have "novalue" set.
                 if param.novalue {
@@ -344,7 +345,8 @@ LoadDefinitions!({
 
   // \the<internal quantity>
   DefMacro!("\\the Register", sub[args] {
-    if let ArgWrap::RegisterDefinition(dbox) = args.remove(0) {
+    let [rdef] : [_; 1] = args.try_into().unwrap();
+    if let ArgWrap::RegisterDefinition(dbox) = rdef {
       let (rtoken, inner) = *dbox;
       // let register_type = defn.borrow().register_type;
       //     if (!$type) {
@@ -356,12 +358,11 @@ LoadDefinitions!({
       let value = defn.value_of(inner)
         .unwrap_or_else(|| RegisterValue::Tokens(Tokens!()));
       // In all cases, these should be OTHER, except for space. (!?)
-      let mut tokens : Vec<Token> = match value {
+      match value {
         RegisterValue::Tokens(ts) => ts.unlist(),
         RegisterValue::Token(t) => vec![t],
         rv => Explode!(rv.to_string()),
-      };
-      tokens
+      }
     } else {
       Error!("expected", "<register>", "a register was expected to be here");
       Vec::new()
