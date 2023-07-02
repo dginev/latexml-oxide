@@ -84,7 +84,6 @@ impl Default for ExpansionBody {
 }
 
 impl PartialEq for ExpansionBody {
-  #[allow(clippy::vtable_address_comparisons)]
   fn eq(&self, other: &ExpansionBody) -> bool {
     match self {
       ExpansionBody::Closure(self_closure) => match other {

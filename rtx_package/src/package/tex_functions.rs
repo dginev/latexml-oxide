@@ -653,7 +653,6 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
 // [maybe need to do some reorganization?]
 // Since this is used for textual tokens, typically to split author lists,
 // we don't split within braces or math
-#[allow(clippy::while_let_on_iterator)]
 pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
   let mut items = Vec::new();
   let mut toks = Vec::new();
@@ -666,7 +665,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
       } else if t == T_BEGIN!() {
         toks.push(t);
         let mut level = 1;
-        while let Some(t) = tokens_iter.next() {
+        for t in tokens_iter.by_ref() {
           match t.get_catcode() {
             Catcode::BEGIN => level += 1,
             Catcode::END => level -= 1,
@@ -680,7 +679,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
         }
       } else if t == T_MATH!() {
         toks.push(t);
-        while let Some(t) = tokens_iter.next() {
+        for t in tokens_iter.by_ref() {
           let is_math = t.get_catcode() == Catcode::MATH;
           toks.push(t);
           if is_math {

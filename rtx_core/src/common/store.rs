@@ -73,6 +73,7 @@ pub enum Stored {
   /// atomic data (Clone)
   Node(Node),
   // Collections (boxed)
+  /// boxed [char]
   Chars(Box<[char]>),
   /// boxed [Option<char>]
   Fontmap(Rc<[Option<char>]>),

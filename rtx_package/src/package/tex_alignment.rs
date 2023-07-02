@@ -36,8 +36,7 @@ LoadDefinitions!({
         ..Cell::default()}));
   });
 
-  DefColumnType!("p{Dimension}", sub[args] {
-    let width = args.remove(0).expect_dimension();
+  DefColumnType!("p{Dimension}", sub[(width)] {
     with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
       before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"), T_BEGIN!())),
       after: Some(Tokens!(T_END!(), T_END!())),
@@ -46,9 +45,7 @@ LoadDefinitions!({
       ..Cell::default()}));
   });
 
-  DefColumnType!("*{Number}{}", sub[args] {
-    let n = args.remove(0).expect_number();
-    let pattern = args.remove(0).owned_tokens().unwrap();
+  DefColumnType!("*{Number}{}", sub[(n,pattern)] {
     let mut tks = Vec::new();
     for _ in 1 ..= n.value_of() {
       tks.extend(pattern.clone().unlist());
@@ -56,8 +53,7 @@ LoadDefinitions!({
     tks
   });
 
-  DefColumnType!("@{}", sub[args] {
-    let filler = args.remove(0).owned_tokens().unwrap();
+  DefColumnType!("@{}", sub[(filler)] {
     with_current_build_template(|template_opt| template_opt.unwrap().add_between_column(filler.unlist()));
   });
 
@@ -176,7 +172,7 @@ LoadDefinitions!({
 
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
   DefMacro!("\\@alignment@newline", {
-    let (star, optional) = read_newline_args(true)?;
+    let (_star, optional) = read_newline_args(true)?;
     let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));
@@ -194,7 +190,7 @@ LoadDefinitions!({
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
   DefMacro!("\\@alignment@newline@noskip", {
-    let (star, optional) = read_newline_args(false)?;
+    let (_star, optional) = read_newline_args(false)?;
     let mut tokens = vec![T_CS!("\\hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));

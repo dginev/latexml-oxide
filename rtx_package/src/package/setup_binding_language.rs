@@ -256,9 +256,8 @@ macro_rules! TypedConditional {
       $body:block $($input:tt)*) => {{
 
     let options = defi_opts!(@munch ($($input)*) -> {ConditionalOptions,});
-    #[allow(unused_mut,unused_variables)]
     let closure : ConditionalClosure =  Rc::new(
-    move |mut args: Vec<ArgWrap>| {
+    move |args: Vec<ArgWrap>| {
       let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
@@ -338,8 +337,7 @@ macro_rules! DefPrimitive {
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
     let closure : PrimitiveClosure = Rc::new(
-      #[allow(unused_mut)]
-      move |mut $args: Vec<ArgWrap>| {
+      move |$args: Vec<ArgWrap>| {
         $body.into_digested_result()
       });
     def_primitive(cs, params, Some(closure), options)?;
@@ -349,7 +347,7 @@ macro_rules! DefPrimitive {
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let replacement_closure = Rc::new(
-      move |mut $args: Vec<ArgWrap>| {
+      move |$args: Vec<ArgWrap>| {
         $body.into_digested_result()
       });
     def_primitive($cs, None, Some(replacement_closure), options)?;
@@ -402,9 +400,8 @@ macro_rules! TypedPrimitive {
       sub [( $($var:ident),* ):($($ptype:ident),*)]
       $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    #[allow(unused_mut,unused_variables)]
     let replacement_closure =  Rc::new(
-    move |mut args: Vec<ArgWrap>| {
+    move |args: Vec<ArgWrap>| {
       let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
@@ -779,7 +776,6 @@ macro_rules! Invocation {
 #[macro_export]
 macro_rules! DefLigature {
   ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => {
-    #[allow(clippy::trivial_regex)]
     let regex_compiled = Regex::new($regex).unwrap();
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
     let new_ligature_id = generate_ligature_id();
@@ -1096,17 +1092,15 @@ macro_rules! DefMacro {
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
-    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(
-      Rc::new(move |mut $args| $body.into_tokens_result())));
+      Rc::new(move |$args| $body.into_tokens_result())));
     def_macro(cs, params, expansion_closure, Some(options))?;
   }};
   ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
-    #[allow(unused_mut, unused_variables)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |mut args| $body.into_tokens_result()
+      move |_args| $body.into_tokens_result()
     )));
     def_macro(cs, params, expansion_closure, Some(options))?;
   }};
@@ -1122,9 +1116,8 @@ macro_rules! DefMacro {
   ($cs:expr, $parameters:expr, sub [$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |mut $args| $body.into_tokens_result()
+      move |$args| $body.into_tokens_result()
     )));
     def_macro($cs, $parameters, expansion_closure, Some(options))?;
   }};
@@ -1189,9 +1182,8 @@ macro_rules! TypedMacro {
     sub [( $($var:ident),* ):($($ptype:ident),*)]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
-    #[allow(unused_mut,unused_variables)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |mut args: Vec<ArgWrap>| {
+      move |args: Vec<ArgWrap>| {
         let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
         $(
           let $var: parameter_rust_type!($ptype) = match $var.try_into() {
@@ -1335,14 +1327,17 @@ macro_rules! DefParameterType {
 #[macro_export]
 macro_rules! DefColumnType {
   ($proto:literal, sub[$args:ident] $body:block) => {
-    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
-      move |mut $args| $body.into_tokens_result()
+      move |$args| $body.into_tokens_result()
     )));
     DefColumnType!($proto, expansion_closure)
   };
+
+  ($prototype:literal, sub [( $($var:ident),* )]
+    $body:block) => {{
+    compile_prototype_for_typed_columntype!($prototype, sub [ ( $($var),* ) ] $body)
+  }};
   ($proto:literal, $body:block) => {
-    #[allow(unused_mut)]
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |_args| $body.into_tokens_result()
     )));
@@ -1370,6 +1365,35 @@ macro_rules! DefColumnType {
       );
     }
   };
+}
+
+#[macro_export]
+macro_rules! TypedColumntype {
+  ($first_c:literal, $these_parameters:ident,
+      sub [( $($var:ident),* ):($($ptype:ident),*)]
+      $body:block $($input:tt)*) => {{
+    let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
+        $(
+          let $var: parameter_rust_type!($ptype) = match $var.try_into() {
+            Ok(v) => v,
+            Err(e) => {
+              Error!("expected", "argument", e);
+              <parameter_rust_type!($ptype)>::default()
+            }
+          };
+        )*
+        $body.into_tokens_result()
+      }
+    )));
+    def_macro(
+      T_CS!(concat!("\\NC@rewrite@",$first_c)),
+      $these_parameters,
+      expansion_closure,
+      None
+    )?;
+  }}
 }
 
 // Reverts an object into TeX code, as a Tokens list, that would create it.
