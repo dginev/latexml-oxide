@@ -16,8 +16,6 @@ LoadDefinitions!({
     r"\def\@date{#1}\
 \@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
-
-  // TODO: ^
   DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
     alias => "\\thanks", mode => "text");
   DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
@@ -63,7 +61,7 @@ LoadDefinitions!({
         }
       }
     }
-    return Ok(()); });
+  });
 
   DefConstructor!("\\and", " and ");
 

@@ -70,7 +70,7 @@ impl PartialEq for KeyVals {
 
 impl fmt::Display for KeyVals {
   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
+    todo!();
   }
 }
 
@@ -138,7 +138,7 @@ impl BoxOps for KeyVals {
   }
   fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   fn set_property<T: Into<Stored>>(&mut self, _key: &str, _value: T) {
-    unimplemented!();
+    todo!();
   }
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
     Ok(Vec::new())
@@ -152,7 +152,7 @@ impl BoxOps for KeyVals {
     crate::common::dimension::Dimension,
     crate::common::dimension::Dimension,
   )> {
-    unimplemented!() // TODO
+    todo!() // TODO
   }
 }
 
@@ -659,7 +659,7 @@ impl KeyVals {
           text: vstr,
           code: Catcode::OTHER
         }),
-        _ => unimplemented!(),
+        _ => todo!(),
       }
     }
     Ok(Tokens::new(tks))

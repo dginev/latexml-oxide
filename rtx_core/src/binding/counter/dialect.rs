@@ -420,7 +420,7 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
     }
     // TODO: Continue once we know the type of "mapper"
     // let _label = state!().lookup_value("PEEKED_LABEL");
-    unimplemented!();
+    todo!();
     //   let (fixedrefnum, fixedid) = mapper(label, ctr, norefnum);
     //   if !norefnum && fixedrefnum {
     //     if !state!().lookup_neaning(hj_refnum) {    // Save for later

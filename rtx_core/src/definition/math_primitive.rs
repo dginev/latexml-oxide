@@ -242,7 +242,7 @@ impl PartialEq for MathPrimitive {
 
 // impl fmt::Display for MathPrimitive {
 //   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//     unimplemented!();
+//     todo!();
 //   }
 // }
 impl Object for MathPrimitive {

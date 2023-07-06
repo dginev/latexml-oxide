@@ -14,7 +14,7 @@ pub trait Object {
   fn stringify(&self) -> String {
     // TODO: remove this and make sure all structs implement
     // something reasonable
-    unimplemented!();
+    todo!();
   }
 
   fn isa_box(&self) -> bool { false }
@@ -37,6 +37,6 @@ pub trait Object {
 
   /// each concrete object needs to provide its own path back to tokens
   fn revert(&self) -> Result<Tokens> {
-    unimplemented!();
+    todo!();
   }
 }

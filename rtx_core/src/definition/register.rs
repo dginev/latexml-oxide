@@ -144,8 +144,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.add(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.add(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.add(other)),
-      RegisterValue::Token(_v) => unimplemented!(),
-      RegisterValue::Tokens(_v) => unimplemented!(),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
     }
   }
   fn subtract<T: NumericOps>(self, other: T) -> Self {
@@ -155,8 +155,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.subtract(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.subtract(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.subtract(other)),
-      RegisterValue::Token(_v) => unimplemented!(),
-      RegisterValue::Tokens(_v) => unimplemented!(),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
     }
   }
   fn multiply<T: NumericOps>(self, other: T) -> Self {
@@ -166,8 +166,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.multiply(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.multiply(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.multiply(other)),
-      RegisterValue::Token(_v) => unimplemented!(),
-      RegisterValue::Tokens(_v) => unimplemented!(),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
     }
   }
   fn negate(self) -> Self {
@@ -177,8 +177,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.negate()),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.negate()),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.negate()),
-      RegisterValue::Token(_v) => unimplemented!(),
-      RegisterValue::Tokens(_v) => unimplemented!(),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
     }
   }
   fn divide<T: NumericOps>(self, other: T) -> Self
@@ -189,8 +189,8 @@ impl NumericOps for RegisterValue {
       RegisterValue::MuDimension(v) => RegisterValue::MuDimension(v.divide(other)),
       RegisterValue::Glue(v) => RegisterValue::Glue(v.divide(other)),
       RegisterValue::MuGlue(v) => RegisterValue::MuGlue(v.divide(other)),
-      RegisterValue::Token(_v) => unimplemented!(),
-      RegisterValue::Tokens(_v) => unimplemented!(),
+      RegisterValue::Token(_v) => todo!(),
+      RegisterValue::Tokens(_v) => todo!(),
     }
   }
   /// For now only meant as a type cast, unimplemented in other cases
@@ -198,7 +198,7 @@ impl NumericOps for RegisterValue {
   fn into_glue_type(self) -> Glue {
     match self {
       RegisterValue::Glue(v) => v,
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn to_attribute(&self) -> String
@@ -466,9 +466,9 @@ impl Definition for Register {
   fn is_readonly(&self) -> bool { self.readonly }
   // not implemented for primitives
   fn invoke(&self, _once_only: bool) -> Result<Tokens> {
-    unimplemented!()
+    todo!()
   }
-  fn get_parameters(&self) -> Option<&Parameters> { unimplemented!() }
+  fn get_parameters(&self) -> Option<&Parameters> { todo!() }
   fn get_cs(&self) -> Cow<Token> { Cow::Owned(self.cs) }
   fn get_cs_name(&self) -> Cow<str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }

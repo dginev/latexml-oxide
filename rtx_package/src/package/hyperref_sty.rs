@@ -389,8 +389,7 @@ LoadDefinitions!({
   DefConditional!("\\ifHy@pdfdisplaydoctitle");
   DefConditional!("\\ifHy@pdfa");
   RawTeX!(
-    r###"
-\Hy@backreffalse
+    r"\Hy@backreffalse
 \Hy@bookmarksnumberedfalse
 \Hy@bookmarksopenfalse
 \Hy@bookmarkstrue
@@ -423,8 +422,7 @@ LoadDefinitions!({
 \Hy@pdftoolbartrue
 \Hy@typexmlfalse
 \Hy@unicodetrue
-"###
-  );
+");
   DefMacro!("\\@bookmarksopenlevel", "\\maxdimen");
   // This only approximates the "contextual label" that should precede the number,
   // and ignores the user-definable macros.
@@ -634,7 +632,7 @@ LoadDefinitions!({
   //       hyperref_setoption($key, $value); } } }
 
   RawTeX!(
-    r###"
+    r#"
 \def\HyLang@afrikaans{%
   \def\equationautorefname{Vergelyking}%
   \def\footnoteautorefname{Voetnota}%
@@ -837,7 +835,7 @@ LoadDefinitions!({
 }
 % For now...
 \HyLang@english
-"###
+"#
   );
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });

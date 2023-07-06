@@ -260,8 +260,7 @@ LoadDefinitions!({
   // TeX Book, Appendix B, p. 345
 
   RawTeX!(
-    r###"
-    \chardef\active=13
+    r"\chardef\active=13
     \chardef\@ne=1
     \chardef\tw@=2
     \chardef\thr@@=3
@@ -272,15 +271,13 @@ LoadDefinitions!({
     \mathchardef\@M=10000
     \mathchardef\@MM=20000
     \countdef\m@ne=21\relax
-    \m@ne=-1
-  "###
+    \m@ne=-1"
   );
 
   //======================================================================
   // TeX Book, Appendix B, p. 346
   RawTeX!(
-    r###"
-  \countdef\count@=255
+    r"\countdef\count@=255
   \toksdef\toks@=0
   \skipdef\skip@=0
   \dimendef\dimen@=0
@@ -299,8 +296,7 @@ LoadDefinitions!({
   \count20=255
   \countdef\insc@unt=20
   \countdef\allocationnumber=21
-  \countdef\m@ne=22 \m@ne=-1
-  "###
+  \countdef\m@ne=22 \m@ne=-1"
   );
   // Various \count's are set; should we?
 
@@ -455,6 +451,5 @@ pub fn add_meaning_rec(_document: &mut Document, _node: Node, _meaning: String) 
   //   else {
   //     foreach my $c ($node->childNodes) {
         // addMeaningRec($document, $c, $meaning); } } }
-    unimplemented!();
-    Ok(())
+    todo!()
 }

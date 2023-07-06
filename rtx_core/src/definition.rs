@@ -9,6 +9,7 @@ pub mod register;
 
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -18,6 +19,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
+use crate::common::arena;
 
 use self::argument::ArgWrap;
 use self::register::{RegisterType, RegisterValue};
@@ -64,7 +66,7 @@ impl ExpansionBody {
     match self {
       ExpansionBody::Tokens(tks) => tks.unlist_mut().push(t),
       ExpansionBody::Closure(_) => {
-        unimplemented!()
+        todo!()
       },
     }
   }
@@ -102,6 +104,17 @@ impl PartialEq for ExpansionBody {
         },
       },
     }
+  }
+}
+
+#[derive(Clone)]
+pub enum PrimitiveBody {
+  Closure(PrimitiveClosure),
+  String(SymbolU32)
+}
+impl From<char> for PrimitiveBody {
+  fn from(c: char) -> Self {
+    PrimitiveBody::String(arena::pin_char(c))
   }
 }
 
@@ -329,12 +342,12 @@ pub trait Definition: Object {
   }
 
   fn value_of(&self, _args: Vec<ArgWrap>) -> Option<RegisterValue> {
-    unimplemented!()
+    todo!()
   }
   /// runs the setter to assign the value for a register
-  fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>) { unimplemented!(); }
+  fn set_value(&self, _value: RegisterValue, _scope: Option<Scope>, _args: Vec<ArgWrap>) { todo!(); }
   fn register_type(&self) -> Option<RegisterType> { None }
-  fn get_reversion_spec(&self) -> Option<Reversion> { unimplemented!() }
+  fn get_reversion_spec(&self) -> Option<Reversion> { todo!() }
   fn get_expansion(&self) -> Option<&ExpansionBody> { None }
 
   fn stringify_type(&self, deftype: &str) -> String {

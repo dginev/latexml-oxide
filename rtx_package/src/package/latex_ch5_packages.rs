@@ -154,14 +154,14 @@ LoadDefinitions!({
 
   DefMacro!("\\CurrentOption", None);
 
-  DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
+  DefPrimitive!("\\ExecuteOptions{}", sub[(_options)] {
     // TODO!
     // ExecuteOptions!(split(/\s*,\s*/, ToString(Expand($options))));
     Info!("TODO","\\ExecuteOptions","implement fully, it's an empty stub.");
     Ok(Vec::new())
   });
 
-  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(star)] {
+  DefPrimitive!("\\ProcessOptions OptionalMatch:*", sub[(_star)] {
     // TODO:
     // if star.is_some() {
     //   "inorder"

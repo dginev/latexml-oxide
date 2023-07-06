@@ -92,7 +92,7 @@ impl TagOptions {
       AfterCloseLate => &mut self.after_close_late,
     };
     match field {
-      Some(ref mut vec) => vec.drain(..).collect(),
+      Some(ref mut vec) => std::mem::take(vec),
       None => Vec::new(),
     }
   }
@@ -123,7 +123,7 @@ impl TagOptions {
 
   pub fn prepend(&mut self, name: &TagOptionName, mut value: Vec<TagConstructionClosure>) {
     let drained: Vec<TagConstructionClosure> = match self.get_mut(name) {
-      Some(vec) => vec.drain(..).collect(),
+      Some(vec) => std::mem::take(vec),
       None => Vec::new(),
     };
 

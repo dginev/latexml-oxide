@@ -283,7 +283,7 @@ impl Rewrite {
             }
           } else {
             // unsupported rewrite pattern? should never happen.
-            unimplemented!()
+            todo!()
           }
         },
         Replace => {
@@ -307,7 +307,7 @@ impl Rewrite {
             if let Some(popped) = following.pop_front() {
               replaced.push(popped);
             } else {
-              unimplemented!(); // should we report an error if nmatched was too large?
+              todo!(); // should we report an error if nmatched was too large?
             }
           }
           for rnode in replaced.iter() {
@@ -351,7 +351,7 @@ impl Rewrite {
             parent.add_child(&mut follow_node)?;
           }
         },
-        _ => unimplemented!(),
+        _ => todo!(),
       }
     }
 

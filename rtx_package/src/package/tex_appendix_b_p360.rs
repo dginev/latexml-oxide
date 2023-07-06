@@ -8,7 +8,7 @@ use crate::package::*;
 // and the choice is made when absorbing!
 LoadDefinitions!({
   DefConstructor!("\\mathchoice Digested Digested Digested Digested", sub[_doc,_args] {
-    unimplemented!();
+    Err(unported!())?;
     //   my ($document, $d, $t, $s, $ss, %props) = @_;
     //   my $style  = $props{mathstyle};
     //   my $choice = ($style eq 'display' ? $d

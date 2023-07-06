@@ -170,7 +170,7 @@ impl PartialEq for Constructor {
 
 impl fmt::Display for Constructor {
   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-    unimplemented!();
+    todo!();
   }
 }
 impl Object for Constructor {

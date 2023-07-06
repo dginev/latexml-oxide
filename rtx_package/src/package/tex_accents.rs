@@ -56,7 +56,6 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lx@applyaccent DefToken Token Token {}",
   sub[(accent, combiningchar, standalonechar, letter)] {
-    let letter_str = letter.to_string();
     let combiningchar = combiningchar.to_string().chars().next().unwrap();
     let standalonechar = standalonechar.to_string();
     apply_accent(letter.clone(), combiningchar, &standalonechar, Some(
@@ -94,10 +93,8 @@ LoadDefinitions!({
   // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above & below cases!  We'll prefer the above case.
-  DefPrimitive!("\\accent Number Expanded", sub[(num,letter)] {
-    unimplemented!();
-
-    Ok(())
+  DefPrimitive!("\\accent Number Expanded", sub[(_num,_letter)] {
+    unported!()
   });
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!
   DefMacro!("\\d{}", r"\ifmmode\@math@daccent{#1}\else\@text@daccent{#1}\fi");

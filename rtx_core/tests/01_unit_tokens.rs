@@ -21,18 +21,18 @@ fn unit_examples() {
   assert_eq!(tz.stringify(), "T_LETTER[z]", "Got correct token (z)");
 
   // Basic Tokens() tests.
-  let ts = Tokens!(t.clone());
+  let ts = Tokens!(t);
   assert_eq!(ts.stringify(), "Tokens[x]", "Got correct token (x)");
-  let ts3 = Tokens!(t.clone(), t.clone(), t.clone());
+  let ts3 = Tokens!(t, t, t);
   assert_eq!(ts3.stringify(), "Tokens[x,x,x]", "Got correct tokens");
-  let ts3x = Tokens!(t.clone(), t.clone(), t.clone());
+  let ts3x = Tokens!(t, t, t);
   let t = T_LETTER!("z");
   assert_eq!(
     ts3x.stringify(),
     "Tokens[x,x,x]",
     "Got correct deref (x,x,x)"
   );
-  let ts3z = Tokens!(t.clone(), t.clone(), t.clone());
+  let ts3z = Tokens!(t, t, t);
   assert_eq!(
     ts3z.stringify(),
     "Tokens[z,z,z]",

@@ -89,7 +89,7 @@ impl BoxOps for List {
   fn get_string(&self) -> Result<Cow<str>> { Ok(Cow::Owned(self.to_string())) }
   /// NOTE: No longer used; Document->absorb bypasses this for stack efficiency.
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    unimplemented!()
+    todo!()
   }
 
   fn get_font(&self) -> Result<Option<Cow<Font>>> {

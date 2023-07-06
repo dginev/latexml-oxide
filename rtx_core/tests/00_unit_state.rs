@@ -50,7 +50,7 @@ fn assign_lookup_value() {
     None => panic!("Couldn't lookup hashref_test value after assignment"),
     Some(Stored::HashStored(ref received_hash)) => match received_hash.get("a") {
       None => panic!("Assigned hash was missing key!"),
-      Some(Stored::Bool(ref b)) => assert_eq!(*b, true),
+      Some(Stored::Bool(ref b)) => assert!(b),
       Some(_) => panic!("Assigned hash had malformed key!"),
     },
     Some(_) => panic!("Looked up value of hashref_test didn't match assignment value"),
@@ -249,7 +249,7 @@ fn install_definition_and_meaning() {
     paramlist: None,
     //       expansion: SimpleExpansion!(Tokens::new(Explode!("name"))),
     expansion: Tokens::new(Explode!("name")).into(),
-    locator: Locator::new("00_unit_test.rs".to_string(), 180, 1, 188, 5),
+    locator: Locator::new("00_unit_test.rs", 180, 1, 188, 5),
     is_protected: get_prefix("protected"),
     ..Expandable::default()
   };

@@ -483,7 +483,7 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
       Some(t) => Ok(t.clone()),
       None => Ok(None),
     },
-    _ => unimplemented!(),
+    _ => todo!(),
   }
 }
 
@@ -545,7 +545,7 @@ pub fn new_props(
   let scriptpos = props.remove("scriptpos");
   // TODO:
   let font = match props.remove("font") {
-    Some(_fnt) => unimplemented!(),
+    Some(_fnt) => todo!(),
     None => {
       if let Some(ref text) = content {
         if !text.is_empty() && !text.chars().all(|c| c.is_whitespace()) {

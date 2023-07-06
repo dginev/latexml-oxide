@@ -238,7 +238,7 @@ impl XM {
       XM::Dual(_, _, _, ref meta) => meta,
       XM::Wrap(_, _, ref meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
-      XM::Ref(_) | XM::Arg(_) => unimplemented!(),
+      XM::Ref(_) | XM::Arg(_) => todo!(),
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -249,7 +249,7 @@ impl XM {
       XM::Dual(_, _, _, ref mut meta) => meta,
       XM::Wrap(_, _, ref mut meta) => meta,
       XM::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
-      XM::Ref(_)| XM::Arg(_) => unimplemented!(),
+      XM::Ref(_)| XM::Arg(_) => todo!(),
     }
   }
   pub fn get_inner_meta(&self) -> Vec<&Meta> {
@@ -292,7 +292,7 @@ impl XM {
           .collect::<Vec<_>>()
           .join("")
       )),
-      XM::Choices(_)| XM::Arg(_)=> unimplemented!(),
+      XM::Choices(_)| XM::Arg(_)=> todo!(),
       XM::Dual(content, pres, _, _) => Cow::Owned(format!(
         "{}{}",
         content.get_value(nodes).expect("inner"),
@@ -326,7 +326,7 @@ impl XM {
         Ok(XM::Lexeme(name, new_meta))
       },
       XM::Token(_t, _meta) => {
-        unimplemented!()
+        todo!()
       },
       XM::Ref(_) => Ok(self),
       XM::Apply(mut op, mut args, props, meta) => {
@@ -406,9 +406,9 @@ impl XM {
         }
         Ok(new_tree)
       },
-      XM::Dual(_, _, _, _) => unimplemented!(),
-      XM::Wrap(_, _, _) => unimplemented!(),
-      XM::Arg(_) => unimplemented!(),
+      XM::Dual(_, _, _, _) => todo!(),
+      XM::Wrap(_, _, _) => todo!(),
+      XM::Arg(_) => todo!(),
       XM::Choices(_) => Err("can not specialize choices".into()),
     }
   }
@@ -477,9 +477,9 @@ impl XM {
           self
         }
       },
-      XM::Dual(_, _, _, _) => unimplemented!(),
-      XM::Wrap(_inner, _, _) => unimplemented!(),
-      XM::Arg(_) => unimplemented!(),
+      XM::Dual(_, _, _, _) => todo!(),
+      XM::Wrap(_inner, _, _) => todo!(),
+      XM::Arg(_) => todo!(),
       XM::Choices(args) => args.first().unwrap().get_baseline(),
     }
   }
@@ -716,7 +716,7 @@ impl XM {
       },
       other => {
         dbg!(other);
-        unimplemented!()
+        todo!()
       },
     };
     Ok(match props.meaning {
@@ -744,7 +744,7 @@ impl XM {
         if let Some(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
           Ok(Some(node.clone()))
         } else {
-          unimplemented!();
+          todo!();
           //   Error("expected", 'id', undef, "Cannot find a node with xml:id='$idref'",
           //   ($LaTeXML::MathParser::IDREFS{$idref}
           //     ? "Previously bound to " . ToString($LaTeXML::MathParser::IDREFS{$idref})
@@ -854,7 +854,7 @@ impl From<&Node> for XM {
         XM::Arg(inner_xm)
       },
       // TODO: continue for the other cases
-      missing_case => {dbg!(missing_case); unimplemented!()},
+      missing_case => {dbg!(missing_case); todo!()},
     }
   }
 }

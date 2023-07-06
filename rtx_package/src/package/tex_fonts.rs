@@ -395,7 +395,7 @@ setter => sub[value,_scope,args] {
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
     let internalcs = T_CS!(internalcs_str);
-    DefPrimitive!(internalcs, None, sub[args] {
+    DefPrimitive!(internalcs, None, {
       let decoded = font::decode(value.value_of() as u8, None, false)
         .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
 
@@ -454,7 +454,7 @@ setter => sub[value,_scope,args] {
     { assign_meaning(&newcs, meaning, None); }
     let value  = gullet::read_number().unwrap();
     // eprintln!(" ** {} + {}", value,csname);
-    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
+    let (_role, _glyph) = decode_math_char(value.value_of() as u16)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
     // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
     // if let Some(internalcs) = internalcs_opt {

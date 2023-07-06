@@ -72,14 +72,13 @@ LoadDefinitions!({
     }
   });
   RawTeX!(
-    r###"
+    r"
   \def\@protected@testopt#1{%%
     \ifx\protect\@typeset@protect
       \expandafter\@testopt
     \else
       \@x@protect#1%
-    \fi}
-  "###
+    \fi}"
   );
 
   Let!("\\l@ngrel@x", "\\relax"); // Never actually used anywhere, but...
@@ -90,14 +89,12 @@ LoadDefinitions!({
 
   // maybe this is easiest just to punt.
   RawTeX!(
-    r###"
+    r"
   \def\in@#1#2{%
   \def\in@@##1#1##2##3\in@@{%
     \ifx\in@##2\in@false\else\in@true\fi}%
   \in@@#2#1\in@\in@@}
-  \newif\ifin@
-  "###
-  );
+  \newif\ifin@");
 
   DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
     if is_definable(&token) {
@@ -115,8 +112,8 @@ LoadDefinitions!({
 
   Let!("\\@@ifdefinable", "\\@ifdefinable");
 
-  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(token, iftoken)] {
-    state::let_i(&T_CS!("\\@ifdefinable"), &T_CS!("\\@@ifdefinable"), None);
+  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(_token, iftoken)] {
+    Let!("\\@ifdefinable", "\\@@ifdefinable");
     iftoken.unlist()
   });
 

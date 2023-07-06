@@ -177,7 +177,7 @@ LoadDefinitions!({
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));
       tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist().into_iter());
+      tokens.extend(opt_tks.unlist());
       tokens.push(T_END!());
     } else {
       tokens.push(T_CS!("\\@alignment@newline@marker"));
@@ -195,7 +195,7 @@ LoadDefinitions!({
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\@alignment@newline@markertall"));
       tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist().into_iter());
+      tokens.extend(opt_tks.unlist());
       tokens.push(T_END!());
     } else {
       tokens.push(T_CS!("\\@alignment@newline@marker"));
@@ -437,12 +437,10 @@ pub fn digest_alignment_body(
       reversion.extend(
         trim_column_template(alignment_cell.borrow_mut(), p_revert(cell.clone())?)
           .unlist()
-          .into_iter(),
       );
       creversion.extend(
         trim_column_template(alignment_cell.borrow_mut(), c_revert(cell.clone())?)
           .unlist()
-          .into_iter(),
       );
       extract_alignment_column(alignment_cell.borrow_mut(), cell)?;
     } else {
@@ -472,8 +470,8 @@ pub fn digest_alignment_body(
       } else if vtype.as_deref() == Some("cr") {
         let arg_toks = gullet::read_arg()?;
         let arg = stomach::digest(arg_toks)?;
-        reversion.extend(p_revert(arg.clone())?.unlist().into_iter());
-        creversion.extend(c_revert(arg)?.unlist().into_iter());
+        reversion.extend(p_revert(arg.clone())?.unlist());
+        creversion.extend(c_revert(arg)?.unlist());
       } else if vtype.as_deref() == Some("crcr") {
       }
       lastwascr = true;
@@ -621,8 +619,6 @@ pub fn digest_alignment_column(
       }
     }
   }
-  expire_local_box_list();
-  Ok((None, None, None, false))
 }
 
 // This attempts to trim off the column template parts from contents of the full column,
@@ -750,8 +746,8 @@ pub fn extract_alignment_column(
   }
   // Replacing boxes with the fil padding & vertical rules stripped off
   let mut final_boxes = Vec::from(saveleft);
-  final_boxes.extend(boxes.into_iter());
-  final_boxes.extend(saveright.into_iter());
+  final_boxes.extend(boxes);
+  final_boxes.extend(saveright);
   let mut boxes_list = List::new(final_boxes);
   boxes_list.mode = Some(if is_math {
     TexMode::Math

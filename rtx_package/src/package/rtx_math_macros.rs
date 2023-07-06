@@ -214,7 +214,7 @@ LoadDefinitions!({
             None => Tokens!()
           }},
          "dual" => {
-            unimplemented!()
+            todo!()
             // Tokens!(T_CS!("\\lx@dual"))
             //               : ($r eq 'dual'
             //                 ? Tokens(T_CS('\lx@dual'), I_keyvals($kvs),
@@ -222,7 +222,7 @@ LoadDefinitions!({
             //                   T_BEGIN, ($pr || Revert($p)), T_END)
          },
           _other => {
-            unimplemented!()
+            todo!()
             //                 : (($LaTeXML::DUAL_BRANCH || '') eq 'presentation'    # Context dependent reversion
             //                   ? $pr || Revert($p)
             //                   : $cr || Revert($c))))); }

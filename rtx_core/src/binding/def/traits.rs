@@ -213,6 +213,11 @@ pub trait IntoResultArgWrap<T>: Sized {
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
 
+impl IntoResultArgWrap<Result<ArgWrap>> for crate::common::error::Error
+{
+  fn into_result_argwrap(self) -> Result<ArgWrap> { Err(self) }
+}
+
 impl<T> IntoResultArgWrap<Result<ArgWrap>> for Result<T>
 where T: Into<ArgWrap> + Sized
 {
@@ -248,6 +253,9 @@ pub trait IntoDigestedResult<T>: Sized {
 }
 impl IntoDigestedResult<Result<Vec<Digested>>> for () {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
+}
+impl IntoDigestedResult<Result<Vec<Digested>>> for crate::common::error::Error {
+  fn into_digested_result(self) -> Result<Vec<Digested>> { Err(self) }
 }
 impl IntoDigestedResult<Result<Vec<Digested>>> for Result<()> {
   fn into_digested_result(self) -> Result<Vec<Digested>> { self.map(|_| Vec::new()) }

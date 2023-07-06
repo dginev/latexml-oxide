@@ -308,8 +308,8 @@ impl BoxOps for Digested {
       Whatsit(w) => w.borrow().be_absorbed(document),
       Alignment(w) => w.borrow_mut().be_absorbed_mut(document),
       KeyVals(kvs) => kvs.be_absorbed(document),
-      Postponed(_) => unimplemented!(),
-      RegisterValue(ref _rv) => unimplemented!(),
+      Postponed(_) => todo!(),
+      RegisterValue(ref _rv) => todo!(),
     }
   }
 
@@ -340,7 +340,7 @@ impl BoxOps for Digested {
       Whatsit(ref w) => w.borrow_mut().set_property(key, value),
       _ => {
         dbg!(self);
-        unimplemented!();
+        todo!();
       },
     }
   }
@@ -360,7 +360,7 @@ impl BoxOps for Digested {
         .borrow()
         .get_property(key)
         .map(|v| Cow::Owned(v.into_owned())),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn get_string(&self) -> Result<Cow<str>> {
@@ -378,7 +378,7 @@ impl BoxOps for Digested {
         .borrow()
         .get_string()
         .map(|v| Cow::Owned(v.into_owned())),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn has_property(&self, key: &str) -> bool {
@@ -387,7 +387,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow().has_property(key),
       List(ref l) => l.borrow().has_property(key),
       Whatsit(ref w) => w.borrow().has_property(key),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn get_body(&self) -> Result<Option<Digested>> {
@@ -412,7 +412,7 @@ impl BoxOps for Digested {
         Ok(None)
       },
       Whatsit(ref w) => w.borrow().get_body(),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn get_property_bool(&self, key: &str) -> bool {
@@ -421,7 +421,7 @@ impl BoxOps for Digested {
       TBox(ref b) => b.borrow().get_property_bool(key),
       List(ref l) => l.borrow().get_property_bool(key),
       Whatsit(ref w) => w.borrow().get_property_bool(key),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   fn get_font(&self) -> Result<Option<Cow<Font>>> {
@@ -443,7 +443,7 @@ impl BoxOps for Digested {
           .map(|t| Cow::Owned(t.into_owned())),
       ),
       Postponed(ref _tks) => Ok(None),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
 
@@ -461,7 +461,7 @@ impl BoxOps for Digested {
       KeyVals(ref kvs) => kvs.compute_size(options),
       Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
       Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => unimplemented!(),
+      Postponed(_) | RegisterValue(_) | Comment(_) => todo!(),
     }
   }
 }
@@ -518,7 +518,7 @@ impl Digested {
       List(ref l) => l.borrow().is_empty(),
       Whatsit(ref w) => w.borrow().is_empty()?,
       Postponed(ref tks) => tks.is_empty(),
-      _ => unimplemented!(),
+      _ => todo!(),
     })
   }
 
