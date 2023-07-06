@@ -410,12 +410,13 @@ LoadDefinitions!({
         return Ok(Vec::new()); // no-op ????
       }
       let _right = stuff.remove(0);
-      unimplemented!(); // TODO:
+      Err(unported!())
+      // TODO:
       // stuff.push(
       //   Whatsit::new(lookup_definition(T_CS!("\\@@joinrel")), vec![left, right],
       //     // locator => $gullet->getLocator,
       //     font => right.get_font(), is_math => true));
-      Ok(stuff)
+      // Ok(stuff)
     } else {
       // Nothing there?...
       Ok(Vec::new()) // I guess this becomes a no-op???
@@ -429,7 +430,7 @@ LoadDefinitions!({
     document.absorb(right,None)?;
     // Now if last 2 items are XMTok, replace by a single token with joined content (& attr?)
     let _node  = document.get_node();
-    unimplemented!(); // TODO:
+    Err(unported!())?; // TODO:
     // let nodes = document.get_child_elements(node);
     // if nodes.len() >= 2 {
       // let rels = (nodes[-2], nodes[-1]);

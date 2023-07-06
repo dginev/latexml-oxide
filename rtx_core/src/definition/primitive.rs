@@ -6,7 +6,7 @@ use crate::common::object::Object;
 use crate::state::{Scope};
 
 use crate::definition::{
-  BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveClosure, Reversion,
+  BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
@@ -37,7 +37,9 @@ pub struct PrimitiveOptions {
 pub struct Primitive {
   pub cs: Token,
   pub paramlist: Option<Parameters>,
-  pub replacement: Option<PrimitiveClosure>,
+  // TODO: we have a case where the replacement is a simple string/character
+  //       which gets auto-wrapped with a Tbox during invoke.
+  pub replacement: Option<PrimitiveBody>,
   pub before_digest: Vec<BeforeDigestClosure>,
   pub after_digest: Vec<DigestionClosure>,
   pub alias: Option<String>,
@@ -66,7 +68,7 @@ impl PartialEq for Primitive {
 
 // impl fmt::Display for Primitive {
 //   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-//     unimplemented!();
+//     todo!();
 //   }
 // }
 impl Object for Primitive {
@@ -90,8 +92,12 @@ impl Definition for Primitive {
     let mut invoked_boxes: Vec<Digested> = self.execute_before_digest()?;
     let args = self.read_arguments()?;
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
-    if let Some(ref closure) = self.replacement {
-      invoked_boxes.extend(closure(args)?);
+    match self.replacement {
+      Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
+      Some(PrimitiveBody::String(symbol)) => {
+        todo!();
+      },
+      None => {}
     }
     if !self.after_digest.is_empty() {
       // optimize to avoid needless generation of whatsits

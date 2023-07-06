@@ -225,7 +225,7 @@ LoadDefinitions!({
   // \parshape !?!??
   DefPrimitive!("\\parshape SkipMatch:= Number", sub[(n)] {
 
-    for i in 0..n.value_of() {
+    for _ in 0..n.value_of() {
       gullet::read_dimension()?;
       gullet::read_dimension()?;
     }

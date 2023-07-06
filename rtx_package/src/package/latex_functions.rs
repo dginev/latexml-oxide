@@ -16,7 +16,7 @@ pub fn start_appendices(kind: &str) { begin_appendices(kind) }
 // counter is also the element name!
 
 pub fn begin_appendices(_counter: &str) {
-  unimplemented!();
+  todo!();
   // Let('\lx@save@theappendex',    '\the' . $counter,         'global');
   // Let('\lx@save@theappendex@ID', '\the' . $counter . '@ID', 'global');
   // Let('\lx@save@appendix',       T_CS!('\\' . $counter),     'global');
@@ -35,7 +35,7 @@ pub fn begin_appendices(_counter: &str) {
 }
 
 pub fn end_appendices() {
-  unimplemented!();
+  todo!();
   // if (my $counter = LookupMapping('BACKMATTER_ELEMENT', 'ltx:appendix')) {
   //   $counter =~ s/^ltx://;
   //   Let('\the' . $counter,         '\lx@save@theappendex',    'global');

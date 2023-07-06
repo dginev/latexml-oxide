@@ -1,4 +1,3 @@
-#![allow(unreachable_code)]
 pub use libxml::tree::{Namespace, Node};
 pub use log;
 pub use once_cell::sync::Lazy;
@@ -42,7 +41,7 @@ pub use rtx_core::definition::ConditionalClosure;
 pub use rtx_core::definition::{
   BeforeDigestClosure, ConstructionClosure, Definition, DigestedReversionClosure, DigestionClosure,
   ExpansionBody, ExpansionClosure, FontClosure, FontDirective, PrimitiveClosure, PrimitiveFn,
-  ReplacementClosure, Reversion,
+  ReplacementClosure, Reversion, PrimitiveBody,
 };
 pub use rtx_core::digested::{Digested, DigestedData};
 pub use rtx_core::document::resource::*;

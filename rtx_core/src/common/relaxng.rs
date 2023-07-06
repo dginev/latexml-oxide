@@ -44,5 +44,5 @@ impl Relaxng {
   }
 
   /// build the internal representation
-  pub fn load_schema(&self) { unimplemented!() }
+  pub fn load_schema(&self) { todo!() }
 }

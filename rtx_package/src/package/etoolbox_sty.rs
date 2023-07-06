@@ -1,7 +1,7 @@
 use crate::package::*;
 LoadDefinitions!({
   RawTeX!(
-    r###"
+    r"
 \def\etb@catcodes{\do\&\do\|\do\:\do\-\do\=\do\<\do\>}
 \def\do#1{\catcode\number`#1=\the\catcode`#1\relax}
 \edef\etb@catcodes{\etb@catcodes}
@@ -20,7 +20,7 @@ LoadDefinitions!({
 \protected\def\etb@warning{\PackageWarning{etoolbox}}
 \protected\def\etb@info{\PackageInfo{etoolbox}}
 \newcount\etb@tempcnta
-"###
+"
   );
 
   DefMacro!("\\newrobustcmd OptionalMatch:* DefToken [Number][]{}", sub[(_star,cs,nargs,opt,body)] {
@@ -46,7 +46,7 @@ LoadDefinitions!({
   Tokens!() });
 
   RawTeX!(
-    r###"
+    r"
 % {<csname>}
 
 \newrobustcmd*{\csshow}[1]{%
@@ -163,7 +163,7 @@ LoadDefinitions!({
   \ifcsdef{#1}
     {\expandafter\ifdefparam\csname#1\endcsname}
     {\@secondoftwo}}
-"###
+"
   );
 
   // If we want to allow raw interpretation, we need to define the discrepant macros *before*
@@ -189,7 +189,7 @@ LoadDefinitions!({
   } }, protected => true);
 
   RawTeX!(
-    r###"
+    r"
 
 % {<csname>}{<true>}{<false>}
 
@@ -1151,8 +1151,7 @@ LoadDefinitions!({
   \else
     \expandafter\@secondoftwo
   \fi}
-"###
-  );
+");
 
   // STOPGAP! Because a lot of LaTeXML definitions are realized via Perl subroutines,
   // the "\meaning#1" tests in the native definition of this macro would return CODE(...) strings
@@ -1164,7 +1163,7 @@ LoadDefinitions!({
   DefMacro!("\\etb@ifpattern DefToken {}", "\\begingroup\\@firstoftwo", protected => true);
 
   RawTeX!(
-    r###"
+    r"
 % {<string>}{<true}{<false>}
 
 \protected\long\def\etb@ifhashcheck#1{%
@@ -1265,10 +1264,7 @@ LoadDefinitions!({
               {\etb@dbg@info{pro}}
               {}%
             \etb@dbg@info{pos}\@firstoftwo}}
-        {\etb@dbg@fail{mac}\@secondoftwo}}}
-
-"###
-  );
+        {\etb@dbg@fail{mac}\@secondoftwo}}}");
 
   // Need to be able to examine a Macro's replacement for a match (and then replace)
   // we can only do this for token expansions, and should return failure for all else.
@@ -1303,7 +1299,7 @@ LoadDefinitions!({
 }, protected => true);
 
   RawTeX!(
-    r###"
+    r"
 \newcommand{\etb@patchcmd}[4][########1]{%
   \etb@ifpatchable#2{#3}
     {\etb@dbg@succ{ret}%
@@ -1686,8 +1682,7 @@ LoadDefinitions!({
 
 \newcommand*{\dolistcsloop}{\forlistcsloop\do}
 
-"###
-  );
+");
   //======================================================================
   // 2.5 Additional Document Hooks
   // \AfterPreamble
@@ -1708,11 +1703,7 @@ LoadDefinitions!({
   DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
   push_value("@after@end@document", arg.unlist())?; });
 
-  RawTeX!(
-    r###"
-\AtEndDocument{\let\AfterEndPreamble\@gobble}
-"###
-  );
+  RawTeX!(r"\AtEndDocument{\let\AfterEndPreamble\@gobble}");
   //======================================================================
   // 2.6 Environment Hooks
 

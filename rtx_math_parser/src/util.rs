@@ -142,7 +142,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
       //       : (map { $document->getNodeQName($_) => $_->getValue } $arg->attributes));
       //     delete $attr{'xml:id'};
       //     push(@refs, [$qname, {%attr}]); }
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
   Ok(refs)

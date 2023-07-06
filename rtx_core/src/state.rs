@@ -957,9 +957,9 @@ pub fn checkout_value(key: &str) -> Option<Stored> {
 /// Returns a value into its `Stored::None` placeholder (see `checkout_value` for taking it)
 pub fn checkin_value(key: &str, value: Stored) {
   match state_mut!().value.get_mut(&arena::pin(key)) {
-    None => unimplemented!(),
+    None => todo!(),
     Some(vvec) => match vvec.front_mut() {
-      None => unimplemented!(),
+      None => todo!(),
       Some(found) => {
         match found {
           Stored::None => std::mem::replace(found, value),
@@ -1389,7 +1389,7 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
     None => None,
     Some(cvec) => match cvec.front() {
       Some(Stored::Catcode(cc)) => Some(*cc),
-      Some(_) => unimplemented!(), // best to fail hard if we set a nonsence value
+      Some(_) => todo!(), // best to fail hard if we set a nonsence value
       _ => None,
     },
   }

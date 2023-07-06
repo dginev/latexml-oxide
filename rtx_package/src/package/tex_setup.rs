@@ -551,7 +551,7 @@ LoadDefinitions!({
   reversion => sub[args, _inner, _extra] {
     let _defn = args.remove(0);
     // my ($defn, @args) = @$var;
-    unimplemented!()
+    todo!()
     // TODO: What is defn here? what is the intent?
     // let mut reverted = vec![defn.get_cs()];
     // let reverted_args = if let Some(params) = defn.get_parameters() {
@@ -656,8 +656,7 @@ LoadDefinitions!({
       // else {
       //   Error('expected', 'DirectoryList', $gullet,
       //          "A DirectoryList was supposed to be here"); } });
-      unimplemented!();
-      Ok(Tokens!())
+      unported!()
   });
 
   // This reads a Box as needed by \raise, \lower, \moveleft, \moveright.
@@ -767,7 +766,7 @@ LoadDefinitions!({
   //   // TODO: To implement this natively, we need "untils" i.e.
   //   // "extra" passed into "predigest" as well.
   //   predigest => {
-  //     unimplemented!();
+  //     todo!();
   //     //   let ismath = lookup_bool("IN_MATH");
   //     //   stomach::digest_next_body(Some(until))?
   //   //   my @list   = $state->getStomach->digestNextBody($until);
@@ -841,8 +840,7 @@ LoadDefinitions!({
       //       : ($gullet->readToken))); }
       // LaTeXML::Core::Array->new(open => T_BEGIN, close => T_END, type => $typedef,
       //   values => [@items]); });
-      unimplemented!();
-      Ok(Tokens!())
+      unported!()
   });
 
   // Support for Key / Value arguments.

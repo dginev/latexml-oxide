@@ -56,7 +56,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,dimension)] {
+  DefPrimitive!("\\vsplit Number Match:to Dimension", sub[(number,_to,_dimension)] {
     // analog to \box for now.
     let box_key   = s!("box{}", number.value_of());
     if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
@@ -123,7 +123,7 @@ LoadDefinitions!({
 
   // TODO: collapseSVGGroup
   Tag!("svg:g", after_close => sub[_document, _node] {
-    unimplemented!();
+    Err(unported!())?
     // collapse_svg_group(document, node)
   });
 
@@ -281,7 +281,7 @@ LoadDefinitions!({
   // "?#isHorizontalRule()\
   //   (<ltx:rule height='&GetKeyVal(#1,height)' depth='&GetKeyVal(#1,depth)'\
   //    width='&GetKeyVal(#1,width)' color='#color'/>)",
-  after_digest=> {unimplemented!(); Ok(Vec::new())});
+  after_digest=> { unported!() });
   // afterDigest => sub {
   //   my ($stomach, $whatsit) = @_;
   //   my $dims   = $whatsit->getArg(1);
@@ -325,5 +325,5 @@ pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
 }
 
 fn adjust_box_color_rec(_color: &str, _props: HashMap<String,String>, _tbox: &Digested) {
-  unimplemented!();
+  todo!();
 }

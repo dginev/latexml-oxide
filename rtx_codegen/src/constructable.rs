@@ -100,9 +100,10 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
 
     quote!(
     Some(Rc::new(
-    |document: &mut Document, args: &Vec<Option<Digested>>,
-      props: &HashMap<String, Stored>| {
-      #[allow(unused_assignments)]
+    |document: &mut Document,
+      #[allow(unused_variables)]args: &Vec<Option<Digested>>,
+      #[allow(unused_variables)]props: &HashMap<String, Stored>| {
+      #[allow(unused_assignments,unused_mut)]
       let mut savenode : Option<Node> = None;
 
       #(#operations)*
@@ -177,11 +178,17 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       // string in place, but also want it to run after the replacement...
       // makes `current_tag` in particular look very misplaced
       let av = translate_avpairs(&mut replacement);
-      operations.push(quote!(
-        let mut av_props : HashMap<String, String> = HashMap::default();
-        #(#av)*
-        document.insert_pi(#current_tag, Some(av_props))?;
-      ));
+      if av.is_empty() {
+        operations.push(quote!(
+          document.insert_pi(#current_tag, None)?;
+        ));
+      } else {
+        operations.push(quote!(
+          let mut av_props : HashMap<String, String> = HashMap::default();
+          #(#av)*
+          document.insert_pi(#current_tag, Some(av_props))?;
+        ));
+      }
 
       let mut pi_closed = false;
       replacement = PI_CLOSE_RE
@@ -222,22 +229,28 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       }
       // Fonts require a bit too much boilerplate at the moment, due to having
       // different directives (code vs asset) and trying to avoid deep cloning.
-      operations.push(quote!(
-        let mut av_props : HashMap<String, String> = HashMap::default();
-        #(#av)*
-        let this_font_opt = match props.get("font") {
-          Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
-          Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
-          Some(Stored::FontDirective(FontDirective::Closure(code))) =>
-            Some(Cow::Owned(code(None)?)),
-          _ => None
-        };
-        if let Some(this_font) = this_font_opt {
-          document.open_element(#current_tag, Some(av_props), Some(&this_font))?;
-        } else {
-          document.open_element(#current_tag, Some(av_props), None)?;
-        }
-      ));
+      if av.is_empty() {
+        operations.push(quote!(
+          document.open_element(#current_tag, None, None)?;
+        ));
+      } else {
+        operations.push(quote!(
+          let mut av_props : HashMap<String, String> = HashMap::default();
+          #(#av)*
+          let this_font_opt = match props.get("font") {
+            Some(Stored::Font(f)) => Some(Cow::Borrowed(&**f)),
+            Some(Stored::FontDirective(FontDirective::Asset(fa))) => Some(Cow::Borrowed(&**fa)),
+            Some(Stored::FontDirective(FontDirective::Closure(code))) =>
+              Some(Cow::Owned(code(None)?)),
+            _ => None
+          };
+          if let Some(this_font) = this_font_opt {
+            document.open_element(#current_tag, Some(av_props), Some(&this_font))?;
+          } else {
+            document.open_element(#current_tag, Some(av_props), None)?;
+          }
+        ));
+      }
       // Empty element?
       if replacement.starts_with('/') {
         operations.push(quote!(document.close_element(#current_tag)?;));
@@ -297,7 +310,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       is_match = true;
       let _key = refs.get(1).map_or("", |m| m.as_str()).to_string();
       // TODO: We need a test to flesh this out - is there any?
-      unimplemented!();
+      todo!();
       // String::new()
     });
 
@@ -391,7 +404,7 @@ fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
       }
     })
     .collect::<Vec<_>>();
-  quote!(vec![#(#token_values),*].join(""))
+  quote!([#(#token_values),*].join(""))
 }
 
 fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
@@ -502,8 +515,7 @@ fn translate_value(
         is_match = true;
         let n = arg_refs.get(1).map_or("", |m| m.as_str()).to_string();
         let n_int = n.parse::<i32>().unwrap_or(-1);
-        if n_int < 1 {
-          //|| (n_int > *NARGS) {
+        if !(1..=9).contains(&n_int) {
           panic!("Illegal argument number {n_int:?} at '{text:?}'\n");
         } else {
           // index starts at 0

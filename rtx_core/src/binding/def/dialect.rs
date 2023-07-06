@@ -24,7 +24,7 @@ use crate::definition::register::{
 use crate::common::numeric_ops::NumericOps;
 use crate::definition::{
   BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
-  ExpansionBody, FontDirective, PrimitiveClosure, ReplacementClosure, Reversion, SizingClosure,
+  ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
@@ -309,7 +309,7 @@ pub fn def_register<T: Into<RegisterValue>>(
 pub fn def_primitive(
   cs: Token,
   paramlist: Option<Parameters>,
-  compiled_replacement: Option<PrimitiveClosure>,
+  compiled_replacement: Option<PrimitiveBody>,
   options: PrimitiveOptions,
 ) -> Result<()> {
   let options_locked = options.locked;

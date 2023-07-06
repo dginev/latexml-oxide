@@ -59,17 +59,6 @@ macro_rules! transfer_opt_default {
 // Discussion: Ideally we wouldn't need any of these closure macros, just the way latexml proper
 // doesn't. In latexml, you could say:
 
-/// create a PrimitiveClosure from the pieces, with a forced empty return value
-#[macro_export]
-macro_rules! primitiveproc {
-  ($args:ident, $body:block) => (Rc::new(
-    |mut $args : Vec<ArgWrap>| {
-      $body
-      Ok(Vec::new())
-    }
-  ))
-}
-
 #[macro_export]
 macro_rules! before_digest {
   ($(sub)? $body:block) => {
@@ -303,7 +292,7 @@ macro_rules! prop_digested {
           "Please extend the api_macros::prop_digested macro to support: {:?}",
           other
         );
-        unimplemented!();
+        todo!();
       },
     }
   };

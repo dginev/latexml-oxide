@@ -23,7 +23,6 @@
 // keep in until code is completed.
 pub mod cell;
 mod normalize;
-#[allow(dead_code)]
 pub mod template;
 
 use self::cell::Cell;
@@ -415,12 +414,12 @@ impl BoxOps for Alignment {
     &self,
     _options: HashMap<String, Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    unimplemented!();
+    todo!();
   }
   fn get_font(&self) -> Result<Option<Cow<crate::common::font::Font>>> {
-    unimplemented!();
+    todo!();
   }
-  fn get_string(&self) -> Result<Cow<str>> { unimplemented!() }
+  fn get_string(&self) -> Result<Cow<str>> { todo!() }
 
   fn compute_size_and_cache(
     &mut self,
@@ -435,7 +434,7 @@ impl BoxOps for Alignment {
   }
 
   fn be_absorbed(&self, _document: &mut Document) -> Result<Vec<Node>> {
-    unimplemented!(); // call the mutable version only, we need to rearrange the alignment first!
+    todo!(); // call the mutable version only, we need to rearrange the alignment first!
   }
   fn be_absorbed_mut(&mut self, document: &mut Document) -> Result<Vec<Node>> {
     let ismath = self.is_math;

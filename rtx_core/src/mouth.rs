@@ -238,10 +238,10 @@ impl Mouth {
   }
   fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
   fn open_http(&mut self, _content: &str) {
-    unimplemented!();
+    todo!();
   }
   fn open_https(&mut self, _content: &str) {
-    unimplemented!();
+    todo!();
   }
   // fn open_binding(&mut self, _content: &str) {}
 
@@ -334,7 +334,7 @@ impl Mouth {
           // TODO: What are characters that fail to decode replaced by in Rust?
           // Bruce suggested that for TeX's behaviour we actually should turn such un-decodeable
           // chars to space(?).
-          unimplemented!();
+          todo!();
           //let message = s!("input isn't valid under encoding {}", encoding);
           //Info!("misdefined", encoding, message);
           //unsafe { str::from_utf8_unchecked(&line_bytes).to_owned() }

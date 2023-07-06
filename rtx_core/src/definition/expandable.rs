@@ -61,7 +61,7 @@ impl PartialEq for Expandable {
 
 // impl fmt::Display for Expandable {
 //   fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-//     unimplemented!();
+//     todo!();
 //   }
 // }
 impl Object for Expandable {
@@ -105,12 +105,12 @@ impl Definition for Expandable {
         };
         if profiled {
           // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
-          unimplemented!();
+          todo!();
         }
         let result = closure(args)?;
         if tracing {
           //$LaTeXML::DEBUG{tracing}) {    # More involved...
-          unimplemented!();
+          todo!();
           // Debug($self->tracingCSName . ' ==> ' . tracetoString($result));
           // Debug($self->tracingArgs(@args)) if @args; } }
         }
@@ -119,11 +119,11 @@ impl Definition for Expandable {
       Some(ExpansionBody::Tokens(tokens)) => {
         let result = if self.paramlist.is_none() {
           if profiled {
-            unimplemented!();
+            todo!();
             // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
           }
           if tracing {
-            unimplemented!();
+            todo!();
             // Debug($self->tracingCSName . ' ->' . tracetoString($expansion))
             //   if $tracing || $LaTeXML::DEBUG{tracing};
           }
@@ -165,19 +165,19 @@ impl Definition for Expandable {
           // let r;
           if tracing {
             // || $LaTeXML::DEBUG{tracing}) {    # More involved...
-            unimplemented!();
+            todo!();
             // Debug($self->tracingCSName . ' ->' . tracetoString($expansion));
             // Debug($self->tracingArgs(@targs)) if @args;
           }
           if profiled {
-            unimplemented!();
+            todo!();
             //LaTeXML::Core::Definition::startProfiling($profiled, 'expand');
           }
           tokens.substitute_parameters(args_tks.as_slice())
         };
         // Getting exclusive requires dubious Gullet support!
         if profiled {
-          unimplemented!();
+          todo!();
           // result = Tokens!(result, T_MARKER!(profiled));
         }
         Ok(result)

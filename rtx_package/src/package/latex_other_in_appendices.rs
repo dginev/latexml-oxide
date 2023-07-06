@@ -6,7 +6,7 @@
 use crate::package::*;
 LoadDefinitions!({
   RawTeX!(
-    r###"
+    r"
     \def\@namedef#1{\expandafter\def\csname #1\endcsname}
     \def\@nameuse#1{\csname #1\endcsname}
     \def\@cons#1#2{\begingroup\let\@elt\relax\xdef#1{#1\@elt #2}\endgroup}
@@ -15,7 +15,7 @@ LoadDefinitions!({
     \def\@carcube#1#2#3#4\@nil{#1#2#3}
     \def\nfss@text#1{{\mbox{#1}}}
     \def\@sect#1#2#3#4#5#6[#7]#8{}
-    "###
+    "
   );
 
   Let!("\\@begindocumenthook", "\\@empty");
@@ -30,7 +30,7 @@ LoadDefinitions!({
     r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
   );
   RawTeX!(
-    r###"
+    r"
   \DeclareRobustCommand{\MakeUppercase}[1]{{%
     \def\i{I}\def\j{J}%
     \def\reserved@a##1##2{\let##1##2\reserved@a}%
@@ -52,7 +52,7 @@ LoadDefinitions!({
   }}
   \protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
   \protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
-  "###
+  "
   );
 
   //======================================================================
@@ -90,14 +90,14 @@ LoadDefinitions!({
   });
 
   RawTeX!(
-    r###"{\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
+    r"{\catcode`\^^M=13 \gdef\obeycr{\catcode`\^^M13 \def^^M{\\\relax}%
     \@gobblecr}%
     {\catcode`\^^M=13 \gdef\@gobblecr{\@ifnextchar
     \@gobble\ignorespaces}}%
-    \gdef\restorecr{\catcode`\^^M5 }}"###
+    \gdef\restorecr{\catcode`\^^M5 }}"
   );
   RawTeX!(
-    r###"\begingroup
+    r"\begingroup
   \catcode`P=12
   \catcode`T=12
   \lowercase{
@@ -112,7 +112,7 @@ LoadDefinitions!({
             \meaning #1}%
   }
   \def\dospecials{\do\ \do\\\do\{\do\}\do\$\do\&%
-    \do\#\do\^\do\_\do\%\do\~}"###
+    \do\#\do\^\do\_\do\%\do\~}"
   );
 
   DefMacro!(
@@ -141,10 +141,8 @@ LoadDefinitions!({
     "###
   );
   DefMacro!("\\ltx@hard@MessageBreak", None, "^^J");
-
-  DefPrimitive!("\\@onlypreamble{}", sub[(arg)] {
-    only_preamble("\\@onlypreamble")?; }); // Don't bother enforcing this.
-  DefPrimitive!("\\GenericError{}{}{}{}", sub[(arg1,arg2,arg3,arg4)] {
+  DefPrimitive!("\\@onlypreamble{}", { only_preamble("\\@onlypreamble")?; });
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
     make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
   });
   DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
@@ -156,8 +154,7 @@ LoadDefinitions!({
 
   Let!("\\MessageBreak", "\\relax");
   RawTeX!(
-    r###"
-     \gdef\PackageError#1#2#3{%
+    r"\gdef\PackageError#1#2#3{%
        \GenericError{%
            (#1)\@spaces\@spaces\@spaces\@spaces
         }{%
@@ -234,8 +231,7 @@ LoadDefinitions!({
      }
      \def\@latex@info@no@line#1{%
        \@latex@info{#1\@gobble}}
-     "###
-  );
+     ");
   DefPrimitive!("\\@setsize{}{}{}{}", None);
   Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
@@ -250,14 +246,12 @@ LoadDefinitions!({
   );
   //======================================================================
   RawTeX!(
-    r###"
-    \chardef\@xxxii=32
+    r"\chardef\@xxxii=32
     \mathchardef\@Mi=10001
     \mathchardef\@Mii=10002
     \mathchardef\@Miii=10003
     \mathchardef\@Miv=10004
-    \def\@fontenc@load@list{\@elt{T1,OT1}}
-  "###
+    \def\@fontenc@load@list{\@elt{T1,OT1}}"
   );
 
   DefMacro!("\\@vpt", "5");
@@ -279,7 +273,7 @@ LoadDefinitions!({
   DefMacro!("\\@gtempa", None);
 
   RawTeX!(
-    r###"
+    r"
     \long\def\loop#1\repeat{%
       \def\iterate{#1\relax\expandafter\iterate\fi}%
       \iterate%
@@ -441,7 +435,7 @@ LoadDefinitions!({
     \newif\if@nmbrlist  \@nmbrlistfalse
 
     \def\glb@settings{}%
-    "###
+    "
   );
 
   DefMacro!("\\@height", None, "height");

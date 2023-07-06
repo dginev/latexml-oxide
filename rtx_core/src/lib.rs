@@ -152,30 +152,30 @@ impl Core {
 /// Common operations for Box-like (digested) data
 pub trait BoxOps: Object {
   /// If composite, unwrap into the contained digested objects (or return self)
-  fn unlist(&self) -> Vec<Digested> { unimplemented!() }
-  fn unlist_ref(&self) -> Vec<Cow<Digested>> { unimplemented!() }
+  fn unlist(&self) -> Vec<Digested> { todo!() }
+  fn unlist_ref(&self) -> Vec<Cow<Digested>> { todo!() }
   /// absorb the current object into the `Document` XML - returning the corresponding nodes
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>>;
   /// be_absorbed but with allowed side-effects on the carrier (for `Alignment` only)
   fn be_absorbed_mut(&mut self, _document: &mut Document) -> Result<Vec<Node>> {
-    unimplemented!();
+    todo!();
   }
   /// build a string representation of the underlying digested data
   fn get_string(&self) -> Result<Cow<str>>;
   /// get the underlying tokens (preceding digestion)
-  fn get_tokens(&self) -> Option<&Tokens> { unimplemented!() }
+  fn get_tokens(&self) -> Option<&Tokens> { todo!() }
   /// deprecated: get the map of named properties. This can not be usable as long as we have any
   /// data behind a RefCell wrapper.
   /// Use `with_properties` instead.
   fn get_properties(&self) -> &HashMap<String, Stored> {
-    unimplemented!();
+    todo!();
   }
 
   /// execute a function using this object's named properties
   fn with_properties<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&HashMap<String, Stored>) -> R;
   /// get a mutable reference to the map of named properties
-  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { unimplemented!() }
+  fn get_properties_mut(&mut self) -> &mut HashMap<String, Stored> { todo!() }
   /// set a named property (allows all `Stored` types for values)
   fn set_property<T: Into<Stored>>(&mut self, key: &str, value: T) {
     self
@@ -233,7 +233,7 @@ pub trait BoxOps: Object {
   /// gets the associated font, if any
   fn get_font(&self) -> Result<Option<Cow<Font>>>;
   /// sets an associated font
-  fn set_font(&mut self, _font: Rc<Font>) { unimplemented!() }
+  fn set_font(&mut self, _font: Rc<Font>) { todo!() }
   /// sets a "width" property, for sizing
   fn set_width<T: Into<Stored>>(&mut self, width: T) { self.set_property("width", width); }
 

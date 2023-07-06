@@ -90,7 +90,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
       {
         //   AssignValue(EQUATIONROW_TAGS => {
         //       ($$numbering{numbered} ? RefStepCounter($ctr) : RefStepID($ctr)) }, 'global'); }
-        unimplemented!();
+        todo!();
       } else if !matches!(tags.get("reset"), Some(&Stored::Bool(true)))
         && matches!(numbering.get("numbered"), Some(&Stored::Bool(true)))
       {
@@ -124,7 +124,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     _ => HashMap::default(),
   };
   if is_aligned {
-    unimplemented!();
+    todo!();
   //   if (my $alignment = LookupValue('Alignment')) {
   //     my $row = $alignment->currentRow;
   //     $$row{id}   = $$props{id};
@@ -136,7 +136,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
 }
 
 fn retract_equation() {
-  unimplemented!();
+  todo!();
 }
 
 LoadDefinitions!({

@@ -145,7 +145,7 @@ pub trait NumericOps {
   // dancing around meta-programming in the Glue case... is there a better way?
   fn into_glue_type(self) -> Glue
   where Self: Sized {
-    unimplemented!()
+    todo!()
   }
   fn register_type(&self) -> RegisterType;
   fn to_attribute(&self) -> String

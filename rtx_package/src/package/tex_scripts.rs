@@ -332,21 +332,21 @@ LoadDefinitions!({
   def_primitive(
     T_SUPER!(),
     None,
-    Some(Rc::new(
+    Some(PrimitiveBody::Closure(Rc::new(
       |_args: Vec<ArgWrap>| {
         script_handler(Catcode::SUPER)
       },
-    )),
+    ))),
     PrimitiveOptions::default(),
   )?;
   def_primitive(
     T_SUB!(),
     None,
-    Some(Rc::new(
+    Some(PrimitiveBody::Closure(Rc::new(
       |_args: Vec<ArgWrap>| {
         script_handler( Catcode::SUB)
       },
-    )),
+    ))),
     PrimitiveOptions::default(),
   )?;
 

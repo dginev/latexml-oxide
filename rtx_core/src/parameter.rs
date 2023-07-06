@@ -424,7 +424,7 @@ impl Parameter {
   /// (and the parameter types for the keys) had a chance to properly parse.
   // Yuck!
   pub fn reparse(&self, _value: Tokens) -> Result<Tokens> {
-    unimplemented!()
+    todo!()
   }
 }
 
@@ -464,7 +464,7 @@ impl Parameters {
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
   pub fn revert_arguments(&self, args: Vec<Option<Tokens>>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg) in self.0.iter().zip(args.into_iter()) {
+    for (parameter, arg) in self.0.iter().zip(args) {
       if !parameter.novalue {
         if let Some(reverted_tks) = parameter.revert(arg)? {
           tokens.extend(reverted_tks.unlist());

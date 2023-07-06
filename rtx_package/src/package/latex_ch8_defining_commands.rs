@@ -11,7 +11,7 @@ LoadDefinitions!({
   DefMacro!("\\@tabacckludge {}", "\\csname\\string#1\\endcsname");
 
   DefPrimitive!("\\newcommand OptionalMatch:* DefToken [Number][]{}",
-  sub[(star,cs_token,nargs,opt,body)] {
+  sub[(_star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     if !IsDefinable!(&cs_token) {
       if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
@@ -25,7 +25,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
-  sub[(star, cs, nargs_num, opt, body)] {
+  sub[(_star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     let opt = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() { None } else { opt }
@@ -45,7 +45,7 @@ LoadDefinitions!({
   // machinery.
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
-  sub[(star, cs, nargs, opt, body)] {
+  sub[(_star, cs, nargs, opt, body)] {
     // TODO: Consider if we should just treat the empty tokens directly in convert_latex_args ?
     let opt_checked = if let Some(ref opt_content) = opt {
       if opt_content.is_empty() {
@@ -61,7 +61,7 @@ LoadDefinitions!({
 
   // Crazy; define \cs in terms of \cs[space] !!!
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
-  sub[(star,cs,nargs,opt,body)] {
+  sub[(_star,cs,nargs,opt,body)] {
     let opt_checked = match opt {
       Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
       _ => None
@@ -116,10 +116,9 @@ LoadDefinitions!({
     let cs_str = cs.to_string();
     let nargs = nargs.value_of() as usize;
     if IsDefinable!(&cs) { // If not already defined...
-      DefMacro!(cs, None, Some(s!(r#"""
-        \expandafter\ifx\csname\cf@encoding\string{}\endcsname\relax\csname?\string{}\endcsname
-        \else\csname\cf@encoding\string{}\endcsname\fi
-      """#, cs_str, cs_str, cs_str).into()));
+      DefMacro!(cs, None, Some(s!(
+        r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname
+        \else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
     }
     let ecs = T_CS!(s!("\\{}{}", encoding, cs_str));
     if !IsDefined!(&ecs) { // If not already defined...
@@ -137,19 +136,17 @@ LoadDefinitions!({
 
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}",
     sub[(cs, encoding, code)] {
-    // TODO:
-    //     $code = $code->valueOf;
-    //     my $css = ToString($cs);
-    //     $encoding = ToString(Expand($encoding));
-    //     if (isDefinable($cs)) {    # If not already defined...
-    //       DefMacroI($cs, undef,
-    // '\expandafter\ifx\csname\cf@encoding\string' . $css .
-    //  '\endcsname\relax\csname?\string' . $css . '\endcsname'
-    //           . '\else\csname\cf@encoding\string' . $css . '\endcsname\fi'); }
-    //     my $ecs = T_CS('\\' . $encoding . $css);
-    //     DefPrimitiveI($ecs, undef, FontDecode($code, $encoding));
-    unimplemented!();
-    Ok(Vec::new())
+      let code_value = code.value_of() as u8;
+      let cs_str = cs.to_string();
+      let encoding_str = Expand!(encoding).to_string();
+      if IsDefinable!(&cs) {    // If not already defined...
+        DefMacro!(cs, None, Some(s!(r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax
+        \csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi").into()));
+      }
+      let ecs = T_CS!("\\{encoding}{cs_str}");
+      let replacement_value = font::decode(code_value, Some(encoding_str), false).unwrap();
+      let replacement = PrimitiveBody::from(replacement_value);
+      def_primitive(ecs, None, Some(replacement), PrimitiveOptions::default())?;
   });
 
   // hmmm... what needs doing here; basically it means use this encoding as the default for the

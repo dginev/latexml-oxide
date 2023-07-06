@@ -84,7 +84,7 @@ LoadDefinitions!({
   // otherwise, just append to the last item in $tag.
 
   // \@add@to@frontmatter{tag}[label]{content}
-  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(tag,label,tokens)] {
+  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(_tag,_label,_tokens)] {
   //     $tag = ToString($tag);
   //     $label = ToString($label) if $label;
   //     my $frontmatter = LookupValue('frontmatter');
@@ -104,8 +104,7 @@ LoadDefinitions!({
   //       push(@{ $$list[-1] }, $datum);
   //       return; }
   //     push(@{ $$frontmatter{$tag} }, [$tag, ($label ? { label => $label } : undef), $datum]);
-    unimplemented!();
-    Ok(())
+    unported!()
   });
 
   // This is called by afterOpen (by default on <ltx:document>) to
@@ -394,6 +393,5 @@ LoadDefinitions!({
 
 pub fn insert_frontmatter(_document: &mut Document) -> Result<()> {
   // TODO: update and port over
-  unimplemented!();
-  Ok(())
+  todo!();
 }

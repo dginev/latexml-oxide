@@ -254,13 +254,13 @@ impl Document {
     if let Some(_comment) = node.get_attribute("_pre_comment") {
       if let Some(_parent) = node.get_parent() {
         // parent.: Option<Node> insert_before(XML::LibXML::Comment.new(comment), node);
-        unimplemented!();
+        todo!();
       }
     }
     if let Some(_comment) = node.get_attribute("_comment") {
       if let Some(_parent) = node.get_parent() {
         // parent.add_next_sibling(XML::c0.:(omment.new(comment), );
-        unimplemented!();
+        todo!();
       }
     }
 
@@ -468,11 +468,11 @@ impl Document {
               self.record_constructed_node(&new_text);
             }
           } else {
-            unimplemented!();
+            todo!();
           }
         },
-        KeyVals(_) => unimplemented!(),
-        RegisterValue(_) => unimplemented!(),
+        KeyVals(_) => todo!(),
+        RegisterValue(_) => todo!(),
       }
     }
     Ok(())
@@ -1420,7 +1420,7 @@ impl Document {
         || MERGE_ATTRIBUTE_SEMICOLONJOIN.contains(key.as_str())
         || MERGE_ATTRIBUTE_SUMLENGTH.contains(key.as_str())
       {
-        unimplemented!();
+        todo!();
       } else if !to.has_attribute(key) {
         // || force...
         // Else if attribute not present on $to, or if we specificallly override it, just copy
@@ -1446,7 +1446,7 @@ impl Document {
       if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
         // TODO:
         // self.append_text_box(parent, self.box_to_absorb);
-        // unimplemented!();
+        // todo!();
       }
       self.node.append_text(text)?;
     } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
@@ -1847,7 +1847,7 @@ impl Document {
       };
     } else {
       // Accept any namespaced attributes
-      unimplemented!();
+      todo!();
       //   my ($ns, $name) = model_mut!()}->decodeQName($key);
       //   if ($ns) {             // If namespaced attribute (must have prefix!
       // let prefix = node.lookupNamespacePrefix($ns);    // namespace already
@@ -1930,7 +1930,7 @@ impl Document {
     } else {
       // Accept any namespaced attributes
       dbg!(key);
-      unimplemented!();
+      todo!();
     }
     // ... TODO: continue (see Perl)
     Ok(())
@@ -1979,7 +1979,7 @@ impl Document {
     if let Some(_prev) = self.idstore.get(id) {
       // Whoops! Already assigned!!!
       // Can we recover?
-      unimplemented!();
+      todo!();
       // if ! self.node.is_same_node(prev) {
       //   let badid = id.to_string();
       //   let id = self.modify_id(id);
@@ -2828,7 +2828,7 @@ impl Document {
   // initially since $node->setNodeName was broken in XML::LibXML 1.58
   // but this can provide for more options & correctness?
   pub fn rename_node(&mut self, _node: &mut Node, _newname: &str) -> Result<Node> {
-    unimplemented!();
+    todo!();
     // my ($self, $node, $newname) = @_;
     // my $model = $$self{model};
     // my ($ns, $tag) = $model->decodeQName($newname);

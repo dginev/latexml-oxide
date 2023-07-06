@@ -206,7 +206,7 @@ LoadDefinitions!({
       let close = gullet::read_x_token(None, false)?;
       // close parenthesis should have terminated recursive call
       if close.is_none() || !(close == Some(T_OTHER!(")"))) {
-        unimplemented!();
+        todo!();
         //       Error('expected', ')', $gullet,
         //         "Missing close parenthesis in $type expr.", "Got " . ToString($close));
       }

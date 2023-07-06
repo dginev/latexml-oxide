@@ -415,7 +415,7 @@ impl BoxOps for Whatsit {
       if boxes.is_empty() {
         // no body
         for arg in self.args.iter().flatten() {
-          boxes.extend(arg.unlist().into_iter());
+          boxes.extend(arg.unlist());
         }
       }
       let font = if let Stored::Font(ref sf) = *self.get_property("font").unwrap() {

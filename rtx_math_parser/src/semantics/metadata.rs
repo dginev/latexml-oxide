@@ -29,7 +29,7 @@ impl PartialEq for Meta {
 impl Eq for Meta {}
 impl Display for Meta {
   fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    unimplemented!();
+    todo!();
   }
 }
 

@@ -83,8 +83,8 @@ impl Object for ArgWrap {
       MuDimension(t) => t.be_digested(),
       KV(kv) => kv.be_digested(),
       None => Ok(Digested::default()),
-      AlignmentTemplate(_) => unimplemented!(),
-      RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct digestion I think
+      AlignmentTemplate(_) => todo!(),
+      RegisterDefinition(_) => todo!(), // ??? not meant for direct digestion I think
     }
   }
   fn revert(&self) -> Result<Tokens> {
@@ -100,8 +100,8 @@ impl Object for ArgWrap {
       MuDimension(t) => t.revert(),
       KV(kv) => kv.revert(),
       None => Ok(Tokens!()),
-      AlignmentTemplate(_) => unimplemented!(),
-      RegisterDefinition(_) => unimplemented!(), // ??? not meant for direct reversion I think
+      AlignmentTemplate(_) => todo!(),
+      RegisterDefinition(_) => todo!(), // ??? not meant for direct reversion I think
     }
   }
 }
@@ -164,8 +164,8 @@ impl ArgWrap {
         Some(Cow::Owned(self.revert()?))
       },
       None => Some(Cow::Borrowed(NO_BORROWED_TOKENS)),
-      AlignmentTemplate(_) => unimplemented!(),
-      RegisterDefinition(_) => unimplemented!(), // ??? not meant for such use
+      AlignmentTemplate(_) => todo!(),
+      RegisterDefinition(_) => todo!(), // ??? not meant for such use
     };
     Ok(result)
   }
@@ -334,7 +334,7 @@ impl ArgWrap {
         tks.unlist()
       },
       ArgWrap::None => Vec::new(),
-      _ => unimplemented!(),
+      _ => todo!(),
     }
   }
 

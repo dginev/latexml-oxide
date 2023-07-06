@@ -73,7 +73,7 @@ pub fn get_status(status: LogStatus) -> usize {
     Warning => report.warning,
     Error => report.error,
     Fatal => if report.fatal {1} else {0},
-    _ => unimplemented!()
+    _ => todo!()
   }
 }
 
@@ -261,6 +261,7 @@ pub enum ErrorCategory {
   MaxLimit(usize),
   Generic(Box<dyn ErrorTrait>),
   Filename(String),
+  ToDo,
 }
 
 #[derive(Debug)]
@@ -304,6 +305,7 @@ impl fmt::Display for ErrorCategory {
       Libxml => write!(f, "libxml error"),
       Recursion => write!(f, "<recursion>"),
       EoF => write!(f, "<EOF>"),
+      ToDo => write!(f, "TODO"),
       Convert => write!(f, "conversion"),
       Endgroup => write!(f, "<endgroup>"),
       FailedParse => write!(f, "failed to parse"),
@@ -325,6 +327,18 @@ impl Error {
     use log::error;
     error!(target: &target_str, "{}", self.message);
   }
+  pub fn todo() -> Self {
+    Error {
+      target: ErrorTarget::Internal,
+      category: ErrorCategory::ToDo,
+      message: String::from("This section of the code is not yet implemented / ported over from Perl.")
+    }
+  }
+}
+
+#[macro_export]
+macro_rules! unported {
+  () => (::rtx_core::common::error::Error::todo())
 }
 
 impl From<io::Error> for Error {

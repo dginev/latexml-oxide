@@ -56,7 +56,7 @@ LoadDefinitions!({
   SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
-    sub[(type_tokens, level_arg, ignore3, ignore4, ignore5, ignore6, flag)] {
+    sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
       if lookup_bool("IN_MATH") {
@@ -68,13 +68,8 @@ LoadDefinitions!({
         }
       }
       // Main logic
-      let stype = type_tokens.to_string();
       let level = level_arg.to_string();
       let level_int = if level.is_empty() { 0 } else { level.parse::<i64>().expect(&level) };
-      let ctr = with_value(&s!("counter_for_{stype}"), |value_opt| match value_opt {
-        Some(v) => v.to_string(),
-        None => stype
-      });
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![

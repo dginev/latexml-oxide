@@ -96,7 +96,7 @@ LoadDefinitions!({
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
     if let Some(_path) = find_file(&filepath,None) {
-      unimplemented!();
+      todo!();
       // let stat = stat $path;
       // (defined $stat[7]) ? Explode($stat[7]) : ();
     } else {

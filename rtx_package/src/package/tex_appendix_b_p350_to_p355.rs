@@ -6,8 +6,7 @@ LoadDefinitions!({
 
   // Font stuff ...
   RawTeX!(
-    r###"
-  \font\tenrm=cmr10
+    r"\font\tenrm=cmr10
   \font\sevenrm=cmr7
   \font\fiverm=cmr5
   \font\teni=cmmi10
@@ -30,9 +29,7 @@ LoadDefinitions!({
   \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
   \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
   \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
-  \textfont3=\tenex
-"###
-  );
+  \textfont3=\tenex");
 
   // Note: \newfam in math should be font switching(?)
 
@@ -118,12 +115,11 @@ LoadDefinitions!({
   DefConstructor!("\\@break", "<ltx:break/>");
 
   RawTeX!(
-    r###"
+    r"
   \def\loop#1\repeat{\def\body{#1}\iterate}
   \def\iterate{\body \let\next=\iterate \else\let\next=\relax\fi \next}
   \let\repeat=\fi
-  "###
-  );
+  ");
 
   DefPrimitive!("\\enskip", {
     Tbox::new(arena::pin_static("\u{2002}"), None, None, Tokens!(T_CS!("\\enskip")),

@@ -153,7 +153,7 @@ impl MathParser {
   // explicit XMApp with the XMRef refering to the script itself, not the
   // XMApp. (make sense?)
   pub fn cleanup_scripts(&mut self, _document: &Document) {
-    // unimplemented!();
+    // todo!();
   }
   // sub cleanupScripts {
   //   my ($self, $document) = @_;
@@ -434,7 +434,7 @@ impl MathParser {
   // NOTE: we should be able to optionally switch this off.
   // Especially, when we want to try alternative parse strategies.
   fn parse_kludge(&self, _node: &mut Node, _document: &mut Document) {
-    unimplemented!();
+    todo!();
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -629,7 +629,7 @@ fn textrec(
     let mut args = element_nodes(&node);
     if args.is_empty() {
       // Error!("expected","arguments" ...);
-      unimplemented!();
+      todo!();
     }
     let arg_node = args.remove(0);
     let op = realize_xmnode(&arg_node, document);
@@ -690,7 +690,7 @@ fn textrec(
     let args = element_nodes(&node);
     if args.is_empty() {
       // Error!("expected","arguments" ...);
-      unimplemented!();
+      todo!();
     }
     args
       .iter()
@@ -792,7 +792,7 @@ fn textrec_array(_node: &Node) -> String {
   // push(@rows, '[' . join(', ', map { ($_->firstChild ?
   // textrec($_->firstChild) : '') } element_nodes($row)) . ']'); } return $name
   // . '[' . join(', ', @rows) . ']';
-  unimplemented!()
+  todo!()
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

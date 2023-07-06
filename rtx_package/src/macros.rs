@@ -8,14 +8,12 @@ macro_rules! compile_replacement {
     #[derive(CompileReplacement)]
     #[replacement=$replacement]
     struct _Dummy;
-    #[allow(unused_mut, unused_variables)]
     let tmp: Option<ReplacementClosure> = this_replacement!();
     $var = tmp;
   }};
 }
 
 #[macro_export]
-#[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Expandable closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_prototype_for_typed_macro {
@@ -30,7 +28,6 @@ macro_rules! compile_prototype_for_typed_macro {
 }
 
 #[macro_export]
-#[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Primitive closures
 macro_rules! compile_prototype_for_typed_primitive {
   ($prototype:literal, sub [( $($var:ident),* )] $body:block
@@ -44,7 +41,6 @@ macro_rules! compile_prototype_for_typed_primitive {
 }
 
 #[macro_export]
-#[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into Conditional closures
 macro_rules! compile_prototype_for_typed_conditional {
   ($prototype:literal, sub [( $($var:ident),* )] $body:block
@@ -58,7 +54,6 @@ macro_rules! compile_prototype_for_typed_conditional {
 }
 
 #[macro_export]
-#[allow(unused_variables)]
 /// Macro for compiling string binding prototypes into ColumnType closures
 /// Approach borrowed from diesel-codegen
 macro_rules! compile_prototype_for_typed_columntype {
@@ -73,7 +68,6 @@ macro_rules! compile_prototype_for_typed_columntype {
 }
 
 #[macro_export]
-#[allow(unused_variables)]
 /// Macro for compiling string literal prototypes into a Token and Parameters structs
 macro_rules! compile_prototype {
   ($prototype:literal) => {{

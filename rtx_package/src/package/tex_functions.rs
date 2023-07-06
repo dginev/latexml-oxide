@@ -90,7 +90,7 @@ pub fn parse_def_parameters(
           if let Some(t_next) = tokens.pop_front() {
             t = t_next;
           } else {
-            unimplemented!(); // hm, this is a bit of a pain to port without making t into an
+            todo!(); // hm, this is a bit of a pain to port without making t into an
                               // Option<Token>...
           }
         }
@@ -324,7 +324,7 @@ pub fn revert_spec(_whatsit: &mut Whatsit, _keyword: &str) -> Vec<Token> {
   //   my ($whatsit, $keyword) = @_;
   //   my $value = $whatsit->getProperty($keyword);
   //   return ($value ? (Explode($keyword), Revert($value)) : ()); }
-  unimplemented!()
+  todo!()
 }
 
 pub fn p_revert<T>(arg: T) -> Result<Tokens>
@@ -619,7 +619,7 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
   ////                                 .' | ltx:tabular/ltx:tbody/ltx:tr/ltx:td[not(ltx:Math)]',
   ////                                 $text_node)
   {
-    unimplemented!(); // TODO
+    todo!(); // TODO
                       // // First step is remove any ltx:tbody from the tabular!
                       // foreach my $tb (document.findnodes('ltx:tabular/ltx:tbody', $text_node)) {
                       //   document.unwrapNodes($tb); }
@@ -661,7 +661,7 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
     let mut tokens_iter = tokens.into_iter();
     while let Some(t) = tokens_iter.next() {
       if delims.iter().any(|d| d == &t) {
-        items.push(Tokens::new(toks.drain(..).collect()));
+        items.push(Tokens::new(std::mem::take(&mut toks)));
       } else if t == T_BEGIN!() {
         toks.push(t);
         let mut level = 1;

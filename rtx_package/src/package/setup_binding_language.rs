@@ -317,12 +317,12 @@ macro_rules! DefPrimitive {
   ($proto:literal, $replacement:literal $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Rc::new(
+    let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
       | _args: Vec<ArgWrap>| {
       Tbox::new(arena::pin_static($replacement), None, None,
         Tokens!(), HashMap::default())
         .into_digested_result()
-    });
+    }));
     def_primitive(cs, params, Some(closure), options)?;
   }};
   // closure with literal prototype
@@ -336,30 +336,30 @@ macro_rules! DefPrimitive {
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let closure : PrimitiveClosure = Rc::new(
+    let closure : PrimitiveBody = PrimitiveBody::Closure(Rc::new(
       move |$args: Vec<ArgWrap>| {
         $body.into_digested_result()
-      });
+      }));
     def_primitive(cs, params, Some(closure), options)?;
   }};
   // Case: cs-noparams with closure pattern replacement
   ($cs:expr, None, sub[$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Rc::new(
+    let closure = PrimitiveBody::Closure(Rc::new(
       move |$args: Vec<ArgWrap>| {
         $body.into_digested_result()
-      });
-    def_primitive($cs, None, Some(replacement_closure), options)?;
+      }));
+    def_primitive($cs, None, Some(closure), options)?;
   }};
   // Case: cs-noparams with closure block
   ($cs:expr, None, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure = Rc::new(
+    let closure = PrimitiveBody::Closure(Rc::new(
       move |_args: Vec<ArgWrap>| {
         $body.into_digested_result()
-      });
-    def_primitive($cs, None, Some(replacement_closure), options)?;
+      }));
+    def_primitive($cs, None, Some(closure), options)?;
   }};
   // Case: no replacement
   ($proto:literal, None $($input:tt)*) => {{
@@ -377,11 +377,11 @@ macro_rules! DefPrimitive {
   ($proto:expr, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
-    let replacement_closure =  Rc::new(
+    let closure = PrimitiveBody::Closure(Rc::new(
       move |_args: Vec<ArgWrap>| {
         $body.into_digested_result()
-      });
-    def_primitive(cs, params, Some(replacement_closure), options)?;
+      }));
+    def_primitive(cs, params, Some(closure), options)?;
   }};
   // Case: direct closure provided (for reasons of reusing the same closure in several definitions)
   ($proto:expr, $replacement_closure:expr, $($input:tt)*) => {{
@@ -400,7 +400,7 @@ macro_rules! TypedPrimitive {
       sub [( $($var:ident),* ):($($ptype:ident),*)]
       $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
-    let replacement_closure =  Rc::new(
+    let replacement_closure =  PrimitiveBody::Closure(Rc::new(
     move |args: Vec<ArgWrap>| {
       let [$($var),*] : [_; count!($($var)*)] = args.try_into().unwrap();
       $(
@@ -413,7 +413,7 @@ macro_rules! TypedPrimitive {
           };
       )*
       $body.into_digested_result()
-    });
+    }));
     def_primitive(T_CS!($cs), $these_parameters, Some(replacement_closure), options)?;
   }};
 }
@@ -1469,7 +1469,7 @@ macro_rules! DefKeyVal {
     // should we tokenize the code?
     // let code_expansion = ExpansionBody::Tokens(tokenize(
     // code.unwrap_or(""), Some()));
-    unimplemented!();
+    todo!();
   };
 }
 
@@ -1586,7 +1586,7 @@ macro_rules! DeclareOption {
   (None, $(sub)? $body:block) => {
     let cs = String::from("\\default@ds");
     // block case, create a primitive
-    let code: PrimitiveClosure = Rc::new(move |_args| $body.into_digested_result());
+    let code: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   };
   ($option:expr, $tex:literal) => {
