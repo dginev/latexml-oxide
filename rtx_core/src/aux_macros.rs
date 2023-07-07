@@ -24,7 +24,7 @@ macro_rules! map {
 #[macro_export]
 macro_rules! stored_map {
   ($( $key:expr => $val:expr ),*) => {{
-    let mut map : HashMap<String,Stored> = HashMap::default();
+    let mut map : HashMap<String,$crate::common::store::Stored> = HashMap::default();
     $( map.insert($key.to_string(), $val.into()); )*
     map
   }}

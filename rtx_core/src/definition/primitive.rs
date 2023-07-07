@@ -1,15 +1,17 @@
 use libxml::tree::Node;
 use std::borrow::Cow;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::common::error::*;
 use crate::common::object::Object;
 use crate::state::{Scope};
-
+use crate::common::arena::EMPTY_SYM;
 use crate::definition::{
   BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
 };
 use crate::document::Document;
 use crate::parameter::Parameters;
+use crate::tbox::Tbox;
 use crate::token::*;
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
@@ -95,7 +97,21 @@ impl Definition for Primitive {
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),
       Some(PrimitiveBody::String(symbol)) => {
-        todo!();
+        let cs_token = self.alias.as_ref().map(|alias| T_CS!(alias)).unwrap_or(self.cs);
+        let box_tokens = vec![cs_token];
+        if let Some(ref _params) = self.paramlist {
+          todo!(); // we need to generalize the revert functions to take ArgWrap-typed arguments
+          // box_tokens.extend(params.revert_arguments(args)?);
+        }
+        let box_props = if symbol == *EMPTY_SYM {
+          HashMap::default()
+        } else {
+          stored_map!("isEmpty" => true)
+        };
+        invoked_boxes.push(Digested::from(
+          Tbox::new(symbol, None, None, Tokens::new(box_tokens),
+          box_props))
+        );
       },
       None => {}
     }
