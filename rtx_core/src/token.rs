@@ -17,9 +17,8 @@ use crate::common::numeric_ops::NumericOps;
 use crate::common::store::Stored;
 use crate::definition::register::Register;
 use crate::{state};
-use crate::state::is_dont_expandable;
 use crate::tokens::Tokens;
-use crate::{fatal, Digested, Fatal};
+use crate::Digested;
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",
@@ -30,7 +29,6 @@ static CONTROLNAME: &[&str] = &[
 /// A Token category code, as in TeX
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Catcode {
-  ///
   ESCAPE,
   BEGIN,
   END,
@@ -49,8 +47,7 @@ pub enum Catcode {
   INVALID,
   CS,
   MARKER,
-  ARG,
-  SmuggleTHE,
+  ARG
 }
 
 impl From<u8> for Catcode {
@@ -76,7 +73,6 @@ impl From<u8> for Catcode {
       16 => CS,
       17 => MARKER,
       18 => ARG,
-      19 => SmuggleTHE,
       _ => {
         // let message = s!("Unrecognized catcode: {:?}", num);
         // Warn!("unknown", "catcode", None, message);
@@ -108,8 +104,7 @@ impl From<Catcode> for u8 {
       INVALID => 15,
       CS => 16,
       MARKER => 17,
-      ARG => 18,
-      SmuggleTHE => 19,
+      ARG => 18
     }
   }
 }
@@ -139,8 +134,7 @@ impl Catcode {
       INVALID => "Invalid",
       CS => "ControlSequence",
       MARKER => "Marker",
-      ARG => "Arg",
-      SmuggleTHE => "SmuggleThe",
+      ARG => "Arg"
     }
   }
   /// a \meaning-friendly name
@@ -188,8 +182,7 @@ impl Catcode {
       INVALID => "T_INVALID",
       CS => "T_CS",
       MARKER => "T_MARKER",
-      ARG => "T_ARG",
-      SmuggleTHE => "T_SMUGGLE_THE",
+      ARG => "T_ARG"
     }
   }
 
@@ -204,7 +197,7 @@ impl Catcode {
       // Primitives
       ESCAPE | BEGIN | END | MATH | ALIGN | EOL | PARAM | SUPER | SUB | SPACE => true,
       // Non-primitive
-      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG | SmuggleTHE => {
+      IGNORE | LETTER | OTHER | ACTIVE | COMMENT | INVALID | CS | MARKER | ARG => {
         false
       },
     }
@@ -216,8 +209,8 @@ impl Catcode {
       // Executable
       BEGIN | END | MATH | ALIGN | SUPER | SUB | ACTIVE | CS => true,
       // Non-executable
-      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER | ARG
-      | SmuggleTHE => false,
+      EOL | ESCAPE | PARAM | SPACE | IGNORE | LETTER | OTHER | COMMENT | INVALID | MARKER |
+      ARG => false,
     }
   }
   ///
@@ -228,7 +221,7 @@ impl Catcode {
       MATH | ALIGN | PARAM | SUPER | SUB | ACTIVE => true,
       // Non-neutralizable
       ESCAPE | BEGIN | END | EOL | IGNORE | SPACE | LETTER | OTHER | COMMENT | INVALID | CS
-      | MARKER | ARG | SmuggleTHE => false,
+      | MARKER | ARG => false,
     }
   }
   ///
@@ -251,11 +244,6 @@ impl Catcode {
   pub fn is_balanced_interesting(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, BEGIN | END | MARKER)
-  }
-  /// can a token of this catcode be used to smuggle for `\the`
-  pub fn can_smuggle_the(self) -> bool {
-    use crate::token::Catcode::*;
-    matches!(self, PARAM | ACTIVE | CS | ARG)
   }
 }
 
@@ -770,30 +758,6 @@ impl Token {
 
   pub fn pack_parameters(self) -> Self { self }
 
-  pub fn with_dont_expand(self) -> Result<Self> {
-    match self.code {
-      Catcode::SmuggleTHE => {
-        // LaTeXML Bug, we haven't correctly emulated scan_toks! Offending token was:
-        let msg = s!(
-          "We are marking as \\noexpand a masked \\the-produced token, this must Never happen. \
-           Illegal: {}",
-          &self.stringify()
-        );
-        Fatal!(Parameter, Unexpected, msg);
-      },
-      Catcode::CS | Catcode::ACTIVE => {
-        if is_dont_expandable(&self) {
-          Ok(Token {
-            text: arena::pin_static("\\relax"),
-            code: Catcode::CS,
-          })
-        } else {
-          Ok(self)
-        }
-      },
-      _ => Ok(self),
-    }
-  }
   ///======================================================================
   /// Note that this converts the string to a more `user readable' form using `standard' chars for
   /// catcodes. We'll need to be careful about using string instead of reverting for internal

@@ -711,12 +711,10 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// Converts $tokens to a string in the fashion of \message and others:
 /// doubles #, converts to string; optionally adds spaces after control sequences
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
+/// [This could be a $tokens->unpackParameters, but for the curious space treatment]
 pub fn writable_tokens(tokens: &Tokens) -> String {
-  // unwrap a \noexpand-created \relax to its actual content,
-  // to avoid confusing users with a \relax dontexpand
   let mut wv = Vec::new();
   for t in tokens.unlist_ref().iter() {
-    // let t = t.without_dont_expand_ref();
     match t.code {
       Catcode::CS => {
         wv.push(*t);

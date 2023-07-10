@@ -307,22 +307,18 @@ LoadDefinitions!({
     Ok(Vec::new())
   }, locked => true);
   // From plain.tex
-  DefPrimitive!("\\newcount Token", sub[(name)] {
+  DefPrimitive!("\\newcount DefToken", sub[(name)] {
     DefRegister!(name, None, Number::new(0), allocate=>"\\count");
   });
-  DefPrimitive!("\\newdimen Token", sub[(name)] {
+  DefPrimitive!("\\newdimen DefToken", sub[(name)] {
     DefRegister!(name, None, Dimension::new(0), allocate=>"\\dimen");
   });
-  DefPrimitive!("\\newskip Token", sub[(name)] {
+  DefPrimitive!("\\newskip DefToken", sub[(name)] {
     DefRegister!(name, None, Glue::new(0), allocate=>"\\skip");
   });
-  DefPrimitive!("\\newmuskip Token", sub[(name)] {
+  DefPrimitive!("\\newmuskip DefToken", sub[(name)] {
     DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
   });
-  DefPrimitive!("\\newtoks Token", sub[(name)] {
-    DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
-  });
-
   AssignValue!("allocated_boxes" => false);
   DefPrimitive!("\\newbox DefToken", sub[(t)] {
     let n = lookup_int("allocated_boxes");
@@ -331,10 +327,10 @@ LoadDefinitions!({
     AssignValue!(&s!("box{}",n), empty_list);
     DefRegister!(t, None, Number(n));
   });
-  DefPrimitive!("\\newhelp Token {}", sub[(token,arg)] {
+  DefPrimitive!("\\newhelp DefToken {}", sub[(token,arg)] {
     state::assign_value(&token.to_string(), arg, None);
   });
-  DefPrimitive!("\\newtoks Token", sub[(name)] {
+  DefPrimitive!("\\newtoks DefToken", sub[(name)] {
     DefRegister!(name, None, Tokens!(), allocate=>"\\toks");
   });
 
@@ -349,19 +345,19 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefMacro!(
-    "\\newread Token",
+    "\\newread DefToken",
     r"\alloc@@{read}\global\chardef#1=\allocationnumber"
   );
   DefMacro!(
-    "\\newwrite Token",
+    "\\newwrite DefToken",
     r"\alloc@@{write}\global\chardef#1=\allocationnumber"
   );
   DefMacro!(
-    "\\newfam Token",
+    "\\newfam DefToken",
     r"\alloc@@{fam}\global\chardef#1=\allocationnumber"
   );
   DefMacro!(
-    "\\newlanguage Token",
+    "\\newlanguage DefToken",
     r"\alloc@@{language}\global\chardef#1=\allocationnumber"
   );
   DefMacro!("\\e@alloc{}{}{}{}{}{}",

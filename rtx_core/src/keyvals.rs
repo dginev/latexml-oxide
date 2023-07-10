@@ -587,8 +587,9 @@ impl KeyVals {
               // Copy next token to args
               let mut rest = Vec::new();
               if tok.get_catcode() == Catcode::BEGIN {
-                if let Some(balanced) = gullet::read_balanced(false)? {
-                  rest.append(&mut balanced.unlist());
+                let balanced_arg = gullet::read_balanced(false,false,false)?;
+                if !balanced_arg.is_empty() {
+                  rest.extend(balanced_arg.unlist());
                 }
                 rest.push(T_END!());
               }

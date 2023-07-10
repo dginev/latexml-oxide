@@ -13,12 +13,12 @@ use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::mouth::Mouth;
-use crate::{gullet};
+use crate::gullet;
 use crate::state::*;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::{Digested};
+use crate::Digested;
 
 pub type ReaderFn =
   dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
@@ -45,7 +45,6 @@ pub struct Parameter {
   pub novalue: bool,
   pub semiverbatim: Option<Vec<char>>,
   pub optional: bool,
-  pub pack_parameters: bool,
   pub name: Cow<'static, str>,
   pub spec: Cow<'static, str>,
   pub extra: Vec<Tokens>,
@@ -62,7 +61,6 @@ impl Default for Parameter {
       novalue: false,
       semiverbatim: None,
       optional: false,
-      pack_parameters: false,
       name: Cow::Borrowed("parameter_default"),
       spec: Cow::Borrowed(""),
       extra: Vec::new(),
@@ -217,7 +215,6 @@ impl Parameter {
         self.before_digest = descriptor.before_digest.clone();
         self.after_digest = descriptor.after_digest.clone();
         self.predigest = descriptor.predigest.clone();
-        self.pack_parameters = descriptor.pack_parameters;
       },
       None => fatal!(
         Parameter,
@@ -284,9 +281,6 @@ impl Parameter {
           if let Some(ref semi_chars) = self.semiverbatim {
             value = value.neutralize(semi_chars);
           }
-          if self.pack_parameters {
-            value = value.pack_parameters()?;
-          }
           if wants_option {
             if value.is_empty() {
               ArgWrap::None
@@ -349,19 +343,21 @@ impl Parameter {
               gullet::unread(value);
               let mut tokens = Vec::new();
               loop {
-                match gullet::read_x_token(Some(true), true) {
-                  Ok(token_opt) => match token_opt {
-                    Some(token) => tokens.push(token),
-                    None => break,
-                  },
-                  Err(x) => return Err(x),
+                match gullet::get_pending_comment() {
+                  Some(token) => tokens.push(token),
+                  None => match gullet::read_x_token(Some(true), false) {
+                    Ok(token_opt) => match token_opt {
+                      Some(token) => tokens.push(token),
+                      None => break,
+                    },
+                    Err(x) => return Err(x),
+                  }
                 }
               }
-              let evec = Vec::new();
-              Ok(Tokens::new(tokens).neutralize(&evec).unlist())
+              Ok(Tokens::new(tokens).neutralize(&[]))
             },
           )?;
-          value_arg = ArgWrap::Tokens(Tokens::new(neutralized));
+          value_arg = ArgWrap::Tokens(neutralized);
         } else {
           value_arg = ArgWrap::default();
         }

@@ -18,7 +18,7 @@ use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::{state};
+use crate::state;
 use crate::state::*;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
@@ -408,7 +408,8 @@ impl Mouth {
   pub fn has_more_input(&mut self) -> bool {
     self.colno < self.nchars
       || !self.buffer.is_empty()
-      || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf().unwrap().is_empty())
+      || (self.reader.is_some() && !self.reader.as_mut().unwrap().fill_buf()
+          .expect("fill_buf should have no reason to fail.").is_empty())
   }
 
   /// Read the next token, or undef if exhausted.

@@ -262,6 +262,8 @@ pub enum ErrorCategory {
   Generic(Box<dyn ErrorTrait>),
   Filename(String),
   ToDo,
+  TokenLimit,
+  PushbackLimit,
 }
 
 #[derive(Debug)]
@@ -284,8 +286,8 @@ pub enum ErrorTarget {
   TexPool,
   Internal,
   TargetUnexpected,
-  SmuggledCatcode,
   TooManyErrors,
+  Timeout,
 }
 
 
@@ -312,6 +314,8 @@ impl fmt::Display for ErrorCategory {
       MaxLimit(num) => write!(f, "{}", num),
       Generic(ref err) => err.fmt(f),
       Filename(ref name) => write!(f, "file:{name}"),
+      TokenLimit => write!(f, "token_limit"),
+      PushbackLimit => write!(f, "pushback_limit"),
     }
   }
 }
@@ -434,6 +438,11 @@ impl From<marpa::error::Error> for Error {
 // Progress Reporting
 //**********************************************************************
 // Progress reporting.
+
+pub fn progress_step(_note: &str) {
+  // should we also do a spinner? It's often too fast to spin
+  // _spinnerstep(note)
+}
 
 pub fn note_progress(stuff: &str) {
   use log::info;

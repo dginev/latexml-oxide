@@ -364,7 +364,10 @@ pub fn digest<T: Into<Tokens>>(
     let initdepth = stomach!().boxing.len();
     let depth = initdepth;
     new_local_box_list();
-    while let Some(token) = gullet::read_x_token(Some(true), true)?
+    while let Some(token) = match gullet::get_pending_comment() {
+      Some(comment) => Some(comment),
+      None => gullet::read_x_token(Some(true), false)?
+    }
     {
       // Done if we run out of tokens
       let invoked = invoke_token(&token)?;
@@ -409,7 +412,10 @@ pub fn digest_next_body(
   //let mut aug = Vec::new();
 
   // try reading a executable token
-  while let Some(token) = gullet::read_x_token(Some(true), true)?
+  while let Some(token) = match gullet::get_pending_comment() {
+    Some(comment) => Some(comment),
+    None => gullet::read_x_token(Some(true), false)?
+  }
   {
     // done if we run out of tokens
     found_token = true;
@@ -472,10 +478,11 @@ pub fn raw_tex(text: &str) -> Result<()> {
     text,
     Some(MouthOptions {
       fordefinitions: true,
+      // at_letter: true,
       ..MouthOptions::default()
     }),
   )?;
-  gullet::reading_from_mouth(raw_tex_mouth, move || -> Result<()> {
+  gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false)? {
       if token != T_SPACE!() {
         invoke_token(&token)?;

@@ -401,7 +401,7 @@ LoadDefinitions!({
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
 
-  DefMacro!("'", {
+  DefMacro!(T_ACTIVE!('\''), None, {
     let mut sup = vec![T_CS!("\\prime")];
     // Collect up all ', convering to \prime
 
