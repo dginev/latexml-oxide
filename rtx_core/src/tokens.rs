@@ -141,7 +141,9 @@ impl Display for Tokens {
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for t in &self.0 {
-      write!(f, "{t}")?;
+      if t.code != Catcode::COMMENT {
+        write!(f, "{t}")?;
+      }
     }
     Ok(())
   }
@@ -170,7 +172,7 @@ impl Tokens {
   /// Number of contained Token entries
   pub fn len(&self) -> usize { self.0.len() }
 
-  /// Return a string containing the TeX form of the Tokens
+  // Just a synonym for unlist in this reversion case
   pub fn revert(self) -> Vec<Token> {
     self
       .0
@@ -247,18 +249,14 @@ impl Tokens {
 
   /// Methods for overloaded ops.
   pub fn equals(&self, other: Tokens) -> bool {
-    let self_tokens = &self.0;
-    let other_tokens = &other.0;
+    let self_tokens : Vec<&Token> = self.0.iter()
+      .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER).collect();
+    let other_tokens : Vec<&Token> = other.0.iter()
+    .filter(|t| t.code != Catcode::COMMENT && t.code != Catcode::MARKER).collect();
     if self_tokens.len() != other_tokens.len() {
       false
     } else {
-      for it in self_tokens.iter().zip(other_tokens.iter()) {
-        let (self_token, other_token) = it;
-        if self_token != other_token {
-          return false;
-        }
-      }
-      true
+      self_tokens.into_iter().zip(other_tokens).all(|(t_self,t_other)| *t_self == *t_other)
     }
   }
 
@@ -284,7 +282,7 @@ impl Tokens {
     stomach::digest(self)
   }
 
-  /// Remove dont_expand, but preserve SMUGGLE_THE
+  /// neutralize each token
   pub fn neutralize(self, extraspecials: &[char]) -> Tokens {
     Tokens(
       self
@@ -412,17 +410,14 @@ impl Tokens {
     tex_string
   }
 
-  /// Process the `Catcode::PARAM` tokens for use as a macro body (and other token lists)
-  // Groups PARAM+OTHER token pair into match tokens.
-  // Collapses PARAM+PARAM token pair into a single PARAM
-  // B book suggests running this
-  // and remove dont_expand markers.
+  /// Packs repeated CC_PARAM tokens into CC_ARG tokens for use as a macro body (and other token lists)
+  /// Also unwraps \noexpand tokens, since that is also needed for macro bodies
+  /// (but not strictly part of packing parameters)
   pub fn pack_parameters(self) -> Result<Self> {
     let mut rescanned = Vec::new();
     let mut toks = self.unlist().into_iter().collect::<VecDeque<_>>();
     while let Some(t) = toks.pop_front() {
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
-        // NOTE for future cleanup: Only CC_CS & CC_ACTIVE should ever get with_dont_expand!
         let next_t = toks.pop_front();
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
         if next_cc == Some(Catcode::OTHER) {
@@ -483,8 +478,7 @@ impl ToTokens for Catcode {
       INVALID => "INVALID",
       CS => "CS",
       MARKER => "MARKER",
-      ARG => "ARG",
-      SmuggleTHE => "SmuggleTHE",
+      ARG => "ARG"
     };
     stream.append(Ident::new("Catcode", Span::call_site()));
     stream.append(Punct::new(':', Spacing::Joint));

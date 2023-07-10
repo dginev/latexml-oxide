@@ -670,8 +670,9 @@ pub fn read_alignment_template() -> Result<Template> {
       let invoked = defn.invoke(true)?;
       gullet::unread(invoked);
     } else if cc == Catcode::BEGIN {
-      if let Some(balanced_tks) = gullet::read_balanced(false)? {
-        gullet::unread(balanced_tks);
+      let balanced_arg = gullet::read_balanced(false,false,false)?;
+      if !balanced_arg.is_empty() {
+        gullet::unread(balanced_arg);
       }
     } else {
       Warn!(

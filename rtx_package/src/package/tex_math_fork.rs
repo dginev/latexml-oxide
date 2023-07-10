@@ -21,7 +21,8 @@ LoadDefinitions!({
     while let Some(t) = gullet::read_x_token(Some(false), false)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        if let Some(balanced_arg) = gullet::read_balanced(false)? {
+        let balanced_arg = gullet::read_balanced(false,false,false)?;
+        if !balanced_arg.is_empty() {
           stuff.extend(balanced_arg.unlist());
         }
         stuff.push(T_END!());

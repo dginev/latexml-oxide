@@ -38,6 +38,9 @@ pub static LTX_P_SYM: Lazy<SymbolU32> = Lazy::new(|| pin_static("ltx:p"));
 /// the unique symbol for str value "\globaldefs"
 #[thread_local]
 pub static GLOBAL_DEFS_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("\\globaldefs"));
+/// the unique symbol for str value "\dont_expand"
+#[thread_local]
+pub static DONT_EXPAND_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("\\dont_expand"));
 /// the unique symbol for str value "_WildCard_"
 #[thread_local]
 pub static WILD_CARD_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("_WildCard_"));

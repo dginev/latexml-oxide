@@ -240,7 +240,7 @@ LoadDefinitions!({
     state::let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
-        gullet::read_balanced(true)?.unwrap_or_default()) // Expand as we go!
+        gullet::read_balanced(true,false,false)?.unwrap_or_default()) // Expand as we go!
     } else {
       ( T_OTHER!("{"), T_OTHER!("}"),
         Tokens!(open.as_other()) )

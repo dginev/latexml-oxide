@@ -93,7 +93,9 @@ LoadDefinitions!({
   // We're given a number pointing into the font, from which we can derive the standalone char.
   // From that, we want to figure out the combining character, but there could be one for
   // both the above & below cases!  We'll prefer the above case.
-  DefPrimitive!("\\accent Number Expanded", sub[(_num,_letter)] {
+  DefPrimitive!("\\accent Number {}", sub[(_num,_letter)] {
+    // let n = num.value_of();
+    // let font_info = lookup_font_info(lookup_value("textfont_0"));
     unported!()
   });
   // Note that these two apparently work in Math? BUT the argument is treated as text!!!

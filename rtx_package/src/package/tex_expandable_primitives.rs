@@ -30,14 +30,7 @@ LoadDefinitions!({
   DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
 
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
-    let token_opt = gullet::read_x_token(Some(false), false)?.map(|t| {
-      // Also resolve \let variants:
-      if let Some(Stored::Token(meaning)) = lookup_meaning(&t) {
-        meaning
-      } else {
-        t
-      }});
-    // let token =
+    let token_opt = gullet::read_x_token(Some(false), true)?;
     match token_opt {
       Some(t) => t,
       None => {
@@ -45,17 +38,6 @@ LoadDefinitions!({
           "conditional expected a token argument, came back empty. Falling back to \\@empty");
         T_CS!("\\@empty")
       }}
-    // if token.has_smuggled() {    // marked dont_expand
-    //   let smuggled = token.get_dont_expand().as_ref().unwrap();
-    //   if smuggled.get_catcode() == Catcode::ACTIVE {
-    //     // treat as active character, if originally such
-    //     token.without_dont_expand()
-    //   } else { // otherwise, treat as relax for comparisons
-    //     T_RELAX!()
-    //   }
-    // } else {   // normal case, treat token as-is
-      // token
-    // }
   });
 
   DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
@@ -80,7 +62,10 @@ LoadDefinitions!({
   //======================================================================
   // This makes \relax disappear completely after digestion
   // (which seems most TeX like).
-  DefPrimitive!("\\relax", None);
+  DefPrimitive!(T_CS!("\\relax"), None, {});
+  // Internal token produced by Gullet in response to \dont_expand;
+  // Acts like \relax, but isn't equal to it.
+  DefPrimitive!(T_CS!("\\special_relax"), None, { });
 
   DefMacro!("\\number Number", sub[(num)] { Explode!(num.value_of()) });
 
@@ -298,15 +283,28 @@ LoadDefinitions!({
     Ok(Tokens::new(tokens))
   });
 
-  // Replace the next token with it's not-expanded variant
+  // If next token is expandable, prefix it with the internal marker \dont_expand
+  // That token is never defined, explicitly handled in Gullet & should never escape the Gullet
   DefMacro!(T_CS!("\\noexpand"), None, {
     if let Some(token) = gullet::read_token()? {
-      vec![token.with_dont_expand()?]
+      match  token.get_catcode() {
+        Catcode::CS | Catcode::ACTIVE => {
+          if state::is_dont_expandable(&token) {
+            vec![T_CS!("\\dont_expand"), token]
+          } else {
+            vec![token]
+          }
+        },
+        _ => vec![token]
+      }
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed
       Vec::new()
     }
   });
+  DefPrimitive!(T_CS!("\\dont_expand"), None, {
+    Error!("misdefined", "\\dont_expand",
+      "The token \\dont_expand should never reach Stomach!"); });
 
   DefMacro!(T_CS!("\\topmark"), None, Tokens!());
   DefMacro!(T_CS!("\\firstmark"), None, Tokens!());

@@ -174,7 +174,7 @@ LoadDefinitions!({
       Tokens!(T_ACTIVE!('~')), stored_map!("isSpace" => true,
       "width" => Dimension::from_str("0.333em")?))
   });
-  DefMacro!("~", "\\nobreakspace{}");
+  DefMacro!(T_ACTIVE!('~'), None, "\\nobreakspace{}");
 
   DefMacro!("\\slash", "/");
   DefPrimitive!("\\filbreak", None);

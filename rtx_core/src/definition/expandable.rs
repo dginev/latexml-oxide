@@ -13,7 +13,7 @@ use crate::parameter::Parameters;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
-use crate::{Digested};
+use crate::Digested;
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
@@ -222,7 +222,7 @@ impl Expandable {
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
       if let ExpansionBody::Tokens(expansion_tokens) = expansion {
-        expansion = ExpansionBody::Tokens(Tokens::pack_parameters(expansion_tokens)?);
+        expansion = ExpansionBody::Tokens(expansion_tokens.pack_parameters()?);
       }
     }
     // simplify: treat empty tokens as None

@@ -542,6 +542,17 @@ impl Stored {
       other => other.to_string(),
     }
   }
+  pub fn to_definition(&self) -> Option<Rc<dyn Definition>> {
+    match self {
+      Stored::Primitive(defn) => Some(defn.clone()),
+      Stored::MathPrimitive(defn) => Some(defn.clone()),
+      Stored::Conditional(defn) => Some(defn.clone()),
+      Stored::Register(defn) => Some(defn.clone()),
+      Stored::Expandable(defn) => Some(defn.clone()),
+      Stored::Constructor(defn) => Some(defn.clone()),
+      _ => None
+    }
+  }
 }
 
 impl From<bool> for Stored {

@@ -216,7 +216,6 @@ pub type Table = HashMap<SymbolU32, VecDeque<Stored>>;
 pub struct Localized {
   pub dual_branch: Vec<&'static str>,
   pub if_frames: Vec<Option<Rc<RefCell<IfFrame>>>>,
-  pub smuggle_the: Vec<bool>,
   pub current_token: Vec<Token>,
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Digested>,
@@ -1232,7 +1231,7 @@ pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn 
     .filter(|defn| (*defn).is_expandable() && (toplevel || !(*defn).is_protected())))
 }
 
-/// Whether token must be wrapped as dont_expand
+/// Whether token is affected by \noexpand
 pub fn is_dont_expandable(token: &Token) -> bool {
   // Basically: a CS or Active token that is either not defined, or is expandable
   // (but not \let to a token)
@@ -1675,15 +1674,13 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {
         if let Stored::Token(ref t) = front {
-          // let lookup_sym = if t.has_smuggled() {
-          //   arena::pin_static("\\relax")
-          // } else {
-            arena::pin(t.get_executable_primitive_name().unwrap_or_default());
-          // };
-          if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
-            // special case,
-            // If a cs has been let to an executable token, lookup ITS defn.
-            return retry_entry.front().cloned();
+          if let Some(lookup_name) = t.get_executable_primitive_name() {
+            let lookup_sym = arena::pin(lookup_name);
+            if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
+              // special case,
+              // If a cs has been let to an executable token, lookup ITS defn.
+              return retry_entry.front().cloned();
+            }
           }
         }
         // if a regular definition, just return.
@@ -2144,19 +2141,6 @@ pub fn get_ifframe() -> Option<Rc<RefCell<IfFrame>>> {
 }
 /// expires the most recent (originally Perl-local) `IfFrame`
 pub fn expire_ifframe() { state_mut!().localized.if_frames.pop(); }
-/// set special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-pub fn set_smuggle_the(smuggle_the: bool) {
-  state_mut!().localized.smuggle_the.push(smuggle_the);
-}
-/// get special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-pub fn get_smuggle_the() -> bool {
-  match state!().localized.smuggle_the.last() {
-    Some(v) => *v,
-    _ => false,
-  }
-}
-/// expire special (localized) flag for "\the smuggling mode"; useful for expanded definitions
-pub fn expire_smuggle_the() { state_mut!().localized.smuggle_the.pop(); }
 /// localizes a new current token. see `Stomach::invoke_token`
 pub fn local_current_token(token: Token) { state_mut!().localized.current_token.push(token); }
 /// expires the most recent (localized) current token.
