@@ -404,7 +404,7 @@ impl MathParser {
   // Depth first parsing of XMArg nodes.
   fn parse_children(
     &mut self,
-    node: &mut Node,
+    node: &Node,
     document: &mut Document,
   ) -> Result<()> {
     for mut child in element_nodes(node) {
@@ -417,7 +417,7 @@ impl MathParser {
         || tag == arena::pin_static("ltx:XMCell")
         || tag == arena::pin_static("ltx:XMDual")
       {
-        self.parse_children(&mut child, document)?;
+        self.parse_children(&child, document)?;
       }
     }
     Ok(())
@@ -580,7 +580,7 @@ impl MathParser {
 // Mostly for debugging information?
 // Note that the nodes are true libXML nodes, already absorbed into the document
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pub fn text_form(node: &Node, document: &mut Document) -> String {
+pub fn text_form(node: &Node, document: &Document) -> String {
   textrec(node, None, None, document)
 }
 

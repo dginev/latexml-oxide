@@ -2,6 +2,7 @@ use libxml::tree::{Document, Node, NodeType};
 use libxml::xpath::Context;
 use rustc_hash::FxHashMap as HashMap;
 use crate::common::error::Result;
+use std::borrow::Cow;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -66,6 +67,31 @@ impl XPath {
 
 //======================================================================
 // XML Utilities
+/// gets the following `Element` sibling of `node` (skipping over non-element nodes)
+pub fn get_next_element(node_in: &Node) -> Option<Node> {
+  let mut node = Cow::Borrowed(node_in);
+  while let Some(next) = node.get_next_sibling() {
+    if next.get_type() == Some(NodeType::ElementNode) {
+      return Some(next);
+    } else {
+      node = Cow::Owned(next);
+    }
+  }
+  None
+}
+/// gets the previous `Element` sibling of `node` (skipping over non-element nodes)
+pub fn get_prev_element(node_in: &Node) -> Option<Node> {
+  let mut node = Cow::Borrowed(node_in);
+  while let Some(next) = node.get_prev_sibling() {
+    if next.get_type() == Some(NodeType::ElementNode) {
+      return Some(next);
+    } else {
+      node = Cow::Owned(next);
+    }
+  }
+  None
+}
+/// obtains all `Element` children of `node`, ignoring all other node types
 pub fn element_nodes(node: &Node) -> Vec<Node> {
   node
     .get_child_nodes()

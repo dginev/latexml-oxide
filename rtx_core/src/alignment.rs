@@ -1322,7 +1322,7 @@ fn alignment_test_headers(
   nhead: usize,
   tab_threshold: f64,
   axis: Axis,
-  lines: &mut [Vec<&mut Cell>],
+  lines: &[Vec<&mut Cell>],
 ) -> Vec<usize> {
   // eprintln!("Testing {nhead} headers with threshold {tab_threshold}");
   let mut heads: Vec<usize> = (0..nhead).collect(); // The indices of heading lines.
@@ -1417,7 +1417,7 @@ fn alignment_match_head(
   nhead: usize,
   tab_threshold: f64,
   axis: Axis,
-  tablines: &mut [Vec<&mut Cell>],
+  tablines: &[Vec<&mut Cell>],
 ) -> usize {
   let nh = alignment_match_lines(p1, p2, nhead, tab_threshold, axis, tablines);
   let ok = nhead == nh;
@@ -1436,7 +1436,7 @@ fn alignment_match_data(
   n: usize,
   tab_threshold: f64,
   axis: Axis,
-  tablines: &mut [Vec<&mut Cell>],
+  tablines: &[Vec<&mut Cell>],
 ) -> usize {
   let nd = alignment_match_lines(p1, p2, n, tab_threshold, axis, tablines);
   let ok = (nd as f64 * 1.0) / n as f64 > 0.66;
@@ -1456,7 +1456,7 @@ fn alignment_match_lines(
   n: usize,
   tab_threshold: f64,
   axis: Axis,
-  tablines: &mut [Vec<&mut Cell>],
+  tablines: &[Vec<&mut Cell>],
 ) -> usize {
   let max_n = tablines.len();
   for i in 0..n {
@@ -1477,7 +1477,7 @@ fn alignment_skip_data(
   i: usize,
   tab_threshold: f64,
   axis: Axis,
-  tablines: &mut [Vec<&mut Cell>],
+  tablines: &[Vec<&mut Cell>],
 ) -> usize {
   let tab_lines_length = tablines.len();
   if i >= tab_lines_length {
@@ -1512,7 +1512,7 @@ fn alignment_max_content_length(
   mut length: usize,
   from: usize,
   to: usize,
-  tablines: &mut [Vec<&mut Cell>],
+  tablines: &[Vec<&mut Cell>],
 ) -> usize {
   for item in tablines.iter().take(to + 1).skip(from) {
     let mut l = 0;
@@ -1539,7 +1539,7 @@ fn alignment_compare(
   reversed: bool,
   p1: usize,
   p2: usize,
-  lines: &mut [Vec<&mut Cell>],
+  lines: &[Vec<&mut Cell>],
 ) -> f64 {
   let max_guard = lines.len();
   if p1 >= max_guard || p2 >= max_guard {

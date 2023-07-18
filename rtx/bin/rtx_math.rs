@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     xmath
       .get_parent()
       .unwrap()
-      .set_attribute("text", &text_form(&xml_tree, &mut doc))
+      .set_attribute("text", &text_form(&xml_tree, &doc))
       .unwrap();
 
     println!(
