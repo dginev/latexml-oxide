@@ -29,8 +29,8 @@ use crate::common::xml::{self, XPath, XML_NS};
 use crate::definition::FontDirective;
 use crate::ligature::Ligature;
 use crate::list::List;
-use crate::{TexMode};
-use crate::state::*;
+use crate::state;
+use crate::TexMode;
 
 use crate::document::resource::Resource;
 use crate::document::tag::{TagConstructionClosure, TagOptionName};
@@ -233,7 +233,7 @@ impl Document {
     if let Some(mut root) = self.document.get_root_element() {
       self.set_local_font(Rc::new(Font::text_default()));
       self.finalize_rec(&mut root)?;
-      if let Some(Stored::String(prefixes)) = lookup_value("RDFa_prefixes") {
+      if let Some(Stored::String(prefixes)) = state::lookup_value("RDFa_prefixes") {
         self.set_rdfa_prefixes(Some(prefixes));
       }
       self.expire_local_font();
@@ -304,7 +304,7 @@ impl Document {
     }
     // Optionally add ids to all nodes (AFTER all parsing, rearrangement, etc)
     if qname != arena::pin_static("ltx:document")
-      && lookup_bool("GENERATE_IDS")
+      && state::lookup_bool("GENERATE_IDS")
       && !node.has_attribute("xml:id")
       && arena::with(qname, |qname_str| {
         can_have_attribute(qname_str, "xml:id")
@@ -932,8 +932,8 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = get_tag_property(tag);
-    let all_hash = get_tag_property(*LTX_STAR_SYM);
+    let tag_hash = state::get_tag_property(tag);
+    let all_hash = state::get_tag_property(*LTX_STAR_SYM);
 
     let mut actions = Vec::new();
     // we have Rc<> around the closures, so cloning them is cheap - just another
@@ -1323,7 +1323,7 @@ impl Document {
       let font = self.get_node_font(&parent);
       let ocontent = self.node.get_content();
       let mut content = Cow::Borrowed(&ocontent);
-      with_value("TEXT_LIGATURES", |value_opt|
+      state::with_value("TEXT_LIGATURES", |value_opt|
       if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
@@ -1430,7 +1430,7 @@ impl Document {
     Ok(())
   }
 
-  pub fn open_text_internal(&mut self, text: &str) -> Result<Node> {
+  fn open_text_internal(&mut self, text: &str) -> Result<Node> {
     if text.is_empty() {
       return Ok(self.node.clone());
     }
@@ -1498,7 +1498,7 @@ impl Document {
     // my $font = $self->getNodeFont($node);
     node.append_text(text)?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
-    if !get_nomathparse_flag() {
+    if !state::get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
     }
     Ok(node)
@@ -1507,7 +1507,7 @@ impl Document {
   // New strategy (but inefficient): apply ligatures until one succeeds,
   // then remove it, and repeat until ALL (remaining) fail.
   fn apply_math_ligatures(&mut self, node: &mut Node) -> Result<()> {
-    let checked_out_ligatures = checkout_value("MATH_LIGATURES");
+    let checked_out_ligatures = state::checkout_value("MATH_LIGATURES");
     if let Some(Stored::VecDequeStored(ref stored_ligatures)) = checked_out_ligatures {
       let mut ligatures = stored_ligatures.iter().collect::<VecDeque<_>>();
       while !ligatures.is_empty() {
@@ -1528,14 +1528,14 @@ impl Document {
         ligatures = next_ligatures;
         if !matched {
           if let Some(value) = checked_out_ligatures {
-            checkin_value("MATH_LIGATURES", value);
+            state::checkin_value("MATH_LIGATURES", value);
           }
           return Ok(());
         }
       }
     }
     if let Some(value) = checked_out_ligatures {
-      checkin_value("MATH_LIGATURES", value);
+      state::checkin_value("MATH_LIGATURES", value);
     }
     Ok(())
   }
@@ -1636,7 +1636,7 @@ impl Document {
     let mut levels = match levels_opt {
       None => {
         // Default depth is based on verbosity
-        if current_verbosity() <= 1 {
+        if state::current_verbosity() <= 1 {
           Some(5)
         } else {
           None
@@ -2860,7 +2860,7 @@ impl Document {
     // return $new; }
   }
 
-  pub fn trim_node_whitespace(&mut self, node: &mut Node) -> Result<()> {
+  pub fn trim_node_whitespace(&mut self, node: &Node) -> Result<()> {
     trim_node_left_whitespace(node)?;
     trim_node_right_whitespace(node)?;
     Ok(())
@@ -2885,11 +2885,11 @@ impl Document {
   }
 
   pub fn process_pending_resources(&mut self) -> Result<()> {
-    let resources: Vec<Resource> = take_pending_resources();
+    let resources: Vec<Resource> = state::take_pending_resources();
     for resource in resources {
       self.add_resource(resource)?;
     }
-    reset_pending_resources();
+    state::reset_pending_resources();
     Ok(())
   }
 
@@ -3191,7 +3191,7 @@ fn serialize_attr(string: &str) -> String {
   serialized
 }
 
-fn trim_node_left_whitespace(node: &mut Node) -> Result<()> {
+fn trim_node_left_whitespace(node: &Node) -> Result<()> {
   if let Some(mut first_child) = node.get_first_child() {
     match first_child.get_type() {
       Some(NodeType::TextNode) => {
@@ -3201,14 +3201,14 @@ fn trim_node_left_whitespace(node: &mut Node) -> Result<()> {
           first_child.set_content(trimmed_content)?;
         }
       },
-      Some(NodeType::ElementNode) => trim_node_left_whitespace(&mut first_child)?,
+      Some(NodeType::ElementNode) => trim_node_left_whitespace(&first_child)?,
       _ => {},
     };
   }
   Ok(())
 }
 
-fn trim_node_right_whitespace(node: &mut Node) -> Result<()> {
+fn trim_node_right_whitespace(node: &Node) -> Result<()> {
   if let Some(mut last_child) = node.get_last_child() {
     match last_child.get_type() {
       Some(NodeType::TextNode) => {
@@ -3218,7 +3218,7 @@ fn trim_node_right_whitespace(node: &mut Node) -> Result<()> {
           last_child.set_content(trimmed_content)?;
         }
       },
-      Some(NodeType::ElementNode) => trim_node_right_whitespace(&mut last_child)?,
+      Some(NodeType::ElementNode) => trim_node_right_whitespace(&last_child)?,
       _ => {},
     };
   }
@@ -3273,12 +3273,12 @@ pub fn can_contain_indirect(
   // $tag = $model->getNodeQName($tag) if ref $tag;          // In case tag is a
   // node. $child = $model->getNodeQName($child) if ref $child;    // In case
   // child is a node.
-  if !has_indirect_model() {
-    let i_model = compute_indirect_model();
-    set_indirect_model(i_model);
+  if !state::has_indirect_model() {
+    let i_model = state::compute_indirect_model();
+    state::set_indirect_model(i_model);
   }
 
-  get_indirect_model_relationship(tag,childtag)
+  state::get_indirect_model_relationship(tag,childtag)
 }
 
 pub fn can_contain_node_somehow(node: &Node, child: &str) -> bool {
@@ -3331,7 +3331,7 @@ pub fn can_auto_close(node: &Node) -> bool {
         if node.has_attribute("_autoclose") {
           true
         } else {
-          with_tag_property(get_node_qname(node), |props_opt|
+          state::with_tag_property(get_node_qname(node), |props_opt|
             if let Some(props) = props_opt {
               props.auto_close.unwrap_or(false)
             } else {
