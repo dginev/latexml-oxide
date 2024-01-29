@@ -127,16 +127,16 @@ macro_rules! LookupColor {
 macro_rules! DefRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
-    PushValue!("DOCUMENT_REWRITE_RULES",
-      Rewrite::new("text", rewrite_options));
+    push_value("DOCUMENT_REWRITE_RULES",
+      Rewrite::new("text", rewrite_options))?;
   }};
 }
 
 macro_rules! DefMathRewrite {
   ($($input:tt)+) => {{
     let rewrite_options = defi_opts!(@munch ($($input)*) -> {RewriteOptions,});
-    PushValue!("DOCUMENT_REWRITE_RULES",
-      Rewrite::new("math", rewrite_options));
+    push_value("DOCUMENT_REWRITE_RULES",
+      Rewrite::new("math", rewrite_options))?;
   }};
 }
 
@@ -892,39 +892,7 @@ macro_rules! AssignValue {
     state::assign_value($name, $value, $scope)
   };
 }
-#[macro_export]
-macro_rules! RemoveValue {
-  ($name:expr) => {{
-    state::remove_value($name)
-  }};
-}
-#[macro_export]
-macro_rules! PushValue {
-  ($name:expr => $values:expr) => {{
-    push_value($name, $values)?
-  }};
-  ($name:expr, $values:expr) => {{
-    push_value($name, $values)?
-  }};
-}
-#[macro_export]
-macro_rules! PopValue {
-  ($name:expr) => {{
-    pop_value($name)
-  }};
-}
-#[macro_export]
-macro_rules! UnshiftValue {
-  ($name:expr, $values:expr) => {{
-    unshift_value($name, $values)
-  }};
-}
-#[macro_export]
-macro_rules! ShiftValue {
-  ($name:expr) => {{
-    state_mut!().shift_value($name)
-  }};
-}
+
 #[macro_export]
 macro_rules! AssignMapping {
   ($map:expr, $key:expr => $value:expr) => {
@@ -1034,12 +1002,6 @@ macro_rules! DigestIf {
   };
   ($token:expr) => {
     digest_if($token)
-  };
-}
-#[macro_export]
-macro_rules! AfterAssignment {
-  () => {
-    state::after_assignment()
   };
 }
 
@@ -1567,13 +1529,6 @@ macro_rules! DocType {
 macro_rules! Today {
   () => {{
     today()?
-  }};
-}
-
-#[macro_export]
-macro_rules! SetPrefix {
-  ($prefix:literal) => {{
-    set_prefix($prefix);
   }};
 }
 

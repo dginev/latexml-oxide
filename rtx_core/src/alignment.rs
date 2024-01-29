@@ -1110,7 +1110,7 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
         Some(NodeType::TextNode) => {
           let text = ch.get_content();
           if !(text.chars().all(|c| c.is_whitespace())
-            || (inferred_classes.get(0) == Some(&ColumnSpec::Math) && SINGLE_PUNCT.is_match(&text)))
+            || (inferred_classes.first() == Some(&ColumnSpec::Math) && SINGLE_PUNCT.is_match(&text)))
           {
             inferred_classes.push(ColumnSpec::Text);
           }

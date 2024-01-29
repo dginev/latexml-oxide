@@ -1,5 +1,4 @@
 use libxml::tree::Node;
-use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -18,7 +17,7 @@ use crate::common::arena;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
-use crate::state::{Scope};
+use crate::state::Scope;
 use crate::tbox::Tbox;
 use crate::gullet;
 use crate::token::*;
@@ -363,7 +362,7 @@ impl fmt::Display for RegisterValue {
 }
 
 /// The type of a TeX Register
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub enum RegisterType {
   /// simple scalar number
   Number,
@@ -383,6 +382,23 @@ pub enum RegisterType {
   CharDef,
   /// Placeholder for any argument accepted
   Any,
+}
+// subtle detail - and maybe we need to refactor this entirely -
+// a CharDef and a Number type should be seen as equal
+impl PartialEq for RegisterType {
+  fn eq(&self, other: &Self) -> bool {
+    use RegisterType::*;
+      match self {
+        Number | CharDef => matches!(other, Number | CharDef),
+        Dimension => matches!(other, Dimension),
+        MuDimension => matches!(other, MuDimension),
+        Glue => matches!(other, Glue),
+        MuGlue => matches!(other, MuGlue),
+        Token => matches!(other, Token),
+        Tokens => matches!(other, Tokens),
+        Any => matches!(other, Any),
+      }
+  }
 }
 
 /// looks up a stored value from the state frame (at a constant key, or key based on the arguments)
@@ -474,7 +490,7 @@ impl Definition for Register {
   fn get_alias(&self) -> Option<&String> { None }
 
   fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
-    if self.register_type == RegisterType::CharDef {
+    if matches!(self.register_type,RegisterType::CharDef) {
       let message = self
         .cs
         .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
@@ -509,10 +525,17 @@ impl Definition for Register {
   // (other than afterassign)
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
     // CharDef case
-    if self.register_type == RegisterType::CharDef {
+    // A dilemma: If the \chardef were in a style file, you're prefer to revert to the $cs
+    // but if defined in the document source, better to use \char ###\relax, so it still "works"
+    if matches!(self.register_type, RegisterType::CharDef) {
       return Ok(vec![Digested::from(
-        Tbox::new(arena::pin_char(font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap()), None, None,
-          Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default()))]);
+        if let Some(mathglyph) = self.mathglyph {
+          Tbox::new(arena::pin_char(mathglyph), None, None,
+            Tokens!(T_CS!("\\mathchar"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
+        } else {
+          Tbox::new(arena::pin_char(font::decode(dbg!(self.value.clone()).unwrap().value_of() as u8, None,false).unwrap()), None, None,
+          Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
+        })])
     }
 
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -521,7 +544,7 @@ impl Definition for Register {
     gullet::read_keyword(&["="])?;
     let value = gullet::read_value(self.register_type().unwrap())?;
 
-    self.borrow().set_value(value, None, args);
+    self.set_value(value, None, args);
 
     state::after_assignment();
     // # Tracing ?
@@ -552,7 +575,7 @@ impl Definition for Register {
     );
   }
   fn value_of(&self, args: Vec<ArgWrap>) -> Option<RegisterValue> {
-    if self.register_type == RegisterType::CharDef {
+    if matches!(self.register_type, RegisterType::CharDef) {
       self.value.clone()
     } else if let Some(ref getter) = self.getter {
       getter(args)
@@ -579,7 +602,10 @@ impl Definition for Register {
 impl Register {
   /// checks the readonly flag
   pub fn is_readonly(&self) -> bool { self.readonly }
-  /// creates a CharDef type register
+  /// A CharDef is a specialized register;
+  /// You can't assign it; when you invoke the control sequence, it returns
+  /// the result of evaluating the character (more like a regular primitive).
+  /// When `mathglyph` is provided, it is the unicode corresponding to the `\mathchar` of `value`
   pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>) -> Self {
     Register {
       cs,

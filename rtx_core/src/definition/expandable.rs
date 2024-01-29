@@ -130,7 +130,7 @@ impl Definition for Expandable {
           // For trivial expansion, make sure we don't get \cs or \relax\cs direct recursion!
           let is_recursion = if !once_only {
             let token_vec = tokens.unlist_ref();
-            let t0_opt = token_vec.get(0);
+            let t0_opt = token_vec.first();
             let t1_opt = token_vec.get(1);
             if let Some(t0) = t0_opt {
               if t0 == &self.cs {

@@ -484,7 +484,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
   )?;
   gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false)? {
-      if token != T_SPACE!() {
+      if token.get_catcode() != Catcode::SPACE {
         invoke_token(&token)?;
       }
     }

@@ -227,7 +227,7 @@ pub fn revert_script(script: &Digested) -> Result<Vec<Token>> {
   let mut ts = tokens.unlist();
   // let mut level = 0;
   if ts.len() > 1
-    && ts.get(0).unwrap().code == Catcode::BEGIN
+    && ts.first().unwrap().code == Catcode::BEGIN
     && ts.last().unwrap().code == Catcode::END
   {
     Ok(ts)
