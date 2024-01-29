@@ -271,7 +271,7 @@ fn handle_template(
 
 // internal low-level reader that extracts a token from a mouth,
 // but always keeps comment tokens pending.
-fn internal_read_token() -> Option<Token> {
+fn read_internal_token() -> Option<Token> {
   let mut next_token = None;
   let mut gullet = gullet_mut!();
   // Check in pushback first....
@@ -323,7 +323,7 @@ pub fn read_token() -> Result<Option<Token>> {
     }
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
-    next_token = internal_read_token();
+    next_token = read_internal_token();
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
 
     // Wow!!!!! See TeX the Program \S 309
@@ -376,17 +376,17 @@ pub fn read_x_token(
   let autoclose = toplevel;
   let for_evaluation = toplevel;
   loop {
-      // internal low-level reader that extracts a token from a mouth,
-      // but always keeps comment tokens pending.
-    let next_token = internal_read_token();
+    // internal low-level reader that extracts a token from a mouth,
+    // but always keeps comment tokens pending.
+    let next_token = read_internal_token();
     //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
     if next_token.is_none() {
-      let gullet = gullet!();
-      // If we're without a runtime, bail
-      if !(autoclose && gullet.runtime.is_some() && gullet.runtime.as_ref().unwrap().autoclose && !gullet.mouthstack.is_empty()) {
+      {let gullet = gullet!();
+      if !autoclose
+        || !gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false)
+        || gullet.mouthstack.is_empty() {
         return Ok(None);
-      }
-      drop(gullet);
+      }}
       close_mouth(false)?; // Next input stream.
       continue;
     }
@@ -448,7 +448,7 @@ pub fn read_x_token(
             // add the newly expanded tokens back into the gullet stream, in the ordinary case.
             unread(invoked);
             expire_current_token();
-            return Ok(None);
+            continue;
           }
         },
       }
@@ -533,7 +533,7 @@ pub fn read_x_non_space() -> Result<Option<Token>> {
 pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
   local_align_group_count(1000000);
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
-  // Does we need to expand to get the { ???
+  // Do we need to expand to get the { ???
   if require_open {
     let token = if do_expand { read_x_token(Some(false),false)? }
     else { read_token()? };
@@ -547,12 +547,11 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
   let mut level  = 1;
   loop {
     let mut next_token = None;
-    let mut gullet = gullet_mut!();
-    if ! gullet.pending_comments.is_empty() {
-      tokens.extend(gullet.pending_comments.drain(..));
+    if ! gullet!().pending_comments.is_empty() {
+      tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-    while let Some(pushback_token) = gullet.runtime.as_mut().unwrap().pushback.pop_front() {
+    while let Some(pushback_token) = gullet_mut!().runtime.as_mut().unwrap().pushback.pop_front() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -564,7 +563,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
     }
     // Not in pushback, read from the current Mouth
     if next_token.is_none() {
-      while let Some(token) = gullet.runtime.as_mut().unwrap().mouth.read_token() {
+      while let Some(token) = gullet_mut!().runtime.as_mut().unwrap().mouth.read_token() {
         match token.get_catcode() {
           Catcode::COMMENT => tokens.push(token),
           Catcode::MARKER => handle_marker(token),
@@ -634,14 +633,13 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
                   }
                 } else {
                   // otherwise, prepend to pushback to be expanded further.
-                  gullet.runtime.as_mut().unwrap().pushback.extend(expansion.unlist());
+                  gullet_mut!().runtime.as_mut().unwrap().pushback.extend(expansion.unlist());
                 }
                 expire_current_token();
                 continue;
               }
             } else if cc == Catcode::CS && meaning_opt.is_none() {
               // cs SHOULD have defn by now; report early!
-              drop(gullet);
               generate_error_stub(&token)?;
             }
           }
@@ -1511,7 +1509,7 @@ pub fn do_expand<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
 pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
   match token.get_catcode() {
     Catcode::ALIGN => Some((*token, "align", false)),
-    Catcode::CS => {
+    Catcode::CS | Catcode::ACTIVE => {
       // Embedded version of Equals, knowing both are tokens
       let defn = lookup_meaning(token)
         .unwrap_or_else(|| Stored::Token(*token));
@@ -1663,4 +1661,10 @@ pub fn get_location() -> String {
 pub fn with_mouth_mut<FnR,R>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Mouth>) -> R {
   caller(gullet_mut!().get_mouth_mut())
+}
+
+pub fn dbg_runtime() {
+  dbg!(
+    gullet!().runtime.as_ref().unwrap()
+  );
 }

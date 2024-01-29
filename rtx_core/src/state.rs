@@ -578,7 +578,7 @@ impl State {
           }
         }
 
-        let table_entry = state_table.entry(key).or_insert_with(VecDeque::new);
+        let table_entry = state_table.entry(key).or_default();
         table_entry.push_front(value);
       },
       Scope::Local => {
@@ -599,7 +599,7 @@ impl State {
         }
         // 2. state_table mutable logic
         let state_table = self.table_mut(table_name);
-        let defs = state_table.entry(key).or_insert_with(VecDeque::new);
+        let defs = state_table.entry(key).or_default();
         if is_replace {
           // 2.1. Replace the value, i.e. remove existing one
           defs.pop_front();
@@ -757,7 +757,7 @@ impl State {
     self
     .tag_properties
     .entry(tag)
-    .or_insert_with(TagOptions::default)
+    .or_default()
   }
 }
 
@@ -1871,7 +1871,7 @@ pub fn activate_scope(scope: SymbolU32) {
     let key_table = state
       .table_mut(table_name)
       .entry(key)
-      .or_insert_with(VecDeque::new);
+      .or_default();
     key_table.push_front(value); // And push new binding.
   }
 }
@@ -2047,20 +2047,20 @@ pub fn compute_indirect_model() -> IndirectModel {
       let mut best = 0; // Find best path to $kid.
       let desc_kid_keys: Vec<SymbolU32> = desc
         .entry(kid)
-        .or_insert_with(HashMap::default)
+        .or_default()
         .keys()
         .copied()
         .collect();
       // desc_kid_keys.sort(); // TODO: why sort?
       for start in desc_kid_keys {
         let start_entry = {
-          let kid_entry = desc.entry(kid).or_insert_with(HashMap::default);
+          let kid_entry = desc.entry(kid).or_default();
           *kid_entry.entry(start.to_owned()).or_insert(0)
         };
         if start_entry > best {
           imodel
             .entry(tag)
-            .or_insert_with(HashMap::default)
+            .or_default()
             .insert(kid, start.to_owned());
           {
             best = desc[&kid][&start];
@@ -2074,7 +2074,7 @@ pub fn compute_indirect_model() -> IndirectModel {
     // !!! Alarm!!!
     imodel
       .entry(arena::pin_static("#Document"))
-      .or_insert_with(HashMap::default)
+      .or_default()
       .insert(*H_PCDATA_SYM, *LTX_P_SYM);
   }
 
@@ -2197,7 +2197,7 @@ pub fn expire_align_group_count() -> Option<i32> {
 }
 
 pub fn get_reading_alignment() -> Option<Digested> {
-  state!().localized.reading_alignment.last().map(Clone::clone)
+  state!().localized.reading_alignment.last().cloned()
 }
 pub fn has_reading_alignment() -> bool { ! state!().localized.reading_alignment.is_empty() }
 pub fn local_reading_alignment(alignment: &Digested) {
@@ -2273,10 +2273,10 @@ pub fn get_indirect_model_relationship(tag: SymbolU32, childtag: SymbolU32) -> O
 }
 
 pub fn get_bindings_dispatch() -> Option<BindingDispatcher> {
-  state!().bindings_dispatch.as_ref().map(Rc::clone)
+  state!().bindings_dispatch.clone()
 }
 pub fn get_extra_bindings_dispatch() -> Option<BindingDispatcher> {
-  state!().extra_bindings_dispatch.as_ref().map(Rc::clone)
+  state!().extra_bindings_dispatch.clone()
 }
 pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();

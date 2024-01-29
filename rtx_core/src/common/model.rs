@@ -163,7 +163,8 @@ impl Model {
     note_begin(&s!("Loading compiled schema {}\n", path));
     let compiled_fh = File::open(path).unwrap();
     let compiled_reader = BufReader::new(&compiled_fh);
-    for line in compiled_reader.lines().flatten() {
+    for line_item in compiled_reader.lines().map_while(std::result::Result::ok) {
+      let line : String = line_item;
       if let Some(caps) = TAG_MODEL_LINE_RE.captures(&line) {
         let tag = caps.get(1).map_or("", |m| m.as_str());
         let attr = caps.get(2).map_or("", |m| m.as_str());
@@ -193,7 +194,7 @@ impl Model {
     let frame = self
       .tagprop
       .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default);
+      .or_default();
 
     for element in elements {
       frame.model.insert(arena::pin(element));
@@ -215,7 +216,7 @@ impl Model {
     let frame = self
       .tagprop
       .entry(arena::pin(tag))
-      .or_insert_with(TagFrame::default);
+      .or_default();
 
     for attribute in attributes {
       frame.attributes.insert(arena::pin(attribute));
@@ -634,7 +635,7 @@ pub fn can_contain_sym(tag: SymbolU32, child: SymbolU32) -> bool {
   let model_entry = &mut model
     .tagprop
     .entry(tag)
-    .or_insert_with(TagFrame::default)
+    .or_default()
     .model;
   model_entry.contains(&ANY_SYM) || model_entry.contains(&child)
 }
@@ -764,7 +765,7 @@ pub(crate) fn compute_indirect_model_aux(
   for kid in tag_contents {
     if desc
       .entry(kid)
-      .or_insert_with(HashMap::default)
+      .or_default()
       .contains_key(&start)
     {
       continue;
@@ -773,7 +774,7 @@ pub(crate) fn compute_indirect_model_aux(
     if start != *EMPTY_SYM {
       desc
         .entry(kid)
-        .or_insert_with(HashMap::default)
+        .or_default()
         .insert(start, desirability);
     }
 

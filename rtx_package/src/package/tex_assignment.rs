@@ -36,9 +36,9 @@ LoadDefinitions!({
 
   // <prefix> = \global | \long | \outer
   // See Stomach.pm & Stomach.pm
-  DefPrimitive!("\\global",{ SetPrefix!("global"); }, is_prefix => true);
-  DefPrimitive!("\\long",  { SetPrefix!("long");   }, is_prefix => true);
-  DefPrimitive!("\\outer", { SetPrefix!("outer");  }, is_prefix => true);
+  DefPrimitive!("\\global",{ state::set_prefix("global"); }, is_prefix => true);
+  DefPrimitive!("\\long",  { state::set_prefix("long");   }, is_prefix => true);
+  DefPrimitive!("\\outer", { state::set_prefix("outer");  }, is_prefix => true);
 
   //======================================================================
   // Non-Macro assignments; TeXBook Ch.24, pp 276--277
@@ -334,11 +334,15 @@ LoadDefinitions!({
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
+  // Let w/o AfterAssign
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-  { assign_meaning(&cs, relax_meaning,None); }
+  assign_meaning(&cs, relax_meaning,None);
+  // define
   let num = gullet::read_number()?;
   let address = s!("{address_type}{}", num.value_of());
-  let options = Some(RegisterOptions{address: Some(address), ..RegisterOptions::default()});
+  let options = Some(RegisterOptions{
+    address: Some(address),
+    ..RegisterOptions::default()});
   def_register(cs, None, init, options)?;
   after_assignment();
   Ok(())

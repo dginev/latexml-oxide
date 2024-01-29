@@ -7,6 +7,7 @@ LoadDefinitions!({
   // Font stuff ...
   RawTeX!(
     r"\font\tenrm=cmr10
+  \font\tenrm=cmr10
   \font\sevenrm=cmr7
   \font\fiverm=cmr5
   \font\teni=cmmi10
@@ -26,10 +27,10 @@ LoadDefinitions!({
   \newfam\slfam
   \newfam\bffam
   \newfam\ttfam
-  \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
-  \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
-  \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
-  \textfont3=\tenex");
+ \textfont0=\tenrm\scriptfont0=\sevenrm\scriptscriptfont0=\fiverm
+ \textfont1=\teni\scriptfont1=\seveni\scriptscriptfont1=\fivei
+ \textfont2=\tensy\scriptfont2=\sevensy\scriptscriptfont2=\fivesy
+ \textfont3=\tenex");
 
   // Note: \newfam in math should be font switching(?)
 

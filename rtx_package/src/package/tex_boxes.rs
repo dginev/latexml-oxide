@@ -118,8 +118,8 @@ LoadDefinitions!({
   AssignValue!("TEXT_MODE_BINDINGS"  => Stored::VecDequeStored(VecDeque::new()));
   AssignValue!("HTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
   AssignValue!("VTEXT_MODE_BINDINGS" => Stored::VecDequeStored(VecDeque::new()));
-  PushValue!("HTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@textmode")));
-  PushValue!("VTEXT_MODE_BINDINGS" => Tokens!(T_MATH!(), T_CS!("\\@dollar@in@normalmode")));
+  push_value("HTEXT_MODE_BINDINGS", Tokens!(T_MATH!(), T_CS!("\\@dollar@in@textmode")))?;
+  push_value("VTEXT_MODE_BINDINGS", Tokens!(T_MATH!(), T_CS!("\\@dollar@in@normalmode")))?;
 
   // TODO: collapseSVGGroup
   Tag!("svg:g", after_close => sub[_document, _node] {

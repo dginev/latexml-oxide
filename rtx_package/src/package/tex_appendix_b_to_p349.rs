@@ -319,13 +319,13 @@ LoadDefinitions!({
   DefPrimitive!("\\newmuskip DefToken", sub[(name)] {
     DefRegister!(name, None, MuGlue::new(0), allocate=>"\\muskip");
   });
-  AssignValue!("allocated_boxes" => false);
+  AssignValue!("allocated_boxes" => 0);
   DefPrimitive!("\\newbox DefToken", sub[(t)] {
     let n = lookup_int("allocated_boxes");
     AssignValue!("allocated_boxes" => n + 1, Some(Scope::Global));
     let empty_list = List::new(Vec::new());
-    AssignValue!(&s!("box{}",n), empty_list);
-    DefRegister!(t, None, Number(n));
+    AssignValue!(&s!("box{n}"), empty_list);
+    DefRegister!(t, None, Number(n), readonly => true);
   });
   DefPrimitive!("\\newhelp DefToken {}", sub[(token,arg)] {
     state::assign_value(&token.to_string(), arg, None);
@@ -336,13 +336,11 @@ LoadDefinitions!({
 
   // the next 4 actually work by doing a \chardef instead of \countdef, etc.
   // which means they actually work quite differently
-  DefRegister!("\\allocationnumber" => Number::new(0));
   DefPrimitive!("\\alloc@@ {}", sub[(atype)] {
     let c = s!("allocation @{}", atype);
-    let n = LookupRegisterOrDefault!(&c).value_of();
+    let n = state::lookup_int(&c);
     state::assign_value(&c, n + 1, Some(Scope::Global));
     state::assign_register("\\allocationnumber", Number::new(n).into(), Some(Scope::Global), Vec::new())?;
-    Ok(Vec::new())
   });
   DefMacro!(
     "\\newread DefToken",
@@ -367,11 +365,11 @@ LoadDefinitions!({
   DefMacro!("\\alloc@{}{}{}{}", r"\e@alloc#2#3{\count1#1}#4\float@count");
   DefMacro!("\\newread",        r"\e@alloc\read \chardef{\count16}\m@ne\sixt@@n");
   DefMacro!("\\newwrite", r"\e@alloc\write
-                    {\ifnum\allocationnumber=18
+                  {\ifnum\allocationnumber=18
                       \advance\count17\@ne
                       \allocationnumber\count17 %
-                      \fi
-                      \global\chardef}%
+                    \fi
+                    \global\chardef}%
                     {\count17}%
                     \m@ne
                     {128}");
@@ -385,15 +383,15 @@ LoadDefinitions!({
   // TeX plain uses \newdimen, etc. for these.
   // Is there any advantage to that?
   // note: rust complains about the 16_383.99999 having excessive precision, hence simplifying
-  DefRegister!("\\maxdimen", Dimension::new(16_384 * 65536));
+  DefRegister!("\\maxdimen", Dimension::new_f64(16383.99999 * UNITY_F64));
   // DefRegister!("\\hideskip", Glue!(-1000 * 65536, "1fill"));
   DefRegister!("\\centering", Glue!("0pt plus 1000pt minus 1000pt"));
-  DefRegister!("\\p@", Dimension::new(65536));
+  DefRegister!("\\p@", Dimension::new(UNITY));
   DefRegister!("\\z@", Dimension::new(0));
   DefRegister!("\\z@skip", Glue::new(0));
 
   // First approximation. till I figure out \newbox
-  // RawTeX('\newbox\voidb@x');
+  RawTeX!(r"\newbox\voidb@x");
   //======================================================================
   // TeX Book, Appendix B, p. 348
 

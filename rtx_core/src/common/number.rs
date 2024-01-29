@@ -4,7 +4,7 @@ use crate::definition::register::RegisterType;
 use crate::mouth;
 use crate::token::Catcode;
 use crate::tokens::Tokens;
-use crate::{Object};
+use crate::Object;
 use std::fmt;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]

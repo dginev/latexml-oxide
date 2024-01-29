@@ -13,7 +13,6 @@ pub use string_interner::symbol::SymbolU32;
 pub use rtx_core::alignment::cell::Cell;
 pub use rtx_core::alignment::template::{Align, Template};
 pub use rtx_core::alignment::{Alignment, AlignmentConfig};
-pub use rtx_core::aux_macros::*;
 pub use rtx_core::common::arena::{self, EMPTY_SYM};
 pub use rtx_core::common::cleaners::*;
 pub use rtx_core::common::def_parser::{parse_parameters, parse_prototype};
@@ -27,7 +26,7 @@ pub use rtx_core::common::mudimension::MuDimension;
 pub use rtx_core::common::muglue::MuGlue;
 pub use rtx_core::common::number::Number;
 pub use rtx_core::common::model;
-pub use rtx_core::common::numeric_ops::NumericOps;
+pub use rtx_core::common::numeric_ops::{NumericOps,UNITY, UNITY_F64};
 pub use rtx_core::common::object::Object;
 pub use rtx_core::common::xml::XML_NS;
 pub use rtx_core::definition::argument::ArgWrap;
@@ -78,7 +77,6 @@ pub mod setup_binding_language;
 pub use rtx_core::binding::content::*;
 pub use rtx_core::binding::counter::dialect::*;
 pub use rtx_core::binding::def::dialect::*;
-pub use rtx_core::binding::def::macros::*;
 pub use rtx_core::binding::def::traits::*;
 
 // At the very end, declare the pool

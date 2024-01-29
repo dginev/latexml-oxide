@@ -56,7 +56,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   // note_begin(&(s!("Compiling .model file: {}", path)));
   let compiled_fh = File::open(path.clone())?;
   let compiled_reader = BufReader::new(&compiled_fh);
-  for line in compiled_reader.lines().flatten() {
+  for line in compiled_reader.lines().map_while(std::result::Result::ok) {
     if let Some(caps) = TAG_MODEL_LINE.captures(&line) {
       let tag = caps.get(1).map_or("", |m| m.as_str()).to_string();
       let attr = caps.get(2).map_or("", |m| m.as_str()).to_string();

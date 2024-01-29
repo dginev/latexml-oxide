@@ -387,30 +387,14 @@ setter => sub[value,_scope,args] {
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipMatch:=", sub[(newcs)] {
+  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-    { assign_meaning(&newcs, meaning, None); }
+    let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
+    state::assign_meaning(&newcs, relax_meaning, None);
     let value = gullet::read_number()?;
-    // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
-    let internalcs_str = newcs.with_cs_name(|csname| s!("\\@chardef@{}", csname));
-    let internalcs = T_CS!(internalcs_str);
-    DefPrimitive!(internalcs, None, {
-      let decoded = font::decode(value.value_of() as u8, None, false)
-        .map(arena::pin_char).unwrap_or_else(|| *EMPTY_SYM);
-
-      Tbox::new(decoded,
-        None,
-        None,
-        // Note: curious case, since this is 2-levels in, we can't infer the "i_state::
-        // in the Invocation!() call, so we provide it explicitly instead.
-        // if this becomes a common problem, we would have to improve the infrastructure
-        Invocation!(T_CS!("\\char"), vec![value]),
-        HashMap::default())
-    });
     state::install_definition(
       Register::new_chardef(newcs, Some(value.into()), None), None);
-    AfterAssignment!();
+    state::after_assignment();
     Ok(Vec::new())
   });
 
@@ -448,7 +432,7 @@ setter => sub[value,_scope,args] {
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipMatch:=", sub[(newcs)] {
+  DefPrimitive!("\\mathchardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
     { assign_meaning(&newcs, meaning, None); }
@@ -479,7 +463,7 @@ setter => sub[value,_scope,args] {
     //   );
     // }
     state::install_definition(Register::new_chardef(newcs,Some(value.into()), None), None);
-    AfterAssignment!();
+    state::after_assignment();
     Ok(Vec::new())
   });
 

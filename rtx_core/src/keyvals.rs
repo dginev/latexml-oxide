@@ -9,7 +9,7 @@ use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
 use crate::common::store::Stored;
-use crate::{gullet};
+use crate::gullet;
 // use crate::definition::expandable::Expandable;
 // use crate::definition::Definition;
 use crate::document::Document;
@@ -489,7 +489,7 @@ impl KeyVals {
       pairs.push((key.to_string(), value.clone()));
 
       // if we do not have a value yet, set it
-      let entry = hash.entry(key.to_string()).or_insert_with(Vec::new);
+      let entry = hash.entry(key.to_string()).or_default();
 
       // If we get a third value, push into an array
       // This is unlikely to be what the caller expects!! But what else?

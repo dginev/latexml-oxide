@@ -722,7 +722,7 @@ fn textrec_apply(
       inner.push(' ');
       inner.push_str(&textrec(arg2, None, None, document));
     }
-    if let Some(arg1) = args.get(0) {
+    if let Some(arg1) = args.first() {
       inner.push(' ');
       inner.push_str(&textrec(arg1, None, None, document));
     }
