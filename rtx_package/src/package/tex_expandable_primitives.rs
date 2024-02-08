@@ -287,15 +287,10 @@ LoadDefinitions!({
   // That token is never defined, explicitly handled in Gullet & should never escape the Gullet
   DefMacro!(T_CS!("\\noexpand"), None, {
     if let Some(token) = gullet::read_token()? {
-      match  token.get_catcode() {
-        Catcode::CS | Catcode::ACTIVE => {
-          if state::is_dont_expandable(&token) {
-            vec![T_CS!("\\dont_expand"), token]
-          } else {
-            vec![token]
-          }
-        },
-        _ => vec![token]
+      if token.get_catcode().is_active_or_cs() && state::is_dont_expandable(&token) {
+        vec![T_CS!("\\dont_expand"), dbg!(token)]
+      } else {
+        vec![dbg!(token)]
       }
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed

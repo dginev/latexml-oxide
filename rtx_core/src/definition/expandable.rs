@@ -33,6 +33,7 @@ pub struct Expandable {
   pub is_protected: bool,
   pub is_long: bool,
   pub is_outer: bool,
+  pub has_cc_arg: bool,
   pub alias: Option<String>,
   pub locator: Locator,
   pub cs: Token,
@@ -45,6 +46,7 @@ impl Default for Expandable {
       is_protected: false,
       is_long: false,
       is_outer: false,
+      has_cc_arg: false,
       alias: None,
       locator: Locator::default(),
       cs: T_CS!("Expandable"),
@@ -118,6 +120,7 @@ impl Definition for Expandable {
       },
       Some(ExpansionBody::Tokens(tokens)) => {
         let result = if self.paramlist.is_none() {
+          // Case: Trivial macro
           if profiled {
             todo!();
             // LaTeXML::Core::Definition::startProfiling($profiled, 'expand')
@@ -147,6 +150,16 @@ impl Definition for Expandable {
             false
           };
           if is_recursion {
+            // TODO: port the Error
+            // if (!$onceonly && $$self{cs}) {
+            //   my ($t0, $t1) = ($etype eq 'LaTeXML::Core::Tokens'
+            //     ? ($$expansion[0], $$expansion[1]) : ($expansion, undef));
+            //   if ($t0 && ($t0->equals($$self{cs})
+            //       || ($t1 && $t1->equals($$self{cs}) && $t0->equals(T_CS('\protect'))))) {
+            //     Error('recursion', $$self{cs}, $gullet,
+            //       "Token " . Stringify($$self{cs}) . " expands into itself!",
+            //       "defining as empty");
+            //     $expansion = TokensI(); } }
             Tokens!()
           } else {
             tokens.clone()
@@ -157,23 +170,15 @@ impl Definition for Expandable {
           } else {
             Vec::new()
           };
-          let mut args_tks = Vec::new();
-          for arg in args.iter() {
-            args_tks.push(arg.as_tokens()?);
+          if self.has_cc_arg {  // Do we actually need to substitute the args in?
+            let mut args_tks = Vec::new();
+            for arg in args.iter() {
+              args_tks.push(arg.as_tokens()?);
+            }
+            tokens.substitute_parameters(args_tks.as_slice())
+          } else {
+            tokens.clone()
           }
-          // for "real" macros, make sure all args are Tokens
-          // let r;
-          if tracing {
-            // || $LaTeXML::DEBUG{tracing}) {    # More involved...
-            todo!();
-            // Debug($self->tracingCSName . ' ->' . tracetoString($expansion));
-            // Debug($self->tracingArgs(@targs)) if @args;
-          }
-          if profiled {
-            todo!();
-            //LaTeXML::Core::Definition::startProfiling($profiled, 'expand');
-          }
-          tokens.substitute_parameters(args_tks.as_slice())
         };
         // Getting exclusive requires dubious Gullet support!
         if profiled {
@@ -212,24 +217,30 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
-  pub fn new<T: Into<ExpansionBody>>(
+  pub fn new(
     cs: Token,
     paramlist: Option<Parameters>,
-    expansion: T,
+    mut expansion_opt: Option<ExpansionBody>,
     traits: Option<ExpandableOptions>
   ) -> Result<Self> {
-    let mut expansion: ExpansionBody = expansion.into();
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
-      if let ExpansionBody::Tokens(expansion_tokens) = expansion {
-        expansion = ExpansionBody::Tokens(expansion_tokens.pack_parameters()?);
+      dbg!(&cs);
+      if let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
+        expansion_opt = Some(ExpansionBody::Tokens(dbg!(dbg!(expansion_tokens).pack_parameters()?)));
       }
     }
-    // simplify: treat empty tokens as None
-    let expansion = match expansion {
-      ExpansionBody::Tokens(tks) if tks.is_empty() => None,
-      other => Some(other),
+    let has_cc_arg = match expansion_opt {
+      Some(ExpansionBody::Tokens(ref tks)) => {
+        tks.unlist_ref().iter().any(|t| t.get_catcode() == Catcode::ARG ) },
+      _ => false
     };
+    // simplify: treat empty tokens as None
+    let expansion = match expansion_opt {
+      Some(ExpansionBody::Tokens(tks)) if tks.is_empty() => None,
+      real_body => real_body,
+    };
+
     Ok(Expandable {
       cs,
       paramlist,
@@ -238,6 +249,7 @@ impl Expandable {
       is_protected: traits.protected || get_prefix("protected"),
       is_outer: traits.outer || get_prefix("outer"),
       is_long: traits.long || get_prefix("long"),
+      has_cc_arg,
       ..Expandable::default()
     })
   }

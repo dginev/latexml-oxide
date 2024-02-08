@@ -92,7 +92,7 @@ LoadDefinitions!({
       if let Some(inner_ps) = inner {
         // TODO: How many arguments can we expect back? One? Many?
         //       Currently only passing through the first
-        value = inner_ps.reparse_argument( value)?.remove(0);
+        value = inner_ps.reparse_argument(value)?.remove(0);
       }
       Ok(value)
     },

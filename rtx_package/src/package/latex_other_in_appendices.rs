@@ -29,9 +29,9 @@ LoadDefinitions!({
     "\\@uclclist",
     r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
   );
-  RawTeX!(
-    r"
-  \DeclareRobustCommand{\MakeUppercase}[1]{{%
+
+  // PORT: continue here... \noexpand is passed in as an argument, which seems wrong - it should be #1 ?
+  RawTeX!(r"\DeclareRobustCommand{\MakeUppercase}[1]{{%
     \def\i{I}\def\j{J}%
     \def\reserved@a##1##2{\let##1##2\reserved@a}%
     \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
@@ -41,6 +41,7 @@ LoadDefinitions!({
     \protected@edef\reserved@a{\uppercase{#1}}%
     \reserved@a
   }}
+  \protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
   \DeclareRobustCommand{\MakeLowercase}[1]{{%
     \def\reserved@a##1##2{\let##2##1\reserved@a}%
     \expandafter\reserved@a\@uclclist\reserved@b{\reserved@b\@gobble}%
@@ -50,10 +51,7 @@ LoadDefinitions!({
     \protected@edef\reserved@a{\lowercase{#1}}%
     \reserved@a
   }}
-  \protected@edef\MakeUppercase#1{\MakeUppercase{#1}}
-  \protected@edef\MakeLowercase#1{\MakeLowercase{#1}}
-  "
-  );
+  \protected@edef\MakeLowercase#1{\MakeLowercase{#1}}");
 
   //======================================================================
   DefMacro!("\\@ehc", "I can't help");

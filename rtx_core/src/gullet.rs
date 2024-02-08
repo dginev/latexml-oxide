@@ -546,12 +546,13 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
   let mut tokens = Vec::new();
   let mut level  = 1;
   loop {
+    // we'll keep comments in the result
     let mut next_token = None;
     if ! gullet!().pending_comments.is_empty() {
       tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-    while let Some(pushback_token) = gullet_mut!().runtime.as_mut().unwrap().pushback.pop_front() {
+  while let Some(pushback_token) = gullet_mut!().runtime.as_mut().unwrap().pushback.pop_front() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -845,14 +846,11 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 pub fn read_arg() -> Result<Tokens> {
   match read_non_space()? {
     None => Ok(Tokens!()),
-    Some(token) => {
-      match token.get_catcode() {
-        Catcode::BEGIN => {
-          Ok(read_balanced(false,false,false)?)
-        },
-        _ => Ok(Tokens!(token)),
+    Some(token) => if token.get_catcode() == Catcode::BEGIN {
+        read_balanced(false,false,false)
+      } else {
+        Ok(Tokens!(token))
       }
-    },
   }
 }
 /// Read and return a LaTeX optional argument; returns C<$default> if there is no '[',

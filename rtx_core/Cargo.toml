@@ -22,5 +22,5 @@ dirs = "5.0"
 kpathsea = "0.2.3"
 unidecode = "0.3.0"
 rustc-hash = "1.1.0"
-string-interner = {version = "0.14.0", default-features = false, features = ["std", "backends","inline-more"]}
+string-interner = {version = "0.15.0", default-features = false, features = ["std", "backends","inline-more"]}
 marpa = { git = "https://github.com/dginev/marpa", branch = "abstract_syntax_forests" }
