@@ -646,7 +646,7 @@ fn invoke_token_undefined(
       Expandable::new(
         T_CS!(s!("\\{}true", name)),
         None,
-        Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iftrue")),
+        Tokens!(T_CS!("\\let"), T_CS!(&cs), T_CS!("\\iftrue")).into(),
         None,
             )?,
       None,
@@ -655,7 +655,7 @@ fn invoke_token_undefined(
       Expandable::new(
         T_CS!(s!("\\{}false", name)),
         None,
-        Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")),
+        Tokens!(T_CS!("\\let"), T_CS!(cs), T_CS!("\\iffalse")).into(),
         None,
             )?,
       None,

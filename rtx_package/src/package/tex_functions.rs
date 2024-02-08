@@ -199,7 +199,7 @@ pub fn do_def(
     Expandable::new(
       cs,
       paramlist,
-      ExpansionBody::Tokens(body),
+      Some(ExpansionBody::Tokens(body)),
       Some(ExpandableOptions {
         nopack_parameters: true,
         ..ExpandableOptions::default()

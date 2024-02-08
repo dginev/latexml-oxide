@@ -870,7 +870,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Expandable::new(
         T_CS!(s!("\\{}true", name)),
         None,
-        s!("\\let{}\\iftrue", cs),
+        Some(s!("\\let{}\\iftrue", cs).into()),
         None
       )?,
       Some(Scope::Global),
@@ -879,7 +879,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Expandable::new(
         T_CS!(s!("\\{}false", name)),
         None,
-        s!("\\let{}\\iffalse", cs),
+        Some(s!("\\let{}\\iffalse", cs).into()),
         None
       )?,
       Some(Scope::Global),

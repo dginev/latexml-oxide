@@ -204,7 +204,6 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
   let expansion_opt: Option<ExpansionBody> = expansion.into();
   // TODO: The None case could be refactored to feel much cleaner.
   // For now it's equivalent to Tokens!()
-  let expansion = expansion_opt.unwrap_or_default();
   let mut options = options_opt.unwrap_or_default();
   let scope = options.scope.take();
   if options.mathactive && cs.with_str(|s| s.len()) == 1 {
@@ -225,7 +224,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     cs
   };
   install_definition(
-    Expandable::new(defcs, paramlist, expansion, Some(options))?,
+    Expandable::new(defcs, paramlist, expansion_opt, Some(options))?,
     scope,
   );
   if let Some(locked_key) = locked_key_opt {
@@ -420,7 +419,7 @@ pub fn def_math_dual(
     Expandable::new(
       defcs,
       paramlist.clone(),
-      ExpansionBody::Closure(Rc::new(move |args| {
+      Some(ExpansionBody::Closure(Rc::new(move |args| {
         let args_opt_tks = args
           .into_iter()
           .map(|arg| arg.into())
@@ -470,7 +469,7 @@ pub fn def_math_dual(
         dtks.push(T_END!());
 
         Ok(Tokens::new(dtks))
-      })),
+      }))),
       Some(ExpandableOptions {
         protected: options.protected,
         ..ExpandableOptions::default()
@@ -484,7 +483,7 @@ pub fn def_math_dual(
     Expandable::new(
       pres_cs,
       paramlist.clone(),
-      ExpansionBody::Tokens(presentation_toks),
+      Some(ExpansionBody::Tokens(presentation_toks)),
       Some(ExpandableOptions {
         protected: options.protected,
         ..ExpandableOptions::default()
@@ -814,7 +813,7 @@ fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token>
   };
   // scope should be \x@protect?
   install_definition(
-    Expandable::new(cs, None, expansion, Some(options))?,
+    Expandable::new(cs, None, expansion.into(), Some(options))?,
     scope,
   );
   Ok(return_cs)

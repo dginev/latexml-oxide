@@ -25,7 +25,7 @@ LoadDefinitions!({
     locked => true);
   DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
     sub[(cs,params,body)] {
-      do_def(false,cs,params,body)?;
+      do_def(false,dbg!(cs),dbg!(params),dbg!(body))?;
     },
     locked => true);
   DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",

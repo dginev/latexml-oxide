@@ -1287,7 +1287,8 @@ LoadDefinitions!({
       let replace_string = replace.to_string();
       let patched = string.replace(&search_string, &replace_string);
       // New definition in local scope
-      state::install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(), patched, None)?, None);
+      state::install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
+          Some(patched.into()), None)?, None);
       Ok(success)
     } else {
       Ok(failure)
