@@ -93,6 +93,9 @@ impl Definition for Primitive {
     // print STDERR '{' . $self->tracingCSName . "}\n" if $tracing;
     let mut invoked_boxes: Vec<Digested> = self.execute_before_digest()?;
     let args = self.read_arguments()?;
+    self.cs.with_cs_name(|name| if name == "\\edef" {
+      dbg!(&args);
+    });
     // print STDERR $self->tracingArgs(@args) . "\n" if $tracing && @args;
     match self.replacement {
       Some(PrimitiveBody::Closure(ref closure)) => invoked_boxes.extend(closure(args)?),

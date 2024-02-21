@@ -17,7 +17,6 @@ use crate::common::error::*;
 use crate::common::locator::Locator;
 use crate::common::numeric_ops::NumericOps;
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::state;
 use crate::state::*;
 use crate::token::*;
@@ -405,6 +404,11 @@ impl Mouth {
       None
     }
   }
+
+  /// Checks if there is more input to process.
+  ///
+  /// Note: we need mutability, as we may refill the internal BufReader
+  /// when performing the check.
   pub fn has_more_input(&mut self) -> bool {
     !self.is_eol()
     || !self.buffer.is_empty()
@@ -766,9 +770,12 @@ impl Mouth {
     }
   }
 
-  // Be Careful!
-  // used BOTH for flushing input for \endinput
-  // and for detecting line end for \read
+  /// Checks if Mouth read is at the end of a line.
+  ///
+  /// Careful:
+  /// used BOTH for flushing input for `\endinput`
+  /// and for detecting line end for `\read`
+  ///
   pub fn is_eol(&mut self) -> bool {
     let savecolno = self.colno;
     // We have to peek past any ignored tokens & also spaces, if skipping
@@ -777,8 +784,6 @@ impl Mouth {
       if ncc != Catcode::IGNORE && (!self.skipping_spaces || ncc != Catcode::SPACE) {
         cc = Some(ncc);
         break;
-      } else {
-        cc = None;
       }
     }
     if self.colno <= self.nchars && cc.is_some() {

@@ -94,6 +94,7 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
+    dbg!(self.get_cs_name());
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
     let tracing = lookup_int("TRACINGMACROS") > 0;
     let profiled = lookup_bool("PROFILING");
@@ -156,9 +157,9 @@ impl Definition for Expandable {
             //     ? ($$expansion[0], $$expansion[1]) : ($expansion, undef));
             //   if ($t0 && ($t0->equals($$self{cs})
             //       || ($t1 && $t1->equals($$self{cs}) && $t0->equals(T_CS('\protect'))))) {
-            //     Error('recursion', $$self{cs}, $gullet,
-            //       "Token " . Stringify($$self{cs}) . " expands into itself!",
-            //       "defining as empty");
+            Error!("recursion", self.cs,
+                  format!("Token {} expands into itself!",self.cs),
+                  "defining as empty");
             //     $expansion = TokensI(); } }
             Tokens!()
           } else {
@@ -225,9 +226,8 @@ impl Expandable {
   ) -> Result<Self> {
     let traits = traits.unwrap_or_default();
     if !traits.nopack_parameters {
-      dbg!(&cs);
       if let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
-        expansion_opt = Some(ExpansionBody::Tokens(dbg!(dbg!(expansion_tokens).pack_parameters()?)));
+        expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
       }
     }
     let has_cc_arg = match expansion_opt {

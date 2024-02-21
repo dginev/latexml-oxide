@@ -1,6 +1,5 @@
 use crate::package::*;
 use std::collections::hash_map::Entry;
-use crate::common::xml::XML_NS;
 
 LoadDefinitions!({
   // ======================================================================

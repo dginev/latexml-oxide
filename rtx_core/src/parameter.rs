@@ -8,7 +8,6 @@ use std::rc::Rc;
 
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::constructor::Constructor;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};

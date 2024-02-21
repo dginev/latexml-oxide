@@ -287,7 +287,7 @@ LoadDefinitions!({
   // That token is never defined, explicitly handled in Gullet & should never escape the Gullet
   DefMacro!(T_CS!("\\noexpand"), None, {
     if let Some(token) = gullet::read_token()? {
-      if token.get_catcode().is_active_or_cs() && state::is_dont_expandable(&token) {
+      if state::is_dont_expandable(&token) {
         vec![T_CS!("\\dont_expand"), dbg!(token)]
       } else {
         vec![dbg!(token)]

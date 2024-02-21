@@ -219,6 +219,7 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     None
   };
   let defcs = if options.robust {
+    dbg!(&expansion_opt);
     def_robust_cs(cs, options.locked, options.scope.clone())?
   } else {
     cs
@@ -803,12 +804,13 @@ fn infer_sizer(
 }
 
 fn def_robust_cs(cs: Token, locked: bool, scope: Option<Scope>) -> Result<Token> {
-  let cs_str = cs.with_str(|cstr| format!("{} ", cstr));
+  let cs_str = cs.with_str(|cstr| format!("{cstr} "));
   let defcs = T_CS!(cs_str);
   let return_cs = defcs;
   let expansion = Tokens!(T_CS!("\\protect"), defcs);
   let options = ExpandableOptions {
     locked,
+    robust: true,
     ..ExpandableOptions::default()
   };
   // scope should be \x@protect?

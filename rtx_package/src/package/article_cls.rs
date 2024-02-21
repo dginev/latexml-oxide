@@ -1,5 +1,4 @@
 use crate::package::*;
-use rtx_core::{state};
 #[rustfmt::skip]
 LoadDefinitions!( {
   LoadPool!("LaTeX");

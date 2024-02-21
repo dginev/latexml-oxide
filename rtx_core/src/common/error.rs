@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use once_cell::sync::Lazy;
 use crate::common::arena::{self,EMPTY_SYM};
 
-use rustc_hash::{FxHashMap as HashMap};
+use rustc_hash::FxHashMap as HashMap;
 use string_interner::symbol::SymbolU32;
 
 #[derive(Debug,Clone,Default)]

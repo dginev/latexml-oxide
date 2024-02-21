@@ -1,4 +1,4 @@
-pub use libxml::tree::{Namespace, Node};
+pub use libxml::tree::{Namespace, Node, NodeType};
 pub use log;
 pub use once_cell::sync::Lazy;
 pub use regex::Regex;

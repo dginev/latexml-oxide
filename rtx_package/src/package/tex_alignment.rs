@@ -1,7 +1,5 @@
 use crate::package::*;
 use rtx_core::alignment::read_alignment_template;
-use rtx_core::alignment::template::Template;
-use rtx_core::common::object::Object;
 use std::cell::{RefCell, RefMut};
 //======================================================================
 // Basic alignment support needed by most environments & commands.

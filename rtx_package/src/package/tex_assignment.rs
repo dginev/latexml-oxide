@@ -25,7 +25,7 @@ LoadDefinitions!({
     locked => true);
   DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
     sub[(cs,params,body)] {
-      do_def(false,dbg!(cs),dbg!(params),dbg!(body))?;
+      do_def(false,dbg!(cs),params,dbg!(body))?;
     },
     locked => true);
   DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
@@ -175,7 +175,7 @@ LoadDefinitions!({
 
   // <let assignment> = \futurelet <control sequence><token><token>
   //  | \let<control sequence><equals><one optional space><token>
-  DefPrimitive!("\\let Token SkipMatch:= Skip1Space Token", sub[(token1, token2)] {
+  DefPrimitive!("\\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token", sub[(token1, token2)] {
     Let!(token1, token2);
   });
 

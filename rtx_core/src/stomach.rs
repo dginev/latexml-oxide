@@ -9,7 +9,6 @@ use crate::common::arena;
 use crate::common::error::*;
 use crate::common::font;
 use crate::common::font::Font;
-use crate::common::store::Stored;
 use crate::definition::constructor::Constructor;
 use crate::definition::expandable::Expandable;
 use crate::definition::Definition;
@@ -433,7 +432,7 @@ pub fn digest_next_body(
       return Ok(expire_local_box_list());
     }
     // normal case
-    let invoked = invoke_token(&token)?;
+    let invoked = invoke_token(dbg!(&token))?;
     extend_box_list( invoked);
 
     if let Some(ref terminal) = terminal_opt {
@@ -484,7 +483,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
   )?;
   gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false)? {
-      if token.get_catcode() != Catcode::SPACE {
+      if dbg!(token).get_catcode() != Catcode::SPACE {
         invoke_token(&token)?;
       }
     }

@@ -1,5 +1,4 @@
 use crate::package::*;
-use libxml::tree::NodeType;
 
 #[rustfmt::skip]
 LoadDefinitions!({

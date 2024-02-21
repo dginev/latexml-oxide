@@ -5,7 +5,6 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::string::ToString;
 use string_interner::symbol::SymbolU32;
 
 use crate::common::arena::{self, ANY_SYM};
