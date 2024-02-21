@@ -1,5 +1,4 @@
 use crate::package::*;
-use once_cell::sync::Lazy;
 
 static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",

@@ -19,7 +19,6 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::DigestedData;
 use crate::state::*;
 
@@ -634,7 +633,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
                   }
                 } else {
                   // otherwise, prepend to pushback to be expanded further.
-                  gullet_mut!().runtime.as_mut().unwrap().pushback.extend(expansion.unlist());
+                  gullet_mut!().runtime.as_mut().unwrap().pushback.extend(dbg!(expansion.unlist()));
                 }
                 expire_current_token();
                 continue;
@@ -1543,7 +1542,7 @@ fn handle_marker(marker_token: Token) {
   });
 }
 
-/// Do something, while reading stuff from a specific Mouth.
+/// Do something, while reading tokens from a specific Mouth.
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
 /// and the mouth should end up empty afterwards, and only be closed here.
 pub fn reading_from_mouth<R, FnR>(

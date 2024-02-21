@@ -1,7 +1,4 @@
 use crate::package::*;
-use rtx_core::list::List;
-use rtx_core::tbox::Tbox;
-use rtx_core::TexMode;
 // use super::tex_boxes::adjust_box_color;
 
 static PSFILE_REGEX : Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
@@ -135,7 +132,7 @@ LoadDefinitions!({
 
   // \afterassignment saves ONE token (globally!) to execute after the next assignment
   DefPrimitive!("\\afterassignment Token", sub[(t)] {
-    state::assign_value("afterAssignment", t, Some(Scope::Global));
+    assign_value("afterAssignment", t, Some(Scope::Global));
   });
   // \aftergroup saves ALL tokens (from repeated calls) to be executed IN ORDER after the next
   // egroup or }

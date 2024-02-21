@@ -9,7 +9,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 use std::rc::Rc;
-use std::result::Result;
 
 fn main() -> Result<(), Box<dyn Error>> {
   if rtx_core::util::logger::init(log::LevelFilter::Info).is_err() {

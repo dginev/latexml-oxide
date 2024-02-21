@@ -1,29 +1,22 @@
 //! A variety of traits helpful for auto-casting between the different components of the
 //! conversion toolchain
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use crate::common::arena;
-use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::glue::Glue;
 use crate::common::mudimension::MuDimension;
 use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
-use crate::common::store::Stored;
 use crate::definition::argument::ArgWrap;
 use crate::definition::register::*;
 use crate::definition::{Reversion, SizingClosure};
 use crate::keyvals::KeyVals;
 use crate::list::List;
 use crate::state::{Scope,lookup_font};
-use crate::tbox::Tbox;
 use crate::token::*;
-use crate::tokens::Tokens;
 use crate::whatsit::Whatsit;
-use crate::Digested;
 use crate::*;
 
 /// A trait for auto-wrapping a generic type T into Option<Y>,

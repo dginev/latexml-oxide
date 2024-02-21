@@ -1,11 +1,7 @@
-use libxml::tree::Node;
-use once_cell::sync::Lazy;
-use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::package::tex_alignment::alignment_bindings;
 use crate::package::*;
-use rtx_core::alignment::template::Template;
 
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
 static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());

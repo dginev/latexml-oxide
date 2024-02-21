@@ -97,4 +97,16 @@ LoadDefinitions!({
     Warn!("unexpected", "dump", "Do not know how to \\dump yet, sorry");
   });
 
+  // Crazy; define \cs in terms of \cs[space] !!!
+  DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
+  sub[(_star,cs,nargs,opt,body)] {
+    let opt_checked = match opt {
+      Some(opt_content) if !opt_content.is_empty() => Some(opt_content),
+      _ => None
+    };
+    let nargs = nargs.value_of() as usize;
+    let cs_args = convert_latex_args(nargs, opt_checked)?;
+    DefMacro!(cs, cs_args, body, robust => true);
+  });
+
 });

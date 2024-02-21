@@ -2,7 +2,6 @@ use crate::binding::content::{load_font_map, preload_font_map};
 use crate::common::arena::{self, EMPTY_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::numeric_ops::{NumericOps, UNITY_F64};
-use crate::common::store::Stored;
 use crate::state::*;
 use crate::{BoxOps, Digested, DigestedData, Result};
 use once_cell::sync::Lazy;

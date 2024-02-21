@@ -533,7 +533,7 @@ impl Definition for Register {
           Tbox::new(arena::pin_char(mathglyph), None, None,
             Tokens!(T_CS!("\\mathchar"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
         } else {
-          Tbox::new(arena::pin_char(font::decode(dbg!(self.value.clone()).unwrap().value_of() as u8, None,false).unwrap()), None, None,
+          Tbox::new(arena::pin_char(font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap()), None, None,
           Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
         })])
     }

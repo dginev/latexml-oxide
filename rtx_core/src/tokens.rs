@@ -5,10 +5,8 @@ use quote::{quote, ToTokens, TokenStreamExt};
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::convert::AsRef;
 use std::fmt::Display;
 use std::rc::Rc;
-use std::string::ToString;
 
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
@@ -315,8 +313,8 @@ impl Tokens {
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
     let mut result = Vec::new();
-    let in_tokens = self.0.iter();
-    for token in in_tokens {
+    dbg!(args);
+    for token in dbg!(&self.0).iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(*token);
@@ -324,7 +322,7 @@ impl Tokens {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
-    Tokens::new(result)
+    Tokens::new(dbg!(result))
   }
 
   /// Consumes a Tokens to a string containing TeX that created it (or could have).

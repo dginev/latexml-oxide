@@ -1,8 +1,5 @@
 use crate::package::*;
-use libxml::tree::{Node, NodeType};
-use rtx_core::keyvals::KeyvalsConfig;
 use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
-use std::collections::VecDeque;
 
 pub fn reenter_text_mode(vertical_mode: bool) {
   let mode_key = if vertical_mode {
@@ -193,8 +190,8 @@ pub fn do_def(
   body: Tokens,
 ) -> Result<()> {
   let paramlist = parse_def_parameters(&cs, params)?;
-
   let scope = if globally { Some(Scope::Global) } else { None };
+  dbg!(cs);
   state::install_definition(
     Expandable::new(
       cs,

@@ -7,7 +7,6 @@ use std::rc::Rc;
 use crate::common::error::*;
 use crate::common::font::Font;
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::state::*;
 
 use crate::definition::{

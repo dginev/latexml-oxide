@@ -32,7 +32,6 @@ use crate::common::arena;
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::object::Object;
-use crate::common::store::Stored;
 use crate::digested::Digested;
 use crate::document::{get_node_qname,with_node_qname,Document};
 use crate::mouth::Mouth;
