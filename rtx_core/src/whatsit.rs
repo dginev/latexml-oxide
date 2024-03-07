@@ -63,13 +63,13 @@ impl PartialEq for Whatsit {
           false
         }
       } else {
-        other.properties.get("body").is_none()
+        !other.properties.contains_key("body")
       }
   }
 }
 
 impl Whatsit {
-  ///
+  /// checks the "isMath" property was set to true
   pub fn is_math(&self) -> bool {
     match self.properties.get("isMath") {
       Some(&Stored::Bool(v)) => v,

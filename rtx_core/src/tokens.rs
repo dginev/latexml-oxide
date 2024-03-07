@@ -313,8 +313,7 @@ impl Tokens {
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
     let mut result = Vec::new();
-    dbg!(args);
-    for token in dbg!(&self.0).iter() {
+    for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it
         result.push(*token);
@@ -322,7 +321,7 @@ impl Tokens {
         result.extend(arg.clone().into_owned().unlist());
       }
     }
-    Tokens::new(dbg!(result))
+    Tokens::new(result)
   }
 
   /// Consumes a Tokens to a string containing TeX that created it (or could have).

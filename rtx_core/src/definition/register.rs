@@ -30,19 +30,19 @@ use super::argument::ArgWrap;
 /// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
 pub enum RegisterValue {
-  ///
+  /// A unitless number
   Number(Number),
-  ///
+  /// A dimension with associated unit
   Dimension(Dimension),
-  ///
+  ///A "mu" dimension with associated unit
   MuDimension(MuDimension),
-  ///
+  /// A Glue space
   Glue(Glue),
-  ///
+  ///A Mu Glue space
   MuGlue(MuGlue),
-  ///
+  /// used by token registers
   Token(Token),
-  ///
+  /// used by token registers
   Tokens(Tokens),
 }
 impl From<Number> for RegisterValue {

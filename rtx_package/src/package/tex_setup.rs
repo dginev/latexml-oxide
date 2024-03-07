@@ -301,7 +301,7 @@ LoadDefinitions!({
   // but expanding \the-like commands only once,
   // and also packing # parameters
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      dbg!(gullet::read_balanced(true, true, true))
+      gullet::read_balanced(true, true, true)
     },
     reversion      => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }

@@ -1235,17 +1235,12 @@ pub fn lookup_expandable(token: &Token, toplevel: bool) -> Result<Option<Rc<dyn 
 pub fn is_dont_expandable(token: &Token) -> bool {
   // Basically: a CS or Active token that is either not defined, or is expandable
   // (but not \let to a token)
-  dbg!(token);
   if token.get_catcode().is_active_or_cs() {
     let lookupname = token.text;
     if lookupname != *EMPTY_SYM {
       match state!().meaning.get(&lookupname) {
         Some(entry) => {
           if let Some(def) = entry.front() {
-            token.with_str(|name| {
-              dbg!(name);
-            });
-            dbg!(&def);
             // the expandable variants are allowed
             matches!(
               def,
@@ -1833,7 +1828,7 @@ pub fn get_prefix(prefix: &str) -> bool {
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 
 // #======================================================================
-///
+/// Activates all stashed definitions for the named scope. No-op if the scope is already active.
 pub fn activate_scope(scope: SymbolU32) {
   let mut state = state_mut!();
   // do not re-activate if already active.

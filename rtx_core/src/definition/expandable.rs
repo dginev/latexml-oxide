@@ -94,7 +94,6 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    dbg!(self.get_cs_name());
     // shortcut for "trivial" macros; but only if not tracing & profiling!!!!
     let tracing = lookup_int("TRACINGMACROS") > 0;
     let profiled = lookup_bool("PROFILING");
