@@ -202,7 +202,7 @@ impl Catcode {
       },
     }
   }
-  ///
+  /// Catcodes with associated primitives
   pub fn is_executable(self) -> bool {
     use crate::token::Catcode::*;
     match self {
@@ -213,7 +213,7 @@ impl Catcode {
       ARG => false,
     }
   }
-  ///
+  /// Catcodes which can be neutralized
   pub fn is_neutralizable(self) -> bool {
     use crate::token::Catcode::*;
     match self {
@@ -224,12 +224,12 @@ impl Catcode {
       | MARKER | ARG => false,
     }
   }
-  ///
+  /// Shorthand to match the "active" and "command sequence" catcodes
   pub fn is_active_or_cs(self) -> bool {
     use crate::token::Catcode::*;
     matches!(self, ACTIVE | CS)
   }
-  ///
+  /// Tokens which can be absorbed without side-effects
   pub fn is_absorbable(self) -> bool {
     use crate::token::Catcode::*;
     // Absorbable
@@ -240,9 +240,10 @@ impl Catcode {
     use crate::token::Catcode::*;
     matches!(self, COMMENT | MARKER)
   }
-  /// gullet::is_balanced reacts to BEGIN,END,MARKER coded tokens
+  /// Catcodes that are of note for balanced reads.
   pub fn is_balanced_interesting(self) -> bool {
     use crate::token::Catcode::*;
+    // `gullet::is_balanced` reacts to BEGIN,END,MARKER coded tokens
     matches!(self, BEGIN | END | MARKER)
   }
 }

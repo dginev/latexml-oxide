@@ -42,7 +42,7 @@ pub struct InputDefinitionOptions {
   pub noerror: bool,
   /// flag to forbid binding dispatch
   pub noltxml: bool,
-  ///
+  /// collection of (package) options to process when loading the dependency
   pub withoptions: Option<Vec<String>>,
   /// flag to handle options, or ignore them
   pub handleoptions: bool,

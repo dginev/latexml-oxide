@@ -6,16 +6,13 @@ use rustc_hash::FxHashMap as HashMap;
 pub struct Relaxng {
   /// the schema name
   pub name: String,
-  ///
+  /// dependent modules
   pub modules: Vec<String>,
-  ///
-  pub elementdefs: HashMap<String, String>,
-  ///
-  pub defs: HashMap<String, String>,
-  ///
-  pub elements: HashMap<String, String>,
-  ///
-  pub internal_grammars: u8,
+  // TODO:
+  // pub elementdefs: HashMap<String, String>,
+  // pub defs: HashMap<String, String>,
+  // pub elements: HashMap<String, String>,
+  // pub internal_grammars: u8,
 }
 
 impl Default for Relaxng {
@@ -23,10 +20,10 @@ impl Default for Relaxng {
     Relaxng {
       name: s!("LaTeXML"),
       modules: Vec::new(),
-      elementdefs: HashMap::default(),
-      defs: HashMap::default(),
-      elements: HashMap::default(),
-      internal_grammars: 0,
+      // elementdefs: HashMap::default(),
+      // defs: HashMap::default(),
+      // elements: HashMap::default(),
+      // internal_grammars: 0,
     }
   }
 }

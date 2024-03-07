@@ -219,7 +219,6 @@ pub fn def_macro<T: Into<Option<ExpansionBody>>>(
     None
   };
   let defcs = if options.robust {
-    dbg!(&expansion_opt);
     def_robust_cs(cs, options.locked, options.scope.clone())?
   } else {
     cs

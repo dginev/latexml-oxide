@@ -191,7 +191,6 @@ pub fn do_def(
 ) -> Result<()> {
   let paramlist = parse_def_parameters(&cs, params)?;
   let scope = if globally { Some(Scope::Global) } else { None };
-  dbg!(cs);
   state::install_definition(
     Expandable::new(
       cs,

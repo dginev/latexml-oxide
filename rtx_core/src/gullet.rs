@@ -73,6 +73,12 @@ macro_rules! gullet {
 macro_rules! gullet_mut {
   () => ((*GULLET).borrow_mut())
 }
+macro_rules! runtime {
+  () => ((*GULLET).borrow_mut().runtime)
+}
+macro_rules! runtime_mut {
+  () => ((*GULLET).borrow_mut().runtime.as_mut())
+}
 
 impl Gullet {
   /// Initialize (or reset, if reentrant) a Gullet to its default empty state
@@ -178,7 +184,7 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
 pub fn close_mouth(forced: bool) -> Result<()> {
   let mut shift_from_mouthstack = false;
   let mut error_has_more_input = false;
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
+  if let Some(ref mut runtime) = runtime!() {
     if !forced && (!runtime.pushback.is_empty()) || runtime.mouth.has_more_input() {
       error_has_more_input = true
     }
@@ -204,7 +210,7 @@ pub fn close_mouth(forced: bool) -> Result<()> {
 /// This flushes a mouth so that it will be automatically closed, next time it's read
 /// Corresponds to TeX's \endinput
 pub fn flush_mouth() {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
+  if let Some(ref mut runtime) = runtime!() {
     while !runtime.mouth.is_eol() {
       if let Some(token) = runtime.mouth.read_token() {
         runtime.pushback.push_back(token);
@@ -551,7 +557,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
       tokens.extend(gullet_mut!().pending_comments.drain(..));
     }
     // Examine pushback first
-  while let Some(pushback_token) = gullet_mut!().runtime.as_mut().unwrap().pushback.pop_front() {
+  while let Some(pushback_token) = runtime_mut!().unwrap().pushback.pop_front() {
       match pushback_token.get_catcode() {
         Catcode::COMMENT => tokens.push(pushback_token),
         Catcode::MARKER => handle_marker(pushback_token),
@@ -563,7 +569,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
     }
     // Not in pushback, read from the current Mouth
     if next_token.is_none() {
-      while let Some(token) = gullet_mut!().runtime.as_mut().unwrap().mouth.read_token() {
+      while let Some(token) = runtime_mut!().unwrap().mouth.read_token() {
         match token.get_catcode() {
           Catcode::COMMENT => tokens.push(token),
           Catcode::MARKER => handle_marker(token),
@@ -633,7 +639,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
                   }
                 } else {
                   // otherwise, prepend to pushback to be expanded further.
-                  gullet_mut!().runtime.as_mut().unwrap().pushback.extend(dbg!(expansion.unlist()));
+                  unread(expansion);
                 }
                 expire_current_token();
                 continue;
@@ -809,7 +815,7 @@ pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
   while let Some(token) = read_token()? {
     if token.get_catcode() == Catcode::BEGIN {
-      if let Some(runtime) = gullet_mut!().runtime.as_mut() {
+      if let Some(runtime) = runtime_mut!() {
         runtime.pushback.push_front(token); // Unread
       } else {
         fatal!(Mouth, NotFound, "No Mouth in read_until_brace")
@@ -876,11 +882,7 @@ pub fn if_next(token: &Token) -> Result<bool> {
   let mut is_next = false;
   if let Some(tok) = read_token()? {
     is_next = tok == *token;
-    if let Some(mouth) = gullet_mut!().runtime.as_mut() {
-      mouth.pushback.push_front(tok); // Unread
-    } else {
-      fatal!(Mouth, NotFound, "No Mouth found in if_next")
-    }
+    unread_one(tok);
   }
   Ok(is_next)
 }
@@ -962,7 +964,7 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
             while let Some(space_token) = read_token()? {
               if space_token.get_catcode() != Catcode::SPACE {
                 // Unread non-space and end
-                match gullet_mut!().runtime.as_mut() {
+                match runtime_mut!() {
                   Some(mouth) => mouth.pushback.push_front(space_token),
                   None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
                 }
@@ -979,7 +981,7 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
       return Ok(Some((*choice).clone())); // All matched!!!
     } else {
       for matched_token in matched.into_iter().rev() {
-        match gullet_mut!().runtime.as_mut() {
+        match runtime_mut!() {
           Some(mouth) => mouth.pushback.push_front(matched_token), // Put 'em back and try next!
           None => fatal!(Mouth, NotFound, "No Mouth in read_match"),
         }
@@ -1572,7 +1574,7 @@ where
       break;
     } else {
       let has_input_remaining = {
-        if let Some(ref mut runtime) = gullet_mut!().runtime {
+        if let Some(ref mut runtime) = runtime!() {
           !runtime.autoclose
             || !runtime.pushback.is_empty()
             || runtime.mouth.has_more_input()
@@ -1587,7 +1589,7 @@ where
             s!("Finished reading from {source}, but it still has input."))
         );
         {
-          if let Some(ref mut runtime) = gullet_mut!().runtime {
+          if let Some(ref mut runtime) = runtime!() {
             runtime.mouth.finish();
           }
         }
@@ -1603,7 +1605,7 @@ where
 }
 
 pub fn has_more_input() -> bool {
-  match gullet_mut!().runtime {
+  match runtime!() {
     Some(ref mut runtime) => runtime.mouth.has_more_input(),
     None => false,
   }

@@ -288,9 +288,9 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\noexpand"), None, {
     if let Some(token) = gullet::read_token()? {
       if state::is_dont_expandable(&token) {
-        vec![T_CS!("\\dont_expand"), dbg!(token)]
+        vec![T_CS!("\\dont_expand"), token]
       } else {
-        vec![dbg!(token)]
+        vec![token]
       }
     } else {
       // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed

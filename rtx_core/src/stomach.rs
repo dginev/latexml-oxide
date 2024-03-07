@@ -64,7 +64,7 @@ impl Stomach {
     assign_value("afterAssignment", Stored::None, Some(Scope::Global)); // undef ???
     assign_value(
       "groupInitiator",
-      String::from("Initialization"),
+      "Initialization",
       Some(Scope::Global),
     );
     // Setup default fonts.
@@ -432,7 +432,7 @@ pub fn digest_next_body(
       return Ok(expire_local_box_list());
     }
     // normal case
-    let invoked = invoke_token(dbg!(&token))?;
+    let invoked = invoke_token(&token)?;
     extend_box_list( invoked);
 
     if let Some(ref terminal) = terminal_opt {
@@ -483,7 +483,7 @@ pub fn raw_tex(text: &str) -> Result<()> {
   )?;
   gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false)? {
-      if dbg!(token).get_catcode() != Catcode::SPACE {
+      if token.get_catcode() != Catcode::SPACE {
         invoke_token(&token)?;
       }
     }
