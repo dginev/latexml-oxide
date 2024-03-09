@@ -81,3 +81,22 @@ pub fn extract_bracketed(text: &mut String, delimiter: Option<&Delimiter>) -> Op
     None
   }
 }
+
+
+// Nice tip from https://users.rust-lang.org/t/trim-string-in-place/15809/18
+pub fn trim_end_in_place(s: &mut String) {
+  let trimmed = s.trim_end();
+  s.truncate(trimmed.len());
+}
+
+// Nice tip from https://users.rust-lang.org/t/trim-string-in-place/15809/18
+pub fn trim_start_in_place(s: &mut String) {
+  let trimmed = s.trim_start();
+  s.replace_range(..(s.len() - trimmed.len()), "");
+}
+
+// Nice tip from https://users.rust-lang.org/t/trim-string-in-place/15809/18
+pub fn trim_in_place(s: &mut String) {
+  trim_end_in_place(s);
+  trim_start_in_place(s);
+}

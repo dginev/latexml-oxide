@@ -22,6 +22,7 @@ use crate::state::*;
 use crate::token::*;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::util::pathname;
+use crate::util::text::trim_end_in_place;
 
 static CS_ENDLINECHAR: Lazy<Token> = Lazy::new(|| T_CS!("\\endlinechar"));
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
@@ -599,7 +600,7 @@ impl Mouth {
           return None;
         },
         Some(next_line) => {
-          line = next_line.trim_end().to_owned();
+          next_line.trim_end().clone_into(&mut line);
           self.lineno += 1;
           self.chars = line.chars().collect();
           self.nchars = self.chars.len();
@@ -607,7 +608,7 @@ impl Mouth {
         },
       }
     }
-    line = line.trim_end().to_owned(); // Even empty lines are valid here
+    trim_end_in_place(&mut line); // Even empty lines are valid here
     Some(line)
   }
 

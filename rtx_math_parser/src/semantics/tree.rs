@@ -341,10 +341,10 @@ impl XM {
                 if let Some(CurryTerm::Var(ref mut curry_var)) = arg_meta.curry_level {
                   let mut base_op = op.0.base_operator_name();
                   // fish out a local name to use as an embellishment
-                  if base_op.contains(':') {
-                    base_op = base_op.split(':').last().unwrap().to_owned();
-                  } else if base_op.contains('.') {
-                    base_op = base_op.split('.').last().unwrap().to_owned();
+                  if let Some(last_colon_idx) = base_op.rfind(':') {
+                    base_op.replace_range(..=last_colon_idx, "");
+                  } else if let Some(last_dot_idx) = base_op.rfind('.') {
+                    base_op.replace_range(..=last_dot_idx, "");
                   }
                   if base_op.is_empty() {
                     base_op = String::from("embellished");
@@ -352,7 +352,7 @@ impl XM {
                   curry_var.push('-');
                   curry_var.push_str(&base_op);
                 }
-                into.curry_level = arg_meta.curry_level.clone();
+                into.curry_level.clone_from(&arg_meta.curry_level)
               }
             }
           },

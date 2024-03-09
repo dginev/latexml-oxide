@@ -749,12 +749,12 @@ impl Font {
     if is_diff(self.series.as_ref(), other.series.as_ref()) {
       let series = self.series.clone().unwrap();
       diffs.push(series);
-      font_properties.series = self.series.clone();
+      font_properties.series.clone_from(&self.series);
     }
     if is_diff(self.shape.as_ref(), other.shape.as_ref()) {
       let shape = self.shape.clone().unwrap();
       diffs.push(shape);
-      font_properties.shape = self.shape.clone();
+      font_properties.shape.clone_from(&self.shape);
     }
     let mut result = HashMap::default();
 
@@ -812,7 +812,7 @@ impl Font {
       ..Font::default()
     };
     if is_diff(othercolor, Some(&Cow::Borrowed(DEFCOLOR))) {
-      changes.color = other.color.clone();
+      changes.color.clone_from(&other.color);
     }
 
     if let Some(ms) = mathstyle {

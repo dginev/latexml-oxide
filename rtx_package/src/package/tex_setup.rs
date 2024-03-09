@@ -287,9 +287,11 @@ LoadDefinitions!({
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
-    gullet::read_balanced(true,false,true)
+    dbg!(gullet::read_balanced(true,false,true))
   },
   reversion => sub[arg, _inner, _extra] {
+    // TODO: Consider a briefer syntax, maybe flat_vec ?
+    // https://docs.rs/flat_vec/latest/flat_vec/macro.flat_vec.html
     let mut tks = vec![T_BEGIN!()];
     tks.extend(arg.into_iter().map(Token::revert).collect::<Vec<_>>());
     tks.push(T_END!());

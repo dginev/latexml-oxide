@@ -254,10 +254,10 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
       // Empty element?
       if replacement.starts_with('/') {
         operations.push(quote!(document.close_element(#current_tag)?;));
-        replacement = replacement[1..].to_owned();
+        replacement.remove(0);
       }
       if replacement.starts_with('>') {
-        replacement = replacement[1..].to_owned();
+        replacement.remove(0);
       } else {
         panic!("Missing '>' at '{replacement:?}'");
       }
@@ -345,7 +345,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
 fn translate_string(text: &mut String) -> proc_macro2::TokenStream {
   // println!("-- ts before: {:?}", text);
   let mut values: Vec<proc_macro2::TokenStream> = Vec::new();
-  *text = text.trim_start().to_owned();
+  trim_start_in_place(&mut *text);
   if text.starts_with('\'') || text.starts_with('"') {
     let quote = text.remove(0);
     while !text.is_empty() && !text.starts_with(quote) {
@@ -411,7 +411,7 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
   // Parse a set of attribute value pairs from a constructor pattern,
   // substituting argument and property values from the whatsit.
   let mut avs: Vec<proc_macro2::TokenStream> = Vec::new();
-  *text = text.trim_start().to_owned();
+  trim_start_in_place(&mut *text);
   while !text.is_empty() {
     let mut is_match = false;
     let mut key = String::new();
@@ -451,7 +451,7 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
     if !is_match {
       break;
     }
-    *text = text.trim_start().to_owned();
+    trim_start_in_place(&mut *text);
   }
   avs
 }
@@ -470,7 +470,7 @@ fn translate_value(
   // Recognize a function call, w/args
   *text = FN_RE
     .replace(text, |refs: &Captures| -> String {
-      fcn = refs.get(1).map_or("", |m| m.as_str()).to_owned();
+      refs.get(1).map_or("", |m| m.as_str()).clone_into(&mut fcn);
       is_match = true;
       String::new()
     })
@@ -498,7 +498,7 @@ fn translate_value(
         break;
       }
     }
-    *text = text.trim_start().to_owned();
+    trim_start_in_place(&mut *text);
     if text.starts_with(')') {
       text.remove(0);
     } else {
