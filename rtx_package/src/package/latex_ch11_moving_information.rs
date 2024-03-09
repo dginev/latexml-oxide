@@ -146,8 +146,7 @@ LoadDefinitions!({
   DefConditional!("\\if@lx@inbibliography");
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
-    "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont'
-    _force_font='true'>#title</ltx:title><ltx:biblist>",
+  "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
      before_digest => {
         AssignValue!("inPreamble", false);
         Ok(vec![stomach::digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")))?])

@@ -204,16 +204,16 @@ impl Parameter {
         if descriptor.novalue {
           self.novalue = true;
         }
-        self.semiverbatim = descriptor.semiverbatim.clone();
+        self.semiverbatim.clone_from(&descriptor.semiverbatim);
         // Also doing optional setting on the fly, so don't override unless true
         // self.optional = descriptor.optional;
         if descriptor.optional {
           self.optional = true;
         }
-        self.reversion = descriptor.reversion.clone();
-        self.before_digest = descriptor.before_digest.clone();
-        self.after_digest = descriptor.after_digest.clone();
-        self.predigest = descriptor.predigest.clone();
+        self.reversion.clone_from(&descriptor.reversion);
+        self.before_digest.clone_from(&descriptor.before_digest);
+        self.after_digest.clone_from(&descriptor.after_digest);
+        self.predigest.clone_from(&descriptor.predigest);
       },
       None => fatal!(
         Parameter,

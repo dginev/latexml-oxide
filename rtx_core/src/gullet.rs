@@ -544,7 +544,7 @@ pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> R
     else { read_token()? };
 
     if token.is_none() || token.as_ref().unwrap().get_catcode() != Catcode::BEGIN {
-      Error!("expected", "{", "Expected opening '{'");
+      Error!("expected", "{", s!("Expected opening '{{' got {token:?}"));
       return Ok(Tokens!());
     }
   }
