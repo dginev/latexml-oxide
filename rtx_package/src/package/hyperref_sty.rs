@@ -1,4 +1,6 @@
 use crate::package::*;
+use crate::package::url_sty::LEADING_BACKSLASH_RE;
+
 LoadDefinitions!({
   // Some of the requirements not yet applicable/supported in latexml
   //TODO: RequirePackage!("ltxcmds");
@@ -229,12 +231,12 @@ LoadDefinitions!({
   // # Additional User Macros
 
   // \href{url}{text}
-  DefMacro!("\\href HyperVerbatim {}", "\\@@Url\\href{}{}{#1}{#2}");
+  DefMacro!("\\href HyperVerbatim {}", "\\lx@hyper@url@\\href{}{}{#1}{#2}");
 
-  // \url{url} from url.sty... well sorta
+  // Redefine \url{url} from url.sty...
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
-  DefMacro!("\\@Url Token", sub[(cmd)] {
+  DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
     let open = gullet::read_token()?.unwrap();
    begin_semiverbatim(Some(&['%']));
     state::let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
@@ -254,7 +256,7 @@ LoadDefinitions!({
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());
     url_wrapped.push(T_CS!("\\UrlRight"));
-    let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
+    let mut invocation_tokens = Invocation!(T_CS!("\\lx@hyper@url@"),vec![
         Tokens!(cmd.as_other()),
         Tokens!(open),
         Tokens!(close),
@@ -264,8 +266,25 @@ LoadDefinitions!({
     Tokens::new(invocation_tokens)
   });
 
+  // RE-define from url w
+  DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true);
+
+  DefConstructor!("\\lx@url@url@nolink Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
+    "?#isMath(<ltx:XMWrap class='ltx_nolink #class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='ltx_nolink #class'>#5</ltx:ref>)",
+    properties => sub[args] {
+      unref!(args => cmd, _open, _close, url, _formattedurl);
+      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
+      Ok(map!(
+        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),
+        // TODO: why was class realized in Perl as "sub" closure here?
+        "class"=> ltx_cmd.into()
+      ))
+    },
+    sizer     => "#5",
+    reversion => "#1#2#4#3");
   // \nolinkurl{url}
-  DefConstructor!("\\nolinkurl Semiverbatim", "#1");
+  DefConstructor!("\\nolinkurl Semiverbatim",
+    "<ltx:ref href='#1' class='ltx_nolink' >#1</ltx:ref>");
 
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {

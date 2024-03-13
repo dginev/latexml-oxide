@@ -1,6 +1,6 @@
 use crate::package::*;
 
-static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
+pub static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
 
 LoadDefinitions!({
   AssignValue!("BASE_URL", "");
@@ -15,7 +15,7 @@ LoadDefinitions!({
   // Font style definitions.
   DefMacro!(
     "\\urlstyle{}",
-    "\\expandafter\\protect\\csname url@#1style\\endcsname"
+    r#"\expandafter\protect\csname url@#1style\endcsname"#
   );
   DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
   DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
@@ -28,17 +28,17 @@ LoadDefinitions!({
   Let!("\\UrlRight", "\\@empty");
 
   // \DeclareUrlCommand\cmd{settings}
-  // Have this expand into \@Url w/ the declared cmd as arg, so it gets reflected in XML.
+  // Have this expand into \lx@url@url w/ the declared cmd as arg, so it gets reflected in XML.
   DefMacro!(
     "\\DeclareUrlCommand{}{}",
-    "\\def#1{\\begingroup #2\\@Url#1}"
+    "\\def#1{\\begingroup #2\\lx@url@url#1}"
   );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
   // That token is the cs that invoked it, so that it can be reflected in the generated XML,
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
-  DefMacro!("\\@Url Token", sub[(cmd)] {
+  DefMacro!("\\lx@url@url Token", sub[(cmd)] {
     let perc = vec!['%'];
    begin_semiverbatim(Some(&perc));
     let mut open = gullet::read_token()?.unwrap();
@@ -59,7 +59,7 @@ LoadDefinitions!({
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());
     url_wrapped.push(T_CS!("\\UrlRight"));
-    let mut invocation_tokens = Invocation!(T_CS!("\\@@Url"),vec![
+    let mut invocation_tokens = Invocation!(T_CS!("\\lx@url@url@nolink"),vec![
         Tokens!(cmd.as_other()),
         Tokens!(open),
         Tokens!(close),
@@ -71,19 +71,18 @@ LoadDefinitions!({
 
   // Define \Url, in case its used; won't be represented as nicely
   DefMacro!("\\Url", {
-    gullet::unread_one(T_OTHER!("\\Url"));
-    Ok(Tokens!(T_CS!("\\@Url")))
+    unread_one(T_OTHER!("\\Url"));
+    Ok(Tokens!(T_CS!("\\lx@url@url")))
   });
 
-  // \@@Url cmd {open}{close}{url}{formattedurl}
-  DefConstructor!("\\@@Url Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+  DefConstructor!("\\lx@url@url@nolink Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
+    "?#isMath(<ltx:XMWrap class='ltx_nolink #class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='ltx_nolink #class'>#5</ltx:ref>)",
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
         "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),
-        // TODO: why was class a sub {}??
+        // TODO: why was class realized in Perl as "sub" closure here?
         "class"=> ltx_cmd.into()
       ))
     },
@@ -91,8 +90,8 @@ LoadDefinitions!({
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\@Url\path");
-  DefMacro!("\\url", r"\begingroup\@Url\url", locked => true);
+  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path");
+  DefMacro!("\\url", r"\begingroup\lx@url@url\url", locked => true);
 
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
