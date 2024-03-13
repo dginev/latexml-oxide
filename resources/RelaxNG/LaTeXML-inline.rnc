@@ -14,7 +14,7 @@ default namespace = "http://dlmf.nist.gov/LaTeXML"
 
 ## The inline module defines basic inline elements used throughout.
 Inline.class |= 
-    \text | emph | del | sub | sup | glossaryref | acronym | rule
+    \text | emph | del | sub | sup | glossaryref | rule
   | anchor | ref | cite | bibref
 
 #======================================================================
@@ -108,6 +108,7 @@ element glossaryref { glossaryref_attributes, glossaryref_model }
 glossaryref_attributes =
   Common.attributes,
   Refable.attributes,
+  Listable.attributes,
   Fontable.attributes,
   Colorable.attributes,
   Backgroundable.attributes,
@@ -115,10 +116,7 @@ glossaryref_attributes =
   ## should be used to identifier used for the glossaryref.
   attribute key { text }?,
 
-  ## The kind of \elementref{glossary} this mark belongs to.
-  attribute role { text }?,
-
-  ## gives a expanded form of the glossaryref,
+  ## gives a expanded form of the glossaryref (unused?),
   attribute title { text }?,
 
   ## a pattern encoding how the text content should be filled in during
@@ -135,24 +133,6 @@ glossaryref_model = Inline.model
 
 #======================================================================
 
-acronym =
-## Represents an acronym (OBSOLETE; see \elementref{glossaryref}).
-element acronym { acronym_attributes, acronym_model }
-
-## Attributes for \elementref{acronym}.
-acronym_attributes =
-  Common.attributes,
-  ID.attributes,
-  ## should be used to identifier used for the acronym.
-  attribute name { text }?,
-  ## gives a expanded form of the acronym,
-  attribute title { text }?
-
-## Content model for \elementref{acronym}.
-acronym_model = Inline.model
-
-#======================================================================
-
 rule =
 ## A Rule.
 element rule { rule_attributes, rule_model }
@@ -161,7 +141,8 @@ element rule { rule_attributes, rule_model }
 rule_attributes =
   Common.attributes,
   Positionable.attributes,
-  Colorable.attributes
+  Colorable.attributes,
+  Backgroundable.attributes
 
 ## Content model for \elementref{rule}.
 rule_model = empty
@@ -194,10 +175,15 @@ ref_attributes =
   ## mixed with arbitrary characters.
   attribute show { text }?,
 
-  ## gives a longer form description of the target,
-  ## this would typically appear as a tooltip in HTML.
+  ## gives a description of the target, not repeating the content,
+  ## used for accessibility or a tooltip in HTML.
   ## Typically filled in by postprocessor.
-  attribute title { text }?
+  attribute title { text }?,
+
+  ## gives a longer form description of the target,
+  ## useful when the link appears outside its original context, eg in navigation.
+  ## Typically filled in by postprocessor.
+  attribute fulltitle { text }?
 
 ## Content model for \elementref{ref}.
 ref_model = Inline.model
@@ -223,7 +209,9 @@ cite =
 element cite { cite_attributes, cite_model }
 
 ## Attributes for \elementref{cite}.
-cite_attributes = Common.attributes
+cite_attributes =
+  Common.attributes,
+  Listable.attributes
 
 ## Content model for \elementref{cite}.
 cite_model = Inline.model
@@ -239,6 +227,7 @@ element bibref { bibref_attributes, bibref_model }
 bibref_attributes =
   Common.attributes,
   IDREF.attributes,
+  Listable.attributes,
 
   ## a comma separated list of bibliographic keys.
   ## (See the \attr{key} attribute of \elementref{bibitem} and \elementref{bibentry})

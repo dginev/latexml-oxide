@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  /=====================================================================\ 
+  /=====================================================================\
   |  LaTeXML-misc.rnc                                                   |
   | RelaxNG model for LaTeXML generated documents                       |
   |=====================================================================|
@@ -12,7 +12,7 @@
   | http://dlmf.nist.gov/LaTeXML/                              (o o)    |
   \=========================================================ooo==U==ooo=/
 -->
-<grammar ns="http://dlmf.nist.gov/LaTeXML" xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns="http://relaxng.org/ns/structure/1.0">
+<grammar ns="http://dlmf.nist.gov/LaTeXML" xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://relaxng.org/ns/structure/1.0">
   <define name="Misc.class" combine="choice">
     <a:documentation> Miscellaneous (Misc) elements are (typically) visible
 elements which don't have clear inline or block character;
@@ -25,6 +25,7 @@ they can appear in both inline and block contexts.</a:documentation>
       <ref name="svg"/>
       <ref name="rawhtml"/>
       <ref name="rawliteral"/>
+      <ref name="ERROR"/>
     </choice>
   </define>
   <!-- ====================================================================== -->
@@ -87,7 +88,7 @@ typesets its contents as a block.</a:documentation>
   <!-- ====================================================================== -->
   <define name="graphics">
     <element name="graphics">
-      <a:documentation>A graphical insertion of an external file. </a:documentation>
+      <a:documentation>A graphical insertion of an external file.</a:documentation>
       <ref name="graphics_attributes"/>
       <ref name="graphics_model"/>
     </element>
@@ -123,12 +124,43 @@ to be used in processing the graphic.</a:documentation>
     <empty/>
   </define>
   <!-- ====================================================================== -->
+  <define name="svgForeign.attributes">
+    <zeroOrMore>
+      <attribute>
+        <anyName>
+          <except>
+            <nsName ns=""/>
+            <nsName ns="http://www.w3.org/XML/1998/namespace"/>
+            <nsName ns="http://www.w3.org/1999/xlink"/>
+          </except>
+        </anyName>
+      </attribute>
+    </zeroOrMore>
+  </define>
   <define name="svg">
     <grammar>
       <a:documentation>An SVG (Scalable Vector Graphics) object
 [eventually must adapt to put LaTeXML objects in foreignObject]</a:documentation>
+      <define name="common.attrs.aria">
+        <empty/>
+      </define>
+      <define name="common.attrs.aria.implicit.group">
+        <empty/>
+      </define>
+      <define name="common.attrs.aria.implicit.img">
+        <empty/>
+      </define>
+      <define name="common.attrs.aria.implicit.link">
+        <empty/>
+      </define>
+      <define name="SVG.Core.extra.attrib" combine="interleave">
+        <parentRef name="svgForeign.attributes"/>
+      </define>
       <include href="urn:x-LaTeXML:RelaxNG:svg:svg11.rng">
         <define name="SVG.foreignObject.content">
+          <parentRef name="Inline.model"/>
+        </define>
+        <define name="SVG.desc.content">
           <parentRef name="Flow.model"/>
         </define>
       </include>
@@ -172,6 +204,25 @@ then the text content, followed by a close angle bracket followed by \attr{close
       </optional>
       <text/>
     </element>
+  </define>
+  <!-- ====================================================================== -->
+  <define name="ERROR">
+    <element name="ERROR">
+      <a:documentation>error object for undefined control sequences, or whatever</a:documentation>
+      <ref name="ERROR_attributes"/>
+      <ref name="ERROR_model"/>
+    </element>
+  </define>
+  <define name="ERROR_attributes">
+    <a:documentation>Attributes for \elementref{ERROR}.</a:documentation>
+    <ref name="Common.attributes"/>
+    <ref name="ID.attributes"/>
+  </define>
+  <define name="ERROR_model">
+    <a:documentation>Content model for \elementref{ERROR}.</a:documentation>
+    <zeroOrMore>
+      <text/>
+    </zeroOrMore>
   </define>
 </grammar>
 <!-- ====================================================================== -->

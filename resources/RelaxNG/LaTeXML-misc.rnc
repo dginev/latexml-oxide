@@ -1,4 +1,4 @@
-# /=====================================================================\ 
+# /=====================================================================\
 # |  LaTeXML-misc.rnc                                                   |
 # | RelaxNG model for LaTeXML generated documents                       |
 # |=====================================================================|
@@ -12,11 +12,13 @@
 
 default namespace = "http://dlmf.nist.gov/LaTeXML"
 namespace xhtml = "http://www.w3.org/1999/xhtml"
+namespace nonamespace = ""
+namespace xlink = "http://www.w3.org/1999/xlink"
 
 ##  Miscellaneous (Misc) elements are (typically) visible
 ## elements which don't have clear inline or block character;
 ## they can appear in both inline and block contexts.
-Misc.class  |= inline-block | verbatim | break | graphics | svg | rawhtml | rawliteral
+Misc.class  |= inline-block | verbatim | break | graphics | svg | rawhtml | rawliteral | ERROR
 
 #======================================================================
 
@@ -68,7 +70,7 @@ break_model = empty
 #======================================================================
 
 graphics =
-## A graphical insertion of an external file. 
+## A graphical insertion of an external file.
 element graphics { graphics_attributes, graphics_model }
 
 ## Attributes for \elementref{graphics}.
@@ -96,19 +98,29 @@ graphics_attributes =
 graphics_model = empty
 
 #======================================================================
+svgForeign.attributes =
+  attribute * - (nonamespace:* | xml:* | xlink:*) { text } *
 
 svg =
 ## An SVG (Scalable Vector Graphics) object
 ## [eventually must adapt to put LaTeXML objects in foreignObject]
 grammar {
+   common.attrs.aria = empty
+   common.attrs.aria.implicit.group = empty
+   common.attrs.aria.implicit.img = empty
+   common.attrs.aria.implicit.link = empty
+   SVG.Core.extra.attrib &= parent svgForeign.attributes
   include "svg11.rnc"
-  { SVG.foreignObject.content = parent Flow.model }
+  { SVG.foreignObject.content = parent Inline.model
+    SVG.desc.content = parent Flow.model
+ }
 }
+
 #======================================================================
 
 htmlElement = element xhtml:* { (attribute * { text } | text | htmlElement) * }
 
-rawhtml = 
+rawhtml =
 ## A container for arbitrary markup in the xhtml namespace
 ## (not currently validated against any particular html schema)
 element rawhtml {  htmlElement * }
@@ -122,5 +134,19 @@ element rawliteral {
   attribute open { text}?,
   attribute close { text}?,
   text }
+
+#======================================================================
+
+ERROR =
+## error object for undefined control sequences, or whatever
+element ERROR { ERROR_attributes, ERROR_model }
+
+## Attributes for \elementref{ERROR}.
+ERROR_attributes =
+  Common.attributes,
+  ID.attributes
+
+## Content model for \elementref{ERROR}.
+ERROR_model = text*
 
 #======================================================================

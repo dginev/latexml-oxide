@@ -22,7 +22,6 @@
       <ref name="sub"/>
       <ref name="sup"/>
       <ref name="glossaryref"/>
-      <ref name="acronym"/>
       <ref name="rule"/>
       <ref name="anchor"/>
       <ref name="ref"/>
@@ -138,6 +137,7 @@ Attributes cover a variety of styling and position shifting properties.</a:docum
     <a:documentation>Attributes for \elementref{glossaryref}.</a:documentation>
     <ref name="Common.attributes"/>
     <ref name="Refable.attributes"/>
+    <ref name="Listable.attributes"/>
     <ref name="Fontable.attributes"/>
     <ref name="Colorable.attributes"/>
     <ref name="Backgroundable.attributes"/>
@@ -147,13 +147,8 @@ Attributes cover a variety of styling and position shifting properties.</a:docum
       </attribute>
     </optional>
     <optional>
-      <attribute name="role">
-        <a:documentation>The kind of \elementref{glossary} this mark belongs to.</a:documentation>
-      </attribute>
-    </optional>
-    <optional>
       <attribute name="title">
-        <a:documentation>gives a expanded form of the glossaryref,</a:documentation>
+        <a:documentation>gives a expanded form of the glossaryref (unused?),</a:documentation>
       </attribute>
     </optional>
     <optional>
@@ -173,33 +168,6 @@ mixed with arbitrary characters.</a:documentation>
     <ref name="Inline.model"/>
   </define>
   <!-- ====================================================================== -->
-  <define name="acronym">
-    <element name="acronym">
-      <a:documentation>Represents an acronym (OBSOLETE; see \elementref{glossaryref}).</a:documentation>
-      <ref name="acronym_attributes"/>
-      <ref name="acronym_model"/>
-    </element>
-  </define>
-  <define name="acronym_attributes">
-    <a:documentation>Attributes for \elementref{acronym}.</a:documentation>
-    <ref name="Common.attributes"/>
-    <ref name="ID.attributes"/>
-    <optional>
-      <attribute name="name">
-        <a:documentation>should be used to identifier used for the acronym.</a:documentation>
-      </attribute>
-    </optional>
-    <optional>
-      <attribute name="title">
-        <a:documentation>gives a expanded form of the acronym,</a:documentation>
-      </attribute>
-    </optional>
-  </define>
-  <define name="acronym_model">
-    <a:documentation>Content model for \elementref{acronym}.</a:documentation>
-    <ref name="Inline.model"/>
-  </define>
-  <!-- ====================================================================== -->
   <define name="rule">
     <element name="rule">
       <a:documentation>A Rule.</a:documentation>
@@ -212,6 +180,7 @@ mixed with arbitrary characters.</a:documentation>
     <ref name="Common.attributes"/>
     <ref name="Positionable.attributes"/>
     <ref name="Colorable.attributes"/>
+    <ref name="Backgroundable.attributes"/>
   </define>
   <define name="rule_model">
     <a:documentation>Content model for \elementref{rule}.</a:documentation>
@@ -250,8 +219,15 @@ mixed with arbitrary characters.</a:documentation>
     </optional>
     <optional>
       <attribute name="title">
+        <a:documentation>gives a description of the target, not repeating the content,
+used for accessibility or a tooltip in HTML.
+Typically filled in by postprocessor.</a:documentation>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="fulltitle">
         <a:documentation>gives a longer form description of the target,
-this would typically appear as a tooltip in HTML.
+useful when the link appears outside its original context, eg in navigation.
 Typically filled in by postprocessor.</a:documentation>
       </attribute>
     </optional>
@@ -290,6 +266,7 @@ which are the specific citation.</a:documentation>
   <define name="cite_attributes">
     <a:documentation>Attributes for \elementref{cite}.</a:documentation>
     <ref name="Common.attributes"/>
+    <ref name="Listable.attributes"/>
   </define>
   <define name="cite_model">
     <a:documentation>Content model for \elementref{cite}.</a:documentation>
@@ -308,6 +285,7 @@ Postprocessing will turn this into an \elementref{ref} for the actual link.</a:d
     <a:documentation>Attributes for \elementref{bibref}.</a:documentation>
     <ref name="Common.attributes"/>
     <ref name="IDREF.attributes"/>
+    <ref name="Listable.attributes"/>
     <optional>
       <attribute name="bibrefs">
         <a:documentation>a comma separated list of bibliographic keys.

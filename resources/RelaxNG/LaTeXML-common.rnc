@@ -12,6 +12,8 @@
 
 default namespace = "http://dlmf.nist.gov/LaTeXML"
 
+namespace nonamespace = ""
+
 # Basic element classes:
 
 ## All strictly inline elements.
@@ -48,11 +50,21 @@ Length.type = text
 Color.type = text
 
 # ======================================================================
+
+## Attributes in foreign namespaces
+Foreign.attributes =
+  attribute * - (nonamespace:* | xml:*) { text } *
+# Oddly, we have to exclude xml, else we allow xml:id everywhere!
+# Alternatively, we have to exclude every specific xml attribute!!!
+
 ## Attributes shared by ALL elements.
 Common.attributes =
 
 #  ## provides for namespace declaration.
 #  attribute xmlns { text }?,
+
+  ## Allow foreign namespaced attributes
+  Foreign.attributes,
 
   ## a space separated list of tokens, as in CSS.
   ## The \attr{class} can be used to add differentiate different instances of elements
@@ -91,12 +103,25 @@ IDREF.attributes =
   ## the identifier of the referred-to element.
   attribute idref { xsd:IDREF }?
 
+## Attributes for items that can be put into lists, like index, table of contents.
+Listable.attributes =
+  ## Records which lists, such as toc=table of contents,..., this object could be listed in.
+  ## Space separated set of toc, lof, lot, etc.
+  attribute inlist { text }?
+
+## Attributes for items that create lists, like index, table of contents.
+Listing.attributes =
+  ## Records which lists, such as toc(=table of contents), this object should create a list of.
+  ## Space separated set of toc, lof, lot, etc.
+  attribute lists { text }?
+
 ## Attributes for elements that can be labelled from within LaTeX.
 ## These attributes deal with assigning a label  and generating cross references.
 ## The label migrates to an \attr{xml:id} and \attr{href} and the element
 ## can serve as a hypertext target.
 Labelled.attributes =
   ID.attributes,
+  Listable.attributes,
 
   ## Records the various labels that LaTeX uses for crossreferencing.
   ## (note that \cs{label} can associate more than one label with an object!)
@@ -104,11 +129,8 @@ Labelled.attributes =
   ## The \cs{label} macro provides the label prefixed by \texttt{LABEL:};
   ## Spaces in a label are replaced by underscore.
   ## Other mechanisms (like acro?) might use other prefixes (but \texttt{ID:} is reserved!)
-  attribute labels { text }?,
+  attribute labels { text }?
 
-  ## Records which lists, such as toc=table of contents,..., this object could be listed in.
-  ## Space separated set of toc, lof, lot, etc.
-  attribute inlist { text }?
   
 ## Attributes for elements that can be referred to from within LaTeX.
 ## Such elements may serve as the starting point of a hypertext link.
@@ -161,7 +183,13 @@ Backgroundable.attributes =
   ## In postprocessing, these values are carried to the \attr{class} attribute,
   ## and can thus be effected by CSS; the background will presumably
   ## correspond to a bounding rectangle, but is determined by the CSS rendering engine.
-  attribute backgroundcolor { text }?
+  attribute backgroundcolor { text }?,
+
+  ## the kind of frame or outline for the box.
+  attribute framed { "rectangle" | "underline" | text }?,
+
+  ## the color of the frame or outlie for the box.
+  attribute framecolor { text }?
 
 ## Attributes shared by low-level, generic inline and block elements
 ## that can be sized or shifted.
@@ -190,13 +218,7 @@ Positionable.attributes =
   attribute vattach { "top" | "middle" | "bottom" | "baseline" }?,
 
   ## the horizontal floating placement parameter that determines where the object is displayed.
-  attribute float { ( "right" | "left" | text) }?,
-
-  ## the kind of frame or outline for the box.
-  attribute framed { "rectangle" | "underline" | text }?,
-
-  ## the color of the frame or outlie for the box.
-  attribute framecolor { text }?
+  attribute float { ( "right" | "left" | text) }?
 
 ## Attributes shared by (hopefully few) elements that can be transformed.
 ## Such elements should also have Positionable.attributes.
@@ -334,11 +356,7 @@ Data.attributes =
   attribute datamimetype { text }?,
 
   ## the encoding of the data (either empty, base64, or )
-  attribute dataencoding { text }?
+  attribute dataencoding { text }?,
 
-
-
-
-
-
-
+  ## the suggested file name of the data
+  attribute dataname { text }?
