@@ -32,8 +32,13 @@
       <ref name="chapter"/>
       <ref name="part"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
+      <ref name="sectional-block"/>
     </choice>
+  </define>
+  <define name="Misc.class" combine="choice">
+    <ref name="inline-sectional-block"/>
   </define>
   <define name="document_attributes">
     <a:documentation>Attributes for \elementref{document}.</a:documentation>
@@ -50,10 +55,41 @@
       </choice>
     </zeroOrMore>
     <zeroOrMore>
+      <choice>
+        <ref name="document.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
+    </zeroOrMore>
+  </define>
+  <!-- ====================================================================== -->
+  <define name="sectional-block">
+    <element name="sectional-block">
+      <a:documentation>A block containing sectional material. Note that this may tend to break the overall heirarchy.</a:documentation>
+      <ref name="sectional-block_attributes"/>
+      <ref name="sectional-block_model"/>
+    </element>
+  </define>
+  <define name="sectional-block_attributes">
+    <ref name="Sectional.attributes"/>
+  </define>
+  <define name="sectional-block_model">
+    <zeroOrMore>
       <ref name="document.body.class"/>
     </zeroOrMore>
+  </define>
+  <define name="inline-sectional-block">
+    <element name="inline-sectional-block">
+      <a:documentation>A block containing sectional material. Note that this may tend to break the overall heirarchy.</a:documentation>
+      <ref name="inline-sectional-block_attributes"/>
+      <ref name="inline-sectional-block_model"/>
+    </element>
+  </define>
+  <define name="inline-sectional-block_attributes">
+    <ref name="Sectional.attributes"/>
+  </define>
+  <define name="inline-sectional-block_model">
     <zeroOrMore>
-      <ref name="BackMatter.class"/>
+      <ref name="document.body.class"/>
     </zeroOrMore>
   </define>
   <!-- ====================================================================== -->
@@ -68,8 +104,14 @@
     <a:documentation>The content allowable as the main body of a part.</a:documentation>
     <choice>
       <ref name="Para.model"/>
+      <ref name="subparagraph"/>
+      <ref name="paragraph"/>
+      <ref name="subsubsection"/>
+      <ref name="subsection"/>
+      <ref name="section"/>
       <ref name="chapter"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -83,7 +125,10 @@
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="part.body.class"/>
+      <choice>
+        <ref name="part.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -104,6 +149,7 @@
       <ref name="subsection"/>
       <ref name="section"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -117,7 +163,10 @@
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="chapter.body.class"/>
+      <choice>
+        <ref name="chapter.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -137,6 +186,7 @@
       <ref name="subsubsection"/>
       <ref name="subsection"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -150,7 +200,10 @@
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="section.body.class"/>
+      <choice>
+        <ref name="section.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -169,6 +222,7 @@
       <ref name="paragraph"/>
       <ref name="subsubsection"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -182,7 +236,10 @@
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="subsection.body.class"/>
+      <choice>
+        <ref name="subsection.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -200,6 +257,7 @@
       <ref name="subparagraph"/>
       <ref name="paragraph"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -213,7 +271,10 @@
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="subsubsection.body.class"/>
+      <choice>
+        <ref name="subsubsection.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -231,6 +292,7 @@ LaTeX Paragraph,  in distinction from an unlabelled logical paragraph.</a:docume
       <ref name="Para.model"/>
       <ref name="subparagraph"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -244,7 +306,10 @@ LaTeX Paragraph,  in distinction from an unlabelled logical paragraph.</a:docume
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="paragraph.body.class"/>
+      <choice>
+        <ref name="paragraph.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
@@ -260,6 +325,7 @@ LaTeX Paragraph,  in distinction from an unlabelled logical paragraph.</a:docume
     <choice>
       <ref name="Para.model"/>
       <ref name="slide"/>
+      <ref name="slidesequence"/>
       <ref name="sidebar"/>
     </choice>
   </define>
@@ -273,16 +339,35 @@ LaTeX Paragraph,  in distinction from an unlabelled logical paragraph.</a:docume
       <ref name="SectionalFrontMatter.class"/>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="subparagraph.body.class"/>
+      <choice>
+        <ref name="subparagraph.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- ====================================================================== -->
+  <define name="slidesequence">
+    <element name="slidesequence">
+      <a:documentation>A slidesequence within a slideshow.
+Each slide contains a set slides, typically those that are revealed constructively. </a:documentation>
+      <ref name="slidesequence_attributes"/>
+      <ref name="slidesequence_model"/>
+    </element>
+  </define>
+  <define name="slidesequence_attributes">
+    <a:documentation>Attributes for \elementref{slidesequence}.</a:documentation>
+    <ref name="Sectional.attributes"/>
+  </define>
+  <!-- A slidesequence *must* contain a group of slides. -->
+  <define name="slidesequence_model">
+    <zeroOrMore>
+      <ref name="slide"/>
+    </zeroOrMore>
+  </define>
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
   <define name="slide">
     <element name="slide">
-      <a:documentation>A Slide within a slideshow.
-The model currently doesn't enforce this, but the idea is that
-a slideshow document can contain section headings, but all
-real content should be confined to slides.</a:documentation>
+      <a:documentation>A Slide within a slideshow, that may or may not be contained within a slidesequence.</a:documentation>
       <ref name="slide_attributes"/>
       <ref name="slide_model"/>
     </element>
@@ -294,14 +379,27 @@ real content should be confined to slides.</a:documentation>
   <define name="slide_attributes">
     <a:documentation>Attributes for \elementref{slide}.</a:documentation>
     <ref name="Sectional.attributes"/>
+    <optional>
+      <attribute name="overlay">
+        <a:documentation>\attr{overlay} is the number of the current overlay.
+This must be specified when part of a slidesequence, else it may be omitted.
+Should be unique and rising within a slidesequence.</a:documentation>
+      </attribute>
+    </optional>
   </define>
   <define name="slide_model">
     <a:documentation>Content model for \elementref{slide}.</a:documentation>
     <zeroOrMore>
-      <ref name="SectionalFrontMatter.class"/>
+      <choice>
+        <ref name="SectionalFrontMatter.class"/>
+        <ref name="subtitle"/>
+      </choice>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="slide.body.class"/>
+      <choice>
+        <ref name="slide.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- ====================================================================== -->
@@ -329,7 +427,10 @@ real content should be confined to slides.</a:documentation>
       </choice>
     </zeroOrMore>
     <zeroOrMore>
-      <ref name="sidebar.body.class"/>
+      <choice>
+        <ref name="sidebar.body.class"/>
+        <ref name="BackMatter.class"/>
+      </choice>
     </zeroOrMore>
   </define>
   <!-- ====================================================================== -->
@@ -384,6 +485,7 @@ real content should be confined to slides.</a:documentation>
   <define name="bibliography_attributes">
     <a:documentation>Attributes for \elementref{bibliography}.</a:documentation>
     <ref name="Sectional.attributes"/>
+    <ref name="Listing.attributes"/>
     <optional>
       <attribute name="files">
         <a:documentation>the list of bib files used to create the bibliography.</a:documentation>
@@ -437,9 +539,10 @@ real content should be confined to slides.</a:documentation>
   <define name="index_attributes">
     <a:documentation>Attributes for \elementref{index}.</a:documentation>
     <ref name="Sectional.attributes"/>
+    <ref name="Listing.attributes"/>
     <optional>
       <attribute name="role">
-        <a:documentation>The kind of index</a:documentation>
+        <a:documentation>The kind of index (obsolete?)</a:documentation>
       </attribute>
     </optional>
   </define>
@@ -534,6 +637,7 @@ arbitrary text, in addition to the expected \elementref{ref}'s.</a:documentation
   <define name="glossary_attributes">
     <a:documentation>Attributes for \elementref{glossary}.</a:documentation>
     <ref name="Sectional.attributes"/>
+    <ref name="Listing.attributes"/>
     <optional>
       <attribute name="role">
         <a:documentation>The kind of glossary</a:documentation>
@@ -576,7 +680,7 @@ but they are not displayed as part of the list.</a:documentation>
   <define name="glossaryentry">
     <element name="glossaryentry">
       <a:documentation>An entry in an \elementref{glossarylist} consisting of a phrase,
-possibly definitions (one or more, presumably in increasing detail?),
+(one or more, presumably in increasing detail?), possibly a definition,
 and references to points in the document where the phrase was found.</a:documentation>
       <ref name="glossaryentry_attributes"/>
       <ref name="glossaryentry_model"/>
@@ -599,9 +703,8 @@ and references to points in the document where the phrase was found.</a:document
   </define>
   <define name="glossaryentry_model">
     <a:documentation>Content model for \elementref{glossaryentry}.</a:documentation>
-    <ref name="glossaryphrase"/>
     <zeroOrMore>
-      <ref name="glossarydefinition"/>
+      <ref name="glossaryphrase"/>
     </zeroOrMore>
     <optional>
       <ref name="indexrefs"/>
@@ -777,6 +880,7 @@ Commonly useful values are specified, but is open-ended to support extension.</a
           <value>url</value>
           <value>thanks</value>
           <value>dedicatory</value>
+          <value>orcid</value>
           <text/>
         </choice>
       </attribute>

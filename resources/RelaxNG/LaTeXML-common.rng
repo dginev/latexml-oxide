@@ -12,7 +12,7 @@
   | http://dlmf.nist.gov/LaTeXML/                              (o o)    |
   \=========================================================ooo==U==ooo=/
 -->
-<grammar xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+<grammar ns="http://www.w3.org/XML/1998/namespace" xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
   <!-- Basic element classes: -->
   <define name="Inline.class">
     <a:documentation>All strictly inline elements.</a:documentation>
@@ -56,13 +56,33 @@ NOTE: To be narrowed later.</a:documentation>
     <text/>
   </define>
   <!-- ====================================================================== -->
+  <define name="Foreign.attributes">
+    <a:documentation>Attributes in foreign namespaces</a:documentation>
+    <zeroOrMore>
+      <attribute>
+        <anyName>
+          <except>
+            <nsName ns=""/>
+            <nsName/>
+          </except>
+        </anyName>
+      </attribute>
+    </zeroOrMore>
+  </define>
+  <!--
+    Oddly, we have to exclude xml, else we allow xml:id everywhere!
+    Alternatively, we have to exclude every specific xml attribute!!!
+  -->
   <define name="Common.attributes">
     <a:documentation>Attributes shared by ALL elements.</a:documentation>
+    <!--
+       ## provides for namespace declaration.
+       attribute xmlns { text }?,
+    -->
+    <ref name="Foreign.attributes">
+      <a:documentation>Allow foreign namespaced attributes</a:documentation>
+    </ref>
     <optional>
-      <!--
-         ## provides for namespace declaration.
-         attribute xmlns { text }?,
-      -->
       <attribute name="class">
         <a:documentation>a space separated list of tokens, as in CSS.
 The \attr{class} can be used to add differentiate different instances of elements
@@ -115,12 +135,31 @@ This is used internally and may go away some day.</a:documentation>
       </attribute>
     </optional>
   </define>
+  <define name="Listable.attributes">
+    <a:documentation>Attributes for items that can be put into lists, like index, table of contents.</a:documentation>
+    <optional>
+      <attribute name="inlist">
+        <a:documentation>Records which lists, such as toc=table of contents,..., this object could be listed in.
+Space separated set of toc, lof, lot, etc.</a:documentation>
+      </attribute>
+    </optional>
+  </define>
+  <define name="Listing.attributes">
+    <a:documentation>Attributes for items that create lists, like index, table of contents.</a:documentation>
+    <optional>
+      <attribute name="lists">
+        <a:documentation>Records which lists, such as toc(=table of contents), this object should create a list of.
+Space separated set of toc, lof, lot, etc.</a:documentation>
+      </attribute>
+    </optional>
+  </define>
   <define name="Labelled.attributes">
     <a:documentation>Attributes for elements that can be labelled from within LaTeX.
 These attributes deal with assigning a label  and generating cross references.
 The label migrates to an \attr{xml:id} and \attr{href} and the element
 can serve as a hypertext target.</a:documentation>
     <ref name="ID.attributes"/>
+    <ref name="Listable.attributes"/>
     <optional>
       <attribute name="labels">
         <a:documentation>Records the various labels that LaTeX uses for crossreferencing.
@@ -129,12 +168,6 @@ It consists of space separated labels for the element.
 The \cs{label} macro provides the label prefixed by \texttt{LABEL:};
 Spaces in a label are replaced by underscore.
 Other mechanisms (like acro?) might use other prefixes (but \texttt{ID:} is reserved!)</a:documentation>
-      </attribute>
-    </optional>
-    <optional>
-      <attribute name="inlist">
-        <a:documentation>Records which lists, such as toc=table of contents,..., this object could be listed in.
-Space separated set of toc, lof, lot, etc.</a:documentation>
       </attribute>
     </optional>
   </define>
@@ -208,6 +241,21 @@ and can thus be effected by CSS; the background will presumably
 correspond to a bounding rectangle, but is determined by the CSS rendering engine.</a:documentation>
       </attribute>
     </optional>
+    <optional>
+      <attribute name="framed">
+        <a:documentation>the kind of frame or outline for the box.</a:documentation>
+        <choice>
+          <value>rectangle</value>
+          <value>underline</value>
+          <text/>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="framecolor">
+        <a:documentation>the color of the frame or outlie for the box.</a:documentation>
+      </attribute>
+    </optional>
   </define>
   <define name="Positionable.attributes">
     <a:documentation>Attributes shared by low-level, generic inline and block elements
@@ -273,21 +321,6 @@ The default is baseline. </a:documentation>
           <value>left</value>
           <text/>
         </choice>
-      </attribute>
-    </optional>
-    <optional>
-      <attribute name="framed">
-        <a:documentation>the kind of frame or outline for the box.</a:documentation>
-        <choice>
-          <value>rectangle</value>
-          <value>underline</value>
-          <text/>
-        </choice>
-      </attribute>
-    </optional>
-    <optional>
-      <attribute name="framecolor">
-        <a:documentation>the color of the frame or outlie for the box.</a:documentation>
       </attribute>
     </optional>
   </define>
@@ -495,6 +528,11 @@ to be used instead of the content of the element itself;</a:documentation>
     <optional>
       <attribute name="dataencoding">
         <a:documentation>the encoding of the data (either empty, base64, or )</a:documentation>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="dataname">
+        <a:documentation>the suggested file name of the data</a:documentation>
       </attribute>
     </optional>
   </define>

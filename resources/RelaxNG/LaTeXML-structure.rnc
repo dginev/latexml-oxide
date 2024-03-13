@@ -21,7 +21,10 @@ element document { document_attributes, document_model }
 
 ## The content allowable as the main body of the document.
 document.body.class = Para.model | paragraph | subsubsection
-  | subsection | section | chapter | part | slide | sidebar
+  | subsection | section | chapter | part | slide | slidesequence | sidebar
+  | sectional-block
+
+Misc.class  |= inline-sectional-block
 
 ## Attributes for \elementref{document}.
 document_attributes = Sectional.attributes
@@ -30,8 +33,24 @@ document_attributes = Sectional.attributes
 ## Content model for \elementref{document}.
 document_model =
  (FrontMatter.class | SectionalFrontMatter.class | Meta.class | titlepage)*,
-  document.body.class*,
-  BackMatter.class*
+  (document.body.class | BackMatter.class)*
+
+#======================================================================
+sectional-block =
+## A block containing sectional material. Note that this may tend to break the overall heirarchy.
+element sectional-block { sectional-block_attributes, sectional-block_model }
+
+sectional-block_attributes = Sectional.attributes
+
+sectional-block_model = document.body.class*
+
+inline-sectional-block =
+## A block containing sectional material. Note that this may tend to break the overall heirarchy.
+element inline-sectional-block { inline-sectional-block_attributes, inline-sectional-block_model }
+
+inline-sectional-block_attributes = Sectional.attributes
+
+inline-sectional-block_model = document.body.class*
 
 #======================================================================
 
@@ -40,13 +59,14 @@ part =
 element part { part_attributes, part_model }
 
 ## The content allowable as the main body of a part.
-part.body.class = Para.model | chapter  | slide | sidebar
+part.body.class = Para.model |  subparagraph | paragraph
+   | subsubsection | subsection | section | chapter  | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{part}.
 part_attributes = Sectional.attributes
 
 ## Content model for \elementref{part}.
-part_model = SectionalFrontMatter.class*, part.body.class*
+part_model = SectionalFrontMatter.class*, (part.body.class | BackMatter.class)*
 
 #----------------------------------------------------------------------
 
@@ -56,13 +76,13 @@ element chapter { chapter_attributes, chapter_model }
 
 ## The content allowable as the main body of a chapter.
 chapter.body.class = Para.model | subparagraph | paragraph
-   | subsubsection | subsection | section | slide | sidebar
+   | subsubsection | subsection | section | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{chapter}.
 chapter_attributes = Sectional.attributes
 
 ## Content model for \elementref{chapter}.
-chapter_model = SectionalFrontMatter.class*, chapter.body.class*
+chapter_model = SectionalFrontMatter.class*, (chapter.body.class | BackMatter.class)*
 
 #----------------------------------------------------------------------
 
@@ -72,13 +92,13 @@ element section { section_attributes, section_model }
 
 ## The content allowable as the main body of a section.
 section.body.class = Para.model | subparagraph | paragraph
-   | subsubsection | subsection  | slide | sidebar
+   | subsubsection | subsection  | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{section}.
 section_attributes = Sectional.attributes
 
 ## Content model for \elementref{section}.
-section_model = SectionalFrontMatter.class*, section.body.class*
+section_model = SectionalFrontMatter.class*, (section.body.class | BackMatter.class)*
 
 #----------------------------------------------------------------------
 
@@ -87,13 +107,13 @@ subsection =
 element subsection { subsection_attributes, subsection_model }
   
 ## The content allowable as the main body of a subsection.
-subsection.body.class = Para.model | subparagraph | paragraph | subsubsection | slide | sidebar
+subsection.body.class = Para.model | subparagraph | paragraph | subsubsection | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{subsection}.
 subsection_attributes = Sectional.attributes
 
 ## Content model for \elementref{subsection}.
-subsection_model = SectionalFrontMatter.class*, subsection.body.class*
+subsection_model = SectionalFrontMatter.class*, (subsection.body.class | BackMatter.class)*
 
 #----------------------------------------------------------------------
 
@@ -102,13 +122,13 @@ subsubsection =
 element subsubsection { subsubsection_attributes, subsubsection_model }
 
 ## The content allowable as the main body of a subsubsection.
-subsubsection.body.class = Para.model | subparagraph | paragraph | slide | sidebar
+subsubsection.body.class = Para.model | subparagraph | paragraph | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{subsubsection}.
 subsubsection_attributes = Sectional.attributes
 
 ## Content model for \elementref{subsubsection}.
-subsubsection_model = SectionalFrontMatter.class*, subsubsection.body.class*
+subsubsection_model = SectionalFrontMatter.class*, (subsubsection.body.class | BackMatter.class)*
 
 #----------------------------------------------------------------------
 
@@ -118,13 +138,13 @@ paragraph =
 element paragraph { paragraph_attributes, paragraph_model }
 
 ## The content allowable as the main body of a paragraph.
-paragraph.body.class = Para.model | subparagraph | slide | sidebar
+paragraph.body.class = Para.model | subparagraph | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{paragraph}.
 paragraph_attributes = Sectional.attributes
 
 ## Content model for \elementref{paragraph}.
-paragraph_model = SectionalFrontMatter.class*, paragraph.body.class*
+paragraph_model = SectionalFrontMatter.class*, (paragraph.body.class | BackMatter.class)*
 
 
 #----------------------------------------------------------------------
@@ -134,31 +154,47 @@ subparagraph =
 element subparagraph { subparagraph_attributes, subparagraph_model }
 
 ## The content allowable as the main body of a subparagraph.
-subparagraph.body.class = Para.model | slide | sidebar
+subparagraph.body.class = Para.model | slide | slidesequence | sidebar
 
 ## Attributes for \elementref{subparagraph}.
 subparagraph_attributes = Sectional.attributes
 
 ## Content model for \elementref{subparagraph}.
-subparagraph_model = SectionalFrontMatter.class*, subparagraph.body.class*
+subparagraph_model = SectionalFrontMatter.class*, (subparagraph.body.class | BackMatter.class)*
 
 #======================================================================
 
+slidesequence =
+## A slidesequence within a slideshow.
+## Each slide contains a set slides, typically those that are revealed constructively. 
+element slidesequence { slidesequence_attributes, slidesequence_model }
+
+## Attributes for \elementref{slidesequence}.
+slidesequence_attributes = Sectional.attributes
+
+# A slidesequence *must* contain a group of slides.
+slidesequence_model = slide*
+
+#----------------------------------------------------------------------
+
 slide =
-## A Slide within a slideshow.
-## The model currently doesn't enforce this, but the idea is that
-## a slideshow document can contain section headings, but all
-## real content should be confined to slides.
+## A Slide within a slideshow, that may or may not be contained within a slidesequence.
 element slide { slide_attributes, slide_model }
 
 ## The content allowable as the main body of a \elementref{slide}.
 slide.body.class = Para.model
 
 ## Attributes for \elementref{slide}.
-slide_attributes = Sectional.attributes
+slide_attributes = 
+  Sectional.attributes,
+
+  ## \attr{overlay} is the number of the current overlay.
+  ## This must be specified when part of a slidesequence, else it may be omitted.
+  ## Should be unique and rising within a slidesequence.
+  attribute overlay { text }?
 
 ## Content model for \elementref{slide}.
-slide_model = SectionalFrontMatter.class*, slide.body.class*
+slide_model = (SectionalFrontMatter.class | subtitle )*, (slide.body.class | BackMatter.class)*
 
 #======================================================================
 
@@ -173,7 +209,7 @@ sidebar.body.class = Para.model
 sidebar_attributes = Sectional.attributes
 
 ## Content model for \elementref{sidebar}.
-sidebar_model = (FrontMatter.class | SectionalFrontMatter.class)*, sidebar.body.class*
+sidebar_model = (FrontMatter.class | SectionalFrontMatter.class)*, (sidebar.body.class | BackMatter.class)*
 
 #======================================================================
 
@@ -203,6 +239,7 @@ bibliography.body.class = Para.model | biblist
 ## Attributes for \elementref{bibliography}.
 bibliography_attributes = 
   Sectional.attributes,
+  Listing.attributes,
 
   ## the list of bib files used to create the bibliography.
   attribute files { text }?,
@@ -232,8 +269,9 @@ index.body.class = Para.model | indexlist
 ## Attributes for \elementref{index}.
 index_attributes = 
   Sectional.attributes,
+  Listing.attributes,
 
-  ## The kind of index
+  ## The kind of index (obsolete?)
   attribute role { text }?
 
 ## Content model for \elementref{index}.
@@ -293,6 +331,7 @@ glossary.body.class = Para.model | glossarylist
 ## Attributes for \elementref{glossary}.
 glossary_attributes = 
   Sectional.attributes,
+  Listing.attributes,
 
   ## The kind of glossary
   attribute role { text }?
@@ -320,7 +359,7 @@ glossarylist_model = glossaryentry*
 
 glossaryentry =
 ## An entry in an \elementref{glossarylist} consisting of a phrase,
-## possibly definitions (one or more, presumably in increasing detail?),
+## (one or more, presumably in increasing detail?), possibly a definition,
 ## and references to points in the document where the phrase was found.
 element glossaryentry { glossaryentry_attributes, glossaryentry_model }
 
@@ -332,7 +371,7 @@ glossaryentry_attributes = Common.attributes, ID.attributes,
   attribute key { text }?
 
 ## Content model for \elementref{glossaryentry}.
-glossaryentry_model = glossaryphrase, glossarydefinition*, indexrefs?
+glossaryentry_model = glossaryphrase*, indexrefs?
 
 #======================================================================
 
@@ -437,7 +476,7 @@ contact_attributes =
   ## indicates the type of contact information contained.
   ## Commonly useful values are specified, but is open-ended to support extension.
   attribute role { "affiliation" | "address" | "current_address" | "email" | "url"
-                 | "thanks" | "dedicatory" | text }?
+                 | "thanks" | "dedicatory" | "orcid" | text }?
 
 ## Content model for \elementref{contact}.
 contact_model = Inline.model
