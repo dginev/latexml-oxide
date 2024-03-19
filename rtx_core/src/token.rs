@@ -384,7 +384,7 @@ macro_rules! T_SUB(() => { $crate::token::TOKEN_SUB.clone() });
 #[macro_export]
 macro_rules! T_SPACE(() => { $crate::token::TOKEN_SPACE.clone() };
 ($text:literal) => {
-  Token { text: $crate::common::arena::pin($text), code: Catcode::SPACE}
+  Token { text: $crate::common::arena::pin_static($text), code: Catcode::SPACE}
 });
 /// macro for a CR "\n" token
 #[macro_export]
@@ -513,6 +513,13 @@ macro_rules! Token {
   ($text:expr) => {
     Token!($text, Catcode::OTHER)
   };
+  ($text:literal, $cc:expr) => {
+    Token {
+      text: $crate::common::arena::pin_static($text),
+      code: $cc,
+
+    }
+  };
   ($text:expr, $cc:expr) => {
     Token {
       text: $crate::common::arena::pin($text),
@@ -601,7 +608,7 @@ impl Token {
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
   pub fn get_cs_name(&self) -> SymbolU32 {
     if self.code.is_primitive() {
-      arena::pin(self.code.name())
+      arena::pin_static(self.code.name())
     } else {
       self.get_sym()
     }

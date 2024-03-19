@@ -163,6 +163,41 @@ impl Default for Constructor {
     }
   }
 }
+impl fmt::Debug for Constructor {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(
+      f,
+      "\nConstructor {{
+        cs:{:?}
+        nargs:{:?}
+        paramlist:{:?}
+        replacement:{:?}
+        before_digest:{:?}
+        after_digest:{:?}
+        before_construct:{:?}
+        after_construct:{:?}
+        capture_body:{:?}
+        after_digest_body:{:?}
+        reversion:{:?}
+        alias:{:?}
+        sizer:{:?} }}\n",
+      self.cs,
+      self.nargs,
+      self.paramlist,
+      self.replacement.is_some(),
+      self.before_digest.len(),
+      self.after_digest.len(),
+      self.before_construct.len(),
+      self.after_construct.len(),
+      self.capture_body,
+      self.after_digest_body.len(),
+      self.reversion.is_some(),
+      self.alias,
+      self.sizer.is_some(),
+    )
+  }
+}
+
 impl PartialEq for Constructor {
   fn eq(&self, other: &Constructor) -> bool { self.cs == other.cs }
 }
@@ -188,7 +223,7 @@ impl Definition for Constructor {
   /// Digest the constructor; This should occur in the Stomach to create a Whatsit.
   /// The whatsit which will be further processed to create the document.
   fn invoke_primitive(&self) -> Result<Vec<Digested>> {
-    Debug!("invoke for {:?}", self.get_cs());
+    Debug!("invoke_primitive for {:?}", self.get_cs());
     // Call any `Before' code.
     // TODO: profiling / tracing
     // let profiled = state!().lookup_value("PROFILING") && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
@@ -291,7 +326,6 @@ impl Definition for Constructor {
         // info!(target:"constructor:replacement", "no replacement for {:?}", self.get_cs_name());
       },
       Some(ref main_closure) => {
-        // info!(target:"constructor:replacement", "invoked for {:?}", self.get_cs_name());
         main_closure(
           document,
           whatsit.get_args(),

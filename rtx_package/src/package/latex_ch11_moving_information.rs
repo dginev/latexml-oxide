@@ -83,6 +83,18 @@ LoadDefinitions!({
 
   DefMacro!("\\thebibliography@ID", "");
 
+  // Do this before digesting the body of a bibliography
+  fn before_digest_bibliography() -> Result<()> {
+    AssignValue!("inPreamble" => false);
+    Digest!("\\@lx@inbibliographytrue")?;
+    DefMacro!("\\bibliographystyle{}", "");
+    DefMacro!("\\bibliography {}", "");
+    // avoid \let-based redefinitions of the ending.
+    Let!("\\endthebibliography", "\\saved@endthebibliography");
+    ResetCounter!("@bibitem");
+    Ok(())
+  }
+
   // DefMacro('\bibliography Semiverbatim',
   // '\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\@bibliography{#1}}'); DefMacro('\lx@ifusebbl{}{}{}',
   // sub {     my ($gullet, $bib_files, $bbl_clause, $bib_clause) = @_;
@@ -147,10 +159,8 @@ LoadDefinitions!({
   // Should be an environment, but people seem to want to misuse it.
   DefConstructor!("\\thebibliography",
   "<ltx:bibliography xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
-     before_digest => {
-        AssignValue!("inPreamble", false);
-        Ok(vec![stomach::digest(Tokens!(T_CS!("\\@lx@inbibliographytrue")))?])
-    },
+    before_digest => {
+        before_digest_bibliography() },
     after_digest => sub[whatsit] {
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
@@ -159,8 +169,10 @@ LoadDefinitions!({
       if gullet::if_next(&TOKEN_BEGIN)? {
         gullet::read_arg()?;
       }
-      begin_bibliography( whatsit)?;
+      begin_bibliography(whatsit)?;
     },
+    // TODO
+    // before_construct => sub[whatsit] { adjust_backmatter_element(whatsit); },
     locked => true
   );
 
@@ -252,18 +264,25 @@ LoadDefinitions!({
       ]);
     }
     // else ? it probably isn't going to work??
-    Info!("Now, try to open {{thebibliography}}");
-    tokens.extend(Invocation!("\\begin",
-      vec![Tokenize!("thebibliography"), Tokens!()]).unlist());
-    let tokens = Tokens::new(tokens);
-    Info!("PATCHING with {:?}", tokens.to_string());
-    Ok(tokens)
+    //Now, try to open {thebibliography}
+    tokens.push(T_CS!("\\lx@mung@bibliography@pre"));
+    tokens.push(T_CS!("\\thebibliography"));
+    Ok(Tokens::new(tokens))
+  });
+  DefConstructor!("\\lx@mung@bibliography@pre", sub[document] {
+    let parent     = document.get_node();
+    let tag_sym    = model::get_node_qname(parent);
+    arena::with(tag_sym, |tag| if tag == "enumerate" || tag == "itemize" || tag == "description" {
+      document.maybe_close_element(tag) } else { Ok(None) })?; // Or even remove (if empty)?
   });
 
-  DefConstructor!("\\lx@bibnewblock", "<ltx:bibblock>");
+  DefConstructor!("\\lx@bibnewblock", sub[document] {
+    if document.is_openable("ltx:bibblock") {
+      document.open_element("ltx:bibblock",None,None)?; }
+  });
   Let!("\\newblock", "\\lx@bibnewblock");
-  Tag!("ltx:bibitem",  auto_close => true);
-  Tag!("ltx:bibblock", auto_close => true);
+  Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
+  Tag!("ltx:bibblock", auto_open => true, auto_close => true);
 
   //----------------------------------------------------------------------
   // We've got the same problem as LaTeX: Lather, Rinse, Repeat.

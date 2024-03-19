@@ -287,7 +287,7 @@ LoadDefinitions!({
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
-    dbg!(gullet::read_balanced(true,false,true))
+    gullet::read_balanced(true,false,true)
   },
   reversion => sub[arg, _inner, _extra] {
     // TODO: Consider a briefer syntax, maybe flat_vec ?

@@ -32,7 +32,7 @@ use crate::state::{Scope, set_unlocked_state};
 use crate::token::Token;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
-use crate::{Digested};
+use crate::Digested;
 
 pub type ExpansionClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<bool>>;

@@ -34,7 +34,7 @@ use crate::mouth;
 use crate::mouth::Mouth;
 use crate::parameter::Parameter;
 use crate::rewrite::Rewrite;
-use crate::state::{StashTable};
+use crate::state::StashTable;
 use crate::token::{Catcode, Token};
 use crate::tokens::Tokens;
 
