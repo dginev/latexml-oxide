@@ -1103,12 +1103,9 @@ pub fn build_invocation<T: Into<Token>>(
   // Note: token may have been \let to another defn!
   if let Some(defn) = lookup_definition(&token)? {
     let mut invoked_tokens = vec![token];
-    let mut reverted_args = if let Some(params) = defn.get_parameters() {
-      params.revert_arguments(args)?
-    } else {
-      Vec::new()
-    };
-    invoked_tokens.append(&mut reverted_args);
+    if let Some(params) = defn.get_parameters() {
+      invoked_tokens.extend(params.revert_arguments(args)?);
+    }
     Ok(Tokens::new(invoked_tokens))
   } else {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
@@ -1116,18 +1113,18 @@ pub fn build_invocation<T: Into<Token>>(
     let mut invoked_tokens = vec![token];
     // DefConstructor!(token, convert_latex_args(args.len(), 0),
     // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
-    let mut wrapped_args: Vec<Token> = args
+    let wrapped_args: Vec<Token> = args
       .into_iter()
       .flat_map(|arg_opt| {
         let mut wrapped = vec![T_BEGIN!()];
         if let Some(arg) = arg_opt {
-          wrapped.append(&mut arg.unlist());
+          wrapped.extend(arg.unlist());
         }
         wrapped.push(T_END!());
         wrapped
       })
       .collect();
-    invoked_tokens.append(&mut wrapped_args);
+    invoked_tokens.extend(wrapped_args);
     Ok(Tokens::new(invoked_tokens))
   }
 }

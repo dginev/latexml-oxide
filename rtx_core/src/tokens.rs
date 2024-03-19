@@ -490,7 +490,7 @@ impl ToTokens for Token {
     self.with_str(|text| {
       stream.extend(quote! {
         Token {
-          text: rtx_core::common::arena::pin(#text),
+          text: rtx_core::common::arena::pin_static(#text),
           code: #code
         }
       })

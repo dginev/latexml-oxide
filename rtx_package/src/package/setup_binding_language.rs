@@ -763,9 +763,15 @@ macro_rules! Expand {
 /// arguments
 #[macro_export]
 macro_rules! Invocation {
+  ($csname:literal) => {{
+    Invocation!(T_CS!($csname))
+  }};
   ($csname:literal, $args:expr) => {{
     Invocation!(T_CS!($csname), $args)
   }};
+  ($token:expr) => {
+    Invocation!($token, vec![None])
+  };
   ($token:expr, $args:expr) => {
     build_invocation(
       $token,
@@ -979,6 +985,20 @@ macro_rules! Let {
       None
     );
   }};
+  ($token1:literal, $token2:literal, None) => {{
+    state::let_i(
+      &T_CS!($token1),
+      &T_CS!($token2),
+      None
+    );
+  }};
+  ($token1:literal, $token2:literal, $scope:expr) => {{
+    state::let_i(
+      &T_CS!($token1),
+      &T_CS!($token2),
+      Some($scope)
+    );
+  }};
   // half-packaged args
   ($token1:literal, $token2:expr) => {{
     state::let_i(&T_CS!($token1), &$token2, None);
@@ -990,8 +1010,11 @@ macro_rules! Let {
   ($token1:expr, $token2:expr) => {{
     state::let_i(&$token1, &$token2, None);
   }};
+  ($token1:expr, $token2:expr, None) => {{
+    state::let_i(&$token1, &$token2, None);
+  }};
   ($token1:expr, $token2:expr, $scope:expr) => {{
-    state::let_i(&$token1, &$token2, $scope);
+    state::let_i(&$token1, &$token2, Some($scope));
   }};
 }
 

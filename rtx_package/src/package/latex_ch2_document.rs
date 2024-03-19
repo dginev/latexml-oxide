@@ -56,11 +56,7 @@ LoadDefinitions!({
   });
 
   // \document is used directly in e.g. expl3.sty
-  Let!(
-    &T_CS!("\\document"),
-    T_CS!("\\begin{document}"),
-    Some(Scope::Global)
-  );
+  Let!("\\document","\\begin{document}", Scope::Global);
 
   DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props] {
       document.close_element("ltx:document")?;
@@ -109,9 +105,5 @@ LoadDefinitions!({
   });
 
   // \enddocument is used directly in e.g. standalone.cls
-  Let!(
-    &T_CS!("\\enddocument"),
-    T_CS!("\\end{document}"),
-    Some(Scope::Global)
-  );
+  Let!("\\enddocument","\\end{document}",Scope::Global);
 });

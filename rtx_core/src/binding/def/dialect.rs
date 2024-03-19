@@ -120,10 +120,10 @@ pub fn def_conditional(
   test: Option<ConditionalClosure>,
   options: ConditionalOptions,
 ) -> Result<()> {
-  let locked_key = if let Some(true) = options.locked {
-    arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked"))
+  let locked_key_opt = if let Some(true) = options.locked {
+    Some(arena::with(cs.get_sym(), |cs_name| s!("{cs_name}:locked")))
   } else {
-    String::new()
+    None
   };
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
     install_definition(
@@ -186,8 +186,8 @@ pub fn def_conditional(
     }
   }
 
-  if let Some(true) = options.locked {
-    assign_value(&locked_key, true, None);
+  if let Some(locked_key) = locked_key_opt {
+    assign_value(&locked_key, true, Some(Scope::Global));
   }
   Ok(())
 }
@@ -386,7 +386,7 @@ pub fn def_primitive(
     scope,
   );
   if options_locked {
-    assign_value(&s!("{}:locked", cs_name), true, None);
+    assign_value(&s!("{}:locked", cs_name), true, Some(Scope::Global));
   }
   Ok(())
 }
@@ -835,12 +835,11 @@ pub fn def_constructor(
   // TODO: This won't work, as we can only invoke method calls on paramlist in runtime
   //*rtx_codegen::constructable::NARGS = $paramlist.get_num_args();
   let scope = options.scope;
-  let is_locked = options.locked;
   let cs_name = cs.with_cs_name(ToString::to_string);
-  let locked_key = if is_locked {
-    s!("{}:locked", cs_name)
+  let locked_key_opt = if options.locked {
+    Some(s!("{cs_name}:locked"))
   } else {
-    String::new()
+    None
   };
 
   let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
@@ -924,8 +923,8 @@ pub fn def_constructor(
   };
   install_definition(constructor, scope);
 
-  if is_locked {
-    assign_value(&locked_key, true, None);
+  if let Some(locked_key) = locked_key_opt {
+    assign_value(&locked_key, true, Some(Scope::Global));
   }
 }
 
@@ -1160,10 +1159,10 @@ pub fn def_environment(
   install_definition(Rc::new(end_name_constructor), options.scope);
 
   if options.locked {
-    assign_value(&s!("\\begin{{{}}}:locked", &name), true, None);
-    assign_value(&s!("\\end{{{}}}:locked", &name), true, None);
-    assign_value(&s!("\\{}:locked", &name), true, None);
-    assign_value(&s!("\\end{}:locked", &name), true, None);
+    assign_value(&s!("\\begin{{{}}}:locked", &name), true, Some(Scope::Global));
+    assign_value(&s!("\\end{{{}}}:locked", &name), true, Some(Scope::Global));
+    assign_value(&s!("\\{}:locked", &name), true, Some(Scope::Global));
+    assign_value(&s!("\\end{}:locked", &name), true, Some(Scope::Global));
   }
 }
 
@@ -1370,7 +1369,7 @@ pub fn def_math(
     def_math_constructor(cs, paramlist, presentation, options)?;
   }
   if locked {
-    assign_value(&format!("{csname}:locked"), true, None);
+    assign_value(&format!("{csname}:locked"), true, Some(Scope::Global));
   }
   Ok(())
 }

@@ -827,26 +827,24 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     _ => panic!("_wrong_argument_for_install_definition"),
   };
   let cs_sym = token.get_cs_name();
-  let cs_locked = token.with_cs_name(|cs| s!("{cs}:locked"));
-  // info!("-- installing definition for: {:?}", token);
+  let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
+  let is_cs_locked = lookup_bool(&lock_key);
+  // TODO: Global UNLOCKED state
+  // let is_state_unlocked = lookup_bool("UNLOCKED");
 
-  // TODO, .is_none() should be a real false check
-  let is_cs_locked = lookup_bool(&cs_locked);
-  let is_state_unlocked = lookup_bool("UNLOCKED");
-
-  if is_cs_locked && !is_state_unlocked {
+  if is_cs_locked { //&& !is_state_unlocked {
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
         txt == "Anonymous String"
           || TEX_OR_BIB_EXT_RE.is_match(txt) && !txt.ends_with(CODE_TEX_EXT)
       }) {
-        Info!("ignore", cs_locked, "Ignoring redefinition of {cs_locked}");
+        Info!("ignore", lock_key, "Ignoring redefinition of {lock_key}");
       }
-      return;
     }
+  } else {
+    state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
   }
-  state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
 }
 
 /// Generate a stub definition for an undefined control-sequence,
