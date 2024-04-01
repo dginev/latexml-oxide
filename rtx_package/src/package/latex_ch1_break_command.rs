@@ -18,7 +18,6 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()),
     properties => { stored_map!("isBreak" => true) },
-    before_construct => sub[doc] { eprintln!("p1 doc: {}",doc.document);}
   );
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",

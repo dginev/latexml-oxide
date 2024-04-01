@@ -19,7 +19,7 @@ use crate::common::muglue::MuGlue;
 use crate::common::number::Number;
 use crate::common::numeric_ops::{fixpoint, NumericOps, UNITY};
 use crate::common::object::Object;
-use crate::DigestedData;
+use crate::{state, DigestedData};
 use crate::state::*;
 
 use crate::definition::conditional::ConditionalType;
@@ -536,15 +536,24 @@ pub fn read_x_non_space() -> Result<Option<Token>> {
 /// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
 pub fn read_balanced(do_expand: bool, is_macrodef: bool, require_open:bool) -> Result<Tokens> {
+  if !require_open {
+    decrement_align_group_count();
+  }
   local_align_group_count(1000000);
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   if require_open {
-    let token = if do_expand { read_x_token(Some(false),false)? }
+    let token_opt = if do_expand { read_x_token(Some(false),false)? }
     else { read_token()? };
-
-    if token.is_none() || token.as_ref().unwrap().get_catcode() != Catcode::BEGIN {
-      Error!("expected", "{", s!("Expected opening '{{' got {token:?}"));
+    let is_open = match token_opt {
+      None => false,
+      Some(token) => {
+        token.get_catcode() == Catcode::BEGIN ||
+        state::lookup_meaning(&token) == Some(Stored::Token(T_BEGIN!()))
+      }
+    };
+    if !is_open {
+      Error!("expected", "{", s!("Expected opening '{{' got {token_opt:?}"));
       return Ok(Tokens!());
     }
   }
@@ -1660,10 +1669,4 @@ pub fn get_location() -> String {
 pub fn with_mouth_mut<FnR,R>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Mouth>) -> R {
   caller(gullet_mut!().get_mouth_mut())
-}
-
-pub fn dbg_runtime() {
-  dbg!(
-    gullet!().runtime.as_ref().unwrap()
-  );
 }

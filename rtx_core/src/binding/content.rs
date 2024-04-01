@@ -529,7 +529,7 @@ fn load_tex_definitions(
   // It is set in before/after methods to allow local rebinding of commands
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
-  set_locked_state();
+  local_state_unlocked(false);
   let content_str = lookup_string(&s!("{pathname}_contents"));
   let content = if content_str.is_empty() {
     None
@@ -562,6 +562,7 @@ fn load_tex_definitions(
 
   assign_value("INTERPRETING_DEFINITIONS", was_interpreting, None);
   assign_value("INCLUDE_STYLES", was_including_styles, None);
+  expire_state_unlocked();
   Ok(())
 }
 
