@@ -17,12 +17,13 @@ LoadDefinitions!({
   DefConstructor!("\\\\ OptionalMatch:* [Glue]",
     "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion => Tokens!(T_CS!("\\\\"), T_CR!()),
-    properties => { stored_map!("isBreak" => true) }
+    properties => { stored_map!("isBreak" => true) },
+    before_construct => sub[doc] { eprintln!("p1 doc: {}",doc.document);}
   );
 
   DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
-    properties => { Ok(stored_map!("isBreak" => true)) }
+    properties => { Ok(stored_map!("isBreak" => true)) },
   );
 
   Let!("\\@normalcr", "\\\\");

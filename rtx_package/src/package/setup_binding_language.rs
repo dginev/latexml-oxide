@@ -87,6 +87,17 @@ macro_rules! DeclareFontMap {
   }};
 }
 
+#[macro_export]
+macro_rules! FindFile {
+  ($name:expr) => {
+    find_file($name, None)
+  };
+  ($name:expr, type => $ext:literal) => {
+    find_file($name, Some(FindFileOptions{
+      ext_type: Some(Cow::Borrowed($ext)), ..FindFileOptions::default()}))
+  };
+}
+
 // ======================================================================
 // Color
 #[macro_export]
@@ -726,6 +737,9 @@ macro_rules! StepCounter {
 /// convenience macro for `api::counter_dialect::ref_step_counter`
 #[macro_export]
 macro_rules! RefStepCounter {
+  ($ctr:expr) => {
+    ref_step_counter($ctr, false)
+  };
   ($ctr:expr, $noreset:expr) => {
     ref_step_counter($ctr, $noreset)
   };
@@ -978,44 +992,44 @@ macro_rules! IsDefinable {
 
 #[macro_export]
 macro_rules! Let {
-  ($token1:literal, $token2:literal) => {{
+  ($token1:literal, $token2:literal) => {
     state::let_i(
       &T_CS!($token1),
       &T_CS!($token2),
       None
-    );
-  }};
-  ($token1:literal, $token2:literal, None) => {{
+    )
+  };
+  ($token1:literal, $token2:literal, None) => {
     state::let_i(
       &T_CS!($token1),
       &T_CS!($token2),
       None
-    );
-  }};
-  ($token1:literal, $token2:literal, $scope:expr) => {{
+    )
+  };
+  ($token1:literal, $token2:literal, $scope:expr) => {
     state::let_i(
       &T_CS!($token1),
       &T_CS!($token2),
       Some($scope)
-    );
-  }};
+    )
+  };
   // half-packaged args
-  ($token1:literal, $token2:expr) => {{
-    state::let_i(&T_CS!($token1), &$token2, None);
-  }};
-  ($token1:expr, $token2:literal) => {{
-    state::let_i(&$token1, &T_CS!($token2), None);
-  }};
+  ($token1:literal, $token2:expr) => {
+    state::let_i(&T_CS!($token1), &$token2, None)
+  };
+  ($token1:expr, $token2:literal) => {
+    state::let_i(&$token1, &T_CS!($token2), None)
+  };
   // internal form, pre-packaged arguments
-  ($token1:expr, $token2:expr) => {{
-    state::let_i(&$token1, &$token2, None);
-  }};
-  ($token1:expr, $token2:expr, None) => {{
-    state::let_i(&$token1, &$token2, None);
-  }};
-  ($token1:expr, $token2:expr, $scope:expr) => {{
-    state::let_i(&$token1, &$token2, Some($scope));
-  }};
+  ($token1:expr, $token2:expr) => {
+    state::let_i(&$token1, &$token2, None)
+  };
+  ($token1:expr, $token2:expr, None) => {
+    state::let_i(&$token1, &$token2, None)
+  };
+  ($token1:expr, $token2:expr, $scope:expr) => {
+    state::let_i(&$token1, &$token2, Some($scope))
+  };
 }
 
 #[macro_export]
@@ -1062,103 +1076,103 @@ macro_rules! MergeFont {
 #[macro_export]
 macro_rules! DefMacro {
   // simplest case - mock macro that discards everything.
-  ($proto:literal, None) => {{
+  ($proto:literal, None) => {
     let (cs, params) = parse_prototype!($proto);
     def_macro(cs, params, None, None)?;
-  }};
+  };
   // closure with literal prototype
   ($prototype:literal, sub [( $($var:ident),* )]
-    $body:block $($input:tt)*) => {{
+    $body:block $($input:tt)*) => {
     compile_prototype_for_typed_macro!($prototype, sub [ ( $($var),* ) ]
       $body $($input)*)
-  }};
+  };
   // closure, general form
   ($proto:expr, sub [$args:ident]
-    $body:block $($input:tt)*) => {{
+    $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(
       Rc::new(move |$args| $body.into_tokens_result())));
     def_macro(cs, params, expansion_closure, Some(options))?;
-  }};
-  ($proto:expr, $body:block $($input:tt)*) => {{
+  };
+  ($proto:expr, $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |_args| $body.into_tokens_result()
     )));
     def_macro(cs, params, expansion_closure, Some(options))?;
-  }};
+  };
   // String; implicit state
-  ($proto:literal, $expansion:literal $($input:tt)*) => {{
+  ($proto:literal, $expansion:literal $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(cs, params, compiled_expansion, Some(options))?;
-  }};
+  };
   // Internal-level use
   ($cs:expr, $parameters:expr, sub [$args:ident]
-    $body:block $($input:tt)*) => {{
+    $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |$args| $body.into_tokens_result()
     )));
     def_macro($cs, $parameters, expansion_closure, Some(options))?;
-  }};
-  ($cs:literal, None, $expansion:literal) => {{
+  };
+  ($cs:literal, None, $expansion:literal) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(T_CS!($cs), None, compiled_expansion, None)?;
-  }};
-  ($cs:literal, None, $expansion:literal, $($input:tt)*) => {{
+  };
+  ($cs:literal, None, $expansion:literal, $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(T_CS!($cs), None, compiled_expansion, Some(options))?;
-  }};
-  ($cs:literal, None, $expansion:expr) => {{
+  };
+  ($cs:literal, None, $expansion:expr) => {
     def_macro(T_CS!($cs), None, $expansion, None)?;
-  }};
-  ($cs:expr, None, $expansion:literal) => {{
+  };
+  ($cs:expr, None, $expansion:literal) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro($cs, None, compiled_expansion, None)?;
-  }};
-  ($cs:expr, None, $body:block) => {{
+  };
+  ($cs:expr, None, $body:block) => {
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |_args| $body.into_tokens_result()
     )));
     def_macro($cs, None, expansion_closure, None)?;
-  }};
-  ($cs:expr, None, $expansion:expr) => {{
+  };
+  ($cs:expr, None, $expansion:expr) => {
     def_macro($cs, None, $expansion, None)?;
-  }};
-  ($cs:expr, None, $expansion:literal, $($input:tt)+) => {{
+  };
+  ($cs:expr, None, $expansion:literal, $($input:tt)+) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     def_macro($cs, None, compiled_expansion, Some(options))?;
-  }};
-  ($cs:expr, None, $expansion:expr, $($input:tt)+) => {{
+  };
+  ($cs:expr, None, $expansion:expr, $($input:tt)+) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     def_macro($cs, None, $expansion, Some(options))?;
-  }};
+  };
   // the triple expr case should be near the end, as it matches too many cases.
   // It's an internal use of DefMacro e.g. with 3 variable name arguments
   ($cs:expr, $replacement:expr, $expansion:expr) => {{
     def_macro($cs, $replacement, $expansion, None)?;
   }};
   // The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
-  ($proto:literal, None $($input:tt)*) => {{
+  ($proto:literal, None $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     def_macro(cs, params, None, Some(options))?;
-  }};
-  ($cs:expr, $replacement:expr, $expansion:expr, $($input:tt)*) => {{
+  };
+  ($cs:expr, $replacement:expr, $expansion:expr, $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     def_macro($cs, $replacement, $expansion, Some(options))?;
-  }};
+  };
 }
 
 #[macro_export]
@@ -2153,9 +2167,15 @@ macro_rules! defi_opts {
       [before_construct @ construct!($doc, $whatsit, $body)]})
   };
   (@before_construct (
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [before_construct @ construct!($doc, _whatsit, $body)]})
+  };
+  (@before_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [before_construct @ construct!(document, whatsit, $body)]})
+      [before_construct @ construct!(_document, _whatsit, $body)]})
   };
 
   (@after_construct (
@@ -2165,9 +2185,15 @@ macro_rules! defi_opts {
       [after_construct @ construct!($doc, $whatsit, $body)]})
   };
   (@after_construct (
+    sub[$doc:ident] $body:block $($next:tt)* )
+      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
+      [after_construct @ construct!($doc, _whatsit, $body)]})
+  };
+  (@after_construct (
     $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
-      [after_construct @ construct!(document, whatsit, $body)]})
+      [after_construct @ construct!(_document, _whatsit, $body)]})
   };
 
   (@getter (

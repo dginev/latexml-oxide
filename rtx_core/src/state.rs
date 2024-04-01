@@ -1355,6 +1355,10 @@ pub fn assign_mapping<T: Into<Stored>>(map: &str, key: &str, value: Option<T>) {
   };
 }
 
+pub fn lookup_mapping(map: &str, key: &str) -> Option<Stored> {
+  state!().lookup_mapping(map,key).cloned()
+}
+
 //======================================================================
 /// Was `name` bound?  If  `frame` is given, check only whether it is bound in
 /// that frame (0 is the topmost).

@@ -98,6 +98,35 @@ where FnR: FnOnce(&str) -> R {
     )
 }
 
+pub fn with2<R, FnR>(sym1: SymbolU32, sym2: SymbolU32, caller: FnR) -> R
+where FnR: FnOnce(&str,&str) -> R {
+  let arena = ARENA.borrow();
+  let str1 = arena.resolve(sym1)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.");
+  let str2 = arena.resolve(sym2)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.");
+  caller(str1,str2)
+}
+pub fn with3<R, FnR>(sym1: SymbolU32, sym2: SymbolU32, sym3:SymbolU32, caller: FnR) -> R
+where FnR: FnOnce(&str,&str,&str) -> R {
+  let arena = ARENA.borrow();
+  let str1 = arena.resolve(sym1)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.");
+  let str2 = arena.resolve(sym2)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.");
+  let str3 = arena.resolve(sym3)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.");
+  caller(str1,str2,str3)
+}
+
+pub fn with_many<R, FnR>(syms: &[SymbolU32], caller: FnR) -> R
+where FnR: FnOnce(Vec<&str>) -> R {
+  let arena = ARENA.borrow();
+  let many = syms.iter().map(|sym| arena.resolve(*sym)
+    .expect("arena::with should only be called when the string is guaranteed to be allocated.")).collect();
+  caller(many)
+}
+
 pub fn to_string(sym: SymbolU32) -> String {
   ARENA.borrow()
     .resolve(sym)
@@ -106,13 +135,4 @@ pub fn to_string(sym: SymbolU32) -> String {
     )
     .to_owned()
 }
-
-// TODO: Is this needed? The tighter call would guarantee the T lock is released early.
-pub fn chars(sym: SymbolU32) -> Vec<char> {
-  ARENA
-    .borrow()
-    .resolve(sym)
-    .expect("arena::chars should only be called when the string is guaranteed to be allocated.")
-    .chars()
-    .collect()
-}
+ 

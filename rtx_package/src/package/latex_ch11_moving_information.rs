@@ -72,14 +72,16 @@ LoadDefinitions!({
       Ok(map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
 
-  // DefConstructor('\pageref OptionalMatch:* Semiverbatim', "<ltx:ref labelref='#label'
-  // _force_font='true'/>", # Same??   properties => sub { (label => CleanLabel($_[2])); });
-  // #======================================================================
-  // # C.11.3 Bibliography and Citation
-  // #======================================================================
+  // "page" does not make sense in xml.  If the user really wants, they will need:
+  // \usepackage{latexml} ... \iflatexml alternate\else page \pageref{label}\fi
+  Let!("\\pageref", "\\ref");
 
-  // # Note that it's called \refname in LaTeX's article, but \bibname in report & book.
-  // # And likewise, mixed up in various other classes!
+  // ======================================================================
+  //  C.11.3 Bibliography and Citation
+  // ======================================================================
+
+  // Note that it's called \refname in LaTeX's article, but \bibname in report & book.
+  // And likewise, mixed up in various other classes!
 
   DefMacro!("\\thebibliography@ID", "");
 
@@ -95,34 +97,55 @@ LoadDefinitions!({
     Ok(())
   }
 
-  // DefMacro('\bibliography Semiverbatim',
-  // '\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\@bibliography{#1}}'); DefMacro('\lx@ifusebbl{}{}{}',
-  // sub {     my ($gullet, $bib_files, $bbl_clause, $bib_clause) = @_;
-  //     $bib_files = ToString(Expand($bib_files));
-  //     return unless $bib_files;
-  //     my $jobname = ToString(Expand(T_CS('\jobname')));
+  DefMacro!("\\bibliography Semiverbatim",
+    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#);
 
-  //     my $bbl_path = FindFile($jobname, type => 'bbl');
-  //     my $missing_bibs = '';
-  //     for my $bf (split(',', $bib_files)) {
-  //       my $bib_path = FindFile($bf, type => 'bib');
-  //       if (not $bib_path) {
-  //         $missing_bibs .= ',' unless length($missing_bibs) == 0;
-  //         $missing_bibs .= $bf; } }
+  DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {
+    let bib_files = Expand!(bib_files_tks).to_string();
+    if bib_files.is_empty() {
+      return Ok(Tokens!());
+    }
+    let jobname = Expand!(T_CS!("\\jobname")).to_string();
+    let bbl_path     = FindFile!(&jobname, type => "bbl");
+    let mut missing_bibs = String::new();
+    if lookup_bool("NO_BIBTEX") {
+      if bbl_path.is_none() {
+        Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
+        Ok(Tokens!())
+      } else {
+        Ok(bbl_clause)
+      }
+    } else {
+      for bf in bib_files.split(',') {
+        let bib_path = FindFile!(bf, type => "bib");
+        if bib_path.is_none() {
+          if !missing_bibs.is_empty() {
+            missing_bibs.push(',');
+          }
+          missing_bibs.push_str(bf);
+        }
+      }
+      if missing_bibs.is_empty() || bbl_path.is_none() {
+        Ok(bib_clause)
+      } else {
+        Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
+        Ok(bbl_clause)
+      }
+    }
+  });
 
-  //     if (length($missing_bibs) == 0 or not $bbl_path) {
-  //       return $bib_clause->unlist; }
-  //     else {
-  //       Info('expected', $missing_bibs, $_[0], "Couldn't find all bib files, using " . $jobname .
-  // ".bbl instead");       return $bbl_clause->unlist; } });
-  // DefConstructor('\@bibliography Semiverbatim',
-  //   "<ltx:bibliography files='#1' xml:id='#id' "
-  //     . "bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>"
+  AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
+  AssignMapping!("BACKMATTER_ELEMENT", "ltx:index"        => "ltx:section");
+
+  // DefConstructor('\lx@bibliography [] Semiverbatim',
+  //   "<ltx:bibliography files='#2' xml:id='#id' "
+  //     . "bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#1'>"
   //     . "<ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>"
   //     . "</ltx:bibliography>",
   //   afterDigest => sub { $_[0]->begingroup;    # wrapped so redefns don't take effect!
   //     beginBibliography($_[1]);
-  //     $_[0]->endgroup; });
+  //     $_[0]->endgroup; },
+  //   beforeConstruct => sub { adjustBackmatterElement($_[0], $_[1]); });
 
   // # NOTE: This totally needs to be made extensible (parsing *.bst!?!? OMG!)
   // our $BIBSTYLES = {
@@ -135,15 +158,24 @@ LoadDefinitions!({
   //   alphanat => { citestyle => 'AY',      sort => 'true' },
   //   abbrvnat => { citestyle => 'numbers', sort => 'true' } };
 
+  // sub setBibstyle {
+  //   my ($style) = @_;
+  //   $style = ToString($style);
+  //   AssignValue(BIBSTYLE => $style);
+  //   if (my $parms = $$BIBSTYLES{$style}) {
+  //     AssignValue(CITE_STYLE => $$parms{citestyle});
+  //     AssignValue(CITE_SORT  => $$parms{sort}); }
+  //   return; }
+
   // DefConstructor('\bibstyle{}', sub {
   //     my ($document, $style) = @_;
-  //     $style = ToString($style);
+  //     setBibstyle($style);
+  //     # Really ?
   //     if (my $bib = $document->findnode('//ltx:bibliography')) {
-  //       $document->setAttribute($bib, bibstyle => $style);
-  //       if (my $parms = $$BIBSTYLES{$style}) {
-  //         $document->setAttribute($bib, citestyle => $$parms{citestyle});
-  //         $document->setAttribute($bib, sort      => $$parms{sort});
-  //   } } },
+  //       $document->setAttribute($bib, bibstyle  => LookupValue('BIBSTYLE'));
+  //       $document->setAttribute($bib, citestyle => LookupValue('CITE_STYLE'));
+  //       $document->setAttribute($bib, sort      => LookupValue('CITE_SORT')); }
+  //   },
   //   afterDigest => sub {
   //     my $style = ToString($_[1]->getArg(1));
   //     AssignValue(BIBSTYLE => $style, 'global');
@@ -153,7 +185,7 @@ LoadDefinitions!({
   //       Info('unexpected', $style, $_[0], "Unknown bibstyle '$style', it will be ignored"); }
   //     return; });
 
-  // DefMacro('\bibliographystyle Semiverbatim', '\bibstyle{#1}');
+  DefMacro!("\\bibliographystyle Semiverbatim", "\\bibstyle{#1}");
 
   DefConditional!("\\if@lx@inbibliography");
   // Should be an environment, but people seem to want to misuse it.
@@ -171,8 +203,9 @@ LoadDefinitions!({
       }
       begin_bibliography(whatsit)?;
     },
-    // TODO
-    // before_construct => sub[whatsit] { adjust_backmatter_element(whatsit); },
+    before_construct => sub[doc,whatsit] { 
+      adjust_backmatter_element(doc, whatsit)?;
+    },
     locked => true
   );
 
@@ -181,6 +214,7 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:biblist")?;
     document.maybe_close_element("ltx:bibliography")?;
   }, locked=>true);
+  Let!("\\saved@endthebibliography", "\\endthebibliography");
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
   Tag!("ltx:bibliography", auto_close => true);
@@ -201,13 +235,17 @@ LoadDefinitions!({
       Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
     }
   });
+  DefMacro!("\\vskip@in@bibliography Glue", None);
   DefMacro!("\\item@in@bibliography", "\\save@bibitem{}");
 
   // If we hit a real \bibitem, put \par & \bibitem back to correct defn, and then \bibitem.
   // A bibitem with now key or label...
+  //
+  // Porting note: careful with the escaping rules. In perl we had a '\let\\\\\save@...'
+  // but if we use the r## 'raw string literal' in Rust, the extra \\ escape is not needed.
   DefMacro!(
     "\\restoring@bibitem",
-    "\\let\\bibitem\\save@bibitem\\let\\par\\save@par\\bibitem"
+    r#"\let\bibitem\save@bibitem\let\par\save@par\let\\\save@backbackslash\bibitem"#
   );
 
   NewCounter!("@bibitem", "bibliography", idprefix => "bib");
@@ -217,7 +255,8 @@ LoadDefinitions!({
   // Hack for abused bibliographies; see below
   DefMacro!(
     "\\bibitem",
-    "\\if@lx@inbibliography\\else\\expandafter\\lx@mung@bibliography\\expandafter{\\@currenvir}\\fi\\lx@bibitem", locked=>true);
+    r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem"#,
+    locked=>true);
   DefConstructor!("\\lx@bibitem[] Semiverbatim",
     "<ltx:bibitem key='#key' xml:id='#id'>#tags<ltx:bibblock>",
     after_digest => sub[whatsit] {
@@ -239,7 +278,7 @@ LoadDefinitions!({
           stomach::digest(tag_tokens)?.into());
         whatsit.set_properties(properties);
       } else {
-        let mut properties = RefStepCounter!("@bibitem", false)?;
+        let mut properties = RefStepCounter!("@bibitem")?;
         properties.insert("key".to_string(), key.into());
         whatsit.set_properties(properties);
       }
@@ -278,8 +317,8 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@bibnewblock", sub[document] {
     if document.is_openable("ltx:bibblock") {
-      document.open_element("ltx:bibblock",None,None)?; }
-  });
+      document.open_element("ltx:bibblock",None,None)?;
+    }});
   Let!("\\newblock", "\\lx@bibnewblock");
   Tag!("ltx:bibitem",  auto_open => true, auto_close => true);
   Tag!("ltx:bibblock", auto_open => true, auto_close => true);
@@ -382,303 +421,55 @@ LoadDefinitions!({
   //   "<ltx:cite><ltx:bibref show='nothing' bibrefs='#bibrefs'/></ltx:cite>",
   //   properties => sub { (bibrefs => CleanBibKey($_[1])) });
 
-  // #======================================================================
-  // # C.11.4 Splitting the input
-  // #======================================================================
-  // Let('\@@input', '\input');    # Save TeX's version.
-  //                               # LaTeX's \input is a bit different...
-  // DefMacroI('\input', undef, '\@ifnextchar\bgroup\@iinput\@@input');
-  // DefPrimitive('\@iinput {}', sub { Input(Expand($_[1])); });
-
-  // # Note that even excluded files SHOULD have the effects of their inclusion
-  // # simulated by having read the corresponding aux file;
-  // # But we're not bothering with that.
-  // DefPrimitive('\include{}', sub {
-  //     my ($stomach, $path) = @_;
-  //     $path = ToString($path);
-  //     my $table = LookupValue('including@only');
-  //     if (!$table || $$table{$path}) {
-  //       Input($path); }
-  //     return; });
-
-  // # [note, this will load name.tex, if it exists, else name]
-  // DefPrimitive('\includeonly{}', sub {
-  //     my ($stomach, $paths) = @_;
-  //     $paths = ToString($paths);
-  //     my $table = LookupValue('including@only');
-  //     AssignValue('including@only', $table = {}, 'global') unless $table;
-  //     map { $$table{$_} = 1 } map { /^\s*(.*?)\s*$/ && $1; } split(/,/, $paths);
-  //     return; });
-
-  // # NOTE: In the long run, we want to SAVE the contents and associate them with the given file
-  // name #  AND, arrange so that when a file is read, we'll use the contents!
-  // DefConstructor(T_CS("\\begin{filecontents}"), "Semiverbatim",
-  //   '',
-  //   reversion   => '',
-  //   afterDigest => [sub {
-  //       my ($stomach, $whatsit) = @_;
-  //       my $filename = ToString($whatsit->getArg(1));
-  //       my @lines    = ();
-  //       my $gullet   = $stomach->getGullet;
-  //       my $line;
-  //       while (defined($line = $gullet->readRawLine) && ($line ne '\end{filecontents}')) {
-  //         push(@lines, $line); }
-  //       AssignValue($filename . '_contents' => join("\n", @lines), 'global');
-  //       NoteProgress("[Cached filecontents for $filename (" . scalar(@lines) . " lines)]"); }]);
-  // DefConstructor(T_CS("\\begin{filecontents*}"), "Semiverbatim",
-  //   '',
-  //   reversion   => '',
-  //   afterDigest => [sub {
-  //       my ($stomach, $whatsit) = @_;
-  //       my $filename = ToString($whatsit->getArg(1));
-  //       my @lines    = ();
-  //       my $gullet   = $stomach->getGullet;
-  //       my $line;
-  //       while (defined($line = $gullet->readRawLine) && ($line ne '\end{filecontents*}')) {
-  //         push(@lines, $line); }
-  //       AssignValue($filename . '_contents' => join("\n", @lines), 'global');
-  //       NoteProgress("[Cached filecontents* for $filename (" . scalar(@lines) . " lines)]"); }]);
-  // DefMacro('\endfilecontents', '');
-  // DefPrimitive('\listfiles', undef);
-
-  // #======================================================================
-  // # C.11.5 Index and Glossary
-  // #======================================================================
-
-  // # ---- The index commands
-  // # Format of Index entries:
-  // #   \index{entry!entry}  gives multilevel index
-  // # Each entry:
-  // #   foo@bar  sorts on "foo" but prints "bar"
-  // # The entries can end with a |expression:
-  // #   \index{...|(}    this page starts a range for foo
-  // #   \index{...|)}    this page ends a range
-  // #           The last two aren't handled in any particular way.
-  // #           We _could_ mark start & end, and then the postprocessor would
-  // #           need to fill in all likely links... ???
-  // #   \index{...|see{key}}  cross reference.
-  // #   \index{...|seealso{key}}  cross reference.
-  // #   \index{...|textbf}  (etc) causes the number to be printed in bold!
-  // #
-  // # I guess the formula is that
-  // #    \index{foo|whatever{pi}{pa}{po}}  => \whatever{pi}{pa}{po}{page}
-  // # How should this get interpreted??
-  // our %index_style = (textbf => 'bold', bf => 'bold', textrm => '', rm => '',
-  //   textit => 'italic', it => 'italic', emph => 'italic');    # What else?
-  //     # A bit screwy, but....
-  //     # Expand \index{a!b!...} into \@index{\@indexphrase{a}\@indexphrase{b}...}
-
-  // sub process_index_phrases {
-  //   my ($gullet, $phrases) = @_;
-  //   my @expansion = ();
-  //   # Split the text into phrases, separated by "!"
-  //   my @tokens = $phrases->unlist;
-  //   return unless @tokens;
-  //   push(@tokens, T_OTHER('!')) unless $tokens[-1]->getString eq '!';    # Add terminal !
-  //   my @phrase = ();
-  //   my @sortas = ();
-  //   my $style;
-  //   while (@tokens) {
-  //     my $tok    = shift(@tokens);
-  //     my $string = $tok->getString;
-  //     if ($string eq '"') {
-  //       push(@phrase, shift(@tokens)); }
-  //     elsif ($string eq '@') {
-  //       while (@phrase && ($phrase[-1]->getString =~ /\s/)) { pop(@phrase); }    # Trim
-  //       @sortas = @phrase; @phrase = (); }
-  //     elsif (($string eq '!') || ($string eq '|')) {
-  //       while (@phrase && ($phrase[-1]->getString =~ /\s/)) { pop(@phrase); }    # Trim
-  //       push(@expansion, T_CS('\@indexphrase'),
-  //         (@sortas ? (T_OTHER('['), @sortas, T_OTHER(']')) : ()),
-  //         T_BEGIN, @phrase, T_END)
-  //         if @phrase;
-  //       @phrase = (); @sortas = ();
-  //       if ($string eq '|') {
-  //         pop(@tokens);    # Remove the extra "!" stopbit.
-  //         my $extra = ToString(Tokens(@tokens));
-  //         if ($extra =~ /^see\s*{/) { push(@expansion, T_CS('\@indexsee'), @tokens[3 ..
-  // $#tokens]); }         elsif ($extra =~ /^seealso\s*\{/) { push(@expansion,
-  // T_CS('\@indexseealso'), @tokens[7 .. $#tokens]); }         elsif ($extra eq '(') { $style =
-  // 'rangestart'; }                     # ?         elsif ($extra eq ')') { $style = 'rangeend';
-  // }                       # ?         else                  { $style = $index_style{$extra} ||
-  // $extra; }         @tokens = (); } }
-  //     elsif (!@phrase && ($string =~ /\s/)) { }                                # Skip leading
-  // whitespace     else {
-  //       push(@phrase, $tok); } }
-  //   @expansion = (T_CS('\@index'),
-  //     ($style ? (T_OTHER('['), T_OTHER($style), T_OTHER(']')) : ()),
-  //     T_BEGIN, @expansion, T_END);
-  //   return (T_BEGIN,T_CS('\normalfont'), @expansion, T_END); }
-
-  // DefMacro('\index{}', \&process_index_phrases);
-
-  // Tag('ltx:indexphrase',    afterClose => \&addIndexPhraseKey);
-  // Tag('ltx:glossaryphrase', afterClose => \&addIndexPhraseKey);
-  // ### ltx:indexsee does NOT get a key (at this stage)!
-
-  // sub addIndexPhraseKey {
-  //   my ($document, $node) = @_;
-  //   if (!$node->getAttribute('key')) {
-  //     $node->setAttribute(key => CleanIndexKey($node->textContent)); }
-  //   return; }
-
-  // DefConstructor('\@index[]{}', "^<ltx:indexmark style='#1'>#2</ltx:indexmark>",
-  //   mode => 'text', reversion => '', sizer => 0);
-
-  // DefConstructor('\@indexphrase[]{}',
-  //   "<ltx:indexphrase key='#key' _standalone_font='true'>#2</ltx:indexphrase>",
-  //   properties => { key => sub { CleanIndexKey($_[1]); } });
-  // DefConstructor('\@indexsee{}',
-  //   "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
-  //   properties => { name => sub { DigestIf('\seename') } });
-
-  // DefConstructor('\@indexseealso{}',
-  //   "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
-  //   properties => { name => sub { DigestIf('\alsoname') } });
-
-  // DefConstructor('\glossary{}',
-  //   "<ltx:glossaryphrase role='glossary' key='#key'>#1</ltx:glossaryphrase>",
-  //   properties => { key => sub { CleanIndexKey($_[1]); } },
-  //   sizer => 0);
-
-  // #======================================================================
-  // # This converts an indexphrase node into a sortable string.
-  // # Seems the XML nodes are the best place to handle it (rather than Boxes),
-  // # although some of the special cases (see, @, may end up tricky)
-  // sub indexify {
-  //   my ($node, $document) = @_;
-  //   my $type = $node->nodeType;
-  //   if ($type == XML_TEXT_NODE) {
-  //     my $string = $node->textContent;
-  //     $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
-  //     $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=>1 mapping???
-  //     return $string; }
-  //   elsif ($type == XML_ELEMENT_NODE) {
-  //     if ($document->getModel->getNodeQName($node) eq 'ltx:Math') {
-  //       return indexify_tex($node->getAttribute('tex')); }
-  //     else {
-  //       return join('', map { indexify($_, $document) } $node->childNodes); } }
-  //   elsif ($type == XML_DOCUMENT_FRAG_NODE) {
-  //     return join('', map { indexify($_, $document) } content_nodes($node)); }
-  //   else {
-  //     return ""; } }
-
-  // # Try to clean up a TeX string into something
-  // # Could walk the math tree and handle XMDual specially, but need to xref args.
-  // # But also we'd have unicode showing up, which we'd like to latinize...
-  // sub indexify_tex {
-  //   my ($string) = @_;
-  //   $string =~ s/(\\\@|\\,|\\:|\\;|\\!|\\ |\\\/|)//g;
-  //   $string =~
-  // s/(\\mathrm|\\mathit|\\mathbf|\\mathsf|\\mathtt|\\mathcal|\\mathscr|\\mbox|\\rm|\\it|\\bf|\\
-  // tt|\\small|\\tiny)//g;   $string =~ s/\\left\b//g; $string =~ s/\\right\b//g;
-  //   $string =~ s/(\\|\{|\})//g;
-  //   $string =~ s/\W//g;    # to be safe (if perhaps non-unique?)
-  //   $string =~ s/\s//g;    # Or remove entirely? Eventually worry about many=>1 mapping???
-  //   return $string; }
-
-  // # ---- Creating the index itself
-
-  // AssignValue(INDEXLEVEL => 0);
-
-  // Tag('ltx:indexentry', autoClose => 1);
-
-  // sub closeIndexPhrase {
-  //   my ($document) = @_;
-  //   if ($document->isCloseable('ltx:indexphrase')) {
-  //     $document->closeElement('ltx:indexphrase'); }
-  //   return; }
-
-  // sub doIndexItem {
-  //   my ($document, $level) = @_;
-  //   $document->closeElement('ltx:indexrefs') if $document->isCloseable('ltx:indexrefs');
-  //   closeIndexPhrase($document);
-  //   my $l = LookupValue('INDEXLEVEL');
-  //   while ($l < $level) {
-  //     $document->openElement('ltx:indexlist'); $l++; }
-  //   while ($l > $level) {
-  //     $document->closeElement('ltx:indexlist'); $l--; }
-  //   AssignValue(INDEXLEVEL => $l);
-  //   if ($level) {
-  //     $document->openElement('ltx:indexentry');
-  //     $document->openElement('ltx:indexphrase'); }
-  //   return; }
-
-  // DefConstructor('\index@dotfill', undef, sub {
-  //     my ($document) = @_;
-  //     closeIndexPhrase($document);
-  //     $document->openElement('ltx:indexrefs'); });
-  // DefConstructor('\index@item',       undef, sub { doIndexItem($_[0], 1); });
-  // DefConstructor('\index@subitem',    undef, sub { doIndexItem($_[0], 2); });
-  // DefConstructor('\index@subsubitem', undef, sub { doIndexItem($_[0], 3); });
-  // DefConstructor('\index@done',       undef, sub { doIndexItem($_[0], 0); });
-
-  // DefMacroI('\indexname', undef, 'Index');
-  // DefEnvironment('{theindex}',
-  //   "<ltx:index xml:id='#id'>"
-  //     . "<ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>"
-  //     . "#body"
-  //     . "</ltx:index>",
-  //   beforeDigest => sub {
-  //     Let('\item',       '\index@item');
-  //     Let('\subitem',    '\index@subitem');
-  //     Let('\subsubitem', '\index@subsubitem');
-  //     Let('\dotfill',    '\index@dotfill'); },
-  //   beforeDigestEnd => sub { Digest(T_CS('\index@done')); },
-  //   afterDigestBegin => sub {
-  //     my $docid = ToString(Expand(T_CS('\thedocument@ID')));
-  //     my $title = DigestIf('\indexname');
-  //     $_[1]->setProperties(id => ($docid ? "$docid.idx" : 'idx'),
-  //       title     => $title,
-  //       titlefont => $title->getFont); });
-
-  // DefPrimitiveI('\indexspace',   undef, undef);
-  // DefPrimitiveI('\makeindex',    undef, undef);
-  // DefPrimitiveI('\makeglossary', undef, undef);
-
-  // #======================================================================
-  // # C.11.6 Terminal Input and Output
-  // #======================================================================
-
-  DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if lookup_int("VERBOSITY") > -1 {
-      let content = Expand!(stuff);
-      eprintln!("{content}\n");
-    }
-  });
-  DefPrimitive!("\\typein[]{}", None);
 });
+
+fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
+  if let Some(val) = state::lookup_mapping("BACKMATTER_ELEMENT", backelement) {
+    whatsit.set_property("backmatterelement", val);
+  }
+}
+
+fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
+  let asif_opt = if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
+    Some(arena::to_string(*asif_sym))
+  } else {
+    None
+  };
+  // Note: We allocate a string here, since
+  // it looks like arena::with can deadlock with find_insertion_point
+  // we may need a find_insertion_point_sym to avoid that...
+  if let Some(asif) = asif_opt {
+    let point = document.find_insertion_point(&asif, None)?;
+    document.set_node(&point);
+  }
+  Ok(())
+}
 
 // Since SOME people seem to write bibliographies w/o \bibitem,
 // just blank lines between apparent entries,
 // Making \par do a \bibitem{} works, but screws up valid
 // bibliographies with blank lines!
 // So, let's do some redirection!
-fn setup_pseudo_bibitem() {
-  state::let_i(&T_CS!("\\save@bibitem"), &T_CS!("\\bibitem"), None);
-  state::let_i(&T_CS!("\\save@par"), &T_CS!("\\par"), None);
-  state::let_i(
-    &T_CS!("\\bibitem"),
-    &T_CS!("\\restoring@bibitem"),
-    None
-  );
-  state::let_i(
-    &T_CS!("\\par"),
-    &T_CS!("\\par@in@bibliography"),
-    None
-  );
+fn setup_pseudo_bibitem() -> Result<()> {
+  Let!("\\save@bibitem","\\bibitem");
+  Let!("\\save@par","\\par");
+  Let!("\\save@backbackslash", "\\\\");
+  Let!("\\bibitem","\\restoring@bibitem");
+  Let!("\\par","\\par@in@bibliography");
+  Let!("\\\\", "\\par@in@bibliography");
+  Let!("\\vskip", "\\vskip@in@bibliography");
   // Moreover some people use \item instead of \bibitem
-  state::let_i(
-    &T_CS!("\\item"),
-    &T_CS!("\\item@in@bibliography"),
-    None
-  );
+  Let!("\\item","\\item@in@bibliography");
   // And protect from redefinitions.
-  state::let_i(
-    &T_CS!("\\newblock"),
-    &T_CS!("\\lx@bibnewblock"),
-    None
-  );
+  Let!("\\newblock","\\lx@bibnewblock");
+  // Risky, but when bibliography immediatesly starts with text (no implied \par)
+  if let Some(token) = gullet::read_non_space()? {
+    gullet::unread_one(token);
+    if !token.is_executable() {
+      gullet::unread_one(T_CS!("\\par"));
+    }
+  }
+  Ok(())
 }
 // This sub does things that would commonly be needed when starting a bibliography
 // setting the ID, etc...
@@ -687,13 +478,19 @@ fn begin_bibliography(
 ) -> Result<()> {
   begin_bibliography_clean( whatsit)?;
   // Fix for missing \bibitems!
-  setup_pseudo_bibitem();
-  Ok(())
+  setup_pseudo_bibitem()
 }
 
 fn begin_bibliography_clean(
   whatsit: &mut Whatsit,
 ) -> Result<()> {
+  // Check if \bibsection is defined and try to decipher it.
+  // Expecting something like \section*{sometext}
+
+  // TODO: Continue updating here...
+  // let bs_opt       = lookup_definition(&T_CS!("\\bibsection"))?;
+
+  note_backmatter_element(whatsit, "ltx:bibliography");
   // Try to compute a reasonable, but unique ID;
   // relative to the document's ID, if any.
   // But also, if there are multiple bibliographies,
