@@ -1,4 +1,5 @@
 use libxml::tree::Node;
+use string_interner::symbol::SymbolU32;
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
@@ -17,7 +18,7 @@ use crate::common::arena;
 use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
 use crate::document::Document;
 use crate::parameter::Parameters;
-use crate::state::Scope;
+use crate::state::{Scope, Stored};
 use crate::tbox::Tbox;
 use crate::gullet;
 use crate::token::*;
@@ -429,8 +430,10 @@ pub struct Register {
   pub default: Option<RegisterValue>,
   /// the unicode corresponding to the \mathchar of `value` (for chardef)
   pub mathglyph: Option<char>,
+  /// TODO: what does this do for CharDef ?
+  pub role: Option<SymbolU32>,
   /// the source point of origin for this register definition
-  pub locator: Locator
+  pub locator: Locator,
 }
 impl Default for Register {
   fn default() -> Self {
@@ -445,6 +448,7 @@ impl Default for Register {
       readonly: false,
       value: None,
       mathglyph: None,
+      role: None,
       default: None
     }
   }
@@ -528,13 +532,21 @@ impl Definition for Register {
     // A dilemma: If the \chardef were in a style file, you're prefer to revert to the $cs
     // but if defined in the document source, better to use \char ###\relax, so it still "works"
     if matches!(self.register_type, RegisterType::CharDef) {
+      let mut props = HashMap::default();
+      if let Some(role) = self.role { 
+        props.insert(String::from("role"),Stored::String(role));
+      }
       return Ok(vec![Digested::from(
         if let Some(mathglyph) = self.mathglyph {
           Tbox::new(arena::pin_char(mathglyph), None, None,
-            Tokens!(T_CS!("\\mathchar"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
+            Tokens!(T_CS!("\\mathchar"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), 
+            props)
         } else {
-          Tbox::new(arena::pin_char(font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap()), None, None,
-          Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), HashMap::default())
+          Tbox::new(arena::pin_char(
+            font::decode(self.value.clone().unwrap().value_of() as u8, None,false).unwrap_or_default()),
+            None, None,
+            Tokens!(T_CS!("\\char"), self.value.as_ref().unwrap().revert()?, T_CS!("\\relax")), 
+            props)
         })])
     }
 
@@ -606,12 +618,13 @@ impl Register {
   /// You can't assign it; when you invoke the control sequence, it returns
   /// the result of evaluating the character (more like a regular primitive).
   /// When `mathglyph` is provided, it is the unicode corresponding to the `\mathchar` of `value`
-  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>) -> Self {
+  pub fn new_chardef(cs: Token, value: Option<RegisterValue>, mathglyph:Option<char>, role:Option<SymbolU32>) -> Self {
     Register {
       cs,
       parameters: None,
       value,
       mathglyph,
+      role,
       register_type: RegisterType::CharDef,
       readonly: true,
       locator: gullet::get_locator(),

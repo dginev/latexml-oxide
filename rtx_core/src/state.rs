@@ -1470,7 +1470,7 @@ pub fn assign_lccode<T: Into<u16>, C: Into<char>>(
 }
 /// like `lookup_catcode` but targets Uccode and its table
 pub fn lookup_uccode(key: char) -> Option<u16> {
-  let mut tmp = [0u8; 3];
+  let mut tmp = [0u8; 4];
   let s = arena::pin(key.encode_utf8(&mut tmp));
   match state!().uccode.get(&s) {
     Some(c) => match c.front() {
@@ -1487,13 +1487,13 @@ pub fn assign_uccode<T: Into<u16>, C: Into<char>>(
   scope: Option<Scope>,
 ) {
   let c: char = key.into();
-  let mut tmp = [0u8; 3];
+  let mut tmp = [0u8; 4];
   let s = arena::pin(c.encode_utf8(&mut tmp));
   state_mut!().assign_internal(TableName::Uccode, s, Stored::Charcode(value.into()), scope);
 }
 /// like `lookup_catcode` but targets Delcode and its table
 pub fn lookup_delcode(key: char) -> Option<u16> {
-  let mut tmp = [0u8; 3];
+  let mut tmp = [0u8; 4];
   let s = arena::pin(key.encode_utf8(&mut tmp));
   match state!().delcode.get(&s) {
     Some(c) => match c.front() {
@@ -1505,7 +1505,7 @@ pub fn lookup_delcode(key: char) -> Option<u16> {
 }
 /// like `assign_catcode` but targets Delcode and its table
 pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
-  let mut tmp = [0u8; 3];
+  let mut tmp = [0u8; 4];
   let s = arena::pin(key.encode_utf8(&mut tmp));
   state_mut!().assign_internal(TableName::Delcode, s, Stored::Charcode(value.into()), scope);
 }
