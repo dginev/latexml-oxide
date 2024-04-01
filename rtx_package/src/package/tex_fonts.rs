@@ -393,7 +393,7 @@ setter => sub[value,_scope,args] {
     state::assign_meaning(&newcs, relax_meaning, None);
     let value = gullet::read_number()?;
     state::install_definition(
-      Register::new_chardef(newcs, Some(value.into()), None), None);
+      Register::new_chardef(newcs, Some(value.into()), None, None), None);
     state::after_assignment();
     Ok(Vec::new())
   });
@@ -434,37 +434,13 @@ setter => sub[value,_scope,args] {
   // Almost like a register, but different...
   DefPrimitive!("\\mathchardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
-    let meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-    { assign_meaning(&newcs, meaning, None); }
-    let value  = gullet::read_number().unwrap();
-    // eprintln!(" ** {} + {}", value,csname);
-    let (_role, _glyph) = decode_math_char(value.value_of() as u16)?;
+    let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
+    assign_meaning(&newcs, means_relax, None);
+    let value  = gullet::read_number().unwrap_or_default();
+    let (role, glyph) = decode_math_char(value.value_of() as u16)?;
     // eprintln!("    role: {:?} + glyph: {:?}", role, glyph);
-    // TODO: DG: This needs to be revised and updated once CharDef is clear as a datastructure
-    // if let Some(internalcs) = internalcs_opt {
-    //   let mut glyph_props: HashMap<String, Stored> = HashMap::default();
-    //   glyph_props.insert(s!("role"), role.unwrap_or_default().into());
-    //   let glyph_c = glyph.unwrap();
-    //   let glyph_str = glyph_c.to_string();
-    //   glyph_props.insert(s!("glyph"), glyph_c.into());
-    //   DefConstructor!(internalcs, None, "<ltx:XMTok role='#role'>#glyph</ltx:XMTok>",
-    //     sizer => "#1",
-    //     properties => glyph_props,
-    //     font => { Ok(lookup_font().unwrap().specialize(&glyph_str)) },
-    //     reversion => sub[_w,_a] {
-    //       Ok(Tokens::new(
-    //         if (glyph_c as usize) < 128 {
-    //           vec![CharToken!(glyph_c,Catcode::OTHER)]
-    //         } else {
-    //           let v = value.value_of().to_string();
-    //           vec![T_CS!("\\mathchar"),T_OTHER!(v),T_RELAX!()]
-    //         }))
-    //     }
-    //   );
-    // }
-    state::install_definition(Register::new_chardef(newcs,Some(value.into()), None), None);
+    state::install_definition(Register::new_chardef(newcs,Some(value.into()), glyph, role.map(arena::pin)), None);
     state::after_assignment();
-    Ok(Vec::new())
   });
 
   DefConstructor!("\\mathaccent Number Digested",

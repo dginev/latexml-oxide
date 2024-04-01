@@ -83,7 +83,7 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymbolU32 {
 }
 
 pub fn pin_char(c: char) -> SymbolU32 {
-  let mut tmp = [0u8; 3];
+  let mut tmp = [0u8; 4];
   let s = c.encode_utf8(&mut tmp);
   pin(s)
 }

@@ -291,6 +291,7 @@ pub fn def_register<T: Into<RegisterValue>>(
       setter: options.setter,
       default: Some(value),
       value: None,
+      role: None,
       locator: gullet::get_locator(),
       mathglyph: None
     },

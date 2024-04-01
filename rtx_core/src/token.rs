@@ -440,7 +440,7 @@ macro_rules! T_OTHER_CHAR {
 #[macro_export]
 macro_rules! T_ACTIVE {
   ($c:expr) => {{
-    let mut tmp = [0u8; 3];
+    let mut tmp = [0u8; 4];
     let s = $c.encode_utf8(&mut tmp);
     Token {
       text: $crate::common::arena::pin(s),
@@ -536,7 +536,7 @@ macro_rules! CharToken {
     CharToken!($c, Catcode::OTHER)
   };
   ($c:expr, $cc:expr) => {{
-    let mut tmp = [0u8; 3];
+    let mut tmp = [0u8; 4];
     let s = $c.encode_utf8(&mut tmp);
     Token!(s, $cc)
   }};
@@ -572,7 +572,7 @@ macro_rules! ExplodeText(
   $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else {
-      let mut tmp = [0u8; 3];
+      let mut tmp = [0u8; 4];
       let s = c.encode_utf8(&mut tmp);
       if c.is_alphabetic() {
       T_LETTER!(s) }
@@ -713,7 +713,7 @@ impl Token {
     if cc.is_neutralizable() {
       for extra in extraspecials {
         if extra == &ch {
-          let mut tmp = [0u8; 3];
+          let mut tmp = [0u8; 4];
           let s = ch.encode_utf8(&mut tmp);
           return T_OTHER!(s);
         }
@@ -722,7 +722,7 @@ impl Token {
         if let Some(Stored::Chars(ref specials_list)) = specials_opt {
           for special in specials_list.iter() {
             if *special == ch {
-              let mut tmp = [0u8; 3];
+              let mut tmp = [0u8; 4];
               let s = ch.encode_utf8(&mut tmp);
               return Some(T_OTHER!(s));
             }
