@@ -238,8 +238,8 @@ LoadDefinitions!({
   // Redefine \@url to sanitize the argument less
   DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
     let open = gullet::read_token()?.unwrap();
-   begin_semiverbatim(Some(&['%']));
-    state::let_i(&T_CS!("~"), &T_OTHER!("~"), None); // Needs special protection?
+    begin_semiverbatim(Some(&['%']));
+    state::let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         gullet::read_balanced(true,false,false)?.unwrap_or_default()) // Expand as we go!
@@ -269,8 +269,8 @@ LoadDefinitions!({
   // RE-define from url w
   DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true);
 
-  DefConstructor!("\\lx@url@url@nolink Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap class='ltx_nolink #class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='ltx_nolink #class'>#5</ltx:ref>)",
+  DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
+    "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));

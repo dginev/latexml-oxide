@@ -250,7 +250,6 @@ fn script_sizer(
   op: &str,
   pos: &str,
 ) -> Result<(Dimension, Dimension, Dimension)> {
-  eprintln!("SCRIPT SIZER IS ON!");
   // NOTE: Currently, the mathstyle is NOT reflected in the font of the script!!!!
   // Or is it now ?????
   // [unless it's different from the 'expected' style!!!]

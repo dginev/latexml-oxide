@@ -28,7 +28,7 @@ use crate::document::Document;
 use crate::gullet::Gullet;
 use crate::mouth;
 use crate::parameter::Parameters;
-use crate::state::{Scope, set_unlocked_state};
+use crate::state::{expire_state_unlocked, local_state_unlocked, Scope};
 use crate::token::Token;
 use crate::tokens::{Tokens, NO_TOKENS};
 use crate::whatsit::Whatsit;
@@ -300,35 +300,36 @@ pub trait Definition: Object {
   fn execute_before_digest(
     &self
   ) -> Result<Vec<Digested>> {
-    set_unlocked_state();
+    local_state_unlocked(true);
     let mut before_digested = Vec::new();
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
         before_digested.extend(pre()?);
       }
     }
+    expire_state_unlocked();
     Ok(before_digested)
   }
   fn execute_after_digest(
     &self,
     whatsit: &mut Whatsit,
   ) -> Result<Vec<Digested>> {
-    set_unlocked_state();
+    local_state_unlocked(true);
     let mut after_digested = Vec::new();
     if let Some(post_list) = self.after_digest() {
       for post in post_list.iter() {
         after_digested.extend(post(whatsit)?);
       }
     }
+    expire_state_unlocked();
     Ok(after_digested)
   }
 
   fn execute_after_digest_body(
     &self,
-
     whatsit: &mut Whatsit,
   ) -> Result<Vec<Digested>> {
-    set_unlocked_state();
+    local_state_unlocked(true);
     let mut after_body_digested = Vec::new();
     if let Some(post_list) = self.after_digest_body() {
       // info!("Found {:?} after_digest_body closures, capture_body was: {:?}", post_list.len(),
@@ -338,6 +339,7 @@ pub trait Definition: Object {
         after_body_digested.extend(after_body_digest_result);
       }
     }
+    expire_state_unlocked();
     Ok(after_body_digested)
   }
 

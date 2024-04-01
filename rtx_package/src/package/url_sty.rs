@@ -31,7 +31,7 @@ LoadDefinitions!({
   // Have this expand into \lx@url@url w/ the declared cmd as arg, so it gets reflected in XML.
   DefMacro!(
     "\\DeclareUrlCommand{}{}",
-    "\\def#1{\\begingroup #2\\lx@url@url#1}"
+    r#"\def#1{\begingroup #2\lx@url@url#1}"#
   );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
@@ -79,6 +79,7 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMWrap class='ltx_nolink #class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='ltx_nolink #class'>#5</ltx:ref>)",
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
+      eprintln!("-- url@url@nolink ! --");
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
         "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),

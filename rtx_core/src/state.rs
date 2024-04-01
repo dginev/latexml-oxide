@@ -220,6 +220,7 @@ pub struct Localized {
   pub align_group_count: Vec<i32>, // was $LaTeXML::ALIGN_STATE
   pub reading_alignment: Vec<Digested>,
   pub build_template: Vec<Template>,
+  pub unlocked: Vec<bool>,
 }
 
 /// The state efficiently maintain the bindings in a TeX-like fashion.
@@ -254,7 +255,6 @@ pub struct State {
   // TODO: Maybe group these in a "SessionFlags" struct?
   //       we can then reset that if we reimplement a daemon app
   pub verbosity: i32,
-  pub unlocked: bool,
   pub input_encoding: Option<String>,
   // strict: bool,
   // include_comments: bool,
@@ -307,7 +307,6 @@ impl Default for State {
       pending_resources: Vec::new(),
       // stateful runtime - simple fields
       verbosity: 0,
-      unlocked: true,
       input_encoding: None,
       // strict: false,
       // include_comments: true,
@@ -828,11 +827,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   };
   let cs_sym = token.get_cs_name();
   let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
-  let is_cs_locked = lookup_bool(&lock_key);
-  // TODO: Global UNLOCKED state
-  // let is_state_unlocked = lookup_bool("UNLOCKED");
-
-  if is_cs_locked { //&& !is_state_unlocked {
+  if lookup_bool(&lock_key) && !state_is_unlocked() {
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
@@ -2177,6 +2172,17 @@ pub fn decrement_align_group_count() {
     },
   }
 }
+
+pub fn state_is_unlocked() -> bool {
+  state!().localized.unlocked.last().copied().unwrap_or(false)
+}
+pub fn local_state_unlocked(v: bool) {
+  state_mut!().localized.unlocked.push(v);
+}
+pub fn expire_state_unlocked() {
+  state_mut!().localized.unlocked.pop();
+}
+
 pub fn align_group_count() -> i32 {
   state!()
     .localized
@@ -2287,13 +2293,6 @@ pub fn set_bindings_dispatch(dispatcher: BindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
-}
-
-pub fn set_locked_state() {
-  state_mut!().unlocked = false;
-}
-pub fn set_unlocked_state() {
-  state_mut!().unlocked = true;
 }
 
 pub fn get_search_paths() -> Vec<String> {
