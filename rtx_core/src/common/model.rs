@@ -226,6 +226,43 @@ impl Model {
     self.schema_class.insert(arena::pin(classname), content);
   }
   pub fn describe_model(&self) {}
+  fn load_internal_extensions(&mut self) {
+    if !self.tagprop.contains_key(&arena::pin_static("ltx:_CaptureBlock_")) {
+      // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
+      self.synthesize_element("ltx:_CaptureBlock_",
+        &["ltx:block","ltx:logical-block","ltx:sectional-block","Caption"]);
+      let cb_entry = self.tagprop.entry(arena::pin_static("ltx:_CaptureBlock_"))
+        .or_default();
+      cb_entry.model.insert(arena::pin_static("svg:g"));
+      cb_entry.model.insert(arena::pin_static("svg:foreignObject"));
+    }
+  }
+  
+  /// Clone the tagprop's (allowed content & attributes) of @other to $tag
+  fn synthesize_element(&mut self, tag: &str, others: &[&str]) {
+    let mut to_add_in_model = Vec::new();
+    let mut to_add_in_attrs = Vec::new();
+    for other in others {
+      if let Some(content) = self.schema_class.get(&arena::pin(other)) {
+        for child in content {
+          to_add_in_model.push(*child); } }
+      else if let Some(entry) = self.tagprop.get(&arena::pin(other)) {
+        for child in &entry.model {
+          to_add_in_model.push(*child);
+        }
+        for attr in &entry.attributes {
+          to_add_in_attrs.push(*attr);
+        }
+      }
+    }
+    let capture = self.tagprop.entry(arena::pin(tag)).or_default();
+    for child in to_add_in_model {
+      capture.model.insert(child);
+    }
+    for attr in to_add_in_attrs {
+      capture.attributes.insert(attr);
+    }
+  }
 }
 
 pub fn set_doc_type(roottag: &str, publicid: &str, systemid: &str) {
@@ -319,7 +356,7 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
       None => model.schema.as_mut().unwrap().load_schema(),
     };
   }
-
+  model.load_internal_extensions();
   if model.debug_mode {
     model.describe_model()
   }

@@ -119,6 +119,7 @@ fn after_equation(whatsit: &mut Whatsit) -> Result<()> {
     );
   }
   // Now install the tags in $whatsit or current Row, as appropriate.
+  #[allow(clippy::manual_unwrap_or_default)]
   let props = match state::remove_value("EQUATIONROW_TAGS") {
     Some(Stored::HashStored(hs)) => hs,
     _ => HashMap::default(),

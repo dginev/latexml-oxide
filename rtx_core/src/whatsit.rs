@@ -71,6 +71,7 @@ impl PartialEq for Whatsit {
 impl Whatsit {
   /// checks the "isMath" property was set to true
   pub fn is_math(&self) -> bool {
+    #[allow(clippy::manual_unwrap_or_default)]
     match self.properties.get("isMath") {
       Some(&Stored::Bool(v)) => v,
       _ => false,

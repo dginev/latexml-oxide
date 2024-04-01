@@ -180,9 +180,10 @@ impl Document {
       model::with_code_namespaces(|code_ns| for (prefix, ns) in code_ns {
         // TODO: Is this too slow? We may need to store an active context in the state as an
         // alternative
-        arena::with(*prefix, |p_str| {
-          arena::with(*ns, |ns_str| context.register_namespace(p_str, ns_str))
-        }).unwrap();
+        arena::with2(*prefix,*ns, |p_str, ns_str| {
+           context.register_namespace(p_str, ns_str)
+            .expect("register_namespace has no reason to fail during get_xpath?");
+        });
       });
       self.context = Some(context);
       self.context.as_mut().unwrap()
@@ -291,10 +292,8 @@ impl Document {
               value = arena::with(value, |value_str| arena::pin(s!("{value_str} {ovalue}")))
             }
           }
-          arena::with(key, |key_str| {
-            arena::with(value, |value_str| {
-              self.set_attribute(node, key_str, value_str)
-            })
+          arena::with2(key, value, |key_str,value_str| {
+            self.set_attribute(node, key_str, value_str)
           })?;
         }
         for key in keys_to_remove {
@@ -719,11 +718,12 @@ impl Document {
 
   // Check whether it is possible to open $qname at this point,
   // possibly by autoOpen'ing & autoClosing other tags.
-  pub fn is_openable(&self, qname: &str) -> bool {
+  pub fn is_openable(&self, test_qname: &str) -> bool {
     let mut node_opt = Some(self.node.clone());
+    let test_sym = arena::pin(test_qname);
     while let Some(node) = node_opt {
       let node_qname = get_node_qname(&node);
-      if sym_can_contain_somehow(node_qname, arena::pin(qname)) {
+      if sym_can_contain_somehow(node_qname, test_sym) {
         return true;
       } else if !can_auto_close(&node) {
         return false; // could close, then check if parent can contain
@@ -739,7 +739,7 @@ impl Document {
   /// returning the last Some(node) that would be closed if it is possible,
   /// otherwise None
   pub fn is_closeable<T: IntoVDQS>(&self, tags: T) -> Option<Node> {
-    let mut tags: VecDeque<String> = tags.into_vdqs();
+    let mut tags: VecDeque<SymbolU32> = tags.into_vdqs();
     let mut node_opt = if self.node.get_type() == Some(NodeType::TextNode) {
       self.node.get_parent()
     } else {
@@ -756,7 +756,7 @@ impl Document {
           return None;
         }
         let this_qname = get_node_qname(node);
-        if this_qname == arena::pin(&qname) {
+        if this_qname == qname {
           break 'inner;
         }
         if !can_auto_close(node) {
@@ -1703,15 +1703,15 @@ impl Document {
 
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
-      let message: String = arena::with(has_opened, |has_opened_str|
-        arena::with(cur_qname, |cur_qname_str| Ok::<String,crate::common::error::Error>(
+      let message: String = arena::with2(has_opened, cur_qname,|has_opened_str,cur_qname_str|
+        Ok::<String,crate::common::error::Error>(
           format!(
             "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
             has_opened_str,
             cur_qname_str,
             self.get_insertion_context(None)?
           ))
-      ))?;
+      )?;
       Error!("malformed", qname, message);
       Ok(self.node.clone()) // But we'll do it anyway, unless Error => Fatal.
     } else {
@@ -3226,21 +3226,26 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
 }
 
 pub trait IntoVDQS {
-  fn into_vdqs(self) -> VecDeque<String>
+  fn into_vdqs(self) -> VecDeque<SymbolU32>
   where Self: Sized;
 }
-impl IntoVDQS for String {
-  fn into_vdqs(self) -> VecDeque<String> {
+impl IntoVDQS for SymbolU32 {
+  fn into_vdqs(self) -> VecDeque<SymbolU32> {
     let mut vdq = VecDeque::new();
     vdq.push_front(self);
     vdq
   }
 }
 impl IntoVDQS for &str {
-  fn into_vdqs(self) -> VecDeque<String> { self.to_string().into_vdqs() }
+  fn into_vdqs(self) -> VecDeque<SymbolU32> {
+    let mut vdq = VecDeque::new();
+    vdq.push_front(arena::pin(self));
+    vdq
+  }
 }
-impl IntoVDQS for VecDeque<String> {
-  fn into_vdqs(self) -> VecDeque<String> { self }
+
+impl IntoVDQS for VecDeque<SymbolU32> {
+  fn into_vdqs(self) -> VecDeque<SymbolU32> { self }
 }
 
 

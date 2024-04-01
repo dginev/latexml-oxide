@@ -843,10 +843,7 @@ pub fn p_get_value(node: &Node) -> String {
       // get content, or fall back to name
       x
     } else {
-      match node.get_attribute("name") {
-        Some(name) => name,
-        None => String::new(),
-      }
+      node.get_attribute("name").unwrap_or_default()
     }
   } else {
     node.get_content()

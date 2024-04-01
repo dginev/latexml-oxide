@@ -123,11 +123,7 @@ pub struct CoreOptions {
 impl Core {
   /// instantiate a new Core processor
   pub fn new(options: CoreOptions) -> Self {
-    let preload = match options.preload {
-      None => Vec::new(),
-      Some(p) => p,
-    };
-
+    let preload = options.preload.unwrap_or_default();
     // pass on the state::options, defaults are handled in state::new
     let state_options = StateOptions {
       model: options.model,

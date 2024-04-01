@@ -298,13 +298,13 @@ impl PartialEq for Token {
 //  a known token than it is to build a new one
 //  (as the arena lookup is a hair slower than copying a u32)
 
-/// constant for an END "}" token
+/// constant for a BEGIN "{" token
 #[thread_local]
 pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("{"),
   code: Catcode::BEGIN
 });
-/// constant for a BEGIN "{" token
+/// constant for an END "}" token
 #[thread_local]
 pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("}"),
