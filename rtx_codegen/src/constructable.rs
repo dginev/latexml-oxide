@@ -235,6 +235,7 @@ fn compile_replacement_tokens(mut replacement: String) -> Vec<proc_macro2::Token
         ));
       } else {
         operations.push(quote!(
+          #[allow(unused_mut)]
           let mut av_props : HashMap<String, String> = HashMap::default();
           #(#av)*
           let this_font_opt = match props.get("font") {
@@ -442,8 +443,10 @@ fn translate_avpairs(text: &mut String) -> Vec<proc_macro2::TokenStream> {
         .to_string();
       if is_match {
         let val = translate_string(text);
-        if key != "font" {
+        if key == "font" {
           // we handle font in a special case
+          avs.push(quote!(();));
+        } else {
           avs.push(quote!(av_props.insert(#key.to_string(), #val);))
         };
       }

@@ -27,7 +27,7 @@ LoadDefinitions!({
   DefConditional!("\\ifvmode", { false });
   DefConditional!("\\ifhmode", { false });
   DefConditional!("\\ifinner", { false });
-  DefConditional!("\\ifmmode", { LookupBool!("IN_MATH") });
+  DefConditional!("\\ifmmode", { lookup_bool("IN_MATH") });
 
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
     let token_opt = gullet::read_x_token(Some(false), true)?;
