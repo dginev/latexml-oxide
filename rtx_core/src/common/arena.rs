@@ -71,6 +71,12 @@ pub static DTD_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("DTD"));
 /// the unique symbol for str value "RelaxNG"
 #[thread_local]
 pub static RELAXNG_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("RelaxNG"));
+/// the unique symbol for str value "text"
+#[thread_local]
+pub static TEXT_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("text"));
+/// the unique symbol for str value "math"
+#[thread_local]
+pub static MATH_SYM : Lazy<SymbolU32> = Lazy::new(|| pin_static("math"));
 
 /// Assign a static str into the arena, returning a unique symbol associated with it
 pub fn pin_static(text: &'static str) -> SymbolU32 {

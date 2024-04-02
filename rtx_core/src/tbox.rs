@@ -5,7 +5,7 @@ use std::fmt;
 use std::rc::Rc;
 use string_interner::symbol::SymbolU32;
 
-use crate::common::arena::{self, EMPTY_SYM};
+use crate::common::arena::{self, EMPTY_SYM, MATH_SYM, TEXT_SYM};
 use crate::common::dimension::Dimension;
 use crate::common::error::*;
 use crate::common::font::Font;
@@ -107,7 +107,7 @@ impl Tbox {
         .or_insert_with(|| Stored::Dimension(Dimension::default()));
     }
     if lookup_bool("IN_MATH") {
-      properties.insert(s!("mode"), "math".into());
+      properties.insert(s!("mode"), Stored::String(*MATH_SYM));
       if text != empty_sym {
         with_value(&arena::with(text, |text_str| {
           s!("math_token_attributes_{}", text_str) }), |value_opt|
@@ -180,11 +180,11 @@ impl BoxOps for Tbox {
     let font = &self.font;
     let mode = match self.properties.get("mode") {
       Some(Stored::String(s)) => *s,
-      _ => arena::pin_static("text"),
+      _ => *TEXT_SYM,
     };
 
     if !text.is_empty() {
-      if mode == arena::pin_static("math") {
+      if mode == *MATH_SYM {
         Ok(vec![document.insert_math_token(
           &text,
           Stored::cast_to_string_hash(&self.properties),

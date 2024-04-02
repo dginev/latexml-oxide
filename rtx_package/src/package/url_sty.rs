@@ -79,7 +79,6 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMWrap class='ltx_nolink #class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='ltx_nolink #class'>#5</ltx:ref>)",
     properties => sub[args] {
       unref!(args => cmd, _open, _close, url, _formattedurl);
-      eprintln!("-- url@url@nolink ! --");
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(map!(
         "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None).into(),

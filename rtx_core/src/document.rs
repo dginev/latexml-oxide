@@ -2,6 +2,7 @@ pub mod helpers;
 pub mod resource;
 pub mod tag;
 
+use std::backtrace::Backtrace;
 use libxml::tree::set_node_rc_guard;
 use libxml::tree::Document as XmlDoc;
 use libxml::tree::{Namespace, Node, NodeType};
@@ -1251,10 +1252,10 @@ impl Document {
     if matches!(&font.family.as_deref(), Some("nullfont")) {
       return Ok(None);
     };
-    Debug!(
-      "Insert text {:?} at {:?}",
+    Debug!("document","open_text",
+      s!("Insert text {:?} at {:?}",
       text,
-      self.document.node_to_string(&self.node)
+      self.document.node_to_string(&self.node))
     );
 
     // Get the desired font attributes, particularly the desired element
@@ -1436,10 +1437,10 @@ impl Document {
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
       // current node already is a text node.
-      Debug!(
-        "Appending text {:?} to {:?}",
+      Debug!("document","open_text_internal",
+        s!("Appending text {:?} to {:?}",
         text,
-        self.document.node_to_string(&self.node)
+        self.document.node_to_string(&self.node))
       );
 
       let parent = self.node.get_parent().unwrap();
@@ -1452,10 +1453,10 @@ impl Document {
     } else if HAS_NONSPACE_RE.is_match(text) || can_contain(&self.node, "#PCDATA") {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
-      Debug!(
-        "Inserting text node for {:?} into {:?}",
+      Debug!("document","open_text_internal",
+        s!("Inserting text node for {:?} into {:?}",
         text,
-        self.document.node_to_string(&point)
+        self.document.node_to_string(&point))
       );
       let mut node = Node::new_text(text, &self.document)?;
       point.add_child(&mut node)?;
@@ -1740,10 +1741,11 @@ impl Document {
       } else {
         // Didn't find a legit place.
         let message = arena::with(cur_qname, |cur_qname_str| {
-          s!("{:?} isn't allowed in <{}>", qname, cur_qname_str)
+          s!("{:?} isn't allowed in <{}>\n{}", qname, cur_qname_str,Backtrace::capture())
         });
         //"Currently in " self.getInsertionContext());
         Error!("malformed", qname, message);
+        
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
